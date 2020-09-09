@@ -363,6 +363,12 @@ class Interpreter {
   /// Returns status of success or failure.
   TfLiteStatus Invoke();
 
+  /// Invoke idx-th subgraph in the interpreter.
+  TfLiteStatus Invoke(int idx);
+
+  /// Invoke all subgraphs in the interpreter.
+  TfLiteStatus InvokeAll();
+
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
 
@@ -505,6 +511,8 @@ class Interpreter {
   /// WARNING: This is an experimental API and subject to change.
   void AddSubgraphs(int subgraphs_to_add,
                     int* first_new_subgraph_index = nullptr);
+
+  void AddSubgraph();
 
   /// Return the number of subgraphs in the model.
   /// WARNING: This is an experimental API and subject to change.

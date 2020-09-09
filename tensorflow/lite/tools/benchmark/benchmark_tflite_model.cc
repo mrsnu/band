@@ -602,7 +602,10 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
-  tflite::InterpreterBuilder(*model_, *resolver)(&interpreter_, num_threads);
+  (&interpreter_)->reset(new Interpreter(nullptr)); 
+  int num_models = 2;
+  for(int i = 0; i < num_models; ++i)
+    tflite::InterpreterBuilder(*model_, *resolver)(&interpreter_, num_threads);
   if (!interpreter_) {
     TFLITE_LOG(ERROR) << "Failed to initialize the interpreter";
     return kTfLiteError;
@@ -749,6 +752,8 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
+TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
+TfLiteStatus BenchmarkTfLiteModel::RunAll() { return interpreter_->InvokeAll(); }
 
 }  // namespace benchmark
 }  // namespace tflite

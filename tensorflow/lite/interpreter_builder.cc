@@ -613,8 +613,10 @@ TfLiteStatus InterpreterBuilder::operator()(
     return cleanup_and_error();
   }
 
-  interpreter->reset(new Interpreter(error_reporter_));
+  (*interpreter)->AddSubgraph();
+  // Threads for CPU inference.
   (*interpreter)->SetNumThreads(num_threads);
+  // (dhkim) May need some change if there exists any tflite model with more than one subgraph.
   if (subgraphs->size() > 1) {
     (*interpreter)->AddSubgraphs(subgraphs->size() - 1);
   }
@@ -627,7 +629,7 @@ TfLiteStatus InterpreterBuilder::operator()(
        ++subgraph_index) {
     const tflite::SubGraph* subgraph = (*subgraphs)[subgraph_index];
     tflite::Subgraph* modified_subgraph =
-        (*interpreter)->subgraph(subgraph_index);
+        (*interpreter)->subgraph((*interpreter)->subgraphs_size() - 1 + subgraph_index);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {
