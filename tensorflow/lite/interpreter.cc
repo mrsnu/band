@@ -206,12 +206,9 @@ void Interpreter::AddSubgraphs(int subgraphs_to_add,
                                       &subgraphs_, &resources_);
     subgraphs_.emplace_back(subgraph);
   }
-}
 
-void Interpreter::AddSubgraph(){
-  AddSubgraphs(1);
-  const size_t idx = subgraphs_.size() - 1;
-  context_ = (*subgraphs_[idx]).context();
+  // TODO #7: Change how the interpreter manages context of each subgraph
+  context_ = primary_subgraph().context();
 }
 
 TfLiteStatus Interpreter::AddNodeWithParameters(

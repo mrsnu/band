@@ -560,6 +560,7 @@ TfLiteStatus InterpreterBuilder::operator()(
   return operator()(interpreter, /*num_threads=*/-1);
 }
 
+// TODO #3: Change how models are added to the interpreter
 TfLiteStatus InterpreterBuilder::operator()(
     std::unique_ptr<Interpreter>* interpreter, int num_threads) {
   if (!interpreter) {
@@ -613,13 +614,9 @@ TfLiteStatus InterpreterBuilder::operator()(
     return cleanup_and_error();
   }
 
-  (*interpreter)->AddSubgraph();
-  // Threads for CPU inference.
+  int old_size = (*interpreter)->subgraphs_size();
+  (*interpreter)->AddSubgraphs(subgraphs->size());
   (*interpreter)->SetNumThreads(num_threads);
-  // (dhkim) May need some change if there exists any tflite model with more than one subgraph.
-  if (subgraphs->size() > 1) {
-    (*interpreter)->AddSubgraphs(subgraphs->size() - 1);
-  }
 
 #if defined(TFLITE_ENABLE_DEFAULT_PROFILER)
   (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
@@ -629,7 +626,7 @@ TfLiteStatus InterpreterBuilder::operator()(
        ++subgraph_index) {
     const tflite::SubGraph* subgraph = (*subgraphs)[subgraph_index];
     tflite::Subgraph* modified_subgraph =
-        (*interpreter)->subgraph((*interpreter)->subgraphs_size() - 1 + subgraph_index);
+        (*interpreter)->subgraph(old_size + subgraph_index);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {

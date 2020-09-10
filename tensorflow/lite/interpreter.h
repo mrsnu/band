@@ -377,6 +377,7 @@ class Interpreter {
   /// NOTE: num_threads should be >= -1.
   /// User may pass -1 to let the TFLite interpreter set the no of threads
   /// available to itself.
+  // TODO #7: Change how the interpreter manages context of each subgraph
   void SetNumThreads(int num_threads);
 
   /// Allow float16 precision for FP32 calculation when possible.
@@ -438,6 +439,7 @@ class Interpreter {
   ///    For example, set an OpenGL texture as the output of inference, while
   ///    the node which produces output is an OpenGL delegate node.
   /// WARNING: This is an experimental API and subject to change.
+  // TODO #7: Change how the interpreter manages context of each subgraph
   TfLiteStatus SetBufferHandle(int tensor_index,
                                TfLiteBufferHandle buffer_handle,
                                TfLiteDelegate* delegate);
@@ -445,6 +447,7 @@ class Interpreter {
   /// Get the delegate buffer handle, and the delegate which can process the
   /// buffer handle.
   /// WARNING: This is an experimental API and subject to change.
+  // TODO #7: Change how the interpreter manages context of each subgraph
   TfLiteStatus GetBufferHandle(int tensor_index,
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
@@ -512,8 +515,6 @@ class Interpreter {
   void AddSubgraphs(int subgraphs_to_add,
                     int* first_new_subgraph_index = nullptr);
 
-  void AddSubgraph();
-
   /// Return the number of subgraphs in the model.
   /// WARNING: This is an experimental API and subject to change.
   size_t subgraphs_size() const { return subgraphs_.size(); }
@@ -529,11 +530,13 @@ class Interpreter {
 
   /// WARNING: Experimental interface, subject to change
   Subgraph& primary_subgraph() {
+    assert(!subgraphs_.empty());
     return *subgraphs_.front();  /// Safe as subgraphs_ always has 1 entry.
   }
 
   /// WARNING: Experimental interface, subject to change
   const Subgraph& primary_subgraph() const {
+    assert(!subgraphs_.empty());
     return *subgraphs_.front();  // Safe as subgraphs_ always has 1 entry.
   }
 #endif  // DOXYGEN_SKIP
