@@ -98,10 +98,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   TFLITE_LOG_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
 #endif
 
-  // There's always at least 1 subgraph which is the primary subgraph.
-  AddSubgraphs(1);
-  context_ = primary_subgraph().context();
-
   // Reserve some space for the tensors to avoid excessive resizing.
   for (int i = 0; i < kTfLiteMaxExternalContexts; ++i) {
     external_contexts_[i] = nullptr;
@@ -112,8 +108,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   own_external_cpu_backend_context_.reset(new ExternalCpuBackendContext());
   external_contexts_[kTfLiteCpuBackendContext] =
       own_external_cpu_backend_context_.get();
-
-  UseNNAPI(false);
 }
 
 Interpreter::~Interpreter() {
@@ -186,7 +180,15 @@ TfLiteStatus Interpreter::AllocateTensors() {
     lazy_delegate_provider_.reset();
   }
 
-  return primary_subgraph().AllocateTensors();
+  TfLiteStatus status;
+
+  for(int i = 0; i < subgraphs_.size(); ++i){
+    status = (*subgraphs_[i]).AllocateTensors();
+    if (status != kTfLiteOk)
+      return status;
+  }
+
+  return kTfLiteOk;
 }
 
 void Interpreter::ReserveNodes(int count) {
@@ -204,6 +206,9 @@ void Interpreter::AddSubgraphs(int subgraphs_to_add,
                                       &subgraphs_, &resources_);
     subgraphs_.emplace_back(subgraph);
   }
+
+  // TODO #7: Change how the interpreter manages context of each subgraph
+  context_ = primary_subgraph().context();
 }
 
 TfLiteStatus Interpreter::AddNodeWithParameters(
@@ -244,6 +249,31 @@ TfLiteStatus Interpreter::Invoke() {
           scoped_runtime_event,
           primary_subgraph().EnsureTensorDataIsReadable(tensor_index));
     }
+  }
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus Interpreter::Invoke(int idx) {
+  ScopedRuntimeInstrumentationProfile scoped_runtime_event(installed_profiler_,
+                                                           "invoke");
+  TF_LITE_ENSURE_STATUS_WITH_SCOPED_INSTRUMENTATION(
+      scoped_runtime_event, (*subgraphs_[idx]).Invoke());
+
+  if (!allow_buffer_handle_output_) {
+    for (int tensor_index : (*subgraphs_[idx]).outputs()) {
+      TF_LITE_ENSURE_STATUS_WITH_SCOPED_INSTRUMENTATION(
+          scoped_runtime_event,
+          (*subgraphs_[idx]).EnsureTensorDataIsReadable(tensor_index));
+    }
+  }
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus Interpreter::InvokeAll(){
+  for(int i = 0; i < subgraphs_.size(); ++i){
+    Invoke(i);
   }
 
   return kTfLiteOk;

@@ -363,6 +363,12 @@ class Interpreter {
   /// Returns status of success or failure.
   TfLiteStatus Invoke();
 
+  /// Invoke idx-th subgraph in the interpreter.
+  TfLiteStatus Invoke(int idx);
+
+  /// Invoke all subgraphs in the interpreter.
+  TfLiteStatus InvokeAll();
+
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
 
@@ -371,6 +377,7 @@ class Interpreter {
   /// NOTE: num_threads should be >= -1.
   /// User may pass -1 to let the TFLite interpreter set the no of threads
   /// available to itself.
+  // TODO #7: Change how the interpreter manages context of each subgraph
   void SetNumThreads(int num_threads);
 
   /// Allow float16 precision for FP32 calculation when possible.
@@ -432,6 +439,7 @@ class Interpreter {
   ///    For example, set an OpenGL texture as the output of inference, while
   ///    the node which produces output is an OpenGL delegate node.
   /// WARNING: This is an experimental API and subject to change.
+  // TODO #7: Change how the interpreter manages context of each subgraph
   TfLiteStatus SetBufferHandle(int tensor_index,
                                TfLiteBufferHandle buffer_handle,
                                TfLiteDelegate* delegate);
@@ -439,6 +447,7 @@ class Interpreter {
   /// Get the delegate buffer handle, and the delegate which can process the
   /// buffer handle.
   /// WARNING: This is an experimental API and subject to change.
+  // TODO #7: Change how the interpreter manages context of each subgraph
   TfLiteStatus GetBufferHandle(int tensor_index,
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
@@ -521,11 +530,13 @@ class Interpreter {
 
   /// WARNING: Experimental interface, subject to change
   Subgraph& primary_subgraph() {
+    assert(!subgraphs_.empty());
     return *subgraphs_.front();  /// Safe as subgraphs_ always has 1 entry.
   }
 
   /// WARNING: Experimental interface, subject to change
   const Subgraph& primary_subgraph() const {
+    assert(!subgraphs_.empty());
     return *subgraphs_.front();  // Safe as subgraphs_ always has 1 entry.
   }
 #endif  // DOXYGEN_SKIP
