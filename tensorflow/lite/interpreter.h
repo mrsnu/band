@@ -551,7 +551,6 @@ class Interpreter {
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
-  friend class Planner;
 
   std::unique_ptr<Planner> planner_;
 
