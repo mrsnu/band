@@ -38,6 +38,11 @@ limitations under the License.
 #include "tensorflow/lite/experimental/tf_runtime/public/eager_interpreter.h"
 #endif
 
+#if defined(__ANDROID__)
+#include "tensorflow/lite/delegates/gpu/delegate.h"
+#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
+#endif
+
 namespace tflite {
 
 class InterpreterTest;
@@ -369,6 +374,8 @@ class Interpreter {
   /// Invoke all subgraphs in the interpreter.
   TfLiteStatus InvokeAll();
 
+  TfLiteStatus Plan();
+
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
 
@@ -547,6 +554,24 @@ class Interpreter {
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
 
+  typedef enum {
+    kTfLiteCPU = 0,
+    kTfLiteGPU = 1,
+    kTfLiteDSP = 2,
+    kTfLiteNumDevices = 3,
+
+  } TfLiteDevice;
+
+  // Contains how a Subgraph should be executed.
+  // Currently, the unit of device placement is a `Subgraph`. 
+  struct ModelPlan{
+    public:
+    ModelPlan():device_(kTfLiteCPU) {}
+    ModelPlan(ModelPlan&&) = default;
+    ModelPlan(const ModelPlan&) = delete;
+    TfLiteDevice device_;
+  };
+
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,
                                  TfLiteExternalContextType type,
@@ -582,6 +607,7 @@ class Interpreter {
   // WARNING: This is an experimental API and subject to change.
   // TODO(b/116667551): Use TfLiteExternalContext for storing state.
   std::vector<TfLiteDelegatePtr> owned_delegates_;
+  std::vector<TfLiteDelegatePtr> device_delegates_;
 
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.
@@ -604,6 +630,10 @@ class Interpreter {
 
   // Subgraphs
   std::vector<std::unique_ptr<Subgraph>> subgraphs_;
+
+  // Plans
+  std::vector<std::unique_ptr<ModelPlan>> subgraph_plans_;
+  bool change_subgraph_plan_ = true;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
