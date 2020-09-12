@@ -33,14 +33,10 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
+#include "tensorflow/lite/planner.h"
 
 #if TFLITE_EXPERIMENTAL_RUNTIME_EAGER
 #include "tensorflow/lite/experimental/tf_runtime/public/eager_interpreter.h"
-#endif
-
-#if defined(__ANDROID__)
-#include "tensorflow/lite/delegates/gpu/delegate.h"
-#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #endif
 
 namespace tflite {
@@ -374,8 +370,6 @@ class Interpreter {
   /// Invoke all subgraphs in the interpreter.
   TfLiteStatus InvokeAll();
 
-  TfLiteStatus Plan();
-
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
 
@@ -548,29 +542,18 @@ class Interpreter {
   }
 #endif  // DOXYGEN_SKIP
 
+  TfLiteDelegate* device_delegates(int device_idx){
+    return &*device_delegates_[device_idx];
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
+  friend class Planner;
 
-  typedef enum {
-    kTfLiteCPU = 0,
-    kTfLiteGPU = 1,
-    kTfLiteDSP = 2,
-    kTfLiteNumDevices = 3,
-
-  } TfLiteDevice;
-
-  // Contains how a Subgraph should be executed.
-  // Currently, the unit of device placement is a `Subgraph`. 
-  struct ModelPlan{
-    public:
-    ModelPlan():device_(kTfLiteCPU) {}
-    ModelPlan(ModelPlan&&) = default;
-    ModelPlan(const ModelPlan&) = delete;
-    TfLiteDevice device_;
-  };
+  std::unique_ptr<Planner> planner_;
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,
@@ -630,10 +613,6 @@ class Interpreter {
 
   // Subgraphs
   std::vector<std::unique_ptr<Subgraph>> subgraphs_;
-
-  // Plans
-  std::vector<std::unique_ptr<ModelPlan>> subgraph_plans_;
-  bool change_subgraph_plan_ = true;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;

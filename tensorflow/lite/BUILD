@@ -78,6 +78,7 @@ FRAMEWORK_LIB_HDRS = [
     "op_resolver.h",
     "optional_debug_tools.h",
     "stderr_reporter.h",
+    "planner.h"
 ]
 
 cc_library(
@@ -233,6 +234,7 @@ cc_library(
         "mutable_op_resolver.cc",
         "optional_debug_tools.cc",
         "stderr_reporter.cc",
+        "planner.cc",
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,
@@ -260,10 +262,14 @@ cc_library(
         "//tensorflow/lite/kernels/internal:compatibility",
         "//tensorflow/lite/nnapi:nnapi_implementation",
         "//tensorflow/lite/schema:schema_fbs",
-        "//tensorflow/lite/delegates/gpu:libtensorflowlite_gpu_delegate.so",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        "//tensorflow:android": [
+            "//tensorflow/lite/delegates/gpu:delegate",
         ],
         "//conditions:default": [],
     }),

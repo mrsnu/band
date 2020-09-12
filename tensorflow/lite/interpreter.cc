@@ -109,25 +109,39 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   external_contexts_[kTfLiteCpuBackendContext] =
       own_external_cpu_backend_context_.get();
 
+  // Create a Planner instance.
+  planner_.reset(new Planner());
+
   // Create Delegates for each device.
-  TfLiteDelegatePtr null_delegate = TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
+  // TODO #13: Create mobile device independent delegate instances
+  TfLiteDelegatePtr null_delegate =
+      TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
   device_delegates_.push_back(std::move(null_delegate));
 
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
-  TfLiteDelegatePtr gpu_delegate = TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
+  // The default number of maximum delegate ops is 1.
+  // Enable the following line to create multiple gpu ops within a Subgraph.
+  // gpu_opts.max_delegated_partitions = 10;
+  TfLiteDelegatePtr gpu_delegate =
+      TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
+                        &TfLiteGpuDelegateV2Delete);
   device_delegates_.push_back(std::move(gpu_delegate));
 
-  StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
+#if defined(__ANDROID__)
+  StatefulNnApiDelegate::Options nnapi_options =
+      StatefulNnApiDelegate::Options();
   nnapi_options.accelerator_name = "qti-dsp";
   // The default number of maximum delegate ops is 1.
   // Enable the following line to create multiple dsp ops within a Subgraph.
-  //nnapi_options.max_number_delegated_partitions = 10;
+  // nnapi_options.max_number_delegated_partitions = 10;
   TfLiteDelegatePtr dsp_delegate = TfLiteDelegatePtr(
-      new StatefulNnApiDelegate(nnapi_options), [](TfLiteDelegate* delegate) {
-        delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
-      });
+      new StatefulNnApiDelegate(nnapi_options),
+        [](TfLiteDelegate* delegate) {
+          delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
+        });
   device_delegates_.push_back(std::move(dsp_delegate));
+#endif  // defined(__ANDROID__)
 }
 
 Interpreter::~Interpreter() {
@@ -225,8 +239,6 @@ void Interpreter::AddSubgraphs(int subgraphs_to_add,
     Subgraph* subgraph = new Subgraph(error_reporter_, external_contexts_,
                                       &subgraphs_, &resources_);
     subgraphs_.emplace_back(subgraph);
-    ModelPlan* model_plan = new ModelPlan();
-		subgraph_plans_.emplace_back(model_plan);
   }
 
   // TODO #7: Change how the interpreter manages context of each subgraph
@@ -295,34 +307,14 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 
 TfLiteStatus Interpreter::InvokeAll(){
 	TfLiteStatus status;
-	if(change_subgraph_plan_){
-		status = Plan();
-		if(status != kTfLiteOk)
-			return status;
-		change_subgraph_plan_ = false;
-	}
+  // Placing `Plan()` here is for demo purposes.
+  // This is not the best position to call `Plan()`.
+	status = planner_->Plan(this);
+	if(status != kTfLiteOk)
+		return status;
 
   for(int i = 0; i < subgraphs_.size(); ++i){
     status = Invoke(i);
-  }
-
-  return status;
-}
-
-TfLiteStatus Interpreter::Plan(){
-  TfLiteStatus status;
-
-  for(int i = 0; i < subgraphs_.size(); ++i){
-    status = (*subgraphs_[i]).UndoAllDelegates();
-
-    if(i % (int)kTfLiteNumDevices == 1){
-      subgraph_plans_[i]->device_ = kTfLiteGPU;
-      status = (*subgraphs_[i]).ModifyGraphWithDelegate(device_delegates_[kTfLiteGPU].get());
-    }
-    else if(i % (int)kTfLiteNumDevices == 2){
-      subgraph_plans_[i]->device_ = kTfLiteDSP;
-      status = (*subgraphs_[i]).ModifyGraphWithDelegate(device_delegates_[kTfLiteDSP].get());
-    }
   }
 
   return status;
