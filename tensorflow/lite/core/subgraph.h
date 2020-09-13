@@ -334,7 +334,7 @@ class Subgraph {
   // Before `AllocateTensors` is called, this will always return true;
   bool HasDynamicTensors() { return has_dynamic_tensors_; }
 
-  TfLiteStatus SetModelPlan(TfLiteDevice device) { model_plan_->device_ = device; }
+  void SetModelPlan(TfLiteDevice device) { model_plan_->device_ = device; }
 
   TfLiteDevice GetModelPlan() { return model_plan_->device_; }
 
