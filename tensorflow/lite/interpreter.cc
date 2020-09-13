@@ -118,6 +118,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
   device_delegates_.push_back(std::move(null_delegate));
 
+#if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
   // The default number of maximum delegate ops is 1.
@@ -128,7 +129,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
                         &TfLiteGpuDelegateV2Delete);
   device_delegates_.push_back(std::move(gpu_delegate));
 
-#if defined(__ANDROID__)
   StatefulNnApiDelegate::Options nnapi_options =
       StatefulNnApiDelegate::Options();
   nnapi_options.accelerator_name = "qti-dsp";
@@ -306,12 +306,12 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 }
 
 TfLiteStatus Interpreter::InvokeAll(){
-	TfLiteStatus status;
+  TfLiteStatus status;
   // Placing `Plan()` here is for demo purposes.
   // This is not the best position to call `Plan()`.
-	status = planner_->Plan(this);
-	if(status != kTfLiteOk)
-		return status;
+  status = planner_->Plan(this);
+  if(status != kTfLiteOk)
+    return status;
 
   for(int i = 0; i < subgraphs_.size(); ++i){
     status = Invoke(i);

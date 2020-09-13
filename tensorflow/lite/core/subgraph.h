@@ -334,7 +334,9 @@ class Subgraph {
   // Before `AllocateTensors` is called, this will always return true;
   bool HasDynamicTensors() { return has_dynamic_tensors_; }
 
-  ModelPlan* model_plan() { return &*model_plan_; }
+  TfLiteStatus SetModelPlan(TfLiteDevice device) { model_plan_->device_ = device; }
+
+  TfLiteDevice GetModelPlan() { return model_plan_->device_; }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a

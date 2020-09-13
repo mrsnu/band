@@ -543,7 +543,7 @@ class Interpreter {
 #endif  // DOXYGEN_SKIP
 
   TfLiteDelegate* device_delegates(int device_idx){
-    return &*device_delegates_[device_idx];
+    return device_delegates_[device_idx].get();
   }
 
  private:

@@ -33,7 +33,7 @@ struct ModelPlan{
 };
 
 // assigns requested model to devices according to `ModelPlan` of a `Subgraph`.
-// The interpreter will
+// The interpreter manages a `Planner`.
 class Planner{
  public:
   Planner() {}
