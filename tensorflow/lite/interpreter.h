@@ -33,6 +33,7 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
+#include "tensorflow/lite/planner.h"
 
 #if TFLITE_EXPERIMENTAL_RUNTIME_EAGER
 #include "tensorflow/lite/experimental/tf_runtime/public/eager_interpreter.h"
@@ -541,11 +542,17 @@ class Interpreter {
   }
 #endif  // DOXYGEN_SKIP
 
+  TfLiteDelegate* device_delegates(int device_idx){
+    return device_delegates_[device_idx].get();
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
+
+  std::unique_ptr<Planner> planner_;
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,
@@ -582,6 +589,7 @@ class Interpreter {
   // WARNING: This is an experimental API and subject to change.
   // TODO(b/116667551): Use TfLiteExternalContext for storing state.
   std::vector<TfLiteDelegatePtr> owned_delegates_;
+  std::vector<TfLiteDelegatePtr> device_delegates_;
 
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.

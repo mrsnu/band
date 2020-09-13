@@ -29,6 +29,7 @@ limitations under the License.
 #include "tensorflow/lite/experimental/resource/resource_base.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/util.h"
+#include "tensorflow/lite/planner.h"
 
 #if TFLITE_EXPERIMENTAL_RUNTIME_EAGER
 #include "tensorflow/lite/experimental/tf_runtime/public/subgraph.h"
@@ -44,6 +45,7 @@ class NNAPIDelegate;
 class Subgraph {
  public:
   friend class Interpreter;
+  friend class Planner;
 
   Subgraph(ErrorReporter* error_reporter,
            TfLiteExternalContext** external_contexts,
@@ -332,6 +334,10 @@ class Subgraph {
   // Before `AllocateTensors` is called, this will always return true;
   bool HasDynamicTensors() { return has_dynamic_tensors_; }
 
+  void SetModelPlan(TfLiteDevice device) { model_plan_->device_ = device; }
+
+  TfLiteDevice GetModelPlan() { return model_plan_->device_; }
+
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
   // BufferedProfiler instance, and takes care of event profiling/tracing in a
@@ -375,6 +381,8 @@ class Subgraph {
     Profiler* const profiler_;
     const int64_t subgraph_index_;
   };
+
+  std::unique_ptr<ModelPlan> model_plan_;
 
   // Prevent 'context_' from accessing functions that are only available to
   // delegated kernels.

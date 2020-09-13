@@ -108,6 +108,40 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   own_external_cpu_backend_context_.reset(new ExternalCpuBackendContext());
   external_contexts_[kTfLiteCpuBackendContext] =
       own_external_cpu_backend_context_.get();
+
+  // Create a Planner instance.
+  planner_.reset(new Planner());
+
+  // Create Delegates for each device.
+  // TODO #13: Create mobile device independent delegate instances
+  TfLiteDelegatePtr null_delegate =
+      TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
+  device_delegates_.push_back(std::move(null_delegate));
+
+#if defined(__ANDROID__)
+  TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
+  gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
+  // The default number of maximum delegate ops is 1.
+  // Enable the following line to create multiple gpu ops within a Subgraph.
+  // gpu_opts.max_delegated_partitions = 10;
+  TfLiteDelegatePtr gpu_delegate =
+      TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
+                        &TfLiteGpuDelegateV2Delete);
+  device_delegates_.push_back(std::move(gpu_delegate));
+
+  StatefulNnApiDelegate::Options nnapi_options =
+      StatefulNnApiDelegate::Options();
+  nnapi_options.accelerator_name = "qti-dsp";
+  // The default number of maximum delegate ops is 1.
+  // Enable the following line to create multiple dsp ops within a Subgraph.
+  // nnapi_options.max_number_delegated_partitions = 10;
+  TfLiteDelegatePtr dsp_delegate = TfLiteDelegatePtr(
+      new StatefulNnApiDelegate(nnapi_options),
+        [](TfLiteDelegate* delegate) {
+          delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
+        });
+  device_delegates_.push_back(std::move(dsp_delegate));
+#endif  // defined(__ANDROID__)
 }
 
 Interpreter::~Interpreter() {
@@ -182,7 +216,7 @@ TfLiteStatus Interpreter::AllocateTensors() {
 
   TfLiteStatus status;
 
-  for(int i = 0; i < subgraphs_.size(); ++i){
+  for (int i = 0; i < subgraphs_.size(); ++i) {
     status = (*subgraphs_[i]).AllocateTensors();
     if (status != kTfLiteOk)
       return status;
@@ -271,12 +305,19 @@ TfLiteStatus Interpreter::Invoke(int idx) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Interpreter::InvokeAll(){
-  for(int i = 0; i < subgraphs_.size(); ++i){
-    Invoke(i);
+TfLiteStatus Interpreter::InvokeAll() {
+  TfLiteStatus status;
+  // Placing `Plan()` here is for demo purposes.
+  // This is not the best position to call `Plan()`.
+  status = planner_->Plan(this);
+  if (status != kTfLiteOk)
+    return status;
+
+  for (int i = 0; i < subgraphs_.size(); ++i) {
+    status = Invoke(i);
   }
 
-  return kTfLiteOk;
+  return status;
 }
 
 TfLiteStatus Interpreter::AddTensors(int tensors_to_add,

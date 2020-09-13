@@ -206,6 +206,8 @@ Subgraph::Subgraph(ErrorReporter* error_reporter,
   nodes_and_registration().reserve(kTensorsReservedCapacity);
   // Invalid to call these these except from TfLiteDelegate
   SwitchToKernelContext();
+
+  model_plan_.reset(new ModelPlan());
 }
 
 Subgraph::~Subgraph() {
