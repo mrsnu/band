@@ -216,7 +216,7 @@ TfLiteStatus Interpreter::AllocateTensors() {
 
   TfLiteStatus status;
 
-  for(int i = 0; i < subgraphs_.size(); ++i){
+  for (int i = 0; i < subgraphs_.size(); ++i) {
     status = (*subgraphs_[i]).AllocateTensors();
     if (status != kTfLiteOk)
       return status;
@@ -305,15 +305,15 @@ TfLiteStatus Interpreter::Invoke(int idx) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Interpreter::InvokeAll(){
+TfLiteStatus Interpreter::InvokeAll() {
   TfLiteStatus status;
   // Placing `Plan()` here is for demo purposes.
   // This is not the best position to call `Plan()`.
   status = planner_->Plan(this);
-  if(status != kTfLiteOk)
+  if (status != kTfLiteOk)
     return status;
 
-  for(int i = 0; i < subgraphs_.size(); ++i){
+  for (int i = 0; i < subgraphs_.size(); ++i) {
     status = Invoke(i);
   }
 
