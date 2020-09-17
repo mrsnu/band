@@ -30,6 +30,13 @@ struct ModelPlan{
   ModelPlan(ModelPlan&&) = default;
   ModelPlan(const ModelPlan&) = delete;
   TfLiteDevice device_;
+
+  // Flag from interpreter_builder
+  // Use MaybeCreateXNNPACKDelegate(num_threads); to create a XNN delegate
+  bool can_use_xnn_pack_ = false;
+  // TODO: Move AcquireFlexDelegate(); in interpreter_builder.cc  
+  // somewhere to create / use a flex delegate
+  bool has_flex_op_ = false;
 };
 
 // assigns requested model to devices according to `ModelPlan` of a `Subgraph`.

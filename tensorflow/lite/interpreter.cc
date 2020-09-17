@@ -245,6 +245,17 @@ void Interpreter::AddSubgraphs(int subgraphs_to_add,
   context_ = primary_subgraph().context();
 }
 
+void Interpreter::DeleteSubgraphs(size_t starting_index_to_delete, 
+                                  int subgraphs_to_delete) {
+  if(subgraphs_to_delete < 0) 
+    subgraphs_to_delete = subgraphs_.size() - starting_index_to_delete;
+    
+  if(starting_index_to_delete + subgraphs_to_delete <= subgraphs_.size()) {
+    subgraphs_.erase(subgraphs_.begin() + starting_index_to_delete,
+    subgraphs_.begin() + subgraphs_to_delete);
+  }
+}
+
 TfLiteStatus Interpreter::AddNodeWithParameters(
     const std::vector<int>& inputs, const std::vector<int>& outputs,
     const char* init_data, size_t init_data_size, void* builtin_data,
@@ -373,16 +384,20 @@ TfLiteStatus Interpreter::SetExecutionPlan(const std::vector<int>& new_plan) {
 
 void Interpreter::UseNNAPI(bool enable) { primary_subgraph().UseNNAPI(enable); }
 
-void Interpreter::SetNumThreads(int num_threads) {
+void Interpreter::SetNumThreads(int num_threads, size_t first_subgraph_index, int last_subgraph_index) {
   if (num_threads < -1) {
+    // TODO #7 : Which context should we use here?
     context_->ReportError(context_,
                           "num_threads should be >=0 or just -1 to let TFLite "
                           "runtime set the value.");
     return;
   }
 
-  for (auto& subgraph : subgraphs_) {
-    subgraph->context()->recommended_num_threads = num_threads;
+  if (last_subgraph_index < 0) 
+    last_subgraph_index = subgraphs_size();
+
+  for(int i = first_subgraph_index; i < last_subgraph_index; i++) {
+    subgraphs_[i]->context()->recommended_num_threads = num_threads;
   }
 
   for (int i = 0; i < kTfLiteMaxExternalContexts; ++i) {

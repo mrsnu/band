@@ -54,24 +54,26 @@ namespace impl {
 /// reporter, if provided) is at least as long as interpreter's lifetime.
 class InterpreterBuilder {
  public:
-  InterpreterBuilder(const FlatBufferModel& model,
-                     const OpResolver& op_resolver);
-  /// Builds an interpreter given only the raw flatbuffer Model object (instead
-  /// of a FlatBufferModel). Mostly used for testing.
-  /// If `error_reporter` is null, then DefaultErrorReporter() is used.
-  InterpreterBuilder(const ::tflite::Model* model,
-                     const OpResolver& op_resolver,
+  InterpreterBuilder(std::unique_ptr<Interpreter>* interpreter,
                      ErrorReporter* error_reporter = DefaultErrorReporter());
+
   ~InterpreterBuilder();
   InterpreterBuilder(const InterpreterBuilder&) = delete;
   InterpreterBuilder& operator=(const InterpreterBuilder&) = delete;
-  TfLiteStatus operator()(std::unique_ptr<Interpreter>* interpreter);
-  TfLiteStatus operator()(std::unique_ptr<Interpreter>* interpreter,
-                          int num_threads);
+
+  TfLiteStatus AddModel(const FlatBufferModel& model,
+                     const OpResolver& op_resolver, 
+                     int num_threads = -1);
+  TfLiteStatus AddModel(const ::tflite::Model* model,
+                     const OpResolver& op_resolver, 
+                     int num_threads = -1);
 
  private:
-  TfLiteStatus BuildLocalIndexToRegistrationMapping();
+  TfLiteStatus BuildLocalIndexToRegistrationMapping(const ::tflite::Model* model,
+                                                    const OpResolver& op_resolver);
   TfLiteStatus ParseNodes(
+      const ::tflite::Model* model,
+      const OpResolver& op_resolver,
       const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
       Subgraph* subgraph);
   TfLiteStatus ParseTensors(
@@ -85,8 +87,7 @@ class InterpreterBuilder {
   TfLiteStatus ParseSparsity(const SparsityParameters* src_sparsity,
                              TfLiteSparsity** sparsity);
 
-  const ::tflite::Model* model_;
-  const OpResolver& op_resolver_;
+  std::unique_ptr<Interpreter>* interpreter_;
   ErrorReporter* error_reporter_;
 
   std::vector<const TfLiteRegistration*> flatbuffer_op_index_to_registration_;

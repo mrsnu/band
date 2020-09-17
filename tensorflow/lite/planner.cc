@@ -17,14 +17,14 @@ TfLiteStatus Planner::Plan(Interpreter* interpreter) {
       return status;
 
     if (i % kTfLiteNumDevices == kTfLiteGPU) {
-      subgraph.SetModelPlan(kTfLiteGPU);
+      subgraph.GetModelPlan()->device_ = kTfLiteGPU;
     } else if (i % kTfLiteNumDevices == kTfLiteDSP) {
-      subgraph.SetModelPlan(kTfLiteDSP);
+      subgraph.GetModelPlan()->device_ = kTfLiteDSP;
     }
 
-    if (subgraph.GetModelPlan() != kTfLiteCPU) { 
+    if (subgraph.GetModelPlan()->device_ != kTfLiteCPU) { 
       status = subgraph.ModifyGraphWithDelegate(
-          interpreter->device_delegates(subgraph.GetModelPlan()));
+          interpreter->device_delegates(subgraph.GetModelPlan()->device_));
     }
     if (status != kTfLiteOk)
       return status;
