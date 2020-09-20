@@ -54,8 +54,6 @@ namespace impl {
 /// reporter, if provided) is at least as long as interpreter's lifetime.
 class InterpreterBuilder {
  public:
-  ~InterpreterBuilder() = default;
-
   static void SetErrorReporter(ErrorReporter* error_reporter);
   static TfLiteStatus AddModel(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
@@ -68,6 +66,8 @@ class InterpreterBuilder {
 
  private:
   InterpreterBuilder() = default;
+  ~InterpreterBuilder() = default;
+
   TfLiteStatus BuildLocalIndexToRegistrationMapping(
       const ::tflite::Model* model, const OpResolver& op_resolver);
   TfLiteStatus ParseNodes(
