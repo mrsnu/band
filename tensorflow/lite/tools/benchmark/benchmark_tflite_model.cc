@@ -602,11 +602,11 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
-  tflite::InterpreterBuilder builder(&interpreter_);
-
+  (&interpreter_)->reset(new Interpreter(nullptr)); 
+  
   int num_models = 5;
   for(int i = 0; i < num_models; ++i)
-    builder.AddModel(*model_, *resolver);
+    tflite::InterpreterBuilder::AddModel(*model_, *resolver, &interpreter_);
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
                   << " subgraph loaded to the interpreter";

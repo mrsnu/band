@@ -54,23 +54,22 @@ namespace impl {
 /// reporter, if provided) is at least as long as interpreter's lifetime.
 class InterpreterBuilder {
  public:
-  InterpreterBuilder(std::unique_ptr<Interpreter>* interpreter,
-                     ErrorReporter* error_reporter = DefaultErrorReporter());
+  ~InterpreterBuilder() = default;
 
-  ~InterpreterBuilder();
-  InterpreterBuilder(const InterpreterBuilder&) = delete;
-  InterpreterBuilder& operator=(const InterpreterBuilder&) = delete;
-
-  TfLiteStatus AddModel(const FlatBufferModel& model,
+  static void SetErrorReporter(ErrorReporter* error_reporter);
+  static TfLiteStatus AddModel(const FlatBufferModel& model,
+                        const OpResolver& op_resolver,
+                        std::unique_ptr<Interpreter>* interpreter,
+                        int num_threads = -1);
+  static TfLiteStatus AddModel(const ::tflite::Model* model,
                      const OpResolver& op_resolver, 
-                     int num_threads = -1);
-  TfLiteStatus AddModel(const ::tflite::Model* model,
-                     const OpResolver& op_resolver, 
+                     std::unique_ptr<Interpreter>* interpreter,
                      int num_threads = -1);
 
  private:
-  TfLiteStatus BuildLocalIndexToRegistrationMapping(const ::tflite::Model* model,
-                                                    const OpResolver& op_resolver);
+  InterpreterBuilder() = default;
+  TfLiteStatus BuildLocalIndexToRegistrationMapping(
+      const ::tflite::Model* model, const OpResolver& op_resolver);
   TfLiteStatus ParseNodes(
       const ::tflite::Model* model,
       const OpResolver& op_resolver,
@@ -87,8 +86,7 @@ class InterpreterBuilder {
   TfLiteStatus ParseSparsity(const SparsityParameters* src_sparsity,
                              TfLiteSparsity** sparsity);
 
-  std::unique_ptr<Interpreter>* interpreter_;
-  ErrorReporter* error_reporter_;
+  static ErrorReporter* error_reporter_;
 
   std::vector<const TfLiteRegistration*> flatbuffer_op_index_to_registration_;
   std::vector<TfLiteRegistration> unresolved_custom_ops_;

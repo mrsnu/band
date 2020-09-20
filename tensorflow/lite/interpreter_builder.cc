@@ -135,15 +135,7 @@ TFLITE_ATTRIBUTE_WEAK Interpreter::TfLiteDelegatePtr AcquireFlexDelegate() {
 }
 
 namespace impl {
-
-InterpreterBuilder::InterpreterBuilder(std::unique_ptr<Interpreter>* interpreter,
-                                       ErrorReporter* error_reporter)
-    : interpreter_(interpreter),
-      error_reporter_(ValidateErrorReporter(error_reporter)) {
-  interpreter_->reset(new Interpreter(error_reporter_));
-}
-
-InterpreterBuilder::~InterpreterBuilder() {}
+ErrorReporter* InterpreterBuilder::error_reporter_ = DefaultErrorReporter();
 
 TfLiteStatus InterpreterBuilder::BuildLocalIndexToRegistrationMapping(const ::tflite::Model* model,
                                                                       const OpResolver& op_resolver) {
@@ -553,14 +545,16 @@ TfLiteStatus InterpreterBuilder::ApplyDelegates(Interpreter* interpreter,
 
 TfLiteStatus InterpreterBuilder::AddModel(const FlatBufferModel& model,
                      const OpResolver& op_resolver, 
+                     std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
-  return AddModel(model.GetModel(), op_resolver, num_threads);
+  return AddModel(model.GetModel(), op_resolver, interpreter, num_threads);
 }
 
 TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
                      const OpResolver& op_resolver, 
+                     std::unique_ptr<Interpreter>* interpreter, 
                      int num_threads) {
-  if (!interpreter_ || !interpreter_->get()) {
+  if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
         "Interpreter is invalid");
     return kTfLiteError;
@@ -586,7 +580,9 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
     return kTfLiteError;
   }
 
-  if (BuildLocalIndexToRegistrationMapping(model, op_resolver) != kTfLiteOk) {
+  InterpreterBuilder builder;
+
+  if (builder.BuildLocalIndexToRegistrationMapping(model, op_resolver) != kTfLiteOk) {
     error_reporter_->Report("Registration failed.\n");
     return kTfLiteError;
   }
@@ -604,24 +600,24 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
     return kTfLiteError;
   }
 
-  int old_size = (*interpreter_)->subgraphs_size();
-  (*interpreter_)->AddSubgraphs(subgraphs->size());
-  (*interpreter_)->SetNumThreads(num_threads, old_size);
+  int old_size = (*interpreter)->subgraphs_size();
+  (*interpreter)->AddSubgraphs(subgraphs->size());
+  (*interpreter)->SetNumThreads(num_threads, old_size);
 
   auto cleanup_and_error = [&]() {
-    (*interpreter_)->DeleteSubgraphs(old_size);
+    (*interpreter)->DeleteSubgraphs(old_size);
     return kTfLiteError;
   };
 
 #if defined(TFLITE_ENABLE_DEFAULT_PROFILER)
-  (*interpreter_)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
+  (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
 #endif
 
   for (int subgraph_index = 0; subgraph_index < subgraphs->size();
        ++subgraph_index) {
     const tflite::SubGraph* subgraph = (*subgraphs)[subgraph_index];
     tflite::Subgraph* modified_subgraph =
-        (*interpreter_)->subgraph(old_size + subgraph_index);
+        (*interpreter)->subgraph(old_size + subgraph_index);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {
@@ -641,9 +637,9 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
         FlatBufferIntArrayToVector(subgraph->outputs()));
 
     // Finally setup nodes and tensors
-    if (ParseNodes(model, op_resolver, operators, modified_subgraph) != kTfLiteOk)
+    if (builder.ParseNodes(model, op_resolver, operators, modified_subgraph) != kTfLiteOk)
       return cleanup_and_error();
-    if (ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
+    if (builder.ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
       return cleanup_and_error();
 
     std::vector<int> variables;
@@ -656,9 +652,9 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
     modified_subgraph->SetVariables(std::move(variables));
     
     // Set available / required delegates of subgraph
-    if(num_fp32_tensors_ > 0)
+    if (builder.num_fp32_tensors_ > 0)
       modified_subgraph->GetModelPlan()->can_use_xnn_pack_ = true;
-    if(has_flex_op_ > 0)
+    if (builder.has_flex_op_ > 0)
       modified_subgraph->GetModelPlan()->has_flex_op_ = true;
   }
 
