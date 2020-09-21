@@ -336,7 +336,7 @@ class Subgraph {
 
   void SetModelPlan(TfLiteDevice device) { model_plan_->device_ = device; }
 
-  TfLiteDevice GetModelPlan() { return model_plan_->device_; }
+  ModelPlan* GetModelPlan() { return model_plan_.get(); }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a

@@ -135,30 +135,16 @@ TFLITE_ATTRIBUTE_WEAK Interpreter::TfLiteDelegatePtr AcquireFlexDelegate() {
 }
 
 namespace impl {
+ErrorReporter* InterpreterBuilder::error_reporter_ = DefaultErrorReporter();
 
-InterpreterBuilder::InterpreterBuilder(const FlatBufferModel& model,
-                                       const OpResolver& op_resolver)
-    : model_(model.GetModel()),
-      op_resolver_(op_resolver),
-      error_reporter_(ValidateErrorReporter(model.error_reporter())),
-      allocation_(model.allocation()) {}
-
-InterpreterBuilder::InterpreterBuilder(const ::tflite::Model* model,
-                                       const OpResolver& op_resolver,
-                                       ErrorReporter* error_reporter)
-    : model_(model),
-      op_resolver_(op_resolver),
-      error_reporter_(ValidateErrorReporter(error_reporter)) {}
-
-InterpreterBuilder::~InterpreterBuilder() {}
-
-TfLiteStatus InterpreterBuilder::BuildLocalIndexToRegistrationMapping() {
+TfLiteStatus InterpreterBuilder::BuildLocalIndexToRegistrationMapping(const ::tflite::Model* model,
+                                                                      const OpResolver& op_resolver) {
   TfLiteStatus status = kTfLiteOk;
   // Reset state.
   flatbuffer_op_index_to_registration_.clear();
   unresolved_custom_ops_.clear();
 
-  auto opcodes = model_->operator_codes();
+  auto opcodes = model->operator_codes();
   if (!opcodes) {
     return status;
   }
@@ -171,7 +157,7 @@ TfLiteStatus InterpreterBuilder::BuildLocalIndexToRegistrationMapping() {
   unresolved_custom_ops_.reserve(num_custom_ops);
   for (const OperatorCode* opcode : *opcodes) {
     const TfLiteRegistration* registration = nullptr;
-    status = GetRegistrationFromOpCode(opcode, op_resolver_, error_reporter_,
+    status = GetRegistrationFromOpCode(opcode, op_resolver, error_reporter_,
                                        &registration);
     if (status != kTfLiteOk) {
       if (opcode->builtin_code() != BuiltinOperator_CUSTOM) {
@@ -234,6 +220,8 @@ class MallocDataAllocator : public BuiltinDataAllocator {
 }  // namespace
 
 TfLiteStatus InterpreterBuilder::ParseNodes(
+    const ::tflite::Model* model,
+    const OpResolver& op_resolver,
     const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
     Subgraph* subgraph) {
   TfLiteStatus status = kTfLiteOk;
@@ -555,17 +543,20 @@ TfLiteStatus InterpreterBuilder::ApplyDelegates(Interpreter* interpreter,
   return kTfLiteOk;
 }
 
-TfLiteStatus InterpreterBuilder::operator()(
-    std::unique_ptr<Interpreter>* interpreter) {
-  return operator()(interpreter, /*num_threads=*/-1);
+TfLiteStatus InterpreterBuilder::AddModel(const FlatBufferModel& model,
+                     const OpResolver& op_resolver, 
+                     std::unique_ptr<Interpreter>* interpreter,
+                     int num_threads) {
+  return AddModel(model.GetModel(), op_resolver, interpreter, num_threads);
 }
 
-// TODO #3: Change how models are added to the interpreter
-TfLiteStatus InterpreterBuilder::operator()(
-    std::unique_ptr<Interpreter>* interpreter, int num_threads) {
-  if (!interpreter) {
+TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
+                     const OpResolver& op_resolver, 
+                     std::unique_ptr<Interpreter>* interpreter, 
+                     int num_threads) {
+  if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
-        "Null output pointer passed to InterpreterBuilder.");
+        "Interpreter is invalid");
     return kTfLiteError;
   }
 
@@ -576,29 +567,24 @@ TfLiteStatus InterpreterBuilder::operator()(
     return kTfLiteError;
   }
 
-  // Safe exit by deleting partially created interpreter, to reduce verbosity
-  // on error conditions. Use by return cleanup_on_error();
-  auto cleanup_and_error = [&interpreter]() {
-    interpreter->reset();
-    return kTfLiteError;
-  };
-
-  if (!model_) {
+  if (!model) {
     error_reporter_->Report("Null pointer passed in as model.");
-    return cleanup_and_error();
+    return kTfLiteError;
   }
 
-  if (model_->version() != TFLITE_SCHEMA_VERSION) {
+  if (model->version() != TFLITE_SCHEMA_VERSION) {
     error_reporter_->Report(
         "Model provided is schema version %d not equal "
         "to supported version %d.\n",
-        model_->version(), TFLITE_SCHEMA_VERSION);
-    return cleanup_and_error();
+        model->version(), TFLITE_SCHEMA_VERSION);
+    return kTfLiteError;
   }
 
-  if (BuildLocalIndexToRegistrationMapping() != kTfLiteOk) {
+  InterpreterBuilder builder;
+
+  if (builder.BuildLocalIndexToRegistrationMapping(model, op_resolver) != kTfLiteOk) {
     error_reporter_->Report("Registration failed.\n");
-    return cleanup_and_error();
+    return kTfLiteError;
   }
 
   // Flatbuffer model schemas define a list of opcodes independent of the graph.
@@ -606,17 +592,22 @@ TfLiteStatus InterpreterBuilder::operator()(
   // ops since we only do it once per custom op rather than once per custom op
   // invocation in the model graph.
   // Construct interpreter with correct number of tensors and operators.
-  auto* subgraphs = model_->subgraphs();
-  auto* buffers = model_->buffers();
+  auto* subgraphs = model->subgraphs();
+  auto* buffers = model->buffers();
 
   if (subgraphs->size() == 0) {
     error_reporter_->Report("No subgraph in the model.\n");
-    return cleanup_and_error();
+    return kTfLiteError;
   }
 
   int old_size = (*interpreter)->subgraphs_size();
   (*interpreter)->AddSubgraphs(subgraphs->size());
-  (*interpreter)->SetNumThreads(num_threads);
+  (*interpreter)->SetNumThreads(num_threads, old_size);
+
+  auto cleanup_and_error = [&]() {
+    (*interpreter)->DeleteSubgraphs(old_size);
+    return kTfLiteError;
+  };
 
 #if defined(TFLITE_ENABLE_DEFAULT_PROFILER)
   (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
@@ -646,9 +637,9 @@ TfLiteStatus InterpreterBuilder::operator()(
         FlatBufferIntArrayToVector(subgraph->outputs()));
 
     // Finally setup nodes and tensors
-    if (ParseNodes(operators, modified_subgraph) != kTfLiteOk)
+    if (builder.ParseNodes(model, op_resolver, operators, modified_subgraph) != kTfLiteOk)
       return cleanup_and_error();
-    if (ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
+    if (builder.ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
       return cleanup_and_error();
 
     std::vector<int> variables;
@@ -659,15 +650,13 @@ TfLiteStatus InterpreterBuilder::operator()(
       }
     }
     modified_subgraph->SetVariables(std::move(variables));
+    
+    // Set available / required delegates of subgraph
+    if (builder.num_fp32_tensors_ > 0)
+      modified_subgraph->GetModelPlan()->can_use_xnn_pack_ = true;
+    if (builder.has_flex_op_ > 0)
+      modified_subgraph->GetModelPlan()->has_flex_op_ = true;
   }
-
-  if (num_fp32_tensors_ > 0) {
-    (*interpreter)->lazy_delegate_provider_ =
-        MaybeCreateXNNPACKDelegate(num_threads);
-  }
-
-  if (ApplyDelegates(interpreter->get(), num_threads) != kTfLiteOk)
-    return cleanup_and_error();
 
   return kTfLiteOk;
 }

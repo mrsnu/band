@@ -603,9 +603,14 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
   (&interpreter_)->reset(new Interpreter(nullptr)); 
-  int num_models = 2;
+  
+  int num_models = 5;
   for(int i = 0; i < num_models; ++i)
-    tflite::InterpreterBuilder(*model_, *resolver)(&interpreter_, num_threads);
+    tflite::InterpreterBuilder::AddModel(*model_, *resolver, &interpreter_);
+
+  TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
+                  << " subgraph loaded to the interpreter";
+
   if (!interpreter_) {
     TFLITE_LOG(ERROR) << "Failed to initialize the interpreter";
     return kTfLiteError;
