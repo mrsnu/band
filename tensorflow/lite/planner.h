@@ -2,6 +2,7 @@
 #define TENSORFLOW_LITE_PLANNER_H_
 
 #include <memory>
+#include "tensorflow/lite/worker.h"
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
@@ -43,10 +44,39 @@ struct ModelPlan{
 // The interpreter manages a `Planner`.
 class Planner{
  public:
-  Planner() {}
-  ~Planner() {}
-  TfLiteStatus Plan(Interpreter* interpreter);
+  explicit Planner(Interpreter* interpreter);
+  ~Planner();
+
+  TfLiteStatus Plan();
+
+  // Enqueues a job to a worker request queue.
+  void EnqueueRequest(TfLiteDevice device_idx, Job job);
+
+  // Waits until the jobs are done.
+  // The interpreter calls the method.
+  // TODO #18: Make the planner run in a different thread
+  TfLiteStatus Wait(int num_requests);
+
+  // Enqueues a finised job to the queue.
+  // A worker calls the method.
+  // TODO #18: Make the planner run in a different thread
+  void EnqueueFinishedJob(Job job);
+
+  // Returns if the worker threads should be killed.
+  bool GetKillWorkers() {
+    return kill_workers_;
+  }
+
+ private:
+  Interpreter* interpreter_;
+  std::vector<std::unique_ptr<Worker>> workers_;
+
+  std::mutex job_queue_mtx_;
+  std::deque<Job> jobs_finished_;
+  std::condition_variable end_invoke_;
+
   bool change_plan_ = true;
+  bool kill_workers_ = false;
 };
 
 }  // namespace impl

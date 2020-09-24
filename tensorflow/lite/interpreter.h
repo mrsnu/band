@@ -549,6 +549,10 @@ class Interpreter {
     return device_delegates_[device_idx].get();
   }
 
+  int GetNumDevices() {
+    return num_devices;
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
@@ -556,6 +560,9 @@ class Interpreter {
   friend class tflite::delegates::InterpreterUtils;
 
   std::unique_ptr<Planner> planner_;
+
+  // TODO #13: Create mobile device independent delegate instances
+  int num_devices = 3;
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,
