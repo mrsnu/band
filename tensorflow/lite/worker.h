@@ -22,7 +22,7 @@ struct Job {
 
 class Worker {
  public:
-  Worker(Interpreter* interpreter, Planner* planner);
+  explicit Worker(std::shared_ptr<Planner> planner);
   ~Worker();
 
  private:
@@ -30,13 +30,13 @@ class Worker {
 
   void Work();
 
-  Interpreter* interpreter_;
-  Planner* planner_;
-
+  std::weak_ptr<Planner> planner_;
   std::thread device_cpu_thread_;
   std::mutex device_mtx_;
   std::condition_variable request_cv_;
   std::deque<Job> requests_;
+
+  bool kill_worker_ = false;
 };
 
 }  // namespace impl

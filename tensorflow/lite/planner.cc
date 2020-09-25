@@ -7,13 +7,6 @@ namespace impl {
 
 Planner::Planner(Interpreter* interpreter) {
   interpreter_ = interpreter;
-  for (int i = 0; i < interpreter_->GetNumDevices(); ++i) {
-    workers_.emplace_back(new Worker(interpreter, this));
-  }
-}
-
-Planner::~Planner() {
-  kill_workers_ = true;
 }
 
 TfLiteStatus Planner::Plan() {
@@ -67,8 +60,11 @@ void Planner::EnqueueFinishedJob(Job job) {
   end_invoke_.notify_one();
 }
 
-void Planner::EnqueueRequest(TfLiteDevice device_idx, Job job) {
-  Worker& worker = *workers_[device_idx];
+void Planner::EnqueueRequest(Job job) {
+  int subgraph_idx = job.subgraph_idx_;
+  TfLiteDevice device_idx =
+    interpreter_->subgraph(subgraph_idx)->GetModelPlan()->device_;
+  Worker& worker = interpreter_->GetWorker(device_idx);
 
   std::unique_lock<std::mutex> lock(worker.device_mtx_);
   worker.requests_.push_back(job);

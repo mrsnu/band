@@ -112,6 +112,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // Create a Planner instance.
   planner_.reset(new Planner(this));
 
+  // Create workers.
+  for (int i = 0; i < GetNumDevices(); ++i) {
+    workers_.emplace_back(new Worker(planner_));
+  }
+
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
   TfLiteDelegatePtr null_delegate =
@@ -325,9 +330,7 @@ TfLiteStatus Interpreter::InvokeAll() {
     return status;
 
   for (int i = 0; i < subgraphs_size(); ++i) {
-    Subgraph& subgraph = *subgraphs_[i];
-    TfLiteDevice device = subgraph.GetModelPlan()->device_;
-    planner_->EnqueueRequest(device, Job(i));
+    planner_->EnqueueRequest(Job(i));
   }
 
   status = planner_->Wait(subgraphs_size());
