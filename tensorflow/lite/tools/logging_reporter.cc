@@ -5,9 +5,10 @@ namespace tflite {
 int LoggingReporter::Report(const char* format, va_list args) {
   int count = snprintf(nullptr, 0, format, args) + 1;
   char* buffer = new char[count];
-  snprintf(buffer, count, format, args);
+  vsnprintf(buffer, count, format, args);
   TFLITE_LOG(ERROR) << buffer;
   delete[] buffer;
+  return 0;
 }
 
 LoggingReporter* LoggingReporter::DefaultLoggingReporter() {
