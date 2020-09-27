@@ -549,13 +549,29 @@ class Interpreter {
     return device_delegates_[device_idx].get();
   }
 
+  int GetNumDevices() {
+    return num_devices;
+  }
+
+  std::shared_ptr<Planner> GetPlanner() {
+    return planner_;
+  }
+
+  Worker& GetWorker(int device_idx) {
+    return *workers_[device_idx];
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
 
-  std::unique_ptr<Planner> planner_;
+  std::shared_ptr<Planner> planner_;
+  std::vector<std::unique_ptr<Worker>> workers_;
+
+  // TODO #13: Create mobile device independent delegate instances
+  int num_devices = 3;
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,

@@ -2,6 +2,7 @@
 #define TENSORFLOW_LITE_PLANNER_H_
 
 #include <memory>
+#include "tensorflow/lite/worker.h"
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
@@ -41,11 +42,37 @@ struct ModelPlan{
 
 // assigns requested model to devices according to `ModelPlan` of a `Subgraph`.
 // The interpreter manages a `Planner`.
-class Planner{
+class Planner {
  public:
-  Planner() {}
-  ~Planner() {}
-  TfLiteStatus Plan(Interpreter* interpreter);
+  explicit Planner(Interpreter* interpreter);
+  ~Planner() = default;
+
+  TfLiteStatus Plan();
+
+  // Enqueues a job to a worker request queue.
+  void EnqueueRequest(Job job);
+
+  // Waits until the jobs are done.
+  // The interpreter calls the method.
+  // TODO #18: Make the planner run in a different thread
+  TfLiteStatus Wait(int num_requests);
+
+  // Enqueues a finised job to the queue.
+  // A worker calls the method.
+  // TODO #18: Make the planner run in a different thread
+  void EnqueueFinishedJob(Job job);
+
+  Interpreter* GetInterpreter() {
+    return interpreter_;
+  }
+
+ private:
+  Interpreter* interpreter_;
+
+  std::mutex job_queue_mtx_;
+  std::deque<Job> jobs_finished_;
+  std::condition_variable end_invoke_;
+
   bool change_plan_ = true;
 };
 

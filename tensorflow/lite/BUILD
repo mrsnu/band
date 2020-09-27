@@ -78,7 +78,8 @@ FRAMEWORK_LIB_HDRS = [
     "op_resolver.h",
     "optional_debug_tools.h",
     "stderr_reporter.h",
-    "planner.h"
+    "planner.h",
+    "worker.h"
 ]
 
 cc_library(
@@ -235,6 +236,7 @@ cc_library(
         "optional_debug_tools.cc",
         "stderr_reporter.cc",
         "planner.cc",
+        "worker.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,

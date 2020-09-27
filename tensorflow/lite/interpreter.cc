@@ -110,7 +110,12 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new Planner());
+  planner_.reset(new Planner(this));
+
+  // Create workers.
+  for (int i = 0; i < GetNumDevices(); ++i) {
+    workers_.emplace_back(new Worker(planner_));
+  }
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
@@ -320,14 +325,15 @@ TfLiteStatus Interpreter::InvokeAll() {
   TfLiteStatus status;
   // Placing `Plan()` here is for demo purposes.
   // This is not the best position to call `Plan()`.
-  status = planner_->Plan(this);
+  status = planner_->Plan();
   if (status != kTfLiteOk)
     return status;
 
-  for (int i = 0; i < subgraphs_.size(); ++i) {
-    status = Invoke(i);
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    planner_->EnqueueRequest(Job(i));
   }
 
+  status = planner_->Wait(subgraphs_size());
   return status;
 }
 

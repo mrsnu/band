@@ -5,13 +5,17 @@
 namespace tflite {
 namespace impl {
 
-TfLiteStatus Planner::Plan(Interpreter* interpreter) {
+Planner::Planner(Interpreter* interpreter) {
+  interpreter_ = interpreter;
+}
+
+TfLiteStatus Planner::Plan() {
   if (!change_plan_) return kTfLiteOk;
   change_plan_ = false;
   TfLiteStatus status;
 
-  for (int i = 0; i < interpreter->subgraphs_size(); ++i) {
-    Subgraph& subgraph = *(interpreter->subgraph(i));
+  for (int i = 0; i < interpreter_->subgraphs_size(); ++i) {
+    Subgraph& subgraph = *(interpreter_->subgraph(i));
     status = subgraph.UndoAllDelegates();
     if (status != kTfLiteOk)
       return status;
@@ -22,15 +26,51 @@ TfLiteStatus Planner::Plan(Interpreter* interpreter) {
       subgraph.GetModelPlan()->device_ = kTfLiteDSP;
     }
 
-    if (subgraph.GetModelPlan()->device_ != kTfLiteCPU) { 
+    if (subgraph.GetModelPlan()->device_ != kTfLiteCPU) {
       status = subgraph.ModifyGraphWithDelegate(
-          interpreter->device_delegates(subgraph.GetModelPlan()->device_));
+          interpreter_->device_delegates(subgraph.GetModelPlan()->device_));
     }
     if (status != kTfLiteOk)
       return status;
   }
 
   return kTfLiteOk;
+}
+
+
+TfLiteStatus Planner::Wait(int num_requests) {
+  std::unique_lock<std::mutex> lock(job_queue_mtx_);
+  end_invoke_.wait(lock, [this, num_requests]{
+    return jobs_finished_.size() >= num_requests;
+  });
+
+  for (int i = 0; i < num_requests; ++i) {
+    jobs_finished_.pop_front();
+  }
+  lock.unlock();
+
+  return kTfLiteOk;
+}
+
+void Planner::EnqueueFinishedJob(Job job) {
+  std::unique_lock<std::mutex> lock(job_queue_mtx_);
+  jobs_finished_.push_back(job);
+  lock.unlock();
+
+  end_invoke_.notify_one();
+}
+
+void Planner::EnqueueRequest(Job job) {
+  int subgraph_idx = job.subgraph_idx_;
+  TfLiteDevice device_idx =
+    interpreter_->subgraph(subgraph_idx)->GetModelPlan()->device_;
+  Worker& worker = interpreter_->GetWorker(device_idx);
+
+  std::unique_lock<std::mutex> lock(worker.device_mtx_);
+  worker.requests_.push_back(job);
+  lock.unlock();
+
+  worker.request_cv_.notify_one();
 }
 
 }  // namespace impl
