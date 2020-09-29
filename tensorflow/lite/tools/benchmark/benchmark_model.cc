@@ -148,7 +148,7 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     ResetInputsAndOutputs();
     listeners_.OnSingleRunStart(run_type);
     int64_t start_us = profiling::time::NowMicros();
-    TfLiteStatus status = RunAll();
+    TfLiteStatus status = RunImpl();
     int64_t end_us = profiling::time::NowMicros();
     listeners_.OnSingleRunEnd();
 
@@ -180,44 +180,51 @@ TfLiteStatus BenchmarkModel::Run() {
 
   LogParams();
 
+  const double model_size_mb = MayGetModelFileSize() / 1e6;
   const auto start_mem_usage = profiling::memory::GetMemoryUsage();
   int64_t initialization_start_us = profiling::time::NowMicros();
   TF_LITE_ENSURE_STATUS(Init());
-  const auto init_end_mem_usage = profiling::memory::GetMemoryUsage();
-  int64_t initialization_end_us = profiling::time::NowMicros();
-  int64_t startup_latency_us = initialization_end_us - initialization_start_us;
-  const auto init_mem_usage = init_end_mem_usage - start_mem_usage;
-  const double model_size_mb = MayGetModelFileSize() / 1e6;
 
-  if (model_size_mb > 0) {
-    TFLITE_LOG(INFO) << "The input model file size (MB): " << model_size_mb;
+  for (int i = 0; i < NumDevices(); i++) {
+    if(Prepare(i) == kTfLiteOk) {
+      const auto init_end_mem_usage = profiling::memory::GetMemoryUsage();
+      int64_t initialization_end_us = profiling::time::NowMicros();
+      int64_t startup_latency_us = initialization_end_us - initialization_start_us;
+      const auto init_mem_usage = init_end_mem_usage - start_mem_usage;
+
+      if (model_size_mb > 0) {
+        TFLITE_LOG(INFO) << "The input model file size (MB): " << model_size_mb;
+      }
+      TFLITE_LOG(INFO) << "Initialized session in " << startup_latency_us / 1e3
+                      << "ms.";
+
+      TF_LITE_ENSURE_STATUS(PrepareInputData());
+
+      TfLiteStatus status = kTfLiteOk;
+      uint64_t input_bytes = ComputeInputBytes();
+      listeners_.OnBenchmarkStart(params_);
+      Stat<int64_t> warmup_time_us =
+          Run(params_.Get<int32_t>("warmup_runs"),
+              params_.Get<float>("warmup_min_secs"), params_.Get<float>("max_secs"),
+              WARMUP, &status);
+      if (status != kTfLiteOk) {
+        TFLITE_LOG(INFO) << "Warmup run failed for device " << i << ".";
+      }
+
+      Stat<int64_t> inference_time_us =
+          Run(params_.Get<int32_t>("num_runs"), params_.Get<float>("min_secs"),
+              params_.Get<float>("max_secs"), REGULAR, &status);
+      const auto overall_mem_usage =
+          profiling::memory::GetMemoryUsage() - start_mem_usage;
+
+      listeners_.OnBenchmarkEnd({model_size_mb, startup_latency_us, input_bytes,
+                                warmup_time_us, inference_time_us, init_mem_usage,
+                                overall_mem_usage});
+    }
+    
+    initialization_start_us = profiling::time::NowMicros();
   }
-  TFLITE_LOG(INFO) << "Initialized session in " << startup_latency_us / 1e3
-                   << "ms.";
-
-  TF_LITE_ENSURE_STATUS(PrepareInputData());
-
-  TfLiteStatus status = kTfLiteOk;
-  uint64_t input_bytes = ComputeInputBytes();
-  listeners_.OnBenchmarkStart(params_);
-  Stat<int64_t> warmup_time_us =
-      Run(params_.Get<int32_t>("warmup_runs"),
-          params_.Get<float>("warmup_min_secs"), params_.Get<float>("max_secs"),
-          WARMUP, &status);
-  if (status != kTfLiteOk) {
-    return status;
-  }
-
-  Stat<int64_t> inference_time_us =
-      Run(params_.Get<int32_t>("num_runs"), params_.Get<float>("min_secs"),
-          params_.Get<float>("max_secs"), REGULAR, &status);
-  const auto overall_mem_usage =
-      profiling::memory::GetMemoryUsage() - start_mem_usage;
-
-  listeners_.OnBenchmarkEnd({model_size_mb, startup_latency_us, input_bytes,
-                             warmup_time_us, inference_time_us, init_mem_usage,
-                             overall_mem_usage});
-  return status;
+  return kTfLiteOk;
 }
 
 TfLiteStatus BenchmarkModel::ParseFlags(int* argc, char** argv) {

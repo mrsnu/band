@@ -217,6 +217,22 @@ const char* TfLiteTypeGetName(TfLiteType type) {
   return "Unknown type";
 }
 
+const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
+  switch (flag) {
+    case kTfLiteDelegateFlagsNone:
+      return "NOTYPE";
+    case kTfLiteDelegateFlagsGPU:
+      return "GPU";
+    case kTfLiteDelegateFlagsNNAPI:
+      return "NNAPI";
+    case kTfLiteDelegateFlagsXNNPACK:
+      return "XNNPACK";
+    case kTfLiteDelegateFlagsFLEX:
+      return "FLEX";
+  }
+  return "Unknown type";  
+}
+
 TfLiteDelegate TfLiteDelegateCreate() {
   TfLiteDelegate d = {
       .data_ = NULL,

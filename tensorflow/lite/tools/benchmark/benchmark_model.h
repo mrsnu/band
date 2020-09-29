@@ -176,6 +176,7 @@ class BenchmarkModel {
       : params_(std::move(params)) {}
   virtual ~BenchmarkModel() {}
   virtual TfLiteStatus Init() = 0;
+  virtual TfLiteStatus Prepare(size_t deviceId) = 0;
   TfLiteStatus Run(int argc, char** argv);
   virtual TfLiteStatus Run();
   void AddListener(BenchmarkListener* listener) {
@@ -206,6 +207,7 @@ class BenchmarkModel {
   virtual tensorflow::Stat<int64_t> Run(int min_num_times, float min_secs,
                                         float max_secs, RunType run_type,
                                         TfLiteStatus* invoke_status);
+  virtual size_t NumDevices() = 0;
   // Prepares input data for benchmark. This can be used to initialize input
   // data that has non-trivial cost.
   virtual TfLiteStatus PrepareInputData();

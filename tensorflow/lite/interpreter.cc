@@ -29,10 +29,15 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
+#include "tensorflow/lite/tflite_with_xnnpack_optional.h"
+#ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
+#include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
+#endif
 #include "tensorflow/lite/util.h"
 
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
+#include "tensorflow/lite/nnapi/nnapi_util.h"
 #define TFLITE_IS_MOBILE_PLATFORM
 #endif  // defined(__ANDROID__)
 
@@ -70,6 +75,20 @@ TfLiteQuantization GetQuantizationFromLegacy(
   quantization.params = affine_quantization;
 
   return quantization;
+}
+
+bool IsNNAPIDeviceUseful(std::string name) {
+  static const char* const filter_keywords[] = {
+    "nnapi-reference", // CPU
+    "gpu", 
+    "default"};
+
+  for(auto keyword : filter_keywords) {
+    if (name.find(keyword) != std::string::npos) 
+      return false;
+  }
+
+  return true;
 }
 
 // TODO(b/153131797): We have put 'delegate_status' to 0 in the following macro
@@ -132,20 +151,38 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   TfLiteDelegatePtr gpu_delegate =
       TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
                         &TfLiteGpuDelegateV2Delete);
-  device_delegates_.push_back(std::move(gpu_delegate));
+  if (gpu_delegate.get()) device_delegates_.push_back(std::move(gpu_delegate));
 
-  StatefulNnApiDelegate::Options nnapi_options =
-      StatefulNnApiDelegate::Options();
-  nnapi_options.accelerator_name = "qti-dsp";
-  // The default number of maximum delegate ops is 1.
-  // Enable the following line to create multiple dsp ops within a Subgraph.
-  // nnapi_options.max_number_delegated_partitions = 10;
-  TfLiteDelegatePtr dsp_delegate = TfLiteDelegatePtr(
-      new StatefulNnApiDelegate(nnapi_options),
-        [](TfLiteDelegate* delegate) {
-          delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
-        });
-  device_delegates_.push_back(std::move(dsp_delegate));
+  std::vector<const char*> string_device_names_list = nnapi::GetDeviceNamesList();
+
+  for(const char* device_name : string_device_names_list) {
+    if(IsNNAPIDeviceUseful(device_name)) {
+      StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
+      nnapi_options.accelerator_name = device_name;
+
+      TfLiteDelegatePtr nnapi_delegate = TfLiteDelegatePtr(
+        new StatefulNnApiDelegate(nnapi_options),
+          [](TfLiteDelegate* delegate) {
+            delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
+          });
+
+      if (nnapi_delegate.get())
+        device_delegates_.push_back(std::move(nnapi_delegate));
+    }
+  }
+
+  TfLiteDelegatePtr xnnpack_delegate = MaybeCreateXNNPACKDelegate(1);
+  if(xnnpack_delegate.get())
+    device_delegates_.push_back(std::move(xnnpack_delegate));
+
+  // Create a Planner instance.
+  planner_.reset(new Planner(this));
+
+  // Create workers.
+  for (int i = 0; i < GetNumDevices(); ++i) {
+    workers_.emplace_back(new Worker(planner_));
+  }
+  
 #endif  // defined(__ANDROID__)
 }
 
@@ -401,6 +438,16 @@ void Interpreter::SetNumThreads(int num_threads,
     if (c && c->Refresh) {
       c->Refresh(context_);
     }
+  }
+
+  for(auto& delegate : device_delegates_) {
+#ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
+    if(delegate && delegate->flags && kTfLiteDelegateFlagsXNNPACK) {
+      TfLiteXNNPackDelegateOptions options = TfLiteXNNPackDelegateOptionsDefault();
+      options.num_threads = num_threads;
+      TfLiteXNNPackDelegateUpdate(delegate.get(), &options);
+    }
+#endif
   }
 }
 

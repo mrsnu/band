@@ -4196,6 +4196,7 @@ StatefulNnApiDelegate::StatefulNnApiDelegate(const NnApi* nnapi,
   CopyToBufferHandle = DoCopyToBufferHandle;
   FreeBufferHandle = DoFreeBufferHandle;
   data_ = &delegate_data_;
+  flags = kTfLiteDelegateFlagsNNAPI;
 }
 
 StatefulNnApiDelegate::StatefulNnApiDelegate()

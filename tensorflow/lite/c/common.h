@@ -772,8 +772,14 @@ typedef enum TfLiteDelegateFlags {
   //
   // If the delegate isn't capable to handle dynamic tensors, this flag need
   // to be set to false.
-  kTfLiteDelegateFlagsAllowDynamicTensors = 1
+  kTfLiteDelegateFlagsAllowDynamicTensors = 1,
+  kTfLiteDelegateFlagsGPU = 2,
+  kTfLiteDelegateFlagsNNAPI = 4,
+  kTfLiteDelegateFlagsXNNPACK = 8,
+  kTfLiteDelegateFlagsFLEX = 16
 } TfLiteDelegateFlags;
+
+const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag);
 
 // WARNING: This is an experimental interface that is subject to change.
 typedef struct TfLiteDelegate {

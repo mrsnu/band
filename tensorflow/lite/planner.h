@@ -12,6 +12,8 @@ namespace impl {
 
 class Interpreter;
 
+// TODO #23
+// Add additional devices for HTA, NPU
 typedef enum {
   kTfLiteCPU = 0,
   kTfLiteGPU = 1,
@@ -27,8 +29,8 @@ struct ModelPlan{
   ModelPlan():device_(kTfLiteCPU) {}
   ModelPlan(ModelPlan&&) = default;
   ModelPlan(const ModelPlan&) = delete;
-  TfLiteDevice device_;
-
+  TfLiteDevice device_;  
+  
   // Flag from interpreter_builder
   // Use MaybeCreateXNNPACKDelegate(num_threads); to create a XNN delegate
   bool can_use_xnn_pack_ = false;

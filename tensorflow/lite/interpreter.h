@@ -432,6 +432,10 @@ class Interpreter {
   /// with a suitable destruction function.
   /// WARNING: This is an experimental API and subject to change.
   TfLiteStatus ModifyGraphWithDelegate(TfLiteDelegatePtr delegate);
+  
+  // Remove delegates (for fallback behaviour). The interpreter is invokable
+  // afterwards.
+  TfLiteStatus RemoveAllDelegates();
 
   /// Ensure the data in `tensor.data` is readable. In case delegate is used,
   /// it might require to copy the data from delegate buffer to raw memory.
@@ -559,7 +563,7 @@ class Interpreter {
   }
 
   int GetNumDevices() {
-    return num_devices;
+    return device_delegates_.size();
   }
 
   std::shared_ptr<Planner> GetPlanner() {
@@ -609,10 +613,6 @@ class Interpreter {
 
   // Sets the profiler to all subgraphs.
   void SetSubgraphProfiler();
-
-  // Remove delegates (for fallback behaviour). The interpreter is invokable
-  // afterwards.
-  TfLiteStatus RemoveAllDelegates();
 
   // Returns true if delegates have been applied.
   bool HasDelegates();

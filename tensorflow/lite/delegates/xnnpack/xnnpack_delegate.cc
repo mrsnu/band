@@ -57,6 +57,14 @@ class Delegate {
                          "Created TensorFlow Lite XNNPACK delegate for CPU.");
   }
 
+  void SetNumThreads(int num_threads) {
+#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
+    if(num_threads > 1) {
+      threadpool_.reset(
+          pthreadpool_create(static_cast<size_t>(num_threads)));
+    }
+#endif
+  }
   TfLiteIntArray* PrepareOpsToDelegate(TfLiteContext* context);
   TfLiteDelegate* tflite_delegate() { return &delegate_; }
 
@@ -75,7 +83,7 @@ class Delegate {
       nullptr,                        // .CopyFromBufferHandle
       nullptr,                        // .CopyToBufferHandle
       nullptr,                        // .FreeBufferHandle
-      kTfLiteDelegateFlagsNone,       // .flags
+      kTfLiteDelegateFlagsXNNPACK,       // .flags
   };
 
   // Unpacked data for quasi-static tensors, i.e. tensors produced by
@@ -2890,5 +2898,12 @@ TfLiteDelegate* TfLiteXNNPackDelegateCreate(
 void TfLiteXNNPackDelegateDelete(TfLiteDelegate* delegate) {
   if (delegate != nullptr) {
     delete static_cast<::tflite::xnnpack::Delegate*>(delegate->data_);
+  }
+}
+
+void TfLiteXNNPackDelegateUpdate(TfLiteDelegate* delegate,
+    const TfLiteXNNPackDelegateOptions* options) {
+  if(delegate != nullptr) {
+    reinterpret_cast<tflite::xnnpack::Delegate*>(delegate->data_)->SetNumThreads(options->num_threads);
   }
 }
