@@ -24,6 +24,7 @@ cc_library(
     deps = [
         ":benchmark_tflite_model_lib",
         "//tensorflow/lite/tools:logging",
+        "//tensorflow/lite/tools:logging_reporter",
     ],
 )
 
@@ -162,6 +163,7 @@ cc_library(
         "//tensorflow/lite/profiling:profile_summary_formatter",
         "//tensorflow/lite/profiling:profiler",
         "//tensorflow/lite/tools:logging",
+        "//tensorflow/lite/tools:logging_reporter",
         "//tensorflow/lite/tools/delegates:delegate_provider_hdr",
         "//tensorflow/lite/tools/delegates:tflite_execution_providers",
         "@com_google_absl//absl/base:core_headers",

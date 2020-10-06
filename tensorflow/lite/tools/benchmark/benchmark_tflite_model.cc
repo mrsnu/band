@@ -41,6 +41,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/benchmark/profiling_listener.h"
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
 #include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/tools/logging_reporter.h"
 
 void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 
@@ -602,7 +603,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
-  (&interpreter_)->reset(new Interpreter(nullptr)); 
+  (&interpreter_)->reset(new Interpreter(LoggingReporter::DefaultLoggingReporter())); 
   
   int num_models = 5;
   for(int i = 0; i < num_models; ++i)
