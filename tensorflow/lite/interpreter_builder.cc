@@ -543,6 +543,37 @@ TfLiteStatus InterpreterBuilder::ApplyDelegates(Interpreter* interpreter,
   return kTfLiteOk;
 }
 
+TfLiteStatus InterpreterBuilder::RegisterModel(std::string graph,
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
+                     int num_threads) {
+  TfLiteStatus status;
+  int model_id = (*interpreter)->LoadModel(graph);
+  if (model_id == -1) {
+    return kTfLiteError;
+  }
+
+  FlatBufferModel& model = (*interpreter)->GetModel(model_id);
+  for (int i = 0; i < (*interpreter)->GetNumDevices(); ++i) {
+    status = AddModel(model.GetModel(), op_resolver, interpreter, num_threads);
+    if (status != kTfLiteOk) {
+      return status;
+    }
+
+    int subgraph_idx = (*interpreter)->subgraphs_size() - 1;
+    status = (*interpreter)->ApplyDeviceDelegate(
+        subgraph_idx, static_cast<TfLiteDevice>(i));
+    if (status != kTfLiteOk) {
+      return status;
+    }
+
+    (*interpreter)->RegisterSubgraphIdx(
+        std::make_pair(model_id, static_cast<TfLiteDevice>(i)), subgraph_idx);
+  }
+
+  return kTfLiteOk;
+}
+
 TfLiteStatus InterpreterBuilder::AddModel(const FlatBufferModel& model,
                      const OpResolver& op_resolver, 
                      std::unique_ptr<Interpreter>* interpreter,

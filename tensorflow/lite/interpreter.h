@@ -33,7 +33,13 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
-#include "tensorflow/lite/planner.h"
+#include "tensorflow/lite/fixed_device_planner.h"
+#include "tensorflow/lite/model_builder.h"
+
+#if defined(__ANDROID__)
+#include "tensorflow/lite/delegates/gpu/delegate.h"
+#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
+#endif
 
 #if TFLITE_EXPERIMENTAL_RUNTIME_EAGER
 #include "tensorflow/lite/experimental/tf_runtime/public/eager_interpreter.h"
@@ -561,6 +567,30 @@ class Interpreter {
     return *workers_[device_idx];
   }
 
+  int GetWorkersSize() {
+    return workers_.size();
+  }
+
+  // Inserts a pair whose key is (model_id, device_id) and value is
+  // the subgraph index.
+  void RegisterSubgraphIdx(std::pair<int, TfLiteDevice> model_and_device,
+                                int subgraph_idx);
+
+  int GetSubgraphIdx(std::pair<int, TfLiteDevice> model_and_device) {
+    return subgraph_idx_map_[model_and_device];
+  }
+
+  // Loads `*.tflite` model and emplaces to `models_` vector
+  // and returns the model index.
+  int LoadModel(std::string graph);
+
+  FlatBufferModel& GetModel(int model_id) {
+    return *models_[model_id];
+  }
+
+  // Applies Delegate to the subgraph when a device id is given.
+  TfLiteStatus ApplyDeviceDelegate(int subgraph_idx, TfLiteDevice device);
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
@@ -572,6 +602,12 @@ class Interpreter {
 
   // TODO #13: Create mobile device independent delegate instances
   int num_devices = 3;
+
+  // Map structure to find subgraph idx with (model_id, device_id)
+  std::map<std::pair<int, TfLiteDevice>, int> subgraph_idx_map_;
+
+  // FlatBufferModel pointer vector. Models are emplaced by `LoadModel()`.
+  std::vector<std::unique_ptr<tflite::FlatBufferModel>> models_;
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,

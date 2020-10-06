@@ -110,7 +110,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new Planner(this));
+  planner_.reset(new FixedDevicePlanner(this));
 
   // Create workers.
   for (int i = 0; i < GetNumDevices(); ++i) {
@@ -323,17 +323,15 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 
 TfLiteStatus Interpreter::InvokeAll() {
   TfLiteStatus status;
-  // Placing `Plan()` here is for demo purposes.
-  // This is not the best position to call `Plan()`.
-  status = planner_->Plan();
-  if (status != kTfLiteOk)
-    return status;
+  int num_iter = 3;
 
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    planner_->EnqueueRequest(Job(i));
+  for (int j = 0; j < num_iter; ++j) {
+    for (int i = 0; i < models_.size(); ++i) {
+      planner_->EnqueueRequest(Job(i));
+    }
   }
 
-  status = planner_->Wait(subgraphs_size());
+  status = planner_->Wait(models_.size() * num_iter);
   return status;
 }
 
@@ -520,6 +518,39 @@ void Interpreter::SetSubgraphProfiler() {
 
 Profiler* Interpreter::GetProfiler() {
   return primary_subgraph().GetProfiler();
+}
+
+TfLiteStatus Interpreter::ApplyDeviceDelegate(int subgraph_idx,
+                                              TfLiteDevice device) {
+  if (device == kTfLiteCPU)
+    return kTfLiteOk;
+
+  Subgraph& subgraph = *subgraphs_[subgraph_idx];
+  TfLiteStatus status =
+    subgraph.ModifyGraphWithDelegate(device_delegates(device));
+  if (status != kTfLiteOk) {
+    return status;
+  }
+
+  return kTfLiteOk;
+}
+
+void Interpreter::RegisterSubgraphIdx(
+    std::pair<int, TfLiteDevice> model_and_device, int subgraph_idx) {
+  subgraph_idx_map_.insert(std::make_pair(model_and_device, subgraph_idx));
+}
+
+int Interpreter::LoadModel(std::string graph) {
+  models_.emplace_back(
+      tflite::FlatBufferModel::BuildFromFile(graph.c_str()));
+
+  int model_idx = models_.size() - 1;
+  if (!models_[model_idx]) {
+    models_.pop_back();
+    return -1;
+  }
+
+  return model_idx;
 }
 
 }  // namespace impl

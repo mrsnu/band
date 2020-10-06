@@ -603,11 +603,13 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
-  (&interpreter_)->reset(new Interpreter(LoggingReporter::DefaultLoggingReporter())); 
-  
+  (&interpreter_)->reset(new Interpreter(LoggingReporter::DefaultLoggingReporter()));
+
   int num_models = 5;
-  for(int i = 0; i < num_models; ++i)
-    tflite::InterpreterBuilder::AddModel(*model_, *resolver, &interpreter_);
+  std::string graph = params_.Get<std::string>("graph");
+  for (int i = 0; i < num_models; ++i)
+    TF_LITE_ENSURE_STATUS(
+      tflite::InterpreterBuilder::RegisterModel(graph, *resolver, &interpreter_));
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
                   << " subgraph loaded to the interpreter";
@@ -633,7 +635,6 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
-  TF_LITE_ENSURE_STATUS(LoadModel());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   // Install profilers if necessary right after interpreter is created so that

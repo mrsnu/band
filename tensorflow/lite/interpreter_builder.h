@@ -63,6 +63,10 @@ class InterpreterBuilder {
                      const OpResolver& op_resolver, 
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads = -1);
+  static TfLiteStatus RegisterModel(std::string graph,
+                        const OpResolver& op_resolver,
+                        std::unique_ptr<Interpreter>* interpreter,
+                        int num_threads = -1);
 
  private:
   InterpreterBuilder() = default;

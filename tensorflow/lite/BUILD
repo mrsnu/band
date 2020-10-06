@@ -79,7 +79,9 @@ FRAMEWORK_LIB_HDRS = [
     "optional_debug_tools.h",
     "stderr_reporter.h",
     "planner.h",
-    "worker.h"
+    "fixed_device_planner.h",
+    "worker.h",
+    "safe_bool.h"
 ]
 
 cc_library(
@@ -236,6 +238,7 @@ cc_library(
         "optional_debug_tools.cc",
         "stderr_reporter.cc",
         "planner.cc",
+        "fixed_device_planner.cc",
         "worker.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
