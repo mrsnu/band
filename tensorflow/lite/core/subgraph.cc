@@ -392,8 +392,6 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
         // Initialize the output tensors's delegate-related fields.
         for (int tensor_index : node_subset.output_tensors) {
           TfLiteTensor* tensor = &tensors_[tensor_index];
-          TF_LITE_ENSURE(&context_, tensor->delegate == nullptr ||
-                                        tensor->delegate == delegate);
           tensor->delegate = delegate;
         }
 
