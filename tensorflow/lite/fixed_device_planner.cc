@@ -8,6 +8,9 @@ void FixedDevicePlanner::Plan() {
     if (GetSafeBool().wait())
       return;
 
+    // The lock will not be released until the request queue is empty,
+    // which means concurrent enqueue is not available.
+    // This can affect the performance.
     std::unique_lock<std::mutex> lock(GetRequestsMtx());
     while (!GetRequests().empty()) {
       Job to_execute = GetRequests().front();
@@ -16,7 +19,7 @@ void FixedDevicePlanner::Plan() {
       int model_id = to_execute.model_id_;
       int device_idx = model_id % GetInterpreter()->GetNumDevices();
       to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(
-          std::make_pair(model_id, static_cast<TfLiteDevice>(device_idx)));
+          model_id, static_cast<TfLiteDevice>(device_idx));
 
       Worker& worker = GetInterpreter()->GetWorker(device_idx);
       {

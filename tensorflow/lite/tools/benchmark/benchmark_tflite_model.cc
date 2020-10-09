@@ -603,13 +603,26 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
-  (&interpreter_)->reset(new Interpreter(LoggingReporter::DefaultLoggingReporter()));
+  (&interpreter_)->reset(
+      new Interpreter(LoggingReporter::DefaultLoggingReporter()));
 
-  int num_models = 5;
-  std::string graph = params_.Get<std::string>("graph");
-  for (int i = 0; i < num_models; ++i)
-    TF_LITE_ENSURE_STATUS(
-      tflite::InterpreterBuilder::RegisterModel(graph, *resolver, &interpreter_));
+  // TODO #29: Add an argument with multiple graph file names
+  // To successfully build the tool fix the file path to the graph.
+  std::vector<std::string> graphs;
+  std::string base_path = "/data/local/tmp/";
+  graphs.push_back(base_path + "mobilenet_v1_1.0_224_quant.tflite");
+  graphs.push_back(base_path + "ssd_mobilenet_v1_1_metadata_1.tflite");
+  graphs.push_back(base_path + "inception_v3_quant.tflite");
+
+  for (int i = 0; i < graphs.size(); ++i) {
+    TF_LITE_ENSURE_STATUS(LoadModel(graphs[i]));
+    int model_id =
+        tflite::InterpreterBuilder::RegisterModel(
+            *models_[graphs[i]], *resolver, &interpreter_);
+    if (model_id == -1)
+      return kTfLiteError;
+    model_ids_.push_back(model_id);
+  }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
                   << " subgraph loaded to the interpreter";
@@ -732,6 +745,20 @@ TfLiteStatus BenchmarkTfLiteModel::LoadModel() {
     return kTfLiteError;
   }
   TFLITE_LOG(INFO) << "Loaded model " << graph;
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::LoadModel(std::string graph) {
+  std::unique_ptr<tflite::FlatBufferModel> model =
+    tflite::FlatBufferModel::BuildFromFile(graph.c_str());
+
+  if (!model) {
+    TFLITE_LOG(ERROR) << "Failed to mmap model " << graph;
+    return kTfLiteError;
+  }
+  TFLITE_LOG(INFO) << "Loaded model " << graph;
+  models_[graph] = std::move(model);
+
   return kTfLiteOk;
 }
 

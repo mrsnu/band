@@ -573,23 +573,22 @@ class Interpreter {
 
   // Inserts a pair whose key is (model_id, device_id) and value is
   // the subgraph index.
-  void RegisterSubgraphIdx(std::pair<int, TfLiteDevice> model_and_device,
-                                int subgraph_idx);
+  void RegisterSubgraphIdx(int model_id,
+                           TfLiteDevice device_id,
+                           int subgraph_idx);
 
-  int GetSubgraphIdx(std::pair<int, TfLiteDevice> model_and_device) {
-    return subgraph_idx_map_[model_and_device];
-  }
-
-  // Loads `*.tflite` model and emplaces to `models_` vector
-  // and returns the model index.
-  int LoadModel(std::string graph);
-
-  FlatBufferModel& GetModel(int model_id) {
-    return *models_[model_id];
-  }
+  int GetSubgraphIdx(int model_id, TfLiteDevice device_id);
 
   // Applies Delegate to the subgraph when a device id is given.
-  TfLiteStatus ApplyDeviceDelegate(int subgraph_idx, TfLiteDevice device);
+  TfLiteStatus ApplyDeviceDelegate(Subgraph* subgraph, TfLiteDevice device);
+
+  int GetNumRegisteredModel() {
+    return num_registered_model_;
+  }
+
+  void IncreaseNumRegisteredModel() {
+    num_registered_model_++;
+  }
 
  private:
   friend class InterpreterBuilder;
@@ -603,11 +602,11 @@ class Interpreter {
   // TODO #13: Create mobile device independent delegate instances
   int num_devices = 3;
 
+  // Number of models loaded by InterpreterBuilder
+  int num_registered_model_ = 0;
+
   // Map structure to find subgraph idx with (model_id, device_id)
   std::map<std::pair<int, TfLiteDevice>, int> subgraph_idx_map_;
-
-  // FlatBufferModel pointer vector. Models are emplaced by `LoadModel()`.
-  std::vector<std::unique_ptr<tflite::FlatBufferModel>> models_;
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,

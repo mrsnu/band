@@ -326,12 +326,12 @@ TfLiteStatus Interpreter::InvokeAll() {
   int num_iter = 3;
 
   for (int j = 0; j < num_iter; ++j) {
-    for (int i = 0; i < models_.size(); ++i) {
+    for (int i = 0; i < num_registered_model_; ++i) {
       planner_->EnqueueRequest(Job(i));
     }
   }
 
-  status = planner_->Wait(models_.size() * num_iter);
+  status = planner_->Wait(num_registered_model_ * num_iter);
   return status;
 }
 
@@ -520,14 +520,13 @@ Profiler* Interpreter::GetProfiler() {
   return primary_subgraph().GetProfiler();
 }
 
-TfLiteStatus Interpreter::ApplyDeviceDelegate(int subgraph_idx,
+TfLiteStatus Interpreter::ApplyDeviceDelegate(Subgraph* subgraph,
                                               TfLiteDevice device) {
   if (device == kTfLiteCPU)
     return kTfLiteOk;
 
-  Subgraph& subgraph = *subgraphs_[subgraph_idx];
   TfLiteStatus status =
-    subgraph.ModifyGraphWithDelegate(device_delegates(device));
+    subgraph->ModifyGraphWithDelegate(device_delegates(device));
   if (status != kTfLiteOk) {
     return status;
   }
@@ -535,22 +534,16 @@ TfLiteStatus Interpreter::ApplyDeviceDelegate(int subgraph_idx,
   return kTfLiteOk;
 }
 
-void Interpreter::RegisterSubgraphIdx(
-    std::pair<int, TfLiteDevice> model_and_device, int subgraph_idx) {
-  subgraph_idx_map_.insert(std::make_pair(model_and_device, subgraph_idx));
+void Interpreter::RegisterSubgraphIdx(int model_id,
+                                      TfLiteDevice device_id,
+                                      int subgraph_idx) {
+  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
+  subgraph_idx_map_[key] = subgraph_idx;
 }
 
-int Interpreter::LoadModel(std::string graph) {
-  models_.emplace_back(
-      tflite::FlatBufferModel::BuildFromFile(graph.c_str()));
-
-  int model_idx = models_.size() - 1;
-  if (!models_[model_idx]) {
-    models_.pop_back();
-    return -1;
-  }
-
-  return model_idx;
+int Interpreter::GetSubgraphIdx(int model_id, TfLiteDevice device_id) {
+  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
+  return subgraph_idx_map_[key];
 }
 
 }  // namespace impl
