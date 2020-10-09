@@ -564,6 +564,12 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, num_threads, device_id);
     if (subgraph_idx == -1) {
+      int start_idx = (*interpreter)->subgraphs_size() - i;
+      int num_graphs_to_delete = i;
+
+      (*interpreter)->DeleteSubgraphs(start_idx, num_graphs_to_delete);
+      InterpreterBuilder::num_registered_model--;
+
       return subgraph_idx;
     }
     (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
