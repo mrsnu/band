@@ -543,6 +543,8 @@ TfLiteStatus InterpreterBuilder::ApplyDelegates(Interpreter* interpreter,
   return kTfLiteOk;
 }
 
+int InterpreterBuilder::num_registered_model = 0;
+
 int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
@@ -555,7 +557,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
-  int model_id = (*interpreter)->GetNumRegisteredModel();
+  int model_id = InterpreterBuilder::num_registered_model++;
 
   for (int i = 0; i < (*interpreter)->GetNumDevices(); ++i) {
     TfLiteDevice device_id = static_cast<TfLiteDevice>(i);
@@ -566,8 +568,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
     (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
   }
-
-  (*interpreter)->IncreaseNumRegisteredModel();
 
   return model_id;
 }

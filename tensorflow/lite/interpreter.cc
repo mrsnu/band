@@ -321,18 +321,8 @@ TfLiteStatus Interpreter::Invoke(int idx) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Interpreter::InvokeAll() {
-  TfLiteStatus status;
-  int num_iter = 3;
-
-  for (int j = 0; j < num_iter; ++j) {
-    for (int i = 0; i < num_registered_model_; ++i) {
-      planner_->EnqueueRequest(Job(i));
-    }
-  }
-
-  status = planner_->Wait(num_registered_model_ * num_iter);
-  return status;
+void Interpreter::InvokeModel(int model_id) {
+  planner_->EnqueueRequest(Job(model_id));
 }
 
 TfLiteStatus Interpreter::AddTensors(int tensors_to_add,

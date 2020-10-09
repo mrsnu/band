@@ -373,8 +373,9 @@ class Interpreter {
   /// Invoke idx-th subgraph in the interpreter.
   TfLiteStatus Invoke(int idx);
 
-  /// Invoke all subgraphs in the interpreter.
-  TfLiteStatus InvokeAll();
+  /// Invoke one subgraph with the model_id in the interpreter.
+  /// This method is an asychronous call.
+  void InvokeModel(int model_id);
 
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
@@ -573,24 +574,11 @@ class Interpreter {
     return workers_.size();
   }
 
-  // Inserts a pair whose key is (model_id, device_id) and value is
-  // the subgraph index.
-  void RegisterSubgraphIdx(int model_id,
-                           TfLiteDevice device_id,
-                           int subgraph_idx);
-
+  // TODO #13: Create mobile device independent delegate instances
   int GetSubgraphIdx(int model_id, TfLiteDevice device_id);
 
   // Applies Delegate to the subgraph when a device id is given.
   TfLiteStatus ApplyDeviceDelegate(Subgraph* subgraph, TfLiteDevice device);
-
-  int GetNumRegisteredModel() {
-    return num_registered_model_;
-  }
-
-  void IncreaseNumRegisteredModel() {
-    num_registered_model_++;
-  }
 
  private:
   friend class InterpreterBuilder;
@@ -604,11 +592,15 @@ class Interpreter {
   // TODO #13: Create mobile device independent delegate instances
   int num_devices = 3;
 
-  // Number of models loaded by InterpreterBuilder
-  int num_registered_model_ = 0;
-
   // Map structure to find subgraph idx with (model_id, device_id)
   std::map<std::pair<int, TfLiteDevice>, int> subgraph_idx_map_;
+
+  // TODO #13: Create mobile device independent delegate instances
+  // Inserts a pair whose key is (model_id, device_id) and value is
+  // the subgraph index.
+  void RegisterSubgraphIdx(int model_id,
+                           TfLiteDevice device_id,
+                           int subgraph_idx);
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,

@@ -787,7 +787,16 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
-TfLiteStatus BenchmarkTfLiteModel::RunAll() { return interpreter_->InvokeAll(); }
+TfLiteStatus BenchmarkTfLiteModel::RunAll() {
+  int num_iters = 3;
+  for (int i = 0; i < num_iters; ++i) {
+    for (int j = 0; j < models_.size(); ++j) {
+      interpreter_->InvokeModel(j);
+    }
+  }
+  interpreter_->GetPlanner()->Wait(models_.size() * num_iters);
+  return kTfLiteOk;
+}
 
 }  // namespace benchmark
 }  // namespace tflite

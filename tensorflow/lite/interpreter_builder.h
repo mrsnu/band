@@ -105,6 +105,7 @@ class InterpreterBuilder {
                              TfLiteSparsity** sparsity);
 
   static ErrorReporter* error_reporter_;
+  static int num_registered_model;
 
   std::vector<const TfLiteRegistration*> flatbuffer_op_index_to_registration_;
   std::vector<TfLiteRegistration> unresolved_custom_ops_;
