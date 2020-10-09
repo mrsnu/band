@@ -385,7 +385,9 @@ class Interpreter {
   /// User may pass -1 to let the TFLite interpreter set the no of threads
   /// available to itself.
   // TODO #7: Change how the interpreter manages context of each subgraph
-  void SetNumThreads(int num_threads, size_t first_subgraph_index = 0, int last_subgraph_index = -1);
+  void SetNumThreads(int num_threads,
+                     size_t first_subgraph_index = 0,
+                     int last_subgraph_index = -1);
 
   /// Allow float16 precision for FP32 calculation when possible.
   /// default: not allow.
@@ -522,7 +524,7 @@ class Interpreter {
   void AddSubgraphs(int subgraphs_to_add,
                     int* first_new_subgraph_index = nullptr);
 
-  void DeleteSubgraphs(size_t starting_index_to_delete, 
+  void DeleteSubgraphs(size_t starting_index_to_delete,
                        int subgraphs_to_delete = -1);
 
   /// Return the number of subgraphs in the model.
@@ -551,7 +553,7 @@ class Interpreter {
   }
 #endif  // DOXYGEN_SKIP
 
-  TfLiteDelegate* device_delegates(int device_idx){
+  TfLiteDelegate* device_delegates(int device_idx) {
     return device_delegates_[device_idx].get();
   }
 

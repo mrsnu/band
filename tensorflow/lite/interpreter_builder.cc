@@ -581,8 +581,8 @@ int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
 }
 
 int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
-                     const OpResolver& op_resolver, 
-                     std::unique_ptr<Interpreter>* interpreter, 
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
                      int num_threads,
                      TfLiteDevice device_id) {
   if (!interpreter || !interpreter->get()) {

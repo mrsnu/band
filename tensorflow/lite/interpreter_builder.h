@@ -65,7 +65,7 @@ class InterpreterBuilder {
                         int num_threads = -1,
                         TfLiteDevice device_id = kTfLiteCPU);
   static int AddSubgraph(const ::tflite::Model* model,
-                     const OpResolver& op_resolver, 
+                     const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads = -1,
                      TfLiteDevice device_id = kTfLiteCPU);
