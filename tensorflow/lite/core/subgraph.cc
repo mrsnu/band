@@ -392,8 +392,13 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
         // Initialize the output tensors's delegate-related fields.
         for (int tensor_index : node_subset.output_tensors) {
           TfLiteTensor* tensor = &tensors_[tensor_index];
-          TF_LITE_ENSURE(&context_, tensor->delegate == nullptr ||
-                                        tensor->delegate == delegate);
+          if(tensor->delegate != nullptr && tensor->delegate != delegate) {
+            // TODO #13 : Print name of the delegate 
+            // Expected output : Overwriting delegate from %s to %s.
+            TFLITE_LOG(
+              tflite::TFLITE_LOG_WARNING,
+              "Overwriting delegate.");
+          }
           tensor->delegate = delegate;
         }
 
