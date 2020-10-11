@@ -223,8 +223,12 @@ const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
       return "NOTYPE";
     case kTfLiteDelegateFlagsGPU:
       return "GPU";
-    case kTfLiteDelegateFlagsNNAPI:
-      return "NNAPI";
+    case kTfLiteDelegateFlagsNNAPIDSP:
+      return "NNAPI_DSP";
+    case kTfLiteDelegateFlagsNNAPIGPU:
+      return "NNAPI_GPU";
+    case kTfLiteDelegateFlagsNNAPINPU:
+      return "NNAPI_NPU";
     case kTfLiteDelegateFlagsXNNPACK:
       return "XNNPACK";
     case kTfLiteDelegateFlagsFLEX:

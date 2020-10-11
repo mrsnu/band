@@ -759,9 +759,19 @@ typedef struct TfLiteRegistration {
   int version;
 } TfLiteRegistration;
 
+// TODO #23, #30
+// Add additional devices for HTA, NPU
+typedef enum {
+  kTfLiteCPU = 0,
+  kTfLiteGPU = 1,
+  kTfLiteDSP = 2,
+  kTfLiteNumDevices = 3,
+} TfLiteDeviceFlags;
+
 // The flags used in `TfLiteDelegate`. Note that this is a bitmask, so the
 // values should be 1, 2, 4, 8, ...etc.
 typedef enum TfLiteDelegateFlags {
+  // This also means CPU Delegate
   kTfLiteDelegateFlagsNone = 0,
   // The flag is set if the delegate can handle dynamic sized tensors.
   // For example, the output shape of a `Resize` op with non-constant shape
@@ -773,10 +783,12 @@ typedef enum TfLiteDelegateFlags {
   // If the delegate isn't capable to handle dynamic tensors, this flag need
   // to be set to false.
   kTfLiteDelegateFlagsAllowDynamicTensors = 1,
-  kTfLiteDelegateFlagsGPU = 2,
-  kTfLiteDelegateFlagsNNAPI = 4,
-  kTfLiteDelegateFlagsXNNPACK = 8,
-  kTfLiteDelegateFlagsFLEX = 16
+  kTfLiteDelegateFlagsGPU = 1 << 1,
+  kTfLiteDelegateFlagsNNAPIGPU = 1 << 2,
+  kTfLiteDelegateFlagsNNAPIDSP = 1 << 3,
+  kTfLiteDelegateFlagsNNAPINPU = 1 << 4,
+  kTfLiteDelegateFlagsXNNPACK = 1 << 5,
+  kTfLiteDelegateFlagsFLEX = 1 << 6
 } TfLiteDelegateFlags;
 
 const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag);

@@ -17,15 +17,18 @@ void FixedDevicePlanner::Plan() {
       GetRequests().pop_front();
 
       int model_id = to_execute.model_id_;
-      int device_idx = model_id % GetInterpreter()->GetNumDevices();
+      int device_idx = model_id % kTfLiteNumDevices;
       to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(
-          model_id, static_cast<TfLiteDevice>(device_idx));
-
-      Worker& worker = GetInterpreter()->GetWorker(device_idx);
-      {
-        std::lock_guard<std::mutex> lock(worker.GetDeviceMtx());
-        worker.GetDeviceRequests().push_back(to_execute);
-        worker.GetRequestCv().notify_one();
+          model_id, static_cast<TfLiteDeviceFlags>(device_idx));
+      
+      // Model can't run on a specified device
+      if(to_execute.subgraph_idx_ != -1) {
+        Worker& worker = GetInterpreter()->GetWorker(device_idx);
+        {
+          std::lock_guard<std::mutex> lock(worker.GetDeviceMtx());
+          worker.GetDeviceRequests().push_back(to_execute);
+          worker.GetRequestCv().notify_one();
+        }
       }
     }
     lock.unlock();

@@ -4166,6 +4166,30 @@ NNAPIDelegateKernel* StatefulNnApiDelegate::Data::MaybeGetCachedDelegateKernel(
   }
 }
 
+TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
+  auto contains_keywords = [&name](std::vector<std::string> keywords) {
+    for(auto keyword : keywords) {
+      if (name.find(keyword) != std::string::npos) 
+        return true;
+    }
+    return false;
+  };
+
+  if(contains_keywords({"gpu"})) {
+    return kTfLiteDelegateFlagsNNAPIGPU;
+  }
+
+  if(contains_keywords({"dsp"})) {
+    return kTfLiteDelegateFlagsNNAPIDSP;
+  }
+
+  // TODO #23 
+  // 1. Add additional NPU / TPU names 
+  // 2. Is 'hta' belongs to dsp or npu?
+
+  return kTfLiteDelegateFlagsNone;
+}
+
 StatefulNnApiDelegate::StatefulNnApiDelegate(const NnApi* nnapi)
     : StatefulNnApiDelegate(nnapi, Options()) {}
 
@@ -4196,7 +4220,7 @@ StatefulNnApiDelegate::StatefulNnApiDelegate(const NnApi* nnapi,
   CopyToBufferHandle = DoCopyToBufferHandle;
   FreeBufferHandle = DoFreeBufferHandle;
   data_ = &delegate_data_;
-  flags = kTfLiteDelegateFlagsNNAPI;
+  flags = GetNNAPIDeviceFlag(delegate_data_.accelerator_name);
 }
 
 StatefulNnApiDelegate::StatefulNnApiDelegate()

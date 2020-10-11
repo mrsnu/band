@@ -63,12 +63,12 @@ class InterpreterBuilder {
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1,
-                        TfLiteDevice device_id = kTfLiteCPU);
+                        TfLiteDeviceFlags device_id = kTfLiteCPU);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads = -1,
-                     TfLiteDevice device_id = kTfLiteCPU);
+                     TfLiteDeviceFlags device_id = kTfLiteCPU);
 
   // Adds NUM_DEVICES number of Subgraphs to the interpreter.
   // Returns the model id.
@@ -97,7 +97,6 @@ class InterpreterBuilder {
       const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
       const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
       Subgraph* subgraph);
-  TfLiteStatus ApplyDelegates(Interpreter* interpreter, int num_threads);
   TfLiteStatus ParseQuantization(const QuantizationParameters* src_quantization,
                                  TfLiteQuantization* quantization,
                                  const std::vector<int>& dims);
@@ -114,6 +113,7 @@ class InterpreterBuilder {
 
   bool has_flex_op_ = false;
   int num_fp32_tensors_ = 0;
+  int num_int8_tensors_ = 0;
 };
 
 }  // namespace impl

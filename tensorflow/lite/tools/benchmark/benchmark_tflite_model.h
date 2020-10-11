@@ -59,7 +59,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   void LogParams() override;
   TfLiteStatus ValidateParams() override;
   uint64_t ComputeInputBytes() override;
-  TfLiteStatus Prepare(size_t deviceId) override;
   TfLiteStatus Init() override;
   TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
@@ -67,7 +66,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   static BenchmarkParams DefaultParams();
 
  protected:
-  size_t NumDevices() override;
   TfLiteStatus PrepareInputData() override;
   TfLiteStatus ResetInputsAndOutputs() override;
 
@@ -139,7 +137,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;
   std::mt19937 random_engine_;
   std::vector<std::string> graphs_;
-  std::vector<TfLiteDelegate*> owned_delegates_;
+  std::vector<Interpreter::TfLiteDelegatePtr> owned_delegates_;
   // Always TFLITE_LOG the benchmark result.
   BenchmarkLoggingListener log_output_;
 };

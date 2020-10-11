@@ -58,6 +58,7 @@ class Delegate {
   }
 
   void SetNumThreads(int num_threads) {
+    // This code block has a dependency to pthread.
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
     if(num_threads > 1) {
       threadpool_.reset(

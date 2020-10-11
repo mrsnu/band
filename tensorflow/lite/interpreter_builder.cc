@@ -436,6 +436,7 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
   };
 
   num_fp32_tensors_ = 0;
+  num_int8_tensors_ = 0;
   for (int i = 0; i < tensors->size(); ++i) {
     const auto* tensor = tensors->Get(i);
     std::vector<int> dims = FlatBufferIntArrayToVector(tensor->shape());
@@ -445,6 +446,9 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
         kTfLiteOk) {
       status = kTfLiteError;
       continue;
+    }
+    if (type == kTfLiteInt8) {
+      ++num_int8_tensors_;
     }
     if (type == kTfLiteFloat32) {
       ++num_fp32_tensors_;
@@ -531,18 +535,6 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
   return status;
 }
 
-TfLiteStatus InterpreterBuilder::ApplyDelegates(Interpreter* interpreter,
-                                                int num_threads) {
-  // Apply Flex delegate if applicable.
-  if (has_flex_op_) {
-    if (auto flex_delegate = AcquireFlexDelegate()) {
-      return interpreter->ModifyGraphWithDelegate(std::move(flex_delegate));
-    }
-  }
-
-  return kTfLiteOk;
-}
-
 int InterpreterBuilder::num_registered_model = 0;
 
 int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
@@ -559,8 +551,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      int num_threads) {
   int model_id = InterpreterBuilder::num_registered_model++;
 
-  for (int i = 0; i < (*interpreter)->GetNumDevices(); ++i) {
-    TfLiteDevice device_id = static_cast<TfLiteDevice>(i);
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, num_threads, device_id);
     if (subgraph_idx == -1) {
@@ -582,7 +574,7 @@ int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads,
-                     TfLiteDevice device_id) {
+                     TfLiteDeviceFlags device_id) {
   return AddSubgraph(model.GetModel(), op_resolver, interpreter, num_threads);
 }
 
@@ -590,7 +582,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads,
-                     TfLiteDevice device_id) {
+                     TfLiteDeviceFlags device_id) {
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
         "Interpreter is invalid");
@@ -697,14 +689,12 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     }
     modified_subgraph->SetVariables(std::move(variables));
 
-    // Set available / required delegates of subgraph
-    if (builder.num_fp32_tensors_ > 0)
-      modified_subgraph->GetModelPlan()->can_use_xnn_pack_ = true;
-    if (builder.has_flex_op_ > 0)
-      modified_subgraph->GetModelPlan()->has_flex_op_ = true;
-
     if ((*interpreter)->
-          ApplyDeviceDelegate(modified_subgraph, device_id) != kTfLiteOk)
+          ApplyBestDeviceDelegate(
+            modified_subgraph, 
+            device_id, 
+            builder.num_int8_tensors_, 
+            builder.num_fp32_tensors_) != kTfLiteOk)
       return cleanup_and_error();
   }
 

@@ -77,10 +77,12 @@ TfLiteQuantization GetQuantizationFromLegacy(
   return quantization;
 }
 
+// Returns whether the specified device name is
+// efficient enough to run on NNAPI
 bool IsNNAPIDeviceUseful(std::string name) {
   static const char* const filter_keywords[] = {
     "nnapi-reference", // CPU
-    "gpu", 
+    "gpu", // Inefficient than GPUDelegate
     "default"};
 
   for(auto keyword : filter_keywords) {
@@ -105,9 +107,7 @@ bool IsNNAPIDeviceUseful(std::string name) {
 }  // namespace
 
 Interpreter::Interpreter(ErrorReporter* error_reporter)
-    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()),
-      lazy_delegate_provider_(
-          TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {})) {
+    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
@@ -132,7 +132,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   planner_.reset(new FixedDevicePlanner(this));
 
   // Create workers.
-  for (int i = 0; i < GetNumDevices(); ++i) {
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
     workers_.emplace_back(new Worker(planner_));
   }
 
@@ -140,7 +140,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // TODO #13: Create mobile device independent delegate instances
   TfLiteDelegatePtr null_delegate =
       TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
-  device_delegates_.push_back(std::move(null_delegate));
+  delegates_.insert(std::make_pair(kTfLiteDelegateFlagsNone, std::move(null_delegate)));
 
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
@@ -151,7 +151,9 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   TfLiteDelegatePtr gpu_delegate =
       TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
                         &TfLiteGpuDelegateV2Delete);
-  if (gpu_delegate.get()) device_delegates_.push_back(std::move(gpu_delegate));
+  if (gpu_delegate.get()) {
+    delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
+  } 
 
   std::vector<const char*> string_device_names_list = nnapi::GetDeviceNamesList();
 
@@ -166,20 +168,26 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
             delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
           });
 
-      if (nnapi_delegate.get())
-        device_delegates_.push_back(std::move(nnapi_delegate));
+      if (nnapi_delegate.get()) {
+        delegates_.insert(
+          std::make_pair(TfLiteDelegateFlags(nnapi_delegate->flags), std::move(nnapi_delegate)));
+      }
     }
   }
 
   TfLiteDelegatePtr xnnpack_delegate = MaybeCreateXNNPACKDelegate(1);
-  if(xnnpack_delegate.get())
-    device_delegates_.push_back(std::move(xnnpack_delegate));
+  if(xnnpack_delegate.get()) {
+    std::make_pair(kTfLiteDelegateFlagsXNNPACK, std::move(xnnpack_delegate));
+  }
+
+  // TODO #23
+  // Add flex delegate?
 
   // Create a Planner instance.
-  planner_.reset(new Planner(this));
+  planner_.reset(new FixedDevicePlanner(this));
 
   // Create workers.
-  for (int i = 0; i < GetNumDevices(); ++i) {
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
     workers_.emplace_back(new Worker(planner_));
   }
   
@@ -246,16 +254,6 @@ TfLiteStatus Interpreter::SetVariables(std::vector<int> variables) {
 }
 
 TfLiteStatus Interpreter::AllocateTensors() {
-  // Apply the default delegate that TFLite will enable at this point to allow
-  // other user-level delegates to be applied first.
-  if (lazy_delegate_provider_) {
-    // The execution will fall back to default implementation if the XNNPACK
-    // delegate fails to be applied. Therefore, we ignore the return status
-    // here and let it fall through the rest of the code.
-    ModifyGraphWithDelegate(std::move(lazy_delegate_provider_));
-    lazy_delegate_provider_.reset();
-  }
-
   TfLiteStatus status;
 
   for (int i = 0; i < subgraphs_.size(); ++i) {
@@ -439,16 +437,29 @@ void Interpreter::SetNumThreads(int num_threads,
       c->Refresh(context_);
     }
   }
+}
 
-  for(auto& delegate : device_delegates_) {
-#ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
-    if(delegate && delegate->flags && kTfLiteDelegateFlagsXNNPACK) {
-      TfLiteXNNPackDelegateOptions options = TfLiteXNNPackDelegateOptionsDefault();
-      options.num_threads = num_threads;
-      TfLiteXNNPackDelegateUpdate(delegate.get(), &options);
-    }
-#endif
+void Interpreter::SetXNNPACKNumThreads(int num_threads) {
+  if (num_threads < -1) {
+    // TODO #7 : Which context should we use here?
+    context_->ReportError(context_,
+                          "num_threads should be >=0 or just -1 to let TFLite "
+                          "runtime set the value.");
+    return;
   }
+
+#ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
+  TfLiteDelegate* delegate = delegates(kTfLiteDelegateFlagsXNNPACK);
+  if(delegate != nullptr) {
+      TfLiteXNNPackDelegateOptions options = TfLiteXNNPackDelegateOptionsDefault();
+      // Modify -1 to 0 to match the XNNPACK runtime behavior 
+      // to automatically set the value.
+      if(num_threads == -1)
+        num_threads = 0;
+      options.num_threads = num_threads;
+      TfLiteXNNPackDelegateUpdate(delegate, &options);
+  }
+#endif
 }
 
 void Interpreter::SetAllowFp16PrecisionForFp32(bool allow) {
@@ -482,13 +493,6 @@ TfLiteStatus Interpreter::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
     TF_LITE_ENSURE_STATUS(RemoveAllDelegates());
   }
   return status;
-}
-
-TfLiteStatus Interpreter::ModifyGraphWithDelegate(TfLiteDelegatePtr delegate) {
-  // Note that we retain ownership of the delegate even if graph modification
-  // fails, as delegate use will be in an indeterminate state at that point.
-  owned_delegates_.push_back(std::move(delegate));
-  return ModifyGraphWithDelegate(owned_delegates_.back().get());
 }
 
 TfLiteStatus Interpreter::RemoveAllDelegates() {
@@ -559,30 +563,60 @@ Profiler* Interpreter::GetProfiler() {
   return primary_subgraph().GetProfiler();
 }
 
-TfLiteStatus Interpreter::ApplyDeviceDelegate(Subgraph* subgraph,
-                                              TfLiteDevice device) {
-  if (device == kTfLiteCPU)
-    return kTfLiteOk;
+TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
+                                              TfLiteDeviceFlags device, 
+                                              bool has_int8, 
+                                              bool has_fp32) {
+  TfLiteDelegate* targetDelegate = nullptr;
 
-  TfLiteStatus status =
-    subgraph->ModifyGraphWithDelegate(device_delegates(device));
-  if (status != kTfLiteOk) {
-    return status;
+  switch (device)
+  {
+  case kTfLiteCPU:
+    // XNNPACK is efficient than default CPU
+    if(has_fp32)
+      targetDelegate = delegates(kTfLiteDelegateFlagsXNNPACK);
+    else
+      // Only valid case to return Ok with nullptr
+      return kTfLiteOk;
+    break;
+  
+  case kTfLiteGPU:
+    targetDelegate = delegates(kTfLiteDelegateFlagsGPU);
+    break;
+
+  case kTfLiteDSP:
+    if (has_int8)
+      targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
+    break;
+  
+  // TODO # 30
+  // Add NPU / TPU / hta
+  
+  default:
+    break;
   }
 
-  return kTfLiteOk;
+  if (targetDelegate != nullptr) {
+    return subgraph->ModifyGraphWithDelegate(targetDelegate);
+  } else {
+    return kTfLiteError;
+  }
 }
 
 void Interpreter::RegisterSubgraphIdx(int model_id,
-                                      TfLiteDevice device_id,
+                                      TfLiteDeviceFlags device_id,
                                       int subgraph_idx) {
-  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
+  std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
   subgraph_idx_map_[key] = subgraph_idx;
 }
 
-int Interpreter::GetSubgraphIdx(int model_id, TfLiteDevice device_id) {
-  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
-  return subgraph_idx_map_[key];
+int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
+  std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
+  auto it = subgraph_idx_map_.find(key);
+  if(it != subgraph_idx_map_.end())
+    return it->second;
+  else
+    return -1;
 }
 
 }  // namespace impl
