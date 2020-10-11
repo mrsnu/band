@@ -45,7 +45,6 @@ class NNAPIDelegate;
 class Subgraph {
  public:
   friend class Interpreter;
-  friend class Planner;
 
   Subgraph(ErrorReporter* error_reporter,
            TfLiteExternalContext** external_contexts,

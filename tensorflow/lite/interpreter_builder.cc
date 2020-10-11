@@ -543,33 +543,70 @@ TfLiteStatus InterpreterBuilder::ApplyDelegates(Interpreter* interpreter,
   return kTfLiteOk;
 }
 
-TfLiteStatus InterpreterBuilder::AddModel(const FlatBufferModel& model,
-                     const OpResolver& op_resolver, 
+int InterpreterBuilder::num_registered_model = 0;
+
+int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
+                     const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
-  return AddModel(model.GetModel(), op_resolver, interpreter, num_threads);
+  return RegisterModel(
+      model.GetModel(), op_resolver, interpreter, num_threads);
 }
 
-TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
-                     const OpResolver& op_resolver, 
-                     std::unique_ptr<Interpreter>* interpreter, 
+int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
+  int model_id = InterpreterBuilder::num_registered_model++;
+
+  for (int i = 0; i < (*interpreter)->GetNumDevices(); ++i) {
+    TfLiteDevice device_id = static_cast<TfLiteDevice>(i);
+    int subgraph_idx = AddSubgraph(
+        model, op_resolver, interpreter, num_threads, device_id);
+    if (subgraph_idx == -1) {
+      int start_idx = (*interpreter)->subgraphs_size() - i;
+      int num_graphs_to_delete = i;
+
+      (*interpreter)->DeleteSubgraphs(start_idx, num_graphs_to_delete);
+      InterpreterBuilder::num_registered_model--;
+
+      return subgraph_idx;
+    }
+    (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
+  }
+
+  return model_id;
+}
+
+int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
+                     int num_threads,
+                     TfLiteDevice device_id) {
+  return AddSubgraph(model.GetModel(), op_resolver, interpreter, num_threads);
+}
+
+int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
+                     int num_threads,
+                     TfLiteDevice device_id) {
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
         "Interpreter is invalid");
-    return kTfLiteError;
+    return -1;
   }
 
   if (num_threads < -1) {
     error_reporter_->Report(
         "num_threads should be >=0 or just -1 to let TFLite runtime set the "
         "value.");
-    return kTfLiteError;
+    return -1;
   }
 
   if (!model) {
     error_reporter_->Report("Null pointer passed in as model.");
-    return kTfLiteError;
+    return -1;
   }
 
   if (model->version() != TFLITE_SCHEMA_VERSION) {
@@ -577,14 +614,14 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
         "Model provided is schema version %d not equal "
         "to supported version %d.\n",
         model->version(), TFLITE_SCHEMA_VERSION);
-    return kTfLiteError;
+    return -1;
   }
 
   InterpreterBuilder builder;
 
   if (builder.BuildLocalIndexToRegistrationMapping(model, op_resolver) != kTfLiteOk) {
     error_reporter_->Report("Registration failed.\n");
-    return kTfLiteError;
+    return -1;
   }
 
   // Flatbuffer model schemas define a list of opcodes independent of the graph.
@@ -597,7 +634,14 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
 
   if (subgraphs->size() == 0) {
     error_reporter_->Report("No subgraph in the model.\n");
-    return kTfLiteError;
+    return -1;
+  }
+
+  // Assume FlatBuffer model has only one subgraph.
+  // TODO #28: We assume a tflite model has only one Subgraph element
+  if (subgraphs->size() > 1) {
+    error_reporter_->Report("More than one subgraphs in the model.\n");
+    return -1;
   }
 
   int old_size = (*interpreter)->subgraphs_size();
@@ -606,18 +650,20 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
 
   auto cleanup_and_error = [&]() {
     (*interpreter)->DeleteSubgraphs(old_size);
-    return kTfLiteError;
+    return -1;
   };
 
 #if defined(TFLITE_ENABLE_DEFAULT_PROFILER)
   (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
 #endif
 
+  int modified_subgraph_index = -1;
   for (int subgraph_index = 0; subgraph_index < subgraphs->size();
        ++subgraph_index) {
     const tflite::SubGraph* subgraph = (*subgraphs)[subgraph_index];
+    modified_subgraph_index = old_size + subgraph_index;
     tflite::Subgraph* modified_subgraph =
-        (*interpreter)->subgraph(old_size + subgraph_index);
+        (*interpreter)->subgraph(modified_subgraph_index);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {
@@ -650,15 +696,19 @@ TfLiteStatus InterpreterBuilder::AddModel(const ::tflite::Model* model,
       }
     }
     modified_subgraph->SetVariables(std::move(variables));
-    
+
     // Set available / required delegates of subgraph
     if (builder.num_fp32_tensors_ > 0)
       modified_subgraph->GetModelPlan()->can_use_xnn_pack_ = true;
     if (builder.has_flex_op_ > 0)
       modified_subgraph->GetModelPlan()->has_flex_op_ = true;
+
+    if ((*interpreter)->
+          ApplyDeviceDelegate(modified_subgraph, device_id) != kTfLiteOk)
+      return cleanup_and_error();
   }
 
-  return kTfLiteOk;
+  return modified_subgraph_index;
 }
 
 }  // namespace impl

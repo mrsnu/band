@@ -3,17 +3,14 @@
 
 #include <memory>
 #include "tensorflow/lite/worker.h"
-#if defined(__ANDROID__)
-#include "tensorflow/lite/delegates/gpu/delegate.h"
-#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
-#endif
+#include "tensorflow/lite/safe_bool.h"
+#include "tensorflow/lite/c/common.h"
 
 namespace tflite {
 
 namespace impl {
 
 class Interpreter;
-class Subgraph;
 
 typedef enum {
   kTfLiteCPU = 0,
@@ -45,9 +42,26 @@ struct ModelPlan{
 class Planner {
  public:
   explicit Planner(Interpreter* interpreter);
-  ~Planner() = default;
+  ~Planner();
 
-  TfLiteStatus Plan();
+	/*
+	Derived classes should generally follow this template when implementing `Plan()`:
+
+	while (true) {
+		// sleep until somebody wakes me up with GetSafeBool().notify()
+		if (GetSafeBool().wait()) return;
+
+		// wake up and do something with the request queue
+		std::unique_lock<std::mutex> lock(GetRequestsMtx()); // exclusive access to the request queue
+		Job j = GetRequests().front(); // get the first job
+		GetRequests().pop_front(); // actual dequeue
+
+		// enqueue the job in the correct worker queue
+		// Worker& worker = GetInterpreter()->GetWorker(device_idx);
+		// ...
+	}
+	*/
+  virtual void Plan() = 0;
 
   // Enqueues a job to a worker request queue.
   void EnqueueRequest(Job job);
@@ -66,14 +80,32 @@ class Planner {
     return interpreter_;
   }
 
+  SafeBool& GetSafeBool() {
+    return planner_safe_bool_;
+  }
+
+  std::mutex& GetRequestsMtx() {
+    return requests_mtx_;
+  }
+
+  std::deque<Job>& GetRequests() {
+    return requests_;
+  }
+
  private:
   Interpreter* interpreter_;
+  SafeBool planner_safe_bool_;
 
+  // Jobs Finished
   std::mutex job_queue_mtx_;
   std::deque<Job> jobs_finished_;
-  std::condition_variable end_invoke_;
 
-  bool change_plan_ = true;
+  // Request Queue
+  std::mutex requests_mtx_;
+  std::deque<Job> requests_;
+
+  std::condition_variable end_invoke_;
+  std::thread planner_thread_;
 };
 
 }  // namespace impl

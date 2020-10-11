@@ -1,42 +1,17 @@
 #include "tensorflow/lite/planner.h"
-#include "tensorflow/lite/core/subgraph.h"
-#include "tensorflow/lite/interpreter.h"
 
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter) {
+Planner::Planner(Interpreter* interpreter)
+  : planner_thread_([this]{this->Plan();}) {
   interpreter_ = interpreter;
 }
 
-TfLiteStatus Planner::Plan() {
-  if (!change_plan_) return kTfLiteOk;
-  change_plan_ = false;
-  TfLiteStatus status;
-
-  for (int i = 0; i < interpreter_->subgraphs_size(); ++i) {
-    Subgraph& subgraph = *(interpreter_->subgraph(i));
-    status = subgraph.UndoAllDelegates();
-    if (status != kTfLiteOk)
-      return status;
-
-    if (i % kTfLiteNumDevices == kTfLiteGPU) {
-      subgraph.GetModelPlan()->device_ = kTfLiteGPU;
-    } else if (i % kTfLiteNumDevices == kTfLiteDSP) {
-      subgraph.GetModelPlan()->device_ = kTfLiteDSP;
-    }
-
-    if (subgraph.GetModelPlan()->device_ != kTfLiteCPU) {
-      status = subgraph.ModifyGraphWithDelegate(
-          interpreter_->device_delegates(subgraph.GetModelPlan()->device_));
-    }
-    if (status != kTfLiteOk)
-      return status;
-  }
-
-  return kTfLiteOk;
+Planner::~Planner() {
+  planner_safe_bool_.terminate();
+  planner_thread_.join();
 }
-
 
 TfLiteStatus Planner::Wait(int num_requests) {
   std::unique_lock<std::mutex> lock(job_queue_mtx_);
@@ -61,16 +36,11 @@ void Planner::EnqueueFinishedJob(Job job) {
 }
 
 void Planner::EnqueueRequest(Job job) {
-  int subgraph_idx = job.subgraph_idx_;
-  TfLiteDevice device_idx =
-    interpreter_->subgraph(subgraph_idx)->GetModelPlan()->device_;
-  Worker& worker = interpreter_->GetWorker(device_idx);
-
-  std::unique_lock<std::mutex> lock(worker.device_mtx_);
-  worker.requests_.push_back(job);
+  std::unique_lock<std::mutex> lock(requests_mtx_);
+  requests_.push_back(job);
   lock.unlock();
 
-  worker.request_cv_.notify_one();
+  planner_safe_bool_.notify();
 }
 
 }  // namespace impl

@@ -110,7 +110,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new Planner(this));
+  planner_.reset(new FixedDevicePlanner(this));
 
   // Create workers.
   for (int i = 0; i < GetNumDevices(); ++i) {
@@ -250,14 +250,14 @@ void Interpreter::AddSubgraphs(int subgraphs_to_add,
   context_ = primary_subgraph().context();
 }
 
-void Interpreter::DeleteSubgraphs(size_t starting_index_to_delete, 
+void Interpreter::DeleteSubgraphs(size_t starting_index_to_delete,
                                   int subgraphs_to_delete) {
-  if(subgraphs_to_delete < 0) 
+  if (subgraphs_to_delete < 0)
     subgraphs_to_delete = subgraphs_.size() - starting_index_to_delete;
-    
-  if(starting_index_to_delete + subgraphs_to_delete <= subgraphs_.size()) {
+
+  if (starting_index_to_delete + subgraphs_to_delete <= subgraphs_.size()) {
     subgraphs_.erase(subgraphs_.begin() + starting_index_to_delete,
-    subgraphs_.begin() + subgraphs_to_delete);
+    subgraphs_.begin() + starting_index_to_delete + subgraphs_to_delete);
   }
 }
 
@@ -321,20 +321,8 @@ TfLiteStatus Interpreter::Invoke(int idx) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Interpreter::InvokeAll() {
-  TfLiteStatus status;
-  // Placing `Plan()` here is for demo purposes.
-  // This is not the best position to call `Plan()`.
-  status = planner_->Plan();
-  if (status != kTfLiteOk)
-    return status;
-
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    planner_->EnqueueRequest(Job(i));
-  }
-
-  status = planner_->Wait(subgraphs_size());
-  return status;
+void Interpreter::InvokeModel(int model_id) {
+  planner_->EnqueueRequest(Job(model_id));
 }
 
 TfLiteStatus Interpreter::AddTensors(int tensors_to_add,
@@ -390,7 +378,9 @@ TfLiteStatus Interpreter::SetExecutionPlan(const std::vector<int>& new_plan) {
 
 void Interpreter::UseNNAPI(bool enable) { primary_subgraph().UseNNAPI(enable); }
 
-void Interpreter::SetNumThreads(int num_threads, size_t first_subgraph_index, int last_subgraph_index) {
+void Interpreter::SetNumThreads(int num_threads,
+                                size_t first_subgraph_index,
+                                int last_subgraph_index) {
   if (num_threads < -1) {
     // TODO #7 : Which context should we use here?
     context_->ReportError(context_,
@@ -399,10 +389,10 @@ void Interpreter::SetNumThreads(int num_threads, size_t first_subgraph_index, in
     return;
   }
 
-  if (last_subgraph_index < 0) 
+  if (last_subgraph_index < 0)
     last_subgraph_index = subgraphs_size();
 
-  for(int i = first_subgraph_index; i < last_subgraph_index; i++) {
+  for (int i = first_subgraph_index; i < last_subgraph_index; i++) {
     subgraphs_[i]->context()->recommended_num_threads = num_threads;
   }
 
@@ -520,6 +510,32 @@ void Interpreter::SetSubgraphProfiler() {
 
 Profiler* Interpreter::GetProfiler() {
   return primary_subgraph().GetProfiler();
+}
+
+TfLiteStatus Interpreter::ApplyDeviceDelegate(Subgraph* subgraph,
+                                              TfLiteDevice device) {
+  if (device == kTfLiteCPU)
+    return kTfLiteOk;
+
+  TfLiteStatus status =
+    subgraph->ModifyGraphWithDelegate(device_delegates(device));
+  if (status != kTfLiteOk) {
+    return status;
+  }
+
+  return kTfLiteOk;
+}
+
+void Interpreter::RegisterSubgraphIdx(int model_id,
+                                      TfLiteDevice device_id,
+                                      int subgraph_idx) {
+  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
+  subgraph_idx_map_[key] = subgraph_idx;
+}
+
+int Interpreter::GetSubgraphIdx(int model_id, TfLiteDevice device_id) {
+  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
+  return subgraph_idx_map_[key];
 }
 
 }  // namespace impl

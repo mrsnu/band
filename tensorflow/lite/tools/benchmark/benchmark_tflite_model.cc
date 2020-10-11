@@ -603,11 +603,26 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
-  (&interpreter_)->reset(new Interpreter(LoggingReporter::DefaultLoggingReporter())); 
-  
-  int num_models = 5;
-  for(int i = 0; i < num_models; ++i)
-    tflite::InterpreterBuilder::AddModel(*model_, *resolver, &interpreter_);
+  (&interpreter_)->reset(
+      new Interpreter(LoggingReporter::DefaultLoggingReporter()));
+
+  // TODO #29: Add an argument with multiple graph file names
+  // To successfully build the tool fix the file path to the graph.
+  std::vector<std::string> graphs;
+  std::string base_path = "/data/local/tmp/";
+  graphs.push_back(base_path + "mobilenet_v1_1.0_224_quant.tflite");
+  graphs.push_back(base_path + "ssd_mobilenet_v1_1_metadata_1.tflite");
+  graphs.push_back(base_path + "inception_v3_quant.tflite");
+
+  for (int i = 0; i < graphs.size(); ++i) {
+    TF_LITE_ENSURE_STATUS(LoadModel(graphs[i]));
+    int model_id =
+        tflite::InterpreterBuilder::RegisterModel(
+            *models_[graphs[i]], *resolver, &interpreter_);
+    if (model_id == -1)
+      return kTfLiteError;
+    model_ids_.push_back(model_id);
+  }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
                   << " subgraph loaded to the interpreter";
@@ -633,7 +648,6 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
-  TF_LITE_ENSURE_STATUS(LoadModel());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   // Install profilers if necessary right after interpreter is created so that
@@ -734,6 +748,20 @@ TfLiteStatus BenchmarkTfLiteModel::LoadModel() {
   return kTfLiteOk;
 }
 
+TfLiteStatus BenchmarkTfLiteModel::LoadModel(std::string graph) {
+  std::unique_ptr<tflite::FlatBufferModel> model =
+    tflite::FlatBufferModel::BuildFromFile(graph.c_str());
+
+  if (!model) {
+    TFLITE_LOG(ERROR) << "Failed to mmap model " << graph;
+    return kTfLiteError;
+  }
+  TFLITE_LOG(INFO) << "Loaded model " << graph;
+  models_[graph] = std::move(model);
+
+  return kTfLiteOk;
+}
+
 std::unique_ptr<tflite::OpResolver> BenchmarkTfLiteModel::GetOpResolver()
     const {
   auto resolver = new tflite::ops::builtin::BuiltinOpResolver();
@@ -759,7 +787,16 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
-TfLiteStatus BenchmarkTfLiteModel::RunAll() { return interpreter_->InvokeAll(); }
+TfLiteStatus BenchmarkTfLiteModel::RunAll() {
+  int num_iters = 3;
+  for (int i = 0; i < num_iters; ++i) {
+    for (int j = 0; j < models_.size(); ++j) {
+      interpreter_->InvokeModel(j);
+    }
+  }
+  interpreter_->GetPlanner()->Wait(models_.size() * num_iters);
+  return kTfLiteOk;
+}
 
 }  // namespace benchmark
 }  // namespace tflite

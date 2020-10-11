@@ -10,13 +10,14 @@ namespace tflite {
 
 namespace impl {
 
-class Interpreter;
-class Subgraph;
 class Planner;
 
 struct Job {
-  explicit Job(int subgraph_idx)
-    : subgraph_idx_(subgraph_idx) {}
+  explicit Job(int model_id)
+    : model_id_(model_id) {
+    subgraph_idx_ = -1;
+  }
+  int model_id_;
   int subgraph_idx_;
 };
 
@@ -25,9 +26,19 @@ class Worker {
   explicit Worker(std::shared_ptr<Planner> planner);
   ~Worker();
 
- private:
-  friend class Planner;
+  std::mutex& GetDeviceMtx() {
+    return device_mtx_;
+  }
 
+  std::condition_variable& GetRequestCv() {
+    return request_cv_;
+  }
+
+  std::deque<Job>& GetDeviceRequests() {
+    return requests_;
+  }
+
+ private:
   void Work();
 
   std::weak_ptr<Planner> planner_;
@@ -35,7 +46,6 @@ class Worker {
   std::mutex device_mtx_;
   std::condition_variable request_cv_;
   std::deque<Job> requests_;
-
   bool kill_worker_ = false;
 };
 

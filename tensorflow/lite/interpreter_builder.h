@@ -55,14 +55,32 @@ namespace impl {
 class InterpreterBuilder {
  public:
   static void SetErrorReporter(ErrorReporter* error_reporter);
-  static TfLiteStatus AddModel(const FlatBufferModel& model,
+
+  // Adds a Subgraph to the interpreter.
+  // Returns the Subgraph index.
+  // Returns -1 if any error occurs.
+  static int AddSubgraph(const FlatBufferModel& model,
+                        const OpResolver& op_resolver,
+                        std::unique_ptr<Interpreter>* interpreter,
+                        int num_threads = -1,
+                        TfLiteDevice device_id = kTfLiteCPU);
+  static int AddSubgraph(const ::tflite::Model* model,
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
+                     int num_threads = -1,
+                     TfLiteDevice device_id = kTfLiteCPU);
+
+  // Adds NUM_DEVICES number of Subgraphs to the interpreter.
+  // Returns the model id.
+  // Returns -1 if any error occurs.
+  static int RegisterModel(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1);
-  static TfLiteStatus AddModel(const ::tflite::Model* model,
-                     const OpResolver& op_resolver, 
-                     std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads = -1);
+  static int RegisterModel(const ::tflite::Model* model,
+                        const OpResolver& op_resolver,
+                        std::unique_ptr<Interpreter>* interpreter,
+                        int num_threads = -1);
 
  private:
   InterpreterBuilder() = default;
@@ -87,6 +105,7 @@ class InterpreterBuilder {
                              TfLiteSparsity** sparsity);
 
   static ErrorReporter* error_reporter_;
+  static int num_registered_model;
 
   std::vector<const TfLiteRegistration*> flatbuffer_op_index_to_registration_;
   std::vector<TfLiteRegistration> unresolved_custom_ops_;

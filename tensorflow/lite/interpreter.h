@@ -33,7 +33,13 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
-#include "tensorflow/lite/planner.h"
+#include "tensorflow/lite/fixed_device_planner.h"
+#include "tensorflow/lite/model_builder.h"
+
+#if defined(__ANDROID__)
+#include "tensorflow/lite/delegates/gpu/delegate.h"
+#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
+#endif
 
 #if TFLITE_EXPERIMENTAL_RUNTIME_EAGER
 #include "tensorflow/lite/experimental/tf_runtime/public/eager_interpreter.h"
@@ -367,8 +373,9 @@ class Interpreter {
   /// Invoke idx-th subgraph in the interpreter.
   TfLiteStatus Invoke(int idx);
 
-  /// Invoke all subgraphs in the interpreter.
-  TfLiteStatus InvokeAll();
+  /// Invoke one subgraph with the model_id in the interpreter.
+  /// This method is an asychronous call.
+  void InvokeModel(int model_id);
 
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
@@ -379,7 +386,9 @@ class Interpreter {
   /// User may pass -1 to let the TFLite interpreter set the no of threads
   /// available to itself.
   // TODO #7: Change how the interpreter manages context of each subgraph
-  void SetNumThreads(int num_threads, size_t first_subgraph_index = 0, int last_subgraph_index = -1);
+  void SetNumThreads(int num_threads,
+                     size_t first_subgraph_index = 0,
+                     int last_subgraph_index = -1);
 
   /// Allow float16 precision for FP32 calculation when possible.
   /// default: not allow.
@@ -516,7 +525,7 @@ class Interpreter {
   void AddSubgraphs(int subgraphs_to_add,
                     int* first_new_subgraph_index = nullptr);
 
-  void DeleteSubgraphs(size_t starting_index_to_delete, 
+  void DeleteSubgraphs(size_t starting_index_to_delete,
                        int subgraphs_to_delete = -1);
 
   /// Return the number of subgraphs in the model.
@@ -545,7 +554,7 @@ class Interpreter {
   }
 #endif  // DOXYGEN_SKIP
 
-  TfLiteDelegate* device_delegates(int device_idx){
+  TfLiteDelegate* device_delegates(int device_idx) {
     return device_delegates_[device_idx].get();
   }
 
@@ -561,6 +570,16 @@ class Interpreter {
     return *workers_[device_idx];
   }
 
+  int GetWorkersSize() {
+    return workers_.size();
+  }
+
+  // TODO #13: Create mobile device independent delegate instances
+  int GetSubgraphIdx(int model_id, TfLiteDevice device_id);
+
+  // Applies Delegate to the subgraph when a device id is given.
+  TfLiteStatus ApplyDeviceDelegate(Subgraph* subgraph, TfLiteDevice device);
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
@@ -572,6 +591,16 @@ class Interpreter {
 
   // TODO #13: Create mobile device independent delegate instances
   int num_devices = 3;
+
+  // Map structure to find subgraph idx with (model_id, device_id)
+  std::map<std::pair<int, TfLiteDevice>, int> subgraph_idx_map_;
+
+  // TODO #13: Create mobile device independent delegate instances
+  // Inserts a pair whose key is (model_id, device_id) and value is
+  // the subgraph index.
+  void RegisterSubgraphIdx(int model_id,
+                           TfLiteDevice device_id,
+                           int subgraph_idx);
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,

@@ -48,6 +48,7 @@ void Worker::Work() {
         // Currently, put a job with a minus sign if Invoke() fails.
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
       }
+      planner_ptr->GetSafeBool().notify();
     } else {
       // TODO #21: Handle errors in multi-thread environment
       return;

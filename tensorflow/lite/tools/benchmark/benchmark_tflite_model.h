@@ -72,6 +72,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   int64_t MayGetModelFileSize() override;
 
   virtual TfLiteStatus LoadModel();
+  virtual TfLiteStatus LoadModel(std::string graph);
 
   // Allow subclasses to create a customized Op resolver during init.
   virtual std::unique_ptr<tflite::OpResolver> GetOpResolver() const;
@@ -86,6 +87,14 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   void CleanUp();
 
   std::unique_ptr<tflite::FlatBufferModel> model_;
+
+  // TODO #17 : Update benchmark tool to simulate target scenario
+  // Currently, `model_ids_` vector is not being used to generate inputs.
+  std::vector<int> model_ids_;
+
+  // Map structure to find FlatBufferModel pointer with a model file name.
+  std::map<std::string, std::unique_ptr<tflite::FlatBufferModel>> models_;
+
   std::unique_ptr<tflite::Interpreter> interpreter_;
   std::unique_ptr<tflite::ExternalCpuBackendContext> external_context_;
 
