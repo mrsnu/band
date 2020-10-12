@@ -597,7 +597,7 @@ class Interpreter {
                            int subgraph_idx);
 
   // Applies best delegate from the given device to the subgraph.
-  TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, bool has_int8, bool has_fp32);
+  TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,

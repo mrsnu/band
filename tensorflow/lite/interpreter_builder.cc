@@ -435,8 +435,6 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
     return kEmptyTensorName;
   };
 
-  num_fp32_tensors_ = 0;
-  num_int8_tensors_ = 0;
   for (int i = 0; i < tensors->size(); ++i) {
     const auto* tensor = tensors->Get(i);
     std::vector<int> dims = FlatBufferIntArrayToVector(tensor->shape());
@@ -447,12 +445,9 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
       status = kTfLiteError;
       continue;
     }
-    if (type == kTfLiteInt8) {
-      ++num_int8_tensors_;
-    }
-    if (type == kTfLiteFloat32) {
-      ++num_fp32_tensors_;
-    }
+
+    tensor_types_.insert(type);
+
     auto get_readonly_data = [&](const char** buffer_data,
                                  size_t* buffer_size) {
       // TODO(aselle): Check what happens if we have an unspecified size
@@ -698,8 +693,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
           ApplyBestDeviceDelegate(
             modified_subgraph, 
             device_id, 
-            builder.num_int8_tensors_, 
-            builder.num_fp32_tensors_) != kTfLiteOk)
+            builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
   }
 

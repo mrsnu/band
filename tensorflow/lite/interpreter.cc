@@ -560,8 +560,7 @@ Profiler* Interpreter::GetProfiler() {
 
 TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
                                               TfLiteDeviceFlags device, 
-                                              bool has_int8, 
-                                              bool has_fp32) {
+                                              const std::set<TfLiteType>& tensor_types) {
   TfLiteDelegate* targetDelegate = nullptr;
 
   switch (device) {
