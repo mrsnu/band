@@ -159,6 +159,9 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
   for(const char* device_name : string_device_names_list) {
     if(IsNNAPIDeviceUseful(device_name)) {
+      // The default number of maximum delegate ops is 1.
+      // Enable the following line to create multiple DSP ops within a Subgraph.
+      // nnapi_options.max_number_delegated_partitions = 10;
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       nnapi_options.accelerator_name = device_name;
 
@@ -569,31 +572,31 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
                                               bool has_fp32) {
   TfLiteDelegate* targetDelegate = nullptr;
 
-  switch (device)
-  {
-  case kTfLiteCPU:
-    // XNNPACK is efficient than default CPU
-    if(has_fp32)
-      targetDelegate = delegates(kTfLiteDelegateFlagsXNNPACK);
-    else
-      // Only valid case to return Ok with nullptr
-      return kTfLiteOk;
-    break;
-  
-  case kTfLiteGPU:
-    targetDelegate = delegates(kTfLiteDelegateFlagsGPU);
-    break;
+  switch (device) {
+    case kTfLiteCPU:
+      // XNNPACK is efficient than default CPU
+      if(tensor_types.find(kTfLiteFloat32) != tensor_types.end())
+        targetDelegate = delegates(kTfLiteDelegateFlagsXNNPACK);
+      if(targetDelegate == nullptr)
+        // Only valid case to return Ok with nullptr
+        return kTfLiteOk;
+      break;
+    
+    case kTfLiteGPU:
+      targetDelegate = delegates(kTfLiteDelegateFlagsGPU);
+      break;
 
-  case kTfLiteDSP:
-    if (has_int8)
-      targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
-    break;
-  
-  // TODO # 30
-  // Add NPU / TPU / hta
-  
-  default:
-    break;
+    case kTfLiteDSP:
+      if (tensor_types.find(kTfLiteInt8) != tensor_types.end() ||
+          tensor_types.find(kTfLiteUInt8) != tensor_types.end())
+        targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
+      break;
+    
+    // TODO # 30
+    // Add NPU / TPU / hta
+    
+    default:
+      break;
   }
 
   if (targetDelegate != nullptr) {

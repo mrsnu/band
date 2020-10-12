@@ -550,24 +550,24 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
   int model_id = InterpreterBuilder::num_registered_model++;
+  bool has_available_device = false;
 
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, num_threads, device_id);
-    if (subgraph_idx == -1) {
-      int start_idx = (*interpreter)->subgraphs_size() - i;
-      int num_graphs_to_delete = i;
-
-      (*interpreter)->DeleteSubgraphs(start_idx, num_graphs_to_delete);
-      InterpreterBuilder::num_registered_model--;
-
-      return subgraph_idx;
+    if (subgraph_idx != -1) {
+      (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
+      has_available_device = true;
     }
-    (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
   }
 
-  return model_id;
+  if(has_available_device)
+    return model_id;
+  else {
+    InterpreterBuilder::num_registered_model--;
+    return -1;
+  }
 }
 
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
@@ -648,6 +648,11 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
 #if defined(TFLITE_ENABLE_DEFAULT_PROFILER)
   (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
 #endif
+
+
+  error_reporter_->Report(
+      "# of subgraphs in model : %d.\n",
+      subgraphs->size());
 
   int modified_subgraph_index = -1;
   for (int subgraph_index = 0; subgraph_index < subgraphs->size();
