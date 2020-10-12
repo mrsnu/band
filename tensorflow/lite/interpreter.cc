@@ -185,14 +185,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
   // TODO #23
   // Add flex delegate?
-
-  // Create a Planner instance.
-  planner_.reset(new FixedDevicePlanner(this));
-
-  // Create workers.
-  for (int i = 0; i < kTfLiteNumDevices; ++i) {
-    workers_.emplace_back(new Worker(planner_));
-  }
   
 #endif  // defined(__ANDROID__)
 }
