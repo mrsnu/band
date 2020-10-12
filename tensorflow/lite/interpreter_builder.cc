@@ -644,11 +644,6 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
   (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
 #endif
 
-
-  error_reporter_->Report(
-      "# of subgraphs in model : %d.\n",
-      subgraphs->size());
-
   int modified_subgraph_index = -1;
   for (int subgraph_index = 0; subgraph_index < subgraphs->size();
        ++subgraph_index) {
