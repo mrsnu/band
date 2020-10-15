@@ -3,7 +3,7 @@
 
 namespace tflite {
 int LoggingReporter::Report(const char* format, va_list args) {
-  int count = snprintf(nullptr, 0, format, args) + 1;
+  int count = vsnprintf(nullptr, 0, format, args) + 1;
   char* buffer = new char[count];
   vsnprintf(buffer, count, format, args);
   TFLITE_LOG(ERROR) << buffer;
