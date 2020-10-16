@@ -251,7 +251,7 @@ CreateProfileSummaryFormatter(bool format_as_csv) {
 
 BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
   BenchmarkParams default_params = BenchmarkModel::DefaultParams();
-  default_params.AddParam("graph", BenchmarkParam::Create<std::string>(""));
+  default_params.AddParam("graphs", BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("input_layer",
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("input_layer_shape",
@@ -299,7 +299,7 @@ BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
 std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkModel::GetFlags();
   std::vector<Flag> specific_flags = {
-      CreateFlag<std::string>("graph", &params_, "graph file name"),
+      CreateFlag<std::string>("graphs", &params_, "graph file names"),
       CreateFlag<std::string>("input_layer", &params_, "input layer names"),
       CreateFlag<std::string>("input_layer_shape", &params_,
                               "input layer shape"),
@@ -347,7 +347,7 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
 
 void BenchmarkTfLiteModel::LogParams() {
   BenchmarkModel::LogParams();
-  TFLITE_LOG(INFO) << "Graph: [" << params_.Get<std::string>("graph") << "]";
+  TFLITE_LOG(INFO) << "Graph: [" << params_.Get<std::string>("graphs") << "]";
   TFLITE_LOG(INFO) << "Input layers: ["
                    << params_.Get<std::string>("input_layer") << "]";
   TFLITE_LOG(INFO) << "Input shapes: ["
@@ -384,9 +384,9 @@ void BenchmarkTfLiteModel::LogParams() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::ValidateParams() {
-  if (params_.Get<std::string>("graph").empty()) {
+  if (params_.Get<std::string>("graphs").empty()) {
     TFLITE_LOG(ERROR)
-        << "Please specify the name of your TF Lite input file with --graph";
+        << "Please specify the name of your TF Lite input file with --graphs";
     return kTfLiteError;
   }
 
@@ -408,9 +408,15 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
 }
 
 int64_t BenchmarkTfLiteModel::MayGetModelFileSize() {
-  std::ifstream in_file(params_.Get<std::string>("graph"),
-                        std::ios::binary | std::ios::ate);
-  return in_file.tellg();
+  int64_t total_mem_size = 0;
+
+  for (int i = 0; i < graphs_.size(); ++i) {
+    std::ifstream in_file(graphs_[i],
+                          std::ios::binary | std::ios::ate);
+    total_mem_size += in_file.tellg();
+  }
+
+  return total_mem_size;
 }
 
 BenchmarkTfLiteModel::InputTensorData BenchmarkTfLiteModel::LoadInputTensorData(
@@ -606,19 +612,11 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter()));
 
-  // TODO #29: Add an argument with multiple graph file names
-  // To successfully build the tool fix the file path to the graph.
-  std::vector<std::string> graphs;
-  std::string base_path = "/data/local/tmp/";
-  graphs.push_back(base_path + "mobilenet_v1_1.0_224_quant.tflite");
-  graphs.push_back(base_path + "ssd_mobilenet_v1_1_metadata_1.tflite");
-  graphs.push_back(base_path + "inception_v3_quant.tflite");
-
-  for (int i = 0; i < graphs.size(); ++i) {
-    TF_LITE_ENSURE_STATUS(LoadModel(graphs[i]));
+  for (int i = 0; i < graphs_.size(); ++i) {
+    TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
     int model_id =
         tflite::InterpreterBuilder::RegisterModel(
-            *models_[graphs[i]], *resolver, &interpreter_);
+            *models_[graphs_[i]], *resolver, &interpreter_);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
@@ -648,6 +646,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
+  TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   // Install profilers if necessary right after interpreter is created so that
@@ -737,17 +736,6 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   return kTfLiteOk;
 }
 
-TfLiteStatus BenchmarkTfLiteModel::LoadModel() {
-  std::string graph = params_.Get<std::string>("graph");
-  model_ = tflite::FlatBufferModel::BuildFromFile(graph.c_str());
-  if (!model_) {
-    TFLITE_LOG(ERROR) << "Failed to mmap model " << graph;
-    return kTfLiteError;
-  }
-  TFLITE_LOG(INFO) << "Loaded model " << graph;
-  return kTfLiteOk;
-}
-
 TfLiteStatus BenchmarkTfLiteModel::LoadModel(std::string graph) {
   std::unique_ptr<tflite::FlatBufferModel> model =
     tflite::FlatBufferModel::BuildFromFile(graph.c_str());
@@ -783,6 +771,21 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
       params_.Get<std::string>("profiling_output_csv_file"),
       CreateProfileSummaryFormatter(
           !params_.Get<std::string>("profiling_output_csv_file").empty())));
+}
+
+TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
+  std::string graphs = params_.Get<std::string>("graphs");
+  size_t previous = 0, current;
+
+  do {
+    current = graphs.find(',', previous);
+    std::string graph = graphs.substr(previous, current - previous);
+    if (graph.size() > 0)
+      graphs_.push_back(graph);
+    previous = current + 1;
+  } while (current != string::npos);
+
+  return kTfLiteOk;
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
