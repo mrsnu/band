@@ -128,6 +128,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   InputTensorData LoadInputTensorData(const TfLiteTensor& t,
                                       const std::string& input_file_path);
 
+  // `graphs` argument is parsed with commas.
   TfLiteStatus ParseGraphFileNames();
 
   std::vector<InputLayerInfo> inputs_;
