@@ -785,6 +785,11 @@ TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
     previous = current + 1;
   } while (current != string::npos);
 
+  if (graphs_.size() == 0) {
+    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite input files.";
+    return kTfLiteError;
+  }
+
   return kTfLiteOk;
 }
 
