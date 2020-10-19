@@ -71,7 +71,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   int64_t MayGetModelFileSize() override;
 
-  virtual TfLiteStatus LoadModel();
   virtual TfLiteStatus LoadModel(std::string graph);
 
   // Allow subclasses to create a customized Op resolver during init.
@@ -129,12 +128,16 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   InputTensorData LoadInputTensorData(const TfLiteTensor& t,
                                       const std::string& input_file_path);
 
+  // `graphs` argument is parsed with commas.
+  TfLiteStatus ParseGraphFileNames();
+
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;
   std::unique_ptr<BenchmarkListener> profiling_listener_ = nullptr;
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;
   std::mt19937 random_engine_;
   std::vector<Interpreter::TfLiteDelegatePtr> owned_delegates_;
+  std::vector<std::string> graphs_;
   // Always TFLITE_LOG the benchmark result.
   BenchmarkLoggingListener log_output_;
 };
