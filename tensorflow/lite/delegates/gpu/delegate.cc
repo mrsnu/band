@@ -199,14 +199,11 @@ class DelegateKernel {
   }
 
   absl::Status Invoke(TfLiteContext* context) {
-    if (thread_id_prepare_ != std::this_thread::get_id()) {
-      TFLITE_LOG(tflite::TFLITE_LOG_WARNING,
-                 "GpuDelegate invoke thread != prepare thread");
-      if (enforce_same_thread_) {
-        return absl::FailedPreconditionError(
-            "GpuDelegate must run on the same thread where it was "
-            "initialized.");
-      }
+    if (thread_id_prepare_ != std::this_thread::get_id() 
+      && enforce_same_thread_) {
+      return absl::FailedPreconditionError(
+          "OpenGL GpuDelegate must run on the same thread where it was "
+          "initialized.");
     }
 
     const bool is_dequant_required = !quant_conversion_map_.empty();
