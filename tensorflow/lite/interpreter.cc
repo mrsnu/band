@@ -141,9 +141,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
-  // The default number of maximum delegate ops is 1.
-  // Enable the following line to create multiple gpu ops within a Subgraph.
-  gpu_opts.max_delegated_partitions = 10;
+  // TODO #34 GPU delegate multiple delegated partition support
+  // gpu_opts.max_delegated_partitions = 10;
   TfLiteDelegatePtr gpu_delegate =
       TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
                         &TfLiteGpuDelegateV2Delete);
@@ -164,8 +163,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   for(const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
-      // The default number of maximum delegate ops is 1.
-      // Enable the following line to create multiple DSP ops within a Subgraph.
+      // Unlimited partition : 0
       nnapi_options.max_number_delegated_partitions = 0;
       nnapi_options.accelerator_name = device_name;
 
