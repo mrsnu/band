@@ -60,7 +60,7 @@ class Delegate {
   void SetNumThreads(int num_threads) {
     // This code block has a dependency to pthread.
 #if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
-    if(num_threads > 1) {
+    if (num_threads > 1) {
       threadpool_.reset(
           pthreadpool_create(static_cast<size_t>(num_threads)));
     }
@@ -2904,7 +2904,7 @@ void TfLiteXNNPackDelegateDelete(TfLiteDelegate* delegate) {
 
 void TfLiteXNNPackDelegateUpdate(TfLiteDelegate* delegate,
     const TfLiteXNNPackDelegateOptions* options) {
-  if(delegate != nullptr) {
+  if (delegate != nullptr) {
     reinterpret_cast<tflite::xnnpack::Delegate*>(delegate->data_)->SetNumThreads(options->num_threads);
   }
 }

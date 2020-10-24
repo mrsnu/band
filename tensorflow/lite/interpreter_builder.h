@@ -111,7 +111,6 @@ class InterpreterBuilder {
   std::vector<TfLiteRegistration> unresolved_custom_ops_;
   std::vector<BuiltinOperator> flatbuffer_op_index_to_registration_types_;
   const Allocation* allocation_ = nullptr;
-  
   bool has_flex_op_ = false;
   std::set<TfLiteType> tensor_types_;
 };

@@ -22,7 +22,6 @@ limitations under the License.
 #include <cstdlib>
 #include <memory>
 #include <vector>
-#include <set>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/common.h"  // IWYU pragma: export
@@ -557,7 +556,7 @@ class Interpreter {
 
   TfLiteDelegate* delegates(TfLiteDelegateFlags delegate) {
     auto it = delegates_.find(delegate);
-    if(it != delegates_.end())
+    if (it != delegates_.end())
       return it->second.get();
     else
       return nullptr;

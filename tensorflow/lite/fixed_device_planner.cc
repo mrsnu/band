@@ -27,6 +27,7 @@ void FixedDevicePlanner::Plan() {
       while (devices_per_models_map.size()) {
         // Loop through models in ascending order 
         // based on # of available devices
+        // (Assign models that has limited support first)
         int selected_model_id = -1;
         for (auto& devices_per_models : devices_per_models_map) {
           for (int model_id : devices_per_models.second) {
@@ -39,7 +40,7 @@ void FixedDevicePlanner::Plan() {
 
           if (selected_model_id != -1) {
             devices_per_models.second.erase(selected_model_id);
-            if(devices_per_models.second.size() == 0)
+            if (devices_per_models.second.size() == 0)
               devices_per_models_map.erase(devices_per_models.first);
             break;
           }

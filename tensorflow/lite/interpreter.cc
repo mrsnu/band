@@ -77,8 +77,7 @@ TfLiteQuantization GetQuantizationFromLegacy(
   return quantization;
 }
 
-// Returns whether the specified device name is
-// efficient enough to run on NNAPI
+// Discard nnapi backend for devices that has direct support
 bool IsNNAPIDeviceUseful(std::string name) {
   static const char* const filter_keywords[] = {
     "nnapi-reference",  // CPU
@@ -163,7 +162,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // arm npu (DaVinci) : armnn
   // mediatek APU : neuron-ann
   for(const char* device_name : string_device_names_list) {
-    if(IsNNAPIDeviceUseful(device_name)) {
+    if (IsNNAPIDeviceUseful(device_name)) {
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       // The default number of maximum delegate ops is 1.
       // Enable the following line to create multiple DSP ops within a Subgraph.
@@ -196,7 +195,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   }
 
   TfLiteDelegatePtr xnnpack_delegate = MaybeCreateXNNPACKDelegate(1);
-  if(xnnpack_delegate.get()) {
+  if (xnnpack_delegate.get()) {
     std::make_pair(kTfLiteDelegateFlagsXNNPACK, std::move(xnnpack_delegate));
   }
 
@@ -466,11 +465,11 @@ void Interpreter::SetXNNPACKNumThreads(int num_threads) {
 
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
   TfLiteDelegate* delegate = delegates(kTfLiteDelegateFlagsXNNPACK);
-  if(delegate != nullptr) {
+  if (delegate != nullptr) {
       TfLiteXNNPackDelegateOptions options = TfLiteXNNPackDelegateOptionsDefault();
       // Modify -1 to 0 to match the XNNPACK runtime behavior 
       // to automatically set the value.
-      if(num_threads == -1)
+      if (num_threads == -1)
         num_threads = 0;
       options.num_threads = num_threads;
       TfLiteXNNPackDelegateUpdate(delegate, &options);
@@ -587,9 +586,9 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
   switch (device) {
     case kTfLiteCPU:
       // XNNPACK is efficient than default CPU
-      if(tensor_types.find(kTfLiteFloat32) != tensor_types.end())
+      if (tensor_types.find(kTfLiteFloat32) != tensor_types.end())
         targetDelegate = delegates(kTfLiteDelegateFlagsXNNPACK);
-      if(targetDelegate == nullptr)
+      if (targetDelegate == nullptr)
         // Only valid case to return Ok with nullptr
         return kTfLiteOk;
       break;
@@ -628,7 +627,7 @@ void Interpreter::RegisterSubgraphIdx(int model_id,
 int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
   std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
   auto it = subgraph_idx_map_.find(key);
-  if(it != subgraph_idx_map_.end())
+  if (it != subgraph_idx_map_.end())
     return it->second;
   else
     return -1;

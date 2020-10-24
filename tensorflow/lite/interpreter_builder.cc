@@ -557,7 +557,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   }
 
-  if(has_available_device)
+  if (has_available_device)
     return model_id;
   else {
     InterpreterBuilder::num_registered_model--;
