@@ -585,7 +585,7 @@ class Interpreter {
 
   int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
 
-  const std::set<int>& models() const;
+  std::set<int> models() const;
 
  private:
   friend class InterpreterBuilder;

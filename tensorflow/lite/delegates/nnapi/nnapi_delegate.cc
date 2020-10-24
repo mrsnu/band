@@ -4175,12 +4175,16 @@ TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
     return false;
   };
 
-  if(contains_keywords({"gpu"})) {
+  if (contains_keywords({ "gpu" })) {
     return kTfLiteDelegateFlagsNNAPIGPU;
   }
 
-  if(contains_keywords({"dsp"})) {
+  if (contains_keywords({ "dsp" })) {
     return kTfLiteDelegateFlagsNNAPIDSP;
+  }
+
+  if (contains_keywords({ "google-edgetpu", "armnn", "neuron-ann" })) {
+    return kTfLiteDelegateFlagsNNAPINPU;
   }
 
   // TODO #23 

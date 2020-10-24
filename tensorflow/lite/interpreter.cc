@@ -131,7 +131,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // Create a Planner instance.
   planner_.reset(new FixedDevicePlanner(this));
 
-  std::set<TfLiteDeviceFlags> validDevices;
+  std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
@@ -150,7 +150,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
                         &TfLiteGpuDelegateV2Delete);
   if (gpu_delegate.get()) {
     delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
-  } 
+    validDevices.insert(kTfLiteGPU);
+  }
 
   std::vector<const char*> string_device_names_list = nnapi::GetDeviceNamesList();
 
@@ -176,8 +177,20 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
           });
 
       if (nnapi_delegate.get()) {
+        TfLiteDelegateFlags delegateFlag =
+            static_cast<TfLiteDelegateFlags>(nnapi_delegate->flags);
+        
+        switch (delegateFlag) {
+          case kTfLiteDelegateFlagsNNAPIDSP:
+            validDevices.insert(kTfLiteDSP);
+            break;
+          case kTfLiteDelegateFlagsNNAPINPU:
+            validDevices.insert(kTfLiteNPU);
+            break;
+        }
+
         delegates_.insert(
-          std::make_pair(TfLiteDelegateFlags(nnapi_delegate->flags), std::move(nnapi_delegate)));
+          std::make_pair(delegateFlag, std::move(nnapi_delegate)));
       }
     }
   }
@@ -621,7 +634,7 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
     return -1;
 }
 
-const std::set<int>& Interpreter::models() const {
+std::set<int> Interpreter::models() const {
   std::set<int> models;
   for(auto key : subgraph_idx_map_) {
     models.insert(key.first.first);
