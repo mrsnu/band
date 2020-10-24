@@ -22,6 +22,7 @@ limitations under the License.
 #include <cstdlib>
 #include <memory>
 #include <vector>
+#include <set>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/common.h"  // IWYU pragma: export
@@ -570,8 +571,12 @@ class Interpreter {
     return planner_;
   }
 
-  Worker& GetWorker(int device_idx) {
-    return *workers_[device_idx];
+  Worker* GetWorker(TfLiteDeviceFlags device) {
+    auto it = workers_.find(device);
+    if (it != workers_.end())
+      return it->second.get();
+    else
+      return nullptr;
   }
 
   int GetWorkersSize() {
@@ -580,6 +585,8 @@ class Interpreter {
 
   int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
 
+  const std::set<int>& models() const;
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
@@ -587,7 +594,7 @@ class Interpreter {
   friend class tflite::delegates::InterpreterUtils;
 
   std::shared_ptr<Planner> planner_;
-  std::vector<std::unique_ptr<Worker>> workers_;
+  std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 
   // Map structure to find subgraph idx with (model_id, device_id)
   std::map<std::pair<int, TfLiteDeviceFlags>, int> subgraph_idx_map_;

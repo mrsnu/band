@@ -81,8 +81,8 @@ TfLiteQuantization GetQuantizationFromLegacy(
 // efficient enough to run on NNAPI
 bool IsNNAPIDeviceUseful(std::string name) {
   static const char* const filter_keywords[] = {
-    "nnapi-reference", // CPU
-    "gpu", // Inefficient than GPUDelegate
+    "nnapi-reference",  // CPU
+    "gpu",  // Inefficient than GPUDelegate
     "default"};
 
   for(auto keyword : filter_keywords) {
@@ -131,10 +131,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // Create a Planner instance.
   planner_.reset(new FixedDevicePlanner(this));
 
-  // Create workers.
-  for (int i = 0; i < kTfLiteNumDevices; ++i) {
-    workers_.emplace_back(new Worker(planner_));
-  }
+  std::set<TfLiteDeviceFlags> validDevices;
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
@@ -147,7 +144,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
   // The default number of maximum delegate ops is 1.
   // Enable the following line to create multiple gpu ops within a Subgraph.
-  // gpu_opts.max_delegated_partitions = 10;
+  gpu_opts.max_delegated_partitions = 10;
   TfLiteDelegatePtr gpu_delegate =
       TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
                         &TfLiteGpuDelegateV2Delete);
@@ -157,12 +154,19 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
   std::vector<const char*> string_device_names_list = nnapi::GetDeviceNamesList();
 
+  // TODO #23 : Add more nnapi names
+  // Possible device runtime names 
+  // nnapi : nnapi-default, nnapi-reference
+  // qualcomm hexagon : qti-default, qti-dsp, qti-gpu, qti-hta
+  // google tpu: google-edgetpu
+  // arm npu (DaVinci) : armnn
+  // mediatek APU : neuron-ann
   for(const char* device_name : string_device_names_list) {
     if(IsNNAPIDeviceUseful(device_name)) {
+      StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       // The default number of maximum delegate ops is 1.
       // Enable the following line to create multiple DSP ops within a Subgraph.
-      // nnapi_options.max_number_delegated_partitions = 10;
-      StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
+      nnapi_options.max_number_delegated_partitions = 0;
       nnapi_options.accelerator_name = device_name;
 
       TfLiteDelegatePtr nnapi_delegate = TfLiteDelegatePtr(
@@ -187,6 +191,10 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // Add flex delegate?
   
 #endif  // defined(__ANDROID__)
+
+  for(const TfLiteDeviceFlags& deviceFlag : validDevices) {
+    workers_[deviceFlag] = std::make_unique<Worker>(planner_);
+  }
 }
 
 Interpreter::~Interpreter() {
@@ -611,6 +619,14 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
     return it->second;
   else
     return -1;
+}
+
+const std::set<int>& Interpreter::models() const {
+  std::set<int> models;
+  for(auto key : subgraph_idx_map_) {
+    models.insert(key.first.first);
+  }
+  return models;
 }
 
 }  // namespace impl

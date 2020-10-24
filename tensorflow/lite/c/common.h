@@ -765,7 +765,8 @@ typedef enum {
   kTfLiteCPU = 0,
   kTfLiteGPU = 1,
   kTfLiteDSP = 2,
-  kTfLiteNumDevices = 3,
+  kTfLiteNPU = 3,
+  kTfLiteNumDevices = 4,
 } TfLiteDeviceFlags;
 
 // The flags used in `TfLiteDelegate`. Note that this is a bitmask, so the
@@ -783,6 +784,7 @@ typedef enum TfLiteDelegateFlags {
   // If the delegate isn't capable to handle dynamic tensors, this flag need
   // to be set to false.
   kTfLiteDelegateFlagsAllowDynamicTensors = 1,
+  // Flags for delegates
   kTfLiteDelegateFlagsGPU = 1 << 1,
   kTfLiteDelegateFlagsNNAPIGPU = 1 << 2,
   kTfLiteDelegateFlagsNNAPIDSP = 1 << 3,
