@@ -6,6 +6,8 @@
 #include <condition_variable>
 #include <deque>
 
+#include "tensorflow/lite/profiling/time.h"
+
 namespace tflite {
 
 namespace impl {
@@ -16,9 +18,17 @@ struct Job {
   explicit Job(int model_id)
     : model_id_(model_id) {
     subgraph_idx_ = -1;
+    device_id_ = -1;
+    enqueue_time_ = 0;
+    invoke_time_ = 0;
+    end_time_ = 0;
   }
   int model_id_;
   int subgraph_idx_;
+  int device_id_;
+  int64_t enqueue_time_;
+  int64_t invoke_time_;
+  int64_t end_time_;
 };
 
 class Worker {
@@ -37,6 +47,8 @@ class Worker {
   std::deque<Job>& GetDeviceRequests() {
     return requests_;
   }
+
+  int64_t GetWaitingTime();
 
  private:
   void Work();

@@ -80,6 +80,8 @@ FRAMEWORK_LIB_HDRS = [
     "stderr_reporter.h",
     "planner.h",
     "fixed_device_planner.h",
+    "round_robin_planner.h",
+    "shortest_expected_latency_planner.h",
     "worker.h",
     "safe_bool.h"
 ]
@@ -239,6 +241,8 @@ cc_library(
         "stderr_reporter.cc",
         "planner.cc",
         "fixed_device_planner.cc",
+        "round_robin_planner.cc",
+        "shortest_expected_latency_planner.cc",
         "worker.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
@@ -267,6 +271,7 @@ cc_library(
         "//tensorflow/lite/kernels/internal:compatibility",
         "//tensorflow/lite/nnapi:nnapi_implementation",
         "//tensorflow/lite/schema:schema_fbs",
+        "//tensorflow/lite/profiling:time",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",

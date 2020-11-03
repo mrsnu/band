@@ -274,8 +274,6 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("enable_platform_tracing",
                           BenchmarkParam::Create<bool>(false));
-  default_params.AddParam("period", BenchmarkParam::Create<int32_t>(10));
-  default_params.AddParam("planner", BenchmarkParam::Create<int32_t>(0));
 
   for (const auto& delegate_provider :
        tools::GetRegisteredDelegateProviders()) {
@@ -612,9 +610,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
-  int planner = params_.Get<int>("planner");
   (&interpreter_)->reset(
-      new Interpreter(LoggingReporter::DefaultLoggingReporter(), planner));
+      new Interpreter(LoggingReporter::DefaultLoggingReporter()));
 
   for (int i = 0; i < graphs_.size(); ++i) {
     TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
@@ -815,11 +812,11 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   return kTfLiteOk;
 }
 
-TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
+TfLiteStatus BenchmarkTfLiteModel::RunRequests() {
   kill_app = false;
 
   for (int j = 0; j < models_.size(); ++j) {
-    GenerateRequests(j, period);
+    GenerateRequests(j, 50);
   }
 
   std::this_thread::sleep_for(std::chrono::milliseconds(60000));

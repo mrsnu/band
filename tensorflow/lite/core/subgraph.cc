@@ -16,6 +16,7 @@ limitations under the License.
 #include "tensorflow/lite/core/subgraph.h"
 
 #include <algorithm>
+#include <iostream>
 
 #include "tensorflow/lite/arena_planner.h"
 #include "tensorflow/lite/c/common.h"
@@ -881,6 +882,29 @@ TfLiteStatus Subgraph::PrepareOpsAndTensors() {
       last_exec_plan_index_prepared));
   next_execution_plan_index_to_plan_allocation_ =
       last_exec_plan_index_prepared + 1;
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus Subgraph::Profile() {
+  int num_iterations = 50;
+  int64_t total = 0;
+  TfLiteStatus status;
+
+  for (int i = 0; i <= num_iterations; ++i) {
+    int64_t start = profiling::time::NowMicros();
+    status = Invoke();
+    if (status != kTfLiteOk) {
+      return status;
+    }
+    int64_t end = profiling::time::NowMicros();
+    if (i == 0)
+      continue;
+    total += end - start;
+  }
+  avg_time = total / num_iterations;
+
+  std::cout << "Profile Result (µs) : " << avg_time << std::endl;
 
   return kTfLiteOk;
 }

@@ -20,6 +20,7 @@ void FixedDevicePlanner::Plan() {
       int device_idx = model_id % GetInterpreter()->GetNumDevices();
       to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(
           model_id, static_cast<TfLiteDevice>(device_idx));
+      to_execute.device_id_ = device_idx;
 
       Worker& worker = GetInterpreter()->GetWorker(device_idx);
       {

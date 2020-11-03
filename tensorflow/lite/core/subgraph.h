@@ -251,6 +251,8 @@ class Subgraph {
   // Returns status of success or failure.
   TfLiteStatus Invoke();
 
+  TfLiteStatus Profile();
+
   // Entry point for C node plugin API to report an error.
   void ReportError(const char* format, ...);
 
@@ -336,6 +338,10 @@ class Subgraph {
   void SetModelPlan(TfLiteDevice device) { model_plan_->device_ = device; }
 
   ModelPlan* GetModelPlan() { return model_plan_.get(); }
+
+  int64_t GetExpectedLatency() {
+    return avg_time;
+  }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
@@ -709,6 +715,8 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
+
+  int64_t avg_time = 0;
 };
 
 }  // namespace impl

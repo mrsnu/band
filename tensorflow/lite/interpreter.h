@@ -34,6 +34,8 @@ limitations under the License.
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/fixed_device_planner.h"
+#include "tensorflow/lite/round_robin_planner.h"
+#include "tensorflow/lite/shortest_expected_latency_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -92,6 +94,7 @@ class Interpreter {
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
   explicit Interpreter(ErrorReporter* error_reporter = DefaultErrorReporter());
+  Interpreter(ErrorReporter* error_reporter, int planner);
 
   ~Interpreter();
 
@@ -580,6 +583,20 @@ class Interpreter {
   // Applies Delegate to the subgraph when a device id is given.
   TfLiteStatus ApplyDeviceDelegate(Subgraph* subgraph, TfLiteDevice device);
 
+  TfLiteStatus ProfileAll() {
+    TfLiteStatus status;
+    for (int i = 0; i < subgraphs_size(); ++i) {
+      status = subgraphs_[i]->Profile();
+      if (status != kTfLiteOk)
+        return status;
+    }
+
+    return kTfLiteOk;
+  }
+
+  TfLiteDevice GetShortestLatency(int model_id);
+  int64_t GetLatency(int model_id, TfLiteDevice device);
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
@@ -590,7 +607,9 @@ class Interpreter {
   std::vector<std::unique_ptr<Worker>> workers_;
 
   // TODO #13: Create mobile device independent delegate instances
-  int num_devices = 3;
+  int num_devices = 4;
+
+  int planner_type = 0;
 
   // Map structure to find subgraph idx with (model_id, device_id)
   std::map<std::pair<int, TfLiteDevice>, int> subgraph_idx_map_;

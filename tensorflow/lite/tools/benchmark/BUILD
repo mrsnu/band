@@ -141,6 +141,13 @@ cc_library(
 )
 
 cc_library(
+    name = "timer",
+    srcs = ["timer.cc"],
+    hdrs = ["timer.h"],
+    copts = common_copts,
+)
+
+cc_library(
     name = "benchmark_tflite_model_lib",
     srcs = ["benchmark_tflite_model.cc"],
     hdrs = ["benchmark_tflite_model.h"],
@@ -169,6 +176,7 @@ cc_library(
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/strings",
         "@ruy//ruy/profiler",
+        ":timer",
     ],
 )
 

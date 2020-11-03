@@ -29,16 +29,18 @@ using tensorflow::Stat;
 
 BenchmarkParams BenchmarkModel::DefaultParams() {
   BenchmarkParams params;
-  params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(50));
-  params.AddParam("min_secs", BenchmarkParam::Create<float>(1.0f));
+  params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(1));
+  params.AddParam("min_secs", BenchmarkParam::Create<float>(0.0f));
   params.AddParam("max_secs", BenchmarkParam::Create<float>(150.0f));
   params.AddParam("run_delay", BenchmarkParam::Create<float>(-1.0f));
   params.AddParam("num_threads", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("use_caching", BenchmarkParam::Create<bool>(false));
   params.AddParam("benchmark_name", BenchmarkParam::Create<std::string>(""));
   params.AddParam("output_prefix", BenchmarkParam::Create<std::string>(""));
-  params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(1));
+  params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(0));
   params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.5f));
+
+
   return params;
 }
 
@@ -68,6 +70,12 @@ void BenchmarkLoggingListener::OnBenchmarkEnd(const BenchmarkResults& results) {
 
 std::vector<Flag> BenchmarkModel::GetFlags() {
   return {
+       CreateFlag<int32_t>(
+          "period", &params_,
+          "run period"),
+       CreateFlag<int32_t>(
+          "planner", &params_,
+          "planner_type"),
       CreateFlag<int32_t>(
           "num_runs", &params_,
           "expected number of runs, see also min_secs, max_secs"),
@@ -79,7 +87,7 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
           "max_secs", &params_,
           "maximum number of seconds to rerun for, potentially making the "
           "actual number of runs to be less than num_runs. Note if --max-secs "
-          "is exceeded in the middle of a run, the benchmark will continue to "
+         "is exceeded in the middle of a run, the benchmark will continue to "
           "the end of the run but will not start the next run."),
       CreateFlag<float>("run_delay", &params_, "delay between runs in seconds"),
       CreateFlag<int32_t>("num_threads", &params_, "number of threads"),
@@ -142,13 +150,14 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
   int64_t max_finish_us = now_us + static_cast<int64_t>(max_secs * 1.e6f);
 
   *invoke_status = kTfLiteOk;
-  for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
-                    now_us <= max_finish_us;
-       run++) {
+  int period = params_.Get<int>("period");
+  std::cout << "PERIOD! " << period << std::endl;
+  // for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
+  for (int run = 0; (run < min_num_times) && (now_us <= max_finish_us); run++) {
     ResetInputsAndOutputs();
     listeners_.OnSingleRunStart(run_type);
     int64_t start_us = profiling::time::NowMicros();
-    TfLiteStatus status = RunAll();
+    TfLiteStatus status = RunRequests(period);
     int64_t end_us = profiling::time::NowMicros();
     listeners_.OnSingleRunEnd();
 

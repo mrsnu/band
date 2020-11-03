@@ -2,6 +2,8 @@
 #define TENSORFLOW_LITE_PLANNER_H_
 
 #include <memory>
+#include <fstream>
+
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
@@ -16,7 +18,8 @@ typedef enum {
   kTfLiteCPU = 0,
   kTfLiteGPU = 1,
   kTfLiteDSP = 2,
-  kTfLiteNumDevices = 3,
+  kTfLiteTPU = 3,
+  kTfLiteNumDevices = 4,
 } TfLiteDevice;
 
 // Contains how a Subgraph should be executed.
@@ -106,6 +109,8 @@ class Planner {
 
   std::condition_variable end_invoke_;
   std::thread planner_thread_;
+
+  std::ofstream log_file_;
 };
 
 }  // namespace impl

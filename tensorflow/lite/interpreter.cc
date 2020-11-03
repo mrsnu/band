@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstdint>
 #include <cstring>
 #include <utility>
+#include <iostream>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/context_util.h"
@@ -85,6 +86,11 @@ TfLiteQuantization GetQuantizationFromLegacy(
 
 }  // namespace
 
+Interpreter::Interpreter(ErrorReporter* error_reporter, int planner) 
+    : Interpreter(error_reporter) {
+  planner_type = planner;
+}
+ 
 Interpreter::Interpreter(ErrorReporter* error_reporter)
     : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()),
       lazy_delegate_provider_(
@@ -110,7 +116,16 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new FixedDevicePlanner(this));
+
+  if (planner_type == 0) {
+    planner_.reset(new FixedDevicePlanner(this));
+  }
+  if (planner_type == 1) {
+  planner_.reset(new RoundRobinPlanner(this));
+  }
+  if (planner_type == 2) {
+  planner_.reset(new ShortestExpectedLatencyPlanner(this));
+  }
 
   // Create workers.
   for (int i = 0; i < GetNumDevices(); ++i) {
@@ -128,7 +143,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
   // The default number of maximum delegate ops is 1.
   // Enable the following line to create multiple gpu ops within a Subgraph.
-  // gpu_opts.max_delegated_partitions = 10;
+  gpu_opts.max_delegated_partitions = 100;
   TfLiteDelegatePtr gpu_delegate =
       TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
                         &TfLiteGpuDelegateV2Delete);
@@ -139,13 +154,27 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   nnapi_options.accelerator_name = "qti-dsp";
   // The default number of maximum delegate ops is 1.
   // Enable the following line to create multiple dsp ops within a Subgraph.
-  // nnapi_options.max_number_delegated_partitions = 10;
+  nnapi_options.max_number_delegated_partitions = 100;
   TfLiteDelegatePtr dsp_delegate = TfLiteDelegatePtr(
       new StatefulNnApiDelegate(nnapi_options),
         [](TfLiteDelegate* delegate) {
           delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
         });
   device_delegates_.push_back(std::move(dsp_delegate));
+
+  StatefulNnApiDelegate::Options tpu_options =
+      StatefulNnApiDelegate::Options();
+  tpu_options.accelerator_name = "google-edgetpu";
+  // The default number of maximum delegate ops is 1.
+  // Enable the following line to create multiple dsp ops within a Subgraph.
+  tpu_options.max_number_delegated_partitions = 100;
+  TfLiteDelegatePtr tpu_delegate = TfLiteDelegatePtr(
+      new StatefulNnApiDelegate(tpu_options),
+        [](TfLiteDelegate* delegate) {
+          delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
+        });
+  device_delegates_.push_back(std::move(tpu_delegate));
+
 #endif  // defined(__ANDROID__)
 }
 
@@ -536,6 +565,58 @@ void Interpreter::RegisterSubgraphIdx(int model_id,
 int Interpreter::GetSubgraphIdx(int model_id, TfLiteDevice device_id) {
   std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
   return subgraph_idx_map_[key];
+}
+
+int64_t Interpreter::GetLatency(int model_id, TfLiteDevice device) {
+  // std::cout << "Device : " << device << std::endl;
+  int64_t current_time = profiling::time::NowMicros();
+  int64_t expected_latency = workers_[device]->GetWaitingTime();
+  // std::cout << "Waiting Time : " << expected_latency << std::endl;
+  int subgraph_idx = GetSubgraphIdx(model_id, device);
+  expected_latency += (*(subgraph(subgraph_idx))).GetExpectedLatency();
+  // std::cout << "Expected Latency : " << expected_latency << std::endl;
+
+  return expected_latency;
+}
+
+TfLiteDevice Interpreter::GetShortestLatency(int model_id) {
+  int idx = 0;
+  int64_t value = -1;
+  for(int i = 0; i < num_devices; ++i) {
+    if (model_id == 2 && i == 3)
+      continue;
+    int64_t latency = GetLatency(model_id, static_cast<TfLiteDevice>(i));
+
+    if (value == -1 || latency < value) {
+      idx = i;
+      value = latency;
+    }
+
+  }
+  // std::cout << "Device(" << idx << ")'s latency : " << value <<std::endl;
+  // std::cout << std::endl;
+
+  return static_cast<TfLiteDevice>(idx);
+
+  /*
+  // std::cout << "Model ID : " << model_id << std::endl;
+  // std::cout << "CPU Queue : " << CPU_latency << std::endl;
+  // std::cout << "GPU Queue : " << GPU_latency << std::endl;
+  // std::cout << "DSP Queue : " << DSP_latency << std::endl;
+  int64_t best_latency = CPU_latency;
+  if (best_latency > GPU_latency) {
+    best_latency = GPU_latency;
+    best_device = kTfLiteGPU;
+  }
+  if (best_latency > DSP_latency) {
+    best_latency = DSP_latency;
+    best_device = kTfLiteDSP;
+  }
+
+  // std::cout << "BEST Queue : " << best_latency << std::endl;
+  // std::cout << "BEST Device : " << best_device << std::endl;
+  return best_device;
+  */
 }
 
 }  // namespace impl
