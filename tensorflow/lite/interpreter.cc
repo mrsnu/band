@@ -566,7 +566,7 @@ TfLiteStatus Interpreter::GetBufferHandle(int tensor_index,
   return kTfLiteOk;
 }
 
-void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
+void Interpreter::Profile(const int num_warm_ups, const int num_runs, bool use_separate_thread) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler* timer = new tflite::profiling::TimeProfiler;
@@ -580,34 +580,39 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
       const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
       if (subgraph_it != subgraph_idx_map_.end()) {
         Subgraph* subgraph = subgraphs_[subgraph_it->second].get();
-
-        if(subgraph-
-
-        TfLiteStatus invoke_status = kTfLiteOk;
-        for (int j = 0; j < num_warm_ups; j++) {
-          (*interpreter)->Invoke(subgraph_idx);
+        bool isInvokable = true;
+        if (subgraph->state() == Subgraph::State::kStateUninvokable) {
+          isInvokable = kTfLiteOk == subgraph->AllocateTensors();
         }
 
-        timer->ClearRecords();
+        if (isInvokable) {
+          auto profile = [&]() {
+            for (int i = 0; i < num_warm_ups; i++) {
+            subgraph->Invoke();
+            }
+            timer->ClearRecords();
+            for (int i = 0; i < num_runs; i++) {
+              subgraph->Invoke();
+            }
+          };
 
-        for (int j = 0; j < num_runs; j++) {
-          (*interpreter)->Invoke(subgraph_idx);
-        } 
+          if (use_separate_thread) {
+            std::thread t(profile);
+            t.join();
+          } else {
+            profile();
+          }
 
-        (*interpreter)->subgraph_profiling_results_map_[{model_id, device_id}] = 
-          timer->GetAverageElapsedTime<std::chrono::milliseconds>();
+          subgraph_profiling_results_map_[{model_id, device_flag}] = 
+            timer->GetAverageElapsedTime<std::chrono::milliseconds>();
+        }
 
-        (*interpreter)
-            ->error_reporter()
-            ->Report(
-                "Profiling result\n threads=%d warmup=%d count=%d avg=%d ms device=%s.",
-                num_threads, 
-                num_warm_up,
-                num_runs,
-                (*interpreter)->subgraph_profiling_results_map_[{model_id, device_id}],
-                TfLiteDeviceGetName(device_id));
+        error_reporter_->Report("Profiling result\n warmup=%d count=%d avg=%d ms device=%s.", 
+                num_warm_ups, 
+                num_runs, 
+                subgraph_profiling_results_map_[{model_id, device_flag}], 
+                TfLiteDeviceGetName(device_flag));
       }
-
     }
   }
 
