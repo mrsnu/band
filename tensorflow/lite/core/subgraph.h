@@ -58,6 +58,20 @@ class Subgraph {
   Subgraph& operator=(const Subgraph&) = delete;
   virtual ~Subgraph();
 
+  // The state of the subgraph.
+  enum State {
+    // The subgraph isn't ready to be invoked.
+    // `AllocateTensor` need to be called to enter an invokable state.
+    kStateUninvokable = 0,
+    // The subgraph is ready to be invoked.
+    kStateInvokable,
+    // The subgraph is ready to be invoked, and graph can't be further
+    // modified. The subgraph will enter this state when calling
+    // `ModifyGraphWithDelegate` and the delegate doesn't support dynamic
+    // tensors.
+    kStateInvokableAndImmutable,
+  };
+
   // Provide a list of tensor indexes that are inputs to the model.
   // Each index is bound check and this modifies the consistent_ flag of the
   // interpreter.
@@ -157,6 +171,8 @@ class Subgraph {
     }
     return &context_.tensors[tensor_index];
   }
+
+  const State& state() const { return state_; }
 
   // Read only access to list of inputs.
   std::vector<int>& inputs() { return inputs_; }
@@ -581,20 +597,6 @@ class Subgraph {
 
   // Returns true if cancellation function returns true.
   bool IsCancelled();
-
-  // The state of the Interpreter.
-  enum State {
-    // The interpreter isn't ready to be invoked.
-    // `AllocateTensor` need to be called to enter an invokable state.
-    kStateUninvokable = 0,
-    // The interpreter is ready to be invoked.
-    kStateInvokable,
-    // The interpreter is ready to be invoked, and graph can't be further
-    // modified. The interpreter will enter this state when calling
-    // `ModifyGraphWithDelegate` and the delegate doesn't support dynamic
-    // tensors.
-    kStateInvokableAndImmutable,
-  };
   State state_ = kStateUninvokable;
 
   // A pure C data structure used to communicate with the pure C plugin
