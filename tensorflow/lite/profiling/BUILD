@@ -36,6 +36,16 @@ cc_library(
 )
 
 cc_library(
+    name = "time_profiler",
+    srcs = ["time_profiler.cc"],
+    hdrs = ["time_profiler.h"],
+    copts = common_copts,
+    deps = [
+        "//tensorflow/lite/core/api",
+    ],
+)
+
+cc_library(
     name = "platform_profiler",
     srcs = ["platform_profiler.cc"],
     hdrs = ["platform_profiler.h"],
