@@ -769,6 +769,8 @@ typedef enum {
   kTfLiteNumDevices = 4,
 } TfLiteDeviceFlags;
 
+const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag);
+
 // The flags used in `TfLiteDelegate`. Note that this is a bitmask, so the
 // values should be 1, 2, 4, 8, ...etc.
 typedef enum TfLiteDelegateFlags {

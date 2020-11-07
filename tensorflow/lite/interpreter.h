@@ -462,6 +462,8 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
+  void Profile(const int num_warm_ups, const int num_runs);
+
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
   /// WARNING: This is an experimental API and subject to change.
@@ -610,8 +612,8 @@ class Interpreter {
                                  TfLiteExternalContextType type,
                                  TfLiteExternalContext* ctx);
 
-  // Sets the profiler to all subgraphs.
-  void SetSubgraphProfiler();
+  // Helper function that sets the profiler to all subgraphs.
+  void SetSubgraphProfiler(Profiler * profiler);
 
   // Returns true if delegates have been applied.
   bool HasDelegates();
@@ -633,6 +635,8 @@ class Interpreter {
 
   std::map<TfLiteDelegateFlags, TfLiteDelegatePtr> delegates_;
 
+  // Map structure to store profiling results in milliseconds of (model_id, device_id)
+  std::map<std::pair<int, TfLiteDeviceFlags>, int> subgraph_profiling_results_map_;
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.
   std::unique_ptr<Profiler> owned_profiler_;
