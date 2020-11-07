@@ -184,6 +184,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
           case kTfLiteDelegateFlagsNNAPINPU:
             validDevices.insert(kTfLiteNPU);
             break;
+          default:
+            continue;
         }
 
         delegates_.insert(
