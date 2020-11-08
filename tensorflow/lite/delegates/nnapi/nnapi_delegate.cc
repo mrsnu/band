@@ -4219,6 +4219,7 @@ const StatefulNnApiDelegate::Options StatefulNnApiDelegate::GetOptions(
   options.max_number_delegated_partitions =
       delegate_data->max_number_delegated_partitions;
   options.allow_fp16 = delegate_data->allow_fp16;
+  options.max_number_delegated_partitions = 100;
   return options;
 }
 

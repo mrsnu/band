@@ -69,6 +69,9 @@ void BenchmarkLoggingListener::OnBenchmarkEnd(const BenchmarkResults& results) {
 std::vector<Flag> BenchmarkModel::GetFlags() {
   return {
       CreateFlag<int32_t>(
+          "period", &params_,
+          "invoke interval"),
+      CreateFlag<int32_t>(
           "num_runs", &params_,
           "expected number of runs, see also min_secs, max_secs"),
       CreateFlag<float>(
@@ -175,11 +178,47 @@ TfLiteStatus BenchmarkModel::Run(int argc, char** argv) {
   return Run();
 }
 
+int64_t BenchmarkModel::RunIteration() {
+  int64_t start_us = profiling::time::NowMicros();
+  TfLiteStatus status = RunImpl();
+  int64_t end_us = profiling::time::NowMicros();
+
+  return end_us - start_us;
+}
+
+TfLiteStatus BenchmarkModel::PrepareRun() {
+  const double model_size_mb = MayGetModelFileSize() / 1e6;
+  const auto start_mem_usage = profiling::memory::GetMemoryUsage();
+  int64_t initialization_start_us = profiling::time::NowMicros();
+  TF_LITE_ENSURE_STATUS(Init());
+  const auto init_end_mem_usage = profiling::memory::GetMemoryUsage();
+  int64_t initialization_end_us = profiling::time::NowMicros();
+  int64_t startup_latency_us = initialization_end_us - initialization_start_us;
+  const auto init_mem_usage = init_end_mem_usage - start_mem_usage;
+
+  if (model_size_mb > 0) {
+    TFLITE_LOG(INFO) << "The input model file size (MB): " << model_size_mb;
+  }
+  TFLITE_LOG(INFO) << "Initialized session in " << startup_latency_us / 1e3
+                   << "ms.";
+
+  TF_LITE_ENSURE_STATUS(PrepareInputData());
+
+  TfLiteStatus status = kTfLiteOk;
+  uint64_t input_bytes = ComputeInputBytes();
+  listeners_.OnBenchmarkStart(params_);
+  Stat<int64_t> warmup_time_us =
+      Run(params_.Get<int32_t>("warmup_runs"),
+          params_.Get<float>("warmup_min_secs"), params_.Get<float>("max_secs"),
+          WARMUP, &status);
+  if (status != kTfLiteOk) {
+    return status;
+  }
+
+  return kTfLiteOk;
+}
+
 TfLiteStatus BenchmarkModel::Run() {
-  TF_LITE_ENSURE_STATUS(ValidateParams());
-
-  LogParams();
-
   const double model_size_mb = MayGetModelFileSize() / 1e6;
   const auto start_mem_usage = profiling::memory::GetMemoryUsage();
   int64_t initialization_start_us = profiling::time::NowMicros();

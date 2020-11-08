@@ -250,6 +250,7 @@ CreateProfileSummaryFormatter(bool format_as_csv) {
 
 BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
   BenchmarkParams default_params = BenchmarkModel::DefaultParams();
+  default_params.AddParam("graphs", BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("graph", BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("input_layer",
                           BenchmarkParam::Create<std::string>(""));
@@ -273,6 +274,7 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("enable_platform_tracing",
                           BenchmarkParam::Create<bool>(false));
+  default_params.AddParam("period", BenchmarkParam::Create<int32_t>(10));
 
   for (const auto& delegate_provider :
        tools::GetRegisteredDelegateProviders()) {
@@ -298,6 +300,7 @@ BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
 std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkModel::GetFlags();
   std::vector<Flag> specific_flags = {
+      CreateFlag<std::string>("graphs", &params_, "graph file names"),
       CreateFlag<std::string>("graph", &params_, "graph file name"),
       CreateFlag<std::string>("input_layer", &params_, "input layer names"),
       CreateFlag<std::string>("input_layer_shape", &params_,
@@ -346,7 +349,7 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
 
 void BenchmarkTfLiteModel::LogParams() {
   BenchmarkModel::LogParams();
-  TFLITE_LOG(INFO) << "Graph: [" << params_.Get<std::string>("graph") << "]";
+  TFLITE_LOG(INFO) << "Graph: [" << params_.Get<std::string>("graphs") << "]";
   TFLITE_LOG(INFO) << "Input layers: ["
                    << params_.Get<std::string>("input_layer") << "]";
   TFLITE_LOG(INFO) << "Input shapes: ["
@@ -385,7 +388,7 @@ void BenchmarkTfLiteModel::LogParams() {
 TfLiteStatus BenchmarkTfLiteModel::ValidateParams() {
   if (params_.Get<std::string>("graph").empty()) {
     TFLITE_LOG(ERROR)
-        << "Please specify the name of your TF Lite input file with --graph";
+        << "Please specify the name of your TF Lite input file";
     return kTfLiteError;
   }
 

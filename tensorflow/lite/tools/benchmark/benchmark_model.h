@@ -177,7 +177,9 @@ class BenchmarkModel {
   virtual ~BenchmarkModel() {}
   virtual TfLiteStatus Init() = 0;
   TfLiteStatus Run(int argc, char** argv);
+  virtual TfLiteStatus PrepareRun();
   virtual TfLiteStatus Run();
+  int64_t RunIteration();
   void AddListener(BenchmarkListener* listener) {
     listeners_.AddListener(listener);
   }
@@ -191,13 +193,15 @@ class BenchmarkModel {
   // will be updated accordingly.
   TfLiteStatus ParseFlags(int* argc, char** argv);
 
+  TfLiteStatus ParseFlags(int argc, char** argv) {
+    return ParseFlags(&argc, argv);
+  }
+  BenchmarkParams params_;
+
  protected:
   virtual void LogParams();
   virtual TfLiteStatus ValidateParams();
 
-  TfLiteStatus ParseFlags(int argc, char** argv) {
-    return ParseFlags(&argc, argv);
-  }
   virtual std::vector<Flag> GetFlags();
 
   // Get the model file size if it's available.
@@ -212,7 +216,6 @@ class BenchmarkModel {
 
   virtual TfLiteStatus ResetInputsAndOutputs();
   virtual TfLiteStatus RunImpl() = 0;
-  BenchmarkParams params_;
   BenchmarkListeners listeners_;
 };
 
