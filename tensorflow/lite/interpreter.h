@@ -93,8 +93,8 @@ class Interpreter {
   //
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
-  explicit Interpreter(ErrorReporter* error_reporter = DefaultErrorReporter());
-  Interpreter(ErrorReporter* error_reporter, int planner);
+  explicit Interpreter(int planner, ErrorReporter* error_reporter = DefaultErrorReporter());
+  // Interpreter(ErrorReporter* error_reporter, int planner);
 
   ~Interpreter();
 

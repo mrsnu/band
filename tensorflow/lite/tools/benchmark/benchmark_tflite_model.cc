@@ -42,6 +42,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/tools/logging_reporter.h"
+#include "tensorflow/lite/profiling/time.h"
 
 void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 
@@ -613,14 +614,15 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
   int planner = params_.Get<int>("planner");
+  TFLITE_LOG(INFO) << "PLANNER ARG : " << planner;
   (&interpreter_)->reset(
-      new Interpreter(LoggingReporter::DefaultLoggingReporter(), planner));
+      new Interpreter(planner, LoggingReporter::DefaultLoggingReporter()));
 
   for (int i = 0; i < graphs_.size(); ++i) {
     TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
     int model_id =
         tflite::InterpreterBuilder::RegisterModel(
-            *models_[graphs_[i]], *resolver, &interpreter_);
+            *models_[graphs_[i]], *resolver, &interpreter_, 4);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
@@ -819,7 +821,8 @@ TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
   kill_app = false;
 
   for (int j = 0; j < models_.size(); ++j) {
-    GenerateRequests(j, period);
+    int model_period = period;
+    GenerateRequests(j, model_period);
   }
 
   std::this_thread::sleep_for(std::chrono::milliseconds(60000));
@@ -832,13 +835,19 @@ TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
 
 void BenchmarkTfLiteModel::GenerateRequests(int model_id, int interval) {
   std::thread t([this, model_id, interval]() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(model_id * interval / 30));
     while(true) {
+      int64_t start = profiling::time::NowMicros();
       interpreter_->InvokeModel(model_id);
       {
         std::lock_guard<std::mutex> lock(cnt_mtx);
         cnt++;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+      int64_t end = profiling::time::NowMicros();
+      int duration = (end - start) / 1000;
+      if (duration < interval) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval - duration));
+      }
       if(kill_app) return;
     }
   });

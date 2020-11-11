@@ -86,15 +86,18 @@ TfLiteQuantization GetQuantizationFromLegacy(
 
 }  // namespace
 
+/*
 Interpreter::Interpreter(ErrorReporter* error_reporter, int planner) 
     : Interpreter(error_reporter) {
   planner_type = planner;
 }
+*/
  
-Interpreter::Interpreter(ErrorReporter* error_reporter)
+Interpreter::Interpreter(int planner, ErrorReporter* error_reporter)
     : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()),
       lazy_delegate_provider_(
           TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {})) {
+  planner_type = planner;
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
@@ -117,6 +120,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
   // Create a Planner instance.
 
+  std::cout << "PLANNER TYPE : " << planner_type << std::endl;
   if (planner_type == 0) {
     planner_.reset(new FixedDevicePlanner(this));
   }
@@ -583,8 +587,6 @@ TfLiteDevice Interpreter::GetShortestLatency(int model_id) {
   int idx = 0;
   int64_t value = -1;
   for(int i = 0; i < num_devices; ++i) {
-    if (model_id == 2 && i == 3)
-      continue;
     int64_t latency = GetLatency(model_id, static_cast<TfLiteDevice>(i));
 
     if (value == -1 || latency < value) {
@@ -593,30 +595,8 @@ TfLiteDevice Interpreter::GetShortestLatency(int model_id) {
     }
 
   }
-  // std::cout << "Device(" << idx << ")'s latency : " << value <<std::endl;
-  // std::cout << std::endl;
 
   return static_cast<TfLiteDevice>(idx);
-
-  /*
-  // std::cout << "Model ID : " << model_id << std::endl;
-  // std::cout << "CPU Queue : " << CPU_latency << std::endl;
-  // std::cout << "GPU Queue : " << GPU_latency << std::endl;
-  // std::cout << "DSP Queue : " << DSP_latency << std::endl;
-  int64_t best_latency = CPU_latency;
-  if (best_latency > GPU_latency) {
-    best_latency = GPU_latency;
-    best_device = kTfLiteGPU;
-  }
-  if (best_latency > DSP_latency) {
-    best_latency = DSP_latency;
-    best_device = kTfLiteDSP;
-  }
-
-  // std::cout << "BEST Queue : " << best_latency << std::endl;
-  // std::cout << "BEST Device : " << best_device << std::endl;
-  return best_device;
-  */
 }
 
 }  // namespace impl

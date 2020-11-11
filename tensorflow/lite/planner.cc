@@ -45,8 +45,8 @@ void Planner::EnqueueFinishedJob(Job job) {
 }
 
 void Planner::EnqueueRequest(Job job) {
-  std::unique_lock<std::mutex> lock(requests_mtx_);
   job.enqueue_time_ = profiling::time::NowMicros();
+  std::unique_lock<std::mutex> lock(requests_mtx_);
   requests_.push_back(job);
   lock.unlock();
 
