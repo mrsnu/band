@@ -68,6 +68,7 @@ FRAMEWORK_LIB_HDRS = [
     "context_util.h",
     "core/macros.h",
     "core/subgraph.h",
+    "core/cpu/cpu.h",
     "error_reporter.h",
     "graph_info.h",
     "interpreter.h",
@@ -230,6 +231,7 @@ cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
+        "core/cpu/cpu.cc",
         "graph_info.cc",
         "interpreter.cc",
         "interpreter_builder.cc",

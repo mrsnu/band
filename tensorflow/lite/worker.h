@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#include "tensorflow/lite/core/cpu/cpu.h"
 
 namespace tflite {
 
@@ -47,6 +48,7 @@ class Worker {
   std::condition_variable request_cv_;
   std::deque<Job> requests_;
   bool kill_worker_ = false;
+  CpuSet cpu_set_;
 };
 
 }  // namespace impl
