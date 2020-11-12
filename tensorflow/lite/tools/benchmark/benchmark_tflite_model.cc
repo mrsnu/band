@@ -763,7 +763,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
-  int num_iters = 3;
+  int num_iters = 1;
   for (int i = 0; i < num_iters; ++i) {
     for (int j = 0; j < models_.size(); ++j) {
       interpreter_->InvokeModelAsync(j);

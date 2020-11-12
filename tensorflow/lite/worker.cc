@@ -21,6 +21,13 @@ Worker::~Worker() {
 }
 
 void Worker::Work() {
+  // 0: All
+  // 1: Little
+  // 2: Big
+  int status = set_cpu_thread_affinity(get_cpu_thread_affinity_mask(2));
+  if (status != 0)
+    return;
+
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
