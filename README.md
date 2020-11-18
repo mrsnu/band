@@ -1,3 +1,6 @@
+## Default TF-Lite
+* Default TF Lite v2.3.0
+
 ## Codebase
 * Tensorflow Lite in [Tensorflow v2.3.0](https://github.com/tensorflow/tensorflow/tree/v2.3.0) 
 * Among files and directories located in `[root]/tensorflow`, files unrelated to TF Lite are deleted.
