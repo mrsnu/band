@@ -29,6 +29,7 @@ limitations under the License.
 
 #include <fp16.h>
 #include <xnnpack.h>
+#include <xnnpack/subgraph.h>
 #include "tensorflow/lite/builtin_ops.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/common.h"
@@ -274,7 +275,7 @@ class Subgraph {
       return nullptr;
     }
 
-    return new Subgraph(runtime_ptr, std::move(externals));
+    return new Subgraph(runtime_ptr, std::move(externals), delegate);
   }
 
   TfLiteStatus Prepare(TfLiteContext* context) { return kTfLiteOk; }
@@ -297,6 +298,11 @@ class Subgraph {
       }
 
       first_run_ = false;
+    }
+
+    // Lazily update the threadpool
+    if (runtime_->threadpool != delegate_->threadpool()) {
+      runtime_->threadpool = delegate_->threadpool();
     }
 
     const xnn_status status = xnn_invoke_runtime(runtime_.get());
@@ -2548,8 +2554,8 @@ class Subgraph {
   }
 
  private:
-  Subgraph(xnn_runtime_t runtime, std::unordered_set<int>&& externals)
-      : runtime_(runtime, &xnn_delete_runtime), externals_(externals) {}
+  Subgraph(xnn_runtime_t runtime, std::unordered_set<int>&& externals, const Delegate* delegate)
+      : runtime_(runtime, &xnn_delete_runtime), externals_(externals), delegate_(delegate) {}
 
   // XNNPACK Runtime (subgraph + workspace) with smart-pointer for lifetime
   // management.
@@ -2558,6 +2564,7 @@ class Subgraph {
   // TFLite Tensor IDs == XNNPACK Value IDs of input/output tensors for the
   // delegated subgraph.
   std::unordered_set<int> externals_;
+  const Delegate* delegate_;
   bool first_run_{true};
 };
 

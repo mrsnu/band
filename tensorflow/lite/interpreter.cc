@@ -196,7 +196,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
   TfLiteDelegatePtr xnnpack_delegate = MaybeCreateXNNPACKDelegate(1);
   if (xnnpack_delegate.get()) {
-    std::make_pair(kTfLiteDelegateFlagsXNNPACK, std::move(xnnpack_delegate));
+    delegates_.insert(std::make_pair(kTfLiteDelegateFlagsXNNPACK, std::move(xnnpack_delegate)));
   }
 
   // TODO #23
@@ -585,9 +585,7 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
 
   switch (device) {
     case kTfLiteCPU:
-      // XNNPACK is efficient than default CPU
-      if (tensor_types.find(kTfLiteFloat32) != tensor_types.end())
-        targetDelegate = delegates(kTfLiteDelegateFlagsXNNPACK);
+      // TODO #23: XNNPACK seems inefficient than default CPU
       if (targetDelegate == nullptr)
         // Only valid case to return Ok with nullptr
         return kTfLiteOk;
