@@ -691,11 +691,6 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
     }
   }
 
-  if (interpreter_->AllocateTensors() != kTfLiteOk) {
-    TFLITE_LOG(ERROR) << "Failed to allocate tensors!";
-    return kTfLiteError;
-  }
-
   ruy_profiling_listener_.reset(new RuyProfileListener());
   AddListener(ruy_profiling_listener_.get());
 
