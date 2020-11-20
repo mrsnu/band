@@ -626,6 +626,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     model_ids_.push_back(model_id);
   }
 
+  interpreter_->Profile(params_.Get<int32_t>("warmup_runs"), params_.Get<int32_t>("num_runs"));
+
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
                   << " subgraph loaded to the interpreter";
 
