@@ -462,7 +462,7 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  void Profile(const int num_warm_ups, const int num_runs, bool use_separate_thread);
+  void Profile(const int num_warm_ups, const int num_runs);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.

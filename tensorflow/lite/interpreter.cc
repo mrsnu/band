@@ -554,7 +554,7 @@ TfLiteStatus Interpreter::GetBufferHandle(int tensor_index,
   return kTfLiteOk;
 }
 
-void Interpreter::Profile(const int num_warm_ups, const int num_runs, bool use_separate_thread) {
+void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler* timer = new tflite::profiling::TimeProfiler;
@@ -574,21 +574,12 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs, bool use_s
         }
 
         if (isInvokable) {
-          auto profile = [&]() {
-            for (int i = 0; i < num_warm_ups; i++) {
+          for (int i = 0; i < num_warm_ups; i++) {
+          subgraph->Invoke();
+          }
+          timer->ClearRecords();
+          for (int i = 0; i < num_runs; i++) {
             subgraph->Invoke();
-            }
-            timer->ClearRecords();
-            for (int i = 0; i < num_runs; i++) {
-              subgraph->Invoke();
-            }
-          };
-
-          if (use_separate_thread) {
-            std::thread t(profile);
-            t.join();
-          } else {
-            profile();
           }
 
           subgraph_profiling_results_map_[{model_id, device_flag}] = 
