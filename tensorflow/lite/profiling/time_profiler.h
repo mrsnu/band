@@ -30,7 +30,7 @@ class TimeProfiler : public tflite::Profiler {
   uint64_t GetElapsedTimeAt(size_t index) {
     static_assert(is_chrono_duration<T>::value,
                   "T must be a std::chrono::duration");
-    if(invoke_timeline_vector_.size() > index) {
+    if (invoke_timeline_vector_.size() > index) {
       return std::chrono::duration_cast<T>(
         invoke_timeline_vector_[index].second - 
         invoke_timeline_vector_[index].first).count();
@@ -53,14 +53,12 @@ class TimeProfiler : public tflite::Profiler {
 
  private:
   template <typename T>
-  struct is_chrono_duration
-  {
+  struct is_chrono_duration {
       static constexpr bool value = false;
   };
 
   template <typename Rep, typename Period>
-  struct is_chrono_duration<std::chrono::duration<Rep, Period>>
-  {
+  struct is_chrono_duration<std::chrono::duration<Rep, Period>> {
       static constexpr bool value = true;
   };
 

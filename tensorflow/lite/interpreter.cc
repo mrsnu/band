@@ -575,7 +575,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
         if (isInvokable) {
           for (int i = 0; i < num_warm_ups; i++) {
-          subgraph->Invoke();
+            subgraph->Invoke();
           }
           timer->ClearRecords();
           for (int i = 0; i < num_runs; i++) {
@@ -583,14 +583,15 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
           }
 
           subgraph_profiling_results_map_[{model_id, device_flag}] = 
-            timer->GetAverageElapsedTime<std::chrono::milliseconds>();
-        }
+            timer->GetAverageElapsedTime<std::chrono::microseconds>();
 
-        error_reporter_->Report("Profiling result\n warmup=%d count=%d avg=%d ms device=%s.", 
-                num_warm_ups, 
-                num_runs, 
-                subgraph_profiling_results_map_[{model_id, device_flag}], 
-                TfLiteDeviceGetName(device_flag));
+          error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
+                  model_id,
+                  num_warm_ups, 
+                  num_runs, 
+                  subgraph_profiling_results_map_[{model_id, device_flag}], 
+                  TfLiteDeviceGetName(device_flag));
+        }
       }
     }
   }
