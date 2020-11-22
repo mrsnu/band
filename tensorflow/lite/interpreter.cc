@@ -600,9 +600,12 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
           tensor_types.find(kTfLiteUInt8) != tensor_types.end())
         targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
       break;
-    
+      
     // TODO # 30
     // Add NPU / TPU / hta
+    case kTfLiteNPU:
+        targetDelegate = delegates(kTfLiteDelegateFlagsNNAPINPU);
+      break;
     
     default:
       break;
