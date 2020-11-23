@@ -78,6 +78,7 @@ int CpuSet::num_enabled() const
 static CpuSet g_thread_affinity_mask_all;
 static CpuSet g_thread_affinity_mask_little;
 static CpuSet g_thread_affinity_mask_big;
+static CpuSet g_thread_affinity_mask_primary;
 static int g_cpucount = get_cpu_count();
 
 int get_cpu_count() {
@@ -258,6 +259,8 @@ int setup_thread_affinity_masks() {
         else {
             g_thread_affinity_mask_big.enable(i);
         }
+        if (cpu_max_freq_khz[i] == max_freq_khz_max)
+          g_thread_affinity_mask_primary.enable(i);
     }
 #else
     // TODO implement me for other platforms
@@ -280,6 +283,9 @@ const CpuSet& get_cpu_thread_affinity_mask(int powersave) {
     if (powersave == 2)
         return g_thread_affinity_mask_big;
 
+    if (powersave == 3)
+        return g_thread_affinity_mask_primary;
+
     // fallback to all cores anyway
     return g_thread_affinity_mask_all;
 }
@@ -293,6 +299,8 @@ const char* get_cpu_thread_affinity_mask_string(int powersave) {
       return "LITTLE";
     case 2:
       return "BIG";
+    case 3:
+      return "PRIMARY";
     default:
       return "UNKNOWN";
     }
