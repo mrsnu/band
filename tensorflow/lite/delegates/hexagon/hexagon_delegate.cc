@@ -119,7 +119,9 @@ class HexagonDelegate : public TfLiteDelegate {
                         "because you're using incompatible versions of "
                         "libhexagon_interface and libhexagon_nn_skel. "
                         "You must use compatible versions. "
-                        "Refer to Tensorflow Lite Hexagon Delegate Guide.");
+                        "Refer to Tensorflow Lite Hexagon Delegate Guide."
+                        "interface library and libhexagon_skel %d vs %d.",
+                        hexagon_interface_version, hexagon_nn_version);
         return false;
       }
       if (hexagon_nn_version != hexagon_interface_version) {
