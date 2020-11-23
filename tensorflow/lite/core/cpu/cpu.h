@@ -37,6 +37,8 @@ int get_big_cpu_count();
 // convenient wrapper
 const CpuSet& get_cpu_thread_affinity_mask(int powersave);
 
+const char* get_cpu_thread_affinity_mask_string(int powersave);
+
 // set explicit thread affinity
 int set_cpu_thread_affinity(const CpuSet& thread_affinity_mask);
 

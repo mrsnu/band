@@ -284,5 +284,19 @@ const CpuSet& get_cpu_thread_affinity_mask(int powersave) {
     return g_thread_affinity_mask_all;
 }
 
+const char* get_cpu_thread_affinity_mask_string(int powersave) {
+    switch (powersave)
+    {
+    case 0:
+      return "ALL";
+    case 1:
+      return "LITTLE";
+    case 2:
+      return "BIG";
+    default:
+      return "UNKNOWN";
+    }
+}
+
 } // namespace impl
 } // namespace tflite
