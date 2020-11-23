@@ -20,6 +20,7 @@ limitations under the License.
 #define TENSORFLOW_LITE_INTERPRETER_BUILDER_H_
 
 #include <memory>
+#include <set>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
@@ -63,12 +64,12 @@ class InterpreterBuilder {
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1,
-                        TfLiteDevice device_id = kTfLiteCPU);
+                        TfLiteDeviceFlags device_id = kTfLiteCPU);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads = -1,
-                     TfLiteDevice device_id = kTfLiteCPU);
+                     TfLiteDeviceFlags device_id = kTfLiteCPU);
 
   // Adds NUM_DEVICES number of Subgraphs to the interpreter.
   // Returns the model id.
@@ -97,7 +98,6 @@ class InterpreterBuilder {
       const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
       const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
       Subgraph* subgraph);
-  TfLiteStatus ApplyDelegates(Interpreter* interpreter, int num_threads);
   TfLiteStatus ParseQuantization(const QuantizationParameters* src_quantization,
                                  TfLiteQuantization* quantization,
                                  const std::vector<int>& dims);
@@ -111,9 +111,8 @@ class InterpreterBuilder {
   std::vector<TfLiteRegistration> unresolved_custom_ops_;
   std::vector<BuiltinOperator> flatbuffer_op_index_to_registration_types_;
   const Allocation* allocation_ = nullptr;
-
   bool has_flex_op_ = false;
-  int num_fp32_tensors_ = 0;
+  std::set<TfLiteType> tensor_types_;
 };
 
 }  // namespace impl

@@ -390,6 +390,8 @@ class Interpreter {
                      size_t first_subgraph_index = 0,
                      int last_subgraph_index = -1);
 
+  void SetXNNPACKNumThreads(int num_threads);
+
   /// Allow float16 precision for FP32 calculation when possible.
   /// default: not allow.
   /// WARNING: This is an experimental API and subject to change.
@@ -426,12 +428,10 @@ class Interpreter {
   // Owning handle to a TfLiteDelegate instance.
   using TfLiteDelegatePtr =
       std::unique_ptr<TfLiteDelegate, void (*)(TfLiteDelegate*)>;
-
-  /// Same as ModifyGraphWithDelegate except this interpreter takes
-  /// ownership of the provided delegate. Be sure to construct the unique_ptr
-  /// with a suitable destruction function.
-  /// WARNING: This is an experimental API and subject to change.
-  TfLiteStatus ModifyGraphWithDelegate(TfLiteDelegatePtr delegate);
+  
+  // Remove delegates (for fallback behaviour). The interpreter is invokable
+  // afterwards.
+  TfLiteStatus RemoveAllDelegates();
 
   /// Ensure the data in `tensor.data` is readable. In case delegate is used,
   /// it might require to copy the data from delegate buffer to raw memory.
@@ -554,31 +554,37 @@ class Interpreter {
   }
 #endif  // DOXYGEN_SKIP
 
-  TfLiteDelegate* device_delegates(int device_idx) {
-    return device_delegates_[device_idx].get();
+  TfLiteDelegate* delegates(TfLiteDelegateFlags delegate) {
+    auto it = delegates_.find(delegate);
+    if (it != delegates_.end())
+      return it->second.get();
+    else
+      return nullptr;
   }
 
-  int GetNumDevices() {
-    return num_devices;
+  int GetNumDelegates() {
+    return delegates_.size();
   }
 
   std::shared_ptr<Planner> GetPlanner() {
     return planner_;
   }
 
-  Worker& GetWorker(int device_idx) {
-    return *workers_[device_idx];
+  Worker* GetWorker(TfLiteDeviceFlags device) {
+    auto it = workers_.find(device);
+    if (it != workers_.end())
+      return it->second.get();
+    else
+      return nullptr;
   }
 
   int GetWorkersSize() {
     return workers_.size();
   }
 
-  // TODO #13: Create mobile device independent delegate instances
-  int GetSubgraphIdx(int model_id, TfLiteDevice device_id);
+  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
 
-  // Applies Delegate to the subgraph when a device id is given.
-  TfLiteStatus ApplyDeviceDelegate(Subgraph* subgraph, TfLiteDevice device);
+  std::set<int> models() const;
 
  private:
   friend class InterpreterBuilder;
@@ -587,20 +593,17 @@ class Interpreter {
   friend class tflite::delegates::InterpreterUtils;
 
   std::shared_ptr<Planner> planner_;
-  std::vector<std::unique_ptr<Worker>> workers_;
-
-  // TODO #13: Create mobile device independent delegate instances
-  int num_devices = 3;
+  std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 
   // Map structure to find subgraph idx with (model_id, device_id)
-  std::map<std::pair<int, TfLiteDevice>, int> subgraph_idx_map_;
+  std::map<std::pair<int, TfLiteDeviceFlags>, int> subgraph_idx_map_;
 
-  // TODO #13: Create mobile device independent delegate instances
-  // Inserts a pair whose key is (model_id, device_id) and value is
-  // the subgraph index.
   void RegisterSubgraphIdx(int model_id,
-                           TfLiteDevice device_id,
+                           TfLiteDeviceFlags device_id,
                            int subgraph_idx);
+
+  // Applies best delegate from the given device to the subgraph.
+  TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,
@@ -609,10 +612,6 @@ class Interpreter {
 
   // Sets the profiler to all subgraphs.
   void SetSubgraphProfiler();
-
-  // Remove delegates (for fallback behaviour). The interpreter is invokable
-  // afterwards.
-  TfLiteStatus RemoveAllDelegates();
 
   // Returns true if delegates have been applied.
   bool HasDelegates();
@@ -632,12 +631,7 @@ class Interpreter {
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;
 
-  // List of delegates that have been installed and are owned by this
-  // interpreter instance. Useful if client delegate ownership is burdensome.
-  // WARNING: This is an experimental API and subject to change.
-  // TODO(b/116667551): Use TfLiteExternalContext for storing state.
-  std::vector<TfLiteDelegatePtr> owned_delegates_;
-  std::vector<TfLiteDelegatePtr> device_delegates_;
+  std::map<TfLiteDelegateFlags, TfLiteDelegatePtr> delegates_;
 
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.
@@ -663,11 +657,6 @@ class Interpreter {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
-
-  // Indicating a delegate that the TFLite interpreter will apply by default.
-  // A nullptr value means there's no delegate to be applied by default or the
-  // delegate has been applied and doesn't need to be applied again.
-  TfLiteDelegatePtr lazy_delegate_provider_;
 };
 
 }  // namespace impl

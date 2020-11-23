@@ -658,42 +658,6 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   interpreter_->UseNNAPI(params_.Get<bool>("use_legacy_nnapi"));
   interpreter_->SetAllowFp16PrecisionForFp32(params_.Get<bool>("allow_fp16"));
 
-  owned_delegates_.clear();
-  for (const auto& delegate_provider :
-       tools::GetRegisteredDelegateProviders()) {
-    auto delegate = delegate_provider->CreateTfLiteDelegate(params_);
-    // It's possible that a delegate of certain type won't be created as
-    // user-specified benchmark params tells not to.
-    if (delegate == nullptr) continue;
-    if (interpreter_->ModifyGraphWithDelegate(delegate.get()) != kTfLiteOk) {
-      TFLITE_LOG(ERROR) << "Failed to apply " << delegate_provider->GetName()
-                        << " delegate.";
-      return kTfLiteError;
-    } else {
-      bool fully_delegated = true;
-      if (interpreter_->execution_plan().size() != 1) {
-        fully_delegated = false;
-      } else {
-        int first_node_id = interpreter_->execution_plan()[0];
-        const TfLiteNode first_node =
-            interpreter_->node_and_registration(first_node_id)->first;
-        if (delegate.get() != first_node.delegate) {
-          fully_delegated = false;
-        }
-      }
-      if (params_.Get<bool>("require_full_delegation") && !fully_delegated) {
-        TFLITE_LOG(ERROR) << "Disallowed CPU fallback detected.";
-        return kTfLiteError;
-      }
-      const std::string delegate_status =
-          fully_delegated ? "completely" : "partially";
-      TFLITE_LOG(INFO) << "Applied " << delegate_provider->GetName()
-                       << " delegate, and the model graph will be "
-                       << delegate_status << " executed w/ the delegate.";
-    }
-    owned_delegates_.emplace_back(std::move(delegate));
-  }
-
   auto interpreter_inputs = interpreter_->inputs();
 
   if (!inputs_.empty()) {

@@ -12,13 +12,6 @@ namespace impl {
 
 class Interpreter;
 
-typedef enum {
-  kTfLiteCPU = 0,
-  kTfLiteGPU = 1,
-  kTfLiteDSP = 2,
-  kTfLiteNumDevices = 3,
-} TfLiteDevice;
-
 // Contains how a Subgraph should be executed.
 // Currently, the unit of device placement is a `Subgraph`.
 // Each Subgraph contains one `ModelPlan` as a member.
@@ -27,14 +20,7 @@ struct ModelPlan{
   ModelPlan():device_(kTfLiteCPU) {}
   ModelPlan(ModelPlan&&) = default;
   ModelPlan(const ModelPlan&) = delete;
-  TfLiteDevice device_;
-
-  // Flag from interpreter_builder
-  // Use MaybeCreateXNNPACKDelegate(num_threads); to create a XNN delegate
-  bool can_use_xnn_pack_ = false;
-  // TODO: Move AcquireFlexDelegate(); in interpreter_builder.cc  
-  // somewhere to create / use a flex delegate
-  bool has_flex_op_ = false;
+  TfLiteDeviceFlags device_;  
 };
 
 // assigns requested model to devices according to `ModelPlan` of a `Subgraph`.

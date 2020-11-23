@@ -357,8 +357,11 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_useXNNPACK(
   auto xnnpack_delete =
       reinterpret_cast<decltype(TfLiteXNNPackDelegateDelete)*>(
           dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateDelete"));
+  auto xnnpack_update =
+      reinterpret_cast<decltype(TfLiteXNNPackDelegateUpdate)*>(
+          dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateUpdate"));
 
-  if (xnnpack_options_default && xnnpack_create && xnnpack_delete) {
+  if (xnnpack_options_default && xnnpack_create && xnnpack_delete && xnnpack_update) {
     TfLiteXNNPackDelegateOptions options = xnnpack_options_default();
     if (num_threads > 0) {
       options.num_threads = num_threads;

@@ -10,10 +10,13 @@ namespace impl {
 
 // assigns requested model to devices according to model_id.
 class FixedDevicePlanner : public Planner {
- public:
-  explicit FixedDevicePlanner(Interpreter* interpreter)
-    : Planner(interpreter) {}
-  void Plan() override;
+  public:
+    explicit FixedDevicePlanner(Interpreter* interpreter)
+      : Planner(interpreter) {}
+    void Plan() override;
+  private:
+    // Map structure to find assigned device of model idx (model_id, device flag)
+    std::map<int, int> model_device_map;
 };
 
 }  // namespace impl

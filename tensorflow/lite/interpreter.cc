@@ -29,10 +29,15 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
+#include "tensorflow/lite/tflite_with_xnnpack_optional.h"
+#ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
+#include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
+#endif
 #include "tensorflow/lite/util.h"
 
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
+#include "tensorflow/lite/nnapi/nnapi_util.h"
 #define TFLITE_IS_MOBILE_PLATFORM
 #endif  // defined(__ANDROID__)
 
@@ -72,6 +77,21 @@ TfLiteQuantization GetQuantizationFromLegacy(
   return quantization;
 }
 
+// Discard nnapi backend for devices that has direct support
+bool IsNNAPIDeviceUseful(std::string name) {
+  static const char* const filter_keywords[] = {
+    "nnapi-reference",  // CPU
+    "gpu",  // Inefficient than GPUDelegate
+    "default"};
+
+  for(auto keyword : filter_keywords) {
+    if (name.find(keyword) != std::string::npos) 
+      return false;
+  }
+
+  return true;
+}
+
 // TODO(b/153131797): We have put 'delegate_status' to 0 in the following macro
 // temporarily because delegate-specific error codes are either not retrievable
 // at the moment, which we will add later.
@@ -86,9 +106,7 @@ TfLiteQuantization GetQuantizationFromLegacy(
 }  // namespace
 
 Interpreter::Interpreter(ErrorReporter* error_reporter)
-    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()),
-      lazy_delegate_provider_(
-          TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {})) {
+    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
@@ -112,41 +130,83 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // Create a Planner instance.
   planner_.reset(new FixedDevicePlanner(this));
 
-  // Create workers.
-  for (int i = 0; i < GetNumDevices(); ++i) {
-    workers_.emplace_back(new Worker(planner_));
-  }
+  std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
   TfLiteDelegatePtr null_delegate =
       TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
-  device_delegates_.push_back(std::move(null_delegate));
+  delegates_.insert(std::make_pair(kTfLiteDelegateFlagsNone, std::move(null_delegate)));
 
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
-  // The default number of maximum delegate ops is 1.
-  // Enable the following line to create multiple gpu ops within a Subgraph.
+  // TODO #34 GPU delegate multiple delegated partition support
   // gpu_opts.max_delegated_partitions = 10;
   TfLiteDelegatePtr gpu_delegate =
       TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
                         &TfLiteGpuDelegateV2Delete);
-  device_delegates_.push_back(std::move(gpu_delegate));
+  if (gpu_delegate.get()) {
+    delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
+    validDevices.insert(kTfLiteGPU);
+  }
 
-  StatefulNnApiDelegate::Options nnapi_options =
-      StatefulNnApiDelegate::Options();
-  nnapi_options.accelerator_name = "qti-dsp";
-  // The default number of maximum delegate ops is 1.
-  // Enable the following line to create multiple dsp ops within a Subgraph.
-  // nnapi_options.max_number_delegated_partitions = 10;
-  TfLiteDelegatePtr dsp_delegate = TfLiteDelegatePtr(
-      new StatefulNnApiDelegate(nnapi_options),
-        [](TfLiteDelegate* delegate) {
-          delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
-        });
-  device_delegates_.push_back(std::move(dsp_delegate));
+  std::vector<const char*> string_device_names_list = nnapi::GetDeviceNamesList();
+
+  // TODO #23 : Add more nnapi names
+  // Possible device runtime names 
+  // nnapi : nnapi-default, nnapi-reference
+  // qualcomm hexagon : qti-default, qti-dsp, qti-gpu, qti-hta
+  // google tpu: google-edgetpu
+  // arm npu (DaVinci) : armnn
+  // mediatek APU : neuron-ann
+  for(const char* device_name : string_device_names_list) {
+    if (IsNNAPIDeviceUseful(device_name)) {
+      StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
+      // Unlimited partition : 0
+      nnapi_options.max_number_delegated_partitions = 0;
+      nnapi_options.accelerator_name = device_name;
+
+      TfLiteDelegatePtr nnapi_delegate = TfLiteDelegatePtr(
+        new StatefulNnApiDelegate(nnapi_options),
+          [](TfLiteDelegate* delegate) {
+            delete reinterpret_cast<StatefulNnApiDelegate*>(delegate);
+          });
+
+      if (nnapi_delegate.get()) {
+        TfLiteDelegateFlags delegateFlag =
+            static_cast<TfLiteDelegateFlags>(nnapi_delegate->flags);
+        
+        switch (delegateFlag) {
+          case kTfLiteDelegateFlagsNNAPIDSP:
+            validDevices.insert(kTfLiteDSP);
+            break;
+          case kTfLiteDelegateFlagsNNAPINPU:
+            validDevices.insert(kTfLiteNPU);
+            break;
+          default:
+            continue;
+        }
+
+        delegates_.insert(
+          std::make_pair(delegateFlag, std::move(nnapi_delegate)));
+      }
+    }
+  }
+
+  TfLiteDelegatePtr xnnpack_delegate = MaybeCreateXNNPACKDelegate(1);
+  if (xnnpack_delegate.get()) {
+    delegates_.insert(std::make_pair(kTfLiteDelegateFlagsXNNPACK, std::move(xnnpack_delegate)));
+  }
+
+  // TODO #23
+  // Add flex delegate?
+  
 #endif  // defined(__ANDROID__)
+
+  for(const TfLiteDeviceFlags& deviceFlag : validDevices) {
+    workers_[deviceFlag] = std::make_unique<Worker>(planner_);
+  }
 }
 
 Interpreter::~Interpreter() {
@@ -209,16 +269,6 @@ TfLiteStatus Interpreter::SetVariables(std::vector<int> variables) {
 }
 
 TfLiteStatus Interpreter::AllocateTensors() {
-  // Apply the default delegate that TFLite will enable at this point to allow
-  // other user-level delegates to be applied first.
-  if (lazy_delegate_provider_) {
-    // The execution will fall back to default implementation if the XNNPACK
-    // delegate fails to be applied. Therefore, we ignore the return status
-    // here and let it fall through the rest of the code.
-    ModifyGraphWithDelegate(std::move(lazy_delegate_provider_));
-    lazy_delegate_provider_.reset();
-  }
-
   TfLiteStatus status;
 
   for (int i = 0; i < subgraphs_.size(); ++i) {
@@ -404,6 +454,29 @@ void Interpreter::SetNumThreads(int num_threads,
   }
 }
 
+void Interpreter::SetXNNPACKNumThreads(int num_threads) {
+  if (num_threads < -1) {
+    // TODO #7 : Which context should we use here?
+    context_->ReportError(context_,
+                          "num_threads should be >=0 or just -1 to let TFLite "
+                          "runtime set the value.");
+    return;
+  }
+
+#ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
+  TfLiteDelegate* delegate = delegates(kTfLiteDelegateFlagsXNNPACK);
+  if (delegate != nullptr) {
+      TfLiteXNNPackDelegateOptions options = TfLiteXNNPackDelegateOptionsDefault();
+      // Modify -1 to 0 to match the XNNPACK runtime behavior 
+      // to automatically set the value.
+      if (num_threads == -1)
+        num_threads = 0;
+      options.num_threads = num_threads;
+      TfLiteXNNPackDelegateUpdate(delegate, &options);
+  }
+#endif
+}
+
 void Interpreter::SetAllowFp16PrecisionForFp32(bool allow) {
   for (auto& subgraph : subgraphs_) {
     subgraph->context()->allow_fp32_relax_to_fp16 = allow;
@@ -435,13 +508,6 @@ TfLiteStatus Interpreter::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
     TF_LITE_ENSURE_STATUS(RemoveAllDelegates());
   }
   return status;
-}
-
-TfLiteStatus Interpreter::ModifyGraphWithDelegate(TfLiteDelegatePtr delegate) {
-  // Note that we retain ownership of the delegate even if graph modification
-  // fails, as delegate use will be in an indeterminate state at that point.
-  owned_delegates_.push_back(std::move(delegate));
-  return ModifyGraphWithDelegate(owned_delegates_.back().get());
 }
 
 TfLiteStatus Interpreter::RemoveAllDelegates() {
@@ -512,30 +578,68 @@ Profiler* Interpreter::GetProfiler() {
   return primary_subgraph().GetProfiler();
 }
 
-TfLiteStatus Interpreter::ApplyDeviceDelegate(Subgraph* subgraph,
-                                              TfLiteDevice device) {
-  if (device == kTfLiteCPU)
-    return kTfLiteOk;
+TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
+                                              TfLiteDeviceFlags device, 
+                                              const std::set<TfLiteType>& tensor_types) {
+  TfLiteDelegate* targetDelegate = nullptr;
 
-  TfLiteStatus status =
-    subgraph->ModifyGraphWithDelegate(device_delegates(device));
-  if (status != kTfLiteOk) {
-    return status;
+  switch (device) {
+    case kTfLiteCPU:
+      // TODO #23: XNNPACK seems inefficient than default CPU
+      if (targetDelegate == nullptr)
+        // Only valid case to return Ok with nullptr
+        return kTfLiteOk;
+      break;
+    
+    case kTfLiteGPU:
+      targetDelegate = delegates(kTfLiteDelegateFlagsGPU);
+      break;
+
+    case kTfLiteDSP:
+      if (tensor_types.find(kTfLiteInt8) != tensor_types.end() ||
+          tensor_types.find(kTfLiteUInt8) != tensor_types.end())
+        targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
+      break;
+      
+    // TODO # 30
+    // Add NPU / TPU / hta
+    case kTfLiteNPU:
+        targetDelegate = delegates(kTfLiteDelegateFlagsNNAPINPU);
+      break;
+    
+    default:
+      break;
   }
 
-  return kTfLiteOk;
+  if (targetDelegate != nullptr) {
+    return subgraph->ModifyGraphWithDelegate(targetDelegate);
+  } else {
+    return kTfLiteError;
+  }
 }
 
 void Interpreter::RegisterSubgraphIdx(int model_id,
-                                      TfLiteDevice device_id,
+                                      TfLiteDeviceFlags device_id,
                                       int subgraph_idx) {
-  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
+  std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
   subgraph_idx_map_[key] = subgraph_idx;
 }
 
-int Interpreter::GetSubgraphIdx(int model_id, TfLiteDevice device_id) {
-  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
-  return subgraph_idx_map_[key];
+int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
+  std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
+  auto it = subgraph_idx_map_.find(key);
+  if (it != subgraph_idx_map_.end())
+    return it->second;
+  else
+    return -1;
+}
+
+std::set<int> Interpreter::models() const {
+  std::set<int> models;
+  for(auto key : subgraph_idx_map_) {
+    models.insert(key.first.first);
+  }
+  return models;
 }
 
 }  // namespace impl
