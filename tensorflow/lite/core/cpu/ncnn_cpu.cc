@@ -516,6 +516,7 @@ int set_cpu_powersave(int powersave)
 static CpuSet g_thread_affinity_mask_all;
 static CpuSet g_thread_affinity_mask_little;
 static CpuSet g_thread_affinity_mask_big;
+static CpuSet g_thread_affinity_mask_primary;
 
 static int setup_thread_affinity_masks()
 {
@@ -553,6 +554,9 @@ static int setup_thread_affinity_masks()
             g_thread_affinity_mask_little.enable(i);
         else
             g_thread_affinity_mask_big.enable(i);
+        
+        if (cpu_max_freq_khz[i] == max_freq_khz_max)
+          g_thread_affinity_mask_primary.enable(i);
     }
 #else
     // TODO implement me for other platforms
@@ -575,6 +579,9 @@ const CpuSet& get_cpu_thread_affinity_mask(int powersave)
 
     if (powersave == 2)
         return g_thread_affinity_mask_big;
+
+    if (powersave == 3) 
+        return g_thread_affinity_mask_primary;
 
     NCNN_LOGE("powersave %d not supported", powersave);
 

@@ -625,7 +625,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
     int model_id =
         tflite::InterpreterBuilder::RegisterModel(
-            *models_[graphs_[i]], *resolver, &interpreter_);
+            *models_[graphs_[i]], *resolver, &interpreter_, num_threads);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
@@ -657,15 +657,15 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
-  TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
-  TF_LITE_ENSURE_STATUS(InitInterpreter());
-
   int status = tflite::impl::set_cpu_thread_affinity(
       tflite::impl::get_cpu_thread_affinity_mask(params_.Get<int32_t>("cpu_masks")));
   
   TFLITE_LOG(INFO) << "Set affinity to " << 
   tflite::impl::get_cpu_thread_affinity_mask_string(params_.Get<int32_t>("cpu_masks")) 
   << " cores : " << (status == 0 ? "True" : "False");
+
+  TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
+  TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the
