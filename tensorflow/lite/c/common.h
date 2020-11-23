@@ -792,7 +792,8 @@ typedef enum TfLiteDelegateFlags {
   kTfLiteDelegateFlagsNNAPIDSP = 1 << 3,
   kTfLiteDelegateFlagsNNAPINPU = 1 << 4,
   kTfLiteDelegateFlagsXNNPACK = 1 << 5,
-  kTfLiteDelegateFlagsFLEX = 1 << 6
+  kTfLiteDelegateFlagsFLEX = 1 << 6,
+  kTfLiteDelegateFlagsHEXAGONDSP = 1 << 7
 } TfLiteDelegateFlags;
 
 const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag);

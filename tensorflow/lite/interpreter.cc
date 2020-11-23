@@ -30,6 +30,7 @@ limitations under the License.
 #include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
+#include "tensorflow/lite/delegates/hexagon/hexagon_delegate.h"
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
@@ -193,6 +194,15 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
           std::make_pair(delegateFlag, std::move(nnapi_delegate)));
       }
     }
+  }
+
+  TfLiteHexagonDelegateOptions hexagon_options = TfLiteHexagonDelegateOptionsDefault();
+  
+  TfLiteDelegatePtr hexagon_delegate =
+      TfLiteDelegatePtr(TfLiteHexagonDelegateCreate(&hexagon_options),
+                        &TfLiteHexagonDelegateDelete);
+  if (hexagon_delegate.get()) {
+    delegates_.insert(std::make_pair(kTfLiteDelegateFlagsHEXAGONDSP, std::move(hexagon_delegate)));
   }
 
   TfLiteDelegatePtr xnnpack_delegate = MaybeCreateXNNPACKDelegate(1);
@@ -650,7 +660,8 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
     case kTfLiteDSP:
       if (tensor_types.find(kTfLiteInt8) != tensor_types.end() ||
           tensor_types.find(kTfLiteUInt8) != tensor_types.end())
-        targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
+        targetDelegate = delegates(kTfLiteDelegateFlagsHEXAGONDSP);
+      //targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
       break;
       
     // TODO # 30

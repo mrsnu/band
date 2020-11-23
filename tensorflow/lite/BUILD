@@ -276,6 +276,7 @@ cc_library(
     }) + select({
         "//tensorflow:android": [
             "//tensorflow/lite/delegates/gpu:delegate",
+            "//tensorflow/lite/delegates/hexagon:hexagon_delegate",
         ],
         "//conditions:default": [],
     }),
