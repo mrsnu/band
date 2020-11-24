@@ -64,11 +64,13 @@ class InterpreterBuilder {
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1,
+                        int max_nodes = -1,
                         TfLiteDeviceFlags device_id = kTfLiteCPU);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads = -1,
+                     int max_nodes = -1,
                      TfLiteDeviceFlags device_id = kTfLiteCPU);
 
   // Adds NUM_DEVICES number of Subgraphs to the interpreter.
@@ -77,11 +79,13 @@ class InterpreterBuilder {
   static int RegisterModel(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
-                        int num_threads = -1);
+                        int num_threads = -1,
+                        int max_nodes = -1);
   static int RegisterModel(const ::tflite::Model* model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
-                        int num_threads = -1);
+                        int num_threads = -1,
+                        int max_nodes = -1);
 
  private:
   InterpreterBuilder() = default;

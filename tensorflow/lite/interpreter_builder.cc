@@ -535,22 +535,22 @@ int InterpreterBuilder::num_registered_model = 0;
 int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads) {
+                     int num_threads, int max_nodes) {
   return RegisterModel(
-      model.GetModel(), op_resolver, interpreter, num_threads);
+      model.GetModel(), op_resolver, interpreter, num_threads, max_nodes);
 }
 
 int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads) {
+                     int num_threads, int max_nodes) {
   int model_id = InterpreterBuilder::num_registered_model++;
   bool has_available_device = false;
 
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     int subgraph_idx = AddSubgraph(
-        model, op_resolver, interpreter, num_threads, device_id);
+        model, op_resolver, interpreter, num_threads, max_nodes, device_id);
     if (subgraph_idx != -1) {
       (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
       has_available_device = true;
@@ -569,14 +569,16 @@ int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads,
+                     int max_nodes,
                      TfLiteDeviceFlags device_id) {
-  return AddSubgraph(model.GetModel(), op_resolver, interpreter, num_threads);
+  return AddSubgraph(model.GetModel(), op_resolver, interpreter, num_threads, max_nodes, device_id);
 }
 
 int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads,
+                     int max_nodes,
                      TfLiteDeviceFlags device_id) {
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
@@ -683,6 +685,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       }
     }
     modified_subgraph->SetVariables(std::move(variables));
+    modified_subgraph->SetNumNodesPerSubset(max_nodes);
 
     if ((*interpreter)->
           ApplyBestDeviceDelegate(
@@ -690,6 +693,12 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
             device_id, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
+
+    error_reporter_->Report("Delegation completed, device %s subgraph %d - %d nodes",
+                            TfLiteDeviceGetName(device_id),
+                            subgraph_index,
+                            modified_subgraph->execution_plan().size());
+                            
   }
 
   return modified_subgraph_index;
