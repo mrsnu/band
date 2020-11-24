@@ -30,6 +30,7 @@ limitations under the License.
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <chrono>
 
 #include "tensorflow/lite/nnapi/NeuralNetworksTypes.h"
 
@@ -3397,6 +3398,8 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
 
 TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
                                          TfLiteNode* node, int* nnapi_errno) {
+  auto start = std::chrono::system_clock::now();
+
   ANeuralNetworksExecution* execution = nullptr;
   RETURN_TFLITE_ERROR_IF_NN_ERROR(context,
                                   nnapi_->ANeuralNetworksExecution_create(
@@ -3563,6 +3566,14 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
         "associating NNAPI execution output to a buffer", nnapi_errno);
     relative_output_index++;
   }
+
+  std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now() - start)
+                   .count()
+            << ",";
+
+  start = std::chrono::system_clock::now();
+
   // Invoke ANN in blocking fashion.
   if (nnapi_->android_sdk_version < kMinSdkVersionForNNAPI12) {
     ANeuralNetworksEvent* event = nullptr;
@@ -3581,6 +3592,13 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
         context, nnapi_->ANeuralNetworksExecution_compute(execution),
         "running computation", nnapi_errno);
   }
+
+  
+  std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now() - start).count()
+            << ",";
+
+  start = std::chrono::system_clock::now();
 
   // copy results from shared memory to the destination.
   output_offset = 0;
@@ -3618,6 +3636,11 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
 
     memcpy(dest.data.raw, src.data.raw, src.bytes);
   }
+
+  
+  std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::system_clock::now() - start).count()
+            << std::endl;
 
   return kTfLiteOk;
 }

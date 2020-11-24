@@ -208,18 +208,36 @@ class DelegateKernel {
             "initialized.");
       }
     }
-
+    auto start = std::chrono::system_clock::now();
     const bool is_dequant_required = !quant_conversion_map_.empty();
     if (is_dequant_required) {
       RETURN_IF_ERROR(
           DequantizeInputs(context, input_indices_, quant_conversion_map_));
+      std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::system_clock::now() - start)
+                  .count()
+          << ",";
+      start = std::chrono::system_clock::now();
     }
     RETURN_IF_ERROR(SetInputsAndOutputs(context));
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::system_clock::now() - start)
+                .count()
+        << ",";
+    start = std::chrono::system_clock::now();
     RETURN_IF_ERROR(runner_->Run());
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::system_clock::now() - start)
+                .count();
+    start = std::chrono::system_clock::now();
     if (is_dequant_required) {
       RETURN_IF_ERROR(
           QuantizeOutputs(context, output_indices_, quant_conversion_map_));
+      std::cout << "," << std::chrono::duration_cast<std::chrono::microseconds>(
+                       std::chrono::system_clock::now() - start)
+                       .count();
     }
+    std::cout << std::endl;
     return absl::OkStatus();
   }
 

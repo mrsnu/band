@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstdint>
 #include <cstring>
 #include <utility>
+#include <iostream>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/context_util.h"
@@ -584,6 +585,15 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
           subgraph_profiling_results_map_[{model_id, device_flag}] = 
             timer->GetAverageElapsedTime<std::chrono::microseconds>();
+          
+          if (device_flag == kTfLiteCPU) {
+            for (int i = 0; i < timer->GetNumInvokeTimelines(); i++) {
+              std::cout << timer->GetElapsedTimeAt<std::chrono::microseconds>(
+                  i)
+              << std::endl;
+            } 
+          }
+            
 
           error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
                   model_id,
