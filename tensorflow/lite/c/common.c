@@ -225,6 +225,8 @@ const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag) {
     return "GPU";
   case kTfLiteDSP:
     return "DSP";
+  case kTfLiteNPU:
+    return "NPU";
   }
   return "Unknown type";  
 }
