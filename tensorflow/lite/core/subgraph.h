@@ -353,6 +353,12 @@ class Subgraph {
 
   ModelPlan* GetModelPlan() { return model_plan_.get(); }
 
+  // Set number of maximum nodes per subset
+  // -1 means infinite
+  void SetNumNodesPerSubset(int max_nodes) { 
+    max_nodes_ = std::max(max_nodes, -1); 
+  }
+
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
   // BufferedProfiler instance, and takes care of event profiling/tracing in a
@@ -711,6 +717,8 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
+
+  int max_nodes_ = -1;
 };
 
 }  // namespace impl

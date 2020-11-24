@@ -37,10 +37,11 @@ class PartitionGraphIntoIndependentNodeSubsetsImpl {
  public:
   PartitionGraphIntoIndependentNodeSubsetsImpl(
       const GraphInfo* info, const TfLiteIntArray* nodes_to_partition,
-      std::vector<NodeSubset>* node_subsets)
+      std::vector<NodeSubset>* node_subsets, int max_nodes)
       : info_(info),
         node_subsets_(node_subsets),
-        node_type_(info->num_nodes(), NodeSubset::kTfNonPartition) {
+        node_type_(info->num_nodes(), NodeSubset::kTfNonPartition),
+        max_nodes_(max_nodes) {
     // Populate the node_type_ map.
     for (auto node_index : TfLiteIntArrayView(nodes_to_partition)) {
       node_type_[node_index] = NodeSubset::kTfPartition;
@@ -137,6 +138,10 @@ class PartitionGraphIntoIndependentNodeSubsetsImpl {
     if (current_subset.type == NodeSubset::kTfUnexplored) {
       current_subset.type = node_type_[node_index];
     }
+
+    if (max_nodes_ > 0 && current_subset.nodes.size() > max_nodes_) 
+      return false;
+
     // The node gets assigned to this epoch if it is the same type as
     // the epoch's assigned type. Note, if this is the current ready
     // node encountered during this epoch, this condition will be
@@ -201,6 +206,7 @@ class PartitionGraphIntoIndependentNodeSubsetsImpl {
   // Maps from tensor index to the epoch in which it is assigned. Also special
   // negative values of kEpochNotReady if not assigned.
   std::vector<int> node_epochs_;
+  int max_nodes_;
 };
 // LINT.ThenChange(//tensorflow/lite/delegates/utils.h)
 
@@ -208,9 +214,9 @@ class PartitionGraphIntoIndependentNodeSubsetsImpl {
 
 TfLiteStatus PartitionGraphIntoIndependentNodeSubsets(
     const GraphInfo* info, const TfLiteIntArray* nodes_to_partition,
-    std::vector<NodeSubset>* node_subsets) {
+    std::vector<NodeSubset>* node_subsets, int max_nodes) {
   PartitionGraphIntoIndependentNodeSubsetsImpl(info, nodes_to_partition,
-                                               node_subsets)
+                                               node_subsets, max_nodes)
       .Partition();
   return kTfLiteOk;
 }

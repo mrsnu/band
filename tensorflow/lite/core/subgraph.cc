@@ -358,7 +358,7 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
   InterpreterInfo info(this);
   std::vector<NodeSubset> node_subsets;
   PartitionGraphIntoIndependentNodeSubsets(&info, nodes_to_replace,
-                                           &node_subsets);
+                                           &node_subsets, max_nodes_);
 
   TFLITE_LOG(
       tflite::TFLITE_LOG_INFO,
@@ -488,7 +488,7 @@ TfLiteStatus Subgraph::PreviewDelegatePartitioning(
   InterpreterInfo info(this);
   std::vector<NodeSubset> node_subsets;
   PartitionGraphIntoIndependentNodeSubsets(&info, nodes_to_replace,
-                                           &node_subsets);
+                                           &node_subsets, max_nodes_);
 
   // Create one TfLiteDelegateParams per node-subset which would be delegated.
   for (auto& node_subset : node_subsets) {

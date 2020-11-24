@@ -80,7 +80,7 @@ struct NodeSubset {
 // sets). `node_subsets` is assumed to be empty.
 TfLiteStatus PartitionGraphIntoIndependentNodeSubsets(
     const GraphInfo* info, const TfLiteIntArray* nodes_to_partition,
-    std::vector<NodeSubset>* node_subsets);
+    std::vector<NodeSubset>* node_subsets, int max_nodes);
 
 }  // namespace tflite
 
