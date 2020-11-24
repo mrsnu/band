@@ -274,6 +274,8 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
                           BenchmarkParam::Create<int32_t>(1024));
   default_params.AddParam("cpu_masks",
                           BenchmarkParam::Create<int32_t>(0));
+  default_params.AddParam("max_nodes",
+                          BenchmarkParam::Create<int32_t>(-1));
   default_params.AddParam("profiling_output_csv_file",
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("enable_platform_tracing",
@@ -332,6 +334,8 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
                           "max profiling buffer entries"),
       CreateFlag<int32_t>("cpu_masks", &params_,
                           "cpu masks 0 : All, 1 : Little, 2: Big"),
+      CreateFlag<int32_t>("max_nodes", &params_,
+                          "Maximum nodes per node subset (-1 : infinite)"),
       CreateFlag<std::string>(
           "profiling_output_csv_file", &params_,
           "File path to export profile data as CSV, if not set "
@@ -617,6 +621,7 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
 TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
+  const int32_t max_nodes = params_.Get<int32_t>("max_nodes");
   const bool use_caching = params_.Get<bool>("use_caching");
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter()));
@@ -625,7 +630,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
     int model_id =
         tflite::InterpreterBuilder::RegisterModel(
-            *models_[graphs_[i]], *resolver, &interpreter_, num_threads);
+            *models_[graphs_[i]], *resolver, &interpreter_, num_threads, max_nodes);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
