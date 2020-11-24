@@ -68,7 +68,6 @@ FRAMEWORK_LIB_HDRS = [
     "context_util.h",
     "core/macros.h",
     "core/subgraph.h",
-    "core/cpu/cpu.h",
     "error_reporter.h",
     "graph_info.h",
     "interpreter.h",
@@ -228,10 +227,19 @@ cc_library(
 )
 
 cc_library(
+    name = "cpu",
+    srcs = [
+        "core/cpu/cpu.cc",
+    ],
+    hdrs = [
+        "core/cpu/cpu.h",
+    ],
+)
+
+cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
-        "core/cpu/cpu.cc",
         "graph_info.cc",
         "interpreter.cc",
         "interpreter_builder.cc",
@@ -251,6 +259,7 @@ cc_library(
     deps = [
         ":allocation",
         ":arena_planner",
+        ":cpu",
         ":external_cpu_backend_context",
         ":graph_info",
         ":memory_planner",
