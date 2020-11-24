@@ -693,12 +693,6 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
             device_id, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
-
-    error_reporter_->Report("Delegation completed, device %s subgraph %d - %d nodes",
-                            TfLiteDeviceGetName(device_id),
-                            subgraph_index,
-                            modified_subgraph->execution_plan().size());
-                            
   }
 
   return modified_subgraph_index;
