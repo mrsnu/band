@@ -139,7 +139,7 @@ class PartitionGraphIntoIndependentNodeSubsetsImpl {
       current_subset.type = node_type_[node_index];
     }
 
-    if (max_nodes_ > 0 && current_subset.nodes.size() > max_nodes_) 
+    if (max_nodes_ > 0 && current_subset.nodes.size() >= max_nodes_) 
       return false;
 
     // The node gets assigned to this epoch if it is the same type as
