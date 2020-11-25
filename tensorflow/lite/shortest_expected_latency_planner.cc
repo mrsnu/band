@@ -23,7 +23,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
     request_lock.unlock();
     // std::cout << "After Release Lock" << std::endl;
 
-    for (Job to_execute : local_jobs) {
+    for (Job& to_execute : local_jobs) {
     // if (to_execute.model_id_ != -1) {
       // for (std::deque<Job>::iterator it = GetRequests().begin(); it != GetRequests().end(); ++it) {
       /*
@@ -38,7 +38,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       // Job to_execute = *it;
       int model_id = to_execute.model_id_;
-      TfLiteDevice device = GetInterpreter()->GetShortestLatency(model_id);
+      TfLiteDevice device = GetInterpreter()->GetShortestLatency(model_id, to_execute);
 
       // if (is_worker_empty[device]) {
       Worker& worker = GetInterpreter()->GetWorker(device);

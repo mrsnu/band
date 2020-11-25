@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#include <map>
 
 #include "tensorflow/lite/profiling/time.h"
 
@@ -29,6 +30,9 @@ struct Job {
   int64_t enqueue_time_;
   int64_t invoke_time_;
   int64_t end_time_;
+
+  std::map<int, int64_t> waiting_time;
+  std::map<int, int64_t> expected_latency;
 };
 
 class Worker {

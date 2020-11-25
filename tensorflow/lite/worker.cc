@@ -32,7 +32,7 @@ void Worker::Work() {
       break;
     }
 
-    Job job = requests_.front();
+    Job& job = requests_.front();
     // requests_.pop_front();
     lock.unlock();
 
@@ -70,27 +70,29 @@ int64_t Worker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
 
   int64_t total = 0;
-  bool running = true;
   for (std::deque<Job>::iterator it = requests_.begin(); it != requests_.end(); ++it) {
     int subgraph_idx = (*it).subgraph_idx_;
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
-      total += subgraph.GetExpectedLatency();
-    }
-    else return -1;
+      int64_t subgraph_latency = subgraph.GetExpectedLatency();
+      total += subgraph_latency;
 
-    if (running) {
-      int64_t current_time = profiling::time::NowMicros();
-      if (current_time > (*it).invoke_time_ && (*it).invoke_time_ != 0) {
-        // std::cout << "The first job executed for: " << (current_time - (*it).invoke_time_) << std::endl;
-        // std::cout << "Current Time: " << current_time << std::endl;
-        // std::cout << "Enqueue time: " << (*it).invoke_time_ << std::endl;
-        total -= (current_time - (*it).invoke_time_);
+      if (it == requests_.begin()) {
+        int64_t current_time = profiling::time::NowMicros();
+        int64_t invoke_time = (*it).invoke_time_;
+        if (invoke_time > 0 && current_time > invoke_time) {
+          int64_t progress = (current_time - invoke_time) > subgraph_latency ? subgraph_latency : (current_time - invoke_time);
+          total -= progress;
+          // std::cout << "Invoke Time : " << (*it).invoke_time_ << std::endl;
+          // std::cout << "current Time : " << current_time << std::endl;
+          // std::cout << "subgraph_latency : " << subgraph_latency << std::endl;
+          // std::cout << "progress : " << progress << std::endl;
+        }
       }
-
-      running = false;
+    } else {
+      return -1;
     }
   }
   lock.unlock();

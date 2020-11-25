@@ -596,8 +596,8 @@ class Interpreter {
     return kTfLiteOk;
   }
 
-  TfLiteDevice GetShortestLatency(int model_id);
-  int64_t GetLatency(int model_id, TfLiteDevice device);
+  TfLiteDevice GetShortestLatency(int model_id, Job& job);
+  int64_t GetLatency(int model_id, TfLiteDevice device, Job& job);
 
  private:
   friend class InterpreterBuilder;

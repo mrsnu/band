@@ -588,23 +588,24 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDevice device_id) {
   return subgraph_idx_map_[key];
 }
 
-int64_t Interpreter::GetLatency(int model_id, TfLiteDevice device) {
-  // std::cout << "Device : " << device << std::endl;
+int64_t Interpreter::GetLatency(int model_id, TfLiteDevice device, Job& job) {
   int64_t current_time = profiling::time::NowMicros();
-  int64_t expected_latency = workers_[device]->GetWaitingTime();
-  // std::cout << "Waiting Time : " << expected_latency << std::endl;
+  int64_t waiting_time = workers_[device]->GetWaitingTime();
   int subgraph_idx = GetSubgraphIdx(model_id, device);
-  expected_latency += (*(subgraph(subgraph_idx))).GetExpectedLatency();
-  // std::cout << "Expected Latency : " << expected_latency << std::endl;
+  int64_t expected_latency = (*(subgraph(subgraph_idx))).GetExpectedLatency();
+  expected_latency += waiting_time;
+
+  job.waiting_time.insert({device, waiting_time});
+  job.expected_latency.insert({device, expected_latency});
 
   return expected_latency;
 }
 
-TfLiteDevice Interpreter::GetShortestLatency(int model_id) {
+TfLiteDevice Interpreter::GetShortestLatency(int model_id, Job& job) {
   int idx = 0;
   int64_t value = -1;
   for(int i = 0; i < num_devices; ++i) {
-    int64_t latency = GetLatency(model_id, static_cast<TfLiteDevice>(i));
+    int64_t latency = GetLatency(model_id, static_cast<TfLiteDevice>(i), job);
 
     if (value == -1 || latency < value) {
       idx = i;
