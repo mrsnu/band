@@ -74,8 +74,9 @@ class Delegate {
   explicit Delegate(const TfLiteGpuDelegateOptionsV2* options)
       : num_delegate_kernels_(0) {
     options_ = options ? *options : TfLiteGpuDelegateOptionsV2Default();
+    // Support infinite # of partitions if less then 0
     if (options_.max_delegated_partitions <= 0) {
-      options_.max_delegated_partitions = 1;
+      options_.max_delegated_partitions = std::numeric_limits<int32_t>::max();
     }
   }
 

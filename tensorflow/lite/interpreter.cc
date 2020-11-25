@@ -143,8 +143,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
-  // TODO #34 GPU delegate multiple delegated partition support
-  // gpu_opts.max_delegated_partitions = 10;
+  gpu_opts.max_delegated_partitions = 0;
   TfLiteDelegatePtr gpu_delegate =
       TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
                         &TfLiteGpuDelegateV2Delete);
