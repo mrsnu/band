@@ -4206,7 +4206,7 @@ TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
     return kTfLiteDelegateFlagsNNAPIDSP;
   }
 
-  if (contains_keywords({ "google-edgetpu", "armnn", "neuron-ann" })) {
+  if (contains_keywords({ "google-edgetpu", "armnn", "neuron-ann", "qti-hta" })) {
     return kTfLiteDelegateFlagsNNAPINPU;
   }
 
