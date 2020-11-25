@@ -595,8 +595,10 @@ int64_t Interpreter::GetLatency(int model_id, TfLiteDevice device, Job& job) {
   int64_t expected_latency = (*(subgraph(subgraph_idx))).GetExpectedLatency();
   expected_latency += waiting_time;
 
-  job.waiting_time.insert({device, waiting_time});
-  job.expected_latency.insert({device, expected_latency});
+  // job.waiting_time.insert({device, waiting_time});
+  job.waiting_time[device] = waiting_time;
+  // job.expected_latency.insert({device, expected_latency});
+  job.expected_latency[device] = expected_latency;
 
   return expected_latency;
 }
