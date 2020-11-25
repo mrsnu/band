@@ -380,6 +380,8 @@ class Interpreter {
   /// This method is an asychronous call.
   void InvokeModel(int model_id);
 
+  void InvokeModel(int num_models, int batch_size);
+
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
 

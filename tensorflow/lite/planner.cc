@@ -53,5 +53,17 @@ void Planner::EnqueueRequest(Job job) {
   planner_safe_bool_.notify();
 }
 
+void Planner::EnqueueBatch(std::list<Job> jobs) {
+  std::unique_lock<std::mutex> lock(requests_mtx_);
+  auto enqueue_time = profiling::time::NowMicros();
+  for (Job job : jobs) {
+    job.enqueue_time_ = enqueue_time;
+    requests_.push_back(job);
+  }
+  lock.unlock();
+
+  planner_safe_bool_.notify();
+}
+
 }  // namespace impl
 }  // namespace tflite

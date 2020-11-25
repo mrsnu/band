@@ -820,10 +820,11 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
 TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
   kill_app = false;
 
-  for (int j = 0; j < models_.size(); ++j) {
-    int model_period = period;
-    GenerateRequests(j, model_period);
-  }
+  // for (int j = 0; j < models_.size(); ++j) {
+  //   int model_period = period;
+  //   GenerateRequests(j, model_period);
+  // }
+  GenerateBatch(models_.size(), 2, period);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(60000));
   kill_app = true;
@@ -842,6 +843,27 @@ void BenchmarkTfLiteModel::GenerateRequests(int model_id, int interval) {
       {
         std::lock_guard<std::mutex> lock(cnt_mtx);
         cnt++;
+      }
+      int64_t end = profiling::time::NowMicros();
+      int duration = (end - start) / 1000;
+      if (duration < interval) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval - duration));
+      }
+      if(kill_app) return;
+    }
+  });
+  t.detach();
+}
+
+void BenchmarkTfLiteModel::GenerateBatch(int num_models, int batch_size, int interval) {
+  std::thread t([this, num_models, batch_size, interval]() {
+
+    while(true) {
+      int64_t start = profiling::time::NowMicros();
+      interpreter_->InvokeModel(num_models, batch_size);
+      {
+        std::lock_guard<std::mutex> lock(cnt_mtx);
+        cnt += num_models * batch_size;
       }
       int64_t end = profiling::time::NowMicros();
       int duration = (end - start) / 1000;

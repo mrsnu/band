@@ -10,34 +10,21 @@ void ShortestExpectedLatencyPlanner::Plan() {
     if (GetSafeBool().wait())
       return;
 
-    /*
-    std::vector<bool> is_worker_empty;
-    is_worker_empty.resize(GetInterpreter()->GetWorkersSize(), false);
-
-    for (int i = 0; i < GetInterpreter()->GetWorkersSize(); ++i) {
-      Worker& worker = GetInterpreter()->GetWorker(i);
-      {
-        std::lock_guard<std::mutex> lock(worker.GetDeviceMtx());
-        if (worker.GetDeviceRequests().empty()) {
-          is_worker_empty[i] = true;
-        }
-      }
-      std::cout << "Check if worker " << i << " is not busy : " << is_worker_empty[i] << std::endl;
-    }*/
- 
-    // std::cout << std::endl;
-    // std::cout << "START PLAN!" << std::endl;
-    Job to_execute = Job(-1);
+    std::deque<Job> local_jobs;
     // std::cout << "Before Acquire Lock" << std::endl;
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
     if (!GetRequests().empty()) {
-      to_execute = GetRequests().front();
-      GetRequests().pop_front();
+      GetRequests().swap(local_jobs);
+      // to_execute = GetRequests().front();
+      // GetRequests().pop_front();
+    } else {
+      continue;
     }
     request_lock.unlock();
     // std::cout << "After Release Lock" << std::endl;
 
-    if (to_execute.model_id_ != -1) {
+    for (Job to_execute : local_jobs) {
+    // if (to_execute.model_id_ != -1) {
       // for (std::deque<Job>::iterator it = GetRequests().begin(); it != GetRequests().end(); ++it) {
       /*
       bool continue_plan = false;

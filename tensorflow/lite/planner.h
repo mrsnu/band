@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <fstream>
+#include <list>
 
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
@@ -68,6 +69,8 @@ class Planner {
 
   // Enqueues a job to a worker request queue.
   void EnqueueRequest(Job job);
+
+  void EnqueueBatch(std::list<Job> jobs);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
