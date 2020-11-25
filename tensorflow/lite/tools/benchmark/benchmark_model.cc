@@ -142,23 +142,19 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
   int64_t max_finish_us = now_us + static_cast<int64_t>(max_secs * 1.e6f);
 
   *invoke_status = kTfLiteOk;
-  for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
-                    now_us <= max_finish_us;
-       run++) {
-    ResetInputsAndOutputs();
-    listeners_.OnSingleRunStart(run_type);
-    int64_t start_us = profiling::time::NowMicros();
-    TfLiteStatus status = RunAll();
-    int64_t end_us = profiling::time::NowMicros();
-    listeners_.OnSingleRunEnd();
+  ResetInputsAndOutputs();
+  listeners_.OnSingleRunStart(run_type);
+  int64_t start_us = profiling::time::NowMicros();
+  TfLiteStatus status = RunAll();
+  int64_t end_us = profiling::time::NowMicros();
+  listeners_.OnSingleRunEnd();
 
-    run_stats.UpdateStat(end_us - start_us);
-    util::SleepForSeconds(params_.Get<float>("run_delay"));
-    now_us = profiling::time::NowMicros();
+  run_stats.UpdateStat(end_us - start_us);
+  util::SleepForSeconds(params_.Get<float>("run_delay"));
+  now_us = profiling::time::NowMicros();
 
-    if (status != kTfLiteOk) {
-      *invoke_status = status;
-    }
+  if (status != kTfLiteOk) {
+    *invoke_status = status;
   }
 
   std::stringstream stream;

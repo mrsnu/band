@@ -35,6 +35,7 @@ limitations under the License.
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/op_resolver.h"
 #include "tensorflow/lite/profiling/platform_profiler.h"
+#include "tensorflow/lite/profiling/time_profiler.h"
 #include "tensorflow/lite/profiling/profile_summary_formatter.h"
 #include "tensorflow/lite/string_util.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
@@ -745,7 +746,7 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 
   if (params_.Get<bool>("enable_platform_tracing")) {
     return std::unique_ptr<BenchmarkListener>(
-        new PlatformProfilingListener(interpreter_.get()));
+    new PlatformProfilingListener(interpreter_.get()));
   }
 
   return std::unique_ptr<BenchmarkListener>(new ProfilingListener(
@@ -778,13 +779,47 @@ TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
-  int num_iters = 1;
+  tflite::Profiler* previous_profiler = interpreter_->GetProfiler();
+
+  std::vector<std::shared_ptr<tflite::profiling::TimeProfiler>>
+      subgraph_profilers;
+
+  for (int i = 0; i < interpreter_->subgraphs_size(); i++) {
+    std::shared_ptr<tflite::profiling::TimeProfiler> profiler =
+        std::make_shared<tflite::profiling::TimeProfiler>();
+    interpreter_->subgraph(i)->SetProfiler(profiler.get(), i);
+    subgraph_profilers.push_back(profiler);
+  }
+
+  int num_iters = params_.Get<int32_t>("num_runs");
   for (int i = 0; i < num_iters; ++i) {
     for (int j = 0; j < models_.size(); ++j) {
       interpreter_->InvokeModel(j);
     }
   }
+
   interpreter_->GetPlanner()->Wait(models_.size() * num_iters);
+
+  for (int i = 0; i < models_.size(); i++) {
+    for (int j = 0; j < kTfLiteNumDevices; j++) {
+      const auto device_id = TfLiteDeviceFlags(j);
+
+      int subgraph_id = interpreter_->GetSubgraphIdx(i, device_id);
+      if (subgraph_id >= 0) {
+        auto profiler = subgraph_profilers[subgraph_id];
+        if (profiler->GetNumInvokeTimelines() > 0) {
+          TFLITE_LOG(INFO)
+              << graphs_[i] << " device : " << TfLiteDeviceGetName(device_id)
+              << " avg="
+              << profiler->GetAverageElapsedTime<std::chrono::microseconds>()
+              << " std="
+              << profiler->GetStandardDeviation<std::chrono::microseconds>();
+        }
+      }
+    } 
+  }
+  interpreter_->SetProfiler(previous_profiler);
+
   return kTfLiteOk;
 }
 
