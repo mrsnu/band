@@ -69,6 +69,7 @@ void FixedDevicePlanner::Plan() {
           static_cast<TfLiteDeviceFlags>(device_idx);
       to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(
           model_id, device_flag);
+      to_execute.device_id_ = device_idx;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
       {

@@ -375,7 +375,12 @@ class Interpreter {
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
-  void InvokeModel(int model_id);
+  void InvokeModelAsync(int model_id);
+
+  /// Invoke models with a given batch size.
+  /// Models with indices from 0 to num_models-1 will be invoked.
+  /// This method is an asychronous call.
+  void InvokeModelsAsync(int num_models, int batch_size);
 
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);

@@ -15,10 +15,13 @@ class Planner;
 struct Job {
   explicit Job(int model_id)
     : model_id_(model_id) {
-    subgraph_idx_ = -1;
   }
   int model_id_;
-  int subgraph_idx_;
+  int subgraph_idx_ = -1;
+  int device_id_ = -1;
+  int64_t enqueue_time_ = 0;
+  int64_t invoke_time_ = 0;
+  int64_t end_time_ = 0;
 };
 
 class Worker {

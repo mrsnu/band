@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstdint>
 #include <cstring>
 #include <utility>
+#include <list>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/context_util.h"
@@ -371,9 +372,20 @@ TfLiteStatus Interpreter::Invoke(int idx) {
   return kTfLiteOk;
 }
 
-void Interpreter::InvokeModel(int model_id) {
+void Interpreter::InvokeModelAsync(int model_id) {
   planner_->EnqueueRequest(Job(model_id));
 }
+
+void Interpreter::InvokeModelsAsync(int num_models, int batch_size) {
+  std::list<Job> jobs;
+  for (int model_id = 0; model_id < num_models; ++model_id) {
+    for (int i = 0; i < batch_size; ++i) {
+      jobs.emplace_back(model_id);
+    }
+  }
+  planner_->EnqueueBatch(jobs);
+}
+
 
 TfLiteStatus Interpreter::AddTensors(int tensors_to_add,
                                      int* first_new_tensor_index) {

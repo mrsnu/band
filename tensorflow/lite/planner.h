@@ -2,6 +2,7 @@
 #define TENSORFLOW_LITE_PLANNER_H_
 
 #include <memory>
+#include <list>
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
@@ -51,6 +52,9 @@ class Planner {
 
   // Enqueues a job to a worker request queue.
   void EnqueueRequest(Job job);
+
+  // Enqueues a batch of jobs to a worker request queue.
+  void EnqueueBatch(std::list<Job> jobs);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
