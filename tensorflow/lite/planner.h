@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <list>
+#include <string>
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
