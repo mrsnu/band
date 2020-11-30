@@ -426,6 +426,9 @@ TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
                   gpu_delegate->num_delegate_kernels());
   TfLiteIntArrayFree(ops_to_replace);
 
+  // NOTE: When a quantized model is invoked without the delegate option
+  // `TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT`, no GPU Delegate kernel
+  // will be generated.
   if (gpu_delegate->num_delegate_kernels() == 0) {
     return kTfLiteError;
   }
