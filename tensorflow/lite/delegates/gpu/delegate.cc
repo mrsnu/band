@@ -425,6 +425,11 @@ TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
   TFLITE_LOG_PROD(TFLITE_LOG_INFO, "Created %d GPU delegate kernels.",
                   gpu_delegate->num_delegate_kernels());
   TfLiteIntArrayFree(ops_to_replace);
+
+  if (gpu_delegate->num_delegate_kernels() == 0) {
+    return kTfLiteError;
+  }
+
   return status;
 }
 
