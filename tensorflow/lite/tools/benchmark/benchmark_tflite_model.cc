@@ -780,6 +780,10 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms, int batch_size) {
   num_requests_ = 0;
 
   // spawn a child thread to do our work, since we're going to sleep
+  // Note: spawning a separate thread is technically unnecessary if we only
+  // have a single thread that generate requests, but we may have multiple
+  // threads doing that in the future so we might as well make the code easily
+  // adaptable to such situtations.
   GeneratePeriodicRequests(period_ms, batch_size);
 
   // wait for 60 seconds until we stop the benchmark

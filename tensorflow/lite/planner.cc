@@ -11,7 +11,7 @@ Planner::Planner(Interpreter* interpreter)
 
   // open file to write per-request timestamps later
   // TODO: make the file path a configurable command line arg
-  std::ofstream log_file("/data/local/tmp/model_execution_log.csv");
+  std::ofstream log_file(log_path_);
   log_file << "model_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\n";
   log_file.close();
 }
@@ -27,8 +27,7 @@ TfLiteStatus Planner::Wait(int num_requests) {
     return jobs_finished_.size() >= num_requests;
   });
 
-  std::ofstream log_file("/data/local/tmp/model_execution_log.csv",
-                         std::ofstream::app);
+  std::ofstream log_file(log_path_, std::ofstream::app);
   for (int i = 0; i < num_requests; ++i) {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();

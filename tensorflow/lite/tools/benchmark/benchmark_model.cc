@@ -160,7 +160,15 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     ResetInputsAndOutputs();
     listeners_.OnSingleRunStart(run_type);
     int64_t start_us = profiling::time::NowMicros();
-    TfLiteStatus status = RunPeriodic(period_ms, batch_size);
+
+    // main run method
+    TfLiteStatus status;
+    if (period_ms <= 0) {
+      status = RunAll();
+    } else {
+      status = RunPeriodic(period_ms, batch_size);
+    }
+
     int64_t end_us = profiling::time::NowMicros();
     listeners_.OnSingleRunEnd();
 
