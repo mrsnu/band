@@ -4563,7 +4563,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                                &nodes_to_delegate));
 
   if (nodes_to_delegate.empty()) {
-    return kTfLiteOk;
+    return kTfLiteError;
   } else {
     // Request TFLite to partition the graph and make kernels
     // for each independent node sub set a new nnapi_delegate_kernel.
