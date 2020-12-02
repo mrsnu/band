@@ -137,6 +137,9 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   // `graphs` argument is parsed with commas.
   TfLiteStatus ParseGraphFileNames();
 
+  // parse json file with model configurations.
+  TfLiteStatus ParseJsonFile();
+
   void GenerateRequests(int model_id, int interval);
   void GenerateBatch(int num_models, int batch_size, int interval);
 

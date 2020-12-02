@@ -43,6 +43,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/tools/logging_reporter.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/tools/jute/jute.h"
 
 void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 
@@ -653,7 +654,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
-  TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
+  // TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
+  TF_LITE_ENSURE_STATUS(ParseJsonFile());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   // Install profilers if necessary right after interpreter is created so that
@@ -796,6 +798,24 @@ TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
     previous = current + 1;
   } while (current != string::npos);
 
+  if (graphs_.size() == 0) {
+    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite input files.";
+    return kTfLiteError;
+  }
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
+  std::string json_fname = params_.Get<std::string>("json_path");
+  jute::jValue json_file = jute::parser::parse_file(json_fname);
+
+  std::cout << json_file.to_string() << std::endl;
+
+  for (int i = 0; i < json_file["models"].size(); ++i) {
+    std::string graph = json_file["models"][i]["graph"].as_string();
+    graphs_.push_back(graph);
+  }
   if (graphs_.size() == 0) {
     TFLITE_LOG(ERROR) << "Please specify the name of TF Lite input files.";
     return kTfLiteError;

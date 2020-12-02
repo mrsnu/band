@@ -176,6 +176,7 @@ cc_library(
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/strings",
         "@ruy//ruy/profiler",
+        "//tensorflow/lite/tools/jute:jute_json_parser",
         ":timer",
     ],
 )

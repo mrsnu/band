@@ -39,7 +39,7 @@ BenchmarkParams BenchmarkModel::DefaultParams() {
   params.AddParam("output_prefix", BenchmarkParam::Create<std::string>(""));
   params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(0));
   params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.5f));
-
+  params.AddParam("json_path", BenchmarkParam::Create<std::string>(""));
 
   return params;
 }
@@ -108,6 +108,8 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
           "warmup_min_secs", &params_,
           "minimum number of seconds to rerun for, potentially making the "
           "actual number of warm-up runs to be greater than warmup_runs"),
+      CreateFlag<std::string>("json_path", &params_, "path to json file with "
+          "model configurations"),
   };
 }
 
