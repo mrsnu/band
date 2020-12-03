@@ -584,6 +584,9 @@ typedef struct TfLiteContext {
   TfLiteStatus (*GetExecutionPlan)(struct TfLiteContext* context,
                                    TfLiteIntArray** execution_plan);
 
+  TfLiteStatus (*GetDevicePlan)(struct TfLiteContext* context,
+                                   TfLiteIntArray** device_plan);
+
   // An array of tensors in the interpreter context (of length `tensors_size`)
   TfLiteTensor* tensors;
 
@@ -816,6 +819,8 @@ typedef struct TfLiteDelegate {
 
   // Bitmask flags. See the comments in `TfLiteDelegateFlags`.
   int64_t flags;
+
+  char * name;
 } TfLiteDelegate;
 
 // Build a 'null' delegate, with all the fields properly set to their default

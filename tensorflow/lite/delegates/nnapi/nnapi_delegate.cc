@@ -4379,8 +4379,71 @@ TfLiteStatus StatefulNnApiDelegate::LimitDelegatedPartitions(
   return kTfLiteOk;
 }
 
+// NN API Delegate Registration (the pseudo kernel that will invoke NN
+// API node sub sets)
+TfLiteRegistration nnapi_delegate_kernel = {
+    .init = [](TfLiteContext* context, const char* buffer,
+               size_t length) -> void* {
+      const TfLiteDelegateParams* params =
+          reinterpret_cast<const TfLiteDelegateParams*>(buffer);
+
+      auto* delegate_data = static_cast<Data*>(params->delegate->data_);
+      int* nnapi_errno = &(delegate_data->nnapi_errno);
+
+      NNAPIDelegateKernel* kernel_state =
+          delegate_data->MaybeGetCachedDelegateKernel(params);
+      if (!kernel_state) {
+        kernel_state = new NNAPIDelegateKernel(delegate_data->nnapi);
+        kernel_state->Init(context, params, nnapi_errno);
+      }
+
+      return kernel_state;
+    },
+
+    .free = [](TfLiteContext* context, void* buffer) -> void {
+      delete reinterpret_cast<NNAPIDelegateKernel*>(buffer);
+    },
+
+    .prepare = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+      NNAPIDelegateKernel* state =
+          reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
+      int* nnapi_errno =
+          &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
+      return state->Prepare(context, node, nnapi_errno);
+    },
+
+    .invoke = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+      NNAPIDelegateKernel* state =
+          reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
+      int* nnapi_errno =
+          &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
+      return state->Invoke(context, node, nnapi_errno);
+    },
+
+    .profiling_string = nullptr,
+    .builtin_code = kTfLiteBuiltinDelegate,
+    .custom_name = "TfLiteNnapiDelegate",
+    .version = 1,
+};
+
 TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                                               TfLiteDelegate* delegate) {
+  std::vector<int> nodes_to_delegate;
+  GetSupportedNodes(context, delegate, nodes_to_delegate);
+
+  if (nodes_to_delegate.empty()) {
+    return kTfLiteOk;
+  } else {
+    // Request TFLite to partition the graph and make kernels
+    // for each independent node sub set a new nnapi_delegate_kernel.
+    auto nodes_to_delegate_int_array = BuildTfLiteIntArray(nodes_to_delegate);
+    return context->ReplaceNodeSubsetsWithDelegateKernels(
+        context, nnapi_delegate_kernel, nodes_to_delegate_int_array.get(),
+        delegate);
+  }
+}
+
+TfLiteStatus StatefulNnApiDelegate::GetSupportedNodes(TfLiteContext* context, TfLiteDelegate* delegate, std::vector<int>& nodes_to_delegate){
   auto* delegate_data = static_cast<Data*>(delegate->data_);
   int* nnapi_errno = &(delegate_data->nnapi_errno);
   const NnApi* nnapi = delegate_data->nnapi;
@@ -4461,54 +4524,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     return kTfLiteOk;
   }
 
-  // NN API Delegate Registration (the pseudo kernel that will invoke NN
-  // API node sub sets)
-  static const TfLiteRegistration nnapi_delegate_kernel = {
-      .init = [](TfLiteContext* context, const char* buffer,
-                 size_t length) -> void* {
-        const TfLiteDelegateParams* params =
-            reinterpret_cast<const TfLiteDelegateParams*>(buffer);
-
-        auto* delegate_data = static_cast<Data*>(params->delegate->data_);
-        int* nnapi_errno = &(delegate_data->nnapi_errno);
-
-        NNAPIDelegateKernel* kernel_state =
-            delegate_data->MaybeGetCachedDelegateKernel(params);
-        if (!kernel_state) {
-          kernel_state = new NNAPIDelegateKernel(delegate_data->nnapi);
-          kernel_state->Init(context, params, nnapi_errno);
-        }
-
-        return kernel_state;
-      },
-
-      .free = [](TfLiteContext* context, void* buffer) -> void {
-        delete reinterpret_cast<NNAPIDelegateKernel*>(buffer);
-      },
-
-      .prepare = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
-        NNAPIDelegateKernel* state =
-            reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
-        int* nnapi_errno =
-            &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
-        return state->Prepare(context, node, nnapi_errno);
-      },
-
-      .invoke = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
-        NNAPIDelegateKernel* state =
-            reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
-        int* nnapi_errno =
-            &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
-        return state->Invoke(context, node, nnapi_errno);
-      },
-
-      .profiling_string = nullptr,
-      .builtin_code = kTfLiteBuiltinDelegate,
-      .custom_name = "TfLiteNnapiDelegate",
-      .version = 1,
-  };
-
-  std::vector<int> nodes_to_delegate;
+  // std::vector<int> nodes_to_delegate;
 
   int num_partitions;
   TfLiteDelegateParams* params_array;
@@ -4533,16 +4549,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                                    params_array, params_array + num_partitions),
                                &nodes_to_delegate));
 
-  if (nodes_to_delegate.empty()) {
-    return kTfLiteOk;
-  } else {
-    // Request TFLite to partition the graph and make kernels
-    // for each independent node sub set a new nnapi_delegate_kernel.
-    auto nodes_to_delegate_int_array = BuildTfLiteIntArray(nodes_to_delegate);
-    return context->ReplaceNodeSubsetsWithDelegateKernels(
-        context, nnapi_delegate_kernel, nodes_to_delegate_int_array.get(),
-        delegate);
-  }
+  return kTfLiteOk;
 }
 
 // Returns a singleton NNAPI Delegate that can check for support of ops.

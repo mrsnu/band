@@ -356,65 +356,66 @@ inline Delegate* GetDelegate(TfLiteDelegate* delegate) {
   return reinterpret_cast<Delegate*>(delegate->data_);
 }
 
+TfLiteRegistration kRegistration = {
+    // .init
+    [](TfLiteContext* context, const char* buffer, size_t) -> void* {
+      const auto* params =
+          reinterpret_cast<const TfLiteDelegateParams*>(buffer);
+      auto* gpu_delegate = GetDelegate(params->delegate);
+      // Everything below should happen in prepare function call, but TFLite
+      // for whatever reason forbids that.
+      auto gpu_delegate_kernel =
+          absl::make_unique<DelegateKernel>(gpu_delegate);
+      const auto status = gpu_delegate_kernel->Prepare(context, params);
+      if (!status.ok()) {
+        TF_LITE_KERNEL_LOG(context, "TfLiteGpuDelegate Init: %s",
+                           std::string(status.message()).c_str());
+        return nullptr;
+      }
+      return gpu_delegate_kernel.release();
+    },
+    // .free
+    [](TfLiteContext*, void* buffer) -> void {
+      delete reinterpret_cast<DelegateKernel*>(buffer);
+    },
+    // .prepare
+    [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+      if (!node->user_data) {
+        TF_LITE_KERNEL_LOG(
+            context,
+            "TfLiteGpuDelegate Prepare: delegate is not initialized");
+        return kTfLiteError;
+      }
+      auto* gpu_delegate_kernel = GetDelegateKernel(node);
+      const auto status = gpu_delegate_kernel->GetRequiredTemporaries(
+          context, node, &node->temporaries);
+      if (!status.ok()) {
+        TF_LITE_KERNEL_LOG(context, "TfLiteGpuDelegate Prepare: %s",
+                           std::string(status.message()).c_str());
+        return kTfLiteError;
+      }
+      // TODO(akulik): tflite tensors are not allocated here either. It would
+      // be good to set inputs and outputs only once here instead of setting
+      // them every time in .invoke.
+      return kTfLiteOk;
+    },
+    // .invoke
+    [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+      const auto status = GetDelegateKernel(node)->Invoke(context);
+      if (!status.ok()) {
+        TF_LITE_KERNEL_LOG(context, "TfLiteGpuDelegate Invoke: %s",
+                           std::string(status.message()).c_str());
+        return kTfLiteError;
+      }
+      return kTfLiteOk;
+    },
+    nullptr,                // .profiling_string
+    0,                      // .builtin_code
+    "TfLiteGpuDelegateV2",  // .custom_name
+    1,                      // .version
+};
+
 TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
-  const TfLiteRegistration kRegistration = {
-      // .init
-      [](TfLiteContext* context, const char* buffer, size_t) -> void* {
-        const auto* params =
-            reinterpret_cast<const TfLiteDelegateParams*>(buffer);
-        auto* gpu_delegate = GetDelegate(params->delegate);
-        // Everything below should happen in prepare function call, but TFLite
-        // for whatever reason forbids that.
-        auto gpu_delegate_kernel =
-            absl::make_unique<DelegateKernel>(gpu_delegate);
-        const auto status = gpu_delegate_kernel->Prepare(context, params);
-        if (!status.ok()) {
-          TF_LITE_KERNEL_LOG(context, "TfLiteGpuDelegate Init: %s",
-                             std::string(status.message()).c_str());
-          return nullptr;
-        }
-        return gpu_delegate_kernel.release();
-      },
-      // .free
-      [](TfLiteContext*, void* buffer) -> void {
-        delete reinterpret_cast<DelegateKernel*>(buffer);
-      },
-      // .prepare
-      [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
-        if (!node->user_data) {
-          TF_LITE_KERNEL_LOG(
-              context,
-              "TfLiteGpuDelegate Prepare: delegate is not initialized");
-          return kTfLiteError;
-        }
-        auto* gpu_delegate_kernel = GetDelegateKernel(node);
-        const auto status = gpu_delegate_kernel->GetRequiredTemporaries(
-            context, node, &node->temporaries);
-        if (!status.ok()) {
-          TF_LITE_KERNEL_LOG(context, "TfLiteGpuDelegate Prepare: %s",
-                             std::string(status.message()).c_str());
-          return kTfLiteError;
-        }
-        // TODO(akulik): tflite tensors are not allocated here either. It would
-        // be good to set inputs and outputs only once here instead of setting
-        // them every time in .invoke.
-        return kTfLiteOk;
-      },
-      // .invoke
-      [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
-        const auto status = GetDelegateKernel(node)->Invoke(context);
-        if (!status.ok()) {
-          TF_LITE_KERNEL_LOG(context, "TfLiteGpuDelegate Invoke: %s",
-                             std::string(status.message()).c_str());
-          return kTfLiteError;
-        }
-        return kTfLiteOk;
-      },
-      nullptr,                // .profiling_string
-      0,                      // .builtin_code
-      "TfLiteGpuDelegateV2",  // .custom_name
-      1,                      // .version
-  };
 
   auto* gpu_delegate = GetDelegate(delegate);
   TfLiteIntArray* ops_to_replace =
@@ -431,6 +432,10 @@ TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
 }  // namespace
 }  // namespace gpu
 }  // namespace tflite
+
+TfLiteRegistration GetRegistration() {
+  return tflite::gpu::kRegistration;
+}
 
 TfLiteGpuDelegateOptionsV2 TfLiteGpuDelegateOptionsV2Default() {
   TfLiteGpuDelegateOptionsV2 options = {

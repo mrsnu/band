@@ -22,6 +22,7 @@ limitations under the License.
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/api/tensor_utils.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
+#include "tensorflow/lite/delegates/mixed/mixed_delegate.h"
 #include "tensorflow/lite/graph_info.h"
 #include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
@@ -447,12 +448,29 @@ TfLiteStatus Subgraph::GetExecutionPlan(TfLiteIntArray** execution_plan) {
   return kTfLiteOk;
 }
 
+TfLiteStatus Subgraph::GetDevicePlan(TfLiteIntArray** device_plan) {
+  // TODO(aselle): Do not make a copy here
+  device_plan_cache_.reset(TfLiteIntArrayCreate(device_plan_.size()));
+  *device_plan = device_plan_cache_.get();
+  static_assert(sizeof(device_plan_cache_->data[0]) == sizeof(device_plan_[0]),
+                "TfLiteIntArray and execution_plan do not contain same type.");
+  std::memcpy(device_plan_cache_->data, device_plan_.data(),
+              sizeof(device_plan_cache_->data[0]) * device_plan_.size());
+  return kTfLiteOk;
+}
+
 // WARNING: This is an experimental interface that is subject to change.
 // Entry point for C node plugin API to get the execution plan
 TfLiteStatus Subgraph::GetExecutionPlan(struct TfLiteContext* context,
                                         TfLiteIntArray** execution_plan) {
   return static_cast<Subgraph*>(context->impl_)
       ->GetExecutionPlan(execution_plan);
+}
+
+TfLiteStatus Subgraph::GetDevicePlan(struct TfLiteContext* context,
+                                        TfLiteIntArray** device_plan) {
+  return static_cast<Subgraph*>(context->impl_)
+      ->GetDevicePlan(device_plan);
 }
 
 void Subgraph::FreeDelegatePartitioningData() {
@@ -893,6 +911,11 @@ TfLiteStatus Subgraph::Invoke() {
     return kTfLiteError;
   }
 
+  if (!applied_mixed_delegate_){
+    TF_LITE_ENSURE_OK(&context_, ModifyGraphWithDelegate(TfLiteMixedDelegateCreate(nullptr)));
+    applied_mixed_delegate_ = true;
+  }
+
   // This is only needed for UseNNAPI(true);
   if (should_apply_nnapi_delegate_ && !applied_nnapi_delegate_) {
     TF_LITE_ENSURE_OK(&context_, ModifyGraphWithDelegate(NnApiDelegate()));
@@ -1238,6 +1261,7 @@ void Subgraph::SwitchToDelegateContext() {
   context_.ReplaceNodeSubsetsWithDelegateKernels =
       ReplaceNodeSubsetsWithDelegateKernels;
   context_.GetExecutionPlan = GetExecutionPlan;
+  context_.GetDevicePlan = GetDevicePlan;
   context_.PreviewDelegatePartitioning = PreviewDelegatePartitioning;
 }
 
@@ -1253,6 +1277,10 @@ void Subgraph::SwitchToKernelContext() {
         return ForbiddenContextFunction(context);
       };
   context_.GetExecutionPlan = [](struct TfLiteContext* context,
+                                 TfLiteIntArray**) {
+    return ForbiddenContextFunction(context);
+  };
+  context_.GetDevicePlan = [](struct TfLiteContext* context,
                                  TfLiteIntArray**) {
     return ForbiddenContextFunction(context);
   };

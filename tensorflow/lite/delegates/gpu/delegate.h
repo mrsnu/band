@@ -137,6 +137,7 @@ TFL_CAPI_EXPORT TfLiteDelegate* TfLiteGpuDelegateV2Create(
 // Destroys a delegate created with `TfLiteGpuDelegateV2Create` call.
 TFL_CAPI_EXPORT void TfLiteGpuDelegateV2Delete(TfLiteDelegate* delegate);
 
+TfLiteRegistration GetRegistration();
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

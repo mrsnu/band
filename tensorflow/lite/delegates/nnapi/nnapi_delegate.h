@@ -177,6 +177,9 @@ class StatefulNnApiDelegate : public TfLiteDelegate {
   // (i.e. when calling interpreter.ModifyGraphWithDelegate(delegate)).
   int GetNnApiErrno() const;
 
+  static TfLiteRegistration nnapi_delegate_kernel;
+  static TfLiteStatus GetSupportedNodes(TfLiteContext* context, TfLiteDelegate* delegate, std::vector<int>& supported_nodes);
+
  private:
   // Encapsulates all delegate data.
   struct Data {

@@ -494,6 +494,11 @@ class Subgraph {
   static TfLiteStatus GetExecutionPlan(struct TfLiteContext* context,
                                        TfLiteIntArray** execution_plan);
 
+  TfLiteStatus GetDevicePlan(TfLiteIntArray** device_plan);
+
+  static TfLiteStatus GetDevicePlan(struct TfLiteContext* context,
+                                       TfLiteIntArray** device_plan);
+
   // WARNING: This is an experimental interface that is subject to change.
   // Provides a preview of post-delegation partitioning. Each
   // TfLiteDelegateParams in the referenced array corresponds to one instance of
@@ -649,6 +654,8 @@ class Subgraph {
   // plan. In particular, it is valid for this ordering to contain only a
   // subset of the node indices.
   std::vector<int> execution_plan_;
+  std::vector<int> device_plan_;
+  std::vector<int> supported_device_;
 
   // This is a copy of the first execution_plan_ before any delegates were
   // applied. It is empty if no delegates were applied to this Subgraph.
@@ -664,6 +671,7 @@ class Subgraph {
   // In the future, we'd like a TfLiteIntArray compatible representation.
   // TODO(aselle): replace execution_plan_ with this.
   std::unique_ptr<TfLiteIntArray, TfLiteIntArrayDeleter> plan_cache_;
+  std::unique_ptr<TfLiteIntArray, TfLiteIntArrayDeleter> device_plan_cache_;
 
   // Used by PreviewDelegateParitioning.
   std::vector<TfLiteDelegateParams> partitioning_preview_cache_;
@@ -671,6 +679,7 @@ class Subgraph {
   // Whether to use delegate to modify the graph.
   bool should_apply_nnapi_delegate_ = false;
   bool applied_nnapi_delegate_ = false;
+  bool applied_mixed_delegate_ = false;
 
   std::unique_ptr<MemoryPlanner> memory_planner_;
 
