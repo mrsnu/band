@@ -599,6 +599,18 @@ class Interpreter {
   TfLiteDevice GetShortestLatency(int model_id, Job& job);
   int64_t GetLatency(int model_id, TfLiteDevice device, Job& job);
 
+  struct ModelInfo {
+    int model_id = -1;
+    std::string model_fname;
+    std::map<TfLiteDevice, int> device_to_subgraph;
+    int slo_ms = 0;
+    int batch_size = 0;
+  };
+
+  void SetModelInfo(int model_id, ModelInfo model_info) {
+    models_info_[model_id] = model_info;
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
@@ -612,9 +624,6 @@ class Interpreter {
   int num_devices = 4;
 
   int planner_type = 0;
-
-  // Map structure to find subgraph idx with (model_id, device_id)
-  std::map<std::pair<int, TfLiteDevice>, int> subgraph_idx_map_;
 
   // TODO #13: Create mobile device independent delegate instances
   // Inserts a pair whose key is (model_id, device_id) and value is
@@ -681,6 +690,9 @@ class Interpreter {
 
   // Subgraphs
   std::vector<std::unique_ptr<Subgraph>> subgraphs_;
+
+  // Model
+  std::map<int, ModelInfo> models_info_;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;

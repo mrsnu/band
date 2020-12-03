@@ -546,6 +546,23 @@ TfLiteStatus InterpreterBuilder::ApplyDelegates(Interpreter* interpreter,
 int InterpreterBuilder::num_registered_model = 0;
 
 int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
+                     Interpreter::ModelInfo& model_info,
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
+                     int num_threads) {
+  int model_id = RegisterModel(
+      model.GetModel(), op_resolver, interpreter, num_threads);
+
+  if (model_id != -1) {
+    // Save model info into interpreter
+    model_info.model_id = model_id;
+    (*interpreter)->SetModelInfo(model_id, model_info);
+  }
+
+  return model_id;
+}
+
+int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {

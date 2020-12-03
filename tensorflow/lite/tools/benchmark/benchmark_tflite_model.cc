@@ -415,8 +415,8 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
 int64_t BenchmarkTfLiteModel::MayGetModelFileSize() {
   int64_t total_mem_size = 0;
 
-  for (int i = 0; i < graphs_.size(); ++i) {
-    std::ifstream in_file(graphs_[i],
+  for (int i = 0; i < models_info_.size(); ++i) {
+    std::ifstream in_file(models_info_[i].model_fname,
                           std::ios::binary | std::ios::ate);
     total_mem_size += in_file.tellg();
   }
@@ -619,11 +619,11 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   (&interpreter_)->reset(
       new Interpreter(planner, LoggingReporter::DefaultLoggingReporter()));
 
-  for (int i = 0; i < graphs_.size(); ++i) {
-    TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
+  for (int i = 0; i < models_info_.size(); ++i) {
+    TF_LITE_ENSURE_STATUS(LoadModel(models_info_[i].model_fname));
     int model_id =
         tflite::InterpreterBuilder::RegisterModel(
-            *models_[graphs_[i]], *resolver, &interpreter_, 4);
+            *models_[i], models_info_[i], *resolver, &interpreter_, 4);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
@@ -758,7 +758,8 @@ TfLiteStatus BenchmarkTfLiteModel::LoadModel(std::string graph) {
     return kTfLiteError;
   }
   TFLITE_LOG(INFO) << "Loaded model " << graph;
-  models_[graph] = std::move(model);
+  // models_[graph] = std::move(model);
+  models_.emplace_back(std::move(model));
 
   return kTfLiteOk;
 }
@@ -786,26 +787,6 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
           !params_.Get<std::string>("profiling_output_csv_file").empty())));
 }
 
-TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
-  std::string graphs = params_.Get<std::string>("graphs");
-  size_t previous = 0, current;
-
-  do {
-    current = graphs.find(',', previous);
-    std::string graph = graphs.substr(previous, current - previous);
-    if (graph.size() > 0)
-      graphs_.push_back(graph);
-    previous = current + 1;
-  } while (current != string::npos);
-
-  if (graphs_.size() == 0) {
-    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite input files.";
-    return kTfLiteError;
-  }
-
-  return kTfLiteOk;
-}
-
 TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   std::string json_fname = params_.Get<std::string>("json_path");
   jute::jValue json_file = jute::parser::parse_file(json_fname);
@@ -813,10 +794,18 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   std::cout << json_file.to_string() << std::endl;
 
   for (int i = 0; i < json_file["models"].size(); ++i) {
-    std::string graph = json_file["models"][i]["graph"].as_string();
-    graphs_.push_back(graph);
+    Interpreter::ModelInfo model_info;
+    model_info.model_fname = json_file["models"][i]["graph"].as_string();
+    // If no "slo_ms", "batch_size" is given, each value is set to 0.
+    model_info.slo_ms = json_file["models"][i]["slo_ms"].as_int();
+    model_info.batch_size = json_file["models"][i]["batch_size"].as_int();
+
+    // TODO: Check if necessary configs exist.
+    // One of slo_ms, batch_size should be given?
+    // or set batch_size to 1 if both are 0.
+    models_info_.push_back(model_info);
   }
-  if (graphs_.size() == 0) {
+  if (models_info_.size() == 0) {
     TFLITE_LOG(ERROR) << "Please specify the name of TF Lite input files.";
     return kTfLiteError;
   }

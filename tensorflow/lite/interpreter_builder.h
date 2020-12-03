@@ -81,7 +81,11 @@ class InterpreterBuilder {
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1);
-
+  static int RegisterModel(const FlatBufferModel& model,
+                        Interpreter::ModelInfo& model_info,
+                        const OpResolver& op_resolver,
+                        std::unique_ptr<Interpreter>* interpreter,
+                        int num_threads = -1);
  private:
   InterpreterBuilder() = default;
   ~InterpreterBuilder() = default;

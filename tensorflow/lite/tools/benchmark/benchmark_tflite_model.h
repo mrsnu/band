@@ -97,8 +97,8 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   std::vector<int> model_ids_;
   std::vector<std::unique_ptr<Timer>> model_timers_;
 
-  // Map structure to find FlatBufferModel pointer with a model file name.
-  std::map<std::string, std::unique_ptr<tflite::FlatBufferModel>> models_;
+  // FlatBufferModel pointer vector.
+  std::vector<std::unique_ptr<tflite::FlatBufferModel>> models_;
 
   std::unique_ptr<tflite::Interpreter> interpreter_;
   std::unique_ptr<tflite::ExternalCpuBackendContext> external_context_;
@@ -134,9 +134,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   InputTensorData LoadInputTensorData(const TfLiteTensor& t,
                                       const std::string& input_file_path);
 
-  // `graphs` argument is parsed with commas.
-  TfLiteStatus ParseGraphFileNames();
-
   // parse json file with model configurations.
   TfLiteStatus ParseJsonFile();
 
@@ -149,7 +146,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;
   std::mt19937 random_engine_;
   std::vector<Interpreter::TfLiteDelegatePtr> owned_delegates_;
-  std::vector<std::string> graphs_;
+  std::vector<Interpreter::ModelInfo> models_info_;
   // Always TFLITE_LOG the benchmark result.
   BenchmarkLoggingListener log_output_;
   bool kill_app = false;

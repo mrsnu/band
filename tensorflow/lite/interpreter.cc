@@ -579,13 +579,11 @@ TfLiteStatus Interpreter::ApplyDeviceDelegate(Subgraph* subgraph,
 void Interpreter::RegisterSubgraphIdx(int model_id,
                                       TfLiteDevice device_id,
                                       int subgraph_idx) {
-  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
-  subgraph_idx_map_[key] = subgraph_idx;
+  models_info_[model_id].device_to_subgraph[device_id] = subgraph_idx;
 }
 
 int Interpreter::GetSubgraphIdx(int model_id, TfLiteDevice device_id) {
-  std::pair<int, TfLiteDevice> key = std::make_pair(model_id, device_id);
-  return subgraph_idx_map_[key];
+  return models_info_[model_id].device_to_subgraph[device_id];
 }
 
 int64_t Interpreter::GetLatency(int model_id, TfLiteDevice device, Job& job) {
