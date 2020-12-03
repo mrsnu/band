@@ -355,7 +355,8 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 }
 
 void Interpreter::InvokeModel(int model_id) {
-  planner_->EnqueueRequest(Job(model_id));
+  int model_slo = models_info_[model_id].slo_ms;
+  planner_->EnqueueRequest(Job(model_id, model_slo));
 }
 
 void Interpreter::InvokeModel(int num_models, int batch_size) {

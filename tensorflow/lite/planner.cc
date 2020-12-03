@@ -14,7 +14,6 @@ Planner::Planner(Interpreter* interpreter)
 }
 
 Planner::~Planner() {
-  // log_file_.close();
   planner_safe_bool_.terminate();
   planner_thread_.join();
 }
@@ -57,10 +56,11 @@ void Planner::EnqueueFinishedJob(Job job) {
   end_invoke_.notify_one();
 }
 
+// Suppose only latency-critical jobs call this method.
 void Planner::EnqueueRequest(Job job) {
   job.enqueue_time_ = profiling::time::NowMicros();
   std::unique_lock<std::mutex> lock(requests_mtx_);
-  requests_.push_back(job);
+  requests_.push_front(job);
   lock.unlock();
 
   planner_safe_bool_.notify();

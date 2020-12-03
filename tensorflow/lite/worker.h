@@ -17,19 +17,18 @@ class Planner;
 
 struct Job {
   explicit Job(int model_id)
-    : model_id_(model_id) {
-    subgraph_idx_ = -1;
-    device_id_ = -1;
-    enqueue_time_ = 0;
-    invoke_time_ = 0;
-    end_time_ = 0;
-  }
+    : model_id_(model_id) {}
+
+  Job(int model_id, int slo_ms)
+    : model_id_(model_id), slo_ms_(slo_ms) {}
+
   int model_id_;
-  int subgraph_idx_;
-  int device_id_;
-  int64_t enqueue_time_;
-  int64_t invoke_time_;
-  int64_t end_time_;
+  int subgraph_idx_ = -1;
+  int device_id_ = -1;
+  int64_t enqueue_time_ = 0;
+  int64_t invoke_time_ = 0;
+  int64_t end_time_ = 0;
+  int slo_ms_ = 0;
 
   std::map<int, int64_t> waiting_time;
   std::map<int, int64_t> expected_latency;
