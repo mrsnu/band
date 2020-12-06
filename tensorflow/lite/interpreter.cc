@@ -86,7 +86,7 @@ bool IsNNAPIDeviceUseful(std::string name) {
     "gpu",  // Inefficient than GPUDelegate
     "default"};
 
-  for(auto keyword : filter_keywords) {
+  for (auto keyword : filter_keywords) {
     if (name.find(keyword) != std::string::npos) 
       return false;
   }
@@ -162,7 +162,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // google tpu: google-edgetpu
   // arm npu (DaVinci) : armnn
   // mediatek APU : neuron-ann
-  for(const char* device_name : string_device_names_list) {
+  for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       // Unlimited partition : 0
@@ -206,7 +206,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   
 #endif  // defined(__ANDROID__)
 
-  for(const TfLiteDeviceFlags& deviceFlag : validDevices) {
+  for (const TfLiteDeviceFlags& deviceFlag : validDevices) {
     workers_[deviceFlag] = std::make_unique<Worker>(planner_);
   }
 }
@@ -573,8 +573,8 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   // Only update subgraph profilers to not care ownership of the profiler
   SetSubgraphProfiler(timer);
 
-  for(const int model_id : models()) {
-    for(int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+  for (const int model_id : models()) {
+    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       const TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
 
       const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
@@ -634,9 +634,9 @@ void Interpreter::SetSubgraphProfiler(Profiler* profiler) {
 }
 
 Profiler* Interpreter::GetProfiler() {
-  if(installed_profiler_)
+  if (installed_profiler_)
     return installed_profiler_;
-  else if(owned_profiler_)
+  else if (owned_profiler_)
     return owned_profiler_.get();
   else
     return nullptr;
@@ -700,7 +700,7 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
 
 std::set<int> Interpreter::models() const {
   std::set<int> models;
-  for(auto key : subgraph_idx_map_) {
+  for (auto key : subgraph_idx_map_) {
     models.insert(key.first.first);
   }
   return models;
