@@ -42,6 +42,12 @@ class Worker {
     return requests_;
   }
 
+  int SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+
+  const CpuSet& GetCpuSet() const { 
+    return cpu_set_; 
+  }
+
  private:
   void Work();
 

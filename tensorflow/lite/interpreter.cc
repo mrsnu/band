@@ -709,6 +709,17 @@ std::set<int> Interpreter::models() const {
   return models;
 }
 
+int Interpreter::SetWorkerCPUThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id) {
+  if (device_id == kTfLiteNumDevices) {
+    for (int i = 0; i < kTfLiteNumDevices; i++) {
+      const TfLiteDeviceFlags flag = static_cast<TfLiteDeviceFlags>(i);
+      workers_[flag]->SetCPUThreadAffinity(thread_affinity_mask);
+    }
+  } else {
+    return workers_[device_id]->SetCPUThreadAffinity(thread_affinity_mask);
+  }
+}
+
 }  // namespace impl
 
 }  // namespace tflite

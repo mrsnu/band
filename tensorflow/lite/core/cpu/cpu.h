@@ -14,33 +14,39 @@
 namespace tflite {
 namespace impl {
 
+typedef enum {
+    kTfLiteAll,
+    kTfLiteLittle,
+    kTfLiteBig,
+    kTfLitePrimary,
+} TFLiteCPUMasks;
+
 class CpuSet {
 public:
     CpuSet();
-    void enable(int cpu);
-    void disable(int cpu);
-    void disable_all();
-    bool is_enabled(int cpu) const;
-    int num_enabled() const;
-
-public:
+    void Enable(int cpu);
+    void Disable(int cpu);
+    void DisableAll();
+    bool IsEnabled(int cpu) const;
+    int NumEnabled() const;
 #if defined __ANDROID__ || defined __linux__
-    cpu_set_t cpu_set;
+    const cpu_set_t& GetCpuSet() const { return cpu_set_; }
+   private:
+    cpu_set_t cpu_set_;
 #endif
 };
 
 // cpu info
-int get_cpu_count();
-int get_little_cpu_count();
-int get_big_cpu_count();
-
-// convenient wrapper
-const CpuSet& get_cpu_thread_affinity_mask(int powersave);
-
-const char* get_cpu_thread_affinity_mask_string(int powersave);
+int GetCPUCount();
+int GetLittleCPUCount();
+int GetBigCPUCount();
 
 // set explicit thread affinity
-int set_cpu_thread_affinity(const CpuSet& thread_affinity_mask);
+int SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+
+// convenient wrapper
+const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask);
+const char* GetCPUThreadAffinityMaskString(TFLiteCPUMasks mask);
 
 } // namespace impl
 } // nmaespace tflite
