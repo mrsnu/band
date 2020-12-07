@@ -690,6 +690,9 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
             device_id, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
+    
+    if (modified_subgraph->AllocateTensors() != kTfLiteOk)
+      return cleanup_and_error();
   }
 
   return modified_subgraph_index;

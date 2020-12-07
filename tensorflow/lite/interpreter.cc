@@ -580,30 +580,23 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
       const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
       if (subgraph_it != subgraph_idx_map_.end()) {
         Subgraph* subgraph = subgraphs_[subgraph_it->second].get();
-        bool isInvokable = true;
-        if (subgraph->state() == Subgraph::State::kStateUninvokable) {
-          isInvokable = kTfLiteOk == subgraph->AllocateTensors();
+        for (int i = 0; i < num_warm_ups; i++) {
+          subgraph->Invoke();
+        }
+        timer->ClearRecords();
+        for (int i = 0; i < num_runs; i++) {
+          subgraph->Invoke();
         }
 
-        if (isInvokable) {
-          for (int i = 0; i < num_warm_ups; i++) {
-            subgraph->Invoke();
-          }
-          timer->ClearRecords();
-          for (int i = 0; i < num_runs; i++) {
-            subgraph->Invoke();
-          }
+        subgraph_profiling_results_map_[{model_id, device_flag}] = 
+          timer->GetAverageElapsedTime<std::chrono::microseconds>();
 
-          subgraph_profiling_results_map_[{model_id, device_flag}] = 
-            timer->GetAverageElapsedTime<std::chrono::microseconds>();
-
-          error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
-                  model_id,
-                  num_warm_ups, 
-                  num_runs, 
-                  subgraph_profiling_results_map_[{model_id, device_flag}], 
-                  TfLiteDeviceGetName(device_flag));
-        }
+        error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
+                model_id,
+                num_warm_ups, 
+                num_runs, 
+                subgraph_profiling_results_map_[{model_id, device_flag}], 
+                TfLiteDeviceGetName(device_flag));
       }
     }
   }
