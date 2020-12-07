@@ -334,7 +334,7 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
       CreateFlag<int32_t>("max_profiling_buffer_entries", &params_,
                           "max profiling buffer entries"),
       CreateFlag<int32_t>("cpu_masks", &params_,
-                          "cpu masks 0 : All, 1 : Little, 2: Big"),
+                          "cpu masks 0 : All, 1 : Little, 2: Big, 3: Primary"),
       CreateFlag<std::string>(
           "profiling_output_csv_file", &params_,
           "File path to export profile data as CSV, if not set "
@@ -782,7 +782,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
-  int num_iters = 1;
+  int num_iters = 3;
   for (int i = 0; i < num_iters; ++i) {
     for (int j = 0; j < models_.size(); ++j) {
       interpreter_->InvokeModelAsync(j);
