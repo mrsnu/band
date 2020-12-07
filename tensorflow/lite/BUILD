@@ -234,6 +234,9 @@ cc_library(
     hdrs = [
         "core/cpu/cpu.h",
     ],
+    deps = [
+        "//tensorflow/lite/c:common",
+    ],
 )
 
 cc_library(

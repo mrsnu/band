@@ -20,7 +20,7 @@ Worker::~Worker() {
   device_cpu_thread_.join();
 }
 
-int Worker::SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
+TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask) {
   cpu_set_ = thread_affinity_mask;
   return SetCPUThreadAffinity(cpu_set_);
 }

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <vector>
 #include <limits.h>
+#include "tensorflow/lite/c/common.h"
 
 #if defined __ANDROID__ || defined __linux__
 #include <sched.h> // cpu_set_t
@@ -42,7 +43,7 @@ int GetLittleCPUCount();
 int GetBigCPUCount();
 
 // set explicit thread affinity
-int SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask);

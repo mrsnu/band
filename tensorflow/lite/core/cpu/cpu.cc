@@ -171,14 +171,14 @@ static int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
 }
 #endif  // defined __ANDROID__ || defined __linux__
 
-int SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
+TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if defined __ANDROID__ || defined __linux__
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
-  if (ssaret != 0) return -1;
+  if (ssaret != 0) return kTfLiteError;
 #endif
 
-  return 0;
+  return kTfLiteOk;
 }
 
 int SetupThreadAffinityMasks() {

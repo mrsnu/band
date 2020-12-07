@@ -30,6 +30,7 @@ limitations under the License.
 #include "absl/strings/numbers.h"
 #include "ruy/profiler/profiler.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
@@ -42,8 +43,6 @@ limitations under the License.
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/tools/logging_reporter.h"
-
-#include "tensorflow/lite/core/cpu/cpu.h"
 
 void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 
@@ -666,16 +665,16 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
       static_cast<tflite::impl::TFLiteCPUMasks>(
           params_.Get<int32_t>("cpu_masks")));
-  int status = tflite::impl::SetCPUThreadAffinity(cpuMask);
+  TF_LITE_ENSURE_STATUS(tflite::impl::SetCPUThreadAffinity(cpuMask));
 
   TFLITE_LOG(INFO) << "Set affinity to " << 
   tflite::impl::GetCPUThreadAffinityMaskString(static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks"))) 
-  << " cores : " << (status == 0 ? "True" : "False");
+  << " cores";
 
   TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
-  interpreter_->SetWorkerCPUThreadAffinity(cpuMask);
+  TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
 
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the
