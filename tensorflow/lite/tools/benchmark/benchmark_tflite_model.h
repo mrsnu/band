@@ -138,7 +138,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus ParseJsonFile();
 
   void GenerateRequests(int model_id, int interval);
-  void GenerateBatch(int num_models, int batch_size, int interval);
+  void GenerateBatch(int interval);
 
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;

@@ -382,6 +382,8 @@ class Interpreter {
 
   void InvokeModel(int num_models, int batch_size);
 
+  int InvokeBatch();
+
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
 
@@ -608,7 +610,10 @@ class Interpreter {
   };
 
   void SetModelInfo(int model_id, ModelInfo model_info) {
-    models_info_[model_id] = model_info;
+    models_info_[model_id].model_id = model_id;
+    models_info_[model_id].model_fname = model_info.model_fname;
+    models_info_[model_id].slo_ms = model_info.slo_ms;
+    models_info_[model_id].batch_size = model_info.batch_size;
   }
 
  private:

@@ -389,11 +389,12 @@ void BenchmarkTfLiteModel::LogParams() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::ValidateParams() {
+  /*
   if (params_.Get<std::string>("graphs").empty()) {
     TFLITE_LOG(ERROR)
         << "Please specify the name of your TF Lite input file with --graphs";
     return kTfLiteError;
-  }
+  }*/
 
   return PopulateInputLayerInfo(
       params_.Get<std::string>("input_layer"),
@@ -833,7 +834,8 @@ TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
   //   int model_period = period;
   //   GenerateRequests(j, model_period);
   // }
-  GenerateBatch(models_.size(), 2, period);
+  // GenerateBatch(models_.size(), 2, period);
+  GenerateBatch(period);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(60000));
   kill_app = true;
@@ -864,15 +866,14 @@ void BenchmarkTfLiteModel::GenerateRequests(int model_id, int interval) {
   t.detach();
 }
 
-void BenchmarkTfLiteModel::GenerateBatch(int num_models, int batch_size, int interval) {
-  std::thread t([this, num_models, batch_size, interval]() {
-
+void BenchmarkTfLiteModel::GenerateBatch(int interval) {
+  std::thread t([this, interval]() {
     while(true) {
       int64_t start = profiling::time::NowMicros();
-      interpreter_->InvokeModel(num_models, batch_size);
+      int batch_size = interpreter_->InvokeBatch();
       {
         std::lock_guard<std::mutex> lock(cnt_mtx);
-        cnt += num_models * batch_size;
+        cnt += batch_size;
       }
       int64_t end = profiling::time::NowMicros();
       int duration = (end - start) / 1000;

@@ -376,6 +376,24 @@ void Interpreter::InvokeModel(int num_models, int batch_size) {
   planner_->EnqueueBatch(jobs);
 }
 
+int Interpreter::InvokeBatch() {
+  std::list<Job> jobs;
+  std::map<int, ModelInfo>::iterator it;
+  int batch_size = 0;
+  for (it = models_info_.begin(); it != models_info_.end(); ++it) {
+    int model_batch = it->second.batch_size;
+    batch_size += model_batch;
+    if (model_batch > 0) {
+      for (int k = 0; k < model_batch; ++k) {
+        jobs.emplace_back(it->first);
+      }
+    }
+  }
+  planner_->EnqueueBatch(jobs);
+
+  return batch_size;
+}
+
 TfLiteStatus Interpreter::AddTensors(int tensors_to_add,
                                      int* first_new_tensor_index) {
   return primary_subgraph().AddTensors(tensors_to_add, first_new_tensor_index);
