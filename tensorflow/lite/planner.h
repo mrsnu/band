@@ -2,6 +2,8 @@
 #define TENSORFLOW_LITE_PLANNER_H_
 
 #include <memory>
+#include <list>
+#include <string>
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
@@ -52,6 +54,9 @@ class Planner {
   // Enqueues a job to a worker request queue.
   void EnqueueRequest(Job job);
 
+  // Enqueues a batch of jobs to a worker request queue.
+  void EnqueueBatch(std::list<Job> jobs);
+
   // Waits until the jobs are done.
   // The interpreter calls the method.
   // TODO #18: Make the planner run in a different thread
@@ -92,6 +97,9 @@ class Planner {
 
   std::condition_variable end_invoke_;
   std::thread planner_thread_;
+
+  // TODO #36: Make this a configurable option (command line arg)
+  std::string log_path_ = "/data/local/tmp/model_execution_log.csv";
 };
 
 }  // namespace impl

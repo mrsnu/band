@@ -29,16 +29,20 @@ using tensorflow::Stat;
 
 BenchmarkParams BenchmarkModel::DefaultParams() {
   BenchmarkParams params;
-  params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(50));
-  params.AddParam("min_secs", BenchmarkParam::Create<float>(1.0f));
+
+  // setting this to one because the periodic benchmark takes long
+  params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(1));
+  params.AddParam("min_secs", BenchmarkParam::Create<float>(0.0f));
   params.AddParam("max_secs", BenchmarkParam::Create<float>(150.0f));
   params.AddParam("run_delay", BenchmarkParam::Create<float>(-1.0f));
   params.AddParam("num_threads", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("use_caching", BenchmarkParam::Create<bool>(false));
   params.AddParam("benchmark_name", BenchmarkParam::Create<std::string>(""));
   params.AddParam("output_prefix", BenchmarkParam::Create<std::string>(""));
-  params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(1));
-  params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.5f));
+
+  // setting this to zero because the periodic benchmark takes long
+  params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(0));
+  params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.0f));
   return params;
 }
 
@@ -68,6 +72,12 @@ void BenchmarkLoggingListener::OnBenchmarkEnd(const BenchmarkResults& results) {
 
 std::vector<Flag> BenchmarkModel::GetFlags() {
   return {
+      CreateFlag<int32_t>(
+          "period_ms", &params_,
+          "period to generate requests, in milliseconds"),
+      CreateFlag<int32_t>(
+          "batch_size", &params_,
+          "batch_size per model, to be used with period_ms"),
       CreateFlag<int32_t>(
           "num_runs", &params_,
           "expected number of runs, see also min_secs, max_secs"),
@@ -140,6 +150,8 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
   int64_t now_us = profiling::time::NowMicros();
   int64_t min_finish_us = now_us + static_cast<int64_t>(min_secs * 1.e6f);
   int64_t max_finish_us = now_us + static_cast<int64_t>(max_secs * 1.e6f);
+  int period_ms = params_.Get<int>("period_ms");
+  int batch_size = params_.Get<int>("batch_size");
 
   *invoke_status = kTfLiteOk;
   for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
@@ -148,7 +160,15 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     ResetInputsAndOutputs();
     listeners_.OnSingleRunStart(run_type);
     int64_t start_us = profiling::time::NowMicros();
-    TfLiteStatus status = RunAll();
+
+    // main run method
+    TfLiteStatus status;
+    if (period_ms <= 0) {
+      status = RunAll();
+    } else {
+      status = RunPeriodic(period_ms, batch_size);
+    }
+
     int64_t end_us = profiling::time::NowMicros();
     listeners_.OnSingleRunEnd();
 

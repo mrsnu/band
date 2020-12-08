@@ -63,6 +63,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
+  TfLiteStatus RunPeriodic(int period_ms, int batch_size) override;
   static BenchmarkParams DefaultParams();
 
  protected:
@@ -131,6 +132,9 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   // `graphs` argument is parsed with commas.
   TfLiteStatus ParseGraphFileNames();
 
+  // spawn a thread that generates input requests periodically for all models
+  void GeneratePeriodicRequests(int period_ms, int batch_size);
+
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;
   std::unique_ptr<BenchmarkListener> profiling_listener_ = nullptr;
@@ -140,6 +144,15 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   std::vector<Interpreter::TfLiteDelegatePtr> owned_delegates_;
   // Always TFLITE_LOG the benchmark result.
   BenchmarkLoggingListener log_output_;
+
+  // boolean flag for letting child threads know that it's time to go home
+  bool kill_app_ = false;
+
+  // number of requests that were generated during this run
+  // any thread that is generating requests should inc this value accordingly
+  int num_requests_ = 0;
+  std::mutex num_requests_mtx_;
+
 };
 
 }  // namespace benchmark

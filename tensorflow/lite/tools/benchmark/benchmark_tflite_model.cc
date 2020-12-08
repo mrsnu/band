@@ -274,6 +274,8 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("enable_platform_tracing",
                           BenchmarkParam::Create<bool>(false));
+  default_params.AddParam("period_ms", BenchmarkParam::Create<int32_t>(50));
+  default_params.AddParam("batch_size", BenchmarkParam::Create<int32_t>(1));
 
   for (const auto& delegate_provider :
        tools::GetRegisteredDelegateProviders()) {
@@ -290,6 +292,8 @@ BenchmarkTfLiteModel::BenchmarkTfLiteModel(BenchmarkParams params)
 }
 
 void BenchmarkTfLiteModel::CleanUp() {
+  // set this flag in case we had a abrupt shutdown
+  kill_app_ = true;
   // Free up any pre-allocated tensor data during PrepareInputData.
   inputs_data_.clear();
 }
@@ -763,11 +767,64 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   int num_iters = 3;
   for (int i = 0; i < num_iters; ++i) {
     for (int j = 0; j < models_.size(); ++j) {
-      interpreter_->InvokeModel(j);
+      interpreter_->InvokeModelAsync(j);
     }
   }
   interpreter_->GetPlanner()->Wait(models_.size() * num_iters);
   return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms, int batch_size) {
+  // initialize values in case this isn't our first run
+  kill_app_ = false;
+  num_requests_ = 0;
+
+  // spawn a child thread to do our work, since we're going to sleep
+  // Note: spawning a separate thread is technically unnecessary if we only
+  // have a single thread that generate requests, but we may have multiple
+  // threads doing that in the future so we might as well make the code easily
+  // adaptable to such situtations.
+  GeneratePeriodicRequests(period_ms, batch_size);
+
+  // wait for 60 seconds until we stop the benchmark
+  // we could set a command line arg for this value as well
+  std::this_thread::sleep_for(std::chrono::milliseconds(60000));
+  kill_app_ = true;
+
+  // Note that num_requests_ may not be equal to the actual # of requests that
+  // were generated from GeneratePeriodicRequests(), because of thread timing
+  // issues.
+  // Nonetheless, we don't care because we don't need the exact number anyway.
+  interpreter_->GetPlanner()->Wait(num_requests_);
+  return kTfLiteOk;
+}
+
+void BenchmarkTfLiteModel::GeneratePeriodicRequests(int period_ms,
+                                                    int batch_size) {
+  std::thread t([this, period_ms, batch_size]() {
+    int num_models = models_.size();
+    while(true) {
+      // measure the time it took to generate requests
+      int64_t start = profiling::time::NowMicros();
+      interpreter_->InvokeModelsAsync(num_models, batch_size);
+      {
+        std::lock_guard<std::mutex> lock(num_requests_mtx_);
+        num_requests_ += num_models * batch_size;
+      }
+      int64_t end = profiling::time::NowMicros();
+      int duration_ms = (end - start) / 1000;
+
+      // sleep until we reach period_ms
+      if (duration_ms < period_ms) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(period_ms - duration_ms));
+      }
+
+      if (kill_app_) return;
+    }
+  });
+
+  t.detach();
 }
 
 }  // namespace benchmark

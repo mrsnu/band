@@ -1,6 +1,7 @@
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
 namespace impl {
@@ -40,10 +41,13 @@ void Worker::Work() {
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
+      job.invoke_time_ = profiling::time::NowMicros();
 
       if (subgraph.Invoke() == kTfLiteOk) {
+        job.end_time_ = profiling::time::NowMicros();
         planner_ptr->EnqueueFinishedJob(job);
       } else {
+        job.end_time_ = profiling::time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
         // Currently, put a job with a minus sign if Invoke() fails.
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
