@@ -4490,11 +4490,14 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       unsupported_nodes_info.insert(node_info);
     }
   }
-  std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
-  std::string error_message = absl::StrCat(
-      "Following operations are not supported by NNAPI delegate:\n",
-      unsupported, "\n");
-  TF_LITE_KERNEL_LOG(context, error_message.c_str());
+
+  if (!unsupported_nodes_info.empty()) {
+    std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
+    std::string error_message = absl::StrCat(
+        "Following operations are not supported by NNAPI delegate:\n",
+        unsupported, "\n");
+    TF_LITE_KERNEL_LOG(context, error_message.c_str());
+  }
 
   // If there are no delegated nodes, short-circuit node replacement.
   if (supported_nodes.empty()) {
