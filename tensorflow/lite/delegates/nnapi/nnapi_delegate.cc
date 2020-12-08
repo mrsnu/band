@@ -43,6 +43,8 @@ limitations under the License.
 #include <unistd.h>
 #endif
 
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/builtin_op_data.h"
 #include "tensorflow/lite/builtin_ops.h"
@@ -4465,6 +4467,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
   }
 
   std::vector<int> supported_nodes;
+  std::set<std::string> unsupported_nodes_info;
   // We don't care about all nodes_, we only care about ones in the
   // current plan.
   TfLiteIntArray* plan;
@@ -4482,8 +4485,16 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                                       registration->version, target_sdk_version,
                                       node, is_accelerator_specified)) {
       supported_nodes.push_back(node_index);
+    } else {
+      std::string node_info = GetOpNameByRegistration(*registration);
+      unsupported_nodes_info.insert(node_info);
     }
   }
+  std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
+  std::string error_message = absl::StrCat(
+      "Following operations are not supported by NNAPI delegate:\n",
+      unsupported, "\n");
+  TF_LITE_KERNEL_LOG(context, error_message.c_str());
 
   // If there are no delegated nodes, short-circuit node replacement.
   if (supported_nodes.empty()) {
