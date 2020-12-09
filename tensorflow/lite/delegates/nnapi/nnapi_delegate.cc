@@ -3395,13 +3395,11 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
                   } else {
                     TfLiteNode* node;
                     TfLiteRegistration* registration;
-                    do {
-                      const TfLiteStatus s = (context->GetNodeAndRegistration(
-                        context, node_index, &node, &registration));
-                      if (s != kTfLiteOk) {
-                        return;
-                      }
-                    } while (0);
+                    const TfLiteStatus s = (context->GetNodeAndRegistration(
+                      context, node_index, &node, &registration));
+                    if (s != kTfLiteOk) {
+                      return;
+                    }
                     std::string node_info = GetOpNameByRegistration(*registration);
                     unsupported_nodes_info.insert(node_info);
                   }
