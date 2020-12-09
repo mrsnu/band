@@ -4595,6 +4595,29 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                                    params_array, params_array + num_partitions),
                                &nodes_to_delegate));
 
+  int num_unsupported = 0, num_supported = 0;
+  for (int node_index : TfLiteIntArrayView(plan)) {
+    if (std::find(nodes_to_delegate.begin(), nodes_to_delegate.end(),
+                  node_index) == nodes_to_delegate.end()) {
+      num_unsupported++;
+    } else {
+      num_supported++;
+    }
+  }
+
+  if (num_unsupported) {
+    std::string error_message;
+    if (num_supported) {
+      absl::StrAppend(&error_message,
+                      num_supported, " operations will run with NNAPI, and the remaining ");
+    } else {
+      absl::StrAppend(&error_message,
+                      "No operations will run with NNAPI, and all ");
+    }
+    absl::StrAppend(&error_message, num_unsupported, " operations will run on the CPU.");
+    TF_LITE_KERNEL_LOG(context, error_message.c_str());
+  }
+
   if (nodes_to_delegate.empty()) {
     return kTfLiteError;
   } else {
