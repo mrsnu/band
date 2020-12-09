@@ -901,13 +901,6 @@ TfLiteStatus Subgraph::Invoke() {
     return kTfLiteError;
   }
 
-  // This is only needed for UseNNAPI(true);
-  if (should_apply_nnapi_delegate_ && !applied_nnapi_delegate_) {
-    TF_LITE_ENSURE_OK(&context_, ModifyGraphWithDelegate(NnApiDelegate()));
-    // only need to modify the graph once upon the first invocation.
-    applied_nnapi_delegate_ = true;
-  }
-
   // Invocations are always done in node order.
   // Note that calling Invoke repeatedly will cause the original memory plan to
   // be reused, unless either ResizeInputTensor() or AllocateTensors() has been
@@ -979,6 +972,12 @@ TfLiteStatus Subgraph::Invoke() {
   }
 
   return status;
+}
+
+
+TfLiteStatus Subgraph::Invoke(size_t execution_plan_index) {
+
+  
 }
 
 TfLiteStatus Subgraph::ResizeTensor(TfLiteContext* context,

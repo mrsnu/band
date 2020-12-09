@@ -455,7 +455,7 @@ TfLiteGlCompileOptions TfLiteGlCompileOptionsDefault() {
   options.precision_loss_allowed = 0;
   options.preferred_gl_object_type = TFLITE_GL_OBJECT_TYPE_FASTEST;
   options.dynamic_batch_enabled = 0;
-  options.inline_parameters = 0;
+  options.inline_parameteryrs = 0;
   return options;
 }
 

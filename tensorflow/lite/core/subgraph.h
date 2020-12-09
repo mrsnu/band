@@ -266,6 +266,7 @@ class Subgraph {
   // AllocateTensors().
   // Returns status of success or failure.
   TfLiteStatus Invoke();
+  TfLiteStatus Invoke(size_t execution_plan_index);
 
   // Entry point for C node plugin API to report an error.
   void ReportError(const char* format, ...);
