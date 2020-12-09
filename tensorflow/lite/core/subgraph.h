@@ -20,6 +20,7 @@ limitations under the License.
 #include <map>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/common.h"
@@ -266,7 +267,7 @@ class Subgraph {
   // AllocateTensors().
   // Returns status of success or failure.
   TfLiteStatus Invoke();
-  TfLiteStatus Invoke(size_t execution_plan_index);
+  TfLiteStatus Invoke(size_t execution_plan_index, std::vector<TfLiteTensor*>& input_tensors, std::vector<TfLiteTensor*>& output_tensors);
 
   // Entry point for C node plugin API to report an error.
   void ReportError(const char* format, ...);
@@ -308,6 +309,7 @@ class Subgraph {
       // TODO(b/120420546): we must add a test that exercise this code.
       TF_LITE_ENSURE_STATUS(t->delegate->CopyFromBufferHandle(
           &context_, t->delegate, t->buffer_handle, t));
+      std::cout << "Copy data from buffer" << std::endl;
       t->data_is_stale = false;
     }
     return kTfLiteOk;

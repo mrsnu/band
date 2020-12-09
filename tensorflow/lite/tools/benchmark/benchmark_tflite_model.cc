@@ -683,6 +683,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   interpreter_->SetAllowFp16PrecisionForFp32(params_.Get<bool>("allow_fp16"));
 
   auto interpreter_inputs = interpreter_->inputs();
+  auto interpreter_outputs = interpreter_->outputs();
 
   if (!inputs_.empty()) {
     TFLITE_TOOLS_CHECK_EQ(inputs_.size(), interpreter_inputs.size())
@@ -701,6 +702,31 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
       TFLITE_LOG(WARN) << "Tensor # " << i << " is named " << t->name
                        << " but flags call it " << input.name;
     }
+    std::string shape;
+    for (int k = 0; k < t->dims->size; k++) {
+      shape += std::to_string(t->dims->data[k]) + " ";
+    }
+    TFLITE_LOG(INFO) << "Input Tensor # " << i << shape.c_str();
+  }
+
+  for (int j = 0; j < interpreter_inputs.size(); ++j) {
+    int i = interpreter_inputs[j];
+    TfLiteTensor* t = interpreter_->tensor(i);
+    std::string shape;
+    for (int k = 0; k < t->dims->size; k++) {
+      shape += std::to_string(t->dims->data[k]) + " ";
+    }
+    TFLITE_LOG(INFO) << "Output Tensor # " << i << shape.c_str();
+  }
+
+  for (int j = 0; j < interpreter_outputs.size(); ++j) {
+    int i = interpreter_outputs[j];
+    TfLiteTensor* t = interpreter_->tensor(i);
+    std::string shape;
+    for (int k = 0; k < t->dims->size; k++) {
+      shape += std::to_string(t->dims->data[k]) + " ";
+    }
+    TFLITE_LOG(INFO) << "Output Tensor # " << i << shape.c_str();
   }
 
   // Resize all non-string tensors.

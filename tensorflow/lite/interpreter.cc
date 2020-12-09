@@ -562,12 +562,13 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   SetSubgraphProfiler(timer);
 
   for(const int model_id : models()) {
-    for(int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+    for(int device_id = 1; device_id < kTfLiteNumDevices; device_id++) {
       const TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
 
       const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
       if (subgraph_it != subgraph_idx_map_.end()) {
         Subgraph* subgraph = subgraphs_[subgraph_it->second].get();
+        std::vector<TfLiteTensor*> inputs, outputs;
         bool isInvokable = true;
         if (subgraph->state() == Subgraph::State::kStateUninvokable) {
           isInvokable = kTfLiteOk == subgraph->AllocateTensors();
@@ -580,6 +581,11 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
           timer->ClearRecords();
           for (int i = 0; i < num_runs; i++) {
             subgraph->Invoke();
+            //for (int j = 0; j < subgraph->execution_plan().size(); j++) {
+            //  subgraph->Invoke(j, inputs, outputs);
+            //  inputs = outputs;
+            //  outputs.clear();
+            //}
           }
 
           subgraph_profiling_results_map_[{model_id, device_flag}] = 

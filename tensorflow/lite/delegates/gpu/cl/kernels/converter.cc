@@ -18,6 +18,7 @@ limitations under the License.
 #include <algorithm>
 #include <array>
 #include <string>
+#include <iostream>
 
 #include "tensorflow/lite/delegates/gpu/cl/cl_command_queue.h"
 #include "tensorflow/lite/delegates/gpu/cl/cl_errors.h"
@@ -274,10 +275,12 @@ __kernel void to_tensor()" +
     }
     auto output_texture = absl::get_if<OpenClTexture>(&output_obj);
     if (output_texture && output_texture->memobj) {
+      std::cout << "DispatchKernel texture" << std::endl;
       return DispatchKernel(input->memobj, output_texture->memobj);
     }
     auto output_buffer = absl::get_if<OpenClBuffer>(&output_obj);
     if (output_buffer && output_buffer->memobj) {
+      std::cout << "DispatchKernel buffer" << std::endl;
       return DispatchKernel(input->memobj, output_buffer->memobj);
     }
     return absl::InvalidArgumentError("Missing input in to_tensor converter");
@@ -402,24 +405,28 @@ class CpuCopier : public OpenClConverterImpl {
     if (cpu_input) {
       auto texture_output = absl::get_if<OpenClTexture>(&output_obj);
       if (texture_output) {
+      std::cout << "DispatchKernel texture" << std::endl;
         return queue_->EnqueueWriteImage(
             texture_output->memobj, int3(region_[0], region_[1], region_[2]),
             cpu_input->data);
       }
       auto buffer_output = absl::get_if<OpenClBuffer>(&output_obj);
       if (buffer_output) {
+      std::cout << "DispatchKernel buffer" << std::endl;
         return queue_->EnqueueWriteBuffer(
             buffer_output->memobj, cpu_input->size_bytes, cpu_input->data);
       }
     } else if (cpu_output) {
       auto texture_input = absl::get_if<OpenClTexture>(&input_obj);
       if (texture_input) {
+      std::cout << "DispatchKernel texture cpu out" << std::endl;
         return queue_->EnqueueReadImage(
             texture_input->memobj, int3(region_[0], region_[1], region_[2]),
             cpu_output->data);
       }
       auto buffer_input = absl::get_if<OpenClBuffer>(&input_obj);
       if (buffer_input) {
+      std::cout << "DispatchKernel buffer cpu out" << std::endl;
         return queue_->EnqueueReadBuffer(
             buffer_input->memobj, cpu_output->size_bytes, cpu_output->data);
       }

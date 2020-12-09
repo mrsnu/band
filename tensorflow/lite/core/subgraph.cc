@@ -16,6 +16,7 @@ limitations under the License.
 #include "tensorflow/lite/core/subgraph.h"
 
 #include <algorithm>
+#include <chrono>
 
 #include "tensorflow/lite/arena_planner.h"
 #include "tensorflow/lite/c/common.h"
@@ -975,9 +976,116 @@ TfLiteStatus Subgraph::Invoke() {
 }
 
 
-TfLiteStatus Subgraph::Invoke(size_t execution_plan_index) {
+TfLiteStatus Subgraph::Invoke(size_t execution_plan_index, std::vector<TfLiteTensor*>& input_tensors, std::vector<TfLiteTensor*>& output_tensors) {
+  TFLITE_SCOPED_TAGGED_DEFAULT_PROFILE(profiler_.get(), "invoke_subgraph");
+  if (!consistent_) {
+    ReportError("Invoke called on model that is not consistent.");
+    return kTfLiteError;
+  }
 
-  
+  TfLiteStatus status = kTfLiteOk;
+  if (state_ == kStateUninvokable) {
+    ReportError("Invoke called on model that is not ready.");
+    return kTfLiteError;
+  } else if (memory_planner_ && !memory_planner_->HasNonPersistentMemory()) {
+    ReportError("Non-persistent memory is not available.");
+    return kTfLiteError;
+  }
+
+  if (execution_plan_index < execution_plan_.size()) {
+    int node_index = execution_plan_[execution_plan_index];
+    TfLiteNode& node = nodes_and_registration_[node_index].first;
+    const TfLiteRegistration& registration =
+        nodes_and_registration_[node_index].second;
+    // TODO(ycling): This is an extra loop through inputs to check if the data
+    // need to be copied from Delegate buffer to raw memory, which is often not
+    // needed. We may want to cache this in prepare to know if this needs to be
+    // done for a node or not.
+    
+    auto start = std::chrono::system_clock::now();
+    for (int i = 0; i < node.inputs->size; ++i) {
+      int tensor_index = node.inputs->data[i];
+      if (tensor_index == kTfLiteOptionalTensor) {
+        continue;
+      }
+      TfLiteTensor* tensor = &tensors_[tensor_index];
+      tensor->data_is_stale = true;
+      if (tensor->delegate && tensor->delegate != node.delegate &&
+          tensor->data_is_stale) {
+        TF_LITE_ENSURE_STATUS(EnsureTensorDataIsReadable(tensor_index));
+      }
+
+      if (input_tensors.size() > i && tensor != input_tensors[i]) {
+        tensor->delegate->CopyToBufferHandle(&context_, tensor->delegate,
+                                             tensor->buffer_handle,
+                                             input_tensors[i]);
+      }
+    }
+
+    std::cout << "input copy time : "
+              << std::chrono::duration_cast<std::chrono::microseconds>(
+                     std::chrono::system_clock::now() - start)
+                     .count()
+              << std::endl;
+
+    if (check_cancelled_func_ != nullptr &&
+        check_cancelled_func_(cancellation_data_)) {
+      ReportError("Client requested cancel during Invoke()");
+      return kTfLiteError;
+    }
+
+    EnsureTensorsVectorCapacity();
+    tensor_resized_since_op_invoke_ = false;
+    if (OpInvoke(registration, &node) != kTfLiteOk) {
+      return ReportOpError(&context_, node, registration, node_index,
+                            "failed to invoke");
+    }
+
+    start = std::chrono::system_clock::now();
+
+    output_tensors.clear();
+    std::cout << "# of output tensors : " << node.outputs->size
+              << std::endl;
+    for (int i = 0; i < node.outputs->size; ++i) {
+      int tensor_index = node.outputs->data[i];
+      if (tensor_index == kTfLiteOptionalTensor) {
+        continue;
+      }
+      TfLiteTensor* tensor = &tensors_[tensor_index];
+      TF_LITE_ENSURE_STATUS(EnsureTensorDataIsReadable(tensor_index));
+      output_tensors.push_back(tensor);
+    }
+    
+    std::cout << "output copy time : "
+              << std::chrono::duration_cast<std::chrono::microseconds>(
+                     std::chrono::system_clock::now() - start)
+                     .count()
+              << std::endl;
+
+
+    // Force execution prep for downstream ops if the latest op triggered the
+    // resize of a dynamic tensor.
+    if (tensor_resized_since_op_invoke_ &&
+        HasDynamicTensor(context_, node.outputs)) {
+      next_execution_plan_index_to_prepare_ = execution_plan_index + 1;
+
+      // This happens when an intermediate dynamic tensor is resized.
+      // We don't have to prepare all the ops, but we need to recompute
+      // the allocation plan.
+      if (next_execution_plan_index_to_plan_allocation_ >
+          next_execution_plan_index_to_prepare_) {
+        next_execution_plan_index_to_plan_allocation_ =
+            next_execution_plan_index_to_prepare_;
+        if (memory_planner_) {
+          TF_LITE_ENSURE_STATUS(memory_planner_->ResetAllocationsAfter(
+              next_execution_plan_index_to_plan_allocation_ - 1));
+        }
+      }
+    }
+    return kTfLiteOk;
+  } else {
+    return kTfLiteError;
+  }
 }
 
 TfLiteStatus Subgraph::ResizeTensor(TfLiteContext* context,

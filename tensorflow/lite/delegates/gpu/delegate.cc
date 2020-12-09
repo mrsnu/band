@@ -225,11 +225,7 @@ class DelegateKernel {
                 std::chrono::system_clock::now() - start)
                 .count()
         << ",";
-    start = std::chrono::system_clock::now();
     RETURN_IF_ERROR(runner_->Run());
-    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::system_clock::now() - start)
-                .count();
     start = std::chrono::system_clock::now();
     if (is_dequant_required) {
       RETURN_IF_ERROR(

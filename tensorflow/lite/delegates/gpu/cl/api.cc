@@ -228,11 +228,13 @@ class TwoStepTensorTie : public TensorTie {
   }
 
   absl::Status CopyToExternalObject() final {
+    std::cout << "TwoStepTensorTie copy to external" << std::endl;
     RETURN_IF_ERROR(inner_tie_->CopyToExternalObject());
     return outer_tie_->CopyToExternalObject();
   }
 
   absl::Status CopyFromExternalObject() final {
+    std::cout << "TwoStepTensorTie copy from external" << std::endl;
     RETURN_IF_ERROR(outer_tie_->CopyFromExternalObject());
     return inner_tie_->CopyFromExternalObject();
   }
@@ -464,20 +466,40 @@ class InferenceRunnerImpl : public InferenceRunner {
   }
 
   absl::Status Run() override {
+    auto start = std::chrono::system_clock::now();
     if (gl_interop_fabric_) {
       RETURN_IF_ERROR(gl_interop_fabric_->Start());
     }
     for (auto& obj : inputs_) {
       RETURN_IF_ERROR(obj->CopyFromExternalObject());
     }
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::system_clock::now() - start)
+                .count()
+        << ",";
+    start = std::chrono::system_clock::now();
     RETURN_IF_ERROR(context_->AddToQueue(queue_));
     clFlush(queue_->queue());
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::system_clock::now() - start)
+                .count()
+        << ",";
+    start = std::chrono::system_clock::now();
     for (auto& obj : outputs_) {
       RETURN_IF_ERROR(obj->CopyToExternalObject());
     }
+    std::cout << "copy out : " << std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::system_clock::now() - start)
+                .count()
+        << ",";
+    start = std::chrono::system_clock::now();
     if (gl_interop_fabric_) {
       RETURN_IF_ERROR(gl_interop_fabric_->Finish());
     }
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                     std::chrono::system_clock::now() - start)
+                     .count()
+        << ",";
     return absl::OkStatus();
   }
 
