@@ -3387,12 +3387,28 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
   }
 
   supported_nodes->clear();
+  std::set<std::string> unsupported_nodes_info;
   std::for_each(nodes_.begin(), nodes_.end(),
-                [&supported_nodes, &tflite_ops_support_status](int node_index) {
+                [&supported_nodes, &tflite_ops_support_status, &context, &unsupported_nodes_info](int node_index) {
                   if (tflite_ops_support_status[node_index]) {
                     supported_nodes->push_back(node_index);
+                  } else {
+                    TfLiteNode* node;
+                    TfLiteRegistration* registration;
+                    TF_LITE_ENSURE_STATUS(context->GetNodeAndRegistration(
+                      context, node_index, &node, &registration));
+                    std::string node_info = GetOpNameByRegistration(*registration);
+                    unsupported_nodes_info.insert(node_info);
                   }
                 });
+
+  if (!unsupported_nodes_info.empty()) {
+    std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
+    std::string error_message = absl::StrCat(
+        "Following operations are not supported by Target NNAPI device:\n",
+        unsupported, "\n");
+    TF_LITE_KERNEL_LOG(context, error_message.c_str());
+  }
 
   return kTfLiteOk;
 }
