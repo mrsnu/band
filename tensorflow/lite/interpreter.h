@@ -616,6 +616,11 @@ class Interpreter {
     models_info_[model_id].batch_size = model_info.batch_size;
   }
 
+  // Model
+  std::map<int, ModelInfo>& GetModelInfo() {
+    return models_info_;
+  };
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;

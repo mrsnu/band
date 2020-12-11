@@ -837,7 +837,15 @@ TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
   // GenerateBatch(models_.size(), 2, period);
   GenerateBatch(period);
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(60000));
+  for (int i = 0; i < models_info_.size(); ++i) {
+    if (models_info_[i].batch_size == 0) {
+      if (models_info_[i].model_id != -1) {
+        GenerateRequests(models_info_[i].model_id, period);
+      }
+    }
+  }
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(6000));
   kill_app = true;
   interpreter_->GetPlanner()->Wait(cnt);
   cnt = 0;
@@ -847,7 +855,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
 
 void BenchmarkTfLiteModel::GenerateRequests(int model_id, int interval) {
   std::thread t([this, model_id, interval]() {
-    std::this_thread::sleep_for(std::chrono::milliseconds(model_id * interval / 30));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     while(true) {
       int64_t start = profiling::time::NowMicros();
       interpreter_->InvokeModel(model_id);

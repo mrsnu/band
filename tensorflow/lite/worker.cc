@@ -46,34 +46,6 @@ void Worker::Work() {
 
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time_ = profiling::time::NowMicros();
-
-        for (auto tensor_idx : subgraph.outputs()) {
-          TfLiteTensor& tensor = subgraph.context()->tensors[tensor_idx]; 
-
-          std::cout << "Tensor Size (bytes) : " << tensor.bytes << std::endl;
-
-          std::cout << "Tensor Dimension" << std::endl;
-          for (int j = 0; j < tensors.dims->size; ++j) {
-            int dim = tensor.dims->data[j];
-            std::cout << dim << " ";
-          }
-          std::cout << std::endl;
-
-          std::cout << "Tensor Data - " << std::endl;
-          for (int j = 0; j < bytes; ++j) {
-            // 1.
-            // Used `char` under the assumption that the output data type
-            // to be INT8. (`tensor.data.raw` is also char*.)
-            // Refer to lite/c/common.h:TfLiteTensor, TfLitePtrUnion, for more
-            // details on `tensor.data` and `tensor.data.raw`
-            // 2.
-            // Memory layout is unclear.
-            char value = *(tensor.data.raw + j);
-            std::cout << (int)value << " ";
-          }
-          std::cout << std::endl;
-        }
-
         planner_ptr->EnqueueFinishedJob(job);
       } else {
         // TODO #21: Handle errors in multi-thread environment

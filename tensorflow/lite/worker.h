@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <deque>
 #include <map>
+#include <string>
 
 #include "tensorflow/lite/profiling/time.h"
 
@@ -29,6 +30,7 @@ struct Job {
   int64_t invoke_time_ = 0;
   int64_t end_time_ = 0;
   int slo_ms_ = 0;
+  std::string model_fname;
 
   std::map<int, int64_t> waiting_time;
   std::map<int, int64_t> expected_latency;

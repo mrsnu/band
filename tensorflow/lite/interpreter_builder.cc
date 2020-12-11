@@ -575,21 +575,22 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
   int model_id = InterpreterBuilder::num_registered_model++;
-
+  bool is_available = false;
   for (int i = 0; i < (*interpreter)->GetNumDevices(); ++i) {
     TfLiteDevice device_id = static_cast<TfLiteDevice>(i);
     int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, num_threads, device_id);
-    if (subgraph_idx == -1) {
-      int start_idx = (*interpreter)->subgraphs_size() - i;
-      int num_graphs_to_delete = i;
-
-      (*interpreter)->DeleteSubgraphs(start_idx, num_graphs_to_delete);
-      InterpreterBuilder::num_registered_model--;
-
-      return subgraph_idx;
+    if (subgraph_idx != -1) {
+      (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
+      is_available = true;
     }
-    (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
+    else {
+      (*interpreter)->RegisterSubgraphIdx(model_id, device_id, -1);
+    }
+  }
+
+  if (is_available == false) {
+    InterpreterBuilder::num_registered_model--;
   }
 
   return model_id;

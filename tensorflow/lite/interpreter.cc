@@ -356,7 +356,9 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 
 void Interpreter::InvokeModel(int model_id) {
   int model_slo = models_info_[model_id].slo_ms;
-  planner_->EnqueueRequest(Job(model_id, model_slo));
+  Job to_enqueue = Job(model_id, model_slo);
+  to_enqueue.model_fname = models_info_[model_id].model_fname;
+  planner_->EnqueueRequest(to_enqueue);
 }
 
 void Interpreter::InvokeModel(int num_models, int batch_size) {
@@ -385,7 +387,9 @@ int Interpreter::InvokeBatch() {
     batch_size += model_batch;
     if (model_batch > 0) {
       for (int k = 0; k < model_batch; ++k) {
-        jobs.emplace_back(it->first);
+        Job to_enqueue = Job(it->first);
+        to_enqueue.model_fname = models_info_[it->first].model_fname;
+        jobs.emplace_back(to_enqueue);
       }
     }
   }
@@ -609,6 +613,10 @@ int64_t Interpreter::GetLatency(int model_id, TfLiteDevice device, Job& job) {
   int64_t current_time = profiling::time::NowMicros();
   int64_t waiting_time = workers_[device]->GetWaitingTime();
   int subgraph_idx = GetSubgraphIdx(model_id, device);
+
+  if (subgraph_idx == -1)
+    return 99999999999;
+
   int64_t expected_latency = (*(subgraph(subgraph_idx))).GetExpectedLatency();
   expected_latency += waiting_time;
 
@@ -626,11 +634,12 @@ TfLiteDevice Interpreter::GetShortestLatency(int model_id, Job& job) {
   for(int i = 0; i < num_devices; ++i) {
     int64_t latency = GetLatency(model_id, static_cast<TfLiteDevice>(i), job);
 
+    // std::cout << "DEVICE : " << i << " latency : " << latency << std::endl;
+
     if (value == -1 || latency < value) {
       idx = i;
       value = latency;
     }
-
   }
 
   return static_cast<TfLiteDevice>(idx);

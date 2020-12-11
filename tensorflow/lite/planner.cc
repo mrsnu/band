@@ -8,7 +8,7 @@ Planner::Planner(Interpreter* interpreter)
   : planner_thread_([this]{this->Plan();}) {
   interpreter_ = interpreter;
   log_file_.open("/data/local/tmp/model_execution_log.csv", std::fstream::app);
-  log_file_ << "model_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\t";
+  log_file_ << "model_name\tmodel_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\t";
   log_file_ << "cpu_waiting\tcpu_latency\tgpu_waiting\tgpu_latency\tdsp_waiting\tdsp_latency\tnpu_waiting\tnpu_latency\n";
   log_file_.close();
 }
@@ -29,7 +29,7 @@ TfLiteStatus Planner::Wait(int num_requests) {
     jobs_finished_.pop_front();
     log_file_.open("/data/local/tmp/model_execution_log.csv", std::fstream::app);
 
-    log_file_ << job.model_id_ << "\t" << job.device_id_ << "\t" << job.enqueue_time_ << "\t" << job.invoke_time_ << "\t" << job.end_time_ << "\t";
+    log_file_ << job.model_fname << "\t" << job.model_id_ << "\t" << job.device_id_ << "\t" << job.enqueue_time_ << "\t" << job.invoke_time_ << "\t" << job.end_time_ << "\t";
     for (int i = 0; i < 4; ++i) {
       log_file_ << job.waiting_time[i] << "\t";
       log_file_ << job.expected_latency[i];
@@ -60,7 +60,7 @@ void Planner::EnqueueFinishedJob(Job job) {
 void Planner::EnqueueRequest(Job job) {
   job.enqueue_time_ = profiling::time::NowMicros();
   std::unique_lock<std::mutex> lock(requests_mtx_);
-  requests_.push_front(job);
+  requests_.push_back(job);
   lock.unlock();
 
   planner_safe_bool_.notify();
