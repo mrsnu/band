@@ -229,6 +229,19 @@ cc_library(
 )
 
 cc_library(
+    name = "cpu",
+    srcs = [
+        "core/cpu/cpu.cc",
+    ],
+    hdrs = [
+        "core/cpu/cpu.h",
+    ],
+    deps = [
+        "//tensorflow/lite/c:common",
+    ],
+)
+
+cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
@@ -253,6 +266,7 @@ cc_library(
     deps = [
         ":allocation",
         ":arena_planner",
+				":cpu",
         ":external_cpu_backend_context",
         ":graph_info",
         ":memory_planner",

@@ -587,6 +587,10 @@ class Interpreter {
   // Applies Delegate to the subgraph when a device id is given.
   TfLiteStatus ApplyDeviceDelegate(Subgraph* subgraph, TfLiteDevice device);
 
+	TfLiteStatus SetWorkerThreadAffinity(
+			const CpuSet& thread_affinity_mask,
+			TfLiteDevice device_id = kTfLiteNumDevices);
+
   TfLiteStatus ProfileAll() {
     TfLiteStatus status;
     for (int i = 0; i < subgraphs_size(); ++i) {

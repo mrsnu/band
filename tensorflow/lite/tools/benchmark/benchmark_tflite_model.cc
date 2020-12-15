@@ -30,6 +30,7 @@ limitations under the License.
 #include "absl/strings/numbers.h"
 #include "ruy/profiler/profiler.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
@@ -272,6 +273,8 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
       BenchmarkParam::Create<bool>(kOpProfilingEnabledDefault));
   default_params.AddParam("max_profiling_buffer_entries",
                           BenchmarkParam::Create<int32_t>(1024));
+  default_params.AddParam("cpu_masks",
+                          BenchmarkParam::Create<int32_t>(0));
   default_params.AddParam("profiling_output_csv_file",
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("enable_platform_tracing",
@@ -331,6 +334,8 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
       CreateFlag<bool>("enable_op_profiling", &params_, "enable op profiling"),
       CreateFlag<int32_t>("max_profiling_buffer_entries", &params_,
                           "max profiling buffer entries"),
+      CreateFlag<int32_t>("cpu_masks", &params_,
+                          "cpu masks 0 : All, 1 : Little, 2: Big, 3: Primary"),
       CreateFlag<std::string>(
           "profiling_output_csv_file", &params_,
           "File path to export profile data as CSV, if not set "
@@ -375,6 +380,9 @@ void BenchmarkTfLiteModel::LogParams() {
                    << params_.Get<bool>("enable_op_profiling") << "]";
   TFLITE_LOG(INFO) << "Max profiling buffer entries: ["
                    << params_.Get<int32_t>("max_profiling_buffer_entries")
+                   << "]";
+  TFLITE_LOG(INFO) << "CPU masks: ["
+                   << params_.Get<int32_t>("cpu_masks")
                    << "]";
   TFLITE_LOG(INFO) << "CSV File to export profiling data to: ["
                    << params_.Get<std::string>("profiling_output_csv_file")
@@ -624,7 +632,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     TF_LITE_ENSURE_STATUS(LoadModel(models_info_[i].model_fname));
     int model_id =
         tflite::InterpreterBuilder::RegisterModel(
-            *models_[i], models_info_[i], *resolver, &interpreter_, 4);
+            *models_[i], models_info_[i], *resolver, &interpreter_, num_threads);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
@@ -655,9 +663,20 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
+  auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
+      static_cast<tflite::impl::TFLiteCPUMasks>(
+          params_.Get<int32_t>("cpu_masks")));
+  TF_LITE_ENSURE_STATUS(tflite::impl::SetCPUThreadAffinity(cpuMask));
+
+  TFLITE_LOG(INFO) << "Set affinity to " << 
+  tflite::impl::GetCPUThreadAffinityMaskString(static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks"))) 
+  << " cores";
+
   // TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
   TF_LITE_ENSURE_STATUS(ParseJsonFile());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
+
+  TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
 
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the

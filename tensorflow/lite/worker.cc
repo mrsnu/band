@@ -20,6 +20,11 @@ Worker::~Worker() {
   device_cpu_thread_.join();
 }
 
+TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask) {
+  cpu_set_ = thread_affinity_mask;
+  return SetCPUThreadAffinity(cpu_set_);
+}
+
 void Worker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);

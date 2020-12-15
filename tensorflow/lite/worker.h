@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 
+#include "tensorflow/lite/core/cpu/cpu.h"
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
@@ -55,6 +56,12 @@ class Worker {
 
   int64_t GetWaitingTime();
 
+	TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask);
+
+  const CpuSet& GetCpuSet() const { 
+    return cpu_set_; 
+  }
+
  private:
   void Work();
 
@@ -64,6 +71,7 @@ class Worker {
   std::condition_variable request_cv_;
   std::deque<Job> requests_;
   bool kill_worker_ = false;
+	CpuSet cpu_set_;
 };
 
 }  // namespace impl
