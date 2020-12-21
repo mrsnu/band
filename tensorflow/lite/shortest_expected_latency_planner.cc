@@ -74,7 +74,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
               worker.GetDeviceRequests().erase(worker.GetDeviceRequests().begin() + to_erase[k]);
             }
           }
-          std::cout << "next job size : " << next_jobs.size() << std::endl;
+          // std::cout << "next job size : " << next_jobs.size() << std::endl;
         }
 
         local_jobs.swap(next_jobs);
@@ -85,8 +85,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
         target_idx = it - local_jobs.begin();
         target_device = GetInterpreter()->GetShortestLatency(to_execute.model_id_, to_execute);
 
-        std::cout << "MODEL : " << to_execute.model_id_ << std::endl;
-        std::cout << "device : " << target_device << std::endl;
+        // std::cout << "MODEL : " << to_execute.model_id_ << std::endl;
+        // std::cout << "device : " << target_device << std::endl;
       } else {
         // find the most urgent job and save its index within the queue
         int64_t largest_shortest_latency = -1;
