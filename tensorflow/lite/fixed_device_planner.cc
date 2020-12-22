@@ -37,7 +37,7 @@ void FixedDevicePlanner::Plan() {
       Worker& worker = GetInterpreter()->GetWorker(to_execute.device_id_);
       {
         std::lock_guard<std::mutex> lock(worker.GetDeviceMtx());
-        worker.GetDeviceRequests().push_back(to_execute);
+        worker.GetDeviceRequests().push_back(to_execute);		
         /*
         if (to_execute.slo_ms_ == 0) {
           worker.GetDeviceRequests().push_back(to_execute);

@@ -39,8 +39,6 @@ void RoundRobinPlanner::Plan() {
           GetInterpreter()->GetSubgraphIdx(to_execute.model_id_, device_);
 
         if (subgraph_idx == -1) {
-          std::cout << "no available m " << to_execute.model_id_ << std::endl;
-          std::cout << "no available d " << device_ << std::endl;
           GetRequests().push_front(to_execute);
           break;
         } else {
