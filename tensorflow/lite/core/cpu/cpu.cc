@@ -46,6 +46,14 @@ static CpuSet g_thread_affinity_mask_all;
 static CpuSet g_thread_affinity_mask_little;
 static CpuSet g_thread_affinity_mask_big;
 static CpuSet g_thread_affinity_mask_primary;
+static CpuSet g_thread_affinity_mask_little1;
+static CpuSet g_thread_affinity_mask_little2;
+static CpuSet g_thread_affinity_mask_little3;
+static CpuSet g_thread_affinity_mask_little4;
+static CpuSet g_thread_affinity_mask_big1;
+static CpuSet g_thread_affinity_mask_big2;
+static CpuSet g_thread_affinity_mask_big3;
+static CpuSet g_thread_affinity_mask_big4;
 static int g_cpucount = GetCPUCount();
 
 int GetCPUCount() {
@@ -206,6 +214,32 @@ int SetupThreadAffinityMasks() {
   }
 
   for (int i = 0; i < g_cpucount; i++) {
+    switch (i) {
+      case 0:
+        g_thread_affinity_mask_little1.Enable(i);
+        break;
+      case 1:
+        g_thread_affinity_mask_little2.Enable(i);
+        break;
+      case 2:
+        g_thread_affinity_mask_little3.Enable(i);
+        break;
+      case 3:
+        g_thread_affinity_mask_little4.Enable(i);
+        break;
+      case 4:
+        g_thread_affinity_mask_big1.Enable(i);
+        break;
+      case 5:
+        g_thread_affinity_mask_big2.Enable(i);
+        break;
+      case 6:
+        g_thread_affinity_mask_big3.Enable(i);
+        break;
+      case 7:
+        g_thread_affinity_mask_big4.Enable(i);
+        break;
+    }
     if (cpu_max_freq_khz[i] < max_freq_khz_medium) {
       g_thread_affinity_mask_little.Enable(i);
     } else {
@@ -224,7 +258,7 @@ int SetupThreadAffinityMasks() {
 }
 
 const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask) {
-  SetupThreadAffinityMasks();
+  // SetupThreadAffinityMasks();
 
   switch (mask) {
     case kTfLiteAll:
@@ -235,6 +269,22 @@ const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask) {
       return g_thread_affinity_mask_big;
     case kTfLitePrimary:
       return g_thread_affinity_mask_primary;
+    case kTfLiteLittle1:
+      return g_thread_affinity_mask_little1;
+    case kTfLiteLittle2:
+      return g_thread_affinity_mask_little2;
+    case kTfLiteLittle3:
+      return g_thread_affinity_mask_little3;
+    case kTfLiteLittle4:
+      return g_thread_affinity_mask_little4;
+    case kTfLiteBig1:
+      return g_thread_affinity_mask_big1;
+    case kTfLiteBig2:
+      return g_thread_affinity_mask_big2;
+    case kTfLiteBig3:
+      return g_thread_affinity_mask_big3;
+    case kTfLiteBig4:
+      return g_thread_affinity_mask_big4;
     default:
       // fallback to all cores anyway
       return g_thread_affinity_mask_all;

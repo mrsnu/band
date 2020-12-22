@@ -76,6 +76,7 @@ class Planner {
   // The interpreter calls the method.
   // TODO #18: Make the planner run in a different thread
   TfLiteStatus Wait(int num_requests);
+  TfLiteStatus Wait();
 
   // Enqueues a finised job to the queue.
   // A worker calls the method.
@@ -109,11 +110,13 @@ class Planner {
   // Request Queue
   std::mutex requests_mtx_;
   std::deque<Job> requests_;
+  int request_counter_;
 
   std::condition_variable end_invoke_;
   std::thread planner_thread_;
 
   std::ofstream log_file_;
+  bool stop_worker_ = false;
 };
 
 }  // namespace impl

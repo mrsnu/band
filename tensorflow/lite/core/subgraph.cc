@@ -910,6 +910,7 @@ TfLiteStatus Subgraph::Profile() {
 }
 
 TfLiteStatus Subgraph::Invoke() {
+  // TFLITE_SCOPED_TAGGED_DEFAULT_PROFILE(profiler_.get(), "invoke_subgraph");
   if (!consistent_) {
     ReportError("Invoke called on model that is not consistent.");
     return kTfLiteError;

@@ -663,6 +663,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
+  tflite::impl::SetupThreadAffinityMasks();
   auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
       static_cast<tflite::impl::TFLiteCPUMasks>(
           params_.Get<int32_t>("cpu_masks")));
@@ -759,10 +760,12 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
     return kTfLiteError;
   }
 
+  /*
   if (interpreter_->ProfileAll() != kTfLiteOk) {
     TFLITE_LOG(ERROR) << "Failed to profile!";
     return kTfLiteError;
-  }
+  }*/
+
   ruy_profiling_listener_.reset(new RuyProfileListener());
   AddListener(ruy_profiling_listener_.get());
 
@@ -819,6 +822,9 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     // If no "slo_ms", "batch_size" is given, each value is set to 0.
     model_info.slo_ms = json_file["models"][i]["slo_ms"].as_int();
     model_info.batch_size = json_file["models"][i]["batch_size"].as_int();
+    
+    if (json_file["models"][i]["device"].get_type() != jute::JUNKNOWN)
+      model_info.device = json_file["models"][i]["device"].as_int();
 
     // TODO: Check if necessary configs exist.
     // One of slo_ms, batch_size should be given?
@@ -836,7 +842,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
-  int num_iters = 3;
+  int num_iters = 1;
   for (int i = 0; i < num_iters; ++i) {
     for (int j = 0; j < models_.size(); ++j) {
       interpreter_->InvokeModel(j);
@@ -845,6 +851,19 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   interpreter_->GetPlanner()->Wait(models_.size() * num_iters);
   return kTfLiteOk;
 }
+
+TfLiteStatus BenchmarkTfLiteModel::RunAllCont() {
+  int num_iters = 1;
+  for (int i = 0; i < num_iters; ++i) {
+    for (int j = 0; j < models_.size(); ++j) {
+      interpreter_->InvokeModel(j);
+    }
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(20000));
+  interpreter_->GetPlanner()->Wait();
+  return kTfLiteOk;
+}
+
 
 TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
   kill_app = false;

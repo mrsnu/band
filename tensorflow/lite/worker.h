@@ -62,6 +62,10 @@ class Worker {
     return cpu_set_; 
   }
 
+  void set_id(int id) {
+    id_ = id;
+  }
+
  private:
   void Work();
 
@@ -72,6 +76,7 @@ class Worker {
   std::deque<Job> requests_;
   bool kill_worker_ = false;
 	CpuSet cpu_set_;
+  int id_ = -1;
 };
 
 }  // namespace impl

@@ -1,6 +1,7 @@
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 #include <iostream>
 
 namespace tflite {
@@ -26,6 +27,18 @@ TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask)
 }
 
 void Worker::Work() {
+  if (id_ == 0) {
+    auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
+        static_cast<tflite::impl::TFLiteCPUMasks>(0));
+
+    SetWorkerThreadAffinity(cpuMask);
+  } else {
+    auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
+        static_cast<tflite::impl::TFLiteCPUMasks>(1));
+
+    SetWorkerThreadAffinity(cpuMask);
+  }
+
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {

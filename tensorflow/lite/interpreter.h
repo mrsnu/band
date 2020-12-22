@@ -608,6 +608,7 @@ class Interpreter {
   struct ModelInfo {
     int model_id = -1;
     std::string model_fname;
+    int device = -1;
     std::map<TfLiteDevice, int> device_to_subgraph;
     int slo_ms = 0;
     int batch_size = 0;
@@ -618,6 +619,7 @@ class Interpreter {
     models_info_[model_id].model_fname = model_info.model_fname;
     models_info_[model_id].slo_ms = model_info.slo_ms;
     models_info_[model_id].batch_size = model_info.batch_size;
+    models_info_[model_id].device = model_info.device;
   }
 
   // Model

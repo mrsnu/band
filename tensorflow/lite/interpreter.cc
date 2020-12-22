@@ -135,6 +135,7 @@ Interpreter::Interpreter(int planner, ErrorReporter* error_reporter)
   // Create workers.
   for (int i = 0; i < GetNumDevices(); ++i) {
     workers_.emplace_back(new Worker(planner_));
+		workers_[i]->set_id(i);
   }
 
   // Create Delegates for each device.
@@ -359,6 +360,7 @@ void Interpreter::InvokeModel(int model_id) {
   int model_slo = models_info_[model_id].slo_ms;
   Job to_enqueue = Job(model_id, model_slo);
   to_enqueue.model_fname = models_info_[model_id].model_fname;
+  to_enqueue.device_id_ = models_info_[model_id].device;
   planner_->EnqueueRequest(to_enqueue);
 }
 
@@ -390,6 +392,7 @@ int Interpreter::InvokeBatch() {
       for (int k = 0; k < model_batch; ++k) {
         Job to_enqueue = Job(it->first);
         to_enqueue.model_fname = models_info_[it->first].model_fname;
+        to_enqueue.device_id_ = models_info_[it->first].device;
         jobs.emplace_back(to_enqueue);
       }
     }
@@ -648,9 +651,12 @@ TfLiteDevice Interpreter::GetShortestLatency(int model_id, Job& job) {
 
 TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDevice device_id) {
   if (device_id == kTfLiteNumDevices) {
-    for (int i = 0; i < workers_.size(); ++i) {
+    for (int i = 1; i < workers_.size(); ++i) {
+			auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
+					static_cast<tflite::impl::TFLiteCPUMasks>(i + 4));
+
       TF_LITE_ENSURE_STATUS(
-          workers_[i]->SetWorkerThreadAffinity(thread_affinity_mask));
+          workers_[i]->SetWorkerThreadAffinity(cpuMask));
     }
     return kTfLiteOk;
   } else {

@@ -20,6 +20,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/internal/optimized/cpu_check.h"
 #include "tensorflow/lite/kernels/internal/optimized/depthwiseconv_float.h"
 #include "tensorflow/lite/kernels/internal/optimized/depthwiseconv_uint8.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 
 namespace tflite {
 namespace optimized_ops {
@@ -51,9 +52,16 @@ struct DepthwiseConvWorkerTask : cpu_backend_threadpool::Task {
         cpu_flags_(cpu_flags),
         thread_start_(thread_start),
         thread_end_(thread_end),
-        thread_dim_(thread_dim) {}
+        thread_dim_(thread_dim) {
+          int allocated = tflite::impl::big_core_refcounter++;
+          allocated = (allocated % 4) + 4;
+          allocated = 0;
+          cpu_set_ = tflite::impl::GetCPUThreadAffinityMask(
+                  static_cast<tflite::impl::TFLiteCPUMasks>(allocated));
+        }
 
   void Run() override {
+    // tflite::impl::SetCPUThreadAffinity(cpu_set_);
     DepthwiseConvImpl(params_, input_shape_, input_data_, filter_shape_,
                       filter_data_, bias_shape_, bias_data_, output_shape_,
                       output_data_, cpu_flags_, thread_start_, thread_end_,
@@ -74,6 +82,7 @@ struct DepthwiseConvWorkerTask : cpu_backend_threadpool::Task {
   int thread_start_;
   int thread_end_;
   int thread_dim_;
+  tflite::impl::CpuSet cpu_set_;
 };
 
 inline int HowManyConvThreads(const RuntimeShape& output_shape,
@@ -168,6 +177,7 @@ inline void DepthwiseConv(const DepthwiseParams& params,
   // At least we make it a single heap allocation by using reserve().
   tasks.reserve(thread_count);
   int thread_start = 0;
+  tflite::impl::big_core_refcounter = 0;
   for (int i = 0; i < thread_count; ++i) {
     int thread_end =
         thread_start + (thread_dim_size - thread_start) / (thread_count - i);

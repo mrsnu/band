@@ -20,6 +20,14 @@ typedef enum {
     kTfLiteLittle,
     kTfLiteBig,
     kTfLitePrimary,
+    kTfLiteLittle1,
+    kTfLiteLittle2,
+    kTfLiteLittle3,
+    kTfLiteLittle4,
+    kTfLiteBig1,
+    kTfLiteBig2,
+    kTfLiteBig3,
+    kTfLiteBig4,
 } TFLiteCPUMasks;
 
 class CpuSet {
@@ -44,10 +52,13 @@ int GetBigCPUCount();
 
 // set explicit thread affinity
 TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+int SetupThreadAffinityMasks();
 
 // convenient wrapper
 const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask);
 const char* GetCPUThreadAffinityMaskString(TFLiteCPUMasks mask);
+
+static int big_core_refcounter = 0;
 
 } // namespace impl
 } // nmaespace tflite

@@ -286,6 +286,7 @@ cc_library(
         "//tensorflow/lite/nnapi:nnapi_implementation",
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
+        "//tensorflow/lite/profiling:time_profiler",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",

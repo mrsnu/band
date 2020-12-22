@@ -7,9 +7,11 @@ namespace impl {
 Planner::Planner(Interpreter* interpreter)
   : planner_thread_([this]{this->Plan();}) {
   interpreter_ = interpreter;
+  request_counter_ = 0;
   log_file_.open("/data/local/tmp/model_execution_log.csv", std::fstream::app);
-  log_file_ << "model_name\tmodel_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\t";
-  log_file_ << "cpu_waiting\tcpu_latency\tgpu_waiting\tgpu_latency\tdsp_waiting\tdsp_latency\tnpu_waiting\tnpu_latency\n";
+  log_file_ << "model_name\tmodel_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\n";
+  //log_file_ << "model_name\tmodel_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\t";
+  //log_file_ << "cpu_waiting\tcpu_latency\tgpu_waiting\tgpu_latency\tdsp_waiting\tdsp_latency\tnpu_waiting\tnpu_latency\n";
   log_file_.close();
 }
 
@@ -48,19 +50,44 @@ TfLiteStatus Planner::Wait(int num_requests) {
   return kTfLiteOk;
 }
 
+TfLiteStatus Planner::Wait() {
+  stop_worker_ = true;
+  std::unique_lock<std::mutex> lock(job_queue_mtx_);
+  end_invoke_.wait(lock, [this] {
+    return jobs_finished_.size() >= request_counter_;
+  });
+
+  while (!jobs_finished_.empty()) {
+    Job job = jobs_finished_.front();
+    jobs_finished_.pop_front();
+    log_file_.open("/data/local/tmp/model_execution_log.csv", std::fstream::app);
+    log_file_ << job.model_fname << "\t" << job.model_id_ << "\t" << job.device_id_ << "\t" << job.enqueue_time_ << "\t" << job.invoke_time_ << "\t" << job.end_time_ << "\n";
+    log_file_.close();
+  }
+  lock.unlock();
+
+  return kTfLiteOk;
+}
+
+
 void Planner::EnqueueFinishedJob(Job job) {
   std::unique_lock<std::mutex> lock(job_queue_mtx_);
   jobs_finished_.push_back(job);
   lock.unlock();
 
   end_invoke_.notify_one();
+
+  if (!stop_worker_) {
+    EnqueueRequest(job);
+  }
 }
 
 // Suppose only latency-critical jobs call this method.
 void Planner::EnqueueRequest(Job job) {
   job.enqueue_time_ = profiling::time::NowMicros();
   std::unique_lock<std::mutex> lock(requests_mtx_);
-  requests_.push_back(job);
+  requests_.push_front(job);
+  request_counter_++;
   lock.unlock();
 
   planner_safe_bool_.notify();
