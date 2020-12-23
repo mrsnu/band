@@ -142,6 +142,10 @@ void BenchmarkModel::LogParams() {
                    << params_.Get<int32_t>("warmup_runs") << "]";
   TFLITE_LOG(INFO) << "Min warmup runs duration (seconds): ["
                    << params_.Get<float>("warmup_min_secs") << "]";
+  TFLITE_LOG(INFO) << "Profile num runs: ["
+                   << params_.Get<int32_t>("profile_num_runs") << "]";
+  TFLITE_LOG(INFO) << "Profile warmup runs: ["
+                   << params_.Get<int32_t>("profile_warmup_runs") << "]";
 }
 
 TfLiteStatus BenchmarkModel::PrepareInputData() { return kTfLiteOk; }
