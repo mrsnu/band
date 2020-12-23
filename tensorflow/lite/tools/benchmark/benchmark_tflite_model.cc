@@ -667,9 +667,10 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
           params_.Get<int32_t>("cpu_masks")));
   TF_LITE_ENSURE_STATUS(tflite::impl::SetCPUThreadAffinity(cpuMask));
 
-  TFLITE_LOG(INFO) << "Set affinity to " << 
-  tflite::impl::GetCPUThreadAffinityMaskString(static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks"))) 
-  << " cores";
+  TFLITE_LOG(INFO) << "Set affinity to "
+      << tflite::impl::GetCPUThreadAffinityMaskString(
+             static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks")))
+      << " cores";
 
   TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
