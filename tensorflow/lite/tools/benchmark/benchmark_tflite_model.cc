@@ -632,7 +632,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       << " cores";
 
   (&interpreter_)->reset(
-      new Interpreter(LoggingReporter::DefaultLoggingReporter()));
+      new Interpreter(LoggingReporter::DefaultLoggingReporter(), cpuMask));
 
   for (int i = 0; i < graphs_.size(); ++i) {
     TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
