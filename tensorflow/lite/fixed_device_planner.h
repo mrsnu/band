@@ -12,7 +12,7 @@ namespace impl {
 class FixedDevicePlanner : public Planner {
   public:
     explicit FixedDevicePlanner(Interpreter* interpreter)
-      : Planner(interpreter) {
+      : Planner(interpreter, /*needs_profile_=*/true) {
       planner_thread_ = std::thread([this]{this->Plan();});
     }
     void Plan() override;

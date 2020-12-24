@@ -635,6 +635,13 @@ Profiler* Interpreter::GetProfiler() {
     return nullptr;
 }
 
+bool Interpreter::NeedProfile() {
+  if (planner_)
+    return planner_->NeedProfile();
+  else
+    return false;
+}
+
 TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
                                               TfLiteDeviceFlags device, 
                                               const std::set<TfLiteType>& tensor_types) {

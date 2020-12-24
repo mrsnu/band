@@ -483,6 +483,9 @@ class Interpreter {
   /// WARNING: This is an experimental API and subject to change.
   Profiler* GetProfiler();
 
+  /// Check whether profiling is required or not.
+  bool NeedProfile();
+
   // The default capacity of `tensors_` vector.
   static constexpr int kTensorsReservedCapacity = 128;
   /// The capacity headroom of `tensors_` vector before calling ops'

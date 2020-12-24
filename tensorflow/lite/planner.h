@@ -17,7 +17,7 @@ class Interpreter;
 // Contains how a Subgraph should be executed.
 // Currently, the unit of device placement is a `Subgraph`.
 // Each Subgraph contains one `ModelPlan` as a member.
-struct ModelPlan{
+struct ModelPlan {
  public:
   ModelPlan():device_(kTfLiteCPU) {}
   ModelPlan(ModelPlan&&) = default;
@@ -29,7 +29,7 @@ struct ModelPlan{
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter);
+  explicit Planner(Interpreter* interpreter, bool needs_profile_);
   ~Planner();
 
 	/*
@@ -83,12 +83,18 @@ class Planner {
     return requests_;
   }
 
+  // Check whether profiling is required or not.
+  bool NeedProfile() {
+    return needs_profile_;
+  }
+
  protected:
   std::thread planner_thread_;
 
  private:
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
+  bool needs_profile_;
 
   // Jobs Finished
   std::mutex job_queue_mtx_;
