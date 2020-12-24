@@ -25,6 +25,7 @@ limitations under the License.
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <sys/stat.h>
 
 #include "absl/base/attributes.h"
 #include "absl/strings/numbers.h"
@@ -281,6 +282,10 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
                           BenchmarkParam::Create<bool>(false));
   default_params.AddParam("period", BenchmarkParam::Create<int32_t>(10));
   default_params.AddParam("planner", BenchmarkParam::Create<int32_t>(0));
+  default_params.AddParam("profile_data",
+                          BenchmarkParam::Create<std::string>(""));
+  default_params.AddParam("write_profile_data",
+                          BenchmarkParam::Create<bool>(false));
 
   for (const auto& delegate_provider :
        tools::GetRegisteredDelegateProviders()) {
@@ -308,6 +313,9 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkModel::GetFlags();
   std::vector<Flag> specific_flags = {
       CreateFlag<std::string>("graphs", &params_, "graph file names"),
+      CreateFlag<std::string>("profile_data", &params_, "profile data"),
+      CreateFlag<bool>("write_profile_data", &params_,
+                              "write profile data"),
       CreateFlag<std::string>("input_layer", &params_, "input layer names"),
       CreateFlag<std::string>("input_layer_shape", &params_,
                               "input layer shape"),
@@ -759,10 +767,29 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
     return kTfLiteError;
   }
 
-  if (interpreter_->ProfileAll() != kTfLiteOk) {
+  jute::jValue json;
+  std::string profile_data_fname = params_.Get<std::string>("profile_data");
+
+  // check if a file named `profile_data_fname` actually exists
+  struct stat buffer;
+  if (stat(profile_data_fname.c_str(), &buffer) == 0) {
+    TFLITE_LOG(INFO) << "Reading profile data from " << profile_data_fname;
+    json = jute::parser::parse_file(profile_data_fname);
+  } else {
+    TFLITE_LOG(INFO) << "No profile data available";
+  }
+
+  if (interpreter_->ProfileAll(json) != kTfLiteOk) {
     TFLITE_LOG(ERROR) << "Failed to profile!";
     return kTfLiteError;
   }
+
+  bool write_profile_data = params_.Get<bool>("write_profile_data");
+  if (write_profile_data) {
+    TFLITE_LOG(INFO) << "Writing profiled data to " << profile_data_fname;
+    interpreter_->WriteProfileData(profile_data_fname);
+  }
+
   ruy_profiling_listener_.reset(new RuyProfileListener());
   AddListener(ruy_profiling_listener_.get());
 

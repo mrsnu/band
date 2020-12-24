@@ -22,6 +22,7 @@ limitations under the License.
 #include <cstdlib>
 #include <memory>
 #include <vector>
+#include <fstream>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/common.h"  // IWYU pragma: export
@@ -37,6 +38,7 @@ limitations under the License.
 #include "tensorflow/lite/round_robin_planner.h"
 #include "tensorflow/lite/shortest_expected_latency_planner.h"
 #include "tensorflow/lite/model_builder.h"
+#include "tensorflow/lite/tools/jute/jute.h"
 
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
@@ -591,15 +593,74 @@ class Interpreter {
 			const CpuSet& thread_affinity_mask,
 			TfLiteDevice device_id = kTfLiteNumDevices);
 
-  TfLiteStatus ProfileAll() {
+  TfLiteStatus ProfileAll(jute::jValue json) {
     TfLiteStatus status;
     for (int i = 0; i < subgraphs_size(); ++i) {
-      status = subgraphs_[i]->Profile();
+      auto fname_and_device = GetModelFnameAndDevice(i);
+      std::string model_fname = fname_and_device.first;
+      std::string device = std::to_string(fname_and_device.second);
+      int64_t profile_data =
+          json[model_fname][device].get_type() == jute::jType::JNUMBER ?
+          json[model_fname][device].as_int() : 0;
+
+      status = subgraphs_[i]->Profile(profile_data);
       if (status != kTfLiteOk)
         return status;
     }
 
     return kTfLiteOk;
+  }
+
+  void WriteProfileData(std::string write_fname) {
+    // collect all profile data into a map
+    std::map<std::string, std::map<int, int64_t>> data;
+    for (int i = 0; i < subgraphs_size(); ++i) {
+      auto pair = GetModelFnameAndDevice(i);
+      std::string model_fname = pair.first;
+      int device = pair.second;
+      int64_t avg_time = subgraphs_[i]->GetExpectedLatency();
+
+      if (data.find(model_fname) == data.end()) {
+        data[model_fname] = std::map<int, int64_t>();
+      }
+
+      data[model_fname][device] = avg_time;
+    }
+
+    // convert the map into a jute::jValue
+    jute::jValue root(jute::jType::JOBJECT);
+    for (auto& pair : data) {
+      std::string model_fname = pair.first;
+      jute::jValue model(jute::jType::JOBJECT);
+
+      for (auto& inner_pair : pair.second) {
+        std::string device = std::to_string(inner_pair.first);
+        std::string avg_time = std::to_string(inner_pair.second);
+
+        jute::jValue val(jute::jType::JNUMBER);
+        val.set_string(avg_time);
+        model.add_property(device, val);
+      }
+
+      root.add_property(model_fname, model);
+    }
+
+    // and finally write the jute::jValue to a file
+    std::ofstream file(write_fname);
+    file << root.to_string();
+    file.close();
+  }
+
+  std::pair<std::string, int> GetModelFnameAndDevice(int subgraph_idx) {
+    for (auto& pair : models_info_) {
+      for (auto& inner_pair : pair.second.device_to_subgraph) {
+        if (inner_pair.second == subgraph_idx) {
+          return std::make_pair(pair.second.model_fname,
+                                                  (int)inner_pair.first);
+        }
+      }
+    }
+    return std::make_pair("", 0);
   }
 
   TfLiteDevice GetShortestLatency(int model_id, Job& job);

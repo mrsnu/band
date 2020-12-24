@@ -886,7 +886,13 @@ TfLiteStatus Subgraph::PrepareOpsAndTensors() {
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::Profile() {
+TfLiteStatus Subgraph::Profile(int64_t profile_data) {
+  if (profile_data > 0) {
+    avg_time = profile_data;
+    std::cout << "Loaded from database (µs) : " << avg_time << std::endl;
+    return kTfLiteOk;
+  }
+
   int num_iterations = 50;
   int64_t total = 0;
   TfLiteStatus status;

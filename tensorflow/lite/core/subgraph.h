@@ -251,7 +251,7 @@ class Subgraph {
   // Returns status of success or failure.
   TfLiteStatus Invoke();
 
-  TfLiteStatus Profile();
+  TfLiteStatus Profile(int64_t profile_data = 0);
 
   // Entry point for C node plugin API to report an error.
   void ReportError(const char* format, ...);
