@@ -44,8 +44,8 @@ class Worker {
 
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask);
 
-  const CpuSet& GetCpuSet() const { 
-    return cpu_set_; 
+  const CpuSet& GetCpuSet() const {
+    return cpu_set_;
   }
 
  private:
