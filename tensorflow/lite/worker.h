@@ -27,8 +27,7 @@ struct Job {
 
 class Worker {
  public:
-  explicit Worker(std::shared_ptr<Planner> planner,
-                  const CpuSet& thread_affinity_mask = GetCPUThreadAffinityMask(kTfLiteAll));
+  explicit Worker(std::shared_ptr<Planner> planner, const CpuSet& thread_affinity_mask);
   ~Worker();
 
   std::mutex& GetDeviceMtx() {
