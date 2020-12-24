@@ -142,12 +142,15 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
+  gpu_opts.inference_priority1 = TFLITE_GPU_INFERENCE_PRIORITY_MIN_LATENCY;
+  gpu_opts.inference_priority2 = TFLITE_GPU_INFERENCE_PRIORITY_MIN_MEMORY_USAGE;
+  gpu_opts.inference_priority3 = TFLITE_GPU_INFERENCE_PRIORITY_MAX_PRECISION;
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
+
   // TODO #34 GPU delegate multiple delegated partition support
   // gpu_opts.max_delegated_partitions = 10;
-  TfLiteDelegatePtr gpu_delegate =
-      TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
-                        &TfLiteGpuDelegateV2Delete);
+  TfLiteDelegatePtr gpu_delegate = TfLiteDelegatePtr(
+    TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
   if (gpu_delegate.get()) {
     delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
     validDevices.insert(kTfLiteGPU);
