@@ -6,8 +6,12 @@
 namespace tflite {
 namespace impl {
 
-Worker::Worker(std::shared_ptr<Planner> planner)
-  : device_cpu_thread_([this] { this->Work(); }) {
+Worker::Worker(std::shared_ptr<Planner> planner, const CpuSet& thread_affinity_mask)
+  : device_cpu_thread_([this, thread_affinity_mask] {
+      if (SetWorkerThreadAffinity(thread_affinity_mask) != kTfLiteOk)
+        return;
+      this->Work();
+    }) {
   planner_ = planner;
 }
 

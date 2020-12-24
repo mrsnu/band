@@ -621,6 +621,16 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
   const bool use_caching = params_.Get<bool>("use_caching");
+  auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
+      static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks")));
+
+  TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpuMask));
+
+  TFLITE_LOG(INFO) << "Set affinity to "
+      << tflite::impl::GetCPUThreadAffinityMaskString(
+             static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks")))
+      << " cores";
+
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter()));
 
@@ -662,20 +672,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
-  auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
-      static_cast<tflite::impl::TFLiteCPUMasks>(
-          params_.Get<int32_t>("cpu_masks")));
-  TF_LITE_ENSURE_STATUS(tflite::impl::SetCPUThreadAffinity(cpuMask));
-
-  TFLITE_LOG(INFO) << "Set affinity to "
-      << tflite::impl::GetCPUThreadAffinityMaskString(
-             static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks")))
-      << " cores";
-
   TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
-
-  TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
 
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the
