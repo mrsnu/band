@@ -39,7 +39,7 @@ struct Job {
 
 class Worker {
  public:
-  explicit Worker(std::shared_ptr<Planner> planner);
+  explicit Worker(std::shared_ptr<Planner> planner, int device_idx);
   ~Worker();
 
   std::mutex& GetDeviceMtx() {
@@ -65,6 +65,8 @@ class Worker {
  private:
   void Work();
 
+  void TryWorkSteal();
+
   std::weak_ptr<Planner> planner_;
   std::thread device_cpu_thread_;
   std::mutex device_mtx_;
@@ -72,6 +74,7 @@ class Worker {
   std::deque<Job> requests_;
   bool kill_worker_ = false;
 	CpuSet cpu_set_;
+  int device_idx_;
 };
 
 }  // namespace impl

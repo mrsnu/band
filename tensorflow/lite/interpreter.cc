@@ -134,7 +134,7 @@ Interpreter::Interpreter(int planner, ErrorReporter* error_reporter)
 
   // Create workers.
   for (int i = 0; i < GetNumDevices(); ++i) {
-    workers_.emplace_back(new Worker(planner_));
+    workers_.emplace_back(new Worker(planner_, i));
   }
 
   // Create Delegates for each device.
