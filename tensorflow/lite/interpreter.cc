@@ -142,7 +142,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     planner_.reset(new FixedDevicePlanner(this));
   }
 
-  std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
+  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
@@ -163,7 +163,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
   if (gpu_delegate.get()) {
     delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
-    validDevices.insert(kTfLiteGPU);
+    valid_devices.insert(kTfLiteGPU);
   }
 
   std::vector<const char*> string_device_names_list = nnapi::GetDeviceNamesList();
@@ -194,10 +194,10 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
         
         switch (delegateFlag) {
           case kTfLiteDelegateFlagsNNAPIDSP:
-            validDevices.insert(kTfLiteDSP);
+            valid_devices.insert(kTfLiteDSP);
             break;
           case kTfLiteDelegateFlagsNNAPINPU:
-            validDevices.insert(kTfLiteNPU);
+            valid_devices.insert(kTfLiteNPU);
             break;
           default:
             continue;
@@ -219,8 +219,9 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   
 #endif  // defined(__ANDROID__)
 
-  for (const TfLiteDeviceFlags& deviceFlag : validDevices) {
-    workers_[deviceFlag] = std::make_unique<Worker>(planner_);
+  // Create workers.
+  for (const TfLiteDeviceFlags device_flag : valid_devices) {
+    workers_[device_flag] = std::make_unique<Worker>(planner_, device_flag);
   }
 }
 
@@ -839,3 +840,4 @@ void Interpreter::SetWindowSize(int schedule_window_size) {
 }  // namespace impl
 
 }  // namespace tflite
+}

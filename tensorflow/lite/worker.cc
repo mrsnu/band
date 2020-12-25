@@ -6,9 +6,9 @@
 namespace tflite {
 namespace impl {
 
-Worker::Worker(std::shared_ptr<Planner> planner) {
+Worker::Worker(std::shared_ptr<Planner> planner, TfLiteDeviceFlags device_flag)
+  : device_cpu_thread_([this] { this->Work(); }), device_flag_(device_flag) {
   planner_ = planner;
-  device_cpu_thread_ = std::thread([this]{ this->Work(); });
 }
 
 Worker::~Worker() {
@@ -78,7 +78,12 @@ void Worker::Work() {
       }
       lock.lock();
       requests_.pop_front();
+      bool empty = requests_.empty();
       lock.unlock();
+
+      if (empty) {
+        TryWorkSteal();
+      }
 
       planner_ptr->GetSafeBool().notify();
     } else {
@@ -86,6 +91,105 @@ void Worker::Work() {
       return;
     }
   }
+}
+
+void Worker::TryWorkSteal() {
+  std::shared_ptr<Planner> planner_ptr = planner_.lock();
+  if (!planner_ptr) {
+    std::cout << "Worker " << device_idx_
+              << " TryWorkSteal() Failed to acquire pointer to Planner"
+              << std::endl;
+    return;
+  }
+
+  Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
+  int64_t max_latency_gain = -1;
+  int max_latency_gain_device = -1;
+  for (int i = 0; i < interpreter_ptr->GetWorkersSize(); ++i) {
+    if (i == device_idx_) {
+      continue;
+    }
+
+    Worker& worker = interpreter_ptr->GetWorker(i);
+    int64_t waiting_time = worker.GetWaitingTime();
+
+    std::unique_lock<std::mutex> lock(worker.GetDeviceMtx());
+    if (worker.GetDeviceRequests().empty()) {
+      // there's nothing to steal here
+      continue;
+    }
+
+    Job& job = worker.GetDeviceRequests().back();
+    if (job.invoke_time_ > 0) {
+      // this job is being processed by the target worker, so leave it alone
+      // FIXME: assume that invoke_time_ is updated only while
+      // the lock is acquired
+      continue;
+    }
+    lock.unlock();
+
+    int subgraph_idx = interpreter_ptr->GetSubgraphIdx(
+        job.model_id_, static_cast<TfLiteDevice>(device_idx_));
+    Subgraph* subgraph = interpreter_ptr->subgraph(subgraph_idx);
+    if (!subgraph) {
+      // a subgraph for this model on this device isn't available
+      continue;
+    }
+
+    int64_t expected_latency = subgraph->GetExpectedLatency();
+    if (expected_latency > waiting_time) {
+      // no point in stealing this job, it's just going to take longer
+      continue;
+    }
+
+    int64_t latency_gain = waiting_time - expected_latency;
+    if (latency_gain > max_latency_gain) {
+      max_latency_gain = latency_gain;
+      max_latency_gain_device = i;
+    }
+  }
+
+
+  if (max_latency_gain < 0) {
+    // no viable job to steal -- do nothing
+    return;
+  }
+
+  Worker& worker = interpreter_ptr->GetWorker(max_latency_gain_device);
+  std::unique_lock<std::mutex> lock(worker.GetDeviceMtx(), std::defer_lock);
+  std::unique_lock<std::mutex> my_lock(device_mtx_, std::defer_lock);
+  std::lock(lock, my_lock);
+
+  if (worker.GetDeviceRequests().empty()) {
+    // target worker has went on and finished all of its jobs
+    // while we were slacking off
+    return;
+  }
+
+  // this must not be a reference,
+  // otherwise the pop_back() below will invalidate it
+  Job job = worker.GetDeviceRequests().back();
+  if (job.invoke_time_ > 0) {
+    // make sure the target worker hasn't started processing the job yet
+    return;
+  }
+
+  if (!requests_.empty()) {
+    // make sure that I still don't have any work to do
+    return;
+  }
+
+  // std::cout << "Worker " << device_idx_ << " is stealing from "
+  //           << "worker " << max_latency_gain_device << std::endl;
+
+  int subgraph_idx = interpreter_ptr->GetSubgraphIdx(
+      job.model_id_, static_cast<TfLiteDevice>(device_idx_));
+  job.subgraph_idx_ = subgraph_idx;
+  job.device_id_ = device_idx_;
+
+  // finally, we perform the swap
+  worker.GetDeviceRequests().pop_back();
+  requests_.push_back(job);
 }
 
 int64_t Worker::GetWaitingTime() {
