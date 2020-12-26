@@ -6,27 +6,32 @@
 namespace tflite {
 namespace impl {
 
-Worker::Worker(std::shared_ptr<Planner> planner, const CpuSet& thread_affinity_mask)
-  : device_cpu_thread_([this, thread_affinity_mask] {
-      if (SetWorkerThreadAffinity(thread_affinity_mask) != kTfLiteOk)
-        return;
-      this->Work();
-    }) {
+Worker::Worker(std::shared_ptr<Planner> planner)
+  : device_cpu_thread_([this]{ this->Work(); }) {
   planner_ = planner;
 }
 
 Worker::~Worker() {
   {
     std::lock_guard<std::mutex> lock(device_mtx_);
+    std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
     kill_worker_ = true;
   }
   request_cv_.notify_all();
   device_cpu_thread_.join();
 }
 
-TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask) {
-  cpu_set_ = thread_affinity_mask;
-  return SetCPUThreadAffinity(cpu_set_);
+TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
+  std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
+  for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
+    if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
+      cpu_set_ = thread_affinity_mask;
+      need_cpu_set_update = true;
+      break;
+    }
+  }
+  cpu_lock.unlock();
+  return kTfLiteOk;
 }
 
 void Worker::Work() {
@@ -39,6 +44,17 @@ void Worker::Work() {
     if (requests_.empty()) {
       lock.unlock();
       break;
+    }
+
+    if (need_cpu_set_update) {
+      std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
+      need_cpu_set_update = false;
+      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+        cpu_lock.unlock();
+        lock.unlock();
+        return;
+      }
+      cpu_lock.unlock();
     }
 
     Job job = requests_.front();

@@ -27,7 +27,7 @@ struct Job {
 
 class Worker {
  public:
-  explicit Worker(std::shared_ptr<Planner> planner, const CpuSet& thread_affinity_mask);
+  explicit Worker(std::shared_ptr<Planner> planner);
   ~Worker();
 
   std::mutex& GetDeviceMtx() {
@@ -42,11 +42,7 @@ class Worker {
     return requests_;
   }
 
-  TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask);
-
-  const CpuSet& GetCpuSet() const {
-    return cpu_set_;
-  }
+  TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
 
  private:
   void Work();
@@ -58,6 +54,8 @@ class Worker {
   std::deque<Job> requests_;
   bool kill_worker_ = false;
   CpuSet cpu_set_;
+  bool need_cpu_set_update = false;
+  std::mutex cpu_set_mtx_;
 };
 
 }  // namespace impl

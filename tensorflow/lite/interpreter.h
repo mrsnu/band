@@ -91,7 +91,7 @@ class Interpreter {
   //
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
-  explicit Interpreter(ErrorReporter* error_reporter, const CpuSet& cpuMask);
+  explicit Interpreter(ErrorReporter* error_reporter);
 
   ~Interpreter();
 
