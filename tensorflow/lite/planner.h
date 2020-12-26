@@ -29,7 +29,7 @@ struct ModelPlan {
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter, bool needs_profile_);
+  explicit Planner(Interpreter* interpreter);
   ~Planner();
 
 	/*
@@ -50,6 +50,9 @@ class Planner {
 	}
 	*/
   virtual void Plan() = 0;
+
+  // Check whether profiling is required or not.
+  virtual bool NeedProfile() = 0;
 
   // Enqueues a job to a worker request queue.
   void EnqueueRequest(Job job);
@@ -83,18 +86,12 @@ class Planner {
     return requests_;
   }
 
-  // Check whether profiling is required or not.
-  bool NeedProfile() {
-    return needs_profile_;
-  }
-
  protected:
   std::thread planner_thread_;
 
  private:
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
-  bool needs_profile_;
 
   // Jobs Finished
   std::mutex job_queue_mtx_;

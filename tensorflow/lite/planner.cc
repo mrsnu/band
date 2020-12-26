@@ -5,9 +5,8 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter, bool needs_profile) {
+Planner::Planner(Interpreter* interpreter) {
   interpreter_ = interpreter;
-  needs_profile_ = needs_profile;
 
   // open file to write per-request timestamps later
   // TODO: make the file path a configurable command line arg
