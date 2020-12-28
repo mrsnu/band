@@ -82,5 +82,9 @@ void FixedDevicePlanner::Plan() {
   }
 }
 
+bool FixedDevicePlanner::NeedProfile() {
+    return true;
+}
+
 }  // namespace impl
 }  // namespace tflite

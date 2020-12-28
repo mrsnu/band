@@ -620,10 +620,14 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
     int model_id =
         tflite::InterpreterBuilder::RegisterModel(
-            *models_[graphs_[i]], *resolver, &interpreter_);
+            *models_[graphs_[i]], *resolver, &interpreter_, num_threads);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
+  }
+
+  if (interpreter_->NeedProfile()) {
+    interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"), params_.Get<int32_t>("profile_num_runs"));
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
@@ -691,11 +695,6 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
     if (t->type != kTfLiteString) {
       interpreter_->ResizeInputTensor(i, input.shape);
     }
-  }
-
-  if (interpreter_->AllocateTensors() != kTfLiteOk) {
-    TFLITE_LOG(ERROR) << "Failed to allocate tensors!";
-    return kTfLiteError;
   }
 
   ruy_profiling_listener_.reset(new RuyProfileListener());

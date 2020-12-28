@@ -581,16 +581,16 @@ class Subgraph {
 
   // Returns true if cancellation function returns true.
   bool IsCancelled();
-
-  // The state of the Interpreter.
+  
+  // The state of the subgraph.
   enum State {
-    // The interpreter isn't ready to be invoked.
+    // The subgraph isn't ready to be invoked.
     // `AllocateTensor` need to be called to enter an invokable state.
     kStateUninvokable = 0,
-    // The interpreter is ready to be invoked.
+    // The subgraph is ready to be invoked.
     kStateInvokable,
-    // The interpreter is ready to be invoked, and graph can't be further
-    // modified. The interpreter will enter this state when calling
+    // The subgraph is ready to be invoked, and graph can't be further
+    // modified. The subgraph will enter this state when calling
     // `ModifyGraphWithDelegate` and the delegate doesn't support dynamic
     // tensors.
     kStateInvokableAndImmutable,

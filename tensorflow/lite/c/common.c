@@ -217,6 +217,20 @@ const char* TfLiteTypeGetName(TfLiteType type) {
   return "Unknown type";
 }
 
+const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag) {
+  switch (flag) {
+  case kTfLiteCPU:
+    return "CPU";
+  case kTfLiteGPU:
+    return "GPU";
+  case kTfLiteDSP:
+    return "DSP";
+  case kTfLiteNPU:
+    return "NPU";
+  }
+  return "Unknown type";  
+}
+
 const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
   switch (flag) {
     case kTfLiteDelegateFlagsNone:

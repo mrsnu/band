@@ -35,6 +35,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
 #include "tensorflow/lite/util.h"
+#include "tensorflow/lite/profiling/time_profiler.h"
 
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
@@ -85,7 +86,7 @@ bool IsNNAPIDeviceUseful(std::string name) {
     "gpu",  // Inefficient than GPUDelegate
     "default"};
 
-  for(auto keyword : filter_keywords) {
+  for (auto keyword : filter_keywords) {
     if (name.find(keyword) != std::string::npos) 
       return false;
   }
@@ -141,12 +142,15 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
+  gpu_opts.inference_priority1 = TFLITE_GPU_INFERENCE_PRIORITY_MIN_LATENCY;
+  gpu_opts.inference_priority2 = TFLITE_GPU_INFERENCE_PRIORITY_MIN_MEMORY_USAGE;
+  gpu_opts.inference_priority3 = TFLITE_GPU_INFERENCE_PRIORITY_MAX_PRECISION;
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
+
   // TODO #34 GPU delegate multiple delegated partition support
   // gpu_opts.max_delegated_partitions = 10;
-  TfLiteDelegatePtr gpu_delegate =
-      TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
-                        &TfLiteGpuDelegateV2Delete);
+  TfLiteDelegatePtr gpu_delegate = TfLiteDelegatePtr(
+    TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
   if (gpu_delegate.get()) {
     delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
     validDevices.insert(kTfLiteGPU);
@@ -161,7 +165,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   // google tpu: google-edgetpu
   // arm npu (DaVinci) : armnn
   // mediatek APU : neuron-ann
-  for(const char* device_name : string_device_names_list) {
+  for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       // Unlimited partition : 0
@@ -205,7 +209,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   
 #endif  // defined(__ANDROID__)
 
-  for(const TfLiteDeviceFlags& deviceFlag : validDevices) {
+  for (const TfLiteDeviceFlags& deviceFlag : validDevices) {
     workers_[deviceFlag] = std::make_unique<Worker>(planner_);
   }
 }
@@ -294,6 +298,7 @@ void Interpreter::AddSubgraphs(int subgraphs_to_add,
   for (int i = 0; i < subgraphs_to_add; ++i) {
     Subgraph* subgraph = new Subgraph(error_reporter_, external_contexts_,
                                       &subgraphs_, &resources_);
+    subgraph->SetProfiler(installed_profiler_, base_index + i);
     subgraphs_.emplace_back(subgraph);
   }
 
@@ -564,30 +569,80 @@ TfLiteStatus Interpreter::GetBufferHandle(int tensor_index,
   return kTfLiteOk;
 }
 
+void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
+  tflite::Profiler* previous_profiler = GetProfiler();
+  // Assign temporal time profiler for profiling.
+  tflite::profiling::TimeProfiler* timer = new tflite::profiling::TimeProfiler;
+  // Only update subgraph profilers to not care ownership of the profiler
+  SetSubgraphProfiler(timer);
+
+  for (const int model_id : models()) {
+    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+      const TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+
+      const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
+      if (subgraph_it != subgraph_idx_map_.end()) {
+        Subgraph* subgraph = subgraphs_[subgraph_it->second].get();
+        for (int i = 0; i < num_warm_ups; i++) {
+          subgraph->Invoke();
+        }
+        timer->ClearRecords();
+        for (int i = 0; i < num_runs; i++) {
+          subgraph->Invoke();
+        }
+
+        subgraph_profiling_results_map_[{model_id, device_flag}] = 
+          timer->GetAverageElapsedTime<std::chrono::microseconds>();
+
+        error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
+                model_id,
+                num_warm_ups, 
+                num_runs, 
+                subgraph_profiling_results_map_[{model_id, device_flag}], 
+                TfLiteDeviceGetName(device_flag));
+      }
+    }
+  }
+
+  SetSubgraphProfiler(previous_profiler);
+}
+
 void Interpreter::SetProfiler(Profiler* profiler) {
   // Release resources occupied by owned_profiler_ which is replaced by
   // caller-owned profiler.
   owned_profiler_.reset(nullptr);
   installed_profiler_ = profiler;
-  SetSubgraphProfiler();
+  SetSubgraphProfiler(installed_profiler_);
 }
 
 void Interpreter::SetProfiler(std::unique_ptr<Profiler> profiler) {
   owned_profiler_ = std::move(profiler);
   installed_profiler_ = owned_profiler_.get();
-  SetSubgraphProfiler();
+  SetSubgraphProfiler(installed_profiler_);
 }
 
-void Interpreter::SetSubgraphProfiler() {
+void Interpreter::SetSubgraphProfiler(Profiler* profiler) {
   for (int subgraph_index = 0; subgraph_index < subgraphs_.size();
        ++subgraph_index) {
-    subgraphs_[subgraph_index]->SetProfiler(installed_profiler_,
+    subgraphs_[subgraph_index]->SetProfiler(profiler,
                                             subgraph_index);
   }
 }
 
 Profiler* Interpreter::GetProfiler() {
-  return primary_subgraph().GetProfiler();
+  if (installed_profiler_)
+    return installed_profiler_;
+  else if (owned_profiler_)
+    return owned_profiler_.get();
+  else
+    return nullptr;
+}
+
+bool Interpreter::NeedProfile() {
+  if (planner_)
+    return planner_->NeedProfile();
+  else
+    return false;
 }
 
 TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
@@ -648,7 +703,7 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
 
 std::set<int> Interpreter::models() const {
   std::set<int> models;
-  for(auto key : subgraph_idx_map_) {
+  for (auto key : subgraph_idx_map_) {
     models.insert(key.first.first);
   }
   return models;

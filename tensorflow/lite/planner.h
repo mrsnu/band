@@ -17,7 +17,7 @@ class Interpreter;
 // Contains how a Subgraph should be executed.
 // Currently, the unit of device placement is a `Subgraph`.
 // Each Subgraph contains one `ModelPlan` as a member.
-struct ModelPlan{
+struct ModelPlan {
  public:
   ModelPlan():device_(kTfLiteCPU) {}
   ModelPlan(ModelPlan&&) = default;
@@ -51,6 +51,9 @@ class Planner {
 	*/
   virtual void Plan() = 0;
 
+  // Check whether profiling is required or not.
+  virtual bool NeedProfile() = 0;
+
   // Enqueues a job to a worker request queue.
   void EnqueueRequest(Job job);
 
@@ -83,6 +86,9 @@ class Planner {
     return requests_;
   }
 
+ protected:
+  std::thread planner_thread_;
+
  private:
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
@@ -96,7 +102,6 @@ class Planner {
   std::deque<Job> requests_;
 
   std::condition_variable end_invoke_;
-  std::thread planner_thread_;
 
   // TODO #36: Make this a configurable option (command line arg)
   std::string log_path_ = "/data/local/tmp/model_execution_log.csv";

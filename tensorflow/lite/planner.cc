@@ -5,8 +5,7 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter)
-  : planner_thread_([this]{this->Plan();}) {
+Planner::Planner(Interpreter* interpreter) {
   interpreter_ = interpreter;
 
   // open file to write per-request timestamps later
