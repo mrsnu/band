@@ -6,9 +6,9 @@
 namespace tflite {
 namespace impl {
 
-Worker::Worker(std::shared_ptr<Planner> planner)
-  : device_cpu_thread_([this]{ this->Work(); }) {
+Worker::Worker(std::shared_ptr<Planner> planner) {
   planner_ = planner;
+  device_cpu_thread_ = std::thread([this]{ this->Work(); });
 }
 
 Worker::~Worker() {
