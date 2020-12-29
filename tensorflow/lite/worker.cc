@@ -21,17 +21,15 @@ Worker::~Worker() {
   device_cpu_thread_.join();
 }
 
-TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
+void Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
   std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
-      need_cpu_set_update = true;
+      need_cpu_set_update_ = true;
       break;
     }
   }
-  cpu_lock.unlock();
-  return kTfLiteOk;
 }
 
 void Worker::Work() {
@@ -46,14 +44,11 @@ void Worker::Work() {
       break;
     }
 
-    if (need_cpu_set_update) {
+    if (need_cpu_set_update_) {
       std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
-      need_cpu_set_update = false;
-      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
-        cpu_lock.unlock();
-        lock.unlock();
+      need_cpu_set_update_ = false;
+      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk)
         return;
-      }
       cpu_lock.unlock();
     }
 

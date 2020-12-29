@@ -627,7 +627,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter()));
 
-  TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
+  interpreter_->SetWorkerThreadAffinity(cpuMask);
   TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpuMask));
 
   TFLITE_LOG(INFO) << "Set affinity to "

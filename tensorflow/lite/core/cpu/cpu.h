@@ -64,6 +64,6 @@ const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask);
 const char* GetCPUThreadAffinityMaskString(TFLiteCPUMasks mask);
 
 } // namespace impl
-} // nmaespace tflite
+} // namespace tflite
 
 #endif // TENSORFLOW_LITE_CORE_CPU_CPU_H_

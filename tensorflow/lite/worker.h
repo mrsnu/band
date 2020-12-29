@@ -42,7 +42,7 @@ class Worker {
     return requests_;
   }
 
-  TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
+  void SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
 
  private:
   void Work();
@@ -54,7 +54,7 @@ class Worker {
   std::deque<Job> requests_;
   bool kill_worker_ = false;
   CpuSet cpu_set_;
-  bool need_cpu_set_update = false;
+  bool need_cpu_set_update_ = false;
   std::mutex cpu_set_mtx_;
 };
 

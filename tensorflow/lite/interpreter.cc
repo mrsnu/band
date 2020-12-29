@@ -710,15 +710,13 @@ std::set<int> Interpreter::models() const {
   return models;
 }
 
-TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id) {
+void Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id) {
   if (device_id == kTfLiteNumDevices) {
     for (auto& deviceWorker : workers_) {
-      TF_LITE_ENSURE_STATUS(
-          deviceWorker.second->SetWorkerThreadAffinity(thread_affinity_mask));
+      deviceWorker.second->SetWorkerThreadAffinity(thread_affinity_mask);
     }
-    return kTfLiteOk;
   } else {
-    return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
+    workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
   }
 }
 
