@@ -58,6 +58,7 @@ int GetBigCPUCount();
 
 // set explicit thread affinity
 TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask);
