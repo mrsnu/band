@@ -754,12 +754,6 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     return kTfLiteError;
   }
 
-  if (model_configs_.size() == 0) {
-    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite model files "
-                      << "in `models` argument.";
-    return kTfLiteError;
-  }
-
   runtime_config_.period_ms = root["period_ms"].asInt();
 
   for (int i = 0; i < root["models"].size(); ++i) {
@@ -784,6 +778,12 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     }
 
     model_configs_.push_back(model);
+  }
+
+  if (model_configs_.size() == 0) {
+    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite model files "
+                      << "in `models` argument.";
+    return kTfLiteError;
   }
 
   return kTfLiteOk;
