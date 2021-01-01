@@ -25,6 +25,7 @@ limitations under the License.
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <json/json.h>
 
 #include "absl/base/attributes.h"
 #include "absl/strings/numbers.h"
@@ -251,7 +252,6 @@ CreateProfileSummaryFormatter(bool format_as_csv) {
 
 BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
   BenchmarkParams default_params = BenchmarkModel::DefaultParams();
-  default_params.AddParam("graphs", BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("input_layer",
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("input_layer_shape",
@@ -274,8 +274,6 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("enable_platform_tracing",
                           BenchmarkParam::Create<bool>(false));
-  default_params.AddParam("period_ms", BenchmarkParam::Create<int32_t>(50));
-  default_params.AddParam("batch_size", BenchmarkParam::Create<int32_t>(1));
 
   for (const auto& delegate_provider :
        tools::GetRegisteredDelegateProviders()) {
@@ -303,7 +301,6 @@ BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
 std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkModel::GetFlags();
   std::vector<Flag> specific_flags = {
-      CreateFlag<std::string>("graphs", &params_, "graph file names"),
       CreateFlag<std::string>("input_layer", &params_, "input layer names"),
       CreateFlag<std::string>("input_layer_shape", &params_,
                               "input layer shape"),
@@ -351,7 +348,6 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
 
 void BenchmarkTfLiteModel::LogParams() {
   BenchmarkModel::LogParams();
-  TFLITE_LOG(INFO) << "Graph: [" << params_.Get<std::string>("graphs") << "]";
   TFLITE_LOG(INFO) << "Input layers: ["
                    << params_.Get<std::string>("input_layer") << "]";
   TFLITE_LOG(INFO) << "Input shapes: ["
@@ -388,9 +384,9 @@ void BenchmarkTfLiteModel::LogParams() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::ValidateParams() {
-  if (params_.Get<std::string>("graphs").empty()) {
+  if (params_.Get<std::string>("json_path").empty()) {
     TFLITE_LOG(ERROR)
-        << "Please specify the name of your TF Lite input file with --graphs";
+        << "Please specify the name of the config file with --json_path";
     return kTfLiteError;
   }
 
@@ -414,8 +410,8 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
 int64_t BenchmarkTfLiteModel::MayGetModelFileSize() {
   int64_t total_mem_size = 0;
 
-  for (int i = 0; i < graphs_.size(); ++i) {
-    std::ifstream in_file(graphs_[i],
+  for (int i = 0; i < model_configs_.size(); ++i) {
+    std::ifstream in_file(model_configs_[i].model_fname,
                           std::ios::binary | std::ios::ate);
     total_mem_size += in_file.tellg();
   }
@@ -616,11 +612,10 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter()));
 
-  for (int i = 0; i < graphs_.size(); ++i) {
-    TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));
-    int model_id =
-        tflite::InterpreterBuilder::RegisterModel(
-            *models_[graphs_[i]], *resolver, &interpreter_, num_threads);
+  for (int i = 0; i < model_configs_.size(); ++i) {
+    TF_LITE_ENSURE_STATUS(LoadModel(model_configs_[i].model_fname));
+    int model_id = tflite::InterpreterBuilder::RegisterModel(
+        *models_[i], model_configs_[i], *resolver, &interpreter_, num_threads);
     if (model_id == -1)
       return kTfLiteError;
     model_ids_.push_back(model_id);
@@ -654,7 +649,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
-  TF_LITE_ENSURE_STATUS(ParseGraphFileNames());
+  TF_LITE_ENSURE_STATUS(ParseJsonFile());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   // Install profilers if necessary right after interpreter is created so that
@@ -712,7 +707,7 @@ TfLiteStatus BenchmarkTfLiteModel::LoadModel(std::string graph) {
     return kTfLiteError;
   }
   TFLITE_LOG(INFO) << "Loaded model " << graph;
-  models_[graph] = std::move(model);
+  models_.emplace_back(std::move(model));
 
   return kTfLiteOk;
 }
@@ -740,21 +735,55 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
           !params_.Get<std::string>("profiling_output_csv_file").empty())));
 }
 
-TfLiteStatus BenchmarkTfLiteModel::ParseGraphFileNames() {
-  std::string graphs = params_.Get<std::string>("graphs");
-  size_t previous = 0, current;
+TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
+  std::string json_fname = params_.Get<std::string>("json_path");
+  std::ifstream config(json_fname, std::ifstream::binary);
 
-  do {
-    current = graphs.find(',', previous);
-    std::string graph = graphs.substr(previous, current - previous);
-    if (graph.size() > 0)
-      graphs_.push_back(graph);
-    previous = current + 1;
-  } while (current != string::npos);
+  Json::Value root;
+  config >> root;
 
-  if (graphs_.size() == 0) {
-    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite input files.";
+  if (!root.isObject()) {
+    TFLITE_LOG(ERROR) << "Please validate the json config file.";
     return kTfLiteError;
+  }
+
+  if (root["period_ms"] == Json::Value::null ||
+      root["models"] == Json::Value::null) {
+    TFLITE_LOG(ERROR) << "Please check if arguments `period_ms` and `models` "
+                      << "are given in the config file.";
+    return kTfLiteError;
+  }
+
+  if (model_configs_.size() == 0) {
+    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite model files "
+                      << "in `models` argument.";
+    return kTfLiteError;
+  }
+
+  runtime_config_.period_ms = root["period_ms"].asInt();
+
+  for (int i = 0; i < root["models"].size(); ++i) {
+    Interpreter::ModelConfig model;
+    Json::Value model_json_value = root["models"][i];
+    model.model_fname = model_json_value["graph"].asString();
+
+    // Set `batch_size`.
+    // If no `batch_size` is given, the default batch size will be set to 1.
+    if (model_json_value["batch_size"] != Json::Value::null) {
+      model.batch_size = model_json_value["batch_size"].asInt();
+    } else {
+      model.batch_size = 1;
+    }
+
+    // Set `device`.
+    // Fixes to the device if specified in case of `FixedDevicePlanner`.
+    if (model_json_value["device"] != Json::Value::null) {
+      model.device = model_json_value["device"].asInt();
+    } else {
+      model.device = -1;
+    }
+
+    model_configs_.push_back(model);
   }
 
   return kTfLiteOk;
@@ -773,7 +802,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   return kTfLiteOk;
 }
 
-TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms, int batch_size) {
+TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
   // initialize values in case this isn't our first run
   kill_app_ = false;
   num_requests_ = 0;
@@ -783,7 +812,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms, int batch_size) {
   // have a single thread that generate requests, but we may have multiple
   // threads doing that in the future so we might as well make the code easily
   // adaptable to such situtations.
-  GeneratePeriodicRequests(period_ms, batch_size);
+  GeneratePeriodicRequests(period_ms);
 
   // wait for 60 seconds until we stop the benchmark
   // we could set a command line arg for this value as well
@@ -798,17 +827,16 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms, int batch_size) {
   return kTfLiteOk;
 }
 
-void BenchmarkTfLiteModel::GeneratePeriodicRequests(int period_ms,
-                                                    int batch_size) {
-  std::thread t([this, period_ms, batch_size]() {
+void BenchmarkTfLiteModel::GeneratePeriodicRequests(int period_ms) {
+  std::thread t([this, period_ms]() {
     int num_models = models_.size();
-    while(true) {
+    while (true) {
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
-      interpreter_->InvokeModelsAsync(num_models, batch_size);
+      int num_requests = interpreter_->InvokeModelsAsync();
       {
         std::lock_guard<std::mutex> lock(num_requests_mtx_);
-        num_requests_ += num_models * batch_size;
+        num_requests_ += num_requests;
       }
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;

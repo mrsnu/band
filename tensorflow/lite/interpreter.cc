@@ -378,19 +378,31 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 }
 
 void Interpreter::InvokeModelAsync(int model_id) {
-  planner_->EnqueueRequest(Job(model_id));
+  Job to_enqueue = Job(model_id);
+  to_enqueue.model_fname_ = model_configs_[model_id].model_fname;
+  to_enqueue.device_id_ = model_configs_[model_id].device;
+
+  planner_->EnqueueRequest(to_enqueue);
 }
 
-void Interpreter::InvokeModelsAsync(int num_models, int batch_size) {
+int Interpreter::InvokeModelsAsync() {
   std::list<Job> jobs;
-  for (int model_id = 0; model_id < num_models; ++model_id) {
-    for (int i = 0; i < batch_size; ++i) {
-      jobs.emplace_back(model_id);
+  std::map<int, ModelConfig>::iterator it;
+
+  for (it = model_configs_.begin(); it != model_configs_.end(); ++it) {
+    Job to_enqueue = Job(it->first);
+    to_enqueue.model_fname_ = model_configs_[it->first].model_fname;
+    to_enqueue.device_id_ = model_configs_[it->first].device;
+
+    for (int k = 0; k < it->second.batch_size; ++k) {
+      jobs.emplace_back(to_enqueue);
     }
   }
-  planner_->EnqueueBatch(jobs);
-}
 
+  planner_->EnqueueBatch(jobs);
+
+  return jobs.size();
+}
 
 TfLiteStatus Interpreter::AddTensors(int tensors_to_add,
                                      int* first_new_tensor_index) {
