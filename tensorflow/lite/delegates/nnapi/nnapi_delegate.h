@@ -277,7 +277,7 @@ class StatefulNnApiDelegate : public TfLiteDelegate {
       TfLiteContext* context, TfLiteDelegate* delegate, const NnApi* nnapi,
       const std::vector<int>& supported_nodes,
       std::vector<int>* device_supported_nodes, int* num_partitions,
-      TfLiteDelegateParams** params_array, int* nnapi_errno);
+      TfLiteDelegateParams** params_array, int* nnapi_errno, const char* accelerator_name);
 
   // Alters the given array of nodes_to_delegate to limit the number of NNAPI
   // owned partition to be less or equal than num_partitions. If num_partitions

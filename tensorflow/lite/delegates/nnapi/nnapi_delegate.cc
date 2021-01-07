@@ -3356,7 +3356,7 @@ TfLiteStatus NNAPIDelegateKernel::Prepare(TfLiteContext* context,
 
 TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
     TfLiteContext* context, std::vector<int>* supported_nodes,
-    int* nnapi_errno) {
+    int* nnapi_errno, const char* accelerator_name) {
   if (!nnapi_->ANeuralNetworksModel_getSupportedOperationsForDevices) {
     return kTfLiteError;
   }
@@ -3408,7 +3408,7 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
   if (!unsupported_nodes_info.empty()) {
     std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
     std::string error_message = absl::StrCat(
-        "Following operations are not supported by Target NNAPI device:\n",
+        "Following operations are not supported by ", accelerator_name, ":\n",
         unsupported, "\n");
     TF_LITE_KERNEL_LOG(context, error_message.c_str());
   }
@@ -4340,7 +4340,7 @@ TfLiteStatus StatefulNnApiDelegate::GetNodesSupportedByAccelerator(
     TfLiteContext* context, TfLiteDelegate* delegate, const NnApi* nnapi,
     const std::vector<int>& supported_nodes,
     std::vector<int>* device_supported_nodes, int* num_partitions,
-    TfLiteDelegateParams** params_array, int* nnapi_errno) {
+    TfLiteDelegateParams** params_array, int* nnapi_errno, const char* accelerator_name) {
   auto* delegate_data = static_cast<Data*>(delegate->data_);
   // The first entry in the array is the element count
 
@@ -4361,7 +4361,7 @@ TfLiteStatus StatefulNnApiDelegate::GetNodesSupportedByAccelerator(
     std::vector<int> supported_partition_nodes;
     TF_LITE_ENSURE_STATUS(
         kernel_state->GetOperationsSupportedByTargetNnApiDevices(
-            context, &supported_partition_nodes, nnapi_errno));
+            context, &supported_partition_nodes, nnapi_errno, accelerator_name));
     device_supported_nodes->insert(device_supported_nodes->end(),
                                    supported_partition_nodes.begin(),
                                    supported_partition_nodes.end());
@@ -4580,7 +4580,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     // Cannot query supported operation before NNAPI 1.2
     TF_LITE_ENSURE_STATUS(GetNodesSupportedByAccelerator(
         context, delegate, nnapi, supported_nodes, &nodes_to_delegate,
-        &num_partitions, &params_array, nnapi_errno));
+        &num_partitions, &params_array, nnapi_errno, delegate_options.accelerator_name));
   } else {
     nodes_to_delegate = supported_nodes;
     auto supported_nodes_int_array = BuildTfLiteIntArray(supported_nodes);
