@@ -3400,7 +3400,8 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
                     if (s != kTfLiteOk) {
                       return;
                     }
-                    std::string node_info = GetOpNameByRegistration(*registration);
+                    std::string node_info = absl::StrCat(
+                      GetOpNameByRegistration(*registration), " (", node_index, ")");
                     unsupported_nodes_info.insert(node_info);
                   }
                 });
@@ -4505,7 +4506,8 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                                       node, is_accelerator_specified)) {
       supported_nodes.push_back(node_index);
     } else {
-      std::string node_info = GetOpNameByRegistration(*registration);
+      std::string node_info = absl::StrCat(
+        GetOpNameByRegistration(*registration), " (", node_index, ")");
       unsupported_nodes_info.insert(node_info);
     }
   }
