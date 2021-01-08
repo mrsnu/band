@@ -42,7 +42,7 @@ class Worker {
     return requests_;
   }
 
-  void SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
+  TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
 
  private:
   void Work();

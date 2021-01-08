@@ -596,7 +596,7 @@ class Interpreter {
 
   std::set<int> models() const;
 
-  void SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
+  TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
  private:
   friend class InterpreterBuilder;

@@ -20,15 +20,18 @@ Worker::~Worker() {
   device_cpu_thread_.join();
 }
 
-void Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
+TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
+  if (thread_affinity_mask.NumEnabled() == 0)
+    return kTfLiteError;
   std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
       need_cpu_set_update_ = true;
-      break;
+      return kTfLiteOk;
     }
   }
+  return kTfLiteOk;
 }
 
 void Worker::Work() {
