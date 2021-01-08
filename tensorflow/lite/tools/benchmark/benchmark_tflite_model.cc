@@ -786,6 +786,8 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     return kTfLiteError;
   }
 
+  TFLITE_LOG(INFO) << root;
+
   return kTfLiteOk;
 }
 
