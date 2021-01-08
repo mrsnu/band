@@ -389,12 +389,15 @@ int Interpreter::InvokeModelsAsync() {
   std::list<Job> jobs;
   std::map<int, ModelConfig>::iterator it;
 
-  for (it = model_configs_.begin(); it != model_configs_.end(); ++it) {
-    Job to_enqueue = Job(it->first);
-    to_enqueue.model_fname_ = model_configs_[it->first].model_fname;
-    to_enqueue.device_id_ = model_configs_[it->first].device;
+  for (auto& m : model_configs_) {
+    int model_id = m.first;
+    ModelConfig& model_config = m.second;
 
-    for (int k = 0; k < it->second.batch_size; ++k) {
+    Job to_enqueue = Job(model_id);
+    to_enqueue.model_fname_ = model_config.model_fname;
+    to_enqueue.device_id_ = model_config.device;
+
+    for (int k = 0; k < model_config.batch_size; ++k) {
       jobs.emplace_back(to_enqueue);
     }
   }
