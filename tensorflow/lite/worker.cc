@@ -12,7 +12,10 @@ Worker::Worker(std::shared_ptr<Planner> planner) {
 }
 
 Worker::~Worker() {
-  kill_worker_ = true;
+  {
+    std::lock_guard<std::mutex> lock(device_mtx_);
+    kill_worker_ = true;
+  }
   request_cv_.notify_all();
   device_cpu_thread_.join();
 }
@@ -43,8 +46,10 @@ void Worker::Work() {
     std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
     if (need_cpu_set_update_) {
       need_cpu_set_update_ = false;
-      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk)
-        return;
+      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+        cpu_lock.unlock();
+        break;
+      }
     }
     cpu_lock.unlock();
 
