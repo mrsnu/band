@@ -765,16 +765,12 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     // If no `batch_size` is given, the default batch size will be set to 1.
     if (model_json_value["batch_size"] != Json::Value::null) {
       model.batch_size = model_json_value["batch_size"].asInt();
-    } else {
-      model.batch_size = 1;
     }
 
     // Set `device`.
     // Fixes to the device if specified in case of `FixedDevicePlanner`.
     if (model_json_value["device"] != Json::Value::null) {
       model.device = model_json_value["device"].asInt();
-    } else {
-      model.device = -1;
     }
 
     model_configs_.push_back(model);

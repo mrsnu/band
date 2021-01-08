@@ -598,8 +598,8 @@ class Interpreter {
 
   struct ModelConfig {
     std::string model_fname;
-    int device;
-    int batch_size;
+    int device = -1;
+    int batch_size = 1;
   };
 
   void SetModelConfig(int model_id, ModelConfig model_config) {
