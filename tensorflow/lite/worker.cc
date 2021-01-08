@@ -40,12 +40,13 @@ void Worker::Work() {
       break;
     }
 
+    std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
     if (need_cpu_set_update_) {
-      std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
       need_cpu_set_update_ = false;
       if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk)
         return;
     }
+    cpu_lock.unlock();
 
     Job job = requests_.front();
     requests_.pop_front();
