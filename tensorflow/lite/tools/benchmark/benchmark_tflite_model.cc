@@ -648,6 +648,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
                         << " delegate.";
       return kTfLiteError;
     } else {
+      interpreter_->primary_subgraph().Print();
       bool fully_delegated = true;
       if (interpreter_->execution_plan().size() != 1) {
         fully_delegated = false;

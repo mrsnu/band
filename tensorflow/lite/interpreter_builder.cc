@@ -652,6 +652,8 @@ TfLiteStatus InterpreterBuilder::operator()(
     if (ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
       return cleanup_and_error();
 
+    modified_subgraph->Print();
+
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
       auto* tensor = modified_subgraph->tensor(i);

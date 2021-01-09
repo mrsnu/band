@@ -57,6 +57,8 @@ class Subgraph {
   Subgraph& operator=(const Subgraph&) = delete;
   virtual ~Subgraph();
 
+  void Print();
+
   // Provide a list of tensor indexes that are inputs to the model.
   // Each index is bound check and this modifies the consistent_ flag of the
   // interpreter.

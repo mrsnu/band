@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <algorithm>
 
+#include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/arena_planner.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/context_util.h"
@@ -206,6 +207,48 @@ Subgraph::Subgraph(ErrorReporter* error_reporter,
   nodes_and_registration().reserve(kTensorsReservedCapacity);
   // Invalid to call these these except from TfLiteDelegate
   SwitchToKernelContext();
+}
+
+void Subgraph::Print() {
+  error_reporter_->Report("=====   Nodes   =====");
+  for (auto node_and_registration : nodes_and_registration_) {
+    TfLiteNode node = node_and_registration.first;
+    TfLiteRegistration registration = node_and_registration.second;
+    error_reporter_->Report("builtin_code: %d", registration.builtin_code);
+    std::string inputs_str;
+    for (int input : TfLiteIntArrayView(node.inputs))
+      inputs_str += std::to_string(input) + " ";
+    error_reporter_->Report("Node inputs: %s", inputs_str.c_str());
+    std::string outputs_str;
+    for (int output : TfLiteIntArrayView(node.outputs))
+      outputs_str += std::to_string(output) + " ";
+    error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
+    error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
+    error_reporter_->Report("---------------------");
+  }
+
+  error_reporter_->Report("=====  Tensors  =====");
+  for (TfLiteTensor tensor : tensors_) {
+    if (tensor.delegate == nullptr) {
+      std::string dim_str;
+      if (tensor.dims) {
+        for (int dim : TfLiteIntArrayView(tensor.dims))
+          dim_str += std::to_string(dim) + " ";
+      }
+      if (tensor.name)
+        error_reporter_->Report("(%d, %d) %s: %s", tensor.is_variable, tensor.buffer_handle, tensor.name, dim_str.c_str());
+    } else {
+      // error_reporter_->Report("Delegate: %p, (%d, %d)", tensor.delegate, tensor.is_variable, tensor.buffer_handle);
+    }
+  }
+  error_reporter_->Report("====================");
+
+  std::string execution_plan_str;
+  for (int idx : execution_plan_) {
+    execution_plan_str += std::to_string(idx) + " ";
+  }
+  error_reporter_->Report("Execution plan: %s", execution_plan_str.c_str());
+  error_reporter_->Report("Subgraph tensor size: %d, context tensor size: %d", tensors_.size(), context_.tensors_size);
 }
 
 Subgraph::~Subgraph() {
