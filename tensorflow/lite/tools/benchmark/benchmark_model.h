@@ -194,6 +194,7 @@ class BenchmarkModel {
   // Keeps the runtime configuration from json config file.
   struct RuntimeConfig {
     int period_ms = 0;
+    int cpu_masks = 0;
   };
 
  protected:
