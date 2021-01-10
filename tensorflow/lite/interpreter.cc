@@ -23,6 +23,7 @@ limitations under the License.
 #include <list>
 
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/delegates/status.h"
@@ -707,6 +708,18 @@ std::set<int> Interpreter::models() const {
     models.insert(key.first.first);
   }
   return models;
+}
+
+TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id) {
+  if (device_id == kTfLiteNumDevices) {
+    for (auto& deviceWorker : workers_) {
+      if (deviceWorker.second->SetWorkerThreadAffinity(thread_affinity_mask) != kTfLiteOk)
+        return kTfLiteError;
+    }
+    return kTfLiteOk;
+  } else {
+    return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
+  }
 }
 
 }  // namespace impl
