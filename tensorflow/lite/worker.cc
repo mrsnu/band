@@ -50,6 +50,7 @@ void Worker::Work() {
     if (need_cpu_set_update_) {
       need_cpu_set_update_ = false;
       if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+        // TODO #21: Handle errors in multi-thread environment
         cpu_lock.unlock();
         break;
       }
