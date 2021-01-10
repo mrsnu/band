@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <deque>
 #include <string>
+#include "tensorflow/lite/core/cpu/cpu.h"
 
 namespace tflite {
 
@@ -43,6 +44,8 @@ class Worker {
     return requests_;
   }
 
+  TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
+
  private:
   void Work();
 
@@ -52,6 +55,9 @@ class Worker {
   std::condition_variable request_cv_;
   std::deque<Job> requests_;
   bool kill_worker_ = false;
+  CpuSet cpu_set_;
+  bool need_cpu_set_update_ = false;
+  std::mutex cpu_set_mtx_;
 };
 
 }  // namespace impl

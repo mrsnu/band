@@ -91,7 +91,7 @@ class Interpreter {
   //
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
-  explicit Interpreter(ErrorReporter* error_reporter = DefaultErrorReporter());
+  explicit Interpreter(ErrorReporter* error_reporter);
 
   ~Interpreter();
 
@@ -609,6 +609,8 @@ class Interpreter {
   std::map<int, ModelConfig>& GetModelConfig() {
     return model_configs_;
   }
+  
+  TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
  private:
   friend class InterpreterBuilder;
