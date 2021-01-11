@@ -98,6 +98,9 @@ class Planner {
     return requests_;
   }
 
+ protected:
+  std::thread planner_thread_;
+
  private:
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
@@ -111,7 +114,6 @@ class Planner {
   std::deque<Job> requests_;
 
   std::condition_variable end_invoke_;
-  std::thread planner_thread_;
 
   std::ofstream log_file_;
 };

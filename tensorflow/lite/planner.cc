@@ -4,10 +4,9 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter)
-  : planner_thread_([this]{this->Plan();}) {
+Planner::Planner(Interpreter* interpreter) {
   interpreter_ = interpreter;
-  log_file_.open("/data/local/tmp/model_execution_log.csv", std::fstream::app);
+  log_file_.open("/data/local/tmp/log/model_execution_log.csv", std::fstream::app);
   log_file_ << "model_name\tmodel_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\t";
   log_file_ << "cpu_waiting\tcpu_latency\tgpu_waiting\tgpu_latency\tdsp_waiting\tdsp_latency\tnpu_waiting\tnpu_latency\n";
   log_file_.close();
@@ -27,7 +26,7 @@ TfLiteStatus Planner::Wait(int num_requests) {
   for (int i = 0; i < num_requests; ++i) {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
-    log_file_.open("/data/local/tmp/model_execution_log.csv", std::fstream::app);
+    log_file_.open("/data/local/tmp/log/model_execution_log.csv", std::fstream::app);
 
     log_file_ << job.model_fname << "\t" << job.model_id_ << "\t" << job.device_id_ << "\t" << job.enqueue_time_ << "\t" << job.invoke_time_ << "\t" << job.end_time_ << "\t";
     for (int i = 0; i < 4; ++i) {

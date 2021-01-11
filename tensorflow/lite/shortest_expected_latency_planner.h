@@ -14,7 +14,9 @@ class Interpreter;
 class ShortestExpectedLatencyPlanner : public Planner {
  public:
   explicit ShortestExpectedLatencyPlanner(Interpreter* interpreter)
-    : Planner(interpreter) {}
+    : Planner(interpreter) {
+    planner_thread_ = std::thread([this]{this->Plan();});
+  }
   void Plan() override;
 };
 
