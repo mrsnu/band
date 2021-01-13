@@ -3356,7 +3356,7 @@ TfLiteStatus NNAPIDelegateKernel::Prepare(TfLiteContext* context,
 
 TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
     TfLiteContext* context, std::vector<int>* supported_nodes,
-    int* nnapi_errno, const char* accelerator_name) {
+    int* nnapi_errno, std::set<std::string>& unsupported_nodes_info) {
   if (!nnapi_->ANeuralNetworksModel_getSupportedOperationsForDevices) {
     return kTfLiteError;
   }
@@ -3387,7 +3387,6 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
   }
 
   supported_nodes->clear();
-  std::set<std::string> unsupported_nodes_info;
   std::for_each(nodes_.begin(), nodes_.end(),
                 [&supported_nodes, &tflite_ops_support_status, &context, &unsupported_nodes_info](int node_index) {
                   if (tflite_ops_support_status[node_index]) {
@@ -3405,14 +3404,6 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
                     unsupported_nodes_info.insert(node_info);
                   }
                 });
-
-  if (!unsupported_nodes_info.empty()) {
-    std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
-    std::string error_message = absl::StrCat(
-        "Following operations are not supported by ", accelerator_name, ":\n",
-        unsupported, "\n");
-    TF_LITE_KERNEL_LOG(context, error_message.c_str());
-  }
 
   return kTfLiteOk;
 }
@@ -4341,7 +4332,8 @@ TfLiteStatus StatefulNnApiDelegate::GetNodesSupportedByAccelerator(
     TfLiteContext* context, TfLiteDelegate* delegate, const NnApi* nnapi,
     const std::vector<int>& supported_nodes,
     std::vector<int>* device_supported_nodes, int* num_partitions,
-    TfLiteDelegateParams** params_array, int* nnapi_errno, const char* accelerator_name) {
+    TfLiteDelegateParams** params_array, int* nnapi_errno,
+    std::set<std::string>& unsupported_nodes_info) {
   auto* delegate_data = static_cast<Data*>(delegate->data_);
   // The first entry in the array is the element count
 
@@ -4362,7 +4354,7 @@ TfLiteStatus StatefulNnApiDelegate::GetNodesSupportedByAccelerator(
     std::vector<int> supported_partition_nodes;
     TF_LITE_ENSURE_STATUS(
         kernel_state->GetOperationsSupportedByTargetNnApiDevices(
-            context, &supported_partition_nodes, nnapi_errno, accelerator_name));
+            context, &supported_partition_nodes, nnapi_errno, unsupported_nodes_info));
     device_supported_nodes->insert(device_supported_nodes->end(),
                                    supported_partition_nodes.begin(),
                                    supported_partition_nodes.end());
@@ -4512,14 +4504,6 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     }
   }
 
-  if (!unsupported_nodes_info.empty()) {
-    std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
-    std::string error_message = absl::StrCat(
-        "Following operations are not supported by NNAPI delegate:\n",
-        unsupported, "\n");
-    TF_LITE_KERNEL_LOG(context, error_message.c_str());
-  }
-
   // If there are no delegated nodes, short-circuit node replacement.
   if (supported_nodes.empty()) {
     return kTfLiteOk;
@@ -4582,13 +4566,24 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     // Cannot query supported operation before NNAPI 1.2
     TF_LITE_ENSURE_STATUS(GetNodesSupportedByAccelerator(
         context, delegate, nnapi, supported_nodes, &nodes_to_delegate,
-        &num_partitions, &params_array, nnapi_errno, delegate_options.accelerator_name));
+        &num_partitions, &params_array, nnapi_errno, unsupported_nodes_info));
   } else {
     nodes_to_delegate = supported_nodes;
     auto supported_nodes_int_array = BuildTfLiteIntArray(supported_nodes);
     TF_LITE_ENSURE_STATUS(context->PreviewDelegatePartitioning(
         context, supported_nodes_int_array.get(), &params_array,
         &num_partitions));
+  }
+
+  if (!unsupported_nodes_info.empty()) {
+    const char* accelerator_name = delegate_options.accelerator_name
+                                 ? delegate_options.accelerator_name
+                                 : "Default NNAPI";
+    std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
+    std::string error_message = absl::StrCat(
+        "Following operations are not supported by ", accelerator_name, "\n",
+        unsupported, "\n");
+    TF_LITE_KERNEL_LOG(context, error_message.c_str());
   }
 
   TF_LITE_ENSURE_STATUS(
