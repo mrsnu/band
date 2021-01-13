@@ -183,6 +183,27 @@ static int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
 
   return 0;
 }
+
+static int GetSchedAffinity(CpuSet& thread_affinity_mask) {
+  // set affinity for thread
+#if defined(__GLIBC__) || defined(__OHOS__)
+  pid_t pid = syscall(SYS_gettid);
+#else
+#ifdef PI3
+  pid_t pid = getpid();
+#else
+  pid_t pid = gettid();
+#endif
+#endif
+
+  int syscallret = syscall(__NR_sched_getaffinity, pid, sizeof(cpu_set_t),
+                           &thread_affinity_mask.GetCpuSet());
+  if (syscallret) {
+    return -1;
+  }
+
+  return 0;
+}
 #endif  // defined __ANDROID__ || defined __linux__
 
 TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
@@ -190,6 +211,15 @@ TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
   if (ssaret != 0) return kTfLiteError;
+#endif
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
+#if defined __ANDROID__ || defined __linux__
+  int gsaret = GetSchedAffinity(thread_affinity_mask);
+  if (gsaret != 0) return kTfLiteError;
 #endif
 
   return kTfLiteOk;

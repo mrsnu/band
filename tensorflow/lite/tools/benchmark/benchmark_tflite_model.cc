@@ -624,15 +624,17 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
       static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks")));
 
+  (&interpreter_)->reset(
+      new Interpreter(LoggingReporter::DefaultLoggingReporter()));
+
+  // Set worker threads and current thread affinity
+  TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
   TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpuMask));
 
   TFLITE_LOG(INFO) << "Set affinity to "
       << tflite::impl::GetCPUThreadAffinityMaskString(
              static_cast<tflite::impl::TFLiteCPUMasks>(params_.Get<int32_t>("cpu_masks")))
       << " cores";
-
-  (&interpreter_)->reset(
-      new Interpreter(LoggingReporter::DefaultLoggingReporter(), cpuMask));
 
   for (int i = 0; i < graphs_.size(); ++i) {
     TF_LITE_ENSURE_STATUS(LoadModel(graphs_[i]));

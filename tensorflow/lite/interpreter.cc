@@ -108,7 +108,7 @@ bool IsNNAPIDeviceUseful(std::string name) {
 
 }  // namespace
 
-Interpreter::Interpreter(ErrorReporter* error_reporter, const CpuSet& cpuMask)
+Interpreter::Interpreter(ErrorReporter* error_reporter)
     : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
@@ -211,7 +211,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter, const CpuSet& cpuMask)
 #endif  // defined(__ANDROID__)
 
   for (const TfLiteDeviceFlags& deviceFlag : validDevices) {
-    workers_[deviceFlag] = std::make_unique<Worker>(planner_, cpuMask);
+    workers_[deviceFlag] = std::make_unique<Worker>(planner_);
   }
 }
 
@@ -708,6 +708,18 @@ std::set<int> Interpreter::models() const {
     models.insert(key.first.first);
   }
   return models;
+}
+
+TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id) {
+  if (device_id == kTfLiteNumDevices) {
+    for (auto& deviceWorker : workers_) {
+      if (deviceWorker.second->SetWorkerThreadAffinity(thread_affinity_mask) != kTfLiteOk)
+        return kTfLiteError;
+    }
+    return kTfLiteOk;
+  } else {
+    return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
+  }
 }
 
 }  // namespace impl
