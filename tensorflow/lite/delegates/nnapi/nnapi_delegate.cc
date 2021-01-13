@@ -4582,7 +4582,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
     std::string error_message = absl::StrCat(
         "Following operations are not supported by ", accelerator_name, "\n",
-        unsupported, "\n");
+        unsupported);
     TF_LITE_KERNEL_LOG(context, error_message.c_str());
   }
 
@@ -4611,7 +4611,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       absl::StrAppend(&error_message,
                       "No operations will run with NNAPI, and all ");
     }
-    absl::StrAppend(&error_message, num_unsupported, " operations will run on the CPU.");
+    absl::StrAppend(&error_message, num_unsupported, " operations will run on the CPU.\n");
     TF_LITE_KERNEL_LOG(context, error_message.c_str());
   }
 
