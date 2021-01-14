@@ -27,6 +27,7 @@ cc_library(
         "nnapi_delegate_kernel.h",
     ],
     deps = [
+        "@com_google_absl//absl/strings",
         "//tensorflow/lite:allocation",
         "//tensorflow/lite:kernel_api",
         "//tensorflow/lite:minimal_logging",

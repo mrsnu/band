@@ -302,7 +302,7 @@ class NNAPIDelegateKernel {
   // available in the NnApi object.
   TfLiteStatus GetOperationsSupportedByTargetNnApiDevices(
       TfLiteContext* context, std::vector<int>* supported_nodes,
-      int* nnapi_errno);
+      int* nnapi_errno, std::set<std::string>& unsupported_nodes_info);
 
  private:
   // True if initialization has been completed successfully
