@@ -210,6 +210,16 @@ Subgraph::Subgraph(ErrorReporter* error_reporter,
 }
 
 void Subgraph::Print() {
+  error_reporter_->Report("=====   Inputs   =====");
+  std::string subgraph_inputs_str;
+  for (int input : inputs_)
+    subgraph_inputs_str += std::to_string(input) + " ";
+  error_reporter_->Report("Subgraph Inputs: %s", subgraph_inputs_str.c_str());
+  error_reporter_->Report("=====  Outputs  =====");
+  std::string subgraph_outputs_str;
+  for (int output : outputs_)
+    subgraph_outputs_str += std::to_string(output) + " ";
+  error_reporter_->Report("Subgraph Outputs: %s", subgraph_outputs_str.c_str());
   error_reporter_->Report("=====   Nodes   =====");
   for (auto node_and_registration : nodes_and_registration_) {
     TfLiteNode node = node_and_registration.first;
@@ -228,7 +238,8 @@ void Subgraph::Print() {
   }
 
   error_reporter_->Report("=====  Tensors  =====");
-  for (TfLiteTensor tensor : tensors_) {
+  for (int tensor_idx = 0; tensor_idx < tensors_.size(); ++tensor_idx) {
+    TfLiteTensor tensor = tensors_[tensor_idx];
     if (tensor.delegate == nullptr) {
       std::string dim_str;
       if (tensor.dims) {
@@ -236,7 +247,7 @@ void Subgraph::Print() {
           dim_str += std::to_string(dim) + " ";
       }
       if (tensor.name)
-        error_reporter_->Report("(%d, %d) %s: %s", tensor.is_variable, tensor.buffer_handle, tensor.name, dim_str.c_str());
+        error_reporter_->Report("%d: (%d, %d) %s: %s", tensor_idx, tensor.is_variable, tensor.buffer_handle, tensor.name, dim_str.c_str());
     } else {
       // error_reporter_->Report("Delegate: %p, (%d, %d)", tensor.delegate, tensor.is_variable, tensor.buffer_handle);
     }
