@@ -377,10 +377,10 @@ class Interpreter {
   /// This method is an asychronous call.
   void InvokeModelAsync(int model_id);
 
-  /// Invoke models with a given batch size.
-  /// Models with indices from 0 to num_models-1 will be invoked.
+  /// Invoke models with a batch size given by the model config.
+  /// Returns the number of requests invoked by the method.
   /// This method is an asychronous call.
-  void InvokeModelsAsync(int num_models, int batch_size);
+  int InvokeModelsAsync();
 
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
@@ -596,6 +596,20 @@ class Interpreter {
 
   std::set<int> models() const;
 
+  struct ModelConfig {
+    std::string model_fname;
+    int device = -1;
+    int batch_size = 1;
+  };
+
+  void SetModelConfig(int model_id, ModelConfig model_config) {
+    model_configs_[model_id] = model_config;
+  }
+
+  std::map<int, ModelConfig>& GetModelConfig() {
+    return model_configs_;
+  }
+  
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
  private:
@@ -668,6 +682,9 @@ class Interpreter {
 
   // Subgraphs
   std::vector<std::unique_ptr<Subgraph>> subgraphs_;
+
+  // Maps to each model's configuration.
+  std::map<int, ModelConfig> model_configs_;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;

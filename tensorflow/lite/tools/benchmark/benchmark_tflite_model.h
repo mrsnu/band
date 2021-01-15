@@ -63,7 +63,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
-  TfLiteStatus RunPeriodic(int period_ms, int batch_size) override;
+  TfLiteStatus RunPeriodic(int period_ms) override;
   static BenchmarkParams DefaultParams();
 
  protected:
@@ -88,12 +88,10 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   std::unique_ptr<tflite::FlatBufferModel> model_;
 
-  // TODO #17 : Update benchmark tool to simulate target scenario
-  // Currently, `model_ids_` vector is not being used to generate inputs.
   std::vector<int> model_ids_;
 
   // Map structure to find FlatBufferModel pointer with a model file name.
-  std::map<std::string, std::unique_ptr<tflite::FlatBufferModel>> models_;
+  std::vector<std::unique_ptr<tflite::FlatBufferModel>> models_;
 
   std::unique_ptr<tflite::Interpreter> interpreter_;
   std::unique_ptr<tflite::ExternalCpuBackendContext> external_context_;
@@ -129,19 +127,18 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   InputTensorData LoadInputTensorData(const TfLiteTensor& t,
                                       const std::string& input_file_path);
 
-  // `graphs` argument is parsed with commas.
-  TfLiteStatus ParseGraphFileNames();
+  TfLiteStatus ParseJsonFile();
 
   // spawn a thread that generates input requests periodically for all models
-  void GeneratePeriodicRequests(int period_ms, int batch_size);
+  void GeneratePeriodicRequests(int period_ms);
 
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;
   std::unique_ptr<BenchmarkListener> profiling_listener_ = nullptr;
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;
   std::mt19937 random_engine_;
-  std::vector<std::string> graphs_;
   std::vector<Interpreter::TfLiteDelegatePtr> owned_delegates_;
+  std::vector<Interpreter::ModelConfig> model_configs_;
   // Always TFLITE_LOG the benchmark result.
   BenchmarkLoggingListener log_output_;
 
@@ -152,7 +149,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   // any thread that is generating requests should inc this value accordingly
   int num_requests_ = 0;
   std::mutex num_requests_mtx_;
-
 };
 
 }  // namespace benchmark

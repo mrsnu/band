@@ -64,7 +64,14 @@ void FixedDevicePlanner::Plan() {
       GetRequests().pop_front();
 
       int model_id = to_execute.model_id_;
-      int device_idx = model_device_map[model_id];
+      int device_idx;
+      if (kTfLiteCPU <= to_execute.device_id_ &&
+          to_execute.device_id_ < kTfLiteNumDevices) {
+        device_idx = to_execute.device_id_;
+      } else {
+        device_idx = model_device_map[model_id];
+      }
+
       TfLiteDeviceFlags device_flag =
           static_cast<TfLiteDeviceFlags>(device_idx);
       to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(

@@ -45,6 +45,7 @@ BenchmarkParams BenchmarkModel::DefaultParams() {
   params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.0f));
   params.AddParam("profile_num_runs", BenchmarkParam::Create<int32_t>(50));
   params.AddParam("profile_warmup_runs", BenchmarkParam::Create<int32_t>(1));
+  params.AddParam("json_path", BenchmarkParam::Create<std::string>(""));
   return params;
 }
 
@@ -74,12 +75,6 @@ void BenchmarkLoggingListener::OnBenchmarkEnd(const BenchmarkResults& results) {
 
 std::vector<Flag> BenchmarkModel::GetFlags() {
   return {
-      CreateFlag<int32_t>(
-          "period_ms", &params_,
-          "period to generate requests, in milliseconds"),
-      CreateFlag<int32_t>(
-          "batch_size", &params_,
-          "batch_size per model, to be used with period_ms"),
       CreateFlag<int32_t>(
           "num_runs", &params_,
           "expected number of runs, see also min_secs, max_secs"),
@@ -118,6 +113,8 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
       CreateFlag<int32_t>(
           "profile_warmup_runs", &params_,
           "minimum number of runs performed on profiling"),
+      CreateFlag<std::string>("json_path", &params_, "path to json file with "
+          "model configurations"),
   };
 }
 
@@ -162,8 +159,7 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
   int64_t now_us = profiling::time::NowMicros();
   int64_t min_finish_us = now_us + static_cast<int64_t>(min_secs * 1.e6f);
   int64_t max_finish_us = now_us + static_cast<int64_t>(max_secs * 1.e6f);
-  int period_ms = params_.Get<int>("period_ms");
-  int batch_size = params_.Get<int>("batch_size");
+  int period_ms = runtime_config_.period_ms;
 
   *invoke_status = kTfLiteOk;
   for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
@@ -178,7 +174,7 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     if (period_ms <= 0) {
       status = RunAll();
     } else {
-      status = RunPeriodic(period_ms, batch_size);
+      status = RunPeriodic(period_ms);
     }
 
     int64_t end_us = profiling::time::NowMicros();

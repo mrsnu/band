@@ -533,6 +533,21 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
 int InterpreterBuilder::num_registered_model = 0;
 
 int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
+                     Interpreter::ModelConfig& model_config,
+                     const OpResolver& op_resolver,
+                     std::unique_ptr<Interpreter>* interpreter,
+                     int num_threads) {
+  int model_id = RegisterModel(
+      model.GetModel(), op_resolver, interpreter, num_threads);
+
+  if (model_id != -1) {
+    (*interpreter)->SetModelConfig(model_id, model_config);
+  }
+
+  return model_id;
+}
+
+int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
