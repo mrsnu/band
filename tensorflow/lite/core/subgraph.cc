@@ -210,6 +210,31 @@ Subgraph::Subgraph(ErrorReporter* error_reporter,
 }
 
 void Subgraph::Print() {
+  error_reporter_->Report("=====   Nodes   =====");
+  for (int node_index = 0; node_index < nodes_and_registration_.size(); node_index++) {
+    auto node_and_registration = nodes_and_registration_[node_index];
+    TfLiteNode node = node_and_registration.first;
+    TfLiteRegistration registration = node_and_registration.second;
+    std::string inputs_str;
+    for (int input : TfLiteIntArrayView(node.inputs))
+      inputs_str += std::to_string(input) + " ";
+    std::string outputs_str;
+    for (int output : TfLiteIntArrayView(node.outputs))
+      outputs_str += std::to_string(output) + " ";
+    error_reporter_->Report("Idx: %4d, builtin_code: %d", node_index, registration.builtin_code);
+    error_reporter_->Report("Node inputs: %s", inputs_str.c_str());
+    error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
+    error_reporter_->Report("---------------------");
+  }
+
+  error_reporter_->Report("=====  Tensors  =====");
+  error_reporter_->Report("Idx  s type      dims            bytes   q v a name");
+  for (int tensor_idx = 0; tensor_idx < tensors_.size(); ++tensor_idx) {
+    TfLiteTensor tensor = tensors_[tensor_idx];
+    PrintTensor(tensor, tensor_idx);
+  }
+  error_reporter_->Report("====================");
+
   error_reporter_->Report("=====   Inputs   =====");
   std::string subgraph_inputs_str;
   for (int input : inputs_)
@@ -220,39 +245,6 @@ void Subgraph::Print() {
   for (int output : outputs_)
     subgraph_outputs_str += std::to_string(output) + " ";
   error_reporter_->Report("Subgraph Outputs: %s", subgraph_outputs_str.c_str());
-  error_reporter_->Report("=====   Nodes   =====");
-  for (auto node_and_registration : nodes_and_registration_) {
-    TfLiteNode node = node_and_registration.first;
-    TfLiteRegistration registration = node_and_registration.second;
-    error_reporter_->Report("builtin_code: %d", registration.builtin_code);
-    std::string inputs_str;
-    for (int input : TfLiteIntArrayView(node.inputs))
-      inputs_str += std::to_string(input) + " ";
-    error_reporter_->Report("Node inputs: %s", inputs_str.c_str());
-    std::string outputs_str;
-    for (int output : TfLiteIntArrayView(node.outputs))
-      outputs_str += std::to_string(output) + " ";
-    error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
-    error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
-    error_reporter_->Report("---------------------");
-  }
-
-  error_reporter_->Report("=====  Tensors  =====");
-  for (int tensor_idx = 0; tensor_idx < tensors_.size(); ++tensor_idx) {
-    TfLiteTensor tensor = tensors_[tensor_idx];
-    if (tensor.delegate == nullptr) {
-      std::string dim_str;
-      if (tensor.dims) {
-        for (int dim : TfLiteIntArrayView(tensor.dims))
-          dim_str += std::to_string(dim) + " ";
-      }
-      if (tensor.name)
-        error_reporter_->Report("%d: (%d, %d) %s: %s", tensor_idx, tensor.is_variable, tensor.buffer_handle, tensor.name, dim_str.c_str());
-    } else {
-      // error_reporter_->Report("Delegate: %p, (%d, %d)", tensor.delegate, tensor.is_variable, tensor.buffer_handle);
-    }
-  }
-  error_reporter_->Report("====================");
 
   std::string execution_plan_str;
   for (int idx : execution_plan_) {
@@ -260,6 +252,17 @@ void Subgraph::Print() {
   }
   error_reporter_->Report("Execution plan: %s", execution_plan_str.c_str());
   error_reporter_->Report("Subgraph tensor size: %d, context tensor size: %d", tensors_.size(), context_.tensors_size);
+}
+
+void Subgraph::PrintTensor(TfLiteTensor& tensor, int tensor_idx) {
+  std::string dim_str;
+  for (int dim : TfLiteIntArrayView(tensor.dims))
+    dim_str += std::to_string(dim) + " ";
+  error_reporter_->Report("%-4d %d %-9s %-16s%-7d %d %d %d %s", tensor_idx,
+                          tensor.data_is_stale, TfLiteTypeGetName(tensor.type),
+                          dim_str.c_str(), tensor.bytes,
+                          tensor.quantization.type, tensor.is_variable,
+                          tensor.allocation_type, tensor.name);
 }
 
 Subgraph::~Subgraph() {
