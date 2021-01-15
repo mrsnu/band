@@ -388,7 +388,6 @@ void Interpreter::InvokeModelAsync(int model_id) {
 
 int Interpreter::InvokeModelsAsync() {
   std::list<Job> jobs;
-  std::map<int, ModelConfig>::iterator it;
 
   for (auto& m : model_configs_) {
     int model_id = m.first;
