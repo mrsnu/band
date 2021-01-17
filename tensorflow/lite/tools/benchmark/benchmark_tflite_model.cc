@@ -711,6 +711,8 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   ruy_profiling_listener_.reset(new RuyProfileListener());
   AddListener(ruy_profiling_listener_.get());
 
+  interpreter_->primary_subgraph().Print();
+
   return kTfLiteOk;
 }
 
