@@ -221,14 +221,18 @@ void Subgraph::Print() {
     std::string outputs_str;
     for (int output : TfLiteIntArrayView(node.outputs))
       outputs_str += std::to_string(output) + " ";
-    error_reporter_->Report("Idx: %4d, builtin_code: %d", node_index, registration.builtin_code);
+    TfLiteDelegateFlags delegate_flag = static_cast<TfLiteDelegateFlags>(
+        node.delegate ? node.delegate->flags : kTfLiteDelegateFlagsNone);
+    error_reporter_->Report("Idx: %4d, Delegate: %s, builtin_code: %d",
+                            node_index, TfLiteDelegateGetName(delegate_flag),
+                            registration.builtin_code);
     error_reporter_->Report("Node inputs: %s", inputs_str.c_str());
     error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
     error_reporter_->Report("---------------------");
   }
 
   error_reporter_->Report("=====  Tensors  =====");
-  error_reporter_->Report("Idx  s type      dims            bytes   q v a name");
+  error_reporter_->Report("Idx  s delegate  type      dims            bytes   q v a name");
   for (int tensor_idx = 0; tensor_idx < tensors_.size(); ++tensor_idx) {
     TfLiteTensor tensor = tensors_[tensor_idx];
     PrintTensor(tensor, tensor_idx);
@@ -258,11 +262,14 @@ void Subgraph::PrintTensor(TfLiteTensor& tensor, int tensor_idx) {
   std::string dim_str;
   for (int dim : TfLiteIntArrayView(tensor.dims))
     dim_str += std::to_string(dim) + " ";
-  error_reporter_->Report("%-4d %d %-9s %-16s%-7d %d %d %d %s", tensor_idx,
-                          tensor.data_is_stale, TfLiteTypeGetName(tensor.type),
-                          dim_str.c_str(), tensor.bytes,
-                          tensor.quantization.type, tensor.is_variable,
-                          tensor.allocation_type, tensor.name);
+  TfLiteDelegateFlags delegate_flag = static_cast<TfLiteDelegateFlags>(
+      tensor.delegate ? tensor.delegate->flags : kTfLiteDelegateFlagsNone);
+  error_reporter_->Report(
+      "%-4d %d %-9s %-9s %-16s%-7d %d %d %d %s", tensor_idx,
+      tensor.data_is_stale, TfLiteDelegateGetName(delegate_flag),
+      TfLiteTypeGetName(tensor.type), dim_str.c_str(), tensor.bytes,
+      tensor.quantization.type, tensor.is_variable, tensor.allocation_type,
+      tensor.name);
 }
 
 Subgraph::~Subgraph() {

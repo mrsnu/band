@@ -353,7 +353,7 @@ class Delegate {
       DelegateCopyFromBufferHandle,   // .CopyFromBufferHandle
       DelegateCopyToBufferHandle,     // .CopyToBufferHandle
       nullptr,                        // .FreeBufferHandle
-      kTfLiteDelegateFlagsNone,       // .flags
+      kTfLiteDelegateFlagsGPU,        // .flags
   };
 
   TfLiteGpuDelegateOptions options_;

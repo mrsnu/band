@@ -75,7 +75,7 @@ class Delegate {
       nullptr,                        // .CopyFromBufferHandle
       nullptr,                        // .CopyToBufferHandle
       nullptr,                        // .FreeBufferHandle
-      kTfLiteDelegateFlagsNone,       // .flags
+      kTfLiteDelegateFlagsXNNPACK,    // .flags
   };
 
   // Unpacked data for quasi-static tensors, i.e. tensors produced by
