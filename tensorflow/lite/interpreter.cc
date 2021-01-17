@@ -587,9 +587,9 @@ TfLiteStatus Interpreter::GetBufferHandle(int tensor_index,
 void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
-  tflite::profiling::TimeProfiler* timer = new tflite::profiling::TimeProfiler;
+  tflite::profiling::TimeProfiler timer;
   // Only update subgraph profilers to not care ownership of the profiler
-  SetSubgraphProfiler(timer);
+  SetSubgraphProfiler(&timer);
 
   for (const int model_id : models()) {
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
@@ -601,13 +601,13 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
         for (int i = 0; i < num_warm_ups; i++) {
           subgraph->Invoke();
         }
-        timer->ClearRecords();
+        timer.ClearRecords();
         for (int i = 0; i < num_runs; i++) {
           subgraph->Invoke();
         }
 
         subgraph_profiling_results_map_[{model_id, device_flag}] = 
-          timer->GetAverageElapsedTime<std::chrono::microseconds>();
+          timer.GetAverageElapsedTime<std::chrono::microseconds>();
 
         error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
                 model_id,
