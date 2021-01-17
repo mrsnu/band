@@ -232,7 +232,7 @@ void Subgraph::Print() {
   }
 
   error_reporter_->Report("=====  Tensors  =====");
-  error_reporter_->Report("Idx  s delegate  type      dims            bytes   q v a name");
+  error_reporter_->Report("Idx  s delegate  value type      dims            bytes   q v a name");
   for (int tensor_idx = 0; tensor_idx < tensors_.size(); ++tensor_idx) {
     TfLiteTensor tensor = tensors_[tensor_idx];
     PrintTensor(tensor, tensor_idx);
@@ -265,11 +265,11 @@ void Subgraph::PrintTensor(TfLiteTensor& tensor, int tensor_idx) {
   TfLiteDelegateFlags delegate_flag = static_cast<TfLiteDelegateFlags>(
       tensor.delegate ? tensor.delegate->flags : kTfLiteDelegateFlagsNone);
   error_reporter_->Report(
-      "%-4d %d %-9s %-9s %-16s%-7d %d %d %d %s", tensor_idx,
+      "%-4d %d %-9s %-5d %-9s %-16s%-7d %d %d %d %s", tensor_idx,
       tensor.data_is_stale, TfLiteDelegateGetName(delegate_flag),
-      TfLiteTypeGetName(tensor.type), dim_str.c_str(), tensor.bytes,
-      tensor.quantization.type, tensor.is_variable, tensor.allocation_type,
-      tensor.name);
+      tensor.data.raw[0], TfLiteTypeGetName(tensor.type), dim_str.c_str(),
+      tensor.bytes, tensor.quantization.type, tensor.is_variable,
+      tensor.allocation_type, tensor.name);
 }
 
 Subgraph::~Subgraph() {

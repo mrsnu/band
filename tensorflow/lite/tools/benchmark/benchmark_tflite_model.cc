@@ -284,7 +284,7 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
 
 BenchmarkTfLiteModel::BenchmarkTfLiteModel(BenchmarkParams params)
     : BenchmarkModel(std::move(params)),
-      random_engine_(std::random_device()()) {
+      random_engine_(0) {
   AddListener(&log_output_);
 }
 

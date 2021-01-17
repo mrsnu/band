@@ -29,16 +29,16 @@ using tensorflow::Stat;
 
 BenchmarkParams BenchmarkModel::DefaultParams() {
   BenchmarkParams params;
-  params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(50));
-  params.AddParam("min_secs", BenchmarkParam::Create<float>(1.0f));
+  params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(1));
+  params.AddParam("min_secs", BenchmarkParam::Create<float>(0.0f));
   params.AddParam("max_secs", BenchmarkParam::Create<float>(150.0f));
   params.AddParam("run_delay", BenchmarkParam::Create<float>(-1.0f));
   params.AddParam("num_threads", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("use_caching", BenchmarkParam::Create<bool>(false));
   params.AddParam("benchmark_name", BenchmarkParam::Create<std::string>(""));
   params.AddParam("output_prefix", BenchmarkParam::Create<std::string>(""));
-  params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(1));
-  params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.5f));
+  params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(0));
+  params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.0f));
   return params;
 }
 
