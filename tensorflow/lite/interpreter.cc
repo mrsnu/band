@@ -131,7 +131,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new FixedDevicePlanner(this));
+  planner_.reset(new ShortestExpectedLatencyPlanner(this));
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 

@@ -14,9 +14,18 @@ Planner::Planner(Interpreter* interpreter) {
   log_file << "model_name\t"
            << "model_id\t"
            << "device_id\t"
+           << "sched_id\t"
            << "enqueue_time\t"
            << "invoke_time\t"
-           << "end_time\n";
+           << "end_time\t"
+           << "waiting_CPU\t"
+           << "waiting_GPU\t"
+           << "waiting_DSP\t"
+           << "waiting_NPU\t"
+           << "profiled_CPU\t"
+           << "profiled_GPU\t"
+           << "profiled_DSP\t"
+           << "profiled_NPU\n";
   log_file.close();
 }
 
@@ -40,9 +49,18 @@ TfLiteStatus Planner::Wait(int num_requests) {
     log_file << job.model_fname_ << "\t"
              << job.model_id_ << "\t"
              << job.device_id_ << "\t"
+             << job.sched_id_ << "\t"
              << job.enqueue_time_ << "\t"
              << job.invoke_time_ << "\t"
-             << job.end_time_ << "\n";
+             << job.end_time_ << "\t"
+             << job.waiting_time[0] << "\t"
+             << job.waiting_time[1] << "\t"
+             << job.waiting_time[2] << "\t"
+             << job.waiting_time[3] << "\t"
+             << job.profiled_latency[0] << "\t"
+             << job.profiled_latency[1] << "\t"
+             << job.profiled_latency[2] << "\t"
+             << job.profiled_latency[3] << "\n";
   }
   log_file.close();
   lock.unlock();

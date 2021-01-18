@@ -57,8 +57,8 @@ void Worker::Work() {
     }
     cpu_lock.unlock();
 
-    Job job = requests_.front();
-    requests_.pop_front();
+    Job& job = requests_.front();
+    // requests_.pop_front();
     lock.unlock();
 
     int subgraph_idx = job.subgraph_idx_;
@@ -77,6 +77,11 @@ void Worker::Work() {
         // Currently, put a job with a minus sign if Invoke() fails.
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
       }
+
+      lock.lock();
+      requests_.pop_front();
+      lock.unlock();
+
       planner_ptr->GetSafeBool().notify();
     } else {
       // TODO #21: Handle errors in multi-thread environment
@@ -84,6 +89,40 @@ void Worker::Work() {
     }
   }
 }
+
+int64_t Worker::GetWaitingTime() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+
+  std::shared_ptr<Planner> planner = planner_.lock();
+  if (!planner) {
+    return -1;
+  }
+  Interpreter* interpreter = planner->GetInterpreter();
+
+  int64_t total = 0;
+  for (std::deque<Job>::iterator it = requests_.begin();
+       it != requests_.end(); ++it) {
+    int model_id = (*it).model_id_;
+    TfLiteDeviceFlags device_id =
+        static_cast<TfLiteDeviceFlags>((*it).device_id_);
+    int64_t profiled_latency =
+        interpreter->GetProfiledLatency(model_id, device_id);
+
+    total += profiled_latency;
+    if (it == requests_.begin()) {
+      int64_t current_time = profiling::time::NowMicros();
+      int64_t invoke_time = (*it).invoke_time_;
+      if (invoke_time > 0 && current_time > invoke_time) {
+        int64_t progress = (current_time - invoke_time) > profiled_latency ? profiled_latency : (current_time - invoke_time);
+        total -= progress;
+      }
+    }
+  }
+  lock.unlock();
+
+  return total;
+ }
+
 
 }  // namespace impl
 }  // namespace tflite
