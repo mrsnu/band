@@ -901,6 +901,7 @@ TfLiteStatus Subgraph::Profile(int64_t profile_data) {
     int64_t start = profiling::time::NowMicros();
     status = Invoke();
     if (status != kTfLiteOk) {
+      avg_time = -1;
       return status;
     }
     int64_t end = profiling::time::NowMicros();

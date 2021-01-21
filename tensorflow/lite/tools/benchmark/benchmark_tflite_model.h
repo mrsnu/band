@@ -66,7 +66,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus Init() override;
   TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
-  TfLiteStatus RunAll() override;
+  // TfLiteStatus RunAll() override;
   TfLiteStatus RunRequests(int period) override;
   static BenchmarkParams DefaultParams();
 
@@ -137,8 +137,9 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   // parse json file with model configurations.
   TfLiteStatus ParseJsonFile();
 
-  void GenerateRequests(int model_id, int interval);
+  // void GenerateRequests(int model_id, int interval);
   void GenerateBatch(int interval);
+  void GenerateEagleeye(int period_ms);
 
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;

@@ -1,0 +1,8 @@
+{
+  "models": [
+    {"graph": "/data/local/tmp/retinaface_mbv2_quant_160.tflite", "batch_size": 6, "device": 0},
+    {"graph": "/data/local/tmp/arc_mbv2_quant.tflite", "batch_size": 3, "device": 1},
+    {"graph": "/data/local/tmp/arc_res50_quant.tflite", "batch_size": 1, "device": 2},
+    {"graph": "/data/local/tmp/ICN_quant.tflite", "batch_size": 3}
+  ]
+}

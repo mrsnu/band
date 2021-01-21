@@ -380,9 +380,11 @@ class Interpreter {
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
-  void InvokeModel(int model_id);
+  // void InvokeModelAsync(int model_id);
 
-  void InvokeModel(int num_models, int batch_size);
+  void InvokeModelAsync(int model_id,
+                        int batch,
+                        std::function<void()> callback = nullptr);
 
   int InvokeBatch();
 
@@ -604,8 +606,10 @@ class Interpreter {
           json[model_fname][device].as_int() : 0;
 
       status = subgraphs_[i]->Profile(profile_data);
+      /*
       if (status != kTfLiteOk)
         return status;
+      */
     }
 
     return kTfLiteOk;
@@ -672,6 +676,7 @@ class Interpreter {
     std::map<TfLiteDevice, int> device_to_subgraph;
     int slo_ms = 0;
     int batch_size = 0;
+    int device = -1;
   };
 
   void SetModelInfo(int model_id, ModelInfo model_info) {
@@ -679,11 +684,16 @@ class Interpreter {
     models_info_[model_id].model_fname = model_info.model_fname;
     models_info_[model_id].slo_ms = model_info.slo_ms;
     models_info_[model_id].batch_size = model_info.batch_size;
+    models_info_[model_id].device = model_info.device;
   }
 
   // Model
   std::map<int, ModelInfo>& GetModelInfo() {
     return models_info_;
+  };
+
+  int GetCurrentCnt() {
+    return planner_->GetCurrentCnt();
   };
 
  private:
@@ -694,6 +704,7 @@ class Interpreter {
 
   std::shared_ptr<Planner> planner_;
   std::vector<std::unique_ptr<Worker>> workers_;
+
 
   // TODO #13: Create mobile device independent delegate instances
   int num_devices = 4;

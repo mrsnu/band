@@ -50,13 +50,6 @@ void Worker::Work() {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
 
-      int64_t to_sleep_us = subgraph.GetExpectedLatency();
-      std::this_thread::sleep_for(
-          std::chrono::microseconds(to_sleep_us));
-      job.end_time_ = profiling::time::NowMicros();
-      planner_ptr->EnqueueFinishedJob(job);
-
-      /*
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time_ = profiling::time::NowMicros();
         planner_ptr->EnqueueFinishedJob(job);
@@ -65,7 +58,7 @@ void Worker::Work() {
         // Currently, put a job with a minus sign if Invoke() fails.
         job.end_time_ = profiling::time::NowMicros();
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
-      }*/
+      }
 
       lock.lock();
       requests_.pop_front();

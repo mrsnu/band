@@ -26,6 +26,7 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 #include <sys/stat.h>
+#include <array>
 
 #include "absl/base/attributes.h"
 #include "absl/strings/numbers.h"
@@ -846,6 +847,9 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     // If no "slo_ms", "batch_size" is given, each value is set to 0.
     model_info.slo_ms = json_file["models"][i]["slo_ms"].as_int();
     model_info.batch_size = json_file["models"][i]["batch_size"].as_int();
+    if (json_file["models"][i]["device"].get_type() != jute::JUNKNOWN) {
+        model_info.device = json_file["models"][i]["device"].as_int();
+    }
 
     // TODO: Check if necessary configs exist.
     // One of slo_ms, batch_size should be given?
@@ -862,6 +866,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
+/*
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   int num_iters = 3;
   for (int i = 0; i < num_iters; ++i) {
@@ -871,34 +876,32 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   }
   interpreter_->GetPlanner()->Wait(models_.size() * num_iters);
   return kTfLiteOk;
-}
+}*/
 
 TfLiteStatus BenchmarkTfLiteModel::RunRequests(int period) {
   kill_app = false;
+  std::srand(5323);
 
-  // for (int j = 0; j < models_.size(); ++j) {
-  //   int model_period = period;
-  //   GenerateRequests(j, model_period);
-  // }
-  // GenerateBatch(models_.size(), 2, period);
-  GenerateBatch(period);
+  GenerateEagleeye(period);
 
-  for (int i = 0; i < models_info_.size(); ++i) {
-    if (models_info_[i].batch_size == 0) {
-      if (models_info_[i].model_id != -1) {
-        GenerateRequests(models_info_[i].model_id, period);
-      }
+  std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+  kill_app = true;
+
+  while (true) {
+    std::cout << "CNT : " << cnt << " current : " << interpreter_->GetCurrentCnt() << std::endl;
+    if(cnt <= interpreter_->GetCurrentCnt()) {
+      break;
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     }
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-  kill_app = true;
-  interpreter_->GetPlanner()->Wait(cnt);
   cnt = 0;
 
   return kTfLiteOk;
 }
 
+/*
 void BenchmarkTfLiteModel::GenerateRequests(int model_id, int interval) {
   std::thread t([this, model_id, interval]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -919,6 +922,7 @@ void BenchmarkTfLiteModel::GenerateRequests(int model_id, int interval) {
   });
   t.detach();
 }
+*/
 
 void BenchmarkTfLiteModel::GenerateBatch(int interval) {
   std::thread t([this, interval]() {
@@ -937,6 +941,92 @@ void BenchmarkTfLiteModel::GenerateBatch(int interval) {
       if(kill_app) return;
     }
   });
+  t.detach();
+}
+
+void BenchmarkTfLiteModel::GenerateEagleeye(int period_ms) {
+  std::thread t([this, period_ms]() {
+    int num_models = models_.size();
+    int batch = 0;
+
+    // Assumption:
+    // 1. model[0] = face detection (RetinaFace)
+    // 2. model[1] = ArcFace mobilenet
+    // 3. model[2] = ArcFace Resnet50
+    // 4. model[3] = ICN
+    while(true) {
+      int64_t start = profiling::time::NowMicros();
+      int model_id = 0;
+      int batch_cnt = 0;
+
+      // num of recognition requests for each model in one frame
+      std::vector<int> recognition_requests;
+      for (int i = 0; i < 3; ++i) {
+        recognition_requests.push_back(
+            models_info_[i + 1].batch_size);
+      }
+      int detection_batch = models_info_[model_id].batch_size;
+
+      // ith detection model calls recognition jobs according to ith element.
+      std::vector<std::array<int, 3>> recognition_workload;
+
+      for (int i = 0; i < detection_batch; ++i)
+        recognition_workload.push_back({0, 0, 0});
+
+      // Assign each request to one of the detection model
+      for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < recognition_requests[i]; ++j) {
+          int detection_idx = std::rand() % detection_batch;
+          recognition_workload[detection_idx][i] += 1;
+        }
+      }
+
+      for (int k = 0; k < detection_batch; ++k) {
+        std::cout << "batch idx : " << k << std::endl;
+        auto following_requests = recognition_workload[k];
+
+        for (auto num_req : following_requests)
+          std::cout << num_req << " ";
+        std::cout << std::endl;
+
+        interpreter_->InvokeModelAsync(model_id,
+                                       batch,
+                                       [this, batch, following_requests] {
+          for (int i = 0; i < following_requests[0]; ++i)
+            interpreter_->InvokeModelAsync(1, batch);
+          for (int i = 0; i < following_requests[1]; ++i)
+            interpreter_->InvokeModelAsync(2, batch);
+
+          // ArcFace-Resnet50 request is followed by ICN.
+          for (int i = 0; i < following_requests[2]; ++i)
+            interpreter_->InvokeModelAsync(3, batch, [this, batch] {
+                interpreter_->InvokeModelAsync(2, batch);
+            });
+        });
+        batch_cnt += 1;
+        batch_cnt += following_requests[0];
+        batch_cnt += following_requests[1];
+        batch_cnt += following_requests[2] * 2;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(cnt_mtx);
+        cnt += batch_cnt;
+      }
+
+      int64_t end = profiling::time::NowMicros();
+      int duration_ms = (end - start) / 1000;
+
+      // sleep until we reach period_ms
+      if (duration_ms < period_ms) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(period_ms - duration_ms));
+      }
+      if (kill_app) return;
+      batch++;
+    }
+  });
+
   t.detach();
 }
 

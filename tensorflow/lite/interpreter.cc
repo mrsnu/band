@@ -145,6 +145,9 @@ Interpreter::Interpreter(int planner, ErrorReporter* error_reporter)
 
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
+  gpu_opts.inference_priority1 = TFLITE_GPU_INFERENCE_PRIORITY_MIN_LATENCY;
+  gpu_opts.inference_priority2 = TFLITE_GPU_INFERENCE_PRIORITY_MIN_MEMORY_USAGE;
+  gpu_opts.inference_priority3 = TFLITE_GPU_INFERENCE_PRIORITY_MAX_PRECISION;
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
   // The default number of maximum delegate ops is 1.
   // Enable the following line to create multiple gpu ops within a Subgraph.
@@ -355,46 +358,45 @@ TfLiteStatus Interpreter::Invoke(int idx) {
   return kTfLiteOk;
 }
 
-void Interpreter::InvokeModel(int model_id) {
-  int model_slo = models_info_[model_id].slo_ms;
-  Job to_enqueue = Job(model_id, model_slo);
-  to_enqueue.model_fname = models_info_[model_id].model_fname;
-  planner_->EnqueueRequest(to_enqueue);
+/*
+void Interpreter::InvokeModelAsync(int model_id) {
+    Job to_enqueue = Job(model_id);
+    to_enqueue.model_fname = models_info_[model_id].model_fname;
+    planner_->EnqueueRequest(to_enqueue);
 }
+*/
 
-void Interpreter::InvokeModel(int num_models, int batch_size) {
-  std::list<Job> jobs;
-  // for (int i = 0; i < batch_size; ++i) {
-  //   for (int model_id = 0; model_id < num_models; ++model_id) {
-  //     jobs.emplace_back(model_id);
-  //   }
-  // }
-
-  for (int model_id = 0; model_id < num_models; ++model_id) {
-    int k = model_id == 1 ? 3 : batch_size;
-    for (int i = 0; i < k; ++i) {
-      jobs.emplace_back(model_id);
-    }
-  }
-  planner_->EnqueueBatch(jobs);
+void Interpreter::InvokeModelAsync(int model_id,
+                                   int batch,
+                                   std::function<void()> callback) {
+    Job to_enqueue = Job(model_id);
+    to_enqueue.model_fname = models_info_[model_id].model_fname;
+    to_enqueue.batch_id_ = batch;
+    to_enqueue.device_id_ = models_info_[model_id].device;
+	planner_->EnqueueRequest(to_enqueue, callback);
 }
 
 int Interpreter::InvokeBatch() {
-  std::list<Job> jobs;
+  std::vector<Job> jobs;
+  std::vector<std::function<void()>> callbacks;
   std::map<int, ModelInfo>::iterator it;
   int batch_size = 0;
   for (it = models_info_.begin(); it != models_info_.end(); ++it) {
     int model_batch = it->second.batch_size;
+    int model_id = it->first;
     batch_size += model_batch;
     if (model_batch > 0) {
       for (int k = 0; k < model_batch; ++k) {
         Job to_enqueue = Job(it->first);
         to_enqueue.model_fname = models_info_[it->first].model_fname;
         jobs.emplace_back(to_enqueue);
+        callbacks.push_back([model_id, k] {
+          std::cout << model_id << " " << k << std::endl;
+        });
       }
     }
   }
-  planner_->EnqueueBatch(jobs);
+  planner_->EnqueueBatch(jobs, callbacks);
 
   return batch_size;
 }

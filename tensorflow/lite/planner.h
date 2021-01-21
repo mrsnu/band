@@ -68,14 +68,14 @@ class Planner {
   virtual void Plan() = 0;
 
   // Enqueues a job to a worker request queue.
-  void EnqueueRequest(Job job);
+  void EnqueueRequest(Job job, std::function<void()> callback = nullptr);
 
-  void EnqueueBatch(std::list<Job> jobs);
+  void EnqueueBatch(std::vector<Job> jobs, std::vector<std::function<void()>> callbacks);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
   // TODO #18: Make the planner run in a different thread
-  TfLiteStatus Wait(int num_requests);
+  void Wait();
 
   // Enqueues a finised job to the queue.
   // A worker calls the method.
@@ -98,6 +98,15 @@ class Planner {
     return requests_;
   }
 
+  SafeBool& GetWaitSafeBool() {
+    return wait_safe_bool_;
+  }
+
+  int GetCurrentCnt() {
+    std::lock_guard<std::mutex> lock(cnt_mtx_);
+    return cnt_;
+  }
+
  protected:
   std::thread planner_thread_;
 
@@ -108,14 +117,21 @@ class Planner {
   // Jobs Finished
   std::mutex job_queue_mtx_;
   std::deque<Job> jobs_finished_;
+  std::map<int, std::function<void()>> callbacks_;
 
   // Request Queue
   std::mutex requests_mtx_;
   std::deque<Job> requests_;
-
-  std::condition_variable end_invoke_;
+  int global_job_id_ = 0;
 
   std::ofstream log_file_;
+  std::string log_path_ = "/data/local/tmp/log/model_execution_log.csv";
+
+  SafeBool wait_safe_bool_;
+  std::thread wait_thread_;
+
+  std::mutex cnt_mtx_;
+  int cnt_ = 0;
 };
 
 }  // namespace impl

@@ -17,7 +17,14 @@ void FixedDevicePlanner::Plan() {
       GetRequests().pop_front();
 
       int model_id = to_execute.model_id_;
-      int device_idx = model_id % GetInterpreter()->GetNumDevices();
+      int device_idx;
+      if (kTfLiteCPU <= to_execute.device_id_ &&
+          to_execute.device_id_ < kTfLiteNumDevices) {
+        device_idx = to_execute.device_id_;
+      } else {
+        device_idx = model_id % GetInterpreter()->GetNumDevices();
+      }
+
       do {
         to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(
             model_id, static_cast<TfLiteDevice>(device_idx));
@@ -25,7 +32,7 @@ void FixedDevicePlanner::Plan() {
         device_idx = (device_idx + 1) % GetInterpreter()->GetNumDevices();
       } while(to_execute.subgraph_idx_ == -1);
 
-      Worker& worker = GetInterpreter()->GetWorker(device_idx);
+      Worker& worker = GetInterpreter()->GetWorker(to_execute.device_id_);
       {
         std::lock_guard<std::mutex> lock(worker.GetDeviceMtx());
         worker.GetDeviceRequests().push_back(to_execute);

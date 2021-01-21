@@ -24,7 +24,9 @@ struct Job {
   Job(int model_id, int slo_ms)
     : model_id_(model_id), slo_ms_(slo_ms) {}
 
+  int job_id_;
   int model_id_;
+  int batch_id_;
   int subgraph_idx_ = -1;
   int device_id_ = -1;
   int64_t enqueue_time_ = 0;
