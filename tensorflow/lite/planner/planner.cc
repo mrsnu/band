@@ -1,4 +1,4 @@
-#include "tensorflow/lite/planner.h"
+#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/time.h"
 #include <fstream>
 

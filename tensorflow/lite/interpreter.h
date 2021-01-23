@@ -33,7 +33,7 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
-#include "tensorflow/lite/fixed_device_planner.h"
+#include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)

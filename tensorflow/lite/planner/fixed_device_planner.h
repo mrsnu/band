@@ -1,7 +1,7 @@
 #ifndef TENSORFLOW_LITE_FIXED_DEVICE_PLANNER_H_
 #define TENSORFLOW_LITE_FIXED_DEVICE_PLANNER_H_
 
-#include "tensorflow/lite/planner.h"
+#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/interpreter.h"
 
 namespace tflite {
