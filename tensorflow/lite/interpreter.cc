@@ -707,6 +707,26 @@ void Interpreter::RegisterSubgraphIdx(int model_id,
   subgraph_idx_map_[key] = subgraph_idx;
 }
 
+Worker* Interpreter::GetWorker(int device_idx) {
+  TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
+  return GetWorker(device_flag);
+}
+
+Worker* Interpreter::GetWorker(TfLiteDeviceFlags device) {
+  auto it = workers_.find(device);
+  if (it != workers_.end()) {
+    return it->second.get();
+  } else {
+      error_reporter_->Report("ERROR: Cannot find the worker.");
+      return nullptr;
+  }
+}
+
+int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {
+  TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
+  return GetSubgraphIdx(model_id, device_flag);
+}
+
 int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
   std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
   auto it = subgraph_idx_map_.find(key);

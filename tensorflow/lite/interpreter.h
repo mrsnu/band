@@ -34,6 +34,7 @@ limitations under the License.
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/planner/fixed_device_planner.h"
+#include "tensorflow/lite/planner/round_robin_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -580,19 +581,15 @@ class Interpreter {
     return planner_;
   }
 
-  Worker* GetWorker(TfLiteDeviceFlags device) {
-    auto it = workers_.find(device);
-    if (it != workers_.end())
-      return it->second.get();
-    else
-      return nullptr;
-  }
+  Worker* GetWorker(int device_idx);
+  Worker* GetWorker(TfLiteDeviceFlags device);
 
   int GetWorkersSize() {
     return workers_.size();
   }
 
   int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
+  int GetSubgraphIdx(int model_id, int device_idx);
 
   std::set<int> models() const;
 

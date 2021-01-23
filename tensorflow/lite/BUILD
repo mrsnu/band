@@ -80,6 +80,7 @@ FRAMEWORK_LIB_HDRS = [
     "stderr_reporter.h",
     "planner/planner.h",
     "planner/fixed_device_planner.h",
+    "planner/round_robin_planner.h",
     "worker.h",
     "safe_bool.h"
 ]
@@ -252,6 +253,7 @@ cc_library(
         "stderr_reporter.cc",
         "planner/planner.cc",
         "planner/fixed_device_planner.cc",
+        "planner/round_robin_planner.cc",
         "worker.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
