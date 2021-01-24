@@ -610,7 +610,6 @@ class Interpreter {
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
-
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;

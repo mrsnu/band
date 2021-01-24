@@ -21,6 +21,7 @@ limitations under the License.
 #include <cstring>
 #include <utility>
 #include <list>
+#include <iostream>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/cpu/cpu.h"
@@ -133,18 +134,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  switch (planner_type) {
-    default:
-    kFixedDevice:
-      planner_.reset(new FixedDevicePlanner(this));
-      break;
-    kRoundRobin:
-      planner_.reset(new RoundRobinPlanner(this));
-      break;
-    kShortestExpectedLatency:
-      planner_.reset(new FixedDevicePlanner(this));
-      // planner_.reset(new ShortestExpectedLatencyPlanner(this));
-      break;
+  // FixedDevicePlanner is the default planner.
+  if (planner_type == kRoundRobin) {
+    planner_.reset(new RoundRobinPlanner(this));
+  } else {
+    planner_.reset(new FixedDevicePlanner(this));
   }
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
@@ -732,8 +726,7 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device) {
     return it->second.get();
   } else {
     error_reporter_->Report("ERROR: Cannot find the worker.");
-    // SYSTEM FAIL!!
-    //
+    // TODO #21: Handle errors in multi-thread environment
     return nullptr;
   }
 }

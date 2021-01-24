@@ -18,33 +18,28 @@ void RoundRobinPlanner::Plan() {
       }
     }
 
-    std::deque<Job> local_jobs;
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
-    if (!GetRequests().empty()) {
-      GetRequests().swap(local_jobs);
-    } else {
-      continue;
-    }
-    request_lock.unlock();
+    while (!GetRequests().empty()) {
+      Job to_execute = Job(-1);
+      int device_idx;
+      for (device_idx = 0; device_idx < is_device_empty.size(); ++device_idx) {
+        if (is_device_empty[device_idx]) {
+          auto available_job =
+            std::find_if(GetRequests().begin(), GetRequests().end(),
+              [this, device_idx](const Job& job) {
+                return GetInterpreter()->GetSubgraphIdx(
+                                            job.model_id_, device_idx) != -1;
+              });
+          if (available_job != GetRequests().end()) {
+            to_execute = *available_job;
+            GetRequests().erase(available_job);
+            break;
+          }
+        }
+      }
 
-    while (!local_jobs.empty()) {
-      auto empty_device_it =
-        std::find(is_device_empty.begin(), is_device_empty.end(), true);
-      if (empty_device_it == is_device_empty.end())
+      if (device_idx == is_device_empty.size())
         break;
-      int device_idx = *(empty_device_it);
-
-      auto available_job =
-        std::find_if(local_jobs.begin(), local_jobs.end(),
-          [this, device_idx](const Job& job) {
-            return GetInterpreter()->GetSubgraphIdx(
-                                        job.model_id_, device_idx) != -1;
-          });
-      if (available_job == local_jobs.end())
-        break;
-
-      Job to_execute = *available_job;
-      local_jobs.erase(available_job);
 
       int subgraph_idx =
         GetInterpreter()->GetSubgraphIdx(to_execute.model_id_, device_idx);
@@ -59,6 +54,7 @@ void RoundRobinPlanner::Plan() {
       }
       is_device_empty[device_idx] = false;
     }
+    request_lock.unlock();
   }
 }
 
