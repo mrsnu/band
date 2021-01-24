@@ -108,8 +108,10 @@ bool IsNNAPIDeviceUseful(std::string name) {
 
 }  // namespace
 
-Interpreter::Interpreter(ErrorReporter* error_reporter)
-    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()) {
+Interpreter::Interpreter(ErrorReporter* error_reporter,
+                         TfLitePlannerType planner_type)
+    : error_reporter_(error_reporter ? error_reporter :
+                                       DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
@@ -131,7 +133,19 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new FixedDevicePlanner(this));
+  switch (planner_type) {
+    default:
+    kFixedDevice:
+      planner_.reset(new FixedDevicePlanner(this));
+      break;
+    kRoundRobin:
+      planner_.reset(new RoundRobinPlanner(this));
+      break;
+    kShortestExpectedLatency:
+      planner_.reset(new FixedDevicePlanner(this));
+      // planner_.reset(new ShortestExpectedLatencyPlanner(this));
+      break;
+  }
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 
@@ -717,8 +731,10 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device) {
   if (it != workers_.end()) {
     return it->second.get();
   } else {
-      error_reporter_->Report("ERROR: Cannot find the worker.");
-      return nullptr;
+    error_reporter_->Report("ERROR: Cannot find the worker.");
+    // SYSTEM FAIL!!
+    //
+    return nullptr;
   }
 }
 

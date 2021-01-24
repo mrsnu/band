@@ -11,12 +11,10 @@ void RoundRobinPlanner::Plan() {
     std::vector<bool> is_device_empty;
     for (int i = 0; i < GetInterpreter()->GetWorkersSize(); ++i) {
       Worker* worker = GetInterpreter()->GetWorker(i);
-      if (worker) {
-        {
-          std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-          bool is_empty = worker->GetDeviceRequests().empty();
-          is_device_empty.push_back(is_empty);
-        }
+      {
+        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+        bool is_empty = worker->GetDeviceRequests().empty();
+        is_device_empty.push_back(is_empty);
       }
     }
 
@@ -42,7 +40,6 @@ void RoundRobinPlanner::Plan() {
             return GetInterpreter()->GetSubgraphIdx(
                                         job.model_id_, device_idx) != -1;
           });
-
       if (available_job == local_jobs.end())
         break;
 
@@ -55,16 +52,18 @@ void RoundRobinPlanner::Plan() {
       to_execute.device_id_ = device_idx;
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id_);
-      if (worker) {
-        {
-          std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-          worker->GetDeviceRequests().push_back(to_execute);
-          worker->GetRequestCv().notify_one();
-        }
-        is_device_empty[device_idx] = false;
+      {
+        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+        worker->GetDeviceRequests().push_back(to_execute);
+        worker->GetRequestCv().notify_one();
       }
+      is_device_empty[device_idx] = false;
     }
   }
+}
+
+bool RoundRobinPlanner::NeedProfile() {
+    return false;
 }
 
 }  // namespace impl
