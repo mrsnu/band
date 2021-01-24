@@ -719,8 +719,8 @@ Worker* Interpreter::GetWorker(int device_idx) {
   return GetWorker(device_flag);
 }
 
-Worker* Interpreter::GetWorker(TfLiteDeviceFlags device) {
-  auto it = workers_.find(device);
+Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
+  auto it = workers_.find(device_flag);
   if (it != workers_.end()) {
     return it->second.get();
   } else {
