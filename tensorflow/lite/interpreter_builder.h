@@ -60,6 +60,13 @@ class InterpreterBuilder {
   // Adds a Subgraph to the interpreter.
   // Returns the Subgraph index.
   // Returns -1 if any error occurs.
+  static int AddPrimarySubgraph(const ::tflite::Model* model,
+                               const OpResolver& op_resolver,
+                               std::unique_ptr<Interpreter>* interpreter,
+                               int num_threads = -1) {
+    return AddSubgraph(model, op_resolver, interpreter, num_threads);
+  }
+
   static int AddSubgraph(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,

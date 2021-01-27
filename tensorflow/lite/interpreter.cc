@@ -149,7 +149,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
   gpu_opts.experimental_flags |= TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
 
   // TODO #34 GPU delegate multiple delegated partition support
-  // gpu_opts.max_delegated_partitions = 10;
+  gpu_opts.max_delegated_partitions = 100;
   TfLiteDelegatePtr gpu_delegate = TfLiteDelegatePtr(
     TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
   if (gpu_delegate.get()) {
@@ -733,6 +733,31 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
     return kTfLiteOk;
   } else {
     return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
+  }
+}
+
+void Interpreter::InvestigateModelSpec(int model_id) {
+  int subgraph_idx = GetSubgraphIdx(model_id, kTfLiteCPU);
+  Subgraph* primary_subgraph = subgraph(subgraph_idx);
+
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+    if (device_flag == kTfLiteCPU)
+      continue;
+
+    std::set<TfLiteType> tensor_types;
+    ApplyBestDeviceDelegate(primary_subgraph, device_flag, tensor_types);
+
+    ModelSpec& model_spec = model_specs_[model_id];
+    std::vector<int>& execution_plan = primary_subgraph->execution_plan();
+    for (auto node_index : execution_plan) {
+      const TfLiteNode& node = \
+                    primary_subgraph->node_and_registration(node_index)->first;
+      if (node.delegate == nullptr) {
+        model_spec.unsupported_ops[device_flag].push_back(node_index);
+      }
+    }
+    primary_subgraph->UndoAllDelegates();
   }
 }
 

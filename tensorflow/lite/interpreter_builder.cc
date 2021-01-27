@@ -562,8 +562,25 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int model_id = InterpreterBuilder::num_registered_model++;
   bool has_available_device = false;
 
+  // Add CPU subgraph
+  int subgraph_idx = AddPrimarySubgraph(
+                        model, op_resolver, interpreter, num_threads);
+  if (subgraph_idx != -1) {
+    (*interpreter)->RegisterSubgraphIdx(model_id, kTfLiteCPU, subgraph_idx);
+    has_available_device = true;
+  }
+
+  // Investigate Model Specification
+  (*interpreter)->InvestigateModelSpec(model_id);
+
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
+    // For given strategy, get partition plan.
+    // Subgraph Key = (model_id, device_id, start_op_idx, end_op_idx)
+    // If key does not exist,
+    //   AddSubgraph(model, op_resolver, interpreter, num_threads, SubgraphKey);
+    //   RegisterSubgraphIdx
+
     int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, num_threads, device_id);
     if (subgraph_idx != -1) {

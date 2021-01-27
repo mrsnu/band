@@ -373,6 +373,8 @@ class Interpreter {
   /// Invoke idx-th subgraph in the interpreter.
   TfLiteStatus Invoke(int idx);
 
+  void InvestigateModelSpec(int model_id);
+
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   void InvokeModelAsync(int model_id);
@@ -602,6 +604,17 @@ class Interpreter {
     int batch_size = 1;
   };
 
+  struct ModelSpec {
+    int num_ops;
+    std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
+    /*
+    std::map<int, int> tensor_size;
+    std::map<int, int> op_input_size;
+    std::map<int, int> op_output_size;
+    std::map<int, int> op_flops;
+    */
+  };
+
   void SetModelConfig(int model_id, ModelConfig model_config) {
     model_configs_[model_id] = model_config;
   }
@@ -685,6 +698,9 @@ class Interpreter {
 
   // Maps to each model's configuration.
   std::map<int, ModelConfig> model_configs_;
+
+  // Maps to model spec
+  std::map<int, ModelSpec> model_specs_;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
