@@ -441,7 +441,8 @@ TfLiteStatus InterpreterBuilder::ParseSparsity(
 TfLiteStatus InterpreterBuilder::ParseTensors(
     const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
     const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-    Subgraph* subgraph) {
+    Subgraph* subgraph,
+    std::set<int> tensor_indices) {
   TfLiteStatus status = kTfLiteOk;
 
   // A little helper to get the names of inputs and outputs. Note that they
@@ -453,6 +454,9 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
   };
 
   for (int i = 0; i < tensors->size(); ++i) {
+    if (tensor_indices.find(i) == tensor_indices.end())
+      continue;
+
     const auto* tensor = tensors->Get(i);
     std::vector<int> dims = FlatBufferIntArrayToVector(tensor->shape());
 
@@ -744,8 +748,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                            subgraph_key.start_idx,
                            subgraph_key.end_idx) != kTfLiteOk)
       return cleanup_and_error();
-    if (builder.ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
-      return cleanup_and_error();
 
     // Parse inputs/outputs
     // Need refactoring
@@ -760,6 +762,14 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
         node_output_tensors.insert(output_tensor);
       }
     }
+
+    std::set<int> subgraph_tensors;
+    std::set_union(node_input_tensors.begin(), node_input_tensors.end(),
+                   node_output_tensors.begin(), node_output_tensors.end(),
+                   std::inserter(subgraph_tensors, subgraph_tensors.end()));
+
+    if (builder.ParseTensors(buffers, tensors, modified_subgraph, subgraph_tensors) != kTfLiteOk)
+      return cleanup_and_error();
 
     std::set<int> input_features;
     std::set<int> input_tensors, output_tensors;
