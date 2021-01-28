@@ -595,7 +595,7 @@ class Interpreter {
     return workers_.size();
   }
 
-  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
+  int GetSubgraphIdx(SubgraphKey subgraph_key);
 
   std::set<int> models() const;
 
@@ -666,11 +666,9 @@ class Interpreter {
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 
   // Map structure to find subgraph idx with (model_id, device_id)
-  std::map<std::pair<int, TfLiteDeviceFlags>, int> subgraph_idx_map_;
+  std::map<SubgraphKey, int> subgraph_idx_map_;
 
-  void RegisterSubgraphIdx(int model_id,
-                           TfLiteDeviceFlags device_id,
-                           int subgraph_idx);
+  void RegisterSubgraphIdx(SubgraphKey subgraph_key, int subgraph_idx);
 
   // Applies best delegate from the given device to the subgraph.
   TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);

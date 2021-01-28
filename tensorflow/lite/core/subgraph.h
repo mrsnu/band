@@ -45,10 +45,19 @@ class NNAPIDelegate;
 struct SubgraphKey {
   SubgraphKey(int _model_id,
               TfLiteDeviceFlags _device_flag,
-              int _start, int _end)
+              int _start = -1, int _end = -1)
     : model_id(_model_id),
       device_flag(_device_flag),
       start_idx(_start), end_idx(_end) {}
+  bool operator<(const SubgraphKey &key)  const {
+    return model_id < key.model_id;
+  }
+  bool operator==(const SubgraphKey &key)  const {
+    return model_id == key.model_id && 
+           device_flag == key.device_flag &&
+           start_idx == key.start_idx &&
+           end_idx == key.end_idx;
+  }
   int model_id;
   TfLiteDeviceFlags device_flag;
   int start_idx;

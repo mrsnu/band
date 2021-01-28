@@ -595,9 +595,10 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       const TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
 
-      const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
-      if (subgraph_it != subgraph_idx_map_.end()) {
-        Subgraph* subgraph = subgraphs_[subgraph_it->second].get();
+      SubgraphKey key(model_id, device_flag);
+      int subgraph_it = GetSubgraphIdx(key);
+      if (subgraph_it != -1) {
+        Subgraph* subgraph = subgraphs_[subgraph_it].get();
         for (int i = 0; i < num_warm_ups; i++) {
           subgraph->Invoke();
         }
@@ -700,16 +701,17 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
   }
 }
 
-void Interpreter::RegisterSubgraphIdx(int model_id,
-                                      TfLiteDeviceFlags device_id,
+void Interpreter::RegisterSubgraphIdx(SubgraphKey subgraph_key,
                                       int subgraph_idx) {
-  std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
-  subgraph_idx_map_[key] = subgraph_idx;
+  // Skip if exists.
+  if (subgraph_idx_map_.find(subgraph_key) != subgraph_idx_map_.end())
+    return;
+
+  subgraph_idx_map_[subgraph_key] = subgraph_idx;
 }
 
-int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
-  std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
-  auto it = subgraph_idx_map_.find(key);
+int Interpreter::GetSubgraphIdx(SubgraphKey subgraph_key) {
+  auto it = subgraph_idx_map_.find(subgraph_key);
   if (it != subgraph_idx_map_.end())
     return it->second;
   else
@@ -718,8 +720,8 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
 
 std::set<int> Interpreter::models() const {
   std::set<int> models;
-  for (auto key : subgraph_idx_map_) {
-    models.insert(key.first.first);
+  for (auto& key : subgraph_idx_map_) {
+    models.insert(key.first.model_id);
   }
   return models;
 }
@@ -737,7 +739,7 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {
-  int subgraph_idx = GetSubgraphIdx(model_id, kTfLiteCPU);
+  int subgraph_idx = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
   Subgraph* primary_subgraph = subgraph(subgraph_idx);
   ModelSpec& model_spec = model_specs_[model_id];
 
