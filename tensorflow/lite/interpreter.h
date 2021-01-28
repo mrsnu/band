@@ -22,6 +22,7 @@ limitations under the License.
 #include <cstdlib>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/common.h"  // IWYU pragma: export
@@ -615,6 +616,7 @@ class Interpreter {
     */
   };
 
+
   void SetModelConfig(int model_id, ModelConfig model_config) {
     model_configs_[model_id] = model_config;
   }
@@ -623,8 +625,37 @@ class Interpreter {
     return model_configs_;
   }
   
-  TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
+  TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask,
+                                       TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
+  void SplitOperatorsEven(int model_id,
+                          int num_split,
+                          TfLiteDeviceFlags device_flag,
+                          std::vector<std::pair<int, int>>& splitted_op_range) {
+    int num_ops = model_specs_[model_id].num_ops;
+    std::vector<int>& unsupported_ops = \
+                          model_specs_[model_id].unsupported_ops[device_flag];
+    int split_idx = 0;
+    for (int i = 0; i < num_split; ++i) {
+      int min_idx = num_ops * i / num_split;
+      int max_idx = (num_ops * (i + 1) / num_split) - 1;
+      for (int k = min_idx; k <= max_idx; ++k) {
+        if (std::find(unsupported_ops.begin(),
+                      unsupported_ops.end(),
+                      k) != unsupported_ops.end()) {
+          if (min_idx <= k - 1)
+            splitted_op_range.push_back(std::make_pair(min_idx, k - 1));
+          splitted_op_range.push_back(std::make_pair(k, k));
+          min_idx = k + 1;
+        }
+      }
+
+      if (min_idx <= max_idx) {
+          splitted_op_range.push_back(std::make_pair(min_idx, max_idx));
+      }
+    }
+  };
+            
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;

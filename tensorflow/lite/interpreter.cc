@@ -739,7 +739,10 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
 void Interpreter::InvestigateModelSpec(int model_id) {
   int subgraph_idx = GetSubgraphIdx(model_id, kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(subgraph_idx);
+  ModelSpec& model_spec = model_specs_[model_id];
 
+  std::vector<int>& execution_plan = primary_subgraph->execution_plan();
+  model_spec.num_ops = execution_plan.size();
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
     if (device_flag == kTfLiteCPU)
@@ -747,9 +750,6 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
     std::set<TfLiteType> tensor_types;
     ApplyBestDeviceDelegate(primary_subgraph, device_flag, tensor_types);
-
-    ModelSpec& model_spec = model_specs_[model_id];
-    std::vector<int>& execution_plan = primary_subgraph->execution_plan();
     for (auto node_index : execution_plan) {
       const TfLiteNode& node = \
                     primary_subgraph->node_and_registration(node_index)->first;

@@ -63,20 +63,22 @@ class InterpreterBuilder {
   static int AddPrimarySubgraph(const ::tflite::Model* model,
                                const OpResolver& op_resolver,
                                std::unique_ptr<Interpreter>* interpreter,
+                               int model_id,
                                int num_threads = -1) {
-    return AddSubgraph(model, op_resolver, interpreter, num_threads);
+    tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU, -1, -1);
+    return AddSubgraph(model, op_resolver, interpreter, subgraph_key, num_threads);
   }
 
   static int AddSubgraph(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
-                        int num_threads = -1,
-                        TfLiteDeviceFlags device_id = kTfLiteCPU);
+                        tflite::impl::SubgraphKey& subgraph_key,
+                        int num_threads = -1);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads = -1,
-                     TfLiteDeviceFlags device_id = kTfLiteCPU);
+                     tflite::impl::SubgraphKey& subgraph_key,
+                     int num_threads = -1);
 
   // Adds NUM_DEVICES number of Subgraphs to the interpreter.
   // Returns the model id.

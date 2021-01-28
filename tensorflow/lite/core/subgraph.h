@@ -42,6 +42,19 @@ namespace impl {
 // Forward declare since NNAPIDelegate uses Interpreter.
 class NNAPIDelegate;
 
+struct SubgraphKey {
+  SubgraphKey(int _model_id,
+              TfLiteDeviceFlags _device_flag,
+              int _start, int _end)
+    : model_id(_model_id),
+      device_flag(_device_flag),
+      start_idx(_start), end_idx(_end) {}
+  int model_id;
+  TfLiteDeviceFlags device_flag;
+  int start_idx;
+  int end_idx;
+};
+
 class Subgraph {
  public:
   friend class Interpreter;

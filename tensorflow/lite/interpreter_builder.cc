@@ -573,6 +573,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // Investigate Model Specification
   (*interpreter)->InvestigateModelSpec(model_id);
 
+
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     // For given strategy, get partition plan.
@@ -581,8 +582,22 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     //   AddSubgraph(model, op_resolver, interpreter, num_threads, SubgraphKey);
     //   RegisterSubgraphIdx
 
+    std::vector<std::pair<int, int>> splitted_op_range;
+    (*interpreter)->
+      SplitOperatorsEven(model_id, 2, device_id, splitted_op_range);
+
+    for (auto& range : splitted_op_range) {
+      int start = range.first;
+      int end = range.second;
+      tflite::impl::SubgraphKey subgraph_key(model_id, device_id, start, end);
+      int subgraph_idx = AddSubgraph(
+        model, op_resolver, interpreter, subgraph_key, num_threads);
+    }
+
+    /*
     int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, num_threads, device_id);
+    */
     if (subgraph_idx != -1) {
       (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
       has_available_device = true;
@@ -600,16 +615,20 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads,
-                     TfLiteDeviceFlags device_id) {
-  return AddSubgraph(model.GetModel(), op_resolver, interpreter, num_threads, device_id);
+                     tflite::impl::SubgraphKey& subgraph_key,
+                     int num_threads) {
+  return AddSubgraph(model.GetModel(),
+                     op_resolver,
+                     interpreter,
+                     subgraph_key,
+                     num_threads);
 }
 
 int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads,
-                     TfLiteDeviceFlags device_id) {
+                     tflite::impl::SubgraphKey& subgraph_key,
+                     int num_threads) {
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
         "Interpreter is invalid");
@@ -719,7 +738,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if ((*interpreter)->
           ApplyBestDeviceDelegate(
             modified_subgraph, 
-            device_id, 
+            subgraph_key.device_flag, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
     
