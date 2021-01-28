@@ -771,6 +771,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       model_spec.output_tensors.insert(output_tensor);
     }
   }
+
+  primary_subgraph->AllocateTensors();
 }
 
 }  // namespace impl
