@@ -172,7 +172,7 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     // main run method
     TfLiteStatus status;
     if (period_ms <= 0) {
-      status = RunAll();
+      status = RunImpl();
     } else {
       status = RunPeriodic(period_ms);
     }

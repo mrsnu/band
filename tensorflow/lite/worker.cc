@@ -1,6 +1,6 @@
 #include "tensorflow/lite/worker.h"
-#include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {

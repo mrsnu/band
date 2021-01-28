@@ -114,12 +114,6 @@ class InterpreterBuilder {
       const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
       Subgraph* subgraph,
       int start_op_idx, int end_op_idx);
-  /*
-  TfLiteStatus ParseTensors(
-      const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
-      const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-      Subgraph* subgraph);
-  */
   TfLiteStatus ParseTensors(
       const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
       const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,

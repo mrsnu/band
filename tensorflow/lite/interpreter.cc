@@ -132,6 +132,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
 
   // Create a Planner instance.
   planner_.reset(new FixedDevicePlanner(this));
+  // planner_.reset(new ShortestExpectedLatencyPlanner(this));
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 
@@ -347,8 +348,14 @@ TfLiteStatus Interpreter::ReleaseNonPersistentMemory() {
 TfLiteStatus Interpreter::Invoke() {
   ScopedRuntimeInstrumentationProfile scoped_runtime_event(installed_profiler_,
                                                            "invoke");
+  /*
   TF_LITE_ENSURE_STATUS_WITH_SCOPED_INSTRUMENTATION(
       scoped_runtime_event, primary_subgraph().Invoke());
+  */
+
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    Invoke(i);
+  }
 
   if (!allow_buffer_handle_output_) {
     for (int tensor_index : outputs()) {
@@ -745,13 +752,37 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
   std::vector<int>& execution_plan = primary_subgraph->execution_plan();
   model_spec.num_ops = execution_plan.size();
+
+ // Tensor Dependency
+  for (auto node_index : execution_plan) {
+    const TfLiteNode& node = \
+                  primary_subgraph->node_and_registration(node_index)->first;
+
+    std::set<int> tensor_indices;
+    for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
+      tensor_indices.insert(input_tensor);
+    }
+
+    for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+      tensor_indices.insert(output_tensor);
+      model_spec.output_tensors.insert(output_tensor);
+    }
+
+    for (auto i : tensor_indices) {
+      const auto* tensor = primary_subgraph->tensor(i);
+      model_spec.tensor_types.insert(tensor->type);
+    }
+  }
+
+  // Unsupported Ops
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
     if (device_flag == kTfLiteCPU)
       continue;
 
-    std::set<TfLiteType> tensor_types;
-    ApplyBestDeviceDelegate(primary_subgraph, device_flag, tensor_types);
+    ApplyBestDeviceDelegate(primary_subgraph,
+                            device_flag,
+                            model_spec.tensor_types);
     for (auto node_index : execution_plan) {
       const TfLiteNode& node = \
                     primary_subgraph->node_and_registration(node_index)->first;
@@ -762,15 +793,6 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     primary_subgraph->UndoAllDelegates();
   }
 
- // Tensor Dependency
-  for (auto node_index : execution_plan) {
-    const TfLiteNode& node = \
-                  primary_subgraph->node_and_registration(node_index)->first;
-
-    for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
-      model_spec.output_tensors.insert(output_tensor);
-    }
-  }
 
   primary_subgraph->AllocateTensors();
 }

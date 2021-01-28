@@ -36,6 +36,7 @@ limitations under the License.
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/fixed_device_planner.h"
+// #include "tensorflow/lite/shortest_expected_latency_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -88,6 +89,7 @@ namespace impl {
 struct ModelSpec {
 	int num_ops;
 	std::set<int> output_tensors;
+  std::set<TfLiteType> tensor_types;
 	std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
 	/*
 	std::map<int, int> tensor_size;
@@ -641,35 +643,34 @@ class Interpreter {
     std::vector<int>& unsupported_ops = \
                           model_specs_[model_id].unsupported_ops[device_flag];
     int split_idx = 0;
-    TfLiteDeviceFlags current_device = device_flag; 
+    TfLiteDeviceFlags prev_device, current_device = device_flag; 
     for (int i = 0; i < num_split; ++i) {
       int min_idx = num_ops * i / num_split;
       int max_idx = (num_ops * (i + 1) / num_split) - 1;
       int subgraph_min = min_idx;
       for (int k = min_idx; k <= max_idx; ++k) {
+        prev_device = current_device;
         if (std::find(unsupported_ops.begin(),
                       unsupported_ops.end(),
                       k) != unsupported_ops.end()) {
-          if (k > min_idx && current_device != kTfLiteCPU) {
-            // Add Subgraph range
-            splitted_op_range.push_back(
-                SubgraphKey(model_id, device_flag, subgraph_min, k - 1));
-            subgraph_min = k;
-            current_device = kTfLiteCPU;
-          }
+          current_device = kTfLiteCPU;
         } else {
-          if (k > min_idx && current_device != device_flag) {
-            splitted_op_range.push_back(
-                SubgraphKey(model_id, kTfLiteCPU, subgraph_min, k - 1));
-            subgraph_min = k;
-            current_device = device_flag;
-          }
+          current_device = device_flag;
+        }
+
+        if (k == min_idx)
+          prev_device = current_device;
+
+        if (k > min_idx && current_device != prev_device) {
+          splitted_op_range.push_back(
+              SubgraphKey(model_id, prev_device, subgraph_min, k - 1));
+          subgraph_min = k;
         }
       }
 
       if (subgraph_min <= max_idx)
         splitted_op_range.push_back(
-            SubgraphKey(model_id, device_flag, subgraph_min, max_idx));
+            SubgraphKey(model_id, current_device, subgraph_min, max_idx));
     }
   };
             
