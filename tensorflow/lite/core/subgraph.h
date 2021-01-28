@@ -50,13 +50,10 @@ struct SubgraphKey {
       device_flag(_device_flag),
       start_idx(_start), end_idx(_end) {}
   bool operator<(const SubgraphKey &key)  const {
-    return model_id < key.model_id;
-  }
-  bool operator==(const SubgraphKey &key)  const {
-    return model_id == key.model_id && 
-           device_flag == key.device_flag &&
-           start_idx == key.start_idx &&
-           end_idx == key.end_idx;
+    return model_id < key.model_id ||
+           device_flag < key.device_flag ||
+           start_idx < key.start_idx ||
+           end_idx < key.end_idx;
   }
   int model_id;
   TfLiteDeviceFlags device_flag;

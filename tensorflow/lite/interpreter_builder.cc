@@ -591,23 +591,13 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // Investigate Model Specification
   (*interpreter)->InvestigateModelSpec(model_id);
 
-
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    // For given strategy, get partition plan.
-    // Subgraph Key = (model_id, device_id, start_op_idx, end_op_idx)
-    // If key does not exist,
-    //   AddSubgraph(model, op_resolver, interpreter, num_threads, SubgraphKey);
-    //   RegisterSubgraphIdx
-
-    std::vector<std::pair<int, int>> splitted_op_range;
+    std::vector<tflite::impl::SubgraphKey> subgraph_keys;
     (*interpreter)->
-      SplitOperatorsEven(model_id, 2, device_id, splitted_op_range);
+      SplitOperatorsEven(model_id, 2, device_id, subgraph_keys);
 
-    for (auto& range : splitted_op_range) {
-      int start = range.first;
-      int end = range.second;
-      tflite::impl::SubgraphKey subgraph_key(model_id, device_id, start, end);
+    for (auto& subgraph_key : subgraph_keys) {
       int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, subgraph_key, num_threads);
       if (subgraph_idx != -1) {

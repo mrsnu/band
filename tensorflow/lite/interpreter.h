@@ -631,27 +631,35 @@ class Interpreter {
   void SplitOperatorsEven(int model_id,
                           int num_split,
                           TfLiteDeviceFlags device_flag,
-                          std::vector<std::pair<int, int>>& splitted_op_range) {
+                          std::vector<SubgraphKey>& splitted_op_range) {
     int num_ops = model_specs_[model_id].num_ops;
     std::vector<int>& unsupported_ops = \
                           model_specs_[model_id].unsupported_ops[device_flag];
     int split_idx = 0;
+    TfLiteDeviceFlags current_device = device_flag; 
     for (int i = 0; i < num_split; ++i) {
       int min_idx = num_ops * i / num_split;
       int max_idx = (num_ops * (i + 1) / num_split) - 1;
+      int subgraph_min = min_idx;
       for (int k = min_idx; k <= max_idx; ++k) {
         if (std::find(unsupported_ops.begin(),
                       unsupported_ops.end(),
                       k) != unsupported_ops.end()) {
-          if (min_idx <= k - 1)
-            splitted_op_range.push_back(std::make_pair(min_idx, k - 1));
-          splitted_op_range.push_back(std::make_pair(k, k));
-          min_idx = k + 1;
+          if (k > min_idx && current_device != kTfLiteCPU) {
+            // Add Subgraph range
+            splitted_op_range.push_back(
+                SubgraphKey(model_id, device_flag, subgraph_min, k - 1));
+            subgraph_min = k;
+            current_device = kTfLiteCPU;
+          }
+        } else {
+          if (k > min_idx && current_device != device_flag) {
+            splitted_op_range.push_back(
+                SubgraphKey(model_id, kTfLiteCPU, subgraph_min, k - 1));
+            subgraph_min = k;
+            current_device = device_flag;
+          }
         }
-      }
-
-      if (min_idx <= max_idx) {
-          splitted_op_range.push_back(std::make_pair(min_idx, max_idx));
       }
     }
   };
