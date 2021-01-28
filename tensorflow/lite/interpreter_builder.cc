@@ -604,6 +604,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
         has_available_device = true;
       }
+
+      std::cout << "ADDED Subgraph : " << subgraph_key.model_id << " "
+                                       << subgraph_key.device_flag << " "
+                                       << subgraph_key.start_idx << " "
+                                       << subgraph_key.end_idx << std::endl;
     }
   }
 
@@ -721,6 +726,17 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
       return cleanup_and_error();
     }
+
+    std::vector<int> subgraph_inputs =
+        FlatBufferIntArrayToVector(subgraph->inputs());
+    std::vector<int> subgraph_outputs =
+        FlatBufferIntArrayToVector(subgraph->outputs());
+
+    std::set<int> subgraph_input_set =
+        std::set<int>(subgraph_inputs.begin(), subgraph_inputs.end());
+    std::set<int> subgraph_output_set =
+        std::set<int>(subgraph_outputs.begin(), subgraph_outputs.end());
+
     // Finally setup nodes and tensors
     if (builder.ParseNodes(model, op_resolver,
                            operators,
@@ -731,12 +747,47 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (builder.ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
       return cleanup_and_error();
 
-    // Set num threads
     // Parse inputs/outputs
+    // Need refactoring
+    std::set<int> node_input_tensors, node_output_tensors;
+    auto nodes_and_registration = modified_subgraph->nodes_and_registration();
+    for (int node_index : modified_subgraph->execution_plan()) {
+      TfLiteNode node = nodes_and_registration[node_index].first;
+      for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
+        node_input_tensors.insert(input_tensor);
+      }
+      for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+        node_output_tensors.insert(output_tensor);
+      }
+    }
+
+    std::set<int> input_features;
+    std::set<int> input_tensors, output_tensors;
+    std::set<int> input_nominees;
+    std::set_difference(node_input_tensors.begin(), node_input_tensors.end(),
+                        node_output_tensors.begin(), node_output_tensors.end(),
+                        std::inserter(input_tensors, input_tensors.begin()));
+
+    tflite::impl::ModelSpec& model_spec = \
+      (*interpreter)->GetModelSpec(subgraph_key.model_id);
+
+    std::set_union(model_spec.output_tensors.begin(),
+                   model_spec.output_tensors.end(),
+                   subgraph_input_set.begin(), subgraph_input_set.end(),
+                   std::inserter(input_nominees, input_nominees.end()));
+
+    std::set_intersection(input_nominees.begin(), input_nominees.end(),
+                          input_tensors.begin(), input_tensors.end(),
+                          std::inserter(input_features, input_features.begin()));
+
+    std::set_difference(node_output_tensors.begin(), node_output_tensors.end(),
+                        node_input_tensors.begin(), node_input_tensors.end(),
+                        std::inserter(output_tensors, output_tensors.begin()));
+
     modified_subgraph->SetInputs(
-        FlatBufferIntArrayToVector(subgraph->inputs()));
+        std::vector<int>(input_features.begin(), input_features.end()));
     modified_subgraph->SetOutputs(
-        FlatBufferIntArrayToVector(subgraph->outputs()));
+        std::vector<int>(output_tensors.begin(), output_tensors.end()));
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {

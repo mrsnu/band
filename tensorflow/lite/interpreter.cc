@@ -761,6 +761,16 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     }
     primary_subgraph->UndoAllDelegates();
   }
+
+ // Tensor Dependency
+  for (auto node_index : execution_plan) {
+    const TfLiteNode& node = \
+                  primary_subgraph->node_and_registration(node_index)->first;
+
+    for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+      model_spec.output_tensors.insert(output_tensor);
+    }
+  }
 }
 
 }  // namespace impl

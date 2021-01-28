@@ -24,6 +24,7 @@ limitations under the License.
 #include <vector>
 #include <iostream>
 
+#include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/common.h"  // IWYU pragma: export
 #include "tensorflow/lite/core/api/error_reporter.h"
@@ -84,6 +85,17 @@ namespace impl {
 /// foo.Invoke();
 /// </code></pre>
 ///
+struct ModelSpec {
+	int num_ops;
+	std::set<int> output_tensors;
+	std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
+	/*
+	std::map<int, int> tensor_size;
+	std::map<int, int> op_input_size;
+	std::map<int, int> op_output_size;
+	std::map<int, int> op_flops;
+	*/
+};
 
 class Interpreter {
  public:
@@ -605,17 +617,6 @@ class Interpreter {
     int batch_size = 1;
   };
 
-  struct ModelSpec {
-    int num_ops;
-    std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
-    /*
-    std::map<int, int> tensor_size;
-    std::map<int, int> op_input_size;
-    std::map<int, int> op_output_size;
-    std::map<int, int> op_flops;
-    */
-  };
-
 
   void SetModelConfig(int model_id, ModelConfig model_config) {
     model_configs_[model_id] = model_config;
@@ -627,6 +628,10 @@ class Interpreter {
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask,
                                        TfLiteDeviceFlags device_id = kTfLiteNumDevices);
+
+	ModelSpec& GetModelSpec(int model_id) {
+  	return model_specs_[model_id];
+	}
 
   void SplitOperatorsEven(int model_id,
                           int num_split,
@@ -661,6 +666,10 @@ class Interpreter {
           }
         }
       }
+
+      if (subgraph_min <= max_idx)
+        splitted_op_range.push_back(
+            SubgraphKey(model_id, device_flag, subgraph_min, max_idx));
     }
   };
             
