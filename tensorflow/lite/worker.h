@@ -17,16 +17,17 @@ class Planner;
 
 struct Job {
   explicit Job(int model_id, int start_op = 0)
-  : model_id_(model_id), start_op_idx(start_op) {
+  : model_id_(model_id), start_idx(start_op) {
   }
   int model_id_;
   int device_id_ = -1;
-  int start_op_idx;
-  int end_op_idx = -1;
+  int start_idx;
+  int end_idx = -1;
   int subgraph_idx_ = -1;
   int64_t enqueue_time_ = 0;
   int64_t invoke_time_ = 0;
   int64_t end_time_ = 0;
+  int sched_id_ = 0;
   // for log message
   std::string model_fname_;
 };

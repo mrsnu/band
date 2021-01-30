@@ -240,7 +240,7 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
   start_op_idx = start_op_idx == -1 ? 0
                                     : start_op_idx;
 
-  // assert(end_op_idx >= start_op_idx)
+  // TODO(dhkim): assert(end_op_idx >= start_op_idx)
   int num_ops = end_op_idx - start_op_idx + 1;
 
   // Reduce the number of redundant allocations
@@ -467,6 +467,8 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
       continue;
     }
 
+    // TODO(dhkim): delete tensor_types_ from builder attribute.
+    // Let model_spec take the control.
     tensor_types_.insert(type);
 
     auto get_readonly_data = [&](const char** buffer_data,
@@ -590,6 +592,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int subgraph_idx = AddSubgraph(
     model, op_resolver, interpreter, subgraph_key, num_threads);
   if (subgraph_idx != -1) {
+    // TODO(dhkim): Move RegisterSubgraphIdx inside AddSubgraph
     (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
     has_available_device = true;
   }

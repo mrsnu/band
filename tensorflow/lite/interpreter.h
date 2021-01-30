@@ -390,6 +390,14 @@ class Interpreter {
 
   void InvestigateModelSpec(int model_id);
 
+  vector<int> GetSubgraphCandidates(Job& job);
+
+  /*
+  TfLiteDevice GetShortestLatency(int model_id, Job& job);
+
+  int64_t GetLatency(int model_id, TfLiteDeviceFlags device_flag, Job& job);
+  */
+
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   void InvokeModelAsync(int model_id);

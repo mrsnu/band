@@ -71,6 +71,7 @@ void Worker::Work() {
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time_ = profiling::time::NowMicros();
         planner_ptr->EnqueueFinishedJob(job);
+        // TODO (dhkim): Add callback?
       } else {
         job.end_time_ = profiling::time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment

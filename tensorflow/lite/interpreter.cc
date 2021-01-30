@@ -749,6 +749,9 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
   std::vector<int>& execution_plan = primary_subgraph->execution_plan();
   model_spec.num_ops = execution_plan.size();
+  SubgraphKey& key = primary_subgraph->GetKey();
+  key.start_idx = 0;
+  key.end_idx = model_spec.num_ops - 1;
 
  // Tensor Dependency
   for (auto node_index : execution_plan) {
@@ -790,10 +793,61 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     primary_subgraph->UndoAllDelegates();
   }
 
-  DeleteSubgraphs(0);
-  // primary_subgraph->AllocateTensors();
+  primary_subgraph->AllocateTensors();
 }
 
+
+vector<int> Interpreter::GetSubgraphCandidates(Job& job) {
+  vector<int> candidates;
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    SubgraphKey& key = subgraph(i)->GetKey();
+    if (key.model_id == job.model_id && key.start_idx == job.start_idx)
+      candidates.push_back(i);
+  }
+
+  // TODO(dhkim): What if no candidate is chosen.
+
+  return candidates;
+}
+
+/*
+TfLiteDeviceFlags Interpreter::GetShortestLatency(int model_id, Job& job) {
+  int idx = 0;
+  int64_t value = -1;
+  for(int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+    int64_t latency = GetLatency(model_id, device_flags, job);
+
+    if (value == -1 || latency < value) {
+      idx = i;
+      value = latency;
+    }
+  }
+
+  return static_cast<TfLiteDevice>(idx);
+}
+
+int64_t Interpreter::GetLatency(int model_id,
+                                TfLiteDeviceFlags device_flag,
+                                Job& job) {
+  int64_t current_time = profiling::time::NowMicros();
+  int64_t waiting_time = workers_[device]->GetWaitingTime();
+  int subgraph_idx = GetSubgraphIdx(model_id, device);
+
+  if (subgraph_idx == -1)
+    return 99999999999;
+
+  int64_t expected_latency = (*(subgraph(subgraph_idx))).GetExpectedLatency();
+  expected_latency += waiting_time;
+
+  // job.waiting_time.insert({device, waiting_time});
+  job.waiting_time[device] = waiting_time;
+  // job.expected_latency.insert({device, expected_latency});
+  job.expected_latency[device] = expected_latency;
+
+  return expected_latency;
+}
+*/
 }  // namespace impl
 
 }  // namespace tflite
