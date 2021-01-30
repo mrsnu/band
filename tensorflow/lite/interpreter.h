@@ -619,6 +619,8 @@ class Interpreter {
 
   int GetSubgraphIdx(SubgraphKey subgraph_key);
 
+  void DeleteKey(SubgraphKey subgraph_key);
+
   std::set<int> models() const;
 
   struct ModelConfig {

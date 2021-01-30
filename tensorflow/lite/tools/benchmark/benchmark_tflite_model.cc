@@ -829,7 +829,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
 
   // wait for 60 seconds until we stop the benchmark
   // we could set a command line arg for this value as well
-  std::this_thread::sleep_for(std::chrono::milliseconds(60000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(6000));
   kill_app_ = true;
 
   // Note that num_requests_ may not be equal to the actual # of requests that

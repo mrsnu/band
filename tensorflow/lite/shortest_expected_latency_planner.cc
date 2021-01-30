@@ -21,6 +21,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
     }
     request_lock.unlock();
 
+    std::cout << "Got requests" << std::endl;
     while (!local_jobs.empty()) {
       // std::cout << local_jobs.size() << std::endl;
       // First, find the most urgent job -- the one with the
@@ -59,11 +60,17 @@ void ShortestExpectedLatencyPlanner::Plan() {
           SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
           int64_t expected_latency =
             GetInterpreter()->GetShortestLatency(key, 0);
-          if (expected_latency < best_latency)
+          if (expected_latency < best_latency) {
             best_latency = expected_latency;
             best_subgraph = subgraph_idx;
+          }
         }
 
+        /*
+        std::cout << "For Job " << it - local_jobs.begin() << "(" << next_job.model_id_
+                  << ", " << next_job.start_idx << ") : Best subgraph - "
+                  << best_subgraph << ", " << best_latency << std::endl;
+        */
         if (largest_shortest_latency < best_latency) {
           largest_shortest_latency = best_latency;
           target_job_idx = it - local_jobs.begin();

@@ -104,7 +104,7 @@ class Planner {
   std::condition_variable end_invoke_;
 
   // TODO #36: Make this a configurable option (command line arg)
-  std::string log_path_ = "/data/local/tmp/model_execution_log.csv";
+  std::string log_path_ = "/data/local/tmp/log/model_execution_log.csv";
 };
 
 }  // namespace impl

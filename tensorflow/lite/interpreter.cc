@@ -705,6 +705,12 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
   }
 }
 
+void Interpreter::DeleteKey(SubgraphKey subgraph_key) {
+  auto it = subgraph_idx_map_.find(subgraph_key);
+  if (it != subgraph_idx_map_.end())
+    subgraph_idx_map_.erase(it);
+}
+
 void Interpreter::RegisterSubgraphIdx(SubgraphKey subgraph_key,
                                       int subgraph_idx) {
   // Skip if exists.
@@ -750,8 +756,10 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   std::vector<int>& execution_plan = primary_subgraph->execution_plan();
   model_spec.num_ops = execution_plan.size();
   SubgraphKey& key = primary_subgraph->GetKey();
+  DeleteKey(key);
   key.start_idx = 0;
   key.end_idx = model_spec.num_ops - 1;
+  RegisterSubgraphIdx(key, subgraph_idx);
 
  // Tensor Dependency
   for (auto node_index : execution_plan) {
@@ -814,11 +822,20 @@ int64_t Interpreter::GetShortestLatency(SubgraphKey& key, int64_t start_time) {
   TfLiteDeviceFlags device = key.device_flag;
   int64_t waiting_time = GetDeviceWaitingTime(device);
   int64_t expected_latency = GetSubgraphProfileResult(key);
+
+  /*
+  std::cout << "GetShortestLatency((" 
+            << key.model_id << ", " << key.device_flag
+            << ", " << key.start_idx << ", " << key.end_idx  << ")"
+            << ", " << start_time << ")" << std::endl;
+  std::cout << device << " device waiting time : " << waiting_time << std::endl;
+  std::cout << "Subgraph profile result : " << expected_latency << std::endl;
+  */
   expected_latency += std::max(waiting_time, start_time);
 
   if (key.end_idx != model_specs_[key.model_id].num_ops - 1) {
     std::vector<int> subgraph_indices =
-      GetSubgraphCandidates(key.model_id, key.start_idx);
+      GetSubgraphCandidates(key.model_id, key.end_idx + 1);
 
     int64_t min_subgraph_latency = INT_MAX;
     for (auto subgraph_idx : subgraph_indices) {
@@ -853,7 +870,11 @@ int64_t Interpreter::GetDeviceWaitingTime(TfLiteDeviceFlags device) {
 }
 
 int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
-  return subgraph_profiling_results_map_[key];
+  auto it = subgraph_profiling_results_map_.find(key);
+  if (it != subgraph_profiling_results_map_.end())
+    return it->second;
+  else
+    return -1;
 }
 
 }  // namespace impl

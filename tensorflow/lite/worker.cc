@@ -58,7 +58,6 @@ void Worker::Work() {
     cpu_lock.unlock();
 
     Job job = requests_.front();
-    requests_.pop_front();
     lock.unlock();
 
     int subgraph_idx = job.subgraph_idx_;
@@ -79,6 +78,10 @@ void Worker::Work() {
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
       }
       planner_ptr->GetSafeBool().notify();
+
+      lock.lock();
+      requests_.pop_front();
+      lock.unlock();
     } else {
       // TODO #21: Handle errors in multi-thread environment
       return;
