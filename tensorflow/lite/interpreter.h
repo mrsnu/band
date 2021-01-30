@@ -720,7 +720,7 @@ class Interpreter {
   std::map<TfLiteDelegateFlags, TfLiteDelegatePtr> delegates_;
 
   // Map structure to store profiling results in microseconds of (model_id, device_id)
-  std::map<std::pair<int, TfLiteDeviceFlags>, int64_t> subgraph_profiling_results_map_;
+  std::map<SubgraphKey, int64_t> subgraph_profiling_results_map_;
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.
   std::unique_ptr<Profiler> owned_profiler_;

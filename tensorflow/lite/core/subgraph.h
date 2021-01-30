@@ -43,8 +43,8 @@ namespace impl {
 class NNAPIDelegate;
 
 struct SubgraphKey {
-  SubgraphKey(int _model_id,
-              TfLiteDeviceFlags _device_flag,
+  SubgraphKey(int _model_id = -1,
+              TfLiteDeviceFlags _device_flag = kTfLiteCPU,
               int _start = -1, int _end = -1)
     : model_id(_model_id),
       device_flag(_device_flag),
@@ -370,6 +370,10 @@ class Subgraph {
   void SetModelPlan(TfLiteDeviceFlags device) { model_plan_->device_ = device; }
 
   ModelPlan* GetModelPlan() { return model_plan_.get(); }
+
+  // Pass subgraph key in ctor?
+  void SetKey(SubgraphKey key) { key_ = key; }
+  SubgraphKey& GetKey() { return key_; }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
@@ -743,6 +747,8 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
+
+  SubgraphKey key_;
 };
 
 }  // namespace impl

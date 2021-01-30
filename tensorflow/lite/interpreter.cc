@@ -598,33 +598,30 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   // Only update subgraph profilers to not care ownership of the profiler
   SetSubgraphProfiler(&timer);
 
-  for (const int model_id : models()) {
-    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
-      const TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    Subgraph* subgraph = subgraphs_[i].get();
 
-      SubgraphKey key(model_id, device_flag);
-      int subgraph_it = GetSubgraphIdx(key);
-      if (subgraph_it != -1) {
-        Subgraph* subgraph = subgraphs_[subgraph_it].get();
-        for (int i = 0; i < num_warm_ups; i++) {
-          subgraph->Invoke();
-        }
-        timer.ClearRecords();
-        for (int i = 0; i < num_runs; i++) {
-          subgraph->Invoke();
-        }
-
-        subgraph_profiling_results_map_[{model_id, device_flag}] = 
-          timer.GetAverageElapsedTime<std::chrono::microseconds>();
-
-        error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
-                model_id,
-                num_warm_ups, 
-                num_runs, 
-                subgraph_profiling_results_map_[{model_id, device_flag}], 
-                TfLiteDeviceGetName(device_flag));
-      }
+    for (int i = 0; i < num_warm_ups; i++) {
+      subgraph->Invoke();
     }
+    timer.ClearRecords();
+    for (int i = 0; i < num_runs; i++) {
+      subgraph->Invoke();
+    }
+
+    SubgraphKey& subgraph_key = subgraph->GetKey();
+
+    subgraph_profiling_results_map_[subgraph_key] = 
+      timer.GetAverageElapsedTime<std::chrono::microseconds>();
+
+    error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s start=%d end=%d.", 
+            subgraph_key.model_id,
+            num_warm_ups, 
+            num_runs, 
+            subgraph_profiling_results_map_[subgraph_key], 
+            TfLiteDeviceGetName(subgraph_key.device_flag),
+            subgraph_key.start_idx,
+            subgraph_key.end_idx);
   }
 
   SetSubgraphProfiler(previous_profiler);
@@ -793,8 +790,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     primary_subgraph->UndoAllDelegates();
   }
 
-
-  primary_subgraph->AllocateTensors();
+  DeleteSubgraphs(0);
+  // primary_subgraph->AllocateTensors();
 }
 
 }  // namespace impl

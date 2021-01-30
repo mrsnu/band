@@ -584,10 +584,12 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   bool has_available_device = false;
 
   // Add CPU subgraph
-  int subgraph_idx = AddPrimarySubgraph(
-                        model, op_resolver, interpreter, num_threads);
+  //int subgraph_idx = AddPrimarySubgraph(
+  //                      model, op_resolver, interpreter, num_threads);
+  tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU);
+  int subgraph_idx = AddSubgraph(
+    model, op_resolver, interpreter, subgraph_key, num_threads);
   if (subgraph_idx != -1) {
-    tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU);
     (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
     has_available_device = true;
   }
@@ -598,7 +600,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
-    for (int k = 1; k <= 2; ++k) {
+    for (int k = 1; k <= 5; ++k) {
       (*interpreter)->
         SplitOperatorsEven(model_id, k, device_id, subgraph_keys);
     }
@@ -702,7 +704,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
 
   int old_size = (*interpreter)->subgraphs_size();
   // Only one subgraph will be generated.
-  (*interpreter)->AddSubgraphs(1);
+  (*interpreter)->AddSubgraphs(subgraphs->size());
   (*interpreter)->SetNumThreads(num_threads, old_size);
 
   auto cleanup_and_error = [&]() {
@@ -721,6 +723,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     modified_subgraph_index = old_size + subgraph_index;
     tflite::Subgraph* modified_subgraph =
         (*interpreter)->subgraph(modified_subgraph_index);
+    modified_subgraph->SetKey(subgraph_key);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {
