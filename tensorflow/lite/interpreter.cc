@@ -131,8 +131,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new FixedDevicePlanner(this));
-  // planner_.reset(new ShortestExpectedLatencyPlanner(this));
+  // planner_.reset(new FixedDevicePlanner(this));
+  planner_.reset(new ShortestExpectedLatencyPlanner(this));
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 
@@ -797,11 +797,11 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 }
 
 
-vector<int> Interpreter::GetSubgraphCandidates(Job& job) {
-  vector<int> candidates;
+std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx) {
+  std::vector<int> candidates;
   for (int i = 0; i < subgraphs_size(); ++i) {
     SubgraphKey& key = subgraph(i)->GetKey();
-    if (key.model_id == job.model_id && key.start_idx == job.start_idx)
+    if (key.model_id == model_id && key.start_idx == start_idx)
       candidates.push_back(i);
   }
 
@@ -810,44 +810,52 @@ vector<int> Interpreter::GetSubgraphCandidates(Job& job) {
   return candidates;
 }
 
-/*
-TfLiteDeviceFlags Interpreter::GetShortestLatency(int model_id, Job& job) {
-  int idx = 0;
-  int64_t value = -1;
-  for(int i = 0; i < kTfLiteNumDevices; ++i) {
-    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-    int64_t latency = GetLatency(model_id, device_flags, job);
+int64_t Interpreter::GetShortestLatency(SubgraphKey& key, int64_t start_time) {
+  TfLiteDeviceFlags device = key.device_flag;
+  int64_t waiting_time = GetDeviceWaitingTime(device);
+  int64_t expected_latency = GetSubgraphProfileResult(key);
+  expected_latency += std::max(waiting_time, start_time);
 
-    if (value == -1 || latency < value) {
-      idx = i;
-      value = latency;
+  if (key.end_idx != model_specs_[key.model_id].num_ops - 1) {
+    std::vector<int> subgraph_indices =
+      GetSubgraphCandidates(key.model_id, key.start_idx);
+
+    int64_t min_subgraph_latency = INT_MAX;
+    for (auto subgraph_idx : subgraph_indices) {
+      SubgraphKey& subgraph_key = subgraph(subgraph_idx)->GetKey();
+      int64_t subgraph_latency = GetShortestLatency(subgraph_key, expected_latency);
+      if (subgraph_latency < min_subgraph_latency)
+        min_subgraph_latency = subgraph_latency;
     }
+
+    // TODO (dhkim): if no subgraph is chosen, INT_MAX will be added.
+    // Handle 0 item case.
+    expected_latency += min_subgraph_latency;
   }
-
-  return static_cast<TfLiteDevice>(idx);
-}
-
-int64_t Interpreter::GetLatency(int model_id,
-                                TfLiteDeviceFlags device_flag,
-                                Job& job) {
-  int64_t current_time = profiling::time::NowMicros();
-  int64_t waiting_time = workers_[device]->GetWaitingTime();
-  int subgraph_idx = GetSubgraphIdx(model_id, device);
-
-  if (subgraph_idx == -1)
-    return 99999999999;
-
-  int64_t expected_latency = (*(subgraph(subgraph_idx))).GetExpectedLatency();
-  expected_latency += waiting_time;
-
-  // job.waiting_time.insert({device, waiting_time});
-  job.waiting_time[device] = waiting_time;
-  // job.expected_latency.insert({device, expected_latency});
-  job.expected_latency[device] = expected_latency;
 
   return expected_latency;
 }
-*/
+
+int64_t Interpreter::GetDeviceWaitingTime(TfLiteDeviceFlags device) {
+  int64_t waiting_time = 0;
+  Worker* worker = GetWorker(device);
+  {
+    std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+    std::deque<Job>& requests = worker->GetDeviceRequests();
+    for (auto& job : requests) {
+      SubgraphKey subgraph_key(job.model_id_, device, job.start_idx, job.end_idx);
+      // TODO (dhkim): what if no valid subgraph key is given?
+      waiting_time += GetSubgraphProfileResult(subgraph_key);
+    }
+  }
+
+  return waiting_time;
+}
+
+int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
+  return subgraph_profiling_results_map_[key];
+}
+
 }  // namespace impl
 
 }  // namespace tflite

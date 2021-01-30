@@ -36,7 +36,7 @@ limitations under the License.
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/fixed_device_planner.h"
-// #include "tensorflow/lite/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/shortest_expected_latency_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -390,13 +390,13 @@ class Interpreter {
 
   void InvestigateModelSpec(int model_id);
 
-  vector<int> GetSubgraphCandidates(Job& job);
+  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx);
 
-  /*
-  TfLiteDevice GetShortestLatency(int model_id, Job& job);
+  int64_t GetShortestLatency(SubgraphKey& key, int64_t start_time);
 
-  int64_t GetLatency(int model_id, TfLiteDeviceFlags device_flag, Job& job);
-  */
+  int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
+
+  int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.

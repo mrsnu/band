@@ -43,8 +43,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
       int target_subgraph;
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
-        vector<int> subgraph_indices =
-          GetInterpreter()->GetSubgraphCandidates(next_job);
+        std::vector<int> subgraph_indices =
+          GetInterpreter()->GetSubgraphCandidates(next_job.model_id_,
+                                                  next_job.start_idx);
 
         if (subgraph_indices.size() == 0) {
           // TODO(dhkim): error handling
@@ -56,7 +57,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
         int best_subgraph = -1;
         for (auto subgraph_idx : subgraph_indices) {
           SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
-          int64_t expected_latency = GetInterpreter()->GetShortestLatency(key);
+          int64_t expected_latency =
+            GetInterpreter()->GetShortestLatency(key, 0);
           if (expected_latency < best_latency)
             best_latency = expected_latency;
             best_subgraph = subgraph_idx;
@@ -80,8 +82,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
           GetInterpreter()->subgraph(target_subgraph)->GetKey();
       most_urgent_job.start_idx = to_execute.start_idx;
       most_urgent_job.end_idx = to_execute.end_idx;
-      most_urgent_job.subgraph_idx_ = subgraph_idx;
-      most_urgent_job.device_id_ = target_device;
+      most_urgent_job.subgraph_idx_ = target_subgraph;
+      most_urgent_job.device_id_ = to_execute.device_flag;
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {
