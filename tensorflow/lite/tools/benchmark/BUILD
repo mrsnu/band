@@ -24,6 +24,7 @@ cc_library(
     deps = [
         ":benchmark_tflite_model_lib",
         "//tensorflow/lite/tools:logging",
+        "@jsoncpp_git//:jsoncpp",
     ],
 )
 

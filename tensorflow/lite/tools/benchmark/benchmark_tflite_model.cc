@@ -274,7 +274,7 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
                           BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("enable_platform_tracing",
                           BenchmarkParam::Create<bool>(false));
-  default_params.AddParam("period", BenchmarkParam::Create<int32_t>(10));
+  default_params.AddParam("period_ms", BenchmarkParam::Create<int32_t>(10));
 
   for (const auto& delegate_provider :
        tools::GetRegisteredDelegateProviders()) {
@@ -386,11 +386,12 @@ void BenchmarkTfLiteModel::LogParams() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::ValidateParams() {
+  /*
   if (params_.Get<std::string>("graph").empty()) {
     TFLITE_LOG(ERROR)
         << "Please specify the name of your TF Lite input file";
     return kTfLiteError;
-  }
+  }*/
 
   return PopulateInputLayerInfo(
       params_.Get<std::string>("input_layer"),
