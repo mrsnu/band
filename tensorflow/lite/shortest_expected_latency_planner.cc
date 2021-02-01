@@ -1,5 +1,8 @@
 #include "tensorflow/lite/shortest_expected_latency_planner.h"
+
 #include <iostream>
+
+#include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
 namespace impl {
@@ -42,6 +45,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       int64_t largest_shortest_latency = -1;
       int target_job_idx;
       int target_subgraph;
+      int64_t sched_start = profiling::time::NowMicros();
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
         std::vector<int> subgraph_indices =
@@ -77,6 +81,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
           target_subgraph = best_subgraph;
         }
       }
+      int64_t sched_end = profiling::time::NowMicros();
+      std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
 
       // for some reason, this Job must NOT be a reference (&), otherwise
       // we get a segfault at push_back() below
@@ -95,7 +101,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        most_urgent_job.sched_id_ = sched_id++;
+        if (most_urgent_job.sched_id_ < 0)
+          most_urgent_job.sched_id_ = sched_id++;
         worker->GetDeviceRequests().push_back(most_urgent_job);
         worker->GetRequestCv().notify_one();
       }

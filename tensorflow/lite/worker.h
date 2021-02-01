@@ -27,7 +27,7 @@ struct Job {
   int64_t enqueue_time_ = 0;
   int64_t invoke_time_ = 0;
   int64_t end_time_ = 0;
-  int sched_id_ = 0;
+  int sched_id_ = -1;
   // for log message
   std::string model_fname_;
 };

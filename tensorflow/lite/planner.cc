@@ -11,7 +11,8 @@ Planner::Planner(Interpreter* interpreter) {
   // open file to write per-request timestamps later
   // TODO: make the file path a configurable command line arg
   std::ofstream log_file(log_path_);
-  log_file << "model_name\t"
+  log_file << "job_id\t"
+           << "model_name\t"
            << "model_id\t"
            << "device_id\t"
            << "enqueue_time\t"
@@ -37,7 +38,8 @@ TfLiteStatus Planner::Wait(int num_requests) {
     jobs_finished_.pop_front();
 
     // write all timestamp statistics to log file
-    log_file << job.model_fname_ << "\t"
+    log_file << job.sched_id_ << "\t"
+             << job.model_fname_ << "\t"
              << job.model_id_ << "\t"
              << job.device_id_ << "\t"
              << job.enqueue_time_ << "\t"

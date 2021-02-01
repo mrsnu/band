@@ -405,6 +405,7 @@ int Interpreter::InvokeModelsAsync() {
     to_enqueue.device_id_ = model_config.device;
 
     for (int k = 0; k < model_config.batch_size; ++k) {
+      to_enqueue.sched_id_ = k;
       jobs.emplace_back(to_enqueue);
     }
   }
@@ -749,6 +750,7 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {
+
   int subgraph_idx = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
   Subgraph* primary_subgraph = subgraph(subgraph_idx);
   ModelSpec& model_spec = model_specs_[model_id];
@@ -847,7 +849,7 @@ int64_t Interpreter::GetShortestLatency(SubgraphKey& key, int64_t start_time) {
 
     // TODO (dhkim): if no subgraph is chosen, INT_MAX will be added.
     // Handle 0 item case.
-    expected_latency += min_subgraph_latency;
+    expected_latency = min_subgraph_latency;
   }
 
   return expected_latency;

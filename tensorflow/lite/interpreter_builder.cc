@@ -585,9 +585,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int model_id = InterpreterBuilder::num_registered_model++;
   bool has_available_device = false;
 
-  // Add CPU subgraph
-  //int subgraph_idx = AddPrimarySubgraph(
-  //                      model, op_resolver, interpreter, num_threads);
   tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU);
   int subgraph_idx = AddSubgraph(
     model, op_resolver, interpreter, subgraph_key, num_threads);

@@ -71,6 +71,13 @@ void Worker::Work() {
         job.end_time_ = profiling::time::NowMicros();
         planner_ptr->EnqueueFinishedJob(job);
         // TODO (dhkim): Add callback?
+        if (job.end_idx !=
+            interpreter_ptr->GetModelSpec(job.model_id_).num_ops - 1) {
+          Job next_job(job.model_id_, job.end_idx + 1);
+          next_job.model_fname_ = job.model_fname_;
+          next_job.sched_id_ = job.sched_id_;
+          planner_ptr->EnqueueRequest(next_job);
+        }
       } else {
         job.end_time_ = profiling::time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
