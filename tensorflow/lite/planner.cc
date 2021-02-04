@@ -33,7 +33,7 @@ TfLiteStatus Planner::Wait(int num_requests) {
   });
 
   std::ofstream log_file(log_path_, std::ofstream::app);
-  for (int i = 0; i < num_requests; ++i) {
+  while (!jobs_finished_.empty()) {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 

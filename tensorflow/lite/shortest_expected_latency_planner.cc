@@ -40,6 +40,13 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // Note that we are NOT considering enqueue_time at the moment;
       // no request is given higher priority even if it had stayed in the queue
       // for longer than others.
+      //
+      std::vector<int64_t> device_waiting_time;
+      for (int i = 0; i < kTfLiteNumDevices; ++i) {
+        TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+        device_waiting_time.push_back(
+            GetInterpreter()->GetDeviceWaitingTime(device_flag));
+      }
 
       // find the most urgent job and save its index within the queue
       int64_t largest_shortest_latency = -1;
@@ -63,7 +70,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         for (auto subgraph_idx : subgraph_indices) {
           SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
           int64_t expected_latency =
-            GetInterpreter()->GetShortestLatency(key, 0);
+            GetInterpreter()->GetShortestLatency(key, 0, device_waiting_time);
           if (expected_latency < best_latency) {
             best_latency = expected_latency;
             best_subgraph = subgraph_idx;

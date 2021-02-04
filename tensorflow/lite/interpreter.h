@@ -392,7 +392,9 @@ class Interpreter {
 
   std::vector<int> GetSubgraphCandidates(int model_id, int start_idx);
 
-  int64_t GetShortestLatency(SubgraphKey& key, int64_t start_time);
+  int64_t GetShortestLatency(SubgraphKey& key,
+                             int64_t start_time,
+                             std::vector<int64_t>& device_waiting);
 
   int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
 

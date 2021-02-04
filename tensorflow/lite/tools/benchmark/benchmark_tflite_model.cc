@@ -836,6 +836,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
   // were generated from GeneratePeriodicRequests(), because of thread timing
   // issues.
   // Nonetheless, we don't care because we don't need the exact number anyway.
+  // TODO (dhkim): Change Wait() to wait all subgraphs
   interpreter_->GetPlanner()->Wait(num_requests_);
   return kTfLiteOk;
 }

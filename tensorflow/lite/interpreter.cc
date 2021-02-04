@@ -405,7 +405,7 @@ int Interpreter::InvokeModelsAsync() {
     to_enqueue.device_id_ = model_config.device;
 
     for (int k = 0; k < model_config.batch_size; ++k) {
-      to_enqueue.sched_id_ = k;
+      // to_enqueue.sched_id_ = k;
       jobs.emplace_back(to_enqueue);
     }
   }
@@ -820,9 +820,11 @@ std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx)
   return candidates;
 }
 
-int64_t Interpreter::GetShortestLatency(SubgraphKey& key, int64_t start_time) {
+int64_t Interpreter::GetShortestLatency(SubgraphKey& key,
+                                        int64_t start_time,
+                                        std::vector<int64_t>& device_waiting) {
   TfLiteDeviceFlags device = key.device_flag;
-  int64_t waiting_time = GetDeviceWaitingTime(device);
+  int64_t waiting_time = device_waiting[device];
   int64_t expected_latency = GetSubgraphProfileResult(key);
 
   /*
@@ -842,7 +844,9 @@ int64_t Interpreter::GetShortestLatency(SubgraphKey& key, int64_t start_time) {
     int64_t min_subgraph_latency = INT_MAX;
     for (auto subgraph_idx : subgraph_indices) {
       SubgraphKey& subgraph_key = subgraph(subgraph_idx)->GetKey();
-      int64_t subgraph_latency = GetShortestLatency(subgraph_key, expected_latency);
+      int64_t subgraph_latency = GetShortestLatency(subgraph_key,
+                                                    expected_latency,
+                                                    device_waiting);
       if (subgraph_latency < min_subgraph_latency)
         min_subgraph_latency = subgraph_latency;
     }
