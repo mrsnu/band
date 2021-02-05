@@ -773,8 +773,13 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   runtime_config_.period_ms = root["period_ms"].asInt();
   runtime_config_.cpu_masks = root["cpu_masks"].asInt();
   int planner_id = root["planner"].asInt();
+  if (root["planner"].isNull()) {
+    TFLITE_LOG(ERROR) << "`planner` argument is not given.";
+    return kTfLiteError;
+  }
   if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
     TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
+    return kTfLiteError;
   }
   TfLitePlannerType planner_type = static_cast<TfLitePlannerType>(planner_id);
   runtime_config_.planner_type = planner_type;

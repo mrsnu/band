@@ -59,7 +59,7 @@ void RoundRobinPlanner::Plan() {
 }
 
 bool RoundRobinPlanner::NeedProfile() {
-    return false;
+  return false;
 }
 
 }  // namespace impl
