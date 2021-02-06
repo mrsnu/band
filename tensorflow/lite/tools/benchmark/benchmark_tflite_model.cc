@@ -614,7 +614,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       static_cast<tflite::impl::TFLiteCPUMasks>(runtime_config_.cpu_masks));
 
   (&interpreter_)->reset(
-      new Interpreter(LoggingReporter::DefaultLoggingReporter()));
+      new Interpreter(LoggingReporter::DefaultLoggingReporter(),
+                      runtime_config_.planner_type));
 
   // Set worker threads and current thread affinity
   TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
@@ -768,9 +769,22 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     return kTfLiteError;
   }
 
+  // Set Runtime Configurations
   runtime_config_.period_ms = root["period_ms"].asInt();
   runtime_config_.cpu_masks = root["cpu_masks"].asInt();
+  int planner_id = root["planner"].asInt();
+  if (root["planner"].isNull()) {
+    TFLITE_LOG(ERROR) << "`planner` argument is not given.";
+    return kTfLiteError;
+  }
+  if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
+    TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
+    return kTfLiteError;
+  }
+  TfLitePlannerType planner_type = static_cast<TfLitePlannerType>(planner_id);
+  runtime_config_.planner_type = planner_type;
 
+  // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
     Interpreter::ModelConfig model;
     Json::Value model_json_value = root["models"][i];

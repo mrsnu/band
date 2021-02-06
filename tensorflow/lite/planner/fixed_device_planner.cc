@@ -1,4 +1,4 @@
-#include "tensorflow/lite/fixed_device_planner.h"
+#include "tensorflow/lite/planner/fixed_device_planner.h"
 
 namespace tflite {
 namespace impl {
@@ -90,7 +90,7 @@ void FixedDevicePlanner::Plan() {
 }
 
 bool FixedDevicePlanner::NeedProfile() {
-    return true;
+  return false;
 }
 
 }  // namespace impl
