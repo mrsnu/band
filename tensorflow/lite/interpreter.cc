@@ -21,7 +21,6 @@ limitations under the License.
 #include <cstring>
 #include <utility>
 #include <list>
-#include <iostream>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/cpu/cpu.h"

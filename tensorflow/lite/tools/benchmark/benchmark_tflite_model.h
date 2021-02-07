@@ -131,8 +131,13 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   TfLiteStatus ParseJsonFile();
 
+  // Convert model name strings to integer ids for the given model profiles.
+  // The return val can be given to the interpreter via Interpreter::Profile().
   Interpreter::ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile);
 
+  // Convert model integer ids back to string-type names for model profiles.
+  // This function does not erase entries in name_profile for models that were
+  // not run during this benchmark run.
   void ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
                             Json::Value& name_profile);
 

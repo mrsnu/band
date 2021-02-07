@@ -858,6 +858,7 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
     // check the integer id of this model name
     auto name_to_id_it = model_name_to_id_.find(model_name);
     if (name_to_id_it == model_name_to_id_.end()) {
+      // we're not interested in this model for this run
       continue;
     }
     int model_id = name_to_id_it->second;
@@ -867,6 +868,7 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
       std::string device_id = inner_it.key().asString();
       int64_t profiled_latency = (*inner_it).asInt64();
 
+      // copy all entries in name_profile --> id_profile for this model
       id_profile[{model_id, device_id}] = profiled_latency;
     }
   }
@@ -880,6 +882,7 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
     std::string device_id = pair.first.second;
     int64_t profiled_latency = pair.second;
 
+    // check the string name of this model id
     std::string model_name;
     for (auto& name_id_pair : model_name_to_id_) {
       if (name_id_pair.second == model_id) {
@@ -889,6 +892,7 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
     }
     assert(!model_name.empty());
 
+    // copy all entries in id_profile --> name_profile
     name_profile[model_name][device_id] = profiled_latency;
   }
 }
