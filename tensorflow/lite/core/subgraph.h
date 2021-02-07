@@ -29,7 +29,7 @@ limitations under the License.
 #include "tensorflow/lite/experimental/resource/resource_base.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/util.h"
-#include "tensorflow/lite/planner.h"
+#include "tensorflow/lite/planner/planner.h"
 
 #if TFLITE_EXPERIMENTAL_RUNTIME_EAGER
 #include "tensorflow/lite/experimental/tf_runtime/public/subgraph.h"

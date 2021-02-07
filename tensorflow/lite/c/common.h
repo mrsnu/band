@@ -62,6 +62,12 @@ typedef enum TfLiteExternalContextType {
   kTfLiteMaxExternalContexts = 4
 } TfLiteExternalContextType;
 
+typedef enum TfLitePlannerType {
+  kFixedDevice = 0,
+  kRoundRobin = 1,
+  kNumPlannerTypes = 2
+} TfLitePlannerType;
+
 // Forward declare so dependent structs and methods can reference these types
 // prior to the struct definitions.
 struct TfLiteContext;

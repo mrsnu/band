@@ -109,8 +109,10 @@ bool IsNNAPIDeviceUseful(std::string name) {
 
 }  // namespace
 
-Interpreter::Interpreter(ErrorReporter* error_reporter)
-    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()) {
+Interpreter::Interpreter(ErrorReporter* error_reporter,
+                         TfLitePlannerType planner_type)
+    : error_reporter_(error_reporter ? error_reporter :
+                                       DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
@@ -132,7 +134,12 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  planner_.reset(new FixedDevicePlanner(this));
+  // FixedDevicePlanner is the default planner.
+  if (planner_type == kRoundRobin) {
+    planner_.reset(new RoundRobinPlanner(this));
+  } else {
+    planner_.reset(new FixedDevicePlanner(this));
+  }
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 
@@ -725,6 +732,27 @@ void Interpreter::RegisterSubgraphIdx(int model_id,
                                       int subgraph_idx) {
   std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
   subgraph_idx_map_[key] = subgraph_idx;
+}
+
+Worker* Interpreter::GetWorker(int device_idx) {
+  TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
+  return GetWorker(device_flag);
+}
+
+Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
+  auto it = workers_.find(device_flag);
+  if (it != workers_.end()) {
+    return it->second.get();
+  } else {
+    error_reporter_->Report("ERROR: Cannot find the worker.");
+    // TODO #21: Handle errors in multi-thread environment
+    return nullptr;
+  }
+}
+
+int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {
+  TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
+  return GetSubgraphIdx(model_id, device_flag);
 }
 
 int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {

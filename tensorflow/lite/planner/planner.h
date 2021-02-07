@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_LITE_PLANNER_H_
-#define TENSORFLOW_LITE_PLANNER_H_
+#ifndef TENSORFLOW_LITE_PLANNER_PLANNER_H_
+#define TENSORFLOW_LITE_PLANNER_PLANNER_H_
 
 #include <memory>
 #include <list>
@@ -110,4 +110,4 @@ class Planner {
 }  // namespace impl
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_PLANNER_H_
+#endif  // TENSORFLOW_LITE_PLANNER_PLANNER_H_

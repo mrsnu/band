@@ -195,6 +195,7 @@ class BenchmarkModel {
   struct RuntimeConfig {
     int period_ms = 0;
     int cpu_masks = 0;
+    TfLitePlannerType planner_type;
     std::string model_profile;
   };
 
