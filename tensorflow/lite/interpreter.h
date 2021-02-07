@@ -496,6 +496,8 @@ class Interpreter {
 
   void Profile(const int num_warm_ups, const int num_runs);
 
+  void DumpProfileData();
+
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
   /// WARNING: This is an experimental API and subject to change.

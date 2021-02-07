@@ -626,6 +626,12 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   }
 
   SetSubgraphProfiler(previous_profiler);
+  DumpProfileData();
+}
+void Interpreter::DumpProfileData() {
+  std::string log_path = "/data/local/tmp/log/subgraph_profile_log.csv";
+
+
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {

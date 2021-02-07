@@ -666,6 +666,8 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   TF_LITE_ENSURE_STATUS(ParseJsonFile());
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
+  return kTfLiteOk;
+  /*
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the
   // installed profiler profile memory usage information.
@@ -710,6 +712,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   AddListener(ruy_profiling_listener_.get());
 
   return kTfLiteOk;
+  */
 }
 
 TfLiteStatus BenchmarkTfLiteModel::LoadModel(std::string graph) {
@@ -761,33 +764,16 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     return kTfLiteError;
   }
 
-  if (root["period_ms"] == Json::Value::null ||
-      root["models"] == Json::Value::null) {
-    TFLITE_LOG(ERROR) << "Please check if arguments `period_ms` and `models` "
+  if (root["models"] == Json::Value::null) {
+    TFLITE_LOG(ERROR) << "Please check if arguments `models` "
                       << "are given in the config file.";
     return kTfLiteError;
   }
-
-  runtime_config_.period_ms = root["period_ms"].asInt();
-  runtime_config_.cpu_masks = root["cpu_masks"].asInt();
 
   for (int i = 0; i < root["models"].size(); ++i) {
     Interpreter::ModelConfig model;
     Json::Value model_json_value = root["models"][i];
     model.model_fname = model_json_value["graph"].asString();
-
-    // Set `batch_size`.
-    // If no `batch_size` is given, the default batch size will be set to 1.
-    if (model_json_value["batch_size"] != Json::Value::null) {
-      model.batch_size = model_json_value["batch_size"].asInt();
-    }
-
-    // Set `device`.
-    // Fixes to the device if specified in case of `FixedDevicePlanner`.
-    if (model_json_value["device"] != Json::Value::null) {
-      model.device = model_json_value["device"].asInt();
-    }
-
     model_configs_.push_back(model);
   }
 
