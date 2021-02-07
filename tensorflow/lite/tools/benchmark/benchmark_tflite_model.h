@@ -22,6 +22,7 @@ limitations under the License.
 #include <random>
 #include <string>
 #include <vector>
+#include <json/json.h>
 
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/profiling/profiler.h"
@@ -88,7 +89,8 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   std::unique_ptr<tflite::FlatBufferModel> model_;
 
-  std::vector<int> model_ids_;
+  // A map for tracking which model name corresponds to which integer id.
+  std::map<std::string, int> model_name_to_id_;
 
   // Map structure to find FlatBufferModel pointer with a model file name.
   std::vector<std::unique_ptr<tflite::FlatBufferModel>> models_;
@@ -128,6 +130,11 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
                                       const std::string& input_file_path);
 
   TfLiteStatus ParseJsonFile();
+
+  Interpreter::ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile);
+
+  void ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
+                            Json::Value& name_profile);
 
   // spawn a thread that generates input requests periodically for all models
   void GeneratePeriodicRequests(int period_ms);

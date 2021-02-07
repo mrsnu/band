@@ -23,9 +23,9 @@ limitations under the License.
 #include <memory>
 #include <random>
 #include <string>
+#include <sys/stat.h>
 #include <unordered_set>
 #include <vector>
-#include <json/json.h>
 
 #include "absl/base/attributes.h"
 #include "absl/strings/numbers.h"
@@ -247,6 +247,12 @@ CreateProfileSummaryFormatter(bool format_as_csv) {
   return format_as_csv
              ? std::make_shared<profiling::ProfileSummaryCSVFormatter>()
              : std::make_shared<profiling::ProfileSummaryDefaultFormatter>();
+}
+
+// https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
+inline bool FileExists(const std::string& name) {
+  struct stat buffer;
+  return stat(name.c_str(), &buffer) == 0;
 }
 
 }  // namespace
@@ -626,17 +632,39 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       << " cores";
   
   for (int i = 0; i < model_configs_.size(); ++i) {
-    TF_LITE_ENSURE_STATUS(LoadModel(model_configs_[i].model_fname));
+    std::string model_name = model_configs_[i].model_fname;
+    TF_LITE_ENSURE_STATUS(LoadModel(model_name));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
         *models_[i], model_configs_[i], *resolver, &interpreter_, num_threads);
 
     if (model_id == -1)
       return kTfLiteError;
-    model_ids_.push_back(model_id);
+    model_name_to_id_[model_name] = model_id;
   }
 
   if (interpreter_->NeedProfile()) {
-    interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"), params_.Get<int32_t>("profile_num_runs"));
+    Json::Value model_name_profile;
+
+    // load data from the given model profile file
+    // if there is no such file, then `model_name_profile` will be empty
+    if (FileExists(runtime_config_.model_profile)) {
+      std::ifstream model_profile_file(runtime_config_.model_profile,
+                                       std::ifstream::binary);
+      model_profile_file >> model_name_profile;
+    }
+
+    // convert the model name strings to integer ids for the interpreter
+    auto model_id_profile = ConvertModelNameToId(model_name_profile);
+    interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
+                          params_.Get<int32_t>("profile_num_runs"),
+                          model_id_profile);
+
+    // update the profile file to include all new profile results from this run
+    if (!runtime_config_.model_profile.empty()) {
+      ConvertModelIdToName(model_id_profile, model_name_profile);
+      std::ofstream out_file(runtime_config_.model_profile, std::ios::out);
+      out_file << model_name_profile;
+    }
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
@@ -771,6 +799,10 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   runtime_config_.period_ms = root["period_ms"].asInt();
   runtime_config_.cpu_masks = root["cpu_masks"].asInt();
 
+  if (root["model_profile"] != Json::Value::null) {
+    runtime_config_.model_profile = root["model_profile"].asString();
+  }
+
   for (int i = 0; i < root["models"].size(); ++i) {
     Interpreter::ModelConfig model;
     Json::Value model_json_value = root["models"][i];
@@ -800,6 +832,51 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   TFLITE_LOG(INFO) << root;
 
   return kTfLiteOk;
+}
+
+Interpreter::ModelDeviceToLatency
+BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
+  Interpreter::ModelDeviceToLatency id_profile;
+  for (auto profile_it = name_profile.begin();
+       profile_it != name_profile.end(); ++profile_it) {
+    std::string model_name = profile_it.key().asString();
+
+    // check the integer id of this model name
+    auto name_to_id_it = model_name_to_id_.find(model_name);
+    if (name_to_id_it == model_name_to_id_.end()) {
+      continue;
+    }
+    int model_id = name_to_id_it->second;
+
+    const Json::Value inner = *profile_it;
+    for (auto inner_it = inner.begin(); inner_it != inner.end(); ++inner_it) {
+      std::string device_id = inner_it.key().asString();
+      int64_t profiled_latency = (*inner_it).asInt64();
+
+      id_profile[{model_id, device_id}] = profiled_latency;
+    }
+  }
+  return id_profile;
+}
+
+void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
+                                                Json::Value& name_profile) {
+  for (auto& pair : id_profile) {
+    int model_id = pair.first.first;
+    std::string device_id = pair.first.second;
+    int64_t profiled_latency = pair.second;
+
+    std::string model_name;
+    for (auto& name_id_pair : model_name_to_id_) {
+      if (name_id_pair.second == model_id) {
+        model_name = name_id_pair.first;
+        break;
+      }
+    }
+    assert(!model_name.empty());
+
+    name_profile[model_name][device_id] = profiled_latency;
+  }
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }

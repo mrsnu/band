@@ -467,7 +467,10 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  void Profile(const int num_warm_ups, const int num_runs);
+  using ModelDeviceToLatency = std::map<std::pair<int, std::string>, int64_t>;
+
+  void Profile(const int num_warm_ups, const int num_runs,
+               ModelDeviceToLatency& profiled);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
