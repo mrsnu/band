@@ -896,7 +896,12 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
         break;
       }
     }
-    assert(!model_name.empty());
+
+    if (model_name.empty()) {
+      TFLITE_LOG(WARN) << "Cannot find model #" << model_id
+                       << " in model_name_to_id_. Will ignore.";
+      continue;
+    }
 
     // copy all entries in id_profile --> name_profile
     name_profile[model_name][device_id] = profiled_latency;
