@@ -865,8 +865,14 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
 
     const Json::Value inner = *profile_it;
     for (auto inner_it = inner.begin(); inner_it != inner.end(); ++inner_it) {
-      std::string device_id = inner_it.key().asString();
+      int device_id = inner_it.key().asInt();
       int64_t profiled_latency = (*inner_it).asInt64();
+
+      if (profiled_latency <= 0) {
+        // jsoncpp treats missing values (null) as zero,
+        // so they will be filtered out here
+        continue;
+      }
 
       // copy all entries in name_profile --> id_profile for this model
       id_profile[{model_id, device_id}] = profiled_latency;
@@ -879,7 +885,7 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
                                                 Json::Value& name_profile) {
   for (auto& pair : id_profile) {
     int model_id = pair.first.first;
-    std::string device_id = pair.first.second;
+    int device_id = pair.first.second;
     int64_t profiled_latency = pair.second;
 
     // check the string name of this model id

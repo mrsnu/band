@@ -605,7 +605,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
 
       const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
       if (subgraph_it != subgraph_idx_map_.end()) {
-        auto it = profiled.find({model_id, std::to_string(device_id)});
+        auto it = profiled.find({model_id, device_id});
 
         if (it != profiled.end()) {
           // if an entry for this model & device exists in the profiled data,
@@ -632,7 +632,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
           subgraph_profiling_results_map_[{model_id, device_flag}] = latency;
 
           // record the profiled latency for subsequent benchmark runs
-          profiled[{model_id, std::to_string(device_id)}] = latency;
+          profiled[{model_id, device_id}] = latency;
 
           error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.",
               model_id,
