@@ -598,6 +598,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   (*interpreter)->InvestigateModelSpec(model_id);
 
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    // CPU Only
+    if (i > 0)
+      continue;
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
     for (int k = 1; k <= 4; ++k) {

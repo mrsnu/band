@@ -622,9 +622,13 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   TFLITE_LOG(INFO) << "Set affinity to "
       << tflite::impl::GetCPUThreadAffinityMaskString(
-             static_cast<tflite::impl::TFLiteCPUMasks>(runtime_config_.cpu_masks))
+           static_cast<tflite::impl::TFLiteCPUMasks>(runtime_config_.cpu_masks))
       << " cores";
-  
+
+  interpreter_->SetLogPath(runtime_config_.log_path);
+  TFLITE_LOG(INFO) << "Set profile result log path to "
+                   << interpreter_->GetLogPath();
+ 
   for (int i = 0; i < model_configs_.size(); ++i) {
     TF_LITE_ENSURE_STATUS(LoadModel(model_configs_[i].model_fname));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
@@ -635,9 +639,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     model_ids_.push_back(model_id);
   }
 
-  if (interpreter_->NeedProfile()) {
-    interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"), params_.Get<int32_t>("profile_num_runs"));
-  }
+  interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
+                        params_.Get<int32_t>("profile_num_runs"));
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
                   << " subgraph loaded to the interpreter";
@@ -667,52 +670,6 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   return kTfLiteOk;
-  /*
-  // Install profilers if necessary right after interpreter is created so that
-  // any memory allocations inside the TFLite runtime could be recorded if the
-  // installed profiler profile memory usage information.
-  profiling_listener_ = MayCreateProfilingListener();
-  if (profiling_listener_) AddListener(profiling_listener_.get());
-
-  interpreter_->UseNNAPI(params_.Get<bool>("use_legacy_nnapi"));
-  interpreter_->SetAllowFp16PrecisionForFp32(params_.Get<bool>("allow_fp16"));
-
-  auto interpreter_inputs = interpreter_->inputs();
-
-  if (!inputs_.empty()) {
-    TFLITE_TOOLS_CHECK_EQ(inputs_.size(), interpreter_inputs.size())
-        << "Inputs mismatch: Model inputs #:" << inputs_.size()
-        << " expected: " << interpreter_inputs.size();
-  }
-
-  // Check if the tensor names match, and log a warning if it doesn't.
-  // TODO(ycling): Consider to make this an error again when the new converter
-  // create tensors with consistent naming.
-  for (int j = 0; j < inputs_.size(); ++j) {
-    const InputLayerInfo& input = inputs_[j];
-    int i = interpreter_inputs[j];
-    TfLiteTensor* t = interpreter_->tensor(i);
-    if (input.name != t->name) {
-      TFLITE_LOG(WARN) << "Tensor # " << i << " is named " << t->name
-                       << " but flags call it " << input.name;
-    }
-  }
-
-  // Resize all non-string tensors.
-  for (int j = 0; j < inputs_.size(); ++j) {
-    const InputLayerInfo& input = inputs_[j];
-    int i = interpreter_inputs[j];
-    TfLiteTensor* t = interpreter_->tensor(i);
-    if (t->type != kTfLiteString) {
-      interpreter_->ResizeInputTensor(i, input.shape);
-    }
-  }
-
-  ruy_profiling_listener_.reset(new RuyProfileListener());
-  AddListener(ruy_profiling_listener_.get());
-
-  return kTfLiteOk;
-  */
 }
 
 TfLiteStatus BenchmarkTfLiteModel::LoadModel(std::string graph) {
@@ -764,9 +721,17 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     return kTfLiteError;
   }
 
+  if (root["log_path"] == Json::Value::null) {
+    TFLITE_LOG(ERROR) << "Please check if the argument `log_path` "
+                      << "is given in the config file.";
+    return kTfLiteError;
+  }
+
+  runtime_config_.log_path = root["log_path"].asString();
+
   if (root["models"] == Json::Value::null) {
-    TFLITE_LOG(ERROR) << "Please check if arguments `models` "
-                      << "are given in the config file.";
+    TFLITE_LOG(ERROR) << "Please check if the argument `models` "
+                      << "is given in the config file.";
     return kTfLiteError;
   }
 

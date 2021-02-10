@@ -21,6 +21,7 @@ limitations under the License.
 #include <cstring>
 #include <utility>
 #include <list>
+#include <fstream>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/cpu/cpu.h"
@@ -601,6 +602,8 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
+    if (subgraph->GetKey().device_flag != kTfLiteCPU)
+      continue;
 
     for (int i = 0; i < num_warm_ups; i++) {
       subgraph->Invoke();
@@ -628,10 +631,29 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   SetSubgraphProfiler(previous_profiler);
   DumpProfileData();
 }
+
 void Interpreter::DumpProfileData() {
-  std::string log_path = "/data/local/tmp/log/subgraph_profile_log.csv";
+  std::ofstream log_file(log_path_);
+  log_file << "model_name\t"
+           << "device_id\t"
+           << "start_idx\t"
+           << "end_idx\t"
+           << "profile_result\n";
 
+  for (auto& pair : subgraph_profiling_results_map_) {
+    const SubgraphKey& subgraph_key = pair.first;
+    int64_t profile_result = pair.second;
 
+    int model_id = subgraph_key.model_id;
+    ModelConfig& model_config = model_configs_[model_id];
+
+    log_file << model_config.model_fname << "\t"
+             << subgraph_key.device_flag << "\t"
+             << subgraph_key.start_idx << "\t"
+             << subgraph_key.end_idx << "\t"
+             << profile_result << "\n";
+  }
+  log_file.close();
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {

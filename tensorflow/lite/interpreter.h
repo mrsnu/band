@@ -498,6 +498,12 @@ class Interpreter {
 
   void DumpProfileData();
 
+  std::string GetLogPath() { return log_path_; }
+
+  void SetLogPath(std::string log_path) {
+    log_path_ = log_path;
+  }
+
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
   /// WARNING: This is an experimental API and subject to change.
@@ -696,6 +702,8 @@ class Interpreter {
 
   std::shared_ptr<Planner> planner_;
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
+
+  std::string log_path_ = "";
 
   // Map structure to find subgraph idx with (model_id, device_id)
   std::map<SubgraphKey, int> subgraph_idx_map_;

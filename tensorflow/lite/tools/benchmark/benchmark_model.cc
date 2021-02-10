@@ -224,31 +224,6 @@ TfLiteStatus BenchmarkModel::Run() {
                    << "ms.";
 
   return kTfLiteOk;
-  /*
-  TF_LITE_ENSURE_STATUS(PrepareInputData());
-
-  TfLiteStatus status = kTfLiteOk;
-  uint64_t input_bytes = ComputeInputBytes();
-  listeners_.OnBenchmarkStart(params_);
-  Stat<int64_t> warmup_time_us =
-      Run(params_.Get<int32_t>("warmup_runs"),
-          params_.Get<float>("warmup_min_secs"), params_.Get<float>("max_secs"),
-          WARMUP, &status);
-  if (status != kTfLiteOk) {
-    return status;
-  }
-
-  Stat<int64_t> inference_time_us =
-      Run(params_.Get<int32_t>("num_runs"), params_.Get<float>("min_secs"),
-          params_.Get<float>("max_secs"), REGULAR, &status);
-  const auto overall_mem_usage =
-      profiling::memory::GetMemoryUsage() - start_mem_usage;
-
-  listeners_.OnBenchmarkEnd({model_size_mb, startup_latency_us, input_bytes,
-                             warmup_time_us, inference_time_us, init_mem_usage,
-                             overall_mem_usage});
-  return status;
-  */
 }
 
 TfLiteStatus BenchmarkModel::ParseFlags(int* argc, char** argv) {
