@@ -634,10 +634,10 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
 void Interpreter::DumpProfileData() {
   std::ofstream log_file(log_path_);
-  log_file << "model_name\t"
-           << "device_id\t"
-           << "start_idx\t"
-           << "end_idx\t"
+  log_file << "model_name,"
+           << "device_id,"
+           << "start_idx,"
+           << "end_idx,"
            << "profile_result\n";
 
   for (auto& pair : subgraph_profiling_results_map_) {
@@ -647,10 +647,10 @@ void Interpreter::DumpProfileData() {
     int model_id = subgraph_key.model_id;
     ModelConfig& model_config = model_configs_[model_id];
 
-    log_file << model_config.model_fname << "\t"
-             << subgraph_key.device_flag << "\t"
-             << subgraph_key.start_idx << "\t"
-             << subgraph_key.end_idx << "\t"
+    log_file << model_config.model_fname << ","
+             << subgraph_key.device_flag << ","
+             << subgraph_key.start_idx << ","
+             << subgraph_key.end_idx << ","
              << profile_result << "\n";
   }
   log_file.close();
