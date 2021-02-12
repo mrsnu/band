@@ -88,6 +88,7 @@ namespace impl {
 ///
 struct ModelSpec {
 	int num_ops;
+  std::map<int, std::string> op_names;
 	std::set<int> output_tensors;
   std::set<TfLiteType> tensor_types;
 	std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;

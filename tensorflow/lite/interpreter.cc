@@ -638,6 +638,7 @@ void Interpreter::DumpProfileData() {
            << "device_id,"
            << "start_idx,"
            << "end_idx,"
+           << "op_name,"
            << "profile_result\n";
 
   for (auto& pair : subgraph_profiling_results_map_) {
@@ -651,6 +652,7 @@ void Interpreter::DumpProfileData() {
              << subgraph_key.device_flag << ","
              << subgraph_key.start_idx << ","
              << subgraph_key.end_idx << ","
+             << model_specs_[model_id].op_names[subgraph_key.start_idx] << ","
              << profile_result << "\n";
   }
   log_file.close();
@@ -795,6 +797,9 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   for (auto node_index : execution_plan) {
     const TfLiteNode& node = \
                   primary_subgraph->node_and_registration(node_index)->first;
+    const TfLiteRegistration& registration = \
+                  primary_subgraph->node_and_registration(node_index)->second;
+    model_spec.op_names[node_index] = GetOpNameByRegistration(registration);
 
     std::set<int> tensor_indices;
     for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
