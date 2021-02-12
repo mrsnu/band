@@ -603,12 +603,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       continue;
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
-    for (int k = 1; k <= 4; ++k) {
-      if (k == 3)
-        continue;
-      (*interpreter)->
-        SplitOperatorsEven(model_id, k, device_id, subgraph_keys);
-    }
+    int num_ops = (*interpreter)->GetModelSpec(model_id).num_ops;
+    (*interpreter)->
+      SplitOperatorsEven(model_id, num_ops, device_id, subgraph_keys);
 
     for (auto& subgraph_key : subgraph_keys) {
       int subgraph_idx = AddSubgraph(
