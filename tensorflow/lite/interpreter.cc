@@ -635,20 +635,39 @@ void Interpreter::DumpProfileData() {
            << "device_id,"
            << "start_idx,"
            << "end_idx,"
+           << "input_size,"
+           << "output_size,"
            << "op_name,"
            << "profile_result\n";
 
-  for (auto& pair : subgraph_profiling_results_map_) {
-    const SubgraphKey& subgraph_key = pair.first;
-    int64_t profile_result = pair.second;
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    Subgraph* subgraph = subgraphs_[i].get();
+    const SubgraphKey& subgraph_key = subgraph->GetKey();
+    int64_t profile_result = subgraph_profiling_results_map_[subgraph_key];
 
     int model_id = subgraph_key.model_id;
     ModelConfig& model_config = model_configs_[model_id];
+
+    size_t input_bytes = 0;
+    size_t output_bytes = 0;
+
+    for (auto tensor_idx : subgraph->inputs()) {
+      TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
+      input_bytes += tensor.bytes;
+    }
+
+    for (auto tensor_idx : subgraph->outputs()) {
+      TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
+      output_bytes += tensor.bytes;
+    }
+
 
     log_file << model_config.model_fname << ","
              << subgraph_key.device_flag << ","
              << subgraph_key.start_idx << ","
              << subgraph_key.end_idx << ","
+             << input_bytes << ","
+             << output_bytes << ","
              << model_specs_[model_id].op_names[subgraph_key.start_idx] << ","
              << profile_result << "\n";
   }
