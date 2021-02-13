@@ -598,9 +598,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   (*interpreter)->InvestigateModelSpec(model_id);
 
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
-    // GPU Only
-    if (i != 1)
-      continue;
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
     int num_ops = (*interpreter)->GetModelSpec(model_id).num_ops;

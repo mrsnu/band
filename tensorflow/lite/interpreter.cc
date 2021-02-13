@@ -602,9 +602,6 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
-    if (subgraph->GetKey().device_flag != kTfLiteGPU)
-      continue;
-
     for (int i = 0; i < num_warm_ups; i++) {
       subgraph->Invoke();
     }
