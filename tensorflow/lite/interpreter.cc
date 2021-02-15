@@ -591,7 +591,8 @@ TfLiteStatus Interpreter::GetBufferHandle(int tensor_index,
   return kTfLiteOk;
 }
 
-void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
+void Interpreter::Profile(const int num_warm_ups, const int num_runs,
+                          ModelDeviceToLatency& profiled) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler timer;
@@ -604,24 +605,42 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
       const auto subgraph_it = subgraph_idx_map_.find({model_id, device_flag});
       if (subgraph_it != subgraph_idx_map_.end()) {
-        Subgraph* subgraph = subgraphs_[subgraph_it->second].get();
-        for (int i = 0; i < num_warm_ups; i++) {
-          subgraph->Invoke();
-        }
-        timer.ClearRecords();
-        for (int i = 0; i < num_runs; i++) {
-          subgraph->Invoke();
-        }
+        auto it = profiled.find({model_id, device_id});
 
-        subgraph_profiling_results_map_[{model_id, device_flag}] = 
-          timer.GetAverageElapsedTime<std::chrono::microseconds>();
+        if (it != profiled.end()) {
+          // if an entry for this model & device exists in the profiled data,
+          // then reuse it to reduce initialization time
+          int64_t profiled_latency = it->second;
+          subgraph_profiling_results_map_[{model_id, device_flag}] = profiled_latency;
 
-        error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.", 
-                model_id,
-                num_warm_ups, 
-                num_runs, 
-                subgraph_profiling_results_map_[{model_id, device_flag}], 
-                TfLiteDeviceGetName(device_flag));
+          error_reporter_->Report("Reusing profiled result\n model=%d avg=%d us device=%s.",
+              model_id, profiled_latency, TfLiteDeviceGetName(device_flag));
+
+        } else {
+          // otherwise, proceed as normal
+          Subgraph* subgraph = subgraphs_[subgraph_it->second].get();
+          for (int i = 0; i < num_warm_ups; i++) {
+            subgraph->Invoke();
+          }
+          timer.ClearRecords();
+          for (int i = 0; i < num_runs; i++) {
+            subgraph->Invoke();
+          }
+
+          int64_t latency =
+              timer.GetAverageElapsedTime<std::chrono::microseconds>();
+          subgraph_profiling_results_map_[{model_id, device_flag}] = latency;
+
+          // record the profiled latency for subsequent benchmark runs
+          profiled[{model_id, device_id}] = latency;
+
+          error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s.",
+              model_id,
+              num_warm_ups,
+              num_runs,
+              latency,
+              TfLiteDeviceGetName(device_flag));
+        }
       }
     }
   }
