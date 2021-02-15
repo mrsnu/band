@@ -2,6 +2,7 @@
 #define TENSORFLOW_LITE_PROFILING_TIME_PROFILER_H_
 
 #include <vector>
+#include <cmath>
 #include <chrono>
 #include <type_traits>
 
@@ -49,6 +50,21 @@ class TimeProfiler : public tflite::Profiler {
     }
 
     return accumulated_time / invoke_timeline_vector_.size();
+  }
+  
+
+  template <typename T>
+  double GetStandardDeviation() {
+    static_assert(is_chrono_duration<T>::value,
+                  "T must be a std::chrono::duration");
+
+    double average = GetAverageElapsedTime<T>();
+    double standard_deviation = 0;
+    for (size_t i = 0; i < invoke_timeline_vector_.size(); i++) {
+      standard_deviation += pow((double)GetElapsedTimeAt<T>(i) - average, 2);
+    }
+
+    return std::sqrt(standard_deviation / invoke_timeline_vector_.size());
   }
 
  private:
