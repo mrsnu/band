@@ -637,6 +637,7 @@ void Interpreter::DumpProfileData() {
            << "end_idx,"
            << "input_size,"
            << "output_size,"
+           << "tensor_size,"
            << "op_name,"
            << "profile_result\n";
 
@@ -650,6 +651,7 @@ void Interpreter::DumpProfileData() {
 
     size_t input_bytes = 0;
     size_t output_bytes = 0;
+    size_t tensor_bytes = 0;
 
     for (auto tensor_idx : subgraph->inputs()) {
       TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
@@ -661,6 +663,11 @@ void Interpreter::DumpProfileData() {
       output_bytes += tensor.bytes;
     }
 
+    for (auto tensor_idx : subgraph->tensors()) {
+      TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
+      tensor_bytes += tensor.bytes;
+    }
+
 
     log_file << model_config.model_fname << ","
              << subgraph_key.device_flag << ","
@@ -668,6 +675,7 @@ void Interpreter::DumpProfileData() {
              << subgraph_key.end_idx << ","
              << input_bytes << ","
              << output_bytes << ","
+             << tensor_bytes << ","
              << model_specs_[model_id].op_names[subgraph_key.start_idx] << ","
              << profile_result << "\n";
   }
