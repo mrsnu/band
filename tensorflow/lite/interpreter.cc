@@ -663,8 +663,7 @@ void Interpreter::DumpProfileData() {
       output_bytes += tensor.bytes;
     }
 
-    for (auto tensor_idx : subgraph->tensors()) {
-      TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
+    for (auto& tensor : subgraph->tensors()) {
       tensor_bytes += tensor.bytes;
     }
 
