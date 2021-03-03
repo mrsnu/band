@@ -591,7 +591,7 @@ typedef struct TfLiteContext {
   void* impl_;
 
   // run gpu in profile mode
-  bool gpu_profile = false;
+  bool gpu_profile;
 
   // Request memory pointer be resized. Updates dimensions on the tensor.
   // NOTE: ResizeTensor takes ownership of newSize.
