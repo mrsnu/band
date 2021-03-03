@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <algorithm>
 #include <cstring>
+#include <iostream>
 
 #include "absl/memory/memory.h"
 #include "absl/types/span.h"
@@ -471,8 +472,14 @@ class InferenceRunnerImpl : public InferenceRunner {
     for (auto& obj : inputs_) {
       RETURN_IF_ERROR(obj->CopyFromExternalObject());
     }
-    RETURN_IF_ERROR(context_->AddToQueue(queue_));
-    clFlush(queue_->queue());
+
+    ProfilingInfo profiling_info;
+    RETURN_IF_ERROR(
+        context_->Profile(profile_queue_, &profiling_info));
+
+    std::cout << profiling_info.GetDetailedReport() << std::endl;
+    // RETURN_IF_ERROR(context_->AddToQueue(queue_));
+    // clFlush(queue_->queue());
     for (auto& obj : outputs_) {
       RETURN_IF_ERROR(obj->CopyToExternalObject());
     }
@@ -480,6 +487,13 @@ class InferenceRunnerImpl : public InferenceRunner {
       RETURN_IF_ERROR(gl_interop_fabric_->Finish());
     }
     return absl::OkStatus();
+  }
+
+  std::string Profile() {
+    ProfilingInfo profiling_info;
+    context_->Profile(profile_queue_, &profiling_info);
+
+    return profiling_info.GetDetailedReport();
   }
 
  private:
