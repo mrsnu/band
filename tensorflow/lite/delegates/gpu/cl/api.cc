@@ -534,11 +534,14 @@ class InferenceRunnerImpl : public InferenceRunner {
     }
     log_file.close();
 
+    std::ofstream op_type_log("/data/local/tmp/gpu_op_type_profiling.csv");
+    op_type_log << "OpType,latency(us)\n";
     for (auto& timing : op_type_timing) {
       timing.second /= num_iters;
-      std::cout << timing.first + " - " + std::to_string(timing.second * 1000) + "us"
-                << std::endl;
+      op_type_log << timing.first + ","
+                  << std::to_string(timing.second * 1000) + "\n";
     }
+    op_type_log.close();
   }
 
  private:
