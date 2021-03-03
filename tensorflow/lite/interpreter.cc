@@ -685,6 +685,8 @@ void Interpreter::DumpProfileData() {
              << op_name << ","
              << profile_result << "\n";
 
+    if (subgraph_key.start_idx != subgraph_key.end_idx)
+      continue;
     if (op_type_timing.find(op_name) != op_type_timing.end()) {
       op_type_timing[op_name] += profile_result;
     } else {
