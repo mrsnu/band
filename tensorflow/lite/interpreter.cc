@@ -619,9 +619,6 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
     subgraph_profiling_results_map_[subgraph_key] = 
       timer.GetAverageElapsedTime<std::chrono::microseconds>();
-
-    if (subgraph_key.device_flag == kTfLiteGPU)
-      continue;
     error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s start=%d end=%d.", 
             subgraph_key.model_id,
             num_warm_ups, 
@@ -651,6 +648,8 @@ void Interpreter::DumpProfileData() {
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
     const SubgraphKey& subgraph_key = subgraph->GetKey();
+    if (subgraph_key.device_flag == kTfLiteGPU)
+      continue;
     int64_t profile_result = subgraph_profiling_results_map_[subgraph_key];
 
     int model_id = subgraph_key.model_id;
@@ -673,7 +672,6 @@ void Interpreter::DumpProfileData() {
     for (auto& tensor : subgraph->tensors()) {
       tensor_bytes += tensor.bytes;
     }
-
 
     log_file << model_config.model_fname << ","
              << subgraph_key.device_flag << ","
