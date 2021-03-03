@@ -526,7 +526,7 @@ class InferenceRunnerImpl : public InferenceRunner {
     int num_iters = profile_results_.size();
 
     std::ofstream log_file("/data/local/tmp/gpu_profiling_log.csv");
-    log_file << "seqNum,kernelName,latency(ms)";
+    log_file << "seqNum,kernelName,latency(ms)\n";
     for (auto& timing : layer_timing) {
       timing.second /= num_iters;
       log_file << timing.first + "," 
