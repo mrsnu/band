@@ -602,7 +602,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
     int num_ops = (*interpreter)->GetModelSpec(model_id).num_ops;
     (*interpreter)->
-      SplitOperatorsEven(model_id, num_ops, device_id, subgraph_keys);
+      SplitOperatorsEven(model_id, 1, device_id, subgraph_keys);
 
     for (auto& subgraph_key : subgraph_keys) {
       int subgraph_idx = AddSubgraph(
@@ -611,11 +611,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
         has_available_device = true;
       }
-
-      std::cout << "ADDED Subgraph : " << subgraph_key.model_id << " "
-                                       << subgraph_key.device_flag << " "
-                                       << subgraph_key.start_idx << " "
-                                       << subgraph_key.end_idx << std::endl;
     }
   }
 
