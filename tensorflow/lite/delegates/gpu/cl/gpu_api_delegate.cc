@@ -16,6 +16,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/gpu/cl/gpu_api_delegate.h"
 
 #include <cstdint>
+#include <iostream>
 
 #include "absl/types/span.h"
 #include "tensorflow/lite/builtin_ops.h"
@@ -227,6 +228,7 @@ class Delegate {
 
   absl::Status Invoke(TfLiteContext* context) {
     RETURN_IF_ERROR(SetInputsAndOutputs(context));
+    std::cout << "here" << std::endl;
     return runner_->Run(context->gpu_profile);
   }
 
