@@ -22,6 +22,7 @@ limitations under the License.
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 
 #include "absl/memory/memory.h"
 #include "absl/types/span.h"
@@ -502,7 +503,7 @@ class InferenceRunnerImpl : public InferenceRunner {
         std::stringstream s;
         s << std::setfill('0') << std::setw(3) << dispatch_order++;
         std::string kernel_name = s.str() +
-                                  " " + dispatch.label;
+                                  "," + dispatch.label;
         if (layer_timing.find(kernel_name) != layer_timing.end()) {
           layer_timing[kernel_name] +=
             absl::ToDoubleMilliseconds(dispatch.duration);
@@ -523,12 +524,15 @@ class InferenceRunnerImpl : public InferenceRunner {
     }
 
     int num_iters = profile_results_.size();
+
+    std::ofstream log_file("/data/local/tmp/gpu_profiling_log.csv");
     for (auto& timing : layer_timing) {
       timing.second /= num_iters;
-      std::cout << timing.first + " - " +
-                   std::to_string(timing.second) + "ms" << std::endl;
+      log_file << timing.first + "," 
+               << std::to_string(timing.second) + "\n";
     }
-    std::cout << "--------------------" << std::endl;
+    log_file.close();
+
     for (auto& timing : op_type_timing) {
       timing.second /= num_iters;
       std::cout << timing.first + " - " + std::to_string(timing.second) + "ms"
