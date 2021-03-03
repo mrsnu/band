@@ -465,7 +465,7 @@ class InferenceRunnerImpl : public InferenceRunner {
     return outputs_[index]->SetExternalObject(object);
   }
 
-  absl::Status Run() override {
+  absl::Status Run(bool profile) override {
     if (gl_interop_fabric_) {
       RETURN_IF_ERROR(gl_interop_fabric_->Start());
     }
@@ -473,7 +473,7 @@ class InferenceRunnerImpl : public InferenceRunner {
       RETURN_IF_ERROR(obj->CopyFromExternalObject());
     }
 
-    if (context_->gpu_profile) {
+    if (profile) {
     ProfilingInfo profiling_info;
     RETURN_IF_ERROR(
         context_->Profile(profiling_queue_, &profiling_info));
@@ -570,6 +570,8 @@ class InferenceBuilderImpl : public InferenceBuilder {
 
     inputs_ = LinkTensors(graph, graph.inputs());
     outputs_ = LinkTensors(graph, graph.outputs());
+    gpu_profile = false;
+
     return absl::OkStatus();
   }
 

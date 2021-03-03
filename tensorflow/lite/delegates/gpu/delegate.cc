@@ -212,7 +212,7 @@ class DelegateKernel {
           DequantizeInputs(context, input_indices_, quant_conversion_map_));
     }
     RETURN_IF_ERROR(SetInputsAndOutputs(context));
-    RETURN_IF_ERROR(runner_->Run());
+    RETURN_IF_ERROR(runner_->Run(false));
     if (is_dequant_required) {
       RETURN_IF_ERROR(
           QuantizeOutputs(context, output_indices_, quant_conversion_map_));

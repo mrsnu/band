@@ -227,7 +227,7 @@ class Delegate {
 
   absl::Status Invoke(TfLiteContext* context) {
     RETURN_IF_ERROR(SetInputsAndOutputs(context));
-    return runner_->Run();
+    return runner_->Run(context->gpu_profile);
   }
 
   void BindGlBufferToTensor(GLuint buffer_id, int tensor_index,

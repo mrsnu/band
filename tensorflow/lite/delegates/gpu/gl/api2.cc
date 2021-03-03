@@ -417,7 +417,7 @@ class InferenceRunnerImpl : public InferenceRunner {
     return outputs_[index]->SetExternalObject(object);
   }
 
-  absl::Status Run() override {
+  absl::Status Run(bool profile) override {
     for (auto& obj : inputs_) {
       RETURN_IF_ERROR(obj->CopyFromExternalObject());
     }
