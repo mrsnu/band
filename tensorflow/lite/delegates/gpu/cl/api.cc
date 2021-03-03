@@ -570,8 +570,6 @@ class InferenceBuilderImpl : public InferenceBuilder {
 
     inputs_ = LinkTensors(graph, graph.inputs());
     outputs_ = LinkTensors(graph, graph.outputs());
-    gpu_profile = false;
-
     return absl::OkStatus();
   }
 
