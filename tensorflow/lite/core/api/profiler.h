@@ -46,6 +46,8 @@ class Profiler {
     // event_metadata fields. In particular, the delegate status is encoded
     // as DelegateStatus::full_status().
     GENERAL_RUNTIME_INSTRUMENTATION_EVENT = 8,
+    
+    SUBGRAPH_INVOKE_EVENT = 16,
   };
 
   virtual ~Profiler() {}
@@ -163,6 +165,15 @@ class ScopedRuntimeInstrumentationProfile : public ScopedProfile {
   int64_t interpreter_status_;
 };
 
+class ScopedSubgraphProfile : public ScopedProfile {
+ public:
+  ScopedSubgraphProfile(Profiler* profiler, const char* tag,
+                                int model_index)
+      : ScopedProfile(profiler, tag,
+                      Profiler::EventType::SUBGRAPH_INVOKE_EVENT,
+                      static_cast<uint32_t>(model_index)) {}
+};
+
 }  // namespace tflite
 
 #define TFLITE_VARNAME_UNIQ_IMPL(name, ctr) name##ctr
@@ -190,5 +201,9 @@ class ScopedRuntimeInstrumentationProfile : public ScopedProfile {
       profiler->EndEvent(handle);                                          \
     }                                                                      \
   } while (false);
+
+#define TFLITE_SCOPED_SUBGRAPH_PROFILE(profiler, tag, model_index)     \
+  tflite::ScopedSubgraphProfile TFLITE_VARNAME_UNIQ(_profile_, __COUNTER__)( \
+      (profiler), (tag), (model_index))
 
 #endif  // TENSORFLOW_LITE_CORE_API_PROFILER_H_

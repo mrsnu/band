@@ -592,8 +592,9 @@ class Interpreter {
     return workers_.size();
   }
 
-  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
-  int GetSubgraphIdx(int model_id, int device_idx);
+  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) const;
+  int GetSubgraphIdx(int model_id, int device_idx) const;
+  int GetModelIdx(int subgraph_idx) const;
 
   std::set<int> models() const;
 

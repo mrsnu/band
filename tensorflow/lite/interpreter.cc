@@ -305,7 +305,7 @@ void Interpreter::AddSubgraphs(int subgraphs_to_add,
   subgraphs_.reserve(base_index + subgraphs_to_add);
   for (int i = 0; i < subgraphs_to_add; ++i) {
     Subgraph* subgraph = new Subgraph(error_reporter_, external_contexts_,
-                                      &subgraphs_, &resources_);
+                                      &subgraphs_, &resources_, GetModelIdx(base_index +i));
     subgraph->SetProfiler(installed_profiler_, base_index + i);
     subgraphs_.emplace_back(subgraph);
   }
@@ -749,18 +749,30 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
   }
 }
 
-int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {
+int Interpreter::GetSubgraphIdx(int model_id, int device_idx) const {
   TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
   return GetSubgraphIdx(model_id, device_flag);
 }
 
-int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
+int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) const {
   std::pair<int, TfLiteDeviceFlags> key = std::make_pair(model_id, device_id);
   auto it = subgraph_idx_map_.find(key);
   if (it != subgraph_idx_map_.end())
     return it->second;
   else
     return -1;
+}
+
+int Interpreter::GetModelIdx(int subgraph_idx) const {
+  for (int model_id : models()) {
+    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+      const TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+      if (subgraph_idx_map_.find({model_id, device_flag}) != subgraph_idx_map_.end()) {
+        return model_id;
+      }
+    }
+  }
+  return -1;
 }
 
 std::set<int> Interpreter::models() const {

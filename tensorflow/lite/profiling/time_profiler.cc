@@ -10,7 +10,7 @@ uint32_t TimeProfiler::BeginEvent(const char* tag, EventType event_type,
                                    int64_t event_metadata1,
                                    int64_t event_metadata2) {
   // Matching with TFLITE_SCOPED_TAGGED_DEFAULT_PROFILE in Subgraph's Invoke()
-  if (tag == "invoke_subgraph") {
+  if (event_type == EventType::SUBGRAPH_INVOKE_EVENT) {
     invoke_timeline_vector_.push_back({std::chrono::system_clock::now(), {}});
     // Returns current timeline's index + 1 as an event handle
     // (to use 0 as an invalid handle of uint32)

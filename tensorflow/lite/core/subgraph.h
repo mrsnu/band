@@ -49,7 +49,8 @@ class Subgraph {
   Subgraph(ErrorReporter* error_reporter,
            TfLiteExternalContext** external_contexts,
            std::vector<std::unique_ptr<Subgraph>>* subgraphs,
-           resource::ResourceMap* resources);
+           resource::ResourceMap* resources,
+           int model_index);
 
   Subgraph(const Subgraph&) = delete;
 
@@ -336,6 +337,8 @@ class Subgraph {
   void SetModelPlan(TfLiteDeviceFlags device) { model_plan_->device_ = device; }
 
   ModelPlan* GetModelPlan() { return model_plan_.get(); }
+
+  int GetModelIndex() const { return model_index_; }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
@@ -709,6 +712,8 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
+
+  int model_index_;
 };
 
 }  // namespace impl
