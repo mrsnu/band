@@ -432,6 +432,8 @@ class InferenceRunnerImpl : public InferenceRunner {
     return absl::OkStatus();
   }
 
+  void DumpProfileResults() override {}
+
  private:
   absl::Status LinkTensors(const std::vector<TensorTieDef>& defs,
                            TensorTieFactory* tie_factory,
