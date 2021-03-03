@@ -634,6 +634,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 }
 
 void Interpreter::DumpProfileData() {
+  std::map<std::string, int64_t> op_type_timing;
   std::ofstream log_file(log_path_);
   log_file << "model_name,"
            << "device_id,"
@@ -659,7 +660,6 @@ void Interpreter::DumpProfileData() {
     size_t output_bytes = 0;
     size_t tensor_bytes = 0;
 
-    std::map<std::string, int64_t> op_type_timing;
     for (auto tensor_idx : subgraph->inputs()) {
       TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
       input_bytes += tensor.bytes;
