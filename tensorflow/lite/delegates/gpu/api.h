@@ -304,6 +304,7 @@ class InferenceRunner {
   virtual absl::Status SetOutputObject(int index, TensorObject object) = 0;
 
   virtual absl::Status Run(bool profile) = 0;
+  virtual void DumpProfileResults() = 0;
 };
 
 // Encapsulated compilation/runtime tradeoffs.

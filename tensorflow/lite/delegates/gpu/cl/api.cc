@@ -477,7 +477,7 @@ class InferenceRunnerImpl : public InferenceRunner {
     ProfilingInfo profiling_info;
     RETURN_IF_ERROR(
         context_->Profile(profiling_queue_, &profiling_info));
-    std::cout << profiling_info.GetDetailedReport() << std::endl;
+    profile_results_.push_back(profiling_info);
     } else {
       RETURN_IF_ERROR(context_->AddToQueue(queue_));
       clFlush(queue_->queue());
@@ -491,11 +491,10 @@ class InferenceRunnerImpl : public InferenceRunner {
     return absl::OkStatus();
   }
 
-  std::string Profile() {
-    ProfilingInfo profiling_info;
-    context_->Profile(profiling_queue_, &profiling_info);
-
-    return profiling_info.GetDetailedReport();
+  void DumpProfileResults() override {
+    for (auto profiling_info : profile_results_) {
+      std::cout << profiling_info.GetDetailedReport() << std::endl;
+    }
   }
 
  private:
@@ -527,6 +526,7 @@ class InferenceRunnerImpl : public InferenceRunner {
   std::unique_ptr<GlInteropFabric> gl_interop_fabric_;
   std::vector<std::unique_ptr<TensorTie>> inputs_;
   std::vector<std::unique_ptr<TensorTie>> outputs_;
+  std::vector<ProfilingInfo> profile_results_;
 };
 
 TensorObjectDef TensorToDef(const Tensor& tensor) {
