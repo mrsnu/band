@@ -20,6 +20,7 @@ limitations under the License.
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 
 #include "absl/memory/memory.h"
 #include "absl/types/span.h"
@@ -497,7 +498,9 @@ class InferenceRunnerImpl : public InferenceRunner {
     for (auto profiling_info : profile_results_) {
       int dispatch_order = 0;
       for (const auto& dispatch : profiling_info.dispatches) {
-        std::string kernel_name = std::to_string(dispatch_order++) +
+        std::stringstream s;
+        s << std::setfill('0') << std::setw(3) << dispatch_order++;
+        std::string kernel_name = s.str() +
                                   " " + dispatch.label;
         if (layer_timing.find(kernel_name) != layer_timing.end()) {
           layer_timing[kernel_name] +=
