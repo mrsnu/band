@@ -659,7 +659,7 @@ void Interpreter::DumpProfileData() {
     size_t output_bytes = 0;
     size_t tensor_bytes = 0;
 
-    std::map<std::string, double> op_type_timing;
+    std::map<std::string, int64_t> op_type_timing;
     for (auto tensor_idx : subgraph->inputs()) {
       TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
       input_bytes += tensor.bytes;
@@ -686,9 +686,9 @@ void Interpreter::DumpProfileData() {
              << profile_result << "\n";
 
     if (op_type_timing.find(op_name) != op_type_timing.end()) {
-      op_type_timing[name] += profile_result;
+      op_type_timing[op_name] += profile_result;
     } else {
-      op_type_timing[name] = profile_result;
+      op_type_timing[op_name] = profile_result;
     }
   }
   log_file.close();
