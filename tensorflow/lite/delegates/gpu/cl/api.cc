@@ -497,7 +497,7 @@ class InferenceRunnerImpl : public InferenceRunner {
     for (auto profiling_info : profile_results_) {
       int dispatch_order = 0;
       for (const auto& dispatch : profiling_info.dispatches) {
-        std::string kernel_name = absl::to_string(dispatch_order++) +
+        std::string kernel_name = std::to_string(dispatch_order++) +
                                   " " + dispatch.label;
         if (layer_timing.find(kernel_name) != layer_timing.end()) {
           layer_timing[kernel_name] +=
