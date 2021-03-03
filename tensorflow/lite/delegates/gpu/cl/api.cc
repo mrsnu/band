@@ -495,8 +495,10 @@ class InferenceRunnerImpl : public InferenceRunner {
     std::map<std::string, double> layer_timing;
     std::map<std::string, double> op_type_timing;
     for (auto profiling_info : profile_results_) {
+      int dispatch_order = 0;
       for (const auto& dispatch : profiling_info.dispatches) {
-        std::string kernel_name = dispatch.label;
+        std::string kernel_name = absl::to_string(dispatch_order++) +
+                                  " " + dispatch.label;
         if (layer_timing.find(kernel_name) != layer_timing.end()) {
           layer_timing[kernel_name] +=
             absl::ToDoubleMilliseconds(dispatch.duration);
@@ -505,7 +507,7 @@ class InferenceRunnerImpl : public InferenceRunner {
             absl::ToDoubleMilliseconds(dispatch.duration);
         }
 
-        auto name = kernel_name.substr(0, kernel_name.find(" "));
+        auto name = dispatch.label.substr(0, dispatch.label.find(" "));
         if (op_type_timing.find(name) != op_type_timing.end()) {
           op_type_timing[name] +=
             absl::ToDoubleMilliseconds(dispatch.duration);
