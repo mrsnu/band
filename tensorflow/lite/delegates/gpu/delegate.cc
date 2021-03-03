@@ -113,7 +113,10 @@ class DelegateKernel {
   explicit DelegateKernel(Delegate* delegate) : delegate_(delegate) {
     ++delegate_->num_delegate_kernels_;
   }
-  ~DelegateKernel() { --delegate_->num_delegate_kernels_; }
+  ~DelegateKernel() {
+    runner_->DumpProfileResults();
+    --delegate_->num_delegate_kernels_;
+  }
 
   absl::Status Prepare(TfLiteContext* context,
                        const TfLiteDelegateParams* delegate_params) {
