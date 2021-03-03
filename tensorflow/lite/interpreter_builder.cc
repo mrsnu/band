@@ -599,13 +599,18 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     // GPU Only
-    if (i != 1)
+    if (i > 1)
       continue;
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
     int num_ops = (*interpreter)->GetModelSpec(model_id).num_ops;
+
+    int num_splits = 1;
+    if (i == 0)
+      num_splits = num_ops;
+
     (*interpreter)->
-      SplitOperatorsEven(model_id, 1, device_id, subgraph_keys);
+      SplitOperatorsEven(model_id, num_splits, device_id, subgraph_keys);
 
     for (auto& subgraph_key : subgraph_keys) {
       int subgraph_idx = AddSubgraph(
