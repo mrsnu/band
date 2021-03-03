@@ -590,6 +590,9 @@ typedef struct TfLiteContext {
   // opaque full context ptr (an opaque c++ data structure)
   void* impl_;
 
+  // run gpu in profile mode
+  bool gpu_profile = false;
+
   // Request memory pointer be resized. Updates dimensions on the tensor.
   // NOTE: ResizeTensor takes ownership of newSize.
   TfLiteStatus (*ResizeTensor)(struct TfLiteContext*, TfLiteTensor* tensor,

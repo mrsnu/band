@@ -473,13 +473,15 @@ class InferenceRunnerImpl : public InferenceRunner {
       RETURN_IF_ERROR(obj->CopyFromExternalObject());
     }
 
+    if (context_->gpu_profile) {
     ProfilingInfo profiling_info;
     RETURN_IF_ERROR(
         context_->Profile(profiling_queue_, &profiling_info));
-
     std::cout << profiling_info.GetDetailedReport() << std::endl;
-    // RETURN_IF_ERROR(context_->AddToQueue(queue_));
-    // clFlush(queue_->queue());
+    } else {
+      RETURN_IF_ERROR(context_->AddToQueue(queue_));
+      clFlush(queue_->queue());
+    }
     for (auto& obj : outputs_) {
       RETURN_IF_ERROR(obj->CopyToExternalObject());
     }

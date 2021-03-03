@@ -602,6 +602,12 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
+    SubgraphKey& subgraph_key = subgraph->GetKey();
+
+    if (subgraph_key.device_flag == kTfLiteGPU) {
+      subgraph->context().gpu_profile = true;
+    }
+
     for (int i = 0; i < num_warm_ups; i++) {
       subgraph->Invoke();
     }
@@ -609,8 +615,6 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
     for (int i = 0; i < num_runs; i++) {
       subgraph->Invoke();
     }
-
-    SubgraphKey& subgraph_key = subgraph->GetKey();
 
     subgraph_profiling_results_map_[subgraph_key] = 
       timer.GetAverageElapsedTime<std::chrono::microseconds>();
