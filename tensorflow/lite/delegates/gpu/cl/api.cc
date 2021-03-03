@@ -516,14 +516,14 @@ class InferenceRunnerImpl : public InferenceRunner {
       }
     }
 
-    int num_iters = profile_results.size();
-    for (const auto& timing : layer_timing) {
+    int num_iters = profile_results_.size();
+    for (auto& timing : layer_timing) {
       timing.second /= num_iters;
       std::cout << timing.first + " - " +
                    std::to_string(timing.second) + "ms" << std::endl;
     }
     std::cout << "--------------------" << std::endl;
-    for (const auto& timing : op_type_timing) {
+    for (auto& timing : op_type_timing) {
       timing.second /= num_iters;
       std::cout << timing.first + " - " + std::to_string(timing.second) + "ms"
                 << std::endl;
