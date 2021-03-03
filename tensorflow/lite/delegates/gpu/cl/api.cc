@@ -475,7 +475,7 @@ class InferenceRunnerImpl : public InferenceRunner {
 
     ProfilingInfo profiling_info;
     RETURN_IF_ERROR(
-        context_->Profile(profile_queue_, &profiling_info));
+        context_->Profile(profiling_queue_, &profiling_info));
 
     std::cout << profiling_info.GetDetailedReport() << std::endl;
     // RETURN_IF_ERROR(context_->AddToQueue(queue_));
@@ -491,7 +491,7 @@ class InferenceRunnerImpl : public InferenceRunner {
 
   std::string Profile() {
     ProfilingInfo profiling_info;
-    context_->Profile(profile_queue_, &profiling_info);
+    context_->Profile(profiling_queue_, &profiling_info);
 
     return profiling_info.GetDetailedReport();
   }
