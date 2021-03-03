@@ -415,6 +415,7 @@ class InferenceRunnerImpl : public InferenceRunner {
                       std::unique_ptr<InferenceContext> context,
                       std::unique_ptr<GlInteropFabric> gl_interop_fabric)
       : queue_(environment->queue()),
+        profiling_queue_(environment->profiling_queue()),
         context_(std::move(context)),
         gl_interop_fabric_(std::move(gl_interop_fabric)) {}
 
@@ -505,6 +506,7 @@ class InferenceRunnerImpl : public InferenceRunner {
   }
 
   CLCommandQueue* queue_;
+  ProfilingCommandQueue* profiling_queue_;
   std::unique_ptr<InferenceContext> context_;
   std::unique_ptr<GlInteropFabric> gl_interop_fabric_;
   std::vector<std::unique_ptr<TensorTie>> inputs_;
