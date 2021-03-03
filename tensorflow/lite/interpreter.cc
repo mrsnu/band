@@ -659,6 +659,7 @@ void Interpreter::DumpProfileData() {
     size_t output_bytes = 0;
     size_t tensor_bytes = 0;
 
+    std::map<std::string, double> op_type_timing;
     for (auto tensor_idx : subgraph->inputs()) {
       TfLiteTensor& tensor = subgraph->context()->tensors[tensor_idx];
       input_bytes += tensor.bytes;
@@ -673,6 +674,7 @@ void Interpreter::DumpProfileData() {
       tensor_bytes += tensor.bytes;
     }
 
+    std::string op_name = model_specs_[model_id].op_names[subgraph_key.start_idx];
     log_file << model_config.model_fname << ","
              << subgraph_key.device_flag << ","
              << subgraph_key.start_idx << ","
@@ -680,10 +682,24 @@ void Interpreter::DumpProfileData() {
              << input_bytes << ","
              << output_bytes << ","
              << tensor_bytes << ","
-             << model_specs_[model_id].op_names[subgraph_key.start_idx] << ","
+             << op_name << ","
              << profile_result << "\n";
+
+    if (op_type_timing.find(op_name) != op_type_timing.end()) {
+      op_type_timing[name] += profile_result;
+    } else {
+      op_type_timing[name] = profile_result;
+    }
   }
   log_file.close();
+
+  std::ofstream op_type_log("/data/local/tmp/cpu_op_type_profiling.csv");
+  op_type_log << "OpType,latency(us)\n";
+  for (auto& timing : op_type_timing) {
+    op_type_log << timing.first + ","
+                << std::to_string(timing.second) + "\n";
+  }
+  op_type_log.close();
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {
