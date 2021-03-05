@@ -16,7 +16,8 @@ Planner::Planner(Interpreter* interpreter) {
            << "device_id\t"
            << "enqueue_time\t"
            << "invoke_time\t"
-           << "end_time\n";
+           << "end_time\t"
+           << "average_freq\n";
   log_file.close();
 }
 
@@ -42,7 +43,8 @@ TfLiteStatus Planner::Wait(int num_requests) {
              << job.device_id_ << "\t"
              << job.enqueue_time_ << "\t"
              << job.invoke_time_ << "\t"
-             << job.end_time_ << "\n";
+             << job.end_time_ << "\t"
+             << job.average_freq_ << "\n";
   }
   log_file.close();
   lock.unlock();

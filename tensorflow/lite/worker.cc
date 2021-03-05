@@ -3,6 +3,8 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
 
+#include <atomic>
+
 namespace tflite {
 namespace impl {
 
@@ -66,17 +68,43 @@ void Worker::Work() {
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
+
+      int64_t average_freq = 0;
+      std::atomic_bool watcher_loop = ATOMIC_VAR_INIT(true);
+      CpuSet cpu_set;
+      GetCPUThreadAffinity(cpu_set);
+
+      auto frequency_watcher = [&](){
+        int64_t count = 0;
+        while (watcher_loop.load(std::memory_order_acquire)) {
+          average_freq += GetCPUAverageFrequencyKhz(cpu_set);
+          ++count;
+          std::this_thread::sleep_for(std::chrono::nanoseconds(100000));
+        };
+
+        average_freq /= count;
+      };
+
+      std::thread watcher_thread(frequency_watcher);
+
       job.invoke_time_ = profiling::time::NowMicros();
 
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time_ = profiling::time::NowMicros();
+        watcher_loop.store(false, std::memory_order_release);
+        watcher_thread.join();
+        job.average_freq_ = average_freq;
         planner_ptr->EnqueueFinishedJob(job);
       } else {
         job.end_time_ = profiling::time::NowMicros();
+        watcher_loop.store(false, std::memory_order_release);
+        watcher_thread.join();
+        job.average_freq_ = average_freq;
         // TODO #21: Handle errors in multi-thread environment
         // Currently, put a job with a minus sign if Invoke() fails.
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
       }
+
       planner_ptr->GetSafeBool().notify();
     } else {
       // TODO #21: Handle errors in multi-thread environment
