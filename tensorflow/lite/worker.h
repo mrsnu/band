@@ -24,6 +24,8 @@ struct Job {
   int64_t enqueue_time_ = 0;
   int64_t invoke_time_ = 0;
   int64_t end_time_ = 0;
+  // Average cpu frequency in khz
+  int64_t average_freq_ = 0;
   std::string model_fname_;
 };
 

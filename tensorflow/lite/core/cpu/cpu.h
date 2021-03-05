@@ -56,6 +56,9 @@ int GetCPUCount();
 int GetLittleCPUCount();
 int GetBigCPUCount();
 
+int GetCPUFrequencyKhz(int cpu);
+int GetCPUAverageFrequencyKhz(const CpuSet &cpu_set);
+
 // set explicit thread affinity
 TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);

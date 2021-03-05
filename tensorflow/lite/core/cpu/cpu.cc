@@ -101,6 +101,50 @@ int GetLittleCPUCount() { return GetCPUThreadAffinityMask(kTfLiteLittle).NumEnab
 
 int GetBigCPUCount() { return GetCPUThreadAffinityMask(kTfLiteBig).NumEnabled(); }
 
+int GetCPUFrequencyKhz(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  char path[256];
+  // first try from cpu id
+  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq",
+          cpu);
+  FILE* fp = fopen(path, "rb");
+
+  // second try from policy
+  if (!fp) {
+    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/scaling_cur_freq",
+            cpu);
+    fp = fopen(path, "rb");
+  }
+
+  if (fp) {
+    int freq_khz = 0;
+    fscanf(fp, "%d", &freq_khz);
+    fclose(fp);
+    return freq_khz;
+  } else {
+    return -1;
+  }
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUAverageFrequencyKhz(const CpuSet &cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_frequency = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i))
+      accumulated_frequency += GetCPUFrequencyKhz(i);
+  }
+
+  return accumulated_frequency / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
+
 #if defined __ANDROID__ || defined __linux__
 static int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
