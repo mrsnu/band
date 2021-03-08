@@ -612,10 +612,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       num_splits = num_ops;
     */
 
-    int num_splits = 5;
+    (*interpreter)->
+      SplitOperatorsEven(model_id, 1, device_id, subgraph_keys);
 
     (*interpreter)->
-      SplitOperatorsEven(model_id, num_splits, device_id, subgraph_keys);
+      SplitOperatorsEven(model_id, 5, device_id, subgraph_keys);
 
     for (auto& subgraph_key : subgraph_keys) {
       int subgraph_idx = AddSubgraph(
