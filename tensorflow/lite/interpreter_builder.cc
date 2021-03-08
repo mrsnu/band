@@ -611,7 +611,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       num_splits = num_ops;
     */
 
-    int num_splits = num_ops;
+    int num_splits = 1;
 
     (*interpreter)->
       SplitOperatorsEven(model_id, num_splits, device_id, subgraph_keys);
