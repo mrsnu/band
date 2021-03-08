@@ -639,6 +639,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     model_ids_.push_back(model_id);
   }
 
+  return kTfLiteOk;
+
   interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
                         params_.Get<int32_t>("profile_num_runs"));
 
