@@ -604,14 +604,26 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
 
+    if (subgraph_key.device_flag != kTfLiteDSP) {
+      continue;
+    }
+    if (subgraph_key.start_idx != subgraph_key.end_idx) {
+      continue;
+    }
+    if (subgraph_key.start_idx != 0) {
+      continue;
+    }
+
     for (int i = 0; i < num_warm_ups; i++) {
       subgraph->Invoke();
     }
     timer.ClearRecords();
 
+    /*
     if (subgraph_key.device_flag == kTfLiteGPU) {
       subgraph->context()->gpu_profile = true;
     }
+    */
 
     for (int i = 0; i < num_runs; i++) {
       subgraph->Invoke();
@@ -649,8 +661,10 @@ void Interpreter::DumpProfileData() {
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
     const SubgraphKey& subgraph_key = subgraph->GetKey();
+    /*
     if (subgraph_key.device_flag == kTfLiteGPU)
       continue;
+    */
     int64_t profile_result = subgraph_profiling_results_map_[subgraph_key];
 
     int model_id = subgraph_key.model_id;
@@ -695,6 +709,7 @@ void Interpreter::DumpProfileData() {
   }
   log_file.close();
 
+  /*
   std::ofstream op_type_log("/data/local/tmp/cpu_op_type_profiling.csv");
   op_type_log << "OpType,latency(us)\n";
   for (auto& timing : op_type_timing) {
@@ -702,6 +717,7 @@ void Interpreter::DumpProfileData() {
                 << std::to_string(timing.second) + "\n";
   }
   op_type_log.close();
+  */
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {
