@@ -610,7 +610,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
     if (subgraph_key.start_idx != subgraph_key.end_idx) {
       continue;
     }
-    if (subgraph_key.start_idx != 1) {
+    if (subgraph_key.start_idx != 3) {
       continue;
     }
 
