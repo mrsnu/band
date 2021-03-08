@@ -604,6 +604,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
 
+    /* profile a conv op on DSP
     if (subgraph_key.device_flag != kTfLiteDSP) {
       continue;
     }
@@ -613,13 +614,14 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
     if (subgraph_key.start_idx != 3) {
       continue;
     }
+    */
 
     for (int i = 0; i < num_warm_ups; i++) {
       subgraph->Invoke();
     }
     timer.ClearRecords();
 
-    /*
+    /* execution on GPU with Profile Mode
     if (subgraph_key.device_flag == kTfLiteGPU) {
       subgraph->context()->gpu_profile = true;
     }
