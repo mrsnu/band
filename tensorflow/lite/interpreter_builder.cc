@@ -619,6 +619,16 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       SplitOperatorsEven(model_id, 5, device_id, subgraph_keys);
 
     for (auto& subgraph_key : subgraph_keys) {
+      if (subgraph_key.device_flag != kTfLiteDSP) {
+        continue;
+      }
+      if (subgraph_key.start_idx != subgraph_key.end_idx) {
+        continue;
+      }
+      if (subgraph_key.start_idx != 3) {
+        continue;
+      }
+
       int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, subgraph_key, num_threads);
       if (subgraph_idx != -1) {
