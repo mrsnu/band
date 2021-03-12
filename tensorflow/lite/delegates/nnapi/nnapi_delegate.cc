@@ -3590,17 +3590,14 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
                                     nnapi_errno);
   } else {
     // Use synchronous execution for NNAPI 1.2+.
-    /*
     RETURN_TFLITE_ERROR_IF_NN_ERROR(
         context, nnapi_->ANeuralNetworksExecution_setMeasureTiming(execution, true),
         "set measure timing", nnapi_errno);
-    */
     
     RETURN_TFLITE_ERROR_IF_NN_ERROR(
         context, nnapi_->ANeuralNetworksExecution_compute(execution),
         "running computation", nnapi_errno);
 
-    /*
     uint64_t duration = 0;
     RETURN_TFLITE_ERROR_IF_NN_ERROR(
         context, nnapi_->ANeuralNetworksExecution_getDuration(execution,
@@ -3609,7 +3606,6 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
         "get duration on hardware", nnapi_errno);
 
     std::cout << "hardware_duration," << duration << std::endl;
-    */
   }
 
   // copy results from shared memory to the destination.
