@@ -171,7 +171,7 @@ absl::Status CLCommandQueue::EnqueueReadBuffer(cl_mem memory,
         clEnqueueUnmapMemObject(queue_, memory, buffer, 0, nullptr, nullptr);
     if (error_code != CL_SUCCESS) {
       return absl::UnknownError(
-          absl::StrCat("Failed to upload data to GPU (clEnqueueMapBuffer) - ",
+          absl::StrCat("Failed to read data from GPU (clEnqueueMapBuffer) - ",
                       CLErrorCodeToString(error_code)));
     }
   } else {
