@@ -304,7 +304,7 @@ absl::Status Tensor::WriteDataBHWDC(absl::Span<const float> in,
   switch (descriptor_.storage_type) {
     case TensorStorageType::BUFFER:
     case TensorStorageType::IMAGE_BUFFER:
-      RETURN_IF_ERROR(queue->EnqueueWriteBuffer(memory_, data_size, data_ptr));
+      RETURN_IF_ERROR(queue->EnqueueWriteBuffer(memory_, data_size, data_ptr, true));
       break;
     case TensorStorageType::TEXTURE_ARRAY:
     case TensorStorageType::TEXTURE_2D:
@@ -364,7 +364,7 @@ absl::Status Tensor::ReadDataBHWDC(absl::Span<float> out,
   switch (descriptor_.storage_type) {
     case TensorStorageType::BUFFER:
     case TensorStorageType::IMAGE_BUFFER:
-      RETURN_IF_ERROR(queue->EnqueueReadBuffer(memory_, data_size, data_ptr));
+      RETURN_IF_ERROR(queue->EnqueueReadBuffer(memory_, data_size, data_ptr, true));
       break;
     case TensorStorageType::TEXTURE_ARRAY:
     case TensorStorageType::TEXTURE_2D:
@@ -446,7 +446,8 @@ absl::Status AllocateTensorMemory(const CLContext& context,
       const size_t data_size = shape.b * shape.w * shape.h * shape.d * slices *
                                4 * SizeOf(descriptor.data_type);
       cl_int error_code;
-      cl_mem memory = clCreateBuffer(context.context(), CL_MEM_READ_WRITE,
+      // Assuming that tensor buffer is always host accessible
+      cl_mem memory = clCreateBuffer(context.context(), CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,
                                      data_size, nullptr, &error_code);
       if (!memory) {
         return absl::UnknownError(

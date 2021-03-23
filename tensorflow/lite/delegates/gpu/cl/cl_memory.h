@@ -32,14 +32,18 @@ class CLMemory {
   // Creates invalid object.
   CLMemory() : CLMemory(nullptr, false) {}
 
-  CLMemory(cl_mem memory, bool has_ownership)
-      : memory_(memory), has_ownership_(has_ownership) {}
+  CLMemory(cl_mem memory, 
+           bool has_ownership, 
+           bool host_accessible = false)
+      : memory_(memory), has_ownership_(has_ownership), 
+        host_accessible_(host_accessible) {}
 
   // Move-only
   CLMemory(const CLMemory&) = delete;
   CLMemory& operator=(const CLMemory&) = delete;
   CLMemory(CLMemory&& image)
-      : memory_(image.memory_), has_ownership_(image.has_ownership_) {
+      : memory_(image.memory_), has_ownership_(image.has_ownership_), 
+        host_accessible_(image.host_accessible_) {
     image.memory_ = nullptr;
   }
 
@@ -50,6 +54,7 @@ class CLMemory {
       Invalidate();
       std::swap(memory_, image.memory_);
       has_ownership_ = image.has_ownership_;
+      host_accessible_ = image.host_accessible_;
     }
     return *this;
   }
@@ -61,6 +66,9 @@ class CLMemory {
   // @return true if this object actually owns corresponding CL memory
   //         and manages it's lifetime.
   bool has_ownership() const { return has_ownership_; }
+
+  // @return true if this object uses host accessible memory
+  bool host_accessible() const { return host_accessible_; }
 
   cl_mem Release() {
     cl_mem to_return = memory_;
@@ -78,6 +86,7 @@ class CLMemory {
 
   cl_mem memory_ = nullptr;
   bool has_ownership_ = false;
+  bool host_accessible_ = false;
 };
 
 cl_mem_flags ToClMemFlags(AccessType access_type);

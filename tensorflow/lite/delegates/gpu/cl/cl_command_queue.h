@@ -86,9 +86,9 @@ class CLCommandQueue {
   absl::Status EnqueueReadImage(cl_mem memory, int3 region, void* data);
 
   absl::Status EnqueueWriteBuffer(cl_mem memory, size_t size_in_bytes,
-                                  const void* data);
+                                  const void* data, bool mapped = false);
   absl::Status EnqueueReadBuffer(cl_mem memory, size_t size_in_bytes,
-                                 void* data);
+                                 void* data, bool mapped = false);
 
   absl::Status WaitForCompletion();
 

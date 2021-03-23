@@ -132,26 +132,56 @@ absl::Status CLCommandQueue::EnqueueReadImage(cl_mem memory, int3 region,
 
 absl::Status CLCommandQueue::EnqueueWriteBuffer(cl_mem memory,
                                                 size_t size_in_bytes,
-                                                const void* data) {
-  auto error_code = clEnqueueWriteBuffer(
-      queue_, memory, CL_TRUE, 0, size_in_bytes, data, 0, nullptr, nullptr);
-  if (error_code != CL_SUCCESS) {
-    return absl::UnknownError(
-        absl::StrCat("Failed to upload data to GPU (clEnqueueWriteBuffer) - ",
-                     CLErrorCodeToString(error_code)));
+                                                const void* data,
+                                                bool mapped) {
+  if (mapped) {
+    void* buffer =
+        clEnqueueMapBuffer(queue_, memory, CL_TRUE, CL_MAP_WRITE, 0,
+                           size_in_bytes, 0, nullptr, nullptr, nullptr);
+    memcpy(buffer, data, size_in_bytes);
+    auto error_code =
+        clEnqueueUnmapMemObject(queue_, memory, buffer, 0, nullptr, nullptr);
+    if (error_code != CL_SUCCESS) {
+      return absl::UnknownError(
+          absl::StrCat("Failed to upload data to GPU (clEnqueueMapBuffer) - ",
+                      CLErrorCodeToString(error_code)));
+    }
+  } else {
+    auto error_code = clEnqueueWriteBuffer(
+        queue_, memory, CL_TRUE, 0, size_in_bytes, data, 0, nullptr, nullptr);
+    if (error_code != CL_SUCCESS) {
+      return absl::UnknownError(
+          absl::StrCat("Failed to upload data to GPU (clEnqueueWriteBuffer) - ",
+                      CLErrorCodeToString(error_code)));
+    }
   }
   return absl::OkStatus();
 }
 
 absl::Status CLCommandQueue::EnqueueReadBuffer(cl_mem memory,
                                                size_t size_in_bytes,
-                                               void* data) {
-  auto error_code = clEnqueueReadBuffer(
-      queue_, memory, CL_TRUE, 0, size_in_bytes, data, 0, nullptr, nullptr);
-  if (error_code != CL_SUCCESS) {
-    return absl::UnknownError(
-        absl::StrCat("Failed to read data from GPU (clEnqueueReadBuffer) - ",
-                     CLErrorCodeToString(error_code)));
+                                               void* data,
+                                               bool mapped) {
+  if (mapped) {
+    void* buffer =
+        clEnqueueMapBuffer(queue_, memory, CL_TRUE, CL_MAP_READ, 0,
+                           size_in_bytes, 0, nullptr, nullptr, nullptr);
+    memcpy(data, buffer, size_in_bytes);
+    auto error_code =
+        clEnqueueUnmapMemObject(queue_, memory, buffer, 0, nullptr, nullptr);
+    if (error_code != CL_SUCCESS) {
+      return absl::UnknownError(
+          absl::StrCat("Failed to upload data to GPU (clEnqueueMapBuffer) - ",
+                      CLErrorCodeToString(error_code)));
+    }
+  } else {
+    auto error_code = clEnqueueReadBuffer(
+        queue_, memory, CL_TRUE, 0, size_in_bytes, data, 0, nullptr, nullptr);
+    if (error_code != CL_SUCCESS) {
+      return absl::UnknownError(
+          absl::StrCat("Failed to read data from GPU (clEnqueueReadBuffer) - ",
+                      CLErrorCodeToString(error_code)));
+    }
   }
   return absl::OkStatus();
 }
