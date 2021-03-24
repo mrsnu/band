@@ -548,6 +548,11 @@ typedef int (*ANeuralNetworksExecution_setOutputFromMemory_fn)(
 typedef int (*ANeuralNetworksExecution_startCompute_fn)(
     ANeuralNetworksExecution* execution, ANeuralNetworksEvent** event);
 
+typedef int (*ANeuralNetworksExecution_startComputeWithDependencies_fn)(
+    ANeuralNetworksExecution* execution,
+    const ANeuralNetworksEvent* const* dependencies, uint32_t num_dependencies,
+    uint64_t duration, ANeuralNetworksEvent** event);
+
 typedef int (*ANeuralNetworksEvent_wait_fn)(ANeuralNetworksEvent* event);
 
 typedef void (*ANeuralNetworksEvent_free_fn)(ANeuralNetworksEvent* event);

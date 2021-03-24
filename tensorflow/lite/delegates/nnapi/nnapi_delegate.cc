@@ -3284,6 +3284,12 @@ TfLiteStatus NNAPIDelegateKernel::Prepare(TfLiteContext* context,
       StatefulNnApiDelegate::GetOptions(node->delegate);
   ANeuralNetworksCompilation* compilation = nullptr;
   if (!nnapi_devices_.empty()) {
+    for (auto device : nnapi_devices_) {
+      const char* buffer = nullptr;
+      RETURN_TFLITE_ERROR_IF_NN_ERROR(context, nnapi_->ANeuralNetworksDevice_getName(device, &buffer), "getName", nnapi_errno);
+      std::cout << buffer << std::endl;
+    }
+    std::cout << "NOT nnapi_devices_.empty()" << std::endl;
     // Compile for the selected accelerator.
     RETURN_TFLITE_ERROR_IF_NN_ERROR(
         context,
@@ -3291,16 +3297,33 @@ TfLiteStatus NNAPIDelegateKernel::Prepare(TfLiteContext* context,
             nn_model_.get(), nnapi_devices_.data(), nnapi_devices_.size(),
             &compilation),
         "creating NNAPI model for given devices", nnapi_errno);
+
+
+    // bool supportedOps[10] = {false, false, false, false, false,
+    //                          false, false, false, false, false,};
+
+    // RETURN_TFLITE_ERROR_IF_NN_ERROR(
+    //     context,
+    //     nnapi_->ANeuralNetworksModel_getSupportedOperationsForDevices(nn_model_.get(),
+    //                                                           nnapi_devices_.data(),
+    //                                                           nnapi_devices_.size(),
+    //                                                           supportedOps),
+    //     "getSupportedOperationsForDevices",
+    //     nnapi_errno);
+
   } else {
+    std::cout << "YES nnapi_devices_.empty()" << std::endl;
     RETURN_TFLITE_ERROR_IF_NN_ERROR(context,
                                     nnapi_->ANeuralNetworksCompilation_create(
                                         nn_model_.get(), &compilation),
                                     "creating NNAPI compilation", nnapi_errno);
   }
+  
 
   auto preference = delegate_options.execution_preference;
   if (preference !=
       StatefulNnApiDelegate::Options::ExecutionPreference::kUndefined) {
+    std::cout << " StatefulNnApiDelegate::Options::ExecutionPreference::kUndefined" << std::endl;
     const int preference_result =
         nnapi_->ANeuralNetworksCompilation_setPreference(compilation,
                                                          preference);
@@ -3314,6 +3337,7 @@ TfLiteStatus NNAPIDelegateKernel::Prepare(TfLiteContext* context,
   }
 
   if (!nn_compilation_cache_token_.empty()) {
+    std::cout << "compilation cache token" << std::endl;
     const char* cache_dir = delegate_options.cache_dir;
     const int set_caching_result =
         nnapi_->ANeuralNetworksCompilation_setCaching(
@@ -3327,7 +3351,9 @@ TfLiteStatus NNAPIDelegateKernel::Prepare(TfLiteContext* context,
   }
   // Set compilation timeout if applicable.
   if (nnapi_->android_sdk_version >= kMinSdkVersionForNNAPI13) {
+    std::cout << "kMinSdkVersionForNNAPI13" << std::endl;
     if (delegate_options.max_compilation_timeout_duration_ns > 0) {
+      std::cout << "max_compilation_timeout_duration_ns" << std::endl;
       RETURN_TFLITE_ERROR_IF_NN_ERROR(
           context,
           nnapi_->ANeuralNetworksCompilation_setTimeout(

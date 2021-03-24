@@ -567,6 +567,12 @@ struct NnApi {
   int (*ANeuralNetworksExecution_startCompute)(
       ANeuralNetworksExecution* execution, ANeuralNetworksEvent** event);
 
+  int (*ANeuralNetworksExecution_startComputeWithDependencies)(
+      ANeuralNetworksExecution* execution,
+      const ANeuralNetworksEvent* const* dependencies,
+      uint32_t num_dependencies, uint64_t duration,
+      ANeuralNetworksEvent** event);
+
   /**
    * Waits until the execution completes.
    *

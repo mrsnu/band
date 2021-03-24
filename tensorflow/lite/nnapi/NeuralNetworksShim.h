@@ -688,6 +688,15 @@ inline int ANeuralNetworksExecution_startCompute(
   EXECUTE_FUNCTION_RETURN(execution, event);
 }
 
+inline int ANeuralNetworksExecution_startComputeWithDependencies(
+    ANeuralNetworksExecution* execution,
+    const ANeuralNetworksEvent* const* dependencies, uint32_t num_dependencies,
+    uint64_t duration, ANeuralNetworksEvent** event) {
+  LOAD_FUNCTION(ANeuralNetworksExecution_startComputeWithDependencies);
+  EXECUTE_FUNCTION_RETURN(execution, dependencies, num_dependencies, duration,
+                          event);
+}
+
 /**
  * Waits until the execution completes.
  *
