@@ -79,6 +79,6 @@ void ShortestExpectedLatencyPlanner::Plan() {
 bool ShortestExpectedLatencyPlanner::NeedProfile() {
   return true;
 }
- 
-} // namespace impl
-} // namespace tflite
+
+}  // namespace impl
+}  // namespace tflite

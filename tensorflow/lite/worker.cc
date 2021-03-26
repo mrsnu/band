@@ -58,7 +58,6 @@ void Worker::Work() {
     cpu_lock.unlock();
 
     Job& job = requests_.front();
-    // requests_.pop_front();
     lock.unlock();
 
     int subgraph_idx = job.subgraph_idx_;
@@ -77,7 +76,6 @@ void Worker::Work() {
         // Currently, put a job with a minus sign if Invoke() fails.
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
       }
-
       lock.lock();
       requests_.pop_front();
       lock.unlock();
@@ -113,7 +111,9 @@ int64_t Worker::GetWaitingTime() {
       int64_t current_time = profiling::time::NowMicros();
       int64_t invoke_time = (*it).invoke_time_;
       if (invoke_time > 0 && current_time > invoke_time) {
-        int64_t progress = (current_time - invoke_time) > profiled_latency ? profiled_latency : (current_time - invoke_time);
+        int64_t progress =
+          (current_time - invoke_time) > profiled_latency ? profiled_latency
+                                              : (current_time - invoke_time);
         total -= progress;
       }
     }
@@ -121,7 +121,7 @@ int64_t Worker::GetWaitingTime() {
   lock.unlock();
 
   return total;
- }
+}
 
 
 }  // namespace impl

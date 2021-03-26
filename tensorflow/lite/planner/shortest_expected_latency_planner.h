@@ -20,4 +20,4 @@ class ShortestExpectedLatencyPlanner : public Planner {
 }  // namespace impl
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_PLANNER_SHORTEST_EXPECTED_LATENCY_PLANNER_H_ 
+#endif  // TENSORFLOW_LITE_PLANNER_SHORTEST_EXPECTED_LATENCY_PLANNER_H_
