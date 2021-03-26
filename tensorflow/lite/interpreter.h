@@ -390,7 +390,7 @@ class Interpreter {
 
   void InvestigateModelSpec(int model_id);
 
-  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx);
+  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx, TfLiteDeviceFlags disable_device = kTfLiteNumDevices);
 
   int64_t GetShortestLatency(SubgraphKey& key,
                              int64_t start_time,

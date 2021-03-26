@@ -24,7 +24,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
     }
     request_lock.unlock();
 
-    std::cout << "Got requests" << std::endl;
+    // std::cout << "Got requests" << std::endl;
     while (!local_jobs.empty()) {
       // std::cout << local_jobs.size() << std::endl;
       // First, find the most urgent job -- the one with the
@@ -71,11 +71,13 @@ void ShortestExpectedLatencyPlanner::Plan() {
           SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
           int64_t expected_latency =
             GetInterpreter()->GetShortestLatency(key, 0, device_waiting_time);
+          // std::cout << "(" << subgraph_idx << ", " << expected_latency << ") / ";
           if (expected_latency < best_latency) {
             best_latency = expected_latency;
             best_subgraph = subgraph_idx;
           }
         }
+        // std::cout << std::endl;
 
         /*
         std::cout << "For Job " << it - local_jobs.begin() << "(" << next_job.model_id_
@@ -89,7 +91,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         }
       }
       int64_t sched_end = profiling::time::NowMicros();
-      std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
+      // std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
 
       // for some reason, this Job must NOT be a reference (&), otherwise
       // we get a segfault at push_back() below

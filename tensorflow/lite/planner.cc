@@ -11,10 +11,13 @@ Planner::Planner(Interpreter* interpreter) {
   // open file to write per-request timestamps later
   // TODO: make the file path a configurable command line arg
   std::ofstream log_file(log_path_);
-  log_file << "job_id\t"
+  log_file << "sched_id\t"
            << "model_name\t"
            << "model_id\t"
            << "device_id\t"
+           << "start_idx\t"
+           << "end_idx\t"
+           << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
            << "end_time\n";
@@ -42,6 +45,9 @@ TfLiteStatus Planner::Wait(int num_requests) {
              << job.model_fname_ << "\t"
              << job.model_id_ << "\t"
              << job.device_id_ << "\t"
+             << job.start_idx << "\t"
+             << job.end_idx << "\t"
+             << job.subgraph_idx_ << "\t"
              << job.enqueue_time_ << "\t"
              << job.invoke_time_ << "\t"
              << job.end_time_ << "\n";

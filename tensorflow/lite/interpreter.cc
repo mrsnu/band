@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "tensorflow/lite/interpreter.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdarg>
 #include <cstdint>
@@ -807,17 +808,60 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 }
 
 
-std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx) {
-  std::vector<int> candidates;
+static bool CompareIntSubgraphKey(const std::pair<int, SubgraphKey>& a,
+                                  const std::pair<int, SubgraphKey>& b) {
+  return a.second < b.second;
+}
+
+std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
+    TfLiteDeviceFlags disable_device) {
+  // std::vector<int> candidates;
+  std::vector<std::pair<int, SubgraphKey>> candidates;
   for (int i = 0; i < subgraphs_size(); ++i) {
     SubgraphKey& key = subgraph(i)->GetKey();
-    if (key.model_id == model_id && key.start_idx == start_idx)
-      candidates.push_back(i);
+    if (key.model_id == model_id && key.start_idx == start_idx && key.device_flag != disable_device) {
+      // candidates.push_back(i);
+      candidates.push_back({i, key});
+    }
+  }
+
+  if (disable_device != kTfLiteNumDevices) {
+  std::sort(candidates.begin(), candidates.end(), CompareIntSubgraphKey);
+
+    for (auto it = candidates.begin(); it != candidates.end();) {
+      SubgraphKey& key = it->second;
+      if (it+1 != candidates.end()) {
+        SubgraphKey& nextKey = (it+1)->second;
+
+        if (key.model_id == nextKey.model_id
+            && key.device_flag == nextKey.device_flag
+            && key.start_idx == nextKey.start_idx
+            && key.end_idx < nextKey.end_idx) {
+          // std::cout << "Removing SubgraphKey("
+          //           << key.model_id << ", "
+          //           << key.device_flag << ", "
+          //           << key.start_idx << ", "
+          //           << key.end_idx << ") "
+          //           << "because we have SubgraphKey(..., "
+          //           << nextKey.end_idx << ")"
+          //           << std::endl;
+          it = candidates.erase(it);
+          continue;
+        }
+      }
+
+      ++it;
+    }
   }
 
   // TODO(dhkim): What if no candidate is chosen.
-
-  return candidates;
+  std::vector<int> candidatesIds;
+  for (auto& pair : candidates) {
+    candidatesIds.push_back(pair.first);
+    // std::cout << "(" << pair.second.device_flag << ", " << pair.second.start_idx << ", " << pair.second.end_idx << ") / ";
+  }
+  // std::cout << std::endl;
+  return candidatesIds;
 }
 
 int64_t Interpreter::GetShortestLatency(SubgraphKey& key,
@@ -839,7 +883,7 @@ int64_t Interpreter::GetShortestLatency(SubgraphKey& key,
 
   if (key.end_idx != model_specs_[key.model_id].num_ops - 1) {
     std::vector<int> subgraph_indices =
-      GetSubgraphCandidates(key.model_id, key.end_idx + 1);
+      GetSubgraphCandidates(key.model_id, key.end_idx + 1, device);
 
     int64_t min_subgraph_latency = INT_MAX;
     for (auto subgraph_idx : subgraph_indices) {
