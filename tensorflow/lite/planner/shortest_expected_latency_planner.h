@@ -1,7 +1,7 @@
-#ifndef TENSORFLOW_LITE_SHORTEST_EXPECTED_LATENCY_PLANNER_H_
-#define TENSORFLOW_LITE_SHORTEST_EXPECTED_LATENCY_PLANNER_H_
+#ifndef TENSORFLOW_LITE_PLANNER_SHORTEST_EXPECTED_LATENCY_PLANNER_H_
+#define TENSORFLOW_LITE_PLANNER_SHORTEST_EXPECTED_LATENCY_PLANNER_H_
 
-#include "tensorflow/lite/planner.h"
+#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/interpreter.h"
 
 namespace tflite {
@@ -20,4 +20,4 @@ class ShortestExpectedLatencyPlanner : public Planner {
 }  // namespace impl
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_SHORTEST_EXPECTED_LATENCY_PLANNER_H_ 
+#endif  // TENSORFLOW_LITE_PLANNER_SHORTEST_EXPECTED_LATENCY_PLANNER_H_ 

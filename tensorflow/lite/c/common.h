@@ -65,7 +65,8 @@ typedef enum TfLiteExternalContextType {
 typedef enum TfLitePlannerType {
   kFixedDevice = 0,
   kRoundRobin = 1,
-  kNumPlannerTypes = 2
+  kShortestExpectedLatency = 2,
+  kNumPlannerTypes = 3
 } TfLitePlannerType;
 
 // Forward declare so dependent structs and methods can reference these types

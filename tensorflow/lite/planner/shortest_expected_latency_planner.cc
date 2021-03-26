@@ -1,4 +1,4 @@
-#include "tensorflow/lite/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
 #include <iostream>
 
 namespace tflite {

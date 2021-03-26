@@ -136,6 +136,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // FixedDevicePlanner is the default planner.
   if (planner_type == kRoundRobin) {
     planner_.reset(new RoundRobinPlanner(this));
+  } else if (kShortestExpectedLatency) {
+    planner_.reset(new ShortestExpectedLatencyPlanner(this));
   } else {
     planner_.reset(new FixedDevicePlanner(this));
   }
