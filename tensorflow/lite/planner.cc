@@ -26,6 +26,10 @@ Planner::~Planner() {
   planner_thread_.join();
 }
 
+TfLiteStatus Planner::WaitBatch() {
+
+}
+
 TfLiteStatus Planner::Wait(int num_requests) {
   std::unique_lock<std::mutex> lock(job_queue_mtx_);
   end_invoke_.wait(lock, [this, num_requests]{

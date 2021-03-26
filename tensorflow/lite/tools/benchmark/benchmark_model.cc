@@ -160,6 +160,7 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
   int64_t min_finish_us = now_us + static_cast<int64_t>(min_secs * 1.e6f);
   int64_t max_finish_us = now_us + static_cast<int64_t>(max_secs * 1.e6f);
   int period_ms = runtime_config_.period_ms;
+  int run_duration = runtime_config_.run_duration;
 
   *invoke_status = kTfLiteOk;
   for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
@@ -171,7 +172,10 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
 
     // main run method
     TfLiteStatus status;
-    if (period_ms <= 0) {
+
+    if (run_duration > 0) {
+      status = RunStream(run_duration);
+    } else if (period_ms <= 0) {
       status = RunImpl();
     } else {
       status = RunPeriodic(period_ms);

@@ -393,6 +393,30 @@ void Interpreter::InvokeModelAsync(int model_id) {
   planner_->EnqueueRequest(to_enqueue);
 }
 
+
+void Interpreter::InvokeModelsSync() {
+  std::list<Job> jobs;
+
+  for (auto& m : model_configs_) {
+    int model_id = m.first;
+    ModelConfig& model_config = m.second;
+
+    Job to_enqueue = Job(model_id);
+    to_enqueue.model_fname_ = model_config.model_fname;
+    to_enqueue.device_id_ = model_config.device;
+
+    for (int k = 0; k < model_config.batch_size; ++k) {
+      // to_enqueue.sched_id_ = k;
+      jobs.emplace_back(to_enqueue);
+    }
+  }
+
+  planner_->EnqueueBatch(jobs);
+
+  Wait!!
+}
+
+
 int Interpreter::InvokeModelsAsync() {
   std::list<Job> jobs;
 

@@ -194,6 +194,7 @@ class BenchmarkModel {
   // Keeps the runtime configuration from json config file.
   struct RuntimeConfig {
     int period_ms = 0;
+    int run_duration = 0;
     int cpu_masks = 0;
   };
 
@@ -221,6 +222,7 @@ class BenchmarkModel {
   virtual TfLiteStatus RunImpl(int i) = 0;
   virtual TfLiteStatus RunAll() = 0;
   virtual TfLiteStatus RunPeriodic(int period_ms) = 0;
+  virtual TfLiteStatus RunStream(int run_duration) = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
   RuntimeConfig runtime_config_;

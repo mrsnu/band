@@ -769,6 +769,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   }
 
   runtime_config_.period_ms = root["period_ms"].asInt();
+  runtime_config_.run_duration = root["run_duration"].asInt();
   runtime_config_.cpu_masks = root["cpu_masks"].asInt();
 
   for (int i = 0; i < root["models"].size(); ++i) {
@@ -838,6 +839,20 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
   // Nonetheless, we don't care because we don't need the exact number anyway.
   // TODO (dhkim): Change Wait() to wait all subgraphs
   interpreter_->GetPlanner()->Wait(num_requests_);
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunStream(int run_duration) {
+  int cnt = 0;
+  int64_t start = profiling::time::NowMicros();
+  while(true) {
+    interpreter_->InvokeModelsSync();
+    int64_t current = profiling::time::NowMicros();
+    if (current - start >= run_duration * 1000000)
+      break;
+  }
+
+  // cnt will be num frames
   return kTfLiteOk;
 }
 

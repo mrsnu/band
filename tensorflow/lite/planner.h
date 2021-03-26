@@ -105,6 +105,8 @@ class Planner {
 
   // TODO #36: Make this a configurable option (command line arg)
   std::string log_path_ = "/data/local/tmp/log/model_execution_log.csv";
+
+  int batch_size_ = 0;
 };
 
 }  // namespace impl

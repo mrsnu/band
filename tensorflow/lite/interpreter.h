@@ -409,6 +409,10 @@ class Interpreter {
   /// This method is an asychronous call.
   int InvokeModelsAsync();
 
+  /// Invoke models with a batch size given by the model config.
+  /// Returns when all the requests are done.
+  void InvokeModelsSync();
+
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
 
