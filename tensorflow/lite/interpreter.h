@@ -614,44 +614,11 @@ class Interpreter {
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
+  int64_t GetProfiledLatency(int model_id, TfLiteDeviceFlags device_id);
 
-  int64_t GetProfiledLatency(int model_id, TfLiteDeviceFlags device_id) {
-    auto it = subgraph_profiling_results_map_.find({model_id, device_id});
-    if (it != subgraph_profiling_results_map_.end()) {
-      return it->second;
-    } else {
-      return -1;
-    }
-  }
+  int64_t GetLatency(TfLiteDeviceFlags device, Job& job);
 
-  int64_t GetLatency(TfLiteDeviceFlags device, Job& job) {
-    int64_t waiting_time = workers_[device]->GetWaitingTime();
-    int64_t profiled_latency = GetProfiledLatency(job.model_id_, device);
-    assert(waiting_time >= 0);
-    assert(profiled_latency > 0);
-
-    // job.waiting_time.insert({device, waiting_time});
-    job.waiting_time[device] = waiting_time;
-    // job.expected_latency.insert({device, expected_latency});
-    job.profiled_latency[device] = profiled_latency;
-
-    return profiled_latency + waiting_time;
-  }
-
-  TfLiteDeviceFlags GetShortestLatency(Job& job) {
-    TfLiteDeviceFlags shortestDeviceFlag = kTfLiteNumDevices;
-    int64_t value = -1;
-    // for(int i = 0; i < num_devices; ++i) {
-    // for (const TfLiteDeviceFlags& deviceFlag : validDevices) {
-    for (const auto& pair : workers_) {
-      int64_t latency = GetLatency(pair.first, job);
-      if (value == -1 || latency < value) {
-        shortestDeviceFlag = pair.first;
-        value = latency;
-      }
-    }
-    return shortestDeviceFlag;
-  }
+  TfLiteDeviceFlags GetShortestLatency(Job& job);
 
  private:
   friend class InterpreterBuilder;

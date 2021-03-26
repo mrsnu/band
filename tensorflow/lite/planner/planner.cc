@@ -10,6 +10,8 @@ Planner::Planner(Interpreter* interpreter) {
 
   // open file to write per-request timestamps later
   // TODO: make the file path a configurable command line arg
+  // NOTE: Columns starting `sched_id` are added for debugging purpose
+  // and the metrics are only for ShortestExpectedLatency Planner.
   std::ofstream log_file(log_path_);
   log_file << "model_name\t"
            << "model_id\t"
