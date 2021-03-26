@@ -33,8 +33,9 @@ limitations under the License.
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
-#include "tensorflow/lite/fixed_device_planner.h"
-#include "tensorflow/lite/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/planner/fixed_device_planner.h"
+#include "tensorflow/lite/planner/round_robin_planner.h"
+#include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -92,7 +93,8 @@ class Interpreter {
   //
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
-  explicit Interpreter(ErrorReporter* error_reporter);
+  explicit Interpreter(ErrorReporter* error_reporter,
+                       TfLitePlannerType planner_type);
 
   ~Interpreter();
 
@@ -468,7 +470,10 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  void Profile(const int num_warm_ups, const int num_runs);
+  using ModelDeviceToLatency = std::map<std::pair<int, int>, int64_t>;
+
+  void Profile(const int num_warm_ups, const int num_runs,
+               ModelDeviceToLatency& profiled);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
@@ -581,19 +586,15 @@ class Interpreter {
     return planner_;
   }
 
-  Worker* GetWorker(TfLiteDeviceFlags device) {
-    auto it = workers_.find(device);
-    if (it != workers_.end())
-      return it->second.get();
-    else
-      return nullptr;
-  }
+  Worker* GetWorker(int device_idx);
+  Worker* GetWorker(TfLiteDeviceFlags device);
 
   int GetWorkersSize() {
     return workers_.size();
   }
 
   int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
+  int GetSubgraphIdx(int model_id, int device_idx);
 
   std::set<int> models() const;
 

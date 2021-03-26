@@ -78,9 +78,10 @@ FRAMEWORK_LIB_HDRS = [
     "op_resolver.h",
     "optional_debug_tools.h",
     "stderr_reporter.h",
-    "planner.h",
-    "fixed_device_planner.h",
-    "shortest_expected_latency_planner.h",
+    "planner/planner.h",
+    "planner/fixed_device_planner.h",
+    "planner/round_robin_planner.h",
+    "planner/shortest_expected_latency_planner.h",
     "worker.h",
     "safe_bool.h"
 ]
@@ -251,9 +252,10 @@ cc_library(
         "mutable_op_resolver.cc",
         "optional_debug_tools.cc",
         "stderr_reporter.cc",
-        "planner.cc",
-        "fixed_device_planner.cc",
-        "shortest_expected_latency_planner.cc",
+        "planner/planner.cc",
+        "planner/fixed_device_planner.cc",
+        "planner/round_robin_planner.cc",
+        "planner/shortest_expected_latency_planner.cc",
         "worker.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,

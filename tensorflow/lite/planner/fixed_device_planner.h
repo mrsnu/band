@@ -1,7 +1,7 @@
-#ifndef TENSORFLOW_LITE_FIXED_DEVICE_PLANNER_H_
-#define TENSORFLOW_LITE_FIXED_DEVICE_PLANNER_H_
+#ifndef TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_PLANNER_H_
+#define TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_PLANNER_H_
 
-#include "tensorflow/lite/planner.h"
+#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/interpreter.h"
 
 namespace tflite {
@@ -25,4 +25,4 @@ class FixedDevicePlanner : public Planner {
 }  // namespace impl
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_FIXED_DEVICE_PLANNER_H_
+#endif  // TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_PLANNER_H_
