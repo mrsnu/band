@@ -1,5 +1,4 @@
 #include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
-#include <iostream>
 
 namespace tflite {
 namespace impl {
@@ -22,7 +21,6 @@ void ShortestExpectedLatencyPlanner::Plan() {
     request_lock.unlock();
 
     while (!local_jobs.empty()) {
-      // std::cout << local_jobs.size() << std::endl;
       // First, find the most urgent job -- the one with the
       // largest shortest latency (no, that's not a typo).
       // Put that job into some worker, and repeat this whole loop until we've
@@ -43,8 +41,10 @@ void ShortestExpectedLatencyPlanner::Plan() {
       TfLiteDeviceFlags target_device;
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& to_execute = *it;
-        TfLiteDeviceFlags device = GetInterpreter()->GetShortestLatency(to_execute);
-        int64_t shortest_latency = to_execute.waiting_time[device] + to_execute.profiled_latency[device];
+        TfLiteDeviceFlags device =
+          GetInterpreter()->GetShortestLatency(to_execute);
+        int64_t shortest_latency =
+          to_execute.waiting_time[device] + to_execute.profiled_latency[device];
 
         if (shortest_latency > largest_shortest_latency) {
           largest_shortest_latency = shortest_latency;
@@ -63,7 +63,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        int subgraph_idx = GetInterpreter()->GetSubgraphIdx(most_urgent_job.model_id_, target_device);
+        int subgraph_idx =
+          GetInterpreter()->GetSubgraphIdx(most_urgent_job.model_id_, target_device);
         most_urgent_job.subgraph_idx_ = subgraph_idx;
         most_urgent_job.device_id_ = target_device;
         most_urgent_job.sched_id_ = sched_id++;
