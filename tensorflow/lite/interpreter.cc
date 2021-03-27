@@ -136,6 +136,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // FixedDevicePlanner is the default planner.
   if (planner_type == kRoundRobin) {
     planner_.reset(new RoundRobinPlanner(this));
+  } else if (planner_type == kShortestExpectedLatency) {
+    planner_.reset(new ShortestExpectedLatencyPlanner(this));
   } else {
     planner_.reset(new FixedDevicePlanner(this));
   }
@@ -781,6 +783,43 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
   } else {
     return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
   }
+}
+
+int64_t Interpreter::GetProfiledLatency(int model_id, TfLiteDeviceFlags device_id) {
+  auto it = subgraph_profiling_results_map_.find({model_id, device_id});
+  if (it != subgraph_profiling_results_map_.end()) {
+    return it->second;
+  } else {
+    return -1;
+  }
+}
+
+int64_t Interpreter::GetLatency(TfLiteDeviceFlags device, Job& job) {
+  int64_t waiting_time = workers_[device]->GetWaitingTime();
+  int64_t profiled_latency = GetProfiledLatency(job.model_id_, device);
+  assert(waiting_time >= 0);
+
+  if (profiled_latency <= 0)
+    return -1;
+
+  job.waiting_time[device] = waiting_time;
+  job.profiled_latency[device] = profiled_latency;
+
+  return profiled_latency + waiting_time;
+}
+
+TfLiteDeviceFlags Interpreter::GetDeviceWithShortestLatency(Job& job) {
+  TfLiteDeviceFlags shortestDeviceFlag = kTfLiteNumDevices;
+  int64_t value = -1;
+  for (const auto& pair : workers_) {
+    int64_t latency = GetLatency(pair.first, job);
+    if (latency < 0) continue;
+    if (value == -1 || latency < value) {
+      shortestDeviceFlag = pair.first;
+      value = latency;
+    }
+  }
+  return shortestDeviceFlag;
 }
 
 }  // namespace impl

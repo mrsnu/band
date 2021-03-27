@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <deque>
 #include <string>
+#include <map>
 #include "tensorflow/lite/core/cpu/cpu.h"
 
 namespace tflite {
@@ -24,7 +25,11 @@ struct Job {
   int64_t enqueue_time_ = 0;
   int64_t invoke_time_ = 0;
   int64_t end_time_ = 0;
+  int sched_id_ = -1;
   std::string model_fname_;
+
+  std::map<int, int64_t> waiting_time;
+  std::map<int, int64_t> profiled_latency;
 };
 
 class Worker {
@@ -45,6 +50,8 @@ class Worker {
   }
 
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
+
+  int64_t GetWaitingTime();
 
  private:
   void Work();

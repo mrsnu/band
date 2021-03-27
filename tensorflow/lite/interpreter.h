@@ -35,6 +35,7 @@ limitations under the License.
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/planner/round_robin_planner.h"
+#include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -612,6 +613,12 @@ class Interpreter {
   }
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
+
+  int64_t GetProfiledLatency(int model_id, TfLiteDeviceFlags device_id);
+
+  int64_t GetLatency(TfLiteDeviceFlags device, Job& job);
+
+  TfLiteDeviceFlags GetDeviceWithShortestLatency(Job& job);
 
  private:
   friend class InterpreterBuilder;
