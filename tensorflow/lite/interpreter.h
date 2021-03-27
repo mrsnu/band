@@ -618,7 +618,7 @@ class Interpreter {
 
   int64_t GetLatency(TfLiteDeviceFlags device, Job& job);
 
-  TfLiteDeviceFlags GetShortestLatency(Job& job);
+  TfLiteDeviceFlags GetDeviceWithShortestLatency(Job& job);
 
  private:
   friend class InterpreterBuilder;

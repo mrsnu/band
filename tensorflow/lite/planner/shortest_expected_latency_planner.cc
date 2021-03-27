@@ -28,8 +28,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // There should be a more quicker way do this, but I'm leaving this as-is
       // to make it simple.
       // E.g., we add interpreter.GetProfiledLatency() to the expected_latency map
-      // of all Jobs instead of calling GetShortestLatency() a gazillion times
-      // again.
+      // of all Jobs instead of calling GetDeviceWithShortestLatency() a gazillion
+      // times again.
 
       // Note that we are NOT considering enqueue_time at the moment;
       // no request is given higher priority even if it had stayed in the queue
@@ -42,7 +42,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& to_execute = *it;
         TfLiteDeviceFlags device =
-          GetInterpreter()->GetShortestLatency(to_execute);
+          GetInterpreter()->GetDeviceWithShortestLatency(to_execute);
         int64_t shortest_latency =
           to_execute.waiting_time[device] + to_execute.profiled_latency[device];
 

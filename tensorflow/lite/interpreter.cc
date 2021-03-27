@@ -798,7 +798,9 @@ int64_t Interpreter::GetLatency(TfLiteDeviceFlags device, Job& job) {
   int64_t waiting_time = workers_[device]->GetWaitingTime();
   int64_t profiled_latency = GetProfiledLatency(job.model_id_, device);
   assert(waiting_time >= 0);
-  assert(profiled_latency > 0);
+
+  if (profiled_latency <= 0)
+    return -1;
 
   job.waiting_time[device] = waiting_time;
   job.profiled_latency[device] = profiled_latency;
@@ -806,11 +808,12 @@ int64_t Interpreter::GetLatency(TfLiteDeviceFlags device, Job& job) {
   return profiled_latency + waiting_time;
 }
 
-TfLiteDeviceFlags Interpreter::GetShortestLatency(Job& job) {
+TfLiteDeviceFlags Interpreter::GetDeviceWithShortestLatency(Job& job) {
   TfLiteDeviceFlags shortestDeviceFlag = kTfLiteNumDevices;
   int64_t value = -1;
   for (const auto& pair : workers_) {
     int64_t latency = GetLatency(pair.first, job);
+    if (latency < 0) continue;
     if (value == -1 || latency < value) {
       shortestDeviceFlag = pair.first;
       value = latency;
