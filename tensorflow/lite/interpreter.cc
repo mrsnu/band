@@ -109,7 +109,8 @@ bool IsNNAPIDeviceUseful(std::string name) {
 }  // namespace
 
 Interpreter::Interpreter(ErrorReporter* error_reporter,
-                         TfLitePlannerType planner_type)
+                         TfLitePlannerType planner_type,
+                         std::string log_path)
     : error_reporter_(error_reporter ? error_reporter :
                                        DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
@@ -135,11 +136,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // Create a Planner instance.
   // FixedDevicePlanner is the default planner.
   if (planner_type == kRoundRobin) {
-    planner_.reset(new RoundRobinPlanner(this));
+    planner_.reset(new RoundRobinPlanner(this, log_path));
   } else if (planner_type == kShortestExpectedLatency) {
-    planner_.reset(new ShortestExpectedLatencyPlanner(this));
+    planner_.reset(new ShortestExpectedLatencyPlanner(this, log_path));
   } else {
-    planner_.reset(new FixedDevicePlanner(this));
+    planner_.reset(new FixedDevicePlanner(this, log_path));
   }
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };

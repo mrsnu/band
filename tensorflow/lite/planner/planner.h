@@ -29,7 +29,7 @@ struct ModelPlan {
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter);
+  explicit Planner(Interpreter* interpreter, std::string log_path);
   ~Planner();
 
 	/*
@@ -103,8 +103,7 @@ class Planner {
 
   std::condition_variable end_invoke_;
 
-  // TODO #36: Make this a configurable option (command line arg)
-  std::string log_path_ = "/data/local/tmp/model_execution_log.csv";
+  std::string log_path_;
 };
 
 }  // namespace impl

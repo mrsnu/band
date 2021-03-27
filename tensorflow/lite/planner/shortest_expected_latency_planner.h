@@ -9,8 +9,9 @@ namespace impl {
 
 class ShortestExpectedLatencyPlanner : public Planner {
  public:
-  explicit ShortestExpectedLatencyPlanner(Interpreter* interpreter)
-      : Planner(interpreter) {
+  explicit ShortestExpectedLatencyPlanner(Interpreter* interpreter,
+                                          std::string log_path)
+      : Planner(interpreter, log_path) {
     planner_thread_ = std::thread([this]{this->Plan();});
   }
   void Plan() override;

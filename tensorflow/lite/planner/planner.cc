@@ -5,7 +5,8 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter) {
+Planner::Planner(Interpreter* interpreter, std::string log_path)
+    : log_path_(log_path) {
   interpreter_ = interpreter;
 
   // open file to write per-request timestamps later
