@@ -11,8 +11,8 @@ namespace impl {
 // assigns requested model to devices according to model_id.
 class FixedDevicePlanner : public Planner {
   public:
-    explicit FixedDevicePlanner(Interpreter* interpreter, std::string log_path)
-      : Planner(interpreter, log_path) {
+    explicit FixedDevicePlanner(Interpreter* interpreter)
+      : Planner(interpreter) {
       planner_thread_ = std::thread([this]{this->Plan();});
     }
     void Plan() override;

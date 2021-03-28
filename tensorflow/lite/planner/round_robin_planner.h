@@ -13,8 +13,8 @@ class Interpreter;
 // assigns requested model to devices in a Round-robin manner.
 class RoundRobinPlanner : public Planner {
  public:
-  explicit RoundRobinPlanner(Interpreter* interpreter, std::string log_path)
-    : Planner(interpreter, log_path) {
+  explicit RoundRobinPlanner(Interpreter* interpreter)
+    : Planner(interpreter) {
       planner_thread_ = std::thread([this]{this->Plan();});
   }
   void Plan() override;

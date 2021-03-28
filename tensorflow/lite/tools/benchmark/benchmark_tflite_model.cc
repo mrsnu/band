@@ -621,8 +621,10 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter(),
-                      runtime_config_.planner_type,
-                      runtime_config_.log_path));
+                      runtime_config_.planner_type));
+
+  // Set log file path and write log headers
+  TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
 
   // Set worker threads and current thread affinity
   TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));

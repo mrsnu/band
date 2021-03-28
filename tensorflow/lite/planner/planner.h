@@ -29,7 +29,7 @@ struct ModelPlan {
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter, std::string log_path);
+  explicit Planner(Interpreter* interpreter);
   ~Planner();
 
 	/*
@@ -85,6 +85,8 @@ class Planner {
   std::deque<Job>& GetRequests() {
     return requests_;
   }
+
+  void PrepareLogging(std::string log_path);
 
  protected:
   std::thread planner_thread_;

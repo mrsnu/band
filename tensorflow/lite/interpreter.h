@@ -94,8 +94,7 @@ class Interpreter {
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
   explicit Interpreter(ErrorReporter* error_reporter,
-                       TfLitePlannerType planner_type,
-                       std::string log_path);
+                       TfLitePlannerType planner_type);
 
   ~Interpreter();
 
@@ -586,6 +585,8 @@ class Interpreter {
   std::shared_ptr<Planner> GetPlanner() {
     return planner_;
   }
+
+  TfLiteStatus PrepareLogging(std::string log_path);
 
   Worker* GetWorker(int device_idx);
   Worker* GetWorker(TfLiteDeviceFlags device);
