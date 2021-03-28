@@ -38,6 +38,8 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
            << "profiled_DSP\t"
            << "profiled_NPU\n";
   log_file.close();
+  
+  return kTfLiteOk;
 }
 
 TfLiteStatus Planner::Wait(int num_requests) {
