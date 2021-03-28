@@ -691,8 +691,7 @@ bool Interpreter::NeedProfile() {
 TfLiteStatus Interpreter::PrepareLogging(std::string log_path) {
   if (!planner_)
     return kTfLiteError;
-  planner_->PrepareLogging(log_path);
-  return kTfLiteOk;
+  return planner_->PrepareLogging(log_path);
 }
 
 TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,

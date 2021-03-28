@@ -14,12 +14,14 @@ Planner::~Planner() {
   planner_thread_.join();
 }
 
-void Planner::PrepareLogging(std::string log_path) {
+TfLiteStatus Planner::PrepareLogging(std::string log_path) {
   log_path_ = log_path;
-  // open file to write per-request timestamps later
+  // Open file to write per-request timestamps later
   // NOTE: Columns starting `sched_id` are added for debugging purpose
   // and the metrics are only for ShortestExpectedLatency Planner.
   std::ofstream log_file(log_path_);
+  if (!log_file.is_open())
+    return kTfLiteError;
   log_file << "model_name\t"
            << "model_id\t"
            << "device_id\t"

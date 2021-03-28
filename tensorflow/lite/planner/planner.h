@@ -86,7 +86,7 @@ class Planner {
     return requests_;
   }
 
-  void PrepareLogging(std::string log_path);
+  TfLiteStatus PrepareLogging(std::string log_path);
 
  protected:
   std::thread planner_thread_;
