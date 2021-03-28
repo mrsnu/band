@@ -41,7 +41,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 ```
 
 ### JSON Config file arguments
-* `period_ms`: The delay between subsequent requests in ms. If 0 or below is given, 
+* `period_ms`: The delay between subsequent requests in ms. If 0 or below is given, only a few iteraions will run without delay.
 * `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
 * `planner`: The planner type in `int`.
     * `0`: Fixed Device Planner
@@ -53,10 +53,10 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `model_profile`: The path to file with model profile results. [default: None]
 * `cpu_mask`: CPU cluster mask to set CPU affinity. [default: 0]
-    * `0`: All Cluster.
-    * `1`: LITTLE Cluster only.
-    * `2`: Big Cluster only.
-    * `3`: Primary Core only.
+    * `0`: All Cluster
+    * `1`: LITTLE Cluster only
+    * `2`: Big Cluster only
+    * `3`: Primary Core only
 
 An example of complete JSON config file is as follows:
 ```json
@@ -79,6 +79,6 @@ An example of complete JSON config file is as follows:
 ### OPTIONS
 Refer to [Benchmark Tool](tensorflow/lite/tools/benchmark) for details.
 
-The following is added in our version:
+The following options are added in our version:
 * `profile_warmup_runs`: The number of warmup runs during profile stage.
 * `profile_num_runs`: The number of iterations during profile stage.
