@@ -193,9 +193,13 @@ class BenchmarkModel {
 
   // Keeps the runtime configuration from json config file.
   struct RuntimeConfig {
-    int period_ms = 0;
-    int cpu_masks = 0;
+    // Required
+    int period_ms;
+    std::string log_path;
     TfLitePlannerType planner_type;
+    // Optional
+    int cpu_masks = 0;
+    int running_time_ms = 60000;
     std::string model_profile;
   };
 

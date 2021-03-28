@@ -86,6 +86,8 @@ class Planner {
     return requests_;
   }
 
+  TfLiteStatus PrepareLogging(std::string log_path);
+
  protected:
   std::thread planner_thread_;
 
@@ -103,8 +105,7 @@ class Planner {
 
   std::condition_variable end_invoke_;
 
-  // TODO #36: Make this a configurable option (command line arg)
-  std::string log_path_ = "/data/local/tmp/model_execution_log.csv";
+  std::string log_path_;
 };
 
 }  // namespace impl

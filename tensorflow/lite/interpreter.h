@@ -586,6 +586,8 @@ class Interpreter {
     return planner_;
   }
 
+  TfLiteStatus PrepareLogging(std::string log_path);
+
   Worker* GetWorker(int device_idx);
   Worker* GetWorker(TfLiteDeviceFlags device);
 

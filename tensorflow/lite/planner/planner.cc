@@ -7,12 +7,21 @@ namespace impl {
 
 Planner::Planner(Interpreter* interpreter) {
   interpreter_ = interpreter;
+}
 
-  // open file to write per-request timestamps later
-  // TODO: make the file path a configurable command line arg
+Planner::~Planner() {
+  planner_safe_bool_.terminate();
+  planner_thread_.join();
+}
+
+TfLiteStatus Planner::PrepareLogging(std::string log_path) {
+  log_path_ = log_path;
+  // Open file to write per-request timestamps later
   // NOTE: Columns starting `sched_id` are added for debugging purpose
   // and the metrics are only for ShortestExpectedLatency Planner.
   std::ofstream log_file(log_path_);
+  if (!log_file.is_open())
+    return kTfLiteError;
   log_file << "model_name\t"
            << "model_id\t"
            << "device_id\t"
@@ -29,11 +38,8 @@ Planner::Planner(Interpreter* interpreter) {
            << "profiled_DSP\t"
            << "profiled_NPU\n";
   log_file.close();
-}
-
-Planner::~Planner() {
-  planner_safe_bool_.terminate();
-  planner_thread_.join();
+  
+  return kTfLiteOk;
 }
 
 TfLiteStatus Planner::Wait(int num_requests) {

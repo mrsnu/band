@@ -623,6 +623,9 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       new Interpreter(LoggingReporter::DefaultLoggingReporter(),
                       runtime_config_.planner_type));
 
+  // Set log file path and write log headers
+  TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
+
   // Set worker threads and current thread affinity
   TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
   TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpuMask));
@@ -790,21 +793,30 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     return kTfLiteError;
   }
 
-  if (root["period_ms"] == Json::Value::null ||
-      root["models"] == Json::Value::null) {
-    TFLITE_LOG(ERROR) << "Please check if arguments `period_ms` and `models` "
-                      << "are given in the config file.";
+  // Set Runtime Configurations
+  // Optional
+  if (!root["cpu_masks"].isNull())
+    runtime_config_.cpu_masks = root["cpu_masks"].asInt();
+  if (!root["running_time_ms"].isNull())
+    runtime_config_.running_time_ms = root["running_time_ms"].asInt();
+  if (!root["model_profile"].isNull())
+    runtime_config_.model_profile = root["model_profile"].asString();
+
+  // Required
+  if (root["period_ms"].isNull() ||
+      root["log_path"].isNull() ||
+      root["planner"].isNull() ||
+      root["models"].isNull()) {
+    TFLITE_LOG(ERROR) << "Please check if arguments "
+                      << "`period_ms`, `log_path`, `planner` and `models`"
+                      << " are given in the config file.";
     return kTfLiteError;
   }
 
-  // Set Runtime Configurations
   runtime_config_.period_ms = root["period_ms"].asInt();
-  runtime_config_.cpu_masks = root["cpu_masks"].asInt();
+  runtime_config_.log_path = root["log_path"].asString();
+
   int planner_id = root["planner"].asInt();
-  if (root["planner"].isNull()) {
-    TFLITE_LOG(ERROR) << "`planner` argument is not given.";
-    return kTfLiteError;
-  }
   if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
     TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
     return kTfLiteError;
@@ -812,33 +824,32 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   TfLitePlannerType planner_type = static_cast<TfLitePlannerType>(planner_id);
   runtime_config_.planner_type = planner_type;
 
-  if (root["model_profile"] != Json::Value::null) {
-    runtime_config_.model_profile = root["model_profile"].asString();
-  }
-
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
     Interpreter::ModelConfig model;
     Json::Value model_json_value = root["models"][i];
+    if (model_json_value["graph"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if argument `graph` is not given in "
+                           "the model configs.";
+      return kTfLiteError;
+    }
     model.model_fname = model_json_value["graph"].asString();
 
     // Set `batch_size`.
     // If no `batch_size` is given, the default batch size will be set to 1.
-    if (model_json_value["batch_size"] != Json::Value::null) {
+    if (!model_json_value["batch_size"].isNull())
       model.batch_size = model_json_value["batch_size"].asInt();
-    }
 
     // Set `device`.
     // Fixes to the device if specified in case of `FixedDevicePlanner`.
-    if (model_json_value["device"] != Json::Value::null) {
+    if (!model_json_value["device"].isNull())
       model.device = model_json_value["device"].asInt();
-    }
 
     model_configs_.push_back(model);
   }
 
   if (model_configs_.size() == 0) {
-    TFLITE_LOG(ERROR) << "Please specify the name of TF Lite model files "
+    TFLITE_LOG(ERROR) << "Please specify at list one model "
                       << "in `models` argument.";
     return kTfLiteError;
   }
@@ -935,7 +946,8 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
 
   // wait for 60 seconds until we stop the benchmark
   // we could set a command line arg for this value as well
-  std::this_thread::sleep_for(std::chrono::milliseconds(60000));
+  std::this_thread::sleep_for(
+      std::chrono::milliseconds(runtime_config_.running_time_ms));
   kill_app_ = true;
 
   // Note that num_requests_ may not be equal to the actual # of requests that

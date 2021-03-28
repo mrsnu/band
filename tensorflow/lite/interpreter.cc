@@ -688,6 +688,12 @@ bool Interpreter::NeedProfile() {
     return false;
 }
 
+TfLiteStatus Interpreter::PrepareLogging(std::string log_path) {
+  if (!planner_)
+    return kTfLiteError;
+  return planner_->PrepareLogging(log_path);
+}
+
 TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
                                               TfLiteDeviceFlags device, 
                                               const std::set<TfLiteType>& tensor_types) {
