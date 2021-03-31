@@ -767,6 +767,8 @@ class Interpreter {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
+
+  int frame_id_ = 0;
 };
 
 }  // namespace impl

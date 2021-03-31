@@ -1,5 +1,6 @@
 #include "tensorflow/lite/planner.h"
 #include "tensorflow/lite/profiling/time.h"
+
 #include <fstream>
 
 namespace tflite {
@@ -14,6 +15,8 @@ Planner::Planner(Interpreter* interpreter) {
   log_file << "job_id\t"
            << "model_name\t"
            << "model_id\t"
+           << "start_idx\t"
+           << "end_idx\t"
            << "device_id\t"
            << "enqueue_time\t"
            << "invoke_time\t"
@@ -26,13 +29,35 @@ Planner::~Planner() {
   planner_thread_.join();
 }
 
-TfLiteStatus Planner::WaitBatch() {
+void Planner::WaitBatch() {
+  std::unique_lock<std::mutex> lock(job_queue_mtx_);
+  end_invoke_.wait(lock, [this] {
+    return this->GetNumFinishedModels() >= this->GetCurrentBatchSize();
+  });
 
+  std::ofstream log_file(log_path_, std::ofstream::app);
+  while (!jobs_finished_.empty()) {
+    Job job = jobs_finished_.front();
+    jobs_finished_.pop_front();
+
+    // write all timestamp statistics to log file
+    log_file << job.sched_id_ << "\t"
+             << job.model_fname_ << "\t"
+             << job.model_id_ << "\t"
+             << job.start_idx << "\t"
+             << job.end_idx << "\t"
+             << job.device_id_ << "\t"
+             << job.enqueue_time_ << "\t"
+             << job.invoke_time_ << "\t"
+             << job.end_time_ << "\n";
+  }
+  log_file.close();
+  lock.unlock();
 }
 
 TfLiteStatus Planner::Wait(int num_requests) {
   std::unique_lock<std::mutex> lock(job_queue_mtx_);
-  end_invoke_.wait(lock, [this, num_requests]{
+  end_invoke_.wait(lock, [this, num_requests] {
     return jobs_finished_.size() >= num_requests;
   });
 
@@ -75,6 +100,8 @@ void Planner::EnqueueRequest(Job job) {
 
 void Planner::EnqueueBatch(std::list<Job> jobs) {
   std::unique_lock<std::mutex> lock(requests_mtx_);
+  batch_size_ = jobs.size();
+  num_finished_models_ = 0;
   auto enqueue_time = profiling::time::NowMicros();
   for (Job job : jobs) {
     job.enqueue_time_ = enqueue_time;

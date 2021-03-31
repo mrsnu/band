@@ -28,6 +28,7 @@ struct Job {
   int64_t invoke_time_ = 0;
   int64_t end_time_ = 0;
   int sched_id_ = -1;
+  bool finished_ = false;
   // for log message
   std::string model_fname_;
 };

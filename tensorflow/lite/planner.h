@@ -65,6 +65,8 @@ class Planner {
   // TODO #18: Make the planner run in a different thread
   TfLiteStatus Wait(int num_requests);
 
+  void WaitBatch();
+
   // Enqueues a finised job to the queue.
   // A worker calls the method.
   // TODO #18: Make the planner run in a different thread
@@ -86,6 +88,18 @@ class Planner {
     return requests_;
   }
 
+  int GetCurrentBatchSize() {
+    return batch_size_;
+  }
+
+  int GetNumFinishedModels() {
+    return num_finished_models_;
+  }
+
+  void IncreaseNumFinishedModels() {
+    num_finished_models_++;
+  }
+
  protected:
   std::thread planner_thread_;
 
@@ -104,9 +118,10 @@ class Planner {
   std::condition_variable end_invoke_;
 
   // TODO #36: Make this a configurable option (command line arg)
-  std::string log_path_ = "/data/local/tmp/log/model_execution_log.csv";
+  std::string log_path_ = "/data/local/tmp/model_execution_log.csv";
 
   int batch_size_ = 0;
+  int num_finished_models_ = 0;
 };
 
 }  // namespace impl

@@ -77,7 +77,7 @@ class ProfileBuffer {
     uint64_t timestamp = time::NowMicros();
     int index = current_index_ % event_buffer_.size();
     if (current_index_ != 0 && index == 0) {
-      fprintf(stderr, "Warning: Dropping ProfileBuffer event.\n");
+      // fprintf(stderr, "Warning: Dropping ProfileBuffer event.\n");
       return current_index_;
     }
     event_buffer_[index].tag = tag;
@@ -108,7 +108,7 @@ class ProfileBuffer {
     const uint32_t max_size = event_buffer_.size();
     if (current_index_ > (max_size + event_handle)) {
       // Ignore, buffer has already overflowed.
-      fprintf(stderr, "Warning: Dropping ProfileBuffer event.\n");
+      // fprintf(stderr, "Warning: Dropping ProfileBuffer event.\n");
       return;
     }
 
@@ -134,7 +134,7 @@ class ProfileBuffer {
     }
     const int index = current_index_ % event_buffer_.size();
     if (current_index_ != 0 && index == 0) {
-      fprintf(stderr, "Warning: Dropping ProfileBuffer event.\n");
+      // fprintf(stderr, "Warning: Dropping ProfileBuffer event.\n");
       return;
     }
     event_buffer_[index].tag = tag;

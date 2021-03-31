@@ -848,11 +848,10 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream(int run_duration) {
   while(true) {
     interpreter_->InvokeModelsSync();
     int64_t current = profiling::time::NowMicros();
-    if (current - start >= run_duration * 1000000)
+    if (current - start >= run_duration * 1000)
       break;
   }
 
-  // cnt will be num frames
   return kTfLiteOk;
 }
 

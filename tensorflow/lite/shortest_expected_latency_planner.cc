@@ -24,7 +24,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
     }
     request_lock.unlock();
 
-    std::cout << "Got requests" << std::endl;
+    std::cout << "Got requests: " << local_jobs.size() << std::endl;
     while (!local_jobs.empty()) {
       // std::cout << local_jobs.size() << std::endl;
       // First, find the most urgent job -- the one with the
@@ -108,8 +108,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        if (most_urgent_job.sched_id_ < 0)
-          most_urgent_job.sched_id_ = sched_id++;
+        // if (most_urgent_job.sched_id_ < 0)
+        //   most_urgent_job.sched_id_ = sched_id++;
         worker->GetDeviceRequests().push_back(most_urgent_job);
         worker->GetRequestCv().notify_one();
       }

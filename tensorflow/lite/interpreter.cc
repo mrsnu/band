@@ -406,16 +406,15 @@ void Interpreter::InvokeModelsSync() {
     to_enqueue.device_id_ = model_config.device;
 
     for (int k = 0; k < model_config.batch_size; ++k) {
-      // to_enqueue.sched_id_ = k;
+      to_enqueue.sched_id_ = frame_id_;
       jobs.emplace_back(to_enqueue);
     }
   }
 
   planner_->EnqueueBatch(jobs);
-
-  Wait!!
+  planner_->WaitBatch();
+  frame_id_++;
 }
-
 
 int Interpreter::InvokeModelsAsync() {
   std::list<Job> jobs;
