@@ -390,11 +390,19 @@ class Interpreter {
 
   void InvestigateModelSpec(int model_id);
 
-  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx, TfLiteDeviceFlags disable_device = kTfLiteNumDevices);
+  std::map<string, std::vector<int>> ConvertVectorToMap(std::vector<int> subgraph_indices);
 
-  int64_t GetShortestLatency(SubgraphKey& key,
-                             int64_t start_time,
-                             std::vector<int64_t>& device_waiting);
+  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx, TfLiteDeviceFlags preceded_device);
+
+  std::pair<int, int64_t> GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
+                                            int64_t start_time,
+                                            std::vector<int64_t>& device_waiting);
+
+  std::pair<int, int64_t> GetShortestLatency(int model_id,
+                                             int start_idx,
+                                             int64_t start_time,
+                                             std::vector<int64_t>& device_waiting,
+                                             TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
 
   int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
 
