@@ -52,46 +52,22 @@ void ShortestExpectedLatencyPlanner::Plan() {
       int64_t largest_shortest_latency = -1;
       int target_job_idx;
       int target_subgraph;
+
       int64_t sched_start = profiling::time::NowMicros();
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
-        std::vector<int> subgraph_indices =
-          GetInterpreter()->GetSubgraphCandidates(next_job.model_id_,
-                                                  next_job.start_idx);
-
-        if (subgraph_indices.size() == 0) {
-          // TODO(dhkim): error handling
-          std::cout << "NO candidates are selected." << std::endl;
-          return;
-        }
-
-        int64_t best_latency = INT_MAX;
-        int best_subgraph = -1;
-        for (auto subgraph_idx : subgraph_indices) {
-          SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
-          int64_t expected_latency =
-            GetInterpreter()->GetShortestLatency(key, 0, device_waiting_time);
-          // std::cout << "(" << subgraph_idx << ", " << expected_latency << ") / ";
-          if (expected_latency < best_latency) {
-            best_latency = expected_latency;
-            best_subgraph = subgraph_idx;
-          }
-        }
-        // std::cout << std::endl;
-
+        std::pair<int, int64_t> best_subgraph =
+          GetInterpreter()->GetShortestLatency(next_job.model_id_, next_job.start_idx, 0, device_waiting_time);
         /*
         std::cout << "For Job " << it - local_jobs.begin() << "(" << next_job.model_id_
                   << ", " << next_job.start_idx << ") : Best subgraph - "
-                  << best_subgraph << ", " << best_latency << std::endl;
+                  << best_subgraph.first << ", " << best_subgraph.second << std::endl;
         */
-        if (largest_shortest_latency < best_latency) {
-          largest_shortest_latency = best_latency;
-          target_job_idx = it - local_jobs.begin();
-          target_subgraph = best_subgraph;
-        }
+        target_job_idx = it - local_jobs.begin();
+        target_subgraph = best_subgraph.first;
       }
       int64_t sched_end = profiling::time::NowMicros();
-      // std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
+      std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
 
       // for some reason, this Job must NOT be a reference (&), otherwise
       // we get a segfault at push_back() below
