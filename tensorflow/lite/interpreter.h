@@ -651,6 +651,64 @@ class Interpreter {
   	return model_specs_[model_id];
 	}
 
+  void SplitOperatorsArcFaceMb(int model_id,
+                               TfLiteDeviceFlags device_flag,
+                               std::vector<SubgraphKey>& splitted_op_range) {
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 0, 70));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 0, 27));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 28, 58));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 59, 70));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 0, 58));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 28, 70));
+  }
+
+  void SplitOperatorsArcFaceRes(int model_id,
+                                TfLiteDeviceFlags device_flag,
+                                std::vector<SubgraphKey>& splitted_op_range) {
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 0, 75));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 0, 25));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 26, 50));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 51, 75));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 0, 50));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 26, 75));
+  }
+
+  void SplitOperatorsRetinaFace(int model_id,
+                                TfLiteDeviceFlags device_flag,
+                                std::vector<SubgraphKey>& splitted_op_range) {
+    if (device_flag == kTfLiteNPU) {
+      splitted_op_range.push_back(
+          SubgraphKey(model_id, device_flag, 0, 67));
+      splitted_op_range.push_back(
+          SubgraphKey(model_id, kTfLiteCPU, 68, 71));
+      splitted_op_range.push_back(
+          SubgraphKey(model_id, device_flag, 72, 109));
+    } else {
+      splitted_op_range.push_back(
+          SubgraphKey(model_id, device_flag, 0, 109));
+    }
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, kTfLiteCPU, 79, 111));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 81, 126));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, kTfLiteCPU, 116, 128));
+    splitted_op_range.push_back(
+        SubgraphKey(model_id, device_flag, 118, 129));
+  }
+
   void SplitOperatorsEven(int model_id,
                           int num_split,
                           TfLiteDeviceFlags device_flag,
@@ -689,13 +747,22 @@ class Interpreter {
             SubgraphKey(model_id, current_device, subgraph_min, max_idx));
     }
   };
+
+  void SetCurrentModelConfig(ModelConfig model_config) {
+    current_model_config_ = model_config;
+  }
             
+  ModelConfig& GetCurrentModelConfig() {
+    return current_model_config_;
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
 
+  ModelConfig current_model_config_;
   std::shared_ptr<Planner> planner_;
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 

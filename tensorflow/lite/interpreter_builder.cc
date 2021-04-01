@@ -23,6 +23,7 @@ limitations under the License.
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <iostream>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -226,27 +227,40 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
     Subgraph* subgraph) {
   return ParseNodes(model, op_resolver, operators, subgraph, -1, -1);
 }
- 
+
 TfLiteStatus InterpreterBuilder::ParseNodes(
     const ::tflite::Model* model,
     const OpResolver& op_resolver,
     const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
     Subgraph* subgraph,
     int start_op_idx, int end_op_idx) {
-  TfLiteStatus status = kTfLiteOk;
-
   end_op_idx = end_op_idx == -1 ? operators->size() - 1
                                 : end_op_idx;
   start_op_idx = start_op_idx == -1 ? 0
                                     : start_op_idx;
 
-  // TODO(dhkim): assert(end_op_idx >= start_op_idx)
-  int num_ops = end_op_idx - start_op_idx + 1;
+  std::vector<int> op_indices;
+  for (int i = start_op_idx; i <= end_op_idx; ++i) {
+    op_indices.push_back(i);
+  }
+
+  return ParseNodes(model, op_resolver, operators, subgraph, op_indices);
+}
+ 
+TfLiteStatus InterpreterBuilder::ParseNodes(
+    const ::tflite::Model* model,
+    const OpResolver& op_resolver,
+    const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
+    Subgraph* subgraph,
+    std::vector<int>& op_indices) {
+  TfLiteStatus status = kTfLiteOk;
+
+  int num_ops = op_indices.size();
 
   // Reduce the number of redundant allocations
   subgraph->ReserveNodes(num_ops);
 
-  for (int i = start_op_idx; i <= end_op_idx; ++i) {
+  for (int i : op_indices) {
     const auto* op = operators->Get(i);
     int index = op->opcode_index();
     if (index < 0 || index >= flatbuffer_op_index_to_registration_.size()) {
@@ -560,6 +574,7 @@ int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
+  (*interpreter)->SetCurrentModelConfig(model_config);
   int model_id = RegisterModel(
       model.GetModel(), op_resolver, interpreter, num_threads);
 
@@ -600,11 +615,23 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
-    for (int k = 1; k <= 4; ++k) {
-      if (k == 3)
-        continue;
-      (*interpreter)->
-        SplitOperatorsEven(model_id, k, device_id, subgraph_keys);
+
+    
+    if ((*interpreter)->
+          GetCurrentModelConfig().model_fname.find("retinaface_mbv2")
+          != std::string::npos) {
+        (*interpreter)->
+          SplitOperatorsRetinaFace(model_id, device_id, subgraph_keys);
+    } else if ((*interpreter)->
+          GetCurrentModelConfig().model_fname.find("arc_mbv2")
+          != std::string::npos) {
+        (*interpreter)->
+          SplitOperatorsArcFaceMb(model_id, device_id, subgraph_keys);
+    } else {
+      for (int k = 1; k <= 2; ++k) {
+        (*interpreter)->
+          SplitOperatorsEven(model_id, k, device_id, subgraph_keys);
+      }
     }
 
     for (auto& subgraph_key : subgraph_keys) {
@@ -748,13 +775,86 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     std::set<int> subgraph_output_set =
         std::set<int>(subgraph_outputs.begin(), subgraph_outputs.end());
 
-    // Finally setup nodes and tensors
-    if (builder.ParseNodes(model, op_resolver,
-                           operators,
-                           modified_subgraph,
-                           subgraph_key.start_idx,
-                           subgraph_key.end_idx) != kTfLiteOk)
-      return cleanup_and_error();
+    int model_id = subgraph_key.model_id;
+    if ((*interpreter)->
+          GetCurrentModelConfig().model_fname.find("retinaface_mbv2")
+          != std::string::npos) {
+      std::cout << "Found retinaface: ParseNode " << std::endl;
+      std::vector<int> op_indices;
+
+      if (subgraph_key.start_idx == 0 && subgraph_key.end_idx == 67) {
+        for (int j = subgraph_key.start_idx; j <= subgraph_key.end_idx; ++j)
+          op_indices.push_back(j);
+      }
+      if (subgraph_key.start_idx == 68 && subgraph_key.end_idx == 71) {
+        for (int j = subgraph_key.start_idx; j <= subgraph_key.end_idx; ++j)
+          op_indices.push_back(j);
+      }
+      if (subgraph_key.start_idx == 72 && subgraph_key.end_idx == 109) {
+        for (int j = 72; j <= 78; ++j)
+          op_indices.push_back(j);
+        for (int j = 89; j <= 93; ++j)
+          op_indices.push_back(j);
+        for (int j = 105; j <= 109; ++j)
+          op_indices.push_back(j);
+      }
+      if (subgraph_key.start_idx == 0 && subgraph_key.end_idx == 109) {
+        for (int j = 0; j <= 78; ++j)
+          op_indices.push_back(j);
+        for (int j = 89; j <= 93; ++j)
+          op_indices.push_back(j);
+        for (int j = 105; j <= 109; ++j)
+          op_indices.push_back(j);
+      }
+      if (subgraph_key.start_idx == 79 && subgraph_key.end_idx == 111) {
+        for (int j = 79; j <= 80; ++j)
+          op_indices.push_back(j);
+        for (int j = 94; j <= 96; ++j)
+          op_indices.push_back(j);
+        for (int j = 110; j <= 111; ++j)
+          op_indices.push_back(j);
+      }
+      if (subgraph_key.start_idx == 81 && subgraph_key.end_idx == 126) {
+        for (int j = 81; j <= 88; ++j)
+          op_indices.push_back(j);
+        for (int j = 97; j <= 104; ++j)
+          op_indices.push_back(j);
+        for (int j = 112; j <= 115; ++j)
+          op_indices.push_back(j);
+        for (int j = 119; j <= 120; ++j)
+          op_indices.push_back(j);
+        for (int j = 125; j <= 126; ++j)
+          op_indices.push_back(j);
+      }
+      if (subgraph_key.start_idx == 116 && subgraph_key.end_idx == 128) {
+        for (int j = 116; j <= 117; ++j)
+          op_indices.push_back(j);
+        for (int j = 121; j <= 122; ++j)
+          op_indices.push_back(j);
+        for (int j = 127; j <= 128; ++j)
+          op_indices.push_back(j);
+      }
+      if (subgraph_key.start_idx == 118 && subgraph_key.end_idx == 129) {
+          op_indices.push_back(118);
+          op_indices.push_back(123);
+          op_indices.push_back(124);
+          op_indices.push_back(129);
+      }
+      // Finally setup nodes and tensors
+      if (builder.ParseNodes(model, op_resolver,
+                             operators,
+                             modified_subgraph,
+                             op_indices) != kTfLiteOk)
+        return cleanup_and_error();
+    } else {
+      // Finally setup nodes and tensors
+      if (builder.ParseNodes(model, op_resolver,
+                             operators,
+                             modified_subgraph,
+                             subgraph_key.start_idx,
+                             subgraph_key.end_idx) != kTfLiteOk)
+        return cleanup_and_error();
+    }
 
     // Parse inputs/outputs
     // Need refactoring
@@ -805,6 +905,16 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
         std::vector<int>(input_features.begin(), input_features.end()));
     modified_subgraph->SetOutputs(
         std::vector<int>(output_tensors.begin(), output_tensors.end()));
+
+    std::cout << "INPUTS" << std::endl;
+    for (auto i : input_features)
+      std::cout << i << " ";
+    std::cout << std::endl;
+    
+    std::cout << "OUTPUTS" << std::endl;
+    for (auto i : output_tensors)
+      std::cout << i << " ";
+    std::cout << std::endl;
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {

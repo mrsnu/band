@@ -826,7 +826,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     primary_subgraph->UndoAllDelegates();
   }
 
-  primary_subgraph->AllocateTensors();
+  DeleteSubgraphs(0);
+  // primary_subgraph->AllocateTensors();
 }
 
 
