@@ -876,17 +876,19 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(int model_id,
                                                        start_time,
                                                        device_waiting);
     SubgraphKey& key = subgraph(target_subgraph.first)->GetKey();
-    std::pair<int, int64_t> local_min = GetShortestLatency(model_id,
-                                                  key.end_idx + 1,
-                                                  target_subgraph.second,
-                                                  device_waiting,
-                                                  key.device_flag);
-    if (local_min.second == INT_MAX) {
+    std::pair<int, int64_t> local_min;
+    if (key.end_idx == model_specs_[model_id].num_ops - 1) {
       local_min = target_subgraph;
+    } else {
+      local_min = GetShortestLatency(model_id,
+                                     key.end_idx + 1,
+                                     target_subgraph.second,
+                                     device_waiting,
+                                     key.device_flag);
     }
     if (local_min.second < min_subgraph.second) {
       //std::cout << "Target [" << local_min.second << " < " << min_subgraph.second << "]" << std::endl;
-      min_subgraph.first = local_min.first;
+      min_subgraph.first = target_subgraph.first;
       min_subgraph.second = local_min.second;
     }
   }

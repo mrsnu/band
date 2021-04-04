@@ -63,8 +63,11 @@ void ShortestExpectedLatencyPlanner::Plan() {
                   << ", " << next_job.start_idx << ") : Best subgraph - "
                   << best_subgraph.first << ", " << best_subgraph.second << std::endl;
         */
-        target_job_idx = it - local_jobs.begin();
-        target_subgraph = best_subgraph.first;
+        if (largest_shortest_latency < best_subgraph.second) {
+          largest_shortest_latency = best_subgraph.second;
+          target_job_idx = it - local_jobs.begin();
+          target_subgraph = best_subgraph.first;
+        }
       }
       int64_t sched_end = profiling::time::NowMicros();
       std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
