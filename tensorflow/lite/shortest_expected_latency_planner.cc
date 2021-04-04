@@ -45,6 +45,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
         TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
         device_waiting_time.push_back(
             GetInterpreter()->GetDeviceWaitingTime(device_flag));
+
+        // std::cout << "Device(" << i << ") Waiting Time: " << device_waiting_time[i] << std::endl;
       }
 
       // find the most urgent job and save its index within the queue
@@ -53,8 +55,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
       int target_subgraph;
 
       int64_t sched_start = profiling::time::NowMicros();
-      for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
-        Job& next_job = *it;
+      // for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
+        // Job& next_job = *it;
+        Job& next_job = *(local_jobs.begin());
         std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatency(next_job.model_id_, next_job.start_idx, 0, device_waiting_time);
         /*
@@ -62,11 +65,13 @@ void ShortestExpectedLatencyPlanner::Plan() {
                   << ", " << next_job.start_idx << ") : Best subgraph - "
                   << best_subgraph.first << ", " << best_subgraph.second << std::endl;
         */
-        target_job_idx = it - local_jobs.begin();
+        // target_job_idx = it - local_jobs.begin();
+        target_job_idx = 0;
         target_subgraph = best_subgraph.first;
-      }
+      // }
       int64_t sched_end = profiling::time::NowMicros();
-      std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
+      // std::cout << "local job size: " << local_jobs.size() << std::endl;
+      // std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
 
       // for some reason, this Job must NOT be a reference (&), otherwise
       // we get a segfault at push_back() below

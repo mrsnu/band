@@ -627,6 +627,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           != std::string::npos) {
         (*interpreter)->
           SplitOperatorsArcFaceMb(model_id, device_id, subgraph_keys);
+    }  else if ((*interpreter)->
+          GetCurrentModelConfig().model_fname.find("arc_res50")
+          != std::string::npos) {
+        (*interpreter)->
+          SplitOperatorsArcFaceRes(model_id, device_id, subgraph_keys);
     } else {
       for (int k = 1; k <= 2; ++k) {
         (*interpreter)->
@@ -905,16 +910,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
         std::vector<int>(input_features.begin(), input_features.end()));
     modified_subgraph->SetOutputs(
         std::vector<int>(output_tensors.begin(), output_tensors.end()));
-
-    std::cout << "INPUTS" << std::endl;
-    for (auto i : input_features)
-      std::cout << i << " ";
-    std::cout << std::endl;
-    
-    std::cout << "OUTPUTS" << std::endl;
-    for (auto i : output_tensors)
-      std::cout << i << " ";
-    std::cout << std::endl;
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {

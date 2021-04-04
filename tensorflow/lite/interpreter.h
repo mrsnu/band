@@ -87,7 +87,7 @@ namespace impl {
 /// </code></pre>
 ///
 struct ModelSpec {
-	int num_ops;
+	int num_ops = 0;
 	std::set<int> output_tensors;
   std::set<TfLiteType> tensor_types;
 	std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
@@ -106,7 +106,8 @@ class Interpreter {
   //
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
-  explicit Interpreter(ErrorReporter* error_reporter);
+  explicit Interpreter(ErrorReporter* error_reporter,
+                       TfLitePlannerType planner_type);
 
   ~Interpreter();
 
@@ -764,6 +765,23 @@ class Interpreter {
     return current_model_config_;
   }
 
+  void EnableModelLevelExecution() {
+    model_level_ = true;
+  }
+
+  void EnableSubgraphLevelExecution() {
+    model_level_ = false;
+  }
+
+  bool GetIsModelLevelExecution() {
+    return model_level_;
+  }
+
+  void UpdateProfileResult(SubgraphKey key, int64_t value) {
+    int64_t cur = subgraph_profiling_results_map_[key];
+    subgraph_profiling_results_map_[key] = cur * 0.9 + value * 0.1;
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
@@ -844,6 +862,8 @@ class Interpreter {
   resource::ResourceMap resources_;
 
   int frame_id_ = 0;
+  bool model_level_ = true;
+  TfLitePlannerType planner_type_;
 };
 
 }  // namespace impl

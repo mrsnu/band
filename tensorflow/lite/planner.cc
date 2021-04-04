@@ -18,9 +18,6 @@ Planner::Planner(Interpreter* interpreter) {
            << "start_idx\t"
            << "end_idx\t"
            << "device_id\t"
-           << "start_idx\t"
-           << "end_idx\t"
-           << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
            << "end_time\n";

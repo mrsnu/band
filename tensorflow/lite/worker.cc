@@ -80,6 +80,9 @@ void Worker::Work() {
           planner_ptr->IncreaseNumFinishedModels();
         }
         planner_ptr->EnqueueFinishedJob(job);
+
+        interpreter_ptr->UpdateProfileResult(subgraph.GetKey(),
+                                              (job.end_time_ - job.invoke_time_));
       } else {
         job.end_time_ = profiling::time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment

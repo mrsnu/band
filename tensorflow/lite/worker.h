@@ -21,7 +21,7 @@ struct Job {
   }
   int model_id_;
   int device_id_ = -1;
-  int start_idx;
+  int start_idx = 0;
   int end_idx = -1;
   int subgraph_idx_ = -1;
   int64_t enqueue_time_ = 0;

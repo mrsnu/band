@@ -196,6 +196,8 @@ class BenchmarkModel {
     int period_ms = 0;
     int run_duration = 0;
     int cpu_masks = 0;
+    int model_level = 0;
+    TfLitePlannerType planner_type;
   };
 
  protected:

@@ -614,11 +614,20 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       static_cast<tflite::impl::TFLiteCPUMasks>(runtime_config_.cpu_masks));
 
   (&interpreter_)->reset(
-      new Interpreter(LoggingReporter::DefaultLoggingReporter()));
+      new Interpreter(LoggingReporter::DefaultLoggingReporter(),
+                      runtime_config_.planner_type));
 
   // Set worker threads and current thread affinity
   TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
   TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpuMask));
+
+  // Execution Level
+  if (runtime_config_.model_level) {
+    interpreter_->EnableModelLevelExecution();
+  }
+  else {
+    interpreter_->EnableSubgraphLevelExecution();
+  }
 
   TFLITE_LOG(INFO) << "Set affinity to "
       << tflite::impl::GetCPUThreadAffinityMaskString(
@@ -771,6 +780,15 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   runtime_config_.period_ms = root["period_ms"].asInt();
   runtime_config_.run_duration = root["run_duration"].asInt();
   runtime_config_.cpu_masks = root["cpu_masks"].asInt();
+  runtime_config_.model_level = root["model_level"].asInt();
+
+  int planner_id = root["planner"].asInt();
+  if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
+    TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
+    return kTfLiteError;
+  }
+  TfLitePlannerType planner_type = static_cast<TfLitePlannerType>(planner_id);
+  runtime_config_.planner_type = planner_type;
 
   for (int i = 0; i < root["models"].size(); ++i) {
     Interpreter::ModelConfig model;
@@ -846,11 +864,14 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream(int run_duration) {
   int cnt = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
+    cnt++;
     interpreter_->InvokeModelsSync();
     int64_t current = profiling::time::NowMicros();
     if (current - start >= run_duration * 1000)
       break;
   }
+
+  std::cout << cnt / (run_duration / 1000) << "(FPS)" << std::endl;
 
   return kTfLiteOk;
 }

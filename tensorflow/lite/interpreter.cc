@@ -109,7 +109,8 @@ bool IsNNAPIDeviceUseful(std::string name) {
 
 }  // namespace
 
-Interpreter::Interpreter(ErrorReporter* error_reporter)
+Interpreter::Interpreter(ErrorReporter* error_reporter,
+                         TfLitePlannerType planner_type)
     : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
@@ -132,8 +133,13 @@ Interpreter::Interpreter(ErrorReporter* error_reporter)
       own_external_cpu_backend_context_.get();
 
   // Create a Planner instance.
-  // planner_.reset(new FixedDevicePlanner(this));
-  planner_.reset(new ShortestExpectedLatencyPlanner(this));
+  planner_type_ = planner_type;
+  // FixedDevicePlanner is the default planner.
+  if (planner_type == kShortestExpectedLatency) {
+    planner_.reset(new ShortestExpectedLatencyPlanner(this));
+  } else {
+    planner_.reset(new FixedDevicePlanner(this));
+  }
 
   std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
 
@@ -405,6 +411,11 @@ void Interpreter::InvokeModelsSync() {
     Job to_enqueue = Job(model_id);
     to_enqueue.model_fname_ = model_config.model_fname;
     to_enqueue.device_id_ = model_config.device;
+
+    if (planner_type_ == kFixedDevice) {
+      to_enqueue.start_idx = 0;
+      to_enqueue.end_idx = model_specs_[model_id].num_ops - 1;
+    }
 
     for (int k = 0; k < model_config.batch_size; ++k) {
       to_enqueue.sched_id_ = frame_id_;
@@ -746,6 +757,13 @@ void Interpreter::RegisterSubgraphIdx(SubgraphKey subgraph_key,
 }
 
 int Interpreter::GetSubgraphIdx(SubgraphKey subgraph_key) {
+  if (subgraph_key.start_idx == -1 &&
+      subgraph_key.end_idx == -1 &&
+      model_specs_[subgraph_key.model_id].num_ops > 0) {
+    subgraph_key.start_idx = 0;
+    subgraph_key.end_idx = model_specs_[subgraph_key.model_id].num_ops - 1;
+  }
+
   auto it = subgraph_idx_map_.find(subgraph_key);
   if (it != subgraph_idx_map_.end())
     return it->second;
@@ -827,8 +845,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     primary_subgraph->UndoAllDelegates();
   }
 
-  DeleteSubgraphs(0);
-  // primary_subgraph->AllocateTensors();
+  primary_subgraph->AllocateTensors();
 }
 
 
@@ -845,6 +862,8 @@ std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
     if (key.start_idx == start_idx
         && key.device_flag != preceded_device
         && key.model_id == model_id) {
+      if (GetIsModelLevelExecution() && key.end_idx != model_specs_[model_id].num_ops - 1)
+        continue;
       candidatesIds.push_back(i);
     }
   }
@@ -891,11 +910,11 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(int model_id,
   std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx, preceded_device);
   std::map<string, std::vector<int>> subgraph_map = ConvertVectorToMap(subgraph_indices);
 
- // std::cout << "[Loop size = " << subgraph_map.size() << "]" << std::endl;
+  // std::cout << "[Loop size = " << subgraph_map.size() << "]" << std::endl;
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
   for (auto iter = subgraph_map.begin(); iter != subgraph_map.end() ; iter++) {
-    //std::cout << "[" << iter->first << ", " << iter->second.size() << "]" << std::endl;
+    // std::cout << "[" << iter->first << ", " << iter->second.size() << "]" << std::endl;
     std::pair<int, int64_t> target_subgraph = GetShortestSubgraphIndex(iter->second,
                                                        start_time,
                                                        device_waiting);
@@ -909,8 +928,9 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(int model_id,
       local_min = target_subgraph;
     }
     if (local_min.second < min_subgraph.second) {
-      //std::cout << "Target [" << local_min.second << " < " << min_subgraph.second << "]" << std::endl;
-      min_subgraph.first = local_min.first;
+      // std::cout << "Local : " << local_min.first << ", Target : " << target_subgraph.first << std::endl;
+      // std::cout << "Target [" << local_min.second << " < " << min_subgraph.second << "]" << std::endl;
+      min_subgraph.first = target_subgraph.first;
       min_subgraph.second = local_min.second;
     }
   }
