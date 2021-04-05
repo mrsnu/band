@@ -97,7 +97,9 @@ class Planner {
   }
 
   void IncreaseNumFinishedModels() {
+    std::unique_lock<std::mutex> lock(job_queue_mtx_);
     num_finished_models_++;
+    lock.unlock();
   }
 
  protected:
