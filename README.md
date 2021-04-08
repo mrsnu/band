@@ -50,6 +50,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `models`: TF Lite models to run. For each model, specify the following fields. 
     * `graph`: TF Lite model path.
     * `batch_size`: The number of model requests in a frame. [default: 1]
+    * `device`: Specify the processor to run in int. The argument is only effective with `FixedDevicePlanner`.
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `model_profile`: The path to file with model profile results. [default: None]
 * `cpu_mask`: CPU cluster mask to set CPU affinity. [default: 0]
