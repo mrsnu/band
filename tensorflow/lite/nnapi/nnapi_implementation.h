@@ -573,6 +573,9 @@ struct NnApi {
       uint32_t num_dependencies, uint64_t duration,
       ANeuralNetworksEvent** event);
 
+  int (*ANeuralNetworksEvent_getSyncFenceFd)(const ANeuralNetworksEvent *event,
+                                             int *sync_fence_fd);
+
   /**
    * Waits until the execution completes.
    *

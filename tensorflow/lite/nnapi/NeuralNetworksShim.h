@@ -697,6 +697,12 @@ inline int ANeuralNetworksExecution_startComputeWithDependencies(
                           event);
 }
 
+inline int ANeuralNetworksEvent_getSyncFenceFd(
+    const ANeuralNetworksEvent* event, int* sync_fence_fd) {
+  LOAD_FUNCTION(ANeuralNetworksEvent_getSyncFenceFd);
+  EXECUTE_FUNCTION_RETURN(event, sync_fence_fd);
+}
+
 /**
  * Waits until the execution completes.
  *
