@@ -197,7 +197,6 @@ class BenchmarkModel {
     int period_ms;
     std::string log_path;
     TfLitePlannerType planner_type;
-    int schedule_window_size = INT_MAX;
     // Optional
     int cpu_masks = 0;
     int running_time_ms = 60000;
