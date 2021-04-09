@@ -22,6 +22,7 @@ cc_library(
     ],
     copts = common_copts,
     deps = [
+        "multimodel_benchmark_lib",
         ":benchmark_tflite_model_lib",
         "//tensorflow/lite/tools:logging",
         "@jsoncpp_git//:jsoncpp",
@@ -137,6 +138,19 @@ cc_library(
         "//tensorflow/lite/profiling:profile_summary_formatter",
         "//tensorflow/lite/profiling:profiler",
         "//tensorflow/lite/tools:logging",
+    ],
+)
+
+cc_library(
+    name = "multimodel_benchmark_lib",
+    srcs = ["multimodel_benchmark.cc"],
+    hdrs = ["multimodel_benchmark.h"],
+    copts = common_copts,
+    deps = [
+        ":benchmark_tflite_model_lib",
+        "//tensorflow/lite/profiling:time",
+        "//tensorflow/lite/tools:logging",
+        "@jsoncpp_git//:jsoncpp",
     ],
 )
 
