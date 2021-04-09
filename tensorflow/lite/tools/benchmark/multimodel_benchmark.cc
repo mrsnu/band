@@ -2,6 +2,76 @@
 
 namespace tflite {
 namespace benchmark {
+
+TfLiteStatus ParseJsonFile(std::string json_path, RuntimeConfig& runtime_config) {
+  std::ifstream config(json_path, std::ifstream::binary);
+  Json::Value root;
+  config >> root;
+  std::cout << "Read JSON Config " << std::endl;
+  
+  if (!root.isObject()) {
+    TFLITE_LOG(ERROR) << "Please validate the json config file.";
+    return kTfLiteError;
+  }
+
+  // Set Runtime Configurations
+  // Optional
+  if (!root["running_time_ms"].isNull())
+    runtime_config.run_duration = root["running_time_ms"].asInt();
+  if (!root["model_profile"].isNull()) {
+    runtime_config.model_profile = root["model_profile"].asString();
+    std::ifstream profile_config(runtime_config.model_profile, std::ifstream::binary);
+    profile_config >> runtime_config.profile_result;
+  }
+
+  // Required
+  if (root["period_ms"].isNull() ||
+      root["log_path"].isNull() ||
+      root["models"].isNull()) {
+    TFLITE_LOG(ERROR) << "Please check if arguments "
+                      << "`period_ms`, `log_path` and `models`"
+                      << " are given in the config file.";
+    return kTfLiteError;
+  }
+
+  runtime_config.period_ms = root["period_ms"].asInt();
+  runtime_config.log_path = root["log_path"].asString();
+
+  // Set Model Configurations
+  for (int i = 0; i < root["models"].size(); ++i) {
+    ModelConfig model;
+    Json::Value model_json_value = root["models"][i];
+    if (model_json_value["graph"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if argument `graph` is not given in "
+                           "the model configs.";
+      return kTfLiteError;
+    }
+    model.model_fname = model_json_value["graph"].asString();
+
+    // Set `batch_size`.
+    // If no `batch_size` is given, the default batch size will be set to 1.
+    if (!model_json_value["batch_size"].isNull())
+      model.batch_size = model_json_value["batch_size"].asInt();
+
+    // Set `device`.
+    if (!model_json_value["device"].isNull())
+      model.device = model_json_value["device"].asInt();
+
+    runtime_config.model_configs.push_back(model);
+  }
+
+  if (runtime_config.model_configs.size() == 0) {
+    TFLITE_LOG(ERROR) << "Please specify at list one model "
+                      << "in `models` argument.";
+    return kTfLiteError;
+  }
+  runtime_config.num_models = runtime_config.model_configs.size();
+
+  TFLITE_LOG(INFO) << root;
+
+  return kTfLiteOk;
+}
+
 void MultimodelBenchmark::GenerateRequests(int id) {
   std::lock_guard<std::mutex> lock(*worker_mtxs_[id]);
   Job job;
@@ -56,7 +126,6 @@ void MultimodelBenchmark::Work(int id) {
           return kill_worker_ || !worker_requests_[id].empty();
       });
 
-
       if (worker_requests_[id].empty()) {
         lock.unlock();
         return;
@@ -71,7 +140,6 @@ void MultimodelBenchmark::Work(int id) {
 
       job.invoke_time = profiling::time::NowMicros();
       benchmarks_[id]->RunImpl();
-      // std::this_thread::sleep_for(std::chrono::microseconds(to_sleep_us));
       job.end_time = profiling::time::NowMicros();
 
       // Extra Requests
@@ -121,19 +189,15 @@ void MultimodelBenchmark::Work(int id) {
         cnt_++;
         jobs_finished_cv_.notify_all();
       }
-
     }
   });
 
   threads_.push_back(std::move(t));
 }
 
-TfLiteStatus MultimodelBenchmark::RunRequests(int period) {
-	for (int i = 0; i < benchmarks_.size(); ++i) {
-    Work(i);
-  }
-
+TfLiteStatus MultimodelBenchmark::RunRequests() {
   int64_t start_time = profiling::time::NowMicros();
+  int period = runtime_config_.period_ms;
 
   while(true) {
     int64_t current_time = profiling::time::NowMicros();
@@ -165,6 +229,12 @@ TfLiteStatus MultimodelBenchmark::RunRequests(int period) {
     t.join();
   }
 
+  DumpExecutionData();
+
+  return kTfLiteOk;
+}
+
+void MultimodelBenchmark::DumpExecutionData() {
   for (int i = 0; i < jobs_finished_.size(); ++i) {
     Job& job = jobs_finished_[i];
     std::string model_name = runtime_config_.model_configs[job.id].model_fname;
@@ -175,9 +245,7 @@ TfLiteStatus MultimodelBenchmark::RunRequests(int period) {
               << job.enqueue_time << "\t"
               << job.invoke_time << "\t"
               << job.end_time << "\n";
-  }
-
-  return kTfLiteOk;
+  }  
 }
 
 TfLiteStatus MultimodelBenchmark::Initialize(int argc, char** argv) {
@@ -188,19 +256,22 @@ TfLiteStatus MultimodelBenchmark::Initialize(int argc, char** argv) {
     benchmarks_[index]->ParseFlags(argc, argv);
     benchmarks_[index]->params_.Set<std::string>("graph", graph_name);
 
-    model_config.device = device_plan_[index];
     if (runtime_config_.model_profile != "") {
-      std::cout << "PROFILE RESULTS" << std::endl;
-      model_config.avg_time = runtime_config_.profile_result[model_config.model_fname][std::to_string(model_config.device)].asInt(); 
+      std::string model_fname = model_config.model_fname;
+      std::string device_id = std::to_string(model_config.device);
+      model_config.avg_time = runtime_config_.profile_result[model_fname][device_id].asInt(); 
     }
 
-    // Device Placement
-    if (device_plan_[index] % NUM_DEVICES == 1) {
+    if (model_config.device >= 0) {
+      model_config.device = device_plan_[index];
+    }
+    if (model_config.device % NUM_DEVICES == 1) {
+      // NOTE: GPUDelegate Settings in benchmark may differ from `GPUDelegateOptionsDefault`.
       benchmarks_[index]->params_.Set<bool>("use_gpu", true);
-    } else if (device_plan_[index] % NUM_DEVICES == 2) {
+    } else if (model_config.device % NUM_DEVICES == 2) {
       benchmarks_[index]->params_.Set<bool>("use_nnapi", true);
       benchmarks_[index]->params_.Set<std::string>("nnapi_accelerator_name", "qti-dsp");
-    } else if (device_plan_[index] % NUM_DEVICES == 3) {
+    } else if (model_config.device % NUM_DEVICES == 3) {
       benchmarks_[index]->params_.Set<bool>("use_nnapi", true);
       benchmarks_[index]->params_.Set<std::string>("nnapi_accelerator_name", "google-edgetpu");
     }
@@ -217,6 +288,10 @@ TfLiteStatus MultimodelBenchmark::Initialize(int argc, char** argv) {
     worker_requests_.push_back(dq);
 
     TF_LITE_ENSURE_STATUS(benchmarks_[index]->PrepareRun());
+
+    for (int i = 0; i < benchmarks_.size(); ++i) {
+      Work(i);
+    }
   }
 
 	return kTfLiteOk;

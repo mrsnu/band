@@ -12,7 +12,6 @@
 #include <iostream>
 #include <cstdlib>
 
-#include "tensorflow/lite/tools/benchmark/multimodel_benchmark.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_tflite_model.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/profiling/time.h"
@@ -25,7 +24,7 @@ namespace benchmark {
 struct ModelConfig {
   std::string model_fname;
   int batch_size;
-  int device;
+  int device = -1;
   int64_t avg_time = 0;
 };
 
@@ -52,6 +51,8 @@ struct Job {
   std::vector<int> next_requests;
 };
 
+TfLiteStatus ParseJsonFile(std::string json_path, RuntimeConfig& runtime_config);
+
 class MultimodelBenchmark {
  public:
 	explicit MultimodelBenchmark(RuntimeConfig runtime_config, std::vector<int> device_plan) {
@@ -68,6 +69,7 @@ class MultimodelBenchmark {
     log_file_ << "batch_id\tmodel_name\tmodel_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\n";
 
     num_models_ = device_plan.size();
+    std::srand(5323);
   }
 
   ~MultimodelBenchmark() {
@@ -77,7 +79,8 @@ class MultimodelBenchmark {
 	void GenerateRequests(int id);
   void Work(int id);
 	TfLiteStatus Initialize(int argc, char** argv);
-	TfLiteStatus RunRequests(int period);
+	TfLiteStatus RunRequests();
+	void DumpExecutionData();
 	
   int batch_id = 0;
   int job_id = 0;
