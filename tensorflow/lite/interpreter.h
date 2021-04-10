@@ -94,8 +94,7 @@ class Interpreter {
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
   explicit Interpreter(ErrorReporter* error_reporter,
-                       TfLitePlannerType planner_type,
-                       int schedule_window_size);
+                       TfLitePlannerType planner_type);
 
   ~Interpreter();
 
@@ -622,6 +621,10 @@ class Interpreter {
   int64_t GetLatency(TfLiteDeviceFlags device, Job& job);
 
   TfLiteDeviceFlags GetDeviceWithShortestLatency(Job& job);
+
+  int GetWindowSize();
+
+  void SetWindowSize(int schedule_window_size);
 
  private:
   friend class InterpreterBuilder;

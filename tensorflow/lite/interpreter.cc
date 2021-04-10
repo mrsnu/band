@@ -109,8 +109,7 @@ bool IsNNAPIDeviceUseful(std::string name) {
 }  // namespace
 
 Interpreter::Interpreter(ErrorReporter* error_reporter,
-                         TfLitePlannerType planner_type,
-                         int schedule_window_size)
+                         TfLitePlannerType planner_type)
     : error_reporter_(error_reporter ? error_reporter :
                                        DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
@@ -138,7 +137,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   if (planner_type == kRoundRobin) {
     planner_.reset(new RoundRobinPlanner(this));
   } else if (planner_type == kShortestExpectedLatency) {
-    planner_.reset(new ShortestExpectedLatencyPlanner(this, schedule_window_size));
+    planner_.reset(new ShortestExpectedLatencyPlanner(this));
   } else {
     planner_.reset(new FixedDevicePlanner(this));
   }
@@ -827,6 +826,14 @@ TfLiteDeviceFlags Interpreter::GetDeviceWithShortestLatency(Job& job) {
     }
   }
   return shortestDeviceFlag;
+}
+
+int Interpreter::GetWindowSize() {
+  return planner_->GetWindowSize();
+}
+
+void Interpreter::SetWindowSize(int schedule_window_size) {
+  planner_->SetWindowSize(schedule_window_size);
 }
 
 }  // namespace impl
