@@ -105,5 +105,9 @@ void Planner::EnqueueBatch(std::list<Job> jobs) {
   planner_safe_bool_.notify();
 }
 
+void Planner::SetWindowSize(int schedule_window_size) {
+  schedule_window_size_ = schedule_window_size;
+}
+
 }  // namespace impl
 }  // namespace tflite

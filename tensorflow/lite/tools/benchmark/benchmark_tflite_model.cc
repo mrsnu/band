@@ -622,6 +622,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter(),
                       runtime_config_.planner_type));
+  interpreter_->SetWindowSize(runtime_config_.schedule_window_size);
 
   // Set log file path and write log headers
   TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
@@ -823,6 +824,11 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   }
   TfLitePlannerType planner_type = static_cast<TfLitePlannerType>(planner_id);
   runtime_config_.planner_type = planner_type;
+  runtime_config_.schedule_window_size = root["schedule_window_size"].asInt();
+  if (runtime_config_.schedule_window_size <= 0) {
+    TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
+    return kTfLiteError;
+  }
 
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {

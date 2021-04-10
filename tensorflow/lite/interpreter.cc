@@ -828,6 +828,14 @@ TfLiteDeviceFlags Interpreter::GetDeviceWithShortestLatency(Job& job) {
   return shortestDeviceFlag;
 }
 
+int Interpreter::GetWindowSize() const {
+  return planner_->GetWindowSize();
+}
+
+void Interpreter::SetWindowSize(int schedule_window_size) {
+  planner_->SetWindowSize(schedule_window_size);
+}
+
 }  // namespace impl
 
 }  // namespace tflite

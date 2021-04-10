@@ -622,6 +622,10 @@ class Interpreter {
 
   TfLiteDeviceFlags GetDeviceWithShortestLatency(Job& job);
 
+  int GetWindowSize() const;
+
+  void SetWindowSize(int schedule_window_size);
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;

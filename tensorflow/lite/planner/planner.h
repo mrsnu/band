@@ -88,6 +88,12 @@ class Planner {
 
   TfLiteStatus PrepareLogging(std::string log_path);
 
+  int GetWindowSize() {
+    return schedule_window_size_;
+  }
+
+  void SetWindowSize(int schedule_window_size);
+
  protected:
   std::thread planner_thread_;
 
@@ -106,6 +112,8 @@ class Planner {
   std::condition_variable end_invoke_;
 
   std::string log_path_;
+
+  int schedule_window_size_ = INT_MAX;
 };
 
 }  // namespace impl
