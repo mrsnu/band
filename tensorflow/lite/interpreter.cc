@@ -828,7 +828,7 @@ TfLiteDeviceFlags Interpreter::GetDeviceWithShortestLatency(Job& job) {
   return shortestDeviceFlag;
 }
 
-int Interpreter::GetWindowSize() {
+int Interpreter::GetWindowSize() const {
   return planner_->GetWindowSize();
 }
 

@@ -825,6 +825,10 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   TfLitePlannerType planner_type = static_cast<TfLitePlannerType>(planner_id);
   runtime_config_.planner_type = planner_type;
   runtime_config_.schedule_window_size = root["schedule_window_size"].asInt();
+  if (runtime_config_.schedule_window_size <= 0) {
+    TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
+    return kTfLiteError;
+  }
 
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
