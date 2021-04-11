@@ -189,10 +189,10 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
           });
 
       if (nnapi_delegate.get()) {
-        TfLiteDelegateFlags delegateFlag =
+        TfLiteDelegateFlags delegate_flag =
             static_cast<TfLiteDelegateFlags>(nnapi_delegate->flags);
         
-        switch (delegateFlag) {
+        switch (delegate_flag) {
           case kTfLiteDelegateFlagsNNAPIDSP:
             valid_devices.insert(kTfLiteDSP);
             break;
@@ -204,7 +204,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
         }
 
         delegates_.insert(
-          std::make_pair(delegateFlag, std::move(nnapi_delegate)));
+          std::make_pair(delegate_flag, std::move(nnapi_delegate)));
       }
     }
   }
