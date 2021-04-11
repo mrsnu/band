@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
@@ -81,7 +83,7 @@ void Worker::Work() {
       bool empty = requests_.empty();
       lock.unlock();
 
-      if (empty) {
+      if (allow_worksteal_ && empty) {
         TryWorkSteal();
       }
 
@@ -96,7 +98,7 @@ void Worker::Work() {
 void Worker::TryWorkSteal() {
   std::shared_ptr<Planner> planner_ptr = planner_.lock();
   if (!planner_ptr) {
-    std::cout << "Worker " << device_idx_
+    std::cout << "Worker " << device_flag_
               << " TryWorkSteal() Failed to acquire pointer to Planner"
               << std::endl;
     return;
@@ -106,20 +108,20 @@ void Worker::TryWorkSteal() {
   int64_t max_latency_gain = -1;
   int max_latency_gain_device = -1;
   for (int i = 0; i < interpreter_ptr->GetWorkersSize(); ++i) {
-    if (i == device_idx_) {
+    if (i == device_flag_) {
       continue;
     }
 
-    Worker& worker = interpreter_ptr->GetWorker(i);
-    int64_t waiting_time = worker.GetWaitingTime();
+    Worker* worker = interpreter_ptr->GetWorker(i);
+    int64_t waiting_time = worker->GetWaitingTime();
 
-    std::unique_lock<std::mutex> lock(worker.GetDeviceMtx());
-    if (worker.GetDeviceRequests().empty()) {
+    std::unique_lock<std::mutex> lock(worker->GetDeviceMtx());
+    if (worker->GetDeviceRequests().empty()) {
       // there's nothing to steal here
       continue;
     }
 
-    Job& job = worker.GetDeviceRequests().back();
+    Job& job = worker->GetDeviceRequests().back();
     if (job.invoke_time_ > 0) {
       // this job is being processed by the target worker, so leave it alone
       // FIXME: assume that invoke_time_ is updated only while
@@ -128,16 +130,9 @@ void Worker::TryWorkSteal() {
     }
     lock.unlock();
 
-    int subgraph_idx = interpreter_ptr->GetSubgraphIdx(
-        job.model_id_, static_cast<TfLiteDevice>(device_idx_));
-    Subgraph* subgraph = interpreter_ptr->subgraph(subgraph_idx);
-    if (!subgraph) {
-      // a subgraph for this model on this device isn't available
-      continue;
-    }
-
-    int64_t expected_latency = subgraph->GetExpectedLatency();
-    if (expected_latency > waiting_time) {
+    int64_t expected_latency =
+      interpreter_ptr->GetProfiledLatency(job.model_id_, device_flag_);
+    if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;
     }
@@ -149,18 +144,17 @@ void Worker::TryWorkSteal() {
     }
   }
 
-
   if (max_latency_gain < 0) {
     // no viable job to steal -- do nothing
     return;
   }
 
-  Worker& worker = interpreter_ptr->GetWorker(max_latency_gain_device);
-  std::unique_lock<std::mutex> lock(worker.GetDeviceMtx(), std::defer_lock);
+  Worker* worker = interpreter_ptr->GetWorker(max_latency_gain_device);
+  std::unique_lock<std::mutex> lock(worker->GetDeviceMtx(), std::defer_lock);
   std::unique_lock<std::mutex> my_lock(device_mtx_, std::defer_lock);
   std::lock(lock, my_lock);
 
-  if (worker.GetDeviceRequests().empty()) {
+  if (worker->GetDeviceRequests().empty()) {
     // target worker has went on and finished all of its jobs
     // while we were slacking off
     return;
@@ -168,7 +162,7 @@ void Worker::TryWorkSteal() {
 
   // this must not be a reference,
   // otherwise the pop_back() below will invalidate it
-  Job job = worker.GetDeviceRequests().back();
+  Job job = worker->GetDeviceRequests().back();
   if (job.invoke_time_ > 0) {
     // make sure the target worker hasn't started processing the job yet
     return;
@@ -179,16 +173,16 @@ void Worker::TryWorkSteal() {
     return;
   }
 
-  // std::cout << "Worker " << device_idx_ << " is stealing from "
+  // std::cout << "Worker " << device_flag_ << " is stealing from "
   //           << "worker " << max_latency_gain_device << std::endl;
 
-  int subgraph_idx = interpreter_ptr->GetSubgraphIdx(
-      job.model_id_, static_cast<TfLiteDevice>(device_idx_));
+  int subgraph_idx =
+    interpreter_ptr->GetSubgraphIdx(job.model_id_, device_flag_);
   job.subgraph_idx_ = subgraph_idx;
-  job.device_id_ = device_idx_;
+  job.device_id_ = device_flag_;
 
   // finally, we perform the swap
-  worker.GetDeviceRequests().pop_back();
+  worker->GetDeviceRequests().pop_back();
   requests_.push_back(job);
 }
 

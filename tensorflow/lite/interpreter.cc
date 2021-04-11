@@ -841,7 +841,12 @@ void Interpreter::SetWindowSize(int schedule_window_size) {
   planner_->SetWindowSize(schedule_window_size);
 }
 
+void Interpreter::AllowWorksteal() {
+  for (auto& worker : workers_) {
+    worker.second->AllowWorksteal();
+  }
+}
+
 }  // namespace impl
 
 }  // namespace tflite
-}

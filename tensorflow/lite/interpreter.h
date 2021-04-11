@@ -629,6 +629,8 @@ class Interpreter {
 
   void SetWindowSize(int schedule_window_size);
 
+  void AllowWorksteal();
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;

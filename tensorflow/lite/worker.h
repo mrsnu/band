@@ -53,6 +53,10 @@ class Worker {
 
   int64_t GetWaitingTime();
 
+  void AllowWorksteal() {
+    allow_worksteal_ = true;
+  }
+
  private:
   void Work();
 
@@ -70,6 +74,8 @@ class Worker {
   std::mutex cpu_set_mtx_;
 
   TfLiteDeviceFlags device_flag_;
+
+  bool allow_worksteal_ = false;
 };
 
 }  // namespace impl
