@@ -42,14 +42,14 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Planner::Wait(int num_requests) {
+void Planner::Wait() {
   std::unique_lock<std::mutex> lock(job_queue_mtx_);
-  end_invoke_.wait(lock, [this, num_requests]{
-    return jobs_finished_.size() >= num_requests;
+  end_invoke_.wait(lock, [this]{
+    return jobs_finished_.size() >= num_submitted_jobs_;
   });
 
   std::ofstream log_file(log_path_, std::ofstream::app);
-  for (int i = 0; i < num_requests; ++i) {
+  while (!jobs_finished_.empty()) {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
@@ -72,8 +72,6 @@ TfLiteStatus Planner::Wait(int num_requests) {
   }
   log_file.close();
   lock.unlock();
-
-  return kTfLiteOk;
 }
 
 void Planner::EnqueueFinishedJob(Job job) {
@@ -88,6 +86,7 @@ void Planner::EnqueueRequest(Job job) {
   job.enqueue_time_ = profiling::time::NowMicros();
   std::unique_lock<std::mutex> lock(requests_mtx_);
   requests_.push_back(job);
+  num_submitted_jobs_++;
   lock.unlock();
 
   planner_safe_bool_.notify();
@@ -99,6 +98,7 @@ void Planner::EnqueueBatch(std::list<Job> jobs) {
   for (Job job : jobs) {
     job.enqueue_time_ = enqueue_time;
     requests_.push_back(job);
+    num_submitted_jobs_++;
   }
   lock.unlock();
 

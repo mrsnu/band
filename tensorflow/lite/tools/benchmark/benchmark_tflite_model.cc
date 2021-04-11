@@ -807,15 +807,17 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   if (root["period_ms"].isNull() ||
       root["log_path"].isNull() ||
       root["planner"].isNull() ||
+      root["execution_mode"].isNull() ||
       root["models"].isNull()) {
-    TFLITE_LOG(ERROR) << "Please check if arguments "
-                      << "`period_ms`, `log_path`, `planner` and `models`"
+    TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`,"
+                      << " `period_ms`, `log_path`, `planner` and `models`"
                       << " are given in the config file.";
     return kTfLiteError;
   }
 
   runtime_config_.period_ms = root["period_ms"].asInt();
   runtime_config_.log_path = root["log_path"].asString();
+  runtime_config_.execution_mode = root["execution_mode"].asString();
 
   int planner_id = root["planner"].asInt();
   if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
@@ -934,14 +936,13 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
       interpreter_->InvokeModelAsync(j);
     }
   }
-  interpreter_->GetPlanner()->Wait(models_.size() * num_iters);
+  interpreter_->GetPlanner()->Wait();
   return kTfLiteOk;
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
   // initialize values in case this isn't our first run
   kill_app_ = false;
-  num_requests_ = 0;
 
   // spawn a child thread to do our work, since we're going to sleep
   // Note: spawning a separate thread is technically unnecessary if we only
@@ -956,11 +957,23 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
       std::chrono::milliseconds(runtime_config_.running_time_ms));
   kill_app_ = true;
 
-  // Note that num_requests_ may not be equal to the actual # of requests that
-  // were generated from GeneratePeriodicRequests(), because of thread timing
-  // issues.
-  // Nonetheless, we don't care because we don't need the exact number anyway.
-  interpreter_->GetPlanner()->Wait(num_requests_);
+  interpreter_->GetPlanner()->Wait();
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunStream() {
+  int run_duration_us = runtime_config_.running_time_ms * 1000;
+  int num_frames = 0;
+  int64_t start = profiling::time::NowMicros();
+  while(true) {
+    interpreter_->InvokeModelsSync();
+    int64_t current = profiling::time::NowMicros();
+    num_frames++;
+    if (current - start >= run_duration_us)
+      break;
+  }
+  TFLITE_LOG(INFO) << "Measured FPS: " << num_frames;
+
   return kTfLiteOk;
 }
 
@@ -970,11 +983,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests(int period_ms) {
     while (true) {
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
-      int num_requests = interpreter_->InvokeModelsAsync();
-      {
-        std::lock_guard<std::mutex> lock(num_requests_mtx_);
-        num_requests_ += num_requests;
-      }
+      interpreter_->InvokeModelsAsync();
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;
 

@@ -62,8 +62,7 @@ class Planner {
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
-  // TODO #18: Make the planner run in a different thread
-  TfLiteStatus Wait(int num_requests);
+  void Wait();
 
   // Enqueues a finised job to the queue.
   // A worker calls the method.
@@ -94,6 +93,10 @@ class Planner {
 
   void SetWindowSize(int schedule_window_size);
 
+  void InitNumSubmittedJobs() {
+    num_submitted_jobs_ = 0;
+  }
+
  protected:
   std::thread planner_thread_;
 
@@ -114,6 +117,7 @@ class Planner {
   std::string log_path_;
 
   int schedule_window_size_ = INT_MAX;
+  int num_submitted_jobs_ = 0;
 };
 
 }  // namespace impl
