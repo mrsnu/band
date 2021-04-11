@@ -53,8 +53,8 @@ class Worker {
 
   int64_t GetWaitingTime();
 
-  void AllowWorksteal() {
-    allow_worksteal_ = true;
+  void AllowWorkSteal() {
+    allow_work_steal_ = true;
   }
 
  private:
@@ -75,7 +75,7 @@ class Worker {
 
   TfLiteDeviceFlags device_flag_;
 
-  bool allow_worksteal_ = false;
+  bool allow_work_steal_ = false;
 };
 
 }  // namespace impl

@@ -841,9 +841,9 @@ void Interpreter::SetWindowSize(int schedule_window_size) {
   planner_->SetWindowSize(schedule_window_size);
 }
 
-void Interpreter::AllowWorksteal() {
+void Interpreter::AllowWorkSteal() {
   for (auto& worker : workers_) {
-    worker.second->AllowWorksteal();
+    worker.second->AllowWorkSteal();
   }
 }
 

@@ -83,7 +83,7 @@ void Worker::Work() {
       bool empty = requests_.empty();
       lock.unlock();
 
-      if (allow_worksteal_ && empty) {
+      if (allow_work_steal_ && empty) {
         TryWorkSteal();
       }
 

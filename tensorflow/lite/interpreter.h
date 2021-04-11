@@ -629,7 +629,7 @@ class Interpreter {
 
   void SetWindowSize(int schedule_window_size);
 
-  void AllowWorksteal();
+  void AllowWorkSteal();
 
  private:
   friend class InterpreterBuilder;
