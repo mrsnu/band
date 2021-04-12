@@ -172,13 +172,16 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     TfLiteStatus status;
     std::string mode = runtime_config_.execution_mode;
     TFLITE_LOG(INFO) << "Running in [" << mode << "] mode.";
-    if (mode == "Periodic") {
+    if (mode == "periodic") {
       status = RunPeriodic(runtime_config_.period_ms);
-    } else if (mode == "Stream") {
+    } else if (mode == "stream") {
       status = RunStream();
-    } else {
-      TFLITE_LOG(WARN) << "Execution mode is set to **DEFAULT** mode.";
+    } else if (mode == "default") {
       status = RunAll();
+    } else {
+      TFLITE_LOG(ERROR) << "No such execution mode: " << mode;
+      *invoke_status = kTfLiteError;
+      return run_stats;
     }
 
     int64_t end_us = profiling::time::NowMicros();
