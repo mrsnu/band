@@ -87,9 +87,7 @@ void Worker::Work() {
         TryWorkSteal();
       }
 
-      for (auto& request : job.following_requests_) {
-        interpreter_ptr->InvokeModelAsync(request);
-      }
+      interpreter_ptr->InvokeModelsAsync(job.following_requests_);
 
       planner_ptr->GetSafeBool().notify();
     } else {

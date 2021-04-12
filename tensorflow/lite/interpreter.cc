@@ -410,7 +410,7 @@ void Interpreter::InvokeModelsAsync() {
   InvokeModelsAsync(requests);
 }
 
-void Interpreter::InvokeModelsAsync(std::vector<ModelRequest> requests) {
+void Interpreter::InvokeModelsAsync(std::vector<ModelRequest>& requests) {
   std::vector<Job> jobs;
 
   for (auto& request: requests) {
@@ -432,7 +432,7 @@ void Interpreter::InvokeModelsSync() {
   planner_->Wait();
 }
 
-void Interpreter::InvokeModelsSync(std::vector<ModelRequest> requests) {
+void Interpreter::InvokeModelsSync(std::vector<ModelRequest>& requests) {
   planner_->InitNumSubmittedJobs();
   InvokeModelsAsync(requests);
   planner_->Wait();
