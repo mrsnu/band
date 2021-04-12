@@ -58,6 +58,10 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
     * `1`: LITTLE Cluster only
     * `2`: Big Cluster only
     * `3`: Primary Core only
+* `execution_mode`: Specify a exeucution mode. Available execution modes are as follows:
+    * `stream`: consecutively run batches.
+    * `periodic`: invoke requests periodically.
+* `schedule_window_size`: The number of planning unit.
 
 An example of complete JSON config file is as follows:
 ```json
@@ -73,7 +77,9 @@ An example of complete JSON config file is as follows:
     ],
     "running_time_ms": 6000,
     "model_profile": "/data/local/tmp/profile.csv",
-    "cpu_mask": 2
+    "cpu_mask": 2,
+    "schedule_window_size": 4,
+    "execution_mode": "stream"
 }
 ```
 
