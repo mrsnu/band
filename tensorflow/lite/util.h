@@ -29,6 +29,15 @@ limitations under the License.
 
 namespace tflite {
 
+struct ModelRequest {
+  int model_id;
+  std::vector<ModelRequest> following_requests;
+
+  explicit ModelRequest(int request) : model_id(request) {}
+  explicit ModelRequest(int request, std::vector<ModelRequest>& next)
+    : model_id(request), following_requests(next) {}
+};
+
 // The prefix of Flex op custom code.
 // This will be matched agains the `custom_code` field in `OperatorCode`
 // Flatbuffer Table.

@@ -87,6 +87,10 @@ void Worker::Work() {
         TryWorkSteal();
       }
 
+      for (auto& request : job.following_requests_) {
+        interpreter_ptr->InvokeModelAsync(request);
+      }
+
       planner_ptr->GetSafeBool().notify();
     } else {
       // TODO #21: Handle errors in multi-thread environment
