@@ -8,6 +8,7 @@
 #include <string>
 #include <map>
 #include "tensorflow/lite/core/cpu/cpu.h"
+#include "tensorflow/lite/util.h"
 
 namespace tflite {
 
@@ -16,9 +17,10 @@ namespace impl {
 class Planner;
 
 struct Job {
-  explicit Job(int model_id)
-    : model_id_(model_id) {
-  }
+  explicit Job(int model_id) : model_id_(model_id) {}
+  explicit Job(ModelRequest request)
+    : model_id_(request.model_id),
+      following_requests_(request.following_requests) {}
   int model_id_;
   int subgraph_idx_ = -1;
   int device_id_ = -1;
@@ -30,6 +32,7 @@ struct Job {
 
   std::map<int, int64_t> waiting_time;
   std::map<int, int64_t> profiled_latency;
+  std::vector<ModelRequest> following_requests_;
 };
 
 class Worker {

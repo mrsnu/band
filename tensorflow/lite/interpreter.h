@@ -24,7 +24,7 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/lite/allocation.h"
-#include "tensorflow/lite/c/common.h"  // IWYU pragma: export
+#include "tensorflow/lite/util.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/core/api/profiler.h"
 #include "tensorflow/lite/core/subgraph.h"
@@ -379,18 +379,21 @@ class Interpreter {
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   void InvokeModelAsync(int model_id);
+  void InvokeModelAsync(ModelRequest request);
 
   /// Invoke models with a batch size given by the model config.
   /// This method is an asychronous call.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
   void InvokeModelsAsync();
+  void InvokeModelsAsync(std::vector<ModelRequest> requests);
 
   /// Invoke models with a batch size given by the model config.
   /// Returns when all the requests are done.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
   void InvokeModelsSync();
+  void InvokeModelsSync(std::vector<ModelRequest> requests);
 
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
