@@ -996,7 +996,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunEagleEyeStream() {
       break;
   }
   TFLITE_LOG(INFO) << "Num Frames: " << num_frames;
-  TFLITE_LOG(INFO) << "Measured FPS: " << (num_frames / (run_duration_us * 1000000));
+  TFLITE_LOG(INFO) << "Measured FPS: " << (num_frames / (run_duration_us / 1000000));
 
   return kTfLiteOk;
 }
@@ -1072,10 +1072,11 @@ std::vector<ModelRequest> BenchmarkTfLiteModel::GetEagleEyeFrame() {
       following_requests.push_back(icn);
     }
     frame.push_back(ModelRequest(retina_face, following_requests));
-
+    /*
     for (auto num_req: recognition_workload[k])
       std::cout << num_req << " ";
     std::cout << std::endl;
+    */
   }
 
   return frame;
