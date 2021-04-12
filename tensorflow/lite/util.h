@@ -34,7 +34,7 @@ struct ModelRequest {
   std::vector<ModelRequest> following_requests;
 
   explicit ModelRequest(int request) : model_id(request) {}
-  explicit ModelRequest(int request, std::vector<ModelRequest>& next)
+  explicit ModelRequest(int request, std::vector<ModelRequest> next)
     : model_id(request), following_requests(next) {}
 };
 

@@ -66,6 +66,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunAll() override;
   TfLiteStatus RunPeriodic(int period_ms) override;
   TfLiteStatus RunStream() override;
+  TfLiteStatus RunEagleEyeStream() override;
   static BenchmarkParams DefaultParams();
 
  protected:
@@ -144,6 +145,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   // spawn a thread that generates input requests periodically for all models
   void GeneratePeriodicRequests(int period_ms);
+  std::vector<ModelRequest> GetEagleEyeFrame();
 
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;
