@@ -76,7 +76,6 @@ void CpuBackendContext::SetMaxNumThreads(int max_num_threads) {
   for (auto& pair : ruy_contexts_) {
     pair.second->set_max_num_threads(target_num_threads);
   }
-  // ruy_context_->set_max_num_threads(target_num_threads);
   gemmlowp_context_->set_max_num_threads(target_num_threads);
 }
 

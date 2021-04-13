@@ -60,8 +60,8 @@ class CpuBackendContext final : public TfLiteInternalBackendContext {
   // stores both a gemmlowp context and a ruy context.
   // TODO(b/131416458): Once call sites all go through abstractions,
   // elide what can be elided based on TFLITE_WITH_RUY.
-  // const std::unique_ptr<ruy::Context> ruy_context_;
-  std::unordered_map<std::thread::id, std::unique_ptr<ruy::Context>> ruy_contexts_;
+  std::unordered_map<
+    std::thread::id, std::unique_ptr<ruy::Context>> ruy_contexts_;
   std::mutex ruy_context_lock_;
   const std::unique_ptr<gemmlowp::GemmContext> gemmlowp_context_;
 
