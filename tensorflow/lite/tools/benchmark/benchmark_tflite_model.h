@@ -65,6 +65,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
   TfLiteStatus RunPeriodic(int period_ms) override;
+  TfLiteStatus RunStream() override;
   static BenchmarkParams DefaultParams();
 
  protected:
@@ -156,11 +157,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   // boolean flag for letting child threads know that it's time to go home
   bool kill_app_ = false;
-
-  // number of requests that were generated during this run
-  // any thread that is generating requests should inc this value accordingly
-  int num_requests_ = 0;
-  std::mutex num_requests_mtx_;
 };
 
 }  // namespace benchmark

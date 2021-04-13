@@ -202,6 +202,7 @@ class BenchmarkModel {
     int cpu_masks = 0;
     int running_time_ms = 60000;
     std::string model_profile;
+    std::string execution_mode;
   };
 
  protected:
@@ -228,6 +229,7 @@ class BenchmarkModel {
   virtual TfLiteStatus RunImpl(int i) = 0;
   virtual TfLiteStatus RunAll() = 0;
   virtual TfLiteStatus RunPeriodic(int period_ms) = 0;
+  virtual TfLiteStatus RunStream() = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
   RuntimeConfig runtime_config_;

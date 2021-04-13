@@ -159,7 +159,6 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
   int64_t now_us = profiling::time::NowMicros();
   int64_t min_finish_us = now_us + static_cast<int64_t>(min_secs * 1.e6f);
   int64_t max_finish_us = now_us + static_cast<int64_t>(max_secs * 1.e6f);
-  int period_ms = runtime_config_.period_ms;
 
   *invoke_status = kTfLiteOk;
   for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
@@ -171,10 +170,18 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
 
     // main run method
     TfLiteStatus status;
-    if (period_ms <= 0) {
+    std::string mode = runtime_config_.execution_mode;
+    TFLITE_LOG(INFO) << "Running in [" << mode << "] mode.";
+    if (mode == "periodic") {
+      status = RunPeriodic(runtime_config_.period_ms);
+    } else if (mode == "stream") {
+      status = RunStream();
+    } else if (mode == "default") {
       status = RunAll();
     } else {
-      status = RunPeriodic(period_ms);
+      TFLITE_LOG(ERROR) << "No such execution mode: " << mode;
+      *invoke_status = kTfLiteError;
+      return run_stats;
     }
 
     int64_t end_us = profiling::time::NowMicros();

@@ -395,7 +395,7 @@ void Interpreter::InvokeModelAsync(int model_id) {
   planner_->EnqueueRequest(to_enqueue);
 }
 
-int Interpreter::InvokeModelsAsync() {
+void Interpreter::InvokeModelsAsync() {
   std::list<Job> jobs;
 
   for (auto& m : model_configs_) {
@@ -412,8 +412,12 @@ int Interpreter::InvokeModelsAsync() {
   }
 
   planner_->EnqueueBatch(jobs);
+}
 
-  return jobs.size();
+void Interpreter::InvokeModelsSync() {
+  planner_->InitNumSubmittedJobs();
+  InvokeModelsAsync();
+  planner_->Wait();
 }
 
 TfLiteStatus Interpreter::AddTensors(int tensors_to_add,
