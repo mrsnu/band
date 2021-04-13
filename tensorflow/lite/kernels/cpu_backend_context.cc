@@ -56,7 +56,6 @@ CpuBackendContext* CpuBackendContext::GetFromContext(TfLiteContext* context) {
 
 CpuBackendContext::CpuBackendContext()
     : TfLiteInternalBackendContext(),
-      // ruy_context_(new ruy::Context),
       gemmlowp_context_(new gemmlowp::GemmContext) {
   SetMaxNumThreads(kDefaultNumThreadpoolThreads);
 // TODO(b/148289189) Remove when clients have transitioned to runtime flag.
