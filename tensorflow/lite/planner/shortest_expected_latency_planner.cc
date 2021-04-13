@@ -11,13 +11,10 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
     std::deque<Job> local_jobs;
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
-    std::deque<Job>& requests = GetRequests();
-    if (!requests.empty()) {
-      // Gets the specific amount of jobs from requests
-      // and removes those jobs from the requests.
-      int window_size = std::min(GetWindowSize(), (int) requests.size());
-      local_jobs.insert(local_jobs.begin(), requests.begin(), requests.begin() + window_size);
-      requests.erase(requests.begin(), requests.begin() + window_size);
+    if (!GetRequests().empty()) {
+      // copy all elements to a local container so that
+      // we can release the lock asap
+      GetRequests().swap(local_jobs);
     } else {
       continue;
     }
@@ -38,42 +35,52 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // no request is given higher priority even if it had stayed in the queue
       // for longer than others.
 
-      // find the most urgent job and save its index within the queue
-      int64_t largest_shortest_latency = -1;
-      int target_idx;
-      TfLiteDeviceFlags target_device;
-      for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
-        Job& to_execute = *it;
-        TfLiteDeviceFlags device =
-          GetInterpreter()->GetDeviceWithShortestLatency(to_execute);
-        int64_t shortest_latency =
-          to_execute.waiting_time[device] + to_execute.profiled_latency[device];
+      std::deque<Job> sched_jobs;
+      // bring jobs as many as the window size from local jobs
+      // and erase those jobs from the local jobs.
+      int window_size = std::min(GetWindowSize(), (int) local_jobs.size());
+      sched_jobs.insert(sched_jobs.begin(),
+          local_jobs.begin(), local_jobs.begin() + window_size);
+      local_jobs.erase(local_jobs.begin(), local_jobs.begin() + window_size);
 
-        if (shortest_latency > largest_shortest_latency) {
-          largest_shortest_latency = shortest_latency;
-          target_idx = it - local_jobs.begin();
-          target_device = device;
+      while (!sched_jobs.empty()) {
+        // find the most urgent job and save its index within the queue
+        int64_t largest_shortest_latency = -1;
+        int target_idx;
+        TfLiteDeviceFlags target_device;
+        for (auto it = sched_jobs.begin(); it != sched_jobs.end(); ++it) {
+          Job& to_execute = *it;
+          TfLiteDeviceFlags device =
+            GetInterpreter()->GetDeviceWithShortestLatency(to_execute);
+          int64_t shortest_latency =
+            to_execute.waiting_time[device] + to_execute.profiled_latency[device];
+
+          if (shortest_latency > largest_shortest_latency) {
+            largest_shortest_latency = shortest_latency;
+            target_idx = it - sched_jobs.begin();
+            target_device = device;
+          }
         }
-      }
 
-      // for some reason, this Job must NOT be a reference (&), otherwise
-      // we get a segfault at push_back() below
-      Job most_urgent_job = local_jobs[target_idx];
+        // for some reason, this Job must NOT be a reference (&), otherwise
+        // we get a segfault at push_back() below
+        Job most_urgent_job = sched_jobs[target_idx];
 
-      // remove the job from the queue so that we don't meet it in the next loop
-      local_jobs.erase(local_jobs.begin() + target_idx);
-      Worker* worker = GetInterpreter()->GetWorker(target_device);
+        // remove the job from the queue so that we don't meet it in the next loop
+        sched_jobs.erase(sched_jobs.begin() + target_idx);
+        Worker* worker = GetInterpreter()->GetWorker(target_device);
 
-      {
-        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        int subgraph_idx =
-          GetInterpreter()->GetSubgraphIdx(most_urgent_job.model_id_, target_device);
-        most_urgent_job.subgraph_idx_ = subgraph_idx;
-        most_urgent_job.device_id_ = target_device;
-        most_urgent_job.sched_id_ = sched_id++;
+        {
+          std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+          int subgraph_idx =
+            GetInterpreter()->GetSubgraphIdx(most_urgent_job.model_id_, target_device);
+          most_urgent_job.subgraph_idx_ = subgraph_idx;
+          most_urgent_job.device_id_ = target_device;
+          most_urgent_job.sched_id_ = sched_id++;
 
-        worker->GetDeviceRequests().push_back(most_urgent_job);
-        worker->GetRequestCv().notify_one();
+          worker->GetDeviceRequests().push_back(most_urgent_job);
+          worker->GetRequestCv().notify_one();
+        }
       }
     }
   }
