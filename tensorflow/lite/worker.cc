@@ -105,23 +105,24 @@ void Worker::TryWorkSteal() {
   Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
   int64_t max_latency_gain = -1;
   int max_latency_gain_device = -1;
-  for (int i = 0; i < interpreter_ptr->GetWorkersSize(); ++i) {
-    if (i == device_flag_) {
+  for (auto& device_and_worker: interpreter_ptr->GetWorkers()) {
+    TfLiteDeviceFlags target_device = device_and_worker.first;
+    Worker* target_worker = device_and_worker.second.get();
+    if (target_device == device_flag_) {
       continue;
     }
 
-    Worker* worker = interpreter_ptr->GetWorker(i);
-    int64_t waiting_time = worker->GetWaitingTime();
+    int64_t waiting_time = target_worker->GetWaitingTime();
 
-    std::unique_lock<std::mutex> lock(worker->GetDeviceMtx());
-    if (worker->GetDeviceRequests().size() < 2) {
+    std::unique_lock<std::mutex> lock(target_worker->GetDeviceMtx());
+    if (target_worker->GetDeviceRequests().size() < 2) {
       // There is nothing to steal here or
       // the job is being processed by the target worker,
       // so leave it alone.
       continue;
     }
 
-    Job& job = worker->GetDeviceRequests().back();
+    Job& job = target_worker->GetDeviceRequests().back();
     lock.unlock();
 
     int64_t expected_latency =
@@ -134,7 +135,7 @@ void Worker::TryWorkSteal() {
     int64_t latency_gain = waiting_time - expected_latency;
     if (latency_gain > max_latency_gain) {
       max_latency_gain = latency_gain;
-      max_latency_gain_device = i;
+      max_latency_gain_device = target_device;
     }
   }
 
