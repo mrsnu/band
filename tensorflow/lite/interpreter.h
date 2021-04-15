@@ -382,10 +382,14 @@ class Interpreter {
 
   /// Invoke models with a batch size given by the model config.
   /// This method is an asychronous call.
+  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
+  /// not called consecutively.
   void InvokeModelsAsync();
 
   /// Invoke models with a batch size given by the model config.
   /// Returns when all the requests are done.
+  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
+  /// not called consecutively.
   void InvokeModelsSync();
 
   /// Enable or disable the NN API (true to enable)

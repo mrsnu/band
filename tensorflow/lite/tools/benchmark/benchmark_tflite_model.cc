@@ -977,7 +977,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
     if (current - start >= run_duration_us)
       break;
   }
-  TFLITE_LOG(INFO) << "Measured FPS: " << num_frames;
+  TFLITE_LOG(INFO) << "Measured FPS: " << (num_frames / (run_duration_us / 1000000));
 
   return kTfLiteOk;
 }

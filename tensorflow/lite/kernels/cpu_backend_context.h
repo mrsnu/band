@@ -17,6 +17,9 @@ limitations under the License.
 #define TENSORFLOW_LITE_KERNELS_CPU_BACKEND_CONTEXT_H_
 
 #include <memory>
+#include <thread>
+#include <unordered_map>
+#include <mutex>
 
 #include "public/gemmlowp.h"
 #include "ruy/context.h"  // from @ruy
@@ -32,7 +35,7 @@ class CpuBackendContext final : public TfLiteInternalBackendContext {
   CpuBackendContext();
   ~CpuBackendContext() override;
 
-  ruy::Context* ruy_context() const { return ruy_context_.get(); }
+  ruy::Context* ruy_context();
 
   gemmlowp::GemmContext* gemmlowp_context() const {
     return gemmlowp_context_.get();
@@ -48,7 +51,7 @@ class CpuBackendContext final : public TfLiteInternalBackendContext {
 
   bool use_caching() const { return use_caching_; }
 
-  void ClearCaches() override { ruy_context_->ClearPrepackedCache(); }
+  void ClearCaches() override;
 
  private:
   // To enable a smooth transition from the current direct usage
@@ -57,7 +60,9 @@ class CpuBackendContext final : public TfLiteInternalBackendContext {
   // stores both a gemmlowp context and a ruy context.
   // TODO(b/131416458): Once call sites all go through abstractions,
   // elide what can be elided based on TFLITE_WITH_RUY.
-  const std::unique_ptr<ruy::Context> ruy_context_;
+  std::unordered_map<
+    std::thread::id, std::unique_ptr<ruy::Context>> ruy_contexts_;
+  std::mutex ruy_context_lock_;
   const std::unique_ptr<gemmlowp::GemmContext> gemmlowp_context_;
 
   // The maximum of threads used for parallelizing TfLite ops. However,
