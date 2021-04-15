@@ -22,10 +22,13 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
   std::ofstream log_file(log_path_);
   if (!log_file.is_open())
     return kTfLiteError;
-  log_file << "model_name\t"
+  log_file << "sched_id\t"
+           << "model_name\t"
            << "model_id\t"
            << "device_id\t"
-           << "sched_id\t"
+           << "start_idx\t"
+           << "end_idx\t"
+           << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
            << "end_time\t"
@@ -54,10 +57,13 @@ void Planner::Wait() {
     jobs_finished_.pop_front();
 
     // write all timestamp statistics to log file
-    log_file << job.model_fname_ << "\t"
+    log_file << job.sched_id_ << "\t"
+             << job.model_fname_ << "\t"
              << job.model_id_ << "\t"
              << job.device_id_ << "\t"
-             << job.sched_id_ << "\t"
+             << job.start_idx << "\t"
+             << job.end_idx << "\t"
+             << job.subgraph_idx_ << "\t"
              << job.enqueue_time_ << "\t"
              << job.invoke_time_ << "\t"
              << job.end_time_ << "\t"

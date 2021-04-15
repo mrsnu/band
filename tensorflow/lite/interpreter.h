@@ -22,7 +22,9 @@ limitations under the License.
 #include <cstdlib>
 #include <memory>
 #include <vector>
+#include <iostream>
 
+#include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/common.h"  // IWYU pragma: export
 #include "tensorflow/lite/core/api/error_reporter.h"
@@ -85,6 +87,12 @@ namespace impl {
 /// foo.Invoke();
 /// </code></pre>
 ///
+struct ModelSpec {
+	int num_ops;
+	std::set<int> output_tensors;
+  std::set<TfLiteType> tensor_types;
+	std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
+};
 
 class Interpreter {
  public:
@@ -376,6 +384,26 @@ class Interpreter {
   /// Invoke idx-th subgraph in the interpreter.
   TfLiteStatus Invoke(int idx);
 
+  void InvestigateModelSpec(int model_id);
+
+  std::map<string, std::vector<int>> ConvertVectorToMap(std::vector<int> subgraph_indices);
+
+  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx, TfLiteDeviceFlags preceded_device);
+
+  std::pair<int, int64_t> GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
+                                                   int64_t start_time,
+                                                   std::vector<int64_t>& device_waiting);
+
+  std::pair<int, int64_t> GetShortestLatency(int model_id,
+                                             int start_idx,
+                                             int64_t start_time,
+                                             std::vector<int64_t>& device_waiting,
+                                             TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
+
+  int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
+
+  int64_t GetSubgraphProfileResult(SubgraphKey& key);
+
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   void InvokeModelAsync(int model_id);
@@ -477,7 +505,7 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  using ModelDeviceToLatency = std::map<std::pair<int, int>, int64_t>;
+  using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
 
   void Profile(const int num_warm_ups, const int num_runs,
                ModelDeviceToLatency& profiled);
@@ -608,6 +636,8 @@ class Interpreter {
 
   int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
   int GetSubgraphIdx(int model_id, int device_idx);
+  int GetSubgraphIdx(SubgraphKey subgraph_key);
+  void DeleteKey(SubgraphKey subgraph_key);
 
   std::set<int> models() const;
 
@@ -627,11 +657,45 @@ class Interpreter {
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
-  int64_t GetProfiledLatency(int model_id, TfLiteDeviceFlags device_id);
+  ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
-  int64_t GetLatency(TfLiteDeviceFlags device, Job& job);
+  void SplitOperatorsEven(int model_id,
+                          int num_split,
+                          TfLiteDeviceFlags device_flag,
+                          std::vector<SubgraphKey>& splitted_op_range) {
+    int num_ops = model_specs_[model_id].num_ops;
+    std::vector<int>& unsupported_ops = \
+                          model_specs_[model_id].unsupported_ops[device_flag];
+    int split_idx = 0;
+    TfLiteDeviceFlags prev_device, current_device = device_flag; 
+    for (int i = 0; i < num_split; ++i) {
+      int min_idx = num_ops * i / num_split;
+      int max_idx = (num_ops * (i + 1) / num_split) - 1;
+      int subgraph_min = min_idx;
+      for (int k = min_idx; k <= max_idx; ++k) {
+        prev_device = current_device;
+        if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
+            != unsupported_ops.end()) {
+          current_device = kTfLiteCPU;
+        } else {
+          current_device = device_flag;
+        }
 
-  TfLiteDeviceFlags GetDeviceWithShortestLatency(Job& job);
+        if (k == min_idx)
+          prev_device = current_device;
+
+        if (k > min_idx && current_device != prev_device) {
+          splitted_op_range.push_back(
+              SubgraphKey(model_id, prev_device, subgraph_min, k - 1));
+          subgraph_min = k;
+        }
+      }
+
+      if (subgraph_min <= max_idx)
+        splitted_op_range.push_back(
+            SubgraphKey(model_id, current_device, subgraph_min, max_idx));
+    }
+  };
 
   int GetWindowSize() const;
 
@@ -649,11 +713,9 @@ class Interpreter {
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 
   // Map structure to find subgraph idx with (model_id, device_id)
-  std::map<std::pair<int, TfLiteDeviceFlags>, int> subgraph_idx_map_;
+  std::map<SubgraphKey, int> subgraph_idx_map_;
 
-  void RegisterSubgraphIdx(int model_id,
-                           TfLiteDeviceFlags device_id,
-                           int subgraph_idx);
+  void RegisterSubgraphIdx(SubgraphKey subgraph_key, int subgraph_idx);
 
   // Applies best delegate from the given device to the subgraph.
   TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
@@ -687,7 +749,7 @@ class Interpreter {
   std::map<TfLiteDelegateFlags, TfLiteDelegatePtr> delegates_;
 
   // Map structure to store profiling results in microseconds of (model_id, device_id)
-  std::map<std::pair<int, TfLiteDeviceFlags>, int64_t> subgraph_profiling_results_map_;
+  std::map<SubgraphKey, int64_t> subgraph_profiling_results_map_;
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.
   std::unique_ptr<Profiler> owned_profiler_;
@@ -712,6 +774,9 @@ class Interpreter {
 
   // Maps to each model's configuration.
   std::map<int, ModelConfig> model_configs_;
+
+  // Maps to model spec
+  std::map<int, ModelSpec> model_specs_;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;

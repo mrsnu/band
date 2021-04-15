@@ -224,12 +224,29 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
     const OpResolver& op_resolver,
     const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
     Subgraph* subgraph) {
+  return ParseNodes(model, op_resolver, operators, subgraph, -1, -1);
+}
+ 
+TfLiteStatus InterpreterBuilder::ParseNodes(
+    const ::tflite::Model* model,
+    const OpResolver& op_resolver,
+    const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
+    Subgraph* subgraph,
+    int start_op_idx, int end_op_idx) {
   TfLiteStatus status = kTfLiteOk;
 
-  // Reduce the number of redundant allocations
-  subgraph->ReserveNodes(operators->size());
+  end_op_idx = end_op_idx == -1 ? operators->size() - 1
+                                : end_op_idx;
+  start_op_idx = start_op_idx == -1 ? 0
+                                    : start_op_idx;
 
-  for (int i = 0; i < operators->size(); ++i) {
+  // TODO(dhkim): assert(end_op_idx >= start_op_idx)
+  int num_ops = end_op_idx - start_op_idx + 1;
+
+  // Reduce the number of redundant allocations
+  subgraph->ReserveNodes(num_ops);
+
+  for (int i = start_op_idx; i <= end_op_idx; ++i) {
     const auto* op = operators->Get(i);
     int index = op->opcode_index();
     if (index < 0 || index >= flatbuffer_op_index_to_registration_.size()) {
@@ -424,7 +441,8 @@ TfLiteStatus InterpreterBuilder::ParseSparsity(
 TfLiteStatus InterpreterBuilder::ParseTensors(
     const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
     const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-    Subgraph* subgraph) {
+    Subgraph* subgraph,
+    std::set<int> tensor_indices) {
   TfLiteStatus status = kTfLiteOk;
 
   // A little helper to get the names of inputs and outputs. Note that they
@@ -436,6 +454,9 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
   };
 
   for (int i = 0; i < tensors->size(); ++i) {
+    if (tensor_indices.find(i) == tensor_indices.end())
+      continue;
+
     const auto* tensor = tensors->Get(i);
     std::vector<int> dims = FlatBufferIntArrayToVector(tensor->shape());
 
@@ -446,6 +467,8 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
       continue;
     }
 
+    // TODO(dhkim): delete tensor_types_ from builder attribute.
+    // Let model_spec take the control.
     tensor_types_.insert(type);
 
     auto get_readonly_data = [&](const char** buffer_data,
@@ -562,13 +585,38 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int model_id = InterpreterBuilder::num_registered_model++;
   bool has_available_device = false;
 
+  tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU);
+  int subgraph_idx = AddSubgraph(
+    model, op_resolver, interpreter, subgraph_key, num_threads);
+  if (subgraph_idx != -1) {
+    // TODO(dhkim): Move RegisterSubgraphIdx inside AddSubgraph
+    (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
+    has_available_device = true;
+  }
+
+  // Investigate Model Specification
+  (*interpreter)->InvestigateModelSpec(model_id);
+
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    int subgraph_idx = AddSubgraph(
-        model, op_resolver, interpreter, num_threads, device_id);
-    if (subgraph_idx != -1) {
-      (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
-      has_available_device = true;
+    std::vector<tflite::impl::SubgraphKey> subgraph_keys;
+    for (int k : {1}) { // int k : {1, 2, 4}
+      (*interpreter)->
+        SplitOperatorsEven(model_id, k, device_id, subgraph_keys);
+    }
+
+    for (auto& subgraph_key : subgraph_keys) {
+      int subgraph_idx = AddSubgraph(
+        model, op_resolver, interpreter, subgraph_key, num_threads);
+      if (subgraph_idx != -1) {
+        (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
+        has_available_device = true;
+      }
+
+      std::cout << "ADDED Subgraph : " << subgraph_key.model_id << " "
+                                       << subgraph_key.device_flag << " "
+                                       << subgraph_key.start_idx << " "
+                                       << subgraph_key.end_idx << std::endl;
     }
   }
 
@@ -583,16 +631,24 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads,
-                     TfLiteDeviceFlags device_id) {
-  return AddSubgraph(model.GetModel(), op_resolver, interpreter, num_threads, device_id);
+                     tflite::impl::SubgraphKey& subgraph_key,
+                     int num_threads) {
+  return AddSubgraph(model.GetModel(),
+                     op_resolver,
+                     interpreter,
+                     subgraph_key,
+                     num_threads);
 }
 
-int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
+int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads,
-                     TfLiteDeviceFlags device_id) {
+                     tflite::impl::SubgraphKey& subgraph_key,
+                     int num_threads) {
+  int subgraph_exist = (*interpreter)->GetSubgraphIdx(subgraph_key);
+  if (subgraph_exist >= 0)
+    return subgraph_exist;
+
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
         "Interpreter is invalid");
@@ -647,6 +703,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
   }
 
   int old_size = (*interpreter)->subgraphs_size();
+  // Only one subgraph will be generated.
   (*interpreter)->AddSubgraphs(subgraphs->size());
   (*interpreter)->SetNumThreads(num_threads, old_size);
 
@@ -666,6 +723,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     modified_subgraph_index = old_size + subgraph_index;
     tflite::Subgraph* modified_subgraph =
         (*interpreter)->subgraph(modified_subgraph_index);
+    modified_subgraph->SetKey(subgraph_key);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {
@@ -677,18 +735,74 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
       return cleanup_and_error();
     }
-    // Set num threads
-    // Parse inputs/outputs
-    modified_subgraph->SetInputs(
-        FlatBufferIntArrayToVector(subgraph->inputs()));
-    modified_subgraph->SetOutputs(
-        FlatBufferIntArrayToVector(subgraph->outputs()));
+
+    std::vector<int> subgraph_inputs =
+        FlatBufferIntArrayToVector(subgraph->inputs());
+    std::vector<int> subgraph_outputs =
+        FlatBufferIntArrayToVector(subgraph->outputs());
+
+    std::set<int> subgraph_input_set =
+        std::set<int>(subgraph_inputs.begin(), subgraph_inputs.end());
+    std::set<int> subgraph_output_set =
+        std::set<int>(subgraph_outputs.begin(), subgraph_outputs.end());
 
     // Finally setup nodes and tensors
-    if (builder.ParseNodes(model, op_resolver, operators, modified_subgraph) != kTfLiteOk)
+    if (builder.ParseNodes(model, op_resolver,
+                           operators,
+                           modified_subgraph,
+                           subgraph_key.start_idx,
+                           subgraph_key.end_idx) != kTfLiteOk)
       return cleanup_and_error();
-    if (builder.ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
+
+    // Parse inputs/outputs
+    // Need refactoring
+    std::set<int> node_input_tensors, node_output_tensors;
+    auto nodes_and_registration = modified_subgraph->nodes_and_registration();
+    for (int node_index : modified_subgraph->execution_plan()) {
+      TfLiteNode node = nodes_and_registration[node_index].first;
+      for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
+        node_input_tensors.insert(input_tensor);
+      }
+      for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+        node_output_tensors.insert(output_tensor);
+      }
+    }
+
+    std::set<int> subgraph_tensors;
+    std::set_union(node_input_tensors.begin(), node_input_tensors.end(),
+                   node_output_tensors.begin(), node_output_tensors.end(),
+                   std::inserter(subgraph_tensors, subgraph_tensors.end()));
+
+    if (builder.ParseTensors(buffers, tensors, modified_subgraph, subgraph_tensors) != kTfLiteOk)
       return cleanup_and_error();
+
+    std::set<int> input_features;
+    std::set<int> input_tensors, output_tensors;
+    std::set<int> input_nominees;
+    std::set_difference(node_input_tensors.begin(), node_input_tensors.end(),
+                        node_output_tensors.begin(), node_output_tensors.end(),
+                        std::inserter(input_tensors, input_tensors.begin()));
+
+    tflite::impl::ModelSpec& model_spec = \
+      (*interpreter)->GetModelSpec(subgraph_key.model_id);
+
+    std::set_union(model_spec.output_tensors.begin(),
+                   model_spec.output_tensors.end(),
+                   subgraph_input_set.begin(), subgraph_input_set.end(),
+                   std::inserter(input_nominees, input_nominees.end()));
+
+    std::set_intersection(input_nominees.begin(), input_nominees.end(),
+                          input_tensors.begin(), input_tensors.end(),
+                          std::inserter(input_features, input_features.begin()));
+
+    std::set_difference(node_output_tensors.begin(), node_output_tensors.end(),
+                        node_input_tensors.begin(), node_input_tensors.end(),
+                        std::inserter(output_tensors, output_tensors.begin()));
+
+    modified_subgraph->SetInputs(
+        std::vector<int>(input_features.begin(), input_features.end()));
+    modified_subgraph->SetOutputs(
+        std::vector<int>(output_tensors.begin(), output_tensors.end()));
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
@@ -702,7 +816,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if ((*interpreter)->
           ApplyBestDeviceDelegate(
             modified_subgraph, 
-            device_id, 
+            subgraph_key.device_flag, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
     

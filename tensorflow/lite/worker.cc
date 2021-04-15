@@ -1,6 +1,6 @@
 #include "tensorflow/lite/worker.h"
-#include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
@@ -70,6 +70,14 @@ void Worker::Work() {
 
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time_ = profiling::time::NowMicros();
+        // TODO (dhkim): Add callback?
+        if (job.end_idx !=
+            interpreter_ptr->GetModelSpec(job.model_id_).num_ops - 1) {
+          Job next_job(job.model_id_, job.end_idx + 1);
+          next_job.model_fname_ = job.model_fname_;
+          next_job.sched_id_ = job.sched_id_;
+          planner_ptr->EnqueueRequest(next_job);
+        }
         planner_ptr->EnqueueFinishedJob(job);
       } else {
         job.end_time_ = profiling::time::NowMicros();
@@ -212,7 +220,6 @@ int64_t Worker::GetWaitingTime() {
 
   return total;
 }
-
 
 }  // namespace impl
 }  // namespace tflite
