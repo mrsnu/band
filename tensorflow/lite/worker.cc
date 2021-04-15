@@ -114,18 +114,14 @@ void Worker::TryWorkSteal() {
     int64_t waiting_time = worker->GetWaitingTime();
 
     std::unique_lock<std::mutex> lock(worker->GetDeviceMtx());
-    if (worker->GetDeviceRequests().empty()) {
-      // there's nothing to steal here
+    if (worker->GetDeviceRequests().size() < 2) {
+      // There is nothing to steal here or
+      // the job is being processed by the target worker,
+      // so leave it alone.
       continue;
     }
 
     Job& job = worker->GetDeviceRequests().back();
-    if (job.invoke_time_ > 0) {
-      // this job is being processed by the target worker, so leave it alone
-      // FIXME: assume that invoke_time_ is updated only while
-      // the lock is acquired
-      continue;
-    }
     lock.unlock();
 
     int64_t expected_latency =
@@ -147,12 +143,12 @@ void Worker::TryWorkSteal() {
     return;
   }
 
-  Worker* worker = interpreter_ptr->GetWorker(max_latency_gain_device);
-  std::unique_lock<std::mutex> lock(worker->GetDeviceMtx(), std::defer_lock);
+  Worker* target_worker = interpreter_ptr->GetWorker(max_latency_gain_device);
+  std::unique_lock<std::mutex> lock(target_worker->GetDeviceMtx(), std::defer_lock);
   std::unique_lock<std::mutex> my_lock(device_mtx_, std::defer_lock);
   std::lock(lock, my_lock);
 
-  if (worker->GetDeviceRequests().empty()) {
+  if (target_worker->GetDeviceRequests().empty()) {
     // target worker has went on and finished all of its jobs
     // while we were slacking off
     return;
@@ -160,7 +156,7 @@ void Worker::TryWorkSteal() {
 
   // this must not be a reference,
   // otherwise the pop_back() below will invalidate it
-  Job job = worker->GetDeviceRequests().back();
+  Job job = target_worker->GetDeviceRequests().back();
   if (job.invoke_time_ > 0) {
     // make sure the target worker hasn't started processing the job yet
     return;
@@ -177,7 +173,7 @@ void Worker::TryWorkSteal() {
   job.device_id_ = device_flag_;
 
   // finally, we perform the swap
-  worker->GetDeviceRequests().pop_back();
+  target_worker->GetDeviceRequests().pop_back();
   requests_.push_back(job);
 }
 
