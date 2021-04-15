@@ -78,9 +78,10 @@ An example of complete JSON config file is as follows:
     ],
     "running_time_ms": 6000,
     "model_profile": "/data/local/tmp/profile.csv",
-    "cpu_mask": 2,
+    "cpu_masks": 2,
+    "execution_mode": "stream",
     "schedule_window_size": 4,
-    "execution_mode": "stream"
+    "allow_work_steal": true
 }
 ```
 
