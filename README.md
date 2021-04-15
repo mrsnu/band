@@ -53,7 +53,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
     * `device`: Specify the processor to run in int. The argument is only effective with `FixedDevicePlanner`.
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `model_profile`: The path to file with model profile results. [default: None]
-* `cpu_mask`: CPU cluster mask to set CPU affinity. [default: 0]
+* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: 0]
     * `0`: All Cluster
     * `1`: LITTLE Cluster only
     * `2`: Big Cluster only
