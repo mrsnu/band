@@ -598,6 +598,10 @@ class Interpreter {
   Worker* GetWorker(int device_idx);
   Worker* GetWorker(TfLiteDeviceFlags device);
 
+  std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>>& GetWorkers() {
+    return workers_;
+  }
+
   int GetWorkersSize() {
     return workers_.size();
   }
@@ -632,6 +636,8 @@ class Interpreter {
   int GetWindowSize() const;
 
   void SetWindowSize(int schedule_window_size);
+
+  void AllowWorkSteal();
 
  private:
   friend class InterpreterBuilder;

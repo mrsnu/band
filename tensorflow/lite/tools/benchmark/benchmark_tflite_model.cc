@@ -623,6 +623,9 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       new Interpreter(LoggingReporter::DefaultLoggingReporter(),
                       runtime_config_.planner_type));
   interpreter_->SetWindowSize(runtime_config_.schedule_window_size);
+  if (runtime_config_.allow_work_steal) {
+    interpreter_->AllowWorkSteal();
+  }
 
   // Set log file path and write log headers
   TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
@@ -802,6 +805,8 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     runtime_config_.running_time_ms = root["running_time_ms"].asInt();
   if (!root["model_profile"].isNull())
     runtime_config_.model_profile = root["model_profile"].asString();
+  if (!root["allow_work_steal"].isNull())
+    runtime_config_.allow_work_steal = root["allow_work_steal"].asBool();
 
   // Required
   if (root["period_ms"].isNull() ||

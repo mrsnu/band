@@ -34,7 +34,7 @@ struct Job {
 
 class Worker {
  public:
-  explicit Worker(std::shared_ptr<Planner> planner);
+  explicit Worker(std::shared_ptr<Planner> planner, TfLiteDeviceFlags device_flag);
   ~Worker();
 
   std::mutex& GetDeviceMtx() {
@@ -53,8 +53,14 @@ class Worker {
 
   int64_t GetWaitingTime();
 
+  void AllowWorkSteal() {
+    allow_work_steal_ = true;
+  }
+
  private:
   void Work();
+
+  void TryWorkSteal();
 
   std::weak_ptr<Planner> planner_;
   std::thread device_cpu_thread_;
@@ -62,9 +68,14 @@ class Worker {
   std::condition_variable request_cv_;
   std::deque<Job> requests_;
   bool kill_worker_ = false;
+
   CpuSet cpu_set_;
   bool need_cpu_set_update_ = false;
   std::mutex cpu_set_mtx_;
+
+  TfLiteDeviceFlags device_flag_;
+
+  bool allow_work_steal_ = false;
 };
 
 }  // namespace impl

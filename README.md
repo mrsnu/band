@@ -53,7 +53,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
     * `device`: Specify the processor to run in int. The argument is only effective with `FixedDevicePlanner`.
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `model_profile`: The path to file with model profile results. [default: None]
-* `cpu_mask`: CPU cluster mask to set CPU affinity. [default: 0]
+* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: 0]
     * `0`: All Cluster
     * `1`: LITTLE Cluster only
     * `2`: Big Cluster only
@@ -62,6 +62,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
     * `stream`: consecutively run batches.
     * `periodic`: invoke requests periodically.
 * `schedule_window_size`: The number of planning unit.
+* `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
 
 An example of complete JSON config file is as follows:
 ```json

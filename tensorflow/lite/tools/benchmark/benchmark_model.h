@@ -203,6 +203,7 @@ class BenchmarkModel {
     int running_time_ms = 60000;
     std::string model_profile;
     std::string execution_mode;
+    bool allow_work_steal = false;
   };
 
  protected:

@@ -142,7 +142,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     planner_.reset(new FixedDevicePlanner(this));
   }
 
-  std::set<TfLiteDeviceFlags> validDevices = { kTfLiteCPU };
+  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
@@ -163,7 +163,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
   if (gpu_delegate.get()) {
     delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
-    validDevices.insert(kTfLiteGPU);
+    valid_devices.insert(kTfLiteGPU);
   }
 
   std::vector<const char*> string_device_names_list = nnapi::GetDeviceNamesList();
@@ -189,22 +189,22 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
           });
 
       if (nnapi_delegate.get()) {
-        TfLiteDelegateFlags delegateFlag =
+        TfLiteDelegateFlags delegate_flag =
             static_cast<TfLiteDelegateFlags>(nnapi_delegate->flags);
         
-        switch (delegateFlag) {
+        switch (delegate_flag) {
           case kTfLiteDelegateFlagsNNAPIDSP:
-            validDevices.insert(kTfLiteDSP);
+            valid_devices.insert(kTfLiteDSP);
             break;
           case kTfLiteDelegateFlagsNNAPINPU:
-            validDevices.insert(kTfLiteNPU);
+            valid_devices.insert(kTfLiteNPU);
             break;
           default:
             continue;
         }
 
         delegates_.insert(
-          std::make_pair(delegateFlag, std::move(nnapi_delegate)));
+          std::make_pair(delegate_flag, std::move(nnapi_delegate)));
       }
     }
   }
@@ -219,8 +219,9 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   
 #endif  // defined(__ANDROID__)
 
-  for (const TfLiteDeviceFlags& deviceFlag : validDevices) {
-    workers_[deviceFlag] = std::make_unique<Worker>(planner_);
+  // Create workers.
+  for (const TfLiteDeviceFlags device_flag : valid_devices) {
+    workers_[device_flag] = std::make_unique<Worker>(planner_, device_flag);
   }
 }
 
@@ -838,6 +839,12 @@ int Interpreter::GetWindowSize() const {
 
 void Interpreter::SetWindowSize(int schedule_window_size) {
   planner_->SetWindowSize(schedule_window_size);
+}
+
+void Interpreter::AllowWorkSteal() {
+  for (auto& worker : workers_) {
+    worker.second->AllowWorkSteal();
+  }
 }
 
 }  // namespace impl
