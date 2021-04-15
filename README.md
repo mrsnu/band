@@ -62,6 +62,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
     * `stream`: consecutively run batches.
     * `periodic`: invoke requests periodically.
 * `schedule_window_size`: The number of planning unit.
+* `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
 
 An example of complete JSON config file is as follows:
 ```json

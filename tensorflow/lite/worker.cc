@@ -1,9 +1,8 @@
-#include <iostream>
-
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace impl {
@@ -98,9 +97,8 @@ void Worker::Work() {
 void Worker::TryWorkSteal() {
   std::shared_ptr<Planner> planner_ptr = planner_.lock();
   if (!planner_ptr) {
-    std::cout << "Worker " << device_flag_
-              << " TryWorkSteal() Failed to acquire pointer to Planner"
-              << std::endl;
+    TFLITE_LOG(ERROR) << "Worker " << device_flag_
+                      << " TryWorkSteal() Failed to acquire pointer to Planner";
     return;
   }
 
@@ -172,9 +170,6 @@ void Worker::TryWorkSteal() {
     // make sure that I still don't have any work to do
     return;
   }
-
-  // std::cout << "Worker " << device_flag_ << " is stealing from "
-  //           << "worker " << max_latency_gain_device << std::endl;
 
   int subgraph_idx =
     interpreter_ptr->GetSubgraphIdx(job.model_id_, device_flag_);
