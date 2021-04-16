@@ -392,7 +392,7 @@ void Interpreter::InvokeModelAsync(int model_id) {
 }
  
 void Interpreter::InvokeModelAsync(ModelRequest request) {
-  InvokeModelsAsync(std::vector<ModelRequest>{request});
+  InvokeModelsAsync({request});
 }
 
 void Interpreter::InvokeModelsAsync() {
@@ -424,7 +424,6 @@ void Interpreter::InvokeModelsAsync(std::vector<ModelRequest> requests) {
 
   planner_->EnqueueBatch(jobs);
 }
-
 
 void Interpreter::InvokeModelsSync() {
   planner_->InitNumSubmittedJobs();
@@ -867,3 +866,4 @@ void Interpreter::AllowWorkSteal() {
 }  // namespace impl
 
 }  // namespace tflite
+}
