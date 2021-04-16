@@ -26,6 +26,12 @@ namespace impl {
 #if defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() { DisableAll(); }
 
+CpuSet CpuSet::GetCurrent() { 
+  CpuSet set;
+  GetSchedAffinity(set);
+  return set;
+}
+
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
 
 void CpuSet::Disable(int cpu) { CPU_CLR(cpu, &cpu_set_); }
@@ -44,6 +50,8 @@ int CpuSet::NumEnabled() const {
 }
 #else   // defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() {}
+
+CpuSet CpuSet::GetCurrent() { return CpuSet; }
 
 void CpuSet::Enable(int /* cpu */) {}
 

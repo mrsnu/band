@@ -20,6 +20,7 @@ limitations under the License.
 #include "public/gemmlowp.h"
 #include "ruy/context.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 
@@ -46,7 +47,10 @@ CpuBackendContext* CpuBackendContext::GetFromContext(TfLiteContext* context) {
     // We do the lazy initialization here for the TfLiteInternalBackendContext
     // that's wrapped inside ExternalCpuBackendContext.
     cpu_backend_context = new CpuBackendContext();
-    cpu_backend_context->SetMaxNumThreads(context->recommended_num_threads);
+    // Assign upto thread's affinity
+    int max_threads = std::min(CpuSet::GetCurrent().NumEnabled(),
+                               context->recommended_num_threads);
+    cpu_backend_context->SetMaxNumThreads(max_threads);
     external_context->set_internal_backend_context(
         std::unique_ptr<TfLiteInternalBackendContext>(cpu_backend_context));
   }
