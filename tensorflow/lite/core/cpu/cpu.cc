@@ -28,7 +28,7 @@ CpuSet::CpuSet() { DisableAll(); }
 
 CpuSet CpuSet::GetCurrent() { 
   CpuSet set;
-  GetSchedAffinity(set);
+  GetCPUThreadAffinity(set);
   return set;
 }
 
