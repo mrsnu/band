@@ -866,4 +866,3 @@ void Interpreter::AllowWorkSteal() {
 }  // namespace impl
 
 }  // namespace tflite
-}
