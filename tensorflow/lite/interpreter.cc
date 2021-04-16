@@ -388,20 +388,20 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 }
 
 void Interpreter::InvokeModelAsync(int model_id) {
-  InvokeModelAsync(ModelRequest(model_id));
+  InvokeModelAsync(InferenceRequest(model_id));
 }
  
-void Interpreter::InvokeModelAsync(ModelRequest request) {
+void Interpreter::InvokeModelAsync(InferenceRequest request) {
   InvokeModelsAsync({request});
 }
 
 void Interpreter::InvokeModelsAsync() {
-  std::vector<ModelRequest> requests;
+  std::vector<InferenceRequest> requests;
 
   for (auto& m : model_configs_) {
     int model_id = m.first;
     ModelConfig& model_config = m.second;
-    ModelRequest request = ModelRequest(model_id);
+    InferenceRequest request = InferenceRequest(model_id);
     for (int k = 0; k < model_config.batch_size; ++k) {
       requests.push_back(request);
     }
@@ -410,7 +410,7 @@ void Interpreter::InvokeModelsAsync() {
   InvokeModelsAsync(requests);
 }
 
-void Interpreter::InvokeModelsAsync(std::vector<ModelRequest> requests) {
+void Interpreter::InvokeModelsAsync(std::vector<InferenceRequest> requests) {
   std::vector<Job> jobs;
 
   for (auto& request: requests) {
@@ -431,7 +431,7 @@ void Interpreter::InvokeModelsSync() {
   planner_->Wait();
 }
 
-void Interpreter::InvokeModelsSync(std::vector<ModelRequest> requests) {
+void Interpreter::InvokeModelsSync(std::vector<InferenceRequest> requests) {
   planner_->InitNumSubmittedJobs();
   InvokeModelsAsync(requests);
   planner_->Wait();

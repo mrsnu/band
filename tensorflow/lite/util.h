@@ -29,13 +29,13 @@ limitations under the License.
 
 namespace tflite {
 
-struct ModelRequest {
+struct InferenceRequest {
   int model_id;
-  std::vector<ModelRequest> following_requests;
+  std::vector<InferenceRequest> following_requests;
 
-  explicit ModelRequest(int request) : model_id(request) {}
-  explicit ModelRequest(int request, std::vector<ModelRequest>& next)
-    : model_id(request), following_requests(next) {}
+  explicit InferenceRequest(int request_id) : model_id(request_id) {}
+  explicit InferenceRequest(int request_id, std::vector<InferenceRequest>& next)
+    : model_id(request_id), following_requests(next) {}
 };
 
 // The prefix of Flex op custom code.

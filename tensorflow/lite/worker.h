@@ -18,7 +18,7 @@ class Planner;
 
 struct Job {
   explicit Job(int model_id) : model_id_(model_id) {}
-  explicit Job(ModelRequest request)
+  explicit Job(InferenceRequest request)
     : model_id_(request.model_id),
       following_requests_(request.following_requests) {}
   int model_id_;
@@ -32,7 +32,7 @@ struct Job {
 
   std::map<int, int64_t> waiting_time;
   std::map<int, int64_t> profiled_latency;
-  std::vector<ModelRequest> following_requests_;
+  std::vector<InferenceRequest> following_requests_;
 };
 
 class Worker {
