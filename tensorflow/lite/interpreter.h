@@ -642,6 +642,10 @@ class Interpreter {
 
   void AllowWorkSteal();
 
+  ExternalCpuBackendContext* GetCpuBackendContext() {
+    return own_external_cpu_backend_context_.get();
+  }
+
  private:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;

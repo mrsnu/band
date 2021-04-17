@@ -148,6 +148,7 @@ cc_library(
     copts = TFLITE_DEFAULT_COPTS,
     deps = [
         "//tensorflow/lite/c:common",
+        "//tensorflow/lite:cpu"
     ],
 )
 

@@ -16,9 +16,11 @@ limitations under the License.
 #define TENSORFLOW_LITE_EXTERNAL_CPU_BACKEND_CONTEXT_H_
 
 #include <memory>
+#include <thread>
 #include <utility>
 
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 
 namespace tflite {
 
@@ -34,6 +36,7 @@ class TfLiteInternalBackendContext {
   // Set the maximum number of threads that could be used for parallelizing
   // TfLite computation.
   virtual void SetMaxNumThreads(int max_num_threads) = 0;
+  virtual void SetCpuSet(std::thread::id tid, impl::CpuSet cpu_mask) = 0;
 
   // A context may internally cache prepacked versions of constant tensors for
   // faster computation. This function will clear any caches on the context.

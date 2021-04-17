@@ -20,6 +20,7 @@
 #include <string.h>
 #include <vector>
 #include <limits.h>
+#include <string>
 #include "tensorflow/lite/c/common.h"
 
 #if defined __ANDROID__ || defined __linux__
@@ -45,12 +46,15 @@ public:
     void DisableAll();
     bool IsEnabled(int cpu) const;
     int NumEnabled() const;
+    void Print(std::string prefix) const;
 #if defined __ANDROID__ || defined __linux__
-    const cpu_set_t& GetCpuSet() const { return cpu_set_; }
+    cpu_set_t* GetCpuSet() { return &cpu_set_; }
    private:
     cpu_set_t cpu_set_;
 #endif
 };
+
+int GetPId();
 
 // cpu info
 int GetCPUCount();
@@ -58,7 +62,7 @@ int GetLittleCPUCount();
 int GetBigCPUCount();
 
 // set explicit thread affinity
-TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+TfLiteStatus SetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper

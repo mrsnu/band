@@ -16,6 +16,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 
 #include <memory>
+#include <string>
 
 #include "public/gemmlowp.h"
 #include "ruy/context.h"  // from @ruy
@@ -47,10 +48,7 @@ CpuBackendContext* CpuBackendContext::GetFromContext(TfLiteContext* context) {
     // We do the lazy initialization here for the TfLiteInternalBackendContext
     // that's wrapped inside ExternalCpuBackendContext.
     cpu_backend_context = new CpuBackendContext();
-    // Assign upto thread's affinity
-    int max_threads = std::min(impl::CpuSet::GetCurrent().NumEnabled(),
-                               context->recommended_num_threads);
-    cpu_backend_context->SetMaxNumThreads(max_threads);
+    cpu_backend_context->SetMaxNumThreads(context->recommended_num_threads);
     external_context->set_internal_backend_context(
         std::unique_ptr<TfLiteInternalBackendContext>(cpu_backend_context));
   }
@@ -82,6 +80,11 @@ void CpuBackendContext::SetMaxNumThreads(int max_num_threads) {
   gemmlowp_context_->set_max_num_threads(target_num_threads);
 }
 
+void CpuBackendContext::SetCpuSet(std::thread::id tid, impl::CpuSet cpu_mask) {
+  cpu_masks_.insert(std::make_pair(tid, cpu_mask));
+  UpdateCpuSet(tid);
+}
+
 void CpuBackendContext::SetUseCaching(bool flag) { use_caching_ = flag; }
 
 ruy::Context* CpuBackendContext::ruy_context() {
@@ -89,7 +92,7 @@ ruy::Context* CpuBackendContext::ruy_context() {
   std::lock_guard<std::mutex> lock(ruy_context_lock_);
   if (ruy_contexts_.find(this_id) == ruy_contexts_.end()) {
     ruy_contexts_[this_id] = std::make_unique<ruy::Context>();
-    ruy_contexts_[this_id]->set_max_num_threads(max_num_threads_);
+    UpdateCpuSet(this_id);
   }
   return ruy_contexts_[this_id].get();
 }
@@ -97,6 +100,21 @@ ruy::Context* CpuBackendContext::ruy_context() {
 void CpuBackendContext::ClearCaches() {
   for (auto& pair : ruy_contexts_) {
     pair.second->ClearPrepackedCache();
+  }
+}
+
+void CpuBackendContext::UpdateCpuSet(std::thread::id tid) {
+  if (ruy_contexts_.find(tid) != ruy_contexts_.end() &&
+      cpu_masks_.find(tid) != cpu_masks_.end()) {
+    impl::CpuSet current_set = cpu_masks_[tid];
+    int max_threads = std::min(max_num_threads_, current_set.NumEnabled());
+    ruy_contexts_[tid]->set_max_num_threads(max_threads);
+    ruy_contexts_[tid]->set_cpu_mask(current_set.GetCpuSet());
+
+    printf("Ruy context %d \n", max_threads);
+    for (int i = 0; i < impl::GetCPUCount(); i++) {
+      printf("%d %d\n", i, current_set.IsEnabled(i));
+    }
   }
 }
 
