@@ -26,12 +26,6 @@ namespace impl {
 #if defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() { DisableAll(); }
 
-CpuSet CpuSet::GetCurrent() { 
-  CpuSet set;
-  GetCPUThreadAffinity(set);
-  return set;
-}
-
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
 
 void CpuSet::Disable(int cpu) { CPU_CLR(cpu, &cpu_set_); }
@@ -52,8 +46,6 @@ int CpuSet::NumEnabled() const {
 #else   // defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() {}
 
-CpuSet CpuSet::GetCurrent() { return CpuSet; }
-
 void CpuSet::Enable(int /* cpu */) {}
 
 void CpuSet::Disable(int /* cpu */) {}
@@ -70,19 +62,6 @@ static CpuSet g_thread_affinity_mask_little;
 static CpuSet g_thread_affinity_mask_big;
 static CpuSet g_thread_affinity_mask_primary;
 static int g_cpucount = GetCPUCount();
-
-int GetPId() {
-  #if defined(__GLIBC__) || defined(__OHOS__)
-  pid_t pid = syscall(SYS_gettid);
-  #else
-  #ifdef PI3
-    pid_t pid = getpid();
-  #else
-    pid_t pid = gettid();
-  #endif
-  #endif
-  return pid;
-}
 
 int GetCPUCount() {
   int count = 0;

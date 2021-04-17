@@ -40,7 +40,6 @@ typedef enum {
 class CpuSet {
 public:
     CpuSet();
-    static CpuSet GetCurrent();
     void Enable(int cpu);
     void Disable(int cpu);
     void DisableAll();
@@ -52,8 +51,6 @@ public:
     cpu_set_t cpu_set_;
 #endif
 };
-
-int GetPId();
 
 // cpu info
 int GetCPUCount();
