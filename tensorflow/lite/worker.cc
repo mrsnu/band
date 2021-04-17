@@ -64,6 +64,11 @@ void Worker::Work() {
           auto internal_backend = interpreter_ptr->GetCpuBackendContext()
                                       ->internal_backend_context();
           internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
+
+          if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+            // TODO #21: Handle errors in multi-thread environment
+            break;
+          }
         }
       }
 

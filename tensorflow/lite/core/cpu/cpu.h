@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <vector>
 #include <limits.h>
-#include <string>
 #include "tensorflow/lite/c/common.h"
 
 #if defined __ANDROID__ || defined __linux__
