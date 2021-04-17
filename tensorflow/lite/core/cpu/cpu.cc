@@ -164,7 +164,7 @@ static int get_max_freq_khz(int cpuid) {
   return max_freq_khz;
 }
 
-static int SetSchedAffinity(CpuSet& thread_affinity_mask) {
+int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
@@ -177,7 +177,7 @@ static int SetSchedAffinity(CpuSet& thread_affinity_mask) {
 #endif
 
   int syscallret = syscall(__NR_sched_setaffinity, pid, sizeof(cpu_set_t),
-                           thread_affinity_mask.GetCpuSet());
+                           &thread_affinity_mask.GetCpuSet());
   if (syscallret) {
     return -1;
   }
@@ -185,7 +185,7 @@ static int SetSchedAffinity(CpuSet& thread_affinity_mask) {
   return 0;
 }
 
-static int GetSchedAffinity(CpuSet& thread_affinity_mask) {
+int GetSchedAffinity(CpuSet& thread_affinity_mask) {
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
@@ -198,7 +198,7 @@ static int GetSchedAffinity(CpuSet& thread_affinity_mask) {
 #endif
 
   int syscallret = syscall(__NR_sched_getaffinity, pid, sizeof(cpu_set_t),
-                           thread_affinity_mask.GetCpuSet());
+                           &thread_affinity_mask.GetCpuSet());
   if (syscallret) {
     return -1;
   }
@@ -207,7 +207,7 @@ static int GetSchedAffinity(CpuSet& thread_affinity_mask) {
 }
 #endif  // defined __ANDROID__ || defined __linux__
 
-TfLiteStatus SetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
+TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if defined __ANDROID__ || defined __linux__
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);

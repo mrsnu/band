@@ -17,7 +17,6 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 #include <vector>
 #include <limits.h>
 #include <string>
@@ -46,7 +45,7 @@ public:
     bool IsEnabled(int cpu) const;
     int NumEnabled() const;
 #if defined __ANDROID__ || defined __linux__
-    cpu_set_t* GetCpuSet() { return &cpu_set_; }
+    const cpu_set_t& GetCpuSet() const { return cpu_set_; }
    private:
     cpu_set_t cpu_set_;
 #endif
@@ -58,7 +57,7 @@ int GetLittleCPUCount();
 int GetBigCPUCount();
 
 // set explicit thread affinity
-TfLiteStatus SetCPUThreadAffinity(CpuSet& thread_affinity_mask);
+TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
