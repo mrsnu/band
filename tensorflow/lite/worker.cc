@@ -86,6 +86,7 @@ void Worker::Work() {
         TryWorkSteal();
       }
 
+      // TODO #64: Tensor communications between subgraphs
       for (auto& request : job.following_requests_) {
         interpreter_ptr->InvokeModelAsync(request);
       }
