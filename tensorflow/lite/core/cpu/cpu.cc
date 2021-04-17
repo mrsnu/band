@@ -49,12 +49,6 @@ int CpuSet::NumEnabled() const {
   return NumEnabled;
 }
 
-void CpuSet::Print(std::string prefix) const {
-  printf("%s\n", prefix.c_str());
-  for (int i = 0; i < GetCPUCount(); i++) {
-    printf("%d %d\n", i, IsEnabled(i));
-  }
-}
 #else   // defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() {}
 

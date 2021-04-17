@@ -110,11 +110,6 @@ void CpuBackendContext::UpdateCpuSet(std::thread::id tid) {
     int max_threads = std::min(max_num_threads_, current_set.NumEnabled());
     ruy_contexts_[tid]->set_max_num_threads(max_threads);
     ruy_contexts_[tid]->set_cpu_mask(current_set.GetCpuSet());
-
-    printf("Ruy context %d \n", max_threads);
-    for (int i = 0; i < impl::GetCPUCount(); i++) {
-      printf("%d %d\n", i, current_set.IsEnabled(i));
-    }
   }
 }
 
