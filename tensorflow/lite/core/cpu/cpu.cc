@@ -42,7 +42,6 @@ int CpuSet::NumEnabled() const {
 
   return NumEnabled;
 }
-
 #else   // defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() {}
 
