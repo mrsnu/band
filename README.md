@@ -21,7 +21,7 @@
 
 ## How To Build
 * tested with [bazel 3.1.0](https://github.com/bazelbuild/bazel/releases/tag/3.1.0)
-* install the submodule ([Ruy](https://github.com/mrsnu/ruy/tree/snumr_tflite))
+* install the submodule ([Ruy](https://github.com/mrsnu/ruy/tree/tf_v2.3.0))
 ```bash
 git submodule update --init --recursive
 ```

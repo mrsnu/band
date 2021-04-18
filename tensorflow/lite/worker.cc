@@ -74,7 +74,6 @@ void Worker::Work() {
 
       job.invoke_time = profiling::time::NowMicros();
 
-
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time = profiling::time::NowMicros();
         // TODO #65: Tensor communications between subgraphs
