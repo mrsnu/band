@@ -43,12 +43,10 @@ namespace impl {
 class NNAPIDelegate;
 
 struct SubgraphKey {
-  SubgraphKey(int model_id = -1,
-              TfLiteDeviceFlags device_flag = kTfLiteCPU,
+  SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
               int start = -1, int end = -1)
-    : model_id(model_id),
-      device_flag(device_flag),
-      start_idx(start), end_idx(end) {}
+      : model_id(model_id), device_flag(device_flag),
+        start_idx(start), end_idx(end) {}
 
   bool operator<(const SubgraphKey &key) const {
     if (model_id != key.model_id) {

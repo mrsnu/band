@@ -87,6 +87,8 @@ namespace impl {
 /// foo.Invoke();
 /// </code></pre>
 ///
+
+// a convenient data structure for holding various model information
 struct ModelSpec {
 	int num_ops;
 	std::set<int> output_tensors;
@@ -384,26 +386,6 @@ class Interpreter {
   /// Invoke idx-th subgraph in the interpreter.
   TfLiteStatus Invoke(int idx);
 
-  void InvestigateModelSpec(int model_id);
-
-  std::map<string, std::vector<int>> ConvertVectorToMap(std::vector<int> subgraph_indices);
-
-  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx, TfLiteDeviceFlags preceded_device);
-
-  std::pair<int, int64_t> GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
-                                                   int64_t start_time,
-                                                   std::vector<int64_t>& device_waiting);
-
-  std::pair<int, int64_t> GetShortestLatency(int model_id,
-                                             int start_idx,
-                                             int64_t start_time,
-                                             std::vector<int64_t>& device_waiting,
-                                             TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
-
-  int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
-
-  int64_t GetSubgraphProfileResult(SubgraphKey& key);
-
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   void InvokeModelAsync(int model_id);
@@ -657,51 +639,32 @@ class Interpreter {
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
+  int64_t GetSubgraphProfileResult(SubgraphKey& key);
+
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
-
-  void SplitOperatorsEven(int model_id,
-                          int num_split,
-                          TfLiteDeviceFlags device_flag,
-                          std::vector<SubgraphKey>& splitted_op_range) {
-    int num_ops = model_specs_[model_id].num_ops;
-    std::vector<int>& unsupported_ops = \
-                          model_specs_[model_id].unsupported_ops[device_flag];
-    int split_idx = 0;
-    TfLiteDeviceFlags prev_device, current_device = device_flag; 
-    for (int i = 0; i < num_split; ++i) {
-      int min_idx = num_ops * i / num_split;
-      int max_idx = (num_ops * (i + 1) / num_split) - 1;
-      int subgraph_min = min_idx;
-      for (int k = min_idx; k <= max_idx; ++k) {
-        prev_device = current_device;
-        if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
-            != unsupported_ops.end()) {
-          current_device = kTfLiteCPU;
-        } else {
-          current_device = device_flag;
-        }
-
-        if (k == min_idx)
-          prev_device = current_device;
-
-        if (k > min_idx && current_device != prev_device) {
-          splitted_op_range.push_back(
-              SubgraphKey(model_id, prev_device, subgraph_min, k - 1));
-          subgraph_min = k;
-        }
-      }
-
-      if (subgraph_min <= max_idx)
-        splitted_op_range.push_back(
-            SubgraphKey(model_id, current_device, subgraph_min, max_idx));
-    }
-  };
 
   int GetWindowSize() const;
 
   void SetWindowSize(int schedule_window_size);
 
   void AllowWorkSteal();
+
+  // fill in the ModelSpec for this model
+  void InvestigateModelSpec(int model_id);
+
+  // return the subgraph that leads to the shortest final latency (not just the
+  // latency of the returned subgraph, but the )
+  std::pair<int, int64_t>
+  GetShortestLatency(int model_id, int start_idx, int64_t start_time,
+                     std::vector<int64_t>& device_waiting,
+                     TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
+
+  int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
+
+
+  void SplitOperatorsEven(int model_id, int num_split,
+                          TfLiteDeviceFlags device_flag,
+                          std::vector<SubgraphKey>& splitted_op_range);
 
  private:
   friend class InterpreterBuilder;
@@ -712,7 +675,7 @@ class Interpreter {
   std::shared_ptr<Planner> planner_;
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 
-  // Map structure to find subgraph idx with (model_id, device_id)
+  // Map structure to find subgraph idx with SubgraphKeys
   std::map<SubgraphKey, int> subgraph_idx_map_;
 
   void RegisterSubgraphIdx(SubgraphKey subgraph_key, int subgraph_idx);
@@ -780,6 +743,24 @@ class Interpreter {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
+
+  /* private methods related to subgraph scheduling */
+  // divide the given subgraphs into groups that share the same start/end idxs
+  // e.g., {"0/10": [1,3], "0/20": [2,4]}
+  std::map<string, std::vector<int>>
+  GroupByStartEndIdx(std::vector<int> subgraph_indices);
+
+  // return subgraph indices for model_id and start_idx,
+  // excluding subgraphs on preceded_device
+  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx,
+                                         TfLiteDeviceFlags preceded_device);
+
+  // return the shortest subgraph out of given subgraphs, when the start time
+  // and per-device waiting times are taken into account
+  std::pair<int, int64_t>
+  GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
+                           int64_t start_time,
+                           std::vector<int64_t>& device_waiting);
 };
 
 }  // namespace impl

@@ -585,6 +585,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int model_id = InterpreterBuilder::num_registered_model++;
   bool has_available_device = false;
 
+  // the start and end indices aren't valid at this point
+  // we fix this later in InvestigateModelSpec
   tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU);
   int subgraph_idx = AddSubgraph(
     model, op_resolver, interpreter, subgraph_key, num_threads);

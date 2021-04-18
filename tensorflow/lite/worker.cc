@@ -133,8 +133,8 @@ void Worker::TryWorkSteal() {
     Job& job = target_worker->GetDeviceRequests().back();
     lock.unlock();
 
-    int64_t expected_latency =
-      interpreter_ptr->GetProfiledLatency(job.model_id_, device_flag_);
+    SubgraphKey key(job.model_id_, device_flag_, job.start_idx, job.end_idx);
+    int64_t expected_latency = interpreter_ptr->GetSubgraphProfileResult(key);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;
@@ -201,8 +201,10 @@ int64_t Worker::GetWaitingTime() {
     int model_id = (*it).model_id_;
     TfLiteDeviceFlags device_id =
         static_cast<TfLiteDeviceFlags>((*it).device_id_);
-    int64_t profiled_latency =
-        interpreter->GetProfiledLatency(model_id, device_id);
+    int start_idx = (*it).start_idx;
+    int end_idx = (*it).end_idx;
+    SubgraphKey key(model_id, device_id, start_idx, end_idx);
+    int64_t profiled_latency = interpreter->GetSubgraphProfileResult(key);
 
     total += profiled_latency;
     if (it == requests_.begin()) {

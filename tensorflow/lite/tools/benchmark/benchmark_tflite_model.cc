@@ -895,9 +895,10 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
       std::string idx = idx_profile_it.key().asString();
 
       // parse the key to retrieve start/end indices
+      // e.g., "25/50" --> delim_pos = 2
       auto delim_pos = idx.find("/");
       std::string start_idx = idx.substr(0, delim_pos);
-      std::string end_idx = idx.substr(delim_pos, idx.length() - delim_pos);
+      std::string end_idx = idx.substr(delim_pos + 1, idx.length() - delim_pos - 1);
       
       const Json::Value device_profile = *idx_profile_it;
       for (auto device_profile_it = device_profile.begin();

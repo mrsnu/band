@@ -736,25 +736,27 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
 
 void Interpreter::DeleteKey(SubgraphKey subgraph_key) {
   auto it = subgraph_idx_map_.find(subgraph_key);
-  if (it != subgraph_idx_map_.end())
+  if (it != subgraph_idx_map_.end()) {
     subgraph_idx_map_.erase(it);
+  }
 }
 
 void Interpreter::RegisterSubgraphIdx(SubgraphKey subgraph_key,
                                       int subgraph_idx) {
   // Skip if exists.
-  if (subgraph_idx_map_.find(subgraph_key) != subgraph_idx_map_.end())
+  if (subgraph_idx_map_.find(subgraph_key) != subgraph_idx_map_.end()) {
     return;
-
+  }
   subgraph_idx_map_[subgraph_key] = subgraph_idx;
 }
 
 int Interpreter::GetSubgraphIdx(SubgraphKey subgraph_key) {
   auto it = subgraph_idx_map_.find(subgraph_key);
-  if (it != subgraph_idx_map_.end())
+  if (it != subgraph_idx_map_.end()) {
     return it->second;
-  else
+  } else {
     return -1;
+  }
 }
 
 Worker* Interpreter::GetWorker(int device_idx) {
@@ -779,13 +781,16 @@ int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {
 }
 
 int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
+  // start_idx and end_idx weren't specified, so we assume that the caller
+  // intended to retrieve the whole model
   ModelSpec& spec = model_specs_[model_id];
   SubgraphKey key(model_id, device_id, 0, spec.num_ops - 1);
   auto it = subgraph_idx_map_.find(key);
-  if (it != subgraph_idx_map_.end())
+  if (it != subgraph_idx_map_.end()) {
     return it->second;
-  else
+  } else {
     return -1;
+  }
 }
 
 std::set<int> Interpreter::models() const {
@@ -808,150 +813,6 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
   }
 }
 
-void Interpreter::InvestigateModelSpec(int model_id) {
-  int subgraph_idx = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
-  Subgraph* primary_subgraph = subgraph(subgraph_idx);
-  ModelSpec& model_spec = model_specs_[model_id];
-
-  std::vector<int>& execution_plan = primary_subgraph->execution_plan();
-  model_spec.num_ops = execution_plan.size();
-  SubgraphKey& key = primary_subgraph->GetKey();
-  DeleteKey(key);
-  key.start_idx = 0;
-  key.end_idx = model_spec.num_ops - 1;
-  RegisterSubgraphIdx(key, subgraph_idx);
-
- // Tensor Dependency
-  for (auto node_index : execution_plan) {
-    const TfLiteNode& node = \
-                  primary_subgraph->node_and_registration(node_index)->first;
-
-    std::set<int> tensor_indices;
-    for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
-      tensor_indices.insert(input_tensor);
-    }
-
-    for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
-      tensor_indices.insert(output_tensor);
-      model_spec.output_tensors.insert(output_tensor);
-    }
-
-    for (auto i : tensor_indices) {
-      const auto* tensor = primary_subgraph->tensor(i);
-      model_spec.tensor_types.insert(tensor->type);
-    }
-  }
-
-  // Unsupported Ops
-  for (int i = 0; i < kTfLiteNumDevices; ++i) {
-    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-    if (device_flag == kTfLiteCPU)
-      continue;
-
-    ApplyBestDeviceDelegate(primary_subgraph,
-                            device_flag,
-                            model_spec.tensor_types);
-    for (auto node_index : execution_plan) {
-      const TfLiteNode& node = \
-                    primary_subgraph->node_and_registration(node_index)->first;
-      if (node.delegate == nullptr) {
-        model_spec.unsupported_ops[device_flag].push_back(node_index);
-      }
-    }
-    primary_subgraph->UndoAllDelegates();
-  }
-
-  primary_subgraph->AllocateTensors();
-}
-
-
-static bool CompareIntSubgraphKey(const std::pair<int, SubgraphKey>& a,
-                                  const std::pair<int, SubgraphKey>& b) {
-  return a.second < b.second;
-}
-
-std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
-    TfLiteDeviceFlags preceded_device) {
-  std::vector<int> candidatesIds;
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    SubgraphKey& key = subgraph(i)->GetKey();
-    if (key.start_idx == start_idx
-        && key.device_flag != preceded_device
-        && key.model_id == model_id) {
-      candidatesIds.push_back(i);
-    }
-  }
-  return candidatesIds;
-}
-
-std::map<string, std::vector<int>> Interpreter::ConvertVectorToMap(std::vector<int> subgraph_indices) {
-  std::map<string, std::vector<int>> ret;
-  for (auto subgraph_idx : subgraph_indices) {
-    SubgraphKey& subgraph_key = subgraph(subgraph_idx)->GetKey();
-    string key = std::to_string(subgraph_key.start_idx) + "/" +
-        std::to_string(subgraph_key.end_idx);
-    ret[key].push_back(subgraph_idx);
-  }
-  return ret;
-}
-
-std::pair<int, int64_t> Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
-                                          int64_t start_time,
-                                          std::vector<int64_t>& device_waiting) {
-  int64_t min_latency = INT_MAX;
-  int min_idx = 0;
-
-  for (auto subgraph_idx : subgraph_indices) {
-    SubgraphKey& key = subgraph(subgraph_idx)->GetKey();
-
-    int64_t waiting_time = device_waiting[key.device_flag];
-    int64_t expected_latency = GetSubgraphProfileResult(key);
-    expected_latency += std::max(waiting_time, start_time);
-
-    if (min_latency > expected_latency) {
-      min_latency = expected_latency;
-      min_idx = subgraph_idx;
-    }
-  }
-  return { min_idx, min_latency };
-}
-
-std::pair<int, int64_t> Interpreter::GetShortestLatency(int model_id,
-                                        int start_idx,
-                                        int64_t start_time,
-                                        std::vector<int64_t>& device_waiting,
-                                        TfLiteDeviceFlags preceded_device) {
-  std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx, preceded_device);
-  std::map<string, std::vector<int>> subgraph_map = ConvertVectorToMap(subgraph_indices);
-
- // std::cout << "[Loop size = " << subgraph_map.size() << "]" << std::endl;
-
-  std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
-  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end() ; iter++) {
-    //std::cout << "[" << iter->first << ", " << iter->second.size() << "]" << std::endl;
-    std::pair<int, int64_t> target_subgraph = GetShortestSubgraphIndex(iter->second,
-                                                       start_time,
-                                                       device_waiting);
-    SubgraphKey& key = subgraph(target_subgraph.first)->GetKey();
-    std::pair<int, int64_t> local_min;
-    if (key.end_idx == model_specs_[model_id].num_ops - 1) {
-      local_min = target_subgraph;
-    } else {
-      local_min = GetShortestLatency(model_id,
-                                     key.end_idx + 1,
-                                     target_subgraph.second,
-                                     device_waiting,
-                                     key.device_flag);
-    }
-    if (local_min.second < min_subgraph.second) {
-      //std::cout << "Target [" << local_min.second << " < " << min_subgraph.second << "]" << std::endl;
-      min_subgraph.first = target_subgraph.first;
-      min_subgraph.second = local_min.second;
-    }
-  }
-  return min_subgraph;
-}
-
 int64_t Interpreter::GetDeviceWaitingTime(TfLiteDeviceFlags device) {
   int64_t waiting_time = 0;
   Worker* worker = GetWorker(device);
@@ -970,10 +831,49 @@ int64_t Interpreter::GetDeviceWaitingTime(TfLiteDeviceFlags device) {
 
 int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   auto it = subgraph_profiling_results_map_.find(key);
-  if (it != subgraph_profiling_results_map_.end())
+  if (it != subgraph_profiling_results_map_.end()) {
     return it->second;
-  else
+  } else {
     return -1;
+  }
+}
+
+void Interpreter::SplitOperatorsEven(int model_id, int num_split,
+                                     TfLiteDeviceFlags device_flag,
+                                     std::vector<SubgraphKey>& splitted_op_range) {
+  int num_ops = model_specs_[model_id].num_ops;
+  std::vector<int>& unsupported_ops = \
+                        model_specs_[model_id].unsupported_ops[device_flag];
+  int split_idx = 0;
+  TfLiteDeviceFlags prev_device, current_device = device_flag;
+  for (int i = 0; i < num_split; ++i) {
+    int min_idx = num_ops * i / num_split;
+    int max_idx = (num_ops * (i + 1) / num_split) - 1;
+    int subgraph_min = min_idx;
+    for (int k = min_idx; k <= max_idx; ++k) {
+      prev_device = current_device;
+      if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
+          != unsupported_ops.end()) {
+        current_device = kTfLiteCPU;
+      } else {
+        current_device = device_flag;
+      }
+
+      if (k == min_idx) {
+        prev_device = current_device;
+      }
+
+      if (k > min_idx && current_device != prev_device) {
+        splitted_op_range.push_back(SubgraphKey(model_id, prev_device, subgraph_min, k - 1));
+        subgraph_min = k;
+      }
+    }
+
+    if (subgraph_min <= max_idx) {
+      splitted_op_range.push_back(
+          SubgraphKey(model_id, current_device, subgraph_min, max_idx));
+    }
+  }
 }
 
 int Interpreter::GetWindowSize() const {
@@ -988,6 +888,167 @@ void Interpreter::AllowWorkSteal() {
   for (auto& worker : workers_) {
     worker.second->AllowWorkSteal();
   }
+}
+
+void Interpreter::InvestigateModelSpec(int model_id) {
+  // get the subgraph index for this model
+  // at this point, the subgraph key for this model doesn't have valid start
+  // and end indices so we don't need to specify them
+  int subgraph_idx = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
+  Subgraph* primary_subgraph = subgraph(subgraph_idx);
+
+  // this creates an empty ModelSpec
+  ModelSpec& model_spec = model_specs_[model_id];
+
+  std::vector<int>& execution_plan = primary_subgraph->execution_plan();
+  model_spec.num_ops = execution_plan.size();
+
+  // delete the current key and replace it with valid start/end indices
+  SubgraphKey& key = primary_subgraph->GetKey();
+  DeleteKey(key);
+  key.start_idx = 0;
+  key.end_idx = model_spec.num_ops - 1;
+  RegisterSubgraphIdx(key, subgraph_idx);
+
+  // check input/output/intermediate tensors to fill in
+  // model_spec.output_tensors and model_spec.tensor_types
+  for (auto node_index : execution_plan) {
+    const TfLiteNode& node =
+        primary_subgraph->node_and_registration(node_index)->first;
+
+    std::set<int> tensor_indices;
+    for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
+      tensor_indices.insert(input_tensor);
+    }
+
+    for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+      tensor_indices.insert(output_tensor);
+      model_spec.output_tensors.insert(output_tensor);
+    }
+
+    for (auto i : tensor_indices) {
+      const auto* tensor = primary_subgraph->tensor(i);
+      model_spec.tensor_types.insert(tensor->type);
+    }
+  }
+
+  // also check unsupported ops to fill in model_spec.unsupported_ops
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+
+    if (device_flag == kTfLiteCPU) {
+      // no need to check supportability for CPU
+      continue;
+    }
+
+    // try creating a delegate for this device
+    // ops (`node` below) that weren't converted are the unsupported ops
+    ApplyBestDeviceDelegate(primary_subgraph, device_flag,
+                            model_spec.tensor_types);
+    for (auto node_index : execution_plan) {
+      const TfLiteNode& node =
+          primary_subgraph->node_and_registration(node_index)->first;
+      if (node.delegate == nullptr) {
+        model_spec.unsupported_ops[device_flag].push_back(node_index);
+      }
+    }
+
+    // revert changes
+    primary_subgraph->UndoAllDelegates();
+  }
+
+  primary_subgraph->AllocateTensors();
+}
+
+std::pair<int, int64_t>
+Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
+                                std::vector<int64_t>& device_waiting,
+                                TfLiteDeviceFlags preceded_device) {
+  std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,
+                                                            preceded_device);
+  std::map<std::string, std::vector<int>> subgraph_map =
+      GroupByStartEndIdx(subgraph_indices);
+
+  std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
+  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end() ; iter++) {
+    // first, filter out the subgraphs that take longer than others with the
+    // same start/end indices, since there's no reason to pick them
+    std::pair<int, int64_t> target_subgraph =
+        GetShortestSubgraphIndex(iter->second, start_time, device_waiting);
+    SubgraphKey& key = subgraph(target_subgraph.first)->GetKey();
+
+    std::pair<int, int64_t> local_min;
+    if (key.end_idx != model_specs_[model_id].num_ops - 1) {
+      // there's more ops left for this model, so we need to look further to
+      // get the final latency
+      local_min = GetShortestLatency(model_id, key.end_idx + 1,
+                                     target_subgraph.second, device_waiting,
+                                     key.device_flag);
+    } else {
+      // nothing else after this
+      local_min = target_subgraph;
+    }
+
+    // check if this subgraph is better than the best one
+    if (local_min.second < min_subgraph.second) {
+      // note the subgraph to return is the next immediate one (start_idx, XX),
+      // but the latency to return is that of the final subgraph (XX, #ops)
+      // hence, target_subgraph.first & local_min.second
+      min_subgraph.first = target_subgraph.first;
+      min_subgraph.second = local_min.second;
+    }
+  }
+  return min_subgraph;
+}
+
+
+std::map<std::string, std::vector<int>> Interpreter::GroupByStartEndIdx(std::vector<int> subgraph_indices) {
+  std::map<std::string, std::vector<int>> ret;
+  for (auto subgraph_idx : subgraph_indices) {
+    SubgraphKey& subgraph_key = subgraph(subgraph_idx)->GetKey();
+    std::string key = std::to_string(subgraph_key.start_idx) +
+                      "/" +
+                      std::to_string(subgraph_key.end_idx);
+    ret[key].push_back(subgraph_idx);
+  }
+  return ret;
+}
+
+std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
+                                                    TfLiteDeviceFlags preceded_device) {
+  std::vector<int> candidatesIds;
+  // iterate thru all subgraphs and only pick the ones that match the criteria
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    SubgraphKey& key = subgraph(i)->GetKey();
+    if (key.model_id == model_id &&
+        key.start_idx == start_idx &&
+        key.device_flag != preceded_device) {
+      candidatesIds.push_back(i);
+    }
+  }
+  return candidatesIds;
+}
+
+std::pair<int, int64_t>
+Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
+                                      int64_t start_time,
+                                      std::vector<int64_t>& device_waiting) {
+  int64_t min_latency = INT_MAX;
+  int min_idx = 0;
+
+  for (auto subgraph_idx : subgraph_indices) {
+    SubgraphKey& key = subgraph(subgraph_idx)->GetKey();
+
+    int64_t waiting_time = device_waiting[key.device_flag];
+    int64_t profiled = GetSubgraphProfileResult(key);
+    int64_t expected_latency = profiled + std::max(waiting_time, start_time);
+
+    if (min_latency > expected_latency) {
+      min_latency = expected_latency;
+      min_idx = subgraph_idx;
+    }
+  }
+  return { min_idx, min_latency };
 }
 
 }  // namespace impl
