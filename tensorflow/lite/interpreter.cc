@@ -388,20 +388,20 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 }
 
 void Interpreter::InvokeModelAsync(int model_id) {
-  InvokeModelAsync(InferenceRequest(model_id));
+  InvokeModelAsync(Job(model_id));
 }
  
-void Interpreter::InvokeModelAsync(InferenceRequest request) {
+void Interpreter::InvokeModelAsync(Job request) {
   InvokeModelsAsync({request});
 }
 
 void Interpreter::InvokeModelsAsync() {
-  std::vector<InferenceRequest> requests;
+  std::vector<Job> requests;
 
   for (auto& m : model_configs_) {
     int model_id = m.first;
     ModelConfig& model_config = m.second;
-    InferenceRequest request = InferenceRequest(model_id);
+    Job request = Job(model_id);
     for (int k = 0; k < model_config.batch_size; ++k) {
       requests.push_back(request);
     }
@@ -410,19 +410,18 @@ void Interpreter::InvokeModelsAsync() {
   InvokeModelsAsync(requests);
 }
 
-void Interpreter::InvokeModelsAsync(std::vector<InferenceRequest> requests) {
-  std::vector<Job> jobs;
+void Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
+  if (requests.size() == 0) {
+    return;
+  }
 
   for (auto& request: requests) {
     int model_id = request.model_id;
-    Job to_enqueue = Job(request);
-    to_enqueue.model_fname_ = model_configs_[model_id].model_fname;
-    to_enqueue.device_id_ = model_configs_[model_id].device;
-
-    jobs.push_back(to_enqueue);
+    request.model_fname = model_configs_[model_id].model_fname;
+    request.device_id = model_configs_[model_id].device;
   }
 
-  planner_->EnqueueBatch(jobs);
+  planner_->EnqueueBatch(requests);
 }
 
 void Interpreter::InvokeModelsSync() {
@@ -431,7 +430,7 @@ void Interpreter::InvokeModelsSync() {
   planner_->Wait();
 }
 
-void Interpreter::InvokeModelsSync(std::vector<InferenceRequest> requests) {
+void Interpreter::InvokeModelsSync(std::vector<Job> requests) {
   planner_->InitNumSubmittedJobs();
   InvokeModelsAsync(requests);
   planner_->Wait();
@@ -823,7 +822,7 @@ int64_t Interpreter::GetProfiledLatency(int model_id, TfLiteDeviceFlags device_i
 
 int64_t Interpreter::GetLatency(TfLiteDeviceFlags device, Job& job) {
   int64_t waiting_time = workers_[device]->GetWaitingTime();
-  int64_t profiled_latency = GetProfiledLatency(job.model_id_, device);
+  int64_t profiled_latency = GetProfiledLatency(job.model_id, device);
   assert(waiting_time >= 0);
 
   if (profiled_latency <= 0)

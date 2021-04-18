@@ -67,10 +67,10 @@ void ShortestExpectedLatencyPlanner::Plan() {
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
         int subgraph_idx =
-          GetInterpreter()->GetSubgraphIdx(most_urgent_job.model_id_, target_device);
-        most_urgent_job.subgraph_idx_ = subgraph_idx;
-        most_urgent_job.device_id_ = target_device;
-        most_urgent_job.sched_id_ = sched_id++;
+          GetInterpreter()->GetSubgraphIdx(most_urgent_job.model_id, target_device);
+        most_urgent_job.subgraph_idx = subgraph_idx;
+        most_urgent_job.device_id = target_device;
+        most_urgent_job.sched_id = sched_id++;
 
         worker->GetDeviceRequests().push_back(most_urgent_job);
         worker->GetRequestCv().notify_one();

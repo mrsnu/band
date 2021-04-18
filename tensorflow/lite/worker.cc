@@ -61,18 +61,18 @@ void Worker::Work() {
     Job& job = requests_.front();
     lock.unlock();
 
-    int subgraph_idx = job.subgraph_idx_;
+    int subgraph_idx = job.subgraph_idx;
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
-      job.invoke_time_ = profiling::time::NowMicros();
+      job.invoke_time = profiling::time::NowMicros();
 
       if (subgraph.Invoke() == kTfLiteOk) {
-        job.end_time_ = profiling::time::NowMicros();
+        job.end_time = profiling::time::NowMicros();
         planner_ptr->EnqueueFinishedJob(job);
       } else {
-        job.end_time_ = profiling::time::NowMicros();
+        job.end_time = profiling::time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
         // Currently, put a job with a minus sign if Invoke() fails.
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
@@ -87,9 +87,7 @@ void Worker::Work() {
       }
 
       // TODO #65: Tensor communications between subgraphs
-      for (auto& request : job.following_requests_) {
-        interpreter_ptr->InvokeModelAsync(request);
-      }
+      interpreter_ptr->InvokeModelsAsync(job.following_jobs);
 
       planner_ptr->GetSafeBool().notify();
     } else {
@@ -131,7 +129,7 @@ void Worker::TryWorkSteal() {
     lock.unlock();
 
     int64_t expected_latency =
-      interpreter_ptr->GetProfiledLatency(job.model_id_, device_flag_);
+      interpreter_ptr->GetProfiledLatency(job.model_id, device_flag_);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;
@@ -163,7 +161,7 @@ void Worker::TryWorkSteal() {
   // this must not be a reference,
   // otherwise the pop_back() below will invalidate it
   Job job = target_worker->GetDeviceRequests().back();
-  if (job.invoke_time_ > 0) {
+  if (job.invoke_time > 0) {
     // make sure the target worker hasn't started processing the job yet
     return;
   }
@@ -174,9 +172,9 @@ void Worker::TryWorkSteal() {
   }
 
   int subgraph_idx =
-    interpreter_ptr->GetSubgraphIdx(job.model_id_, device_flag_);
-  job.subgraph_idx_ = subgraph_idx;
-  job.device_id_ = device_flag_;
+    interpreter_ptr->GetSubgraphIdx(job.model_id, device_flag_);
+  job.subgraph_idx = subgraph_idx;
+  job.device_id = device_flag_;
 
   // finally, we perform the swap
   target_worker->GetDeviceRequests().pop_back();
@@ -195,16 +193,16 @@ int64_t Worker::GetWaitingTime() {
   int64_t total = 0;
   for (std::deque<Job>::iterator it = requests_.begin();
        it != requests_.end(); ++it) {
-    int model_id = (*it).model_id_;
+    int model_id = (*it).model_id;
     TfLiteDeviceFlags device_id =
-        static_cast<TfLiteDeviceFlags>((*it).device_id_);
+        static_cast<TfLiteDeviceFlags>((*it).device_id);
     int64_t profiled_latency =
         interpreter->GetProfiledLatency(model_id, device_id);
 
     total += profiled_latency;
     if (it == requests_.begin()) {
       int64_t current_time = profiling::time::NowMicros();
-      int64_t invoke_time = (*it).invoke_time_;
+      int64_t invoke_time = (*it).invoke_time;
       if (invoke_time > 0 && current_time > invoke_time) {
         int64_t progress =
           (current_time - invoke_time) > profiled_latency ? profiled_latency

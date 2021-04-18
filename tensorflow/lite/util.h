@@ -24,18 +24,28 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
 
-struct InferenceRequest {
+struct Job {
+  explicit Job(int model_id) : model_id(model_id) {}
+  explicit Job(int model_id, std::vector<Job>& following_jobs)
+    : model_id(model_id), following_jobs(following_jobs) {}
   int model_id;
-  std::vector<InferenceRequest> following_requests;
+  int subgraph_idx = -1;
+  int device_id = -1;
+  int64_t enqueue_time = 0;
+  int64_t invoke_time = 0;
+  int64_t end_time = 0;
+  int sched_id = -1;
+  std::string model_fname;
 
-  explicit InferenceRequest(int request_id) : model_id(request_id) {}
-  explicit InferenceRequest(int request_id, std::vector<InferenceRequest>& next)
-    : model_id(request_id), following_requests(next) {}
+  std::map<int, int64_t> waiting_time;
+  std::map<int, int64_t> profiled_latency;
+  std::vector<Job> following_jobs;
 };
 
 // The prefix of Flex op custom code.
