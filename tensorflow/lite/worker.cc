@@ -70,6 +70,8 @@ void Worker::Work() {
 
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time = profiling::time::NowMicros();
+        // TODO #65: Tensor communications between subgraphs
+        interpreter_ptr->InvokeModelsAsync(job.following_jobs);
         planner_ptr->EnqueueFinishedJob(job);
       } else {
         job.end_time = profiling::time::NowMicros();
@@ -85,9 +87,6 @@ void Worker::Work() {
       if (allow_work_steal_ && empty) {
         TryWorkSteal();
       }
-
-      // TODO #65: Tensor communications between subgraphs
-      interpreter_ptr->InvokeModelsAsync(job.following_jobs);
 
       planner_ptr->GetSafeBool().notify();
     } else {
