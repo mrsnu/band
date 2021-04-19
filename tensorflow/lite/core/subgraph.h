@@ -42,6 +42,7 @@ namespace impl {
 // Forward declare since NNAPIDelegate uses Interpreter.
 class NNAPIDelegate;
 
+// data structure for identifying subgraphs within whole models
 struct SubgraphKey {
   SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
               int start = -1, int end = -1)

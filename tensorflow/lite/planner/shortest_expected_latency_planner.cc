@@ -1,7 +1,8 @@
 #include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
 #include "tensorflow/lite/profiling/time.h"
-#include <iostream>
 
+// for the std::cout commented out in Plan()
+// #include <iostream>
 
 namespace tflite {
 namespace impl {
@@ -40,6 +41,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // Note that we are NOT considering enqueue_time at the moment;
       // no request is given higher priority even if it had stayed in the queue
       // for longer than others.
+
+      // first, get per-device waiting times
       std::vector<int64_t> device_waiting_time;
       for (int i = 0; i < kTfLiteNumDevices; ++i) {
         TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
@@ -56,12 +59,11 @@ void ShortestExpectedLatencyPlanner::Plan() {
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
         std::pair<int, int64_t> best_subgraph =
-          GetInterpreter()->GetShortestLatency(next_job.model_id_, next_job.start_idx, 0, device_waiting_time);
-        /*
-        std::cout << "For Job " << it - local_jobs.begin() << "(" << next_job.model_id_
-                  << ", " << next_job.start_idx << ") : Best subgraph - "
-                  << best_subgraph.first << ", " << best_subgraph.second << std::endl;
-        */
+            GetInterpreter()->GetShortestLatency(next_job.model_id_,
+                                                 next_job.start_idx,
+                                                 0,
+                                                 device_waiting_time);
+
         if (largest_shortest_latency < best_subgraph.second) {
           largest_shortest_latency = best_subgraph.second;
           target_job_idx = it - local_jobs.begin();
@@ -69,6 +71,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         }
       }
       int64_t sched_end = profiling::time::NowMicros();
+      // quick check for roughly examining the planning overhead
       // std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
 
       // for some reason, this Job must NOT be a reference (&), otherwise
@@ -102,5 +105,5 @@ bool ShortestExpectedLatencyPlanner::NeedProfile() {
   return true;
 }
 
-} // namespace impl
-} // namespace tflite
+}  // namespace impl
+}  // namespace tflite

@@ -454,8 +454,9 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
   };
 
   for (int i = 0; i < tensors->size(); ++i) {
-    if (tensor_indices.find(i) == tensor_indices.end())
+    if (tensor_indices.find(i) == tensor_indices.end()) {
       continue;
+    }
 
     const auto* tensor = tensors->Get(i);
     std::vector<int> dims = FlatBufferIntArrayToVector(tensor->shape());
@@ -616,7 +617,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         has_available_device = true;
       }
 
-      error_reporter_->Report("ADDED Subgraph: %d %d %d %d",
+      // TODO: more elegant way to print logs without "NOT AN ERROR"?
+      error_reporter_->Report("(NOT AN ERROR) ADDED Subgraph: %d %d %d %d",
                               subgraph_key.model_id,
                               subgraph_key.device_flag,
                               subgraph_key.start_idx,
@@ -633,25 +635,23 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 }
 
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     tflite::impl::SubgraphKey& subgraph_key,
-                     int num_threads) {
-  return AddSubgraph(model.GetModel(),
-                     op_resolver,
-                     interpreter,
-                     subgraph_key,
-                     num_threads);
+                                    const OpResolver& op_resolver,
+                                    std::unique_ptr<Interpreter>* interpreter,
+                                    tflite::impl::SubgraphKey& subgraph_key,
+                                    int num_threads) {
+  return AddSubgraph(model.GetModel(), op_resolver, interpreter,
+                     subgraph_key, num_threads);
 }
 
 int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     tflite::impl::SubgraphKey& subgraph_key,
-                     int num_threads) {
-  int subgraph_exist = (*interpreter)->GetSubgraphIdx(subgraph_key);
-  if (subgraph_exist >= 0)
-    return subgraph_exist;
+                                    const OpResolver& op_resolver,
+                                    std::unique_ptr<Interpreter>* interpreter,
+                                    tflite::impl::SubgraphKey& subgraph_key,
+                                    int num_threads) {
+  int subgraph_exists = (*interpreter)->GetSubgraphIdx(subgraph_key);
+  if (subgraph_exists >= 0) {
+    return subgraph_exists;
+  }
 
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
@@ -740,73 +740,88 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       return cleanup_and_error();
     }
 
-    std::vector<int> subgraph_inputs =
-        FlatBufferIntArrayToVector(subgraph->inputs());
-    std::vector<int> subgraph_outputs =
-        FlatBufferIntArrayToVector(subgraph->outputs());
+    // we now parse nodes and tensors, and setup input and
+    // output tensors for this particular subgraph
 
-    std::set<int> subgraph_input_set =
-        std::set<int>(subgraph_inputs.begin(), subgraph_inputs.end());
-    std::set<int> subgraph_output_set =
-        std::set<int>(subgraph_outputs.begin(), subgraph_outputs.end());
-
-    // Finally setup nodes and tensors
+    // first, parse nodes to access `TfLiteNode` info below
     if (builder.ParseNodes(model, op_resolver,
                            operators,
                            modified_subgraph,
                            subgraph_key.start_idx,
-                           subgraph_key.end_idx) != kTfLiteOk)
+                           subgraph_key.end_idx) != kTfLiteOk) {
       return cleanup_and_error();
+    }
 
-    // Parse inputs/outputs
-    // Need refactoring
-    std::set<int> node_input_tensors, node_output_tensors;
+    // Collect all input/output tensors for individual nodes.
+    // these include intermediate tensors that may be consumed by other
+    // nodes in the same model, as well as parameters tensors that aren't
+    // really "input" tensors
+    std::set<int> node_inputs, node_outputs;
     auto nodes_and_registration = modified_subgraph->nodes_and_registration();
     for (int node_index : modified_subgraph->execution_plan()) {
       TfLiteNode node = nodes_and_registration[node_index].first;
       for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
-        node_input_tensors.insert(input_tensor);
+        node_inputs.insert(input_tensor);
       }
       for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
-        node_output_tensors.insert(output_tensor);
+        node_outputs.insert(output_tensor);
       }
     }
 
+    // merge inputs and outputs to call ParseTensors()
     std::set<int> subgraph_tensors;
-    std::set_union(node_input_tensors.begin(), node_input_tensors.end(),
-                   node_output_tensors.begin(), node_output_tensors.end(),
+    std::set_union(node_inputs.begin(), node_inputs.end(),
+                   node_outputs.begin(), node_outputs.end(),
                    std::inserter(subgraph_tensors, subgraph_tensors.end()));
 
-    if (builder.ParseTensors(buffers, tensors, modified_subgraph, subgraph_tensors) != kTfLiteOk)
+    if (builder.ParseTensors(buffers, tensors, modified_subgraph,
+                             subgraph_tensors) != kTfLiteOk) {
       return cleanup_and_error();
+    }
 
-    std::set<int> input_features;
-    std::set<int> input_tensors, output_tensors;
-    std::set<int> input_nominees;
-    std::set_difference(node_input_tensors.begin(), node_input_tensors.end(),
-                        node_output_tensors.begin(), node_output_tensors.end(),
-                        std::inserter(input_tensors, input_tensors.begin()));
+    // now filter out the intermediate tensors from node_input_tensors so we
+    // only have external inputs that are required from outside,
+    // as well as parameter tensors
+    std::set<int> external_inputs_params;
+    std::set_difference(node_inputs.begin(), node_inputs.end(),
+                        node_outputs.begin(), node_outputs.end(),
+                        std::inserter(external_inputs_params,
+                                      external_inputs_params.begin()));
 
-    tflite::impl::ModelSpec& model_spec = \
-      (*interpreter)->GetModelSpec(subgraph_key.model_id);
+    // Next, we need to filter out param tensors from external_inputs_params.
+    // there is no way of directly checking if a tensor is a parameter or not,
+    // so instead we collect all non-parameter tensors and exclude the param
+    // tensors in external_inputs_params that are not in the non-param list
+    std::set<int> non_param_tensors;
 
-    std::set_union(model_spec.output_tensors.begin(),
-                   model_spec.output_tensors.end(),
-                   subgraph_input_set.begin(), subgraph_input_set.end(),
-                   std::inserter(input_nominees, input_nominees.end()));
+    std::vector<int> subgraph_input_vec =
+        FlatBufferIntArrayToVector(subgraph->inputs());
+    std::set<int> subgraph_inputs =
+        std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
+    std::set<int>& model_outputs =
+        (*interpreter)->GetModelSpec(subgraph_key.model_id).output_tensors;
 
-    std::set_intersection(input_nominees.begin(), input_nominees.end(),
-                          input_tensors.begin(), input_tensors.end(),
-                          std::inserter(input_features, input_features.begin()));
+    std::set_union(model_outputs.begin(),model_outputs.end(),
+                   subgraph_inputs.begin(), subgraph_inputs.end(),
+                   std::inserter(non_param_tensors, non_param_tensors.end()));
 
-    std::set_difference(node_output_tensors.begin(), node_output_tensors.end(),
-                        node_input_tensors.begin(), node_input_tensors.end(),
-                        std::inserter(output_tensors, output_tensors.begin()));
+    std::set<int> real_inputs;
+    std::set_intersection(non_param_tensors.begin(), non_param_tensors.end(),
+                          external_inputs_params.begin(),
+                          external_inputs_params.end(),
+                          std::inserter(real_inputs, real_inputs.begin()));
+
+    // we do a similar processing for output tensors, except
+    // this time we don't have to worry about param tensors
+    std::set<int> real_outputs;
+    std::set_difference(node_outputs.begin(), node_outputs.end(),
+                        node_inputs.begin(), node_inputs.end(),
+                        std::inserter(real_outputs, real_outputs.begin()));
 
     modified_subgraph->SetInputs(
-        std::vector<int>(input_features.begin(), input_features.end()));
+        std::vector<int>(real_inputs.begin(), real_inputs.end()));
     modified_subgraph->SetOutputs(
-        std::vector<int>(output_tensors.begin(), output_tensors.end()));
+        std::vector<int>(real_outputs.begin(), real_outputs.end()));
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {

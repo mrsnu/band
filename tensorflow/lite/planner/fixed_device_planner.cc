@@ -74,6 +74,7 @@ void FixedDevicePlanner::Plan() {
 
       TfLiteDeviceFlags device_flag =
           static_cast<TfLiteDeviceFlags>(device_idx);
+      // TODO: fallback subgraphs for FixedDevicePlanner?
       SubgraphKey key(model_id, device_flag);
       to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(key);
       to_execute.device_id_ = device_idx;

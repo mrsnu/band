@@ -670,6 +670,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                           params_.Get<int32_t>("profile_num_runs"),
                           model_id_profile);
 
+    // update the profile file to include all new profile results from this run
     if (!runtime_config_.model_profile.empty()) {
       ConvertModelIdToName(model_id_profile, model_name_profile);
       std::ofstream out_file(runtime_config_.model_profile, std::ios::out);
