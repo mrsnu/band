@@ -64,7 +64,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
-  TfLiteStatus RunPeriodic(int period_ms) override;
+  TfLiteStatus RunPeriodic() override;
   TfLiteStatus RunStream() override;
   static BenchmarkParams DefaultParams();
 
@@ -143,7 +143,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
                             Json::Value& name_profile);
 
   // spawn a thread that generates input requests periodically for all models
-  void GeneratePeriodicRequests(int period_ms);
+  void GeneratePeriodicRequests();
 
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;
