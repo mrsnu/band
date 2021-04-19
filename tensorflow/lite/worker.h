@@ -5,32 +5,14 @@
 #include <mutex>
 #include <condition_variable>
 #include <deque>
-#include <string>
-#include <map>
 #include "tensorflow/lite/core/cpu/cpu.h"
+#include "tensorflow/lite/util.h"
 
 namespace tflite {
 
 namespace impl {
 
 class Planner;
-
-struct Job {
-  explicit Job(int model_id)
-    : model_id_(model_id) {
-  }
-  int model_id_;
-  int subgraph_idx_ = -1;
-  int device_id_ = -1;
-  int64_t enqueue_time_ = 0;
-  int64_t invoke_time_ = 0;
-  int64_t end_time_ = 0;
-  int sched_id_ = -1;
-  std::string model_fname_;
-
-  std::map<int, int64_t> waiting_time;
-  std::map<int, int64_t> profiled_latency;
-};
 
 class Worker {
  public:

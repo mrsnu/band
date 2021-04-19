@@ -28,7 +28,7 @@ void RoundRobinPlanner::Plan() {
             std::find_if(GetRequests().begin(), GetRequests().end(),
               [this, device_idx](const Job& job) {
                 return GetInterpreter()->GetSubgraphIdx(
-                                            job.model_id_, device_idx) != -1;
+                                            job.model_id, device_idx) != -1;
               });
           if (available_job != GetRequests().end()) {
             to_execute = *available_job;
@@ -42,11 +42,11 @@ void RoundRobinPlanner::Plan() {
         break;
 
       int subgraph_idx =
-        GetInterpreter()->GetSubgraphIdx(to_execute.model_id_, device_idx);
-      to_execute.subgraph_idx_ = subgraph_idx;
-      to_execute.device_id_ = device_idx;
+        GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device_idx);
+      to_execute.subgraph_idx = subgraph_idx;
+      to_execute.device_id = device_idx;
 
-      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id_);
+      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
         worker->GetDeviceRequests().push_back(to_execute);
