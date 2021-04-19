@@ -848,6 +848,10 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     }
     model.model_fname = model_json_value["graph"].asString();
     model.period_ms = model_json_value["period_ms"].asInt();
+    if (model.period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "Please check if arguments `period_ms` are positive.";
+      return kTfLiteError;
+    }
 
     // Set `batch_size`.
     // If no `batch_size` is given, the default batch size will be set to 1.
