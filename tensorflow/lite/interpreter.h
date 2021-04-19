@@ -661,10 +661,11 @@ class Interpreter {
 
   int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
 
-
-  void SplitOperatorsEven(int model_id, int num_split,
-                          TfLiteDeviceFlags device_flag,
-                          std::vector<SubgraphKey>& splitted_op_range);
+  // Generate explicit subgraphs for fallback ops in `model_id`.
+  // Consecutive fallback ops are grouped as one fallback subgraph.
+  void MakeSubgraphsForFallbackOps(const int model_id,
+                                   const TfLiteDeviceFlags device_flag,
+                                   std::vector<SubgraphKey>& splitted_op_range);
 
  private:
   friend class InterpreterBuilder;

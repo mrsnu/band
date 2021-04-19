@@ -838,40 +838,44 @@ int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   }
 }
 
-void Interpreter::SplitOperatorsEven(int model_id, int num_split,
-                                     TfLiteDeviceFlags device_flag,
-                                     std::vector<SubgraphKey>& splitted_op_range) {
-  int num_ops = model_specs_[model_id].num_ops;
-  std::vector<int>& unsupported_ops = \
-                        model_specs_[model_id].unsupported_ops[device_flag];
-  int split_idx = 0;
-  TfLiteDeviceFlags prev_device, current_device = device_flag;
-  for (int i = 0; i < num_split; ++i) {
-    int min_idx = num_ops * i / num_split;
-    int max_idx = (num_ops * (i + 1) / num_split) - 1;
-    int subgraph_min = min_idx;
-    for (int k = min_idx; k <= max_idx; ++k) {
-      prev_device = current_device;
-      if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
-          != unsupported_ops.end()) {
-        current_device = kTfLiteCPU;
-      } else {
-        current_device = device_flag;
-      }
+void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
+                                              const TfLiteDeviceFlags device_flag,
+                                              std::vector<SubgraphKey>& splitted_op_range) {
+  const int num_ops = model_specs_[model_id].num_ops;
+  const std::vector<int>& unsupported_ops =
+      model_specs_[model_id].unsupported_ops[device_flag];
 
-      if (k == min_idx) {
-        prev_device = current_device;
-      }
+  TfLiteDeviceFlags curr_device = device_flag;
+  TfLiteDeviceFlags prev_device;
+  int subgraph_min = 0;
 
-      if (k > min_idx && current_device != prev_device) {
-        splitted_op_range.push_back(SubgraphKey(model_id, prev_device, subgraph_min, k - 1));
-        subgraph_min = k;
-      }
+  // do a pass through all ops and create a subgraph every time the supported
+  // device changes, using `subgraph_min` to keep track of the current
+  // subgraph's starting op
+  for (int k = 0; k < num_ops; ++k) {
+    prev_device = curr_device;
+
+    // check if this ops is supported by `device_flag` or not
+    if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
+        != unsupported_ops.end()) {
+      curr_device = kTfLiteCPU;
+    } else {
+      curr_device = device_flag;
     }
 
-    if (subgraph_min <= max_idx) {
-      splitted_op_range.push_back(
-          SubgraphKey(model_id, current_device, subgraph_min, max_idx));
+    // if the current op is supported while the prev op is unsupported
+    // (or vice versa), then make a subgraph up until the prev op
+    if (k > 0 && curr_device != prev_device) {
+      splitted_op_range.push_back(SubgraphKey(model_id, prev_device,
+                                              subgraph_min, k - 1));
+      subgraph_min = k;
+    }
+
+    // if this is the last op, then there are no more ops to check so
+    // register the final subgraph
+    if (k == num_ops - 1) {
+      splitted_op_range.push_back(SubgraphKey(model_id, curr_device,
+                                              subgraph_min, num_ops - 1));
     }
   }
 }

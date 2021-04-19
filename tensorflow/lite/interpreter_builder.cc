@@ -596,16 +596,17 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     has_available_device = true;
   }
 
-  // Investigate Model Specification
+  // write the ModelSpec for this model
   (*interpreter)->InvestigateModelSpec(model_id);
 
+  // register subgraphs for all devices
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
-    for (int k : {1}) { // int k : {1, 2, 4}
-      (*interpreter)->
-        SplitOperatorsEven(model_id, k, device_id, subgraph_keys);
-    }
+
+    // separate the supported ops from unsupported, fallback ops
+    (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id,
+                                                subgraph_keys);
 
     for (auto& subgraph_key : subgraph_keys) {
       int subgraph_idx = AddSubgraph(
@@ -615,16 +616,17 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         has_available_device = true;
       }
 
-      std::cout << "ADDED Subgraph : " << subgraph_key.model_id << " "
-                                       << subgraph_key.device_flag << " "
-                                       << subgraph_key.start_idx << " "
-                                       << subgraph_key.end_idx << std::endl;
+      error_reporter_->Report("ADDED Subgraph: %d %d %d %d",
+                              subgraph_key.model_id,
+                              subgraph_key.device_flag,
+                              subgraph_key.start_idx,
+                              subgraph_key.end_idx);
     }
   }
 
-  if (has_available_device)
+  if (has_available_device) {
     return model_id;
-  else {
+  } else {
     InterpreterBuilder::num_registered_model--;
     return -1;
   }
