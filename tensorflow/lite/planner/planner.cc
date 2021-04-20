@@ -57,16 +57,16 @@ void Planner::Wait() {
     jobs_finished_.pop_front();
 
     // write all timestamp statistics to log file
-    log_file << job.sched_id_ << "\t"
-             << job.model_fname_ << "\t"
-             << job.model_id_ << "\t"
-             << job.device_id_ << "\t"
+    log_file << job.sched_id << "\t"
+             << job.model_fname << "\t"
+             << job.model_id << "\t"
+             << job.device_id << "\t"
              << job.start_idx << "\t"
              << job.end_idx << "\t"
-             << job.subgraph_idx_ << "\t"
-             << job.enqueue_time_ << "\t"
-             << job.invoke_time_ << "\t"
-             << job.end_time_ << "\t"
+             << job.subgraph_idx << "\t"
+             << job.enqueue_time << "\t"
+             << job.invoke_time << "\t"
+             << job.end_time << "\t"
              << job.waiting_time[0] << "\t"
              << job.waiting_time[1] << "\t"
              << job.waiting_time[2] << "\t"
@@ -89,7 +89,7 @@ void Planner::EnqueueFinishedJob(Job job) {
 }
 
 void Planner::EnqueueRequest(Job job) {
-  job.enqueue_time_ = profiling::time::NowMicros();
+  job.enqueue_time = profiling::time::NowMicros();
   std::unique_lock<std::mutex> lock(requests_mtx_);
   requests_.push_back(job);
   num_submitted_jobs_++;
@@ -98,11 +98,11 @@ void Planner::EnqueueRequest(Job job) {
   planner_safe_bool_.notify();
 }
 
-void Planner::EnqueueBatch(std::list<Job> jobs) {
+void Planner::EnqueueBatch(std::vector<Job> jobs) {
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
   for (Job job : jobs) {
-    job.enqueue_time_ = enqueue_time;
+    job.enqueue_time = enqueue_time;
     requests_.push_back(job);
     num_submitted_jobs_++;
   }

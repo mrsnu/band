@@ -85,14 +85,25 @@ void ShortestExpectedLatencyPlanner::Plan() {
           GetInterpreter()->subgraph(target_subgraph)->GetKey();
       most_urgent_job.start_idx = to_execute.start_idx;
       most_urgent_job.end_idx = to_execute.end_idx;
-      most_urgent_job.subgraph_idx_ = target_subgraph;
-      most_urgent_job.device_id_ = to_execute.device_flag;
+      most_urgent_job.subgraph_idx = target_subgraph;
+      most_urgent_job.device_id = to_execute.device_flag;
+
+      ModelSpec& model_spec =
+          GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
+      if (most_urgent_job.end_idx < model_spec.num_ops - 1) {
+        Job remaining_ops(most_urgent_job.model_id);
+        remaining_ops.enqueue_time = most_urgent_job.enqueue_time;
+        remaining_ops.start_idx = most_urgent_job.end_idx + 1;
+        remaining_ops.end_idx = model_spec.num_ops - 1;
+
+        most_urgent_job.following_jobs.push_back(remaining_ops);
+      }
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        if (most_urgent_job.sched_id_ < 0) {
-          most_urgent_job.sched_id_ = sched_id++;
+        if (most_urgent_job.sched_id < 0) {
+          most_urgent_job.sched_id = sched_id++;
         }
         worker->GetDeviceRequests().push_back(most_urgent_job);
         worker->GetRequestCv().notify_one();

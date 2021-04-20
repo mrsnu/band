@@ -29,6 +29,7 @@ limitations under the License.
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/delegates/status.h"
 #include "tensorflow/lite/graph_info.h"
+#include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
@@ -36,7 +37,6 @@ limitations under the License.
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
-#include "tensorflow/lite/util.h"
 #include "tensorflow/lite/profiling/time_profiler.h"
 
 // TODO(b/139446230): Move to portable platform header.
@@ -132,6 +132,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   own_external_cpu_backend_context_.reset(new ExternalCpuBackendContext());
   external_contexts_[kTfLiteCpuBackendContext] =
       own_external_cpu_backend_context_.get();
+  
+  // Initialize internal backend context for cpu contexts
+  own_external_cpu_backend_context_->
+      set_internal_backend_context(
+          std::make_unique<CpuBackendContext>());
 
   // Create a Planner instance.
   // FixedDevicePlanner is the default planner.
@@ -391,35 +396,51 @@ TfLiteStatus Interpreter::Invoke(int idx) {
 }
 
 void Interpreter::InvokeModelAsync(int model_id) {
-  Job to_enqueue = Job(model_id);
-  to_enqueue.model_fname_ = model_configs_[model_id].model_fname;
-  to_enqueue.device_id_ = model_configs_[model_id].device;
-
-  planner_->EnqueueRequest(to_enqueue);
+  InvokeModelAsync(Job(model_id));
+}
+ 
+void Interpreter::InvokeModelAsync(Job request) {
+  InvokeModelsAsync({request});
 }
 
 void Interpreter::InvokeModelsAsync() {
-  std::list<Job> jobs;
+  std::vector<Job> requests;
 
   for (auto& m : model_configs_) {
     int model_id = m.first;
     ModelConfig& model_config = m.second;
-
-    Job to_enqueue = Job(model_id);
-    to_enqueue.model_fname_ = model_config.model_fname;
-    to_enqueue.device_id_ = model_config.device;
-
+    Job request = Job(model_id);
     for (int k = 0; k < model_config.batch_size; ++k) {
-      jobs.emplace_back(to_enqueue);
+      requests.push_back(request);
     }
   }
+  
+  InvokeModelsAsync(requests);
+}
 
-  planner_->EnqueueBatch(jobs);
+void Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
+  if (requests.size() == 0) {
+    return;
+  }
+
+  for (auto& request: requests) {
+    int model_id = request.model_id;
+    request.model_fname = model_configs_[model_id].model_fname;
+    request.device_id = model_configs_[model_id].device;
+  }
+
+  planner_->EnqueueBatch(requests);
 }
 
 void Interpreter::InvokeModelsSync() {
   planner_->InitNumSubmittedJobs();
   InvokeModelsAsync();
+  planner_->Wait();
+}
+
+void Interpreter::InvokeModelsSync(std::vector<Job> requests) {
+  planner_->InitNumSubmittedJobs();
+  InvokeModelsAsync(requests);
   planner_->Wait();
 }
 

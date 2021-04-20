@@ -26,7 +26,7 @@ limitations under the License.
 
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/allocation.h"
-#include "tensorflow/lite/c/common.h"  // IWYU pragma: export
+#include "tensorflow/lite/util.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/core/api/profiler.h"
 #include "tensorflow/lite/core/subgraph.h"
@@ -389,18 +389,21 @@ class Interpreter {
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   void InvokeModelAsync(int model_id);
+  void InvokeModelAsync(Job request);
 
   /// Invoke models with a batch size given by the model config.
   /// This method is an asychronous call.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
   void InvokeModelsAsync();
+  void InvokeModelsAsync(std::vector<Job> requests);
 
   /// Invoke models with a batch size given by the model config.
   /// Returns when all the requests are done.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
   void InvokeModelsSync();
+  void InvokeModelsSync(std::vector<Job> requests);
 
   /// Enable or disable the NN API (true to enable)
   void UseNNAPI(bool enable);
@@ -625,6 +628,7 @@ class Interpreter {
 
   struct ModelConfig {
     std::string model_fname;
+    int period_ms;
     int device = -1;
     int batch_size = 1;
   };
@@ -666,6 +670,10 @@ class Interpreter {
   void MakeSubgraphsForFallbackOps(const int model_id,
                                    const TfLiteDeviceFlags device_flag,
                                    std::vector<SubgraphKey>& splitted_op_range);
+
+  ExternalCpuBackendContext* GetCpuBackendContext() {
+    return own_external_cpu_backend_context_.get();
+  }
 
  private:
   friend class InterpreterBuilder;

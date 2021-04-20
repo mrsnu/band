@@ -810,20 +810,25 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     runtime_config_.model_profile = root["model_profile"].asString();
   if (!root["allow_work_steal"].isNull())
     runtime_config_.allow_work_steal = root["allow_work_steal"].asBool();
+  if (!root["schedule_window_size"].isNull()) {
+    runtime_config_.schedule_window_size = root["schedule_window_size"].asInt();
+    if (runtime_config_.schedule_window_size <= 0) {
+      TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
+      return kTfLiteError;
+    }
+  }
 
   // Required
-  if (root["period_ms"].isNull() ||
-      root["log_path"].isNull() ||
+  if (root["log_path"].isNull() ||
       root["planner"].isNull() ||
       root["execution_mode"].isNull() ||
       root["models"].isNull()) {
-    TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`,"
-                      << " `period_ms`, `log_path`, `planner` and `models`"
+    TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`, "
+                      << "`log_path`, `planner` and `models`"
                       << " are given in the config file.";
     return kTfLiteError;
   }
 
-  runtime_config_.period_ms = root["period_ms"].asInt();
   runtime_config_.log_path = root["log_path"].asString();
   runtime_config_.execution_mode = root["execution_mode"].asString();
 
@@ -832,24 +837,24 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
     return kTfLiteError;
   }
-  TfLitePlannerType planner_type = static_cast<TfLitePlannerType>(planner_id);
-  runtime_config_.planner_type = planner_type;
-  runtime_config_.schedule_window_size = root["schedule_window_size"].asInt();
-  if (runtime_config_.schedule_window_size <= 0) {
-    TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
-    return kTfLiteError;
-  }
+  runtime_config_.planner_type = static_cast<TfLitePlannerType>(planner_id);
 
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
     Interpreter::ModelConfig model;
     Json::Value model_json_value = root["models"][i];
-    if (model_json_value["graph"].isNull()) {
-      TFLITE_LOG(ERROR) << "Please check if argument `graph` is not given in "
-                           "the model configs.";
+    if (model_json_value["graph"].isNull() ||
+        model_json_value["period_ms"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if arguments `graph` and `period_ms`"
+                           " are given in the model configs.";
       return kTfLiteError;
     }
     model.model_fname = model_json_value["graph"].asString();
+    model.period_ms = model_json_value["period_ms"].asInt();
+    if (model.period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "Please check if arguments `period_ms` are positive.";
+      return kTfLiteError;
+    }
 
     // Set `batch_size`.
     // If no `batch_size` is given, the default batch size will be set to 1.
@@ -968,7 +973,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   return kTfLiteOk;
 }
 
-TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
+TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
   // initialize values in case this isn't our first run
   kill_app_ = false;
 
@@ -977,7 +982,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic(int period_ms) {
   // have a single thread that generate requests, but we may have multiple
   // threads doing that in the future so we might as well make the code easily
   // adaptable to such situtations.
-  GeneratePeriodicRequests(period_ms);
+  GeneratePeriodicRequests();
 
   // wait for 60 seconds until we stop the benchmark
   // we could set a command line arg for this value as well
@@ -1000,32 +1005,43 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
     if (current - start >= run_duration_us)
       break;
   }
-  TFLITE_LOG(INFO) << "Measured FPS: " << (num_frames / (run_duration_us / 1000000));
+  int64_t end = profiling::time::NowMicros();
+  TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
+  TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
+  TFLITE_LOG(INFO) << "Measured FPS: "
+                   << ((float)num_frames / ((end - start) / 1000000));
 
   return kTfLiteOk;
 }
 
-void BenchmarkTfLiteModel::GeneratePeriodicRequests(int period_ms) {
-  std::thread t([this, period_ms]() {
-    int num_models = models_.size();
-    while (true) {
-      // measure the time it took to generate requests
-      int64_t start = profiling::time::NowMicros();
-      interpreter_->InvokeModelsAsync();
-      int64_t end = profiling::time::NowMicros();
-      int duration_ms = (end - start) / 1000;
+void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
+  for (auto& m : interpreter_->GetModelConfig()) {
+    int model_id = m.first;
+    Interpreter::ModelConfig& model_config = m.second;
+    int batch_size = model_config.batch_size,
+        period_ms = model_config.period_ms;
 
-      // sleep until we reach period_ms
-      if (duration_ms < period_ms) {
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(period_ms - duration_ms));
+    std::thread t([this, batch_size, model_id, period_ms]() {
+      std::vector<Job> requests(batch_size, Job(model_id));
+      while (true) {
+        // measure the time it took to generate requests
+        int64_t start = profiling::time::NowMicros();
+        interpreter_->InvokeModelsAsync(requests);
+        int64_t end = profiling::time::NowMicros();
+        int duration_ms = (end - start) / 1000;
+
+        // sleep until we reach period_ms
+        if (duration_ms < period_ms) {
+          std::this_thread::sleep_for(
+              std::chrono::milliseconds(period_ms - duration_ms));
+        }
+
+        if (kill_app_) return;
       }
+    });
 
-      if (kill_app_) return;
-    }
-  });
-
-  t.detach();
+    t.detach();
+  }
 }
 
 }  // namespace benchmark

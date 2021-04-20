@@ -47,44 +47,40 @@ void Worker::Work() {
       break;
     }
 
-    std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
-    if (need_cpu_set_update_) {
-      need_cpu_set_update_ = false;
-      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
-        // TODO #21: Handle errors in multi-thread environment
-        cpu_lock.unlock();
-        break;
-      }
-    }
-    cpu_lock.unlock();
-
     Job& job = requests_.front();
     lock.unlock();
 
-    int subgraph_idx = job.subgraph_idx_;
+    int subgraph_idx = job.subgraph_idx;
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
-      job.invoke_time_ = profiling::time::NowMicros();
+
+      { 
+        std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
+        if (need_cpu_set_update_) {
+          need_cpu_set_update_ = false;
+
+          auto internal_backend = interpreter_ptr->GetCpuBackendContext()
+                                      ->internal_backend_context();
+          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
+
+          if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+            // TODO #21: Handle errors in multi-thread environment
+            break;
+          }
+        }
+      }
+
+      job.invoke_time = profiling::time::NowMicros();
 
       if (subgraph.Invoke() == kTfLiteOk) {
-        job.end_time_ = profiling::time::NowMicros();
-
-        // immediately add the remaining ops if this subgraph wan't the final
-        // one for this model
-        // TODO (dhkim): Add callback?
-        if (job.end_idx !=
-            interpreter_ptr->GetModelSpec(job.model_id_).num_ops - 1) {
-          Job next_job(job.model_id_, job.end_idx + 1);
-          next_job.model_fname_ = job.model_fname_;
-          next_job.sched_id_ = job.sched_id_;
-          planner_ptr->EnqueueRequest(next_job);
-        }
-
+        job.end_time = profiling::time::NowMicros();
+        // TODO #65: Tensor communications between subgraphs
+        interpreter_ptr->InvokeModelsAsync(job.following_jobs);
         planner_ptr->EnqueueFinishedJob(job);
       } else {
-        job.end_time_ = profiling::time::NowMicros();
+        job.end_time = profiling::time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
         // Currently, put a job with a minus sign if Invoke() fails.
         planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
@@ -137,7 +133,7 @@ void Worker::TryWorkSteal() {
     Job& job = target_worker->GetDeviceRequests().back();
     lock.unlock();
 
-    SubgraphKey key(job.model_id_, device_flag_, job.start_idx, job.end_idx);
+    SubgraphKey key(job.model_id, device_flag_, job.start_idx, job.end_idx);
     int64_t expected_latency = interpreter_ptr->GetSubgraphProfileResult(key);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
@@ -170,7 +166,7 @@ void Worker::TryWorkSteal() {
   // this must not be a reference,
   // otherwise the pop_back() below will invalidate it
   Job job = target_worker->GetDeviceRequests().back();
-  if (job.invoke_time_ > 0) {
+  if (job.invoke_time > 0) {
     // make sure the target worker hasn't started processing the job yet
     return;
   }
@@ -181,9 +177,9 @@ void Worker::TryWorkSteal() {
   }
 
   int subgraph_idx =
-    interpreter_ptr->GetSubgraphIdx(job.model_id_, device_flag_);
-  job.subgraph_idx_ = subgraph_idx;
-  job.device_id_ = device_flag_;
+    interpreter_ptr->GetSubgraphIdx(job.model_id, device_flag_);
+  job.subgraph_idx = subgraph_idx;
+  job.device_id = device_flag_;
 
   // finally, we perform the swap
   target_worker->GetDeviceRequests().pop_back();
@@ -202,9 +198,9 @@ int64_t Worker::GetWaitingTime() {
   int64_t total = 0;
   for (std::deque<Job>::iterator it = requests_.begin();
        it != requests_.end(); ++it) {
-    int model_id = (*it).model_id_;
+    int model_id = (*it).model_id;
     TfLiteDeviceFlags device_id =
-        static_cast<TfLiteDeviceFlags>((*it).device_id_);
+        static_cast<TfLiteDeviceFlags>((*it).device_id);
     int start_idx = (*it).start_idx;
     int end_idx = (*it).end_idx;
     SubgraphKey key(model_id, device_id, start_idx, end_idx);
@@ -213,7 +209,7 @@ int64_t Worker::GetWaitingTime() {
     total += profiled_latency;
     if (it == requests_.begin()) {
       int64_t current_time = profiling::time::NowMicros();
-      int64_t invoke_time = (*it).invoke_time_;
+      int64_t invoke_time = (*it).invoke_time;
       if (invoke_time > 0 && current_time > invoke_time) {
         int64_t progress =
           (current_time - invoke_time) > profiled_latency ? profiled_latency

@@ -63,11 +63,11 @@ void FixedDevicePlanner::Plan() {
       Job to_execute = GetRequests().front();
       GetRequests().pop_front();
 
-      int model_id = to_execute.model_id_;
+      int model_id = to_execute.model_id;
       int device_idx;
-      if (kTfLiteCPU <= to_execute.device_id_ &&
-          to_execute.device_id_ < kTfLiteNumDevices) {
-        device_idx = to_execute.device_id_;
+      if (kTfLiteCPU <= to_execute.device_id &&
+          to_execute.device_id < kTfLiteNumDevices) {
+        device_idx = to_execute.device_id;
       } else {
         device_idx = model_device_map[model_id];
       }
@@ -76,8 +76,8 @@ void FixedDevicePlanner::Plan() {
           static_cast<TfLiteDeviceFlags>(device_idx);
       // TODO: fallback subgraphs for FixedDevicePlanner?
       SubgraphKey key(model_id, device_flag);
-      to_execute.subgraph_idx_ = GetInterpreter()->GetSubgraphIdx(key);
-      to_execute.device_id_ = device_idx;
+      to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(key);
+      to_execute.device_id = device_idx;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
       {

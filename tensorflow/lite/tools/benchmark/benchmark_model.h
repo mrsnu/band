@@ -194,7 +194,6 @@ class BenchmarkModel {
   // Keeps the runtime configuration from json config file.
   struct RuntimeConfig {
     // Required
-    int period_ms;
     std::string log_path;
     TfLitePlannerType planner_type;
     int schedule_window_size = INT_MAX;
@@ -229,7 +228,7 @@ class BenchmarkModel {
   virtual TfLiteStatus RunImpl() = 0;
   virtual TfLiteStatus RunImpl(int i) = 0;
   virtual TfLiteStatus RunAll() = 0;
-  virtual TfLiteStatus RunPeriodic(int period_ms) = 0;
+  virtual TfLiteStatus RunPeriodic() = 0;
   virtual TfLiteStatus RunStream() = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
