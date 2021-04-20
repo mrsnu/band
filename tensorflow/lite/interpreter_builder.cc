@@ -602,6 +602,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   // register subgraphs for all devices
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    if (i == kTfLiteCPUFallback) {
+      // Skip for Fallback worker
+      continue;
+    }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
     std::vector<tflite::impl::SubgraphKey> subgraph_keys;
 

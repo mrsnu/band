@@ -773,7 +773,8 @@ typedef enum {
   kTfLiteGPU = 1,
   kTfLiteDSP = 2,
   kTfLiteNPU = 3,
-  kTfLiteNumDevices = 4,
+  kTfLiteCPUFallback = 4,
+  kTfLiteNumDevices = 5,
 } TfLiteDeviceFlags;
 
 const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag);
