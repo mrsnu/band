@@ -623,6 +623,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       new Interpreter(LoggingReporter::DefaultLoggingReporter(),
                       runtime_config_.planner_type));
   interpreter_->SetWindowSize(runtime_config_.schedule_window_size);
+  interpreter_->SetProfileSmoothingConstant(
+      params_.Get<float>("profile_smoothing_constant"));
   if (runtime_config_.allow_work_steal) {
     interpreter_->AllowWorkSteal();
   }
