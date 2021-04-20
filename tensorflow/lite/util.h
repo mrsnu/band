@@ -32,7 +32,7 @@ namespace tflite {
 
 struct Job {
   explicit Job(int model_id) : model_id(model_id) {}
-  explicit Job(int model_id, std::vector<Job>& following_jobs)
+  explicit Job(int model_id, std::vector<Job> following_jobs)
     : model_id(model_id), following_jobs(following_jobs) {}
   int model_id;
   int subgraph_idx = -1;
