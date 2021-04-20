@@ -1010,7 +1010,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
   TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
   TFLITE_LOG(INFO) << "Measured FPS: "
-                   << ((float)num_frames / ((end - start) / 1000000));
+                   << (num_frames / (float)(end - start)) * 1000000;
 
   return kTfLiteOk;
 }
@@ -1031,7 +1031,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunEagleEyeStream() {
   TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
   TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
   TFLITE_LOG(INFO) << "Measured FPS: "
-                   << ((float)num_frames / ((end - start) / 1000000));
+                   << (num_frames / (float)(end - start)) * 1000000;
 
   return kTfLiteOk;
 }
@@ -1102,7 +1102,6 @@ std::vector<Job> BenchmarkTfLiteModel::GetEagleEyeFrame() {
   }
 
   for (int k = 0; k < detection_batch; ++k) {
-    std::cout << "batch idx : " << k << std::endl;
     std::vector<Job> following_requests;
     for (int i = 0; i < recognition_workload[k][0]; ++i) {
       following_requests.push_back(arcface_mbv);
@@ -1114,10 +1113,6 @@ std::vector<Job> BenchmarkTfLiteModel::GetEagleEyeFrame() {
       following_requests.push_back(icn);
     }
     frame.push_back(Job(retina_face, following_requests));
-
-    for (auto num_req: recognition_workload[k])
-      std::cout << num_req << " ";
-    std::cout << std::endl;
   }
 
   return frame;
