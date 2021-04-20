@@ -842,7 +842,7 @@ int64_t Interpreter::GetDeviceWaitingTime(TfLiteDeviceFlags device) {
     std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
     std::deque<Job>& requests = worker->GetDeviceRequests();
     for (auto& job : requests) {
-      SubgraphKey subgraph_key(job.model_id_, device, job.start_idx, job.end_idx);
+      SubgraphKey subgraph_key(job.model_id, device, job.start_idx, job.end_idx);
       // TODO (dhkim): what if no valid subgraph key is given?
       waiting_time += GetSubgraphProfileResult(subgraph_key);
     }

@@ -59,7 +59,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
         std::pair<int, int64_t> best_subgraph =
-            GetInterpreter()->GetShortestLatency(next_job.model_id_,
+            GetInterpreter()->GetShortestLatency(next_job.model_id,
                                                  next_job.start_idx,
                                                  0,
                                                  device_waiting_time);
