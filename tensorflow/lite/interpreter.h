@@ -643,6 +643,12 @@ class Interpreter {
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
+  void UpdateProfileResult(const SubgraphKey& key, int64_t new_profile);
+
+  void SetProfileSmoothingConstant(float profile_smoothing_constant) {
+    profile_smoothing_constant_ = profile_smoothing_constant;
+  }
+
   int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
@@ -708,6 +714,10 @@ class Interpreter {
 
   // Get the error reporter associated with this interpreter.
   ErrorReporter* error_reporter() { return error_reporter_; }
+
+  // Smoothing constant to update profile result.
+  // The smaller profile_smoothing_constant_, the smoother the profile results.
+  float profile_smoothing_constant_ = 0.1;
 
   // A pure C data structure used to communicate with the pure C plugin
   // interface. To avoid copying tensor metadata, this is also the definitive

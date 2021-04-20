@@ -76,6 +76,8 @@ void Worker::Work() {
 
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time = profiling::time::NowMicros();
+        interpreter_ptr->UpdateProfileResult(
+            subgraph.GetKey(), (job.end_time - job.invoke_time));
         // TODO #65: Tensor communications between subgraphs
         interpreter_ptr->InvokeModelsAsync(job.following_jobs);
         planner_ptr->EnqueueFinishedJob(job);
