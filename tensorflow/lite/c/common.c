@@ -221,6 +221,8 @@ const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag) {
   switch (flag) {
   case kTfLiteCPU:
     return "CPU";
+  case kTfLiteCPUFallback:
+    return "CPUFallback";
   case kTfLiteGPU:
     return "GPU";
   case kTfLiteDSP:

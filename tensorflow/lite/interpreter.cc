@@ -143,7 +143,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     planner_.reset(new FixedDevicePlanner(this));
   }
 
-  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
+  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU, kTfLiteCPUFallback };
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
@@ -701,6 +701,7 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
 
   switch (device) {
     case kTfLiteCPU:
+    case kTfLiteCPUFallback:
       // TODO #23: XNNPACK seems inefficient than default CPU
       if (targetDelegate == nullptr)
         // Only valid case to return Ok with nullptr
@@ -858,7 +859,7 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     // check if this ops is supported by `device_flag` or not
     if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
         != unsupported_ops.end()) {
-      curr_device = kTfLiteCPU;
+      curr_device = kTfLiteCPUFallback;
     } else {
       curr_device = device_flag;
     }
