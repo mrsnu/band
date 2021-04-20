@@ -95,7 +95,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
         remaining_ops.enqueue_time = most_urgent_job.enqueue_time;
         remaining_ops.start_idx = most_urgent_job.end_idx + 1;
         remaining_ops.end_idx = model_spec.num_ops - 1;
+        remaining_ops.following_jobs = most_urgent_job.following_jobs;
 
+        most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);
       }
 
