@@ -671,6 +671,8 @@ class Interpreter {
 
   int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
 
+  bool IsAvailableSubgraph(const SubgraphKey& key);
+
   // Generate explicit subgraphs for fallback ops in `model_id`.
   // Consecutive fallback ops are grouped as one fallback subgraph.
   void MakeSubgraphsForFallbackOps(const int model_id,

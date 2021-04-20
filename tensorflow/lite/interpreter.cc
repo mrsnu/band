@@ -861,6 +861,21 @@ int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   }
 }
 
+bool Interpreter::IsAvailableSubgraph(const SubgraphKey& key) {
+  const std::vector<int>& unsupported =
+    model_specs_[key.model_id].unsupported_ops[key.device_flag];
+  bool available = true;
+
+  for (auto op_idx: unsupported) {
+    if (key.start_idx <= op_idx && op_idx <= key.end_idx) {
+      available = false;
+      break;
+    }
+  }
+
+  return available;
+}
+
 void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
                                               const TfLiteDeviceFlags device_flag,
                                               std::vector<SubgraphKey>& splitted_op_range) {
@@ -896,6 +911,19 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     if (k > 0 && curr_device != prev_device) {
       splitted_op_range.push_back(SubgraphKey(model_id, prev_device,
                                               subgraph_min, k - 1));
+
+      for (int i = 0; i < kTfLiteNumDevices; ++i) {
+        if (i == prev_device ||
+            i == kTfLiteCPUFallback ||
+            prev_device == kTfLiteCPUFallback) continue;
+        TfLiteDeviceFlags current = static_cast<TfLiteDeviceFlags>(i);
+        SubgraphKey target_subgraph_key =
+          SubgraphKey(model_id, current, subgraph_min, k - 1);
+
+        if (IsAvailableSubgraph(target_subgraph_key)) {
+          splitted_op_range.push_back(target_subgraph_key);
+        }
+      }
       subgraph_min = k;
     }
 
@@ -904,6 +932,19 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     if (k == num_ops - 1) {
       splitted_op_range.push_back(SubgraphKey(model_id, curr_device,
                                               subgraph_min, num_ops - 1));
+
+      for (int i = 0; i < kTfLiteNumDevices; ++i) {
+        if (i == curr_device ||
+            i == kTfLiteCPUFallback ||
+            curr_device == kTfLiteCPUFallback) continue;
+        TfLiteDeviceFlags current = static_cast<TfLiteDeviceFlags>(i);
+        SubgraphKey target_subgraph_key =
+          SubgraphKey(model_id, current, subgraph_min, num_ops - 1);
+
+        if (IsAvailableSubgraph(target_subgraph_key)) {
+          splitted_op_range.push_back(target_subgraph_key);
+        }
+      }
     }
   }
 }
