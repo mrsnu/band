@@ -618,7 +618,7 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
 
 TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
-  const int32_t num_threads = params_.Get<int32_t>("num_threads");
+  const int32_t num_threads = runtime_config_.num_cpu_threads;
   const bool use_caching = params_.Get<bool>("use_caching");
   auto cpuMask = tflite::impl::GetCPUThreadAffinityMask(
       static_cast<tflite::impl::TFLiteCPUMasks>(runtime_config_.cpu_masks));
@@ -826,16 +826,18 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   // Required
   if (root["log_path"].isNull() ||
       root["planner"].isNull() ||
+      root["num_cpu_threads"].isNull() ||
       root["execution_mode"].isNull() ||
       root["models"].isNull()) {
     TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`, "
-                      << "`log_path`, `planner` and `models`"
+                      << "`log_path`, `num_cpu_threads`, `planner` and `models`"
                       << " are given in the config file.";
     return kTfLiteError;
   }
 
   runtime_config_.log_path = root["log_path"].asString();
   runtime_config_.execution_mode = root["execution_mode"].asString();
+  runtime_config_.num_cpu_threads = root["num_cpu_threads"].asInt();
 
   int planner_id = root["planner"].asInt();
   if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {

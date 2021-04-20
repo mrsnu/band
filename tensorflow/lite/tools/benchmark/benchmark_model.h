@@ -199,6 +199,7 @@ class BenchmarkModel {
     int schedule_window_size = INT_MAX;
     // Optional
     int cpu_masks = 0;
+    int num_cpu_threads = 1;
     int running_time_ms = 60000;
     float profile_smoothing_constant = 0.1;
     std::string model_profile;
