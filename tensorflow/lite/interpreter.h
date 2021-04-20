@@ -762,6 +762,7 @@ class Interpreter {
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
 
+  TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
 

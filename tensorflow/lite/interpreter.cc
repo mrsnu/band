@@ -141,6 +141,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create a Planner instance.
   // FixedDevicePlanner is the default planner.
+  planner_type_ = planner_type;
   if (planner_type == kRoundRobin) {
     planner_.reset(new RoundRobinPlanner(this));
   } else if (planner_type == kShortestExpectedLatency) {
@@ -867,6 +868,11 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   TfLiteDeviceFlags curr_device = device_flag;
   TfLiteDeviceFlags prev_device;
   int subgraph_min = 0;
+
+  if (planner_type_ == kFixedDevice) {
+    splitted_op_range.push_back(SubgraphKey(model_id, device_flag, 0, num_ops - 1));
+    return;
+  }
 
   // do a pass through all ops and create a subgraph every time the supported
   // device changes, using `subgraph_min` to keep track of the current

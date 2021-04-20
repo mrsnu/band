@@ -15,8 +15,8 @@ void FixedDevicePlanner::Plan() {
       for (auto model_id : models) {
         int count = 0;
         for (int device_idx = 0; device_idx < kTfLiteNumDevices; device_idx++) {
-          SubgraphKey key(model_id, static_cast<TfLiteDeviceFlags>(device_idx));
-          if (GetInterpreter()->GetSubgraphIdx(key) != -1) {
+          if (GetInterpreter()->GetSubgraphIdx(
+                model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
             count++;
           }
         }
@@ -31,8 +31,8 @@ void FixedDevicePlanner::Plan() {
         int selected_model_id = -1;
         for (auto& devices_per_models : devices_per_models_map) {
           for (int model_id : devices_per_models.second) {
-            SubgraphKey key(model_id, static_cast<TfLiteDeviceFlags>(device_idx));
-            if (GetInterpreter()->GetSubgraphIdx(key) != -1) {
+            if (GetInterpreter()->GetSubgraphIdx(
+                  model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
               selected_model_id = model_id;
               break;
             }
@@ -75,8 +75,7 @@ void FixedDevicePlanner::Plan() {
       TfLiteDeviceFlags device_flag =
           static_cast<TfLiteDeviceFlags>(device_idx);
       // TODO: fallback subgraphs for FixedDevicePlanner?
-      SubgraphKey key(model_id, device_flag);
-      to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(key);
+      to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
       to_execute.device_id = device_idx;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
