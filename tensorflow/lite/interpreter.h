@@ -616,6 +616,7 @@ class Interpreter {
 
   struct ModelConfig {
     std::string model_fname;
+    int period_ms;
     int device = -1;
     int batch_size = 1;
   };

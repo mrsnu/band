@@ -41,7 +41,6 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 ```
 
 ### JSON Config file arguments
-* `period_ms`: The delay between subsequent requests in ms. If 0 or below is given, only a few iteraions will run without delay.
 * `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
 * `planner`: The planner type in `int`.
     * `0`: Fixed Device Planner
@@ -49,6 +48,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
     * `2`: Shortest Expected Latency Planner
 * `models`: TF Lite models to run. For each model, specify the following fields. 
     * `graph`: TF Lite model path.
+    * `period_ms`: The delay between subsequent requests in ms.
     * `batch_size`: The number of model requests in a frame. [default: 1]
     * `device`: Specify the processor to run in int. The argument is only effective with `FixedDevicePlanner`.
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
@@ -67,13 +67,23 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 An example of complete JSON config file is as follows:
 ```json
 {
-    "period_ms": 10,
     "log_path": "/data/local/tmp/log.csv",
     "planner": 2,
     "models": [
         {
           "graph": "/data/local/tmp/mobilenet.tflite",
+          "period_ms": 10,
           "batch_size": 2
+        },
+        {
+          "graph": "/data/local/tmp/yolov3.tflite",
+          "period_ms": 20,
+          "batch_size": 2
+        },
+        {
+          "graph": "/data/local/tmp/inception_v4.tflite",
+          "period_ms": 30,
+          "batch_size": 3
         }
     ],
     "running_time_ms": 6000,
