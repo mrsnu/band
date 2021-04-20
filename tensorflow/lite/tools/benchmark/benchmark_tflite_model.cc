@@ -29,8 +29,8 @@ limitations under the License.
 #include "absl/base/attributes.h"
 #include "ruy/profiler/profiler.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/cpu.h"
-#include "tensorflow/lite/core/subgraph.h"
+#include "tensorflow/lite/util.h"
+#include "tensorflow/lite/core/cpu/cpu.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
@@ -670,6 +670,27 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   return kTfLiteOk;
 }
 
+TfLiteStatus BenchmarkTfLiteModel::RunEagleEyeStream() {
+  std::srand(5323);
+  int run_duration_us = runtime_config_.running_time_ms * 1000;
+  int num_frames = 0;
+  int64_t start = profiling::time::NowMicros();
+  while(true) {
+    interpreter_->InvokeModelsSync(GetEagleEyeFrame());
+    int64_t current = profiling::time::NowMicros();
+    num_frames++;
+    if (current - start >= run_duration_us)
+      break;
+  }
+  int64_t end = profiling::time::NowMicros();
+  TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
+  TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
+  TFLITE_LOG(INFO) << "Measured FPS: "
+                   << ((float)num_frames / ((end - start) / 1000000));
+
+  return kTfLiteOk;
+}
+
 void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
   for (auto& m : interpreter_->GetModelConfig()) {
     int model_id = m.first;
@@ -742,6 +763,63 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
   });
 
   t.detach();
+}
+
+std::vector<Job> BenchmarkTfLiteModel::GetEagleEyeFrame() {
+  std::vector<Job> frame;
+  // Assumption:
+  // 1. model[0] = face detection (RetinaFace)
+  // 2. model[1] = ArcFace mobilenet
+  // 3. model[2] = ArcFace Resnet50
+  // 4. model[3] = ICN
+  int retina_face = 0;
+  Job arcface_mbv(1);
+  Job arcface_res(2);
+  Job icn(3, std::vector<Job>{arcface_res});
+
+  // num of recognition requests for each model in one frame
+  std::vector<int> recognition_requests;
+  for (int i = 0; i < 3; ++i) {
+    recognition_requests.push_back(
+        model_configs_[i + 1].batch_size);
+  }
+  int detection_batch = model_configs_[retina_face].batch_size;
+
+  // ith detection model calls recognition jobs according to ith element.
+  std::vector<std::array<int, 3>> recognition_workload;
+
+  for (int i = 0; i < detection_batch; ++i) {
+    recognition_workload.push_back({0, 0, 0});
+  }
+
+  // Assign each request to one of the detection model
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < recognition_requests[i]; ++j) {
+      int detection_idx = std::rand() % detection_batch;
+      recognition_workload[detection_idx][i] += 1;
+    }
+  }
+
+  for (int k = 0; k < detection_batch; ++k) {
+    std::cout << "batch idx : " << k << std::endl;
+    std::vector<Job> following_requests;
+    for (int i = 0; i < recognition_workload[k][0]; ++i) {
+      following_requests.push_back(arcface_mbv);
+    }
+    for (int i = 0; i < recognition_workload[k][1]; ++i) {
+      following_requests.push_back(arcface_res);
+    }
+    for (int i = 0; i < recognition_workload[k][2]; ++i) {
+      following_requests.push_back(icn);
+    }
+    frame.push_back(Job(retina_face, following_requests));
+
+    for (auto num_req: recognition_workload[k])
+      std::cout << num_req << " ";
+    std::cout << std::endl;
+  }
+
+  return frame;
 }
 
 }  // namespace benchmark
