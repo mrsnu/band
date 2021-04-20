@@ -28,6 +28,7 @@ limitations under the License.
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/delegates/status.h"
 #include "tensorflow/lite/graph_info.h"
+#include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
@@ -130,6 +131,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   own_external_cpu_backend_context_.reset(new ExternalCpuBackendContext());
   external_contexts_[kTfLiteCpuBackendContext] =
       own_external_cpu_backend_context_.get();
+  
+  // Initialize internal backend context for cpu contexts
+  own_external_cpu_backend_context_->
+      set_internal_backend_context(
+          std::make_unique<CpuBackendContext>());
 
   // Create a Planner instance.
   // FixedDevicePlanner is the default planner.

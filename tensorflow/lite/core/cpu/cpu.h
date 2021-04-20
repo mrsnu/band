@@ -17,7 +17,6 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 #include <vector>
 #include <limits.h>
 #include "tensorflow/lite/c/common.h"

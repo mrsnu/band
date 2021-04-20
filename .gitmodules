@@ -1,0 +1,4 @@
+[submodule "third_party/ruy/ruy"]
+	path = third_party/ruy/ruy
+	url = https://github.com/mrsnu/ruy
+	branch = tf_v2.3.0

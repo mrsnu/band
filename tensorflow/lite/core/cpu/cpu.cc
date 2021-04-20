@@ -163,7 +163,7 @@ static int get_max_freq_khz(int cpuid) {
   return max_freq_khz;
 }
 
-static int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
+int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
@@ -184,7 +184,7 @@ static int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
   return 0;
 }
 
-static int GetSchedAffinity(CpuSet& thread_affinity_mask) {
+int GetSchedAffinity(CpuSet& thread_affinity_mask) {
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);

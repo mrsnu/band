@@ -299,6 +299,7 @@ cc_library(
         "@ruy//ruy:context",
         "@gemmlowp",
         "//tensorflow/lite/c:common",
+        "//tensorflow/lite:cpu",
         "//tensorflow/lite:external_cpu_backend_context",
     ],
 )
