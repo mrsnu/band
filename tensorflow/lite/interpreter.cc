@@ -869,7 +869,7 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   TfLiteDeviceFlags prev_device;
   int subgraph_min = 0;
 
-  if (planner_type_ == kFixedDevice) {
+  if (planner_type_ == kFixedDevice) || planner_type_ == kRoundRobin) {
     splitted_op_range.push_back(SubgraphKey(model_id, device_flag, 0, num_ops - 1));
     return;
   }
