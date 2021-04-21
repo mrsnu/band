@@ -22,7 +22,7 @@ void RoundRobinPlanner::Plan() {
     while (!GetRequests().empty()) {
       Job to_execute = Job(-1);
       int device_idx;
-      for (device_idx = 0; device_idx < is_device_empty.size(); ++device_idx) {
+      for (device_idx = is_device_empty.size() - 1 ; device_idx >= 0; --device_idx) {
         if (is_device_empty[device_idx]) {
           auto available_job =
             std::find_if(GetRequests().begin(), GetRequests().end(),
@@ -38,7 +38,7 @@ void RoundRobinPlanner::Plan() {
         }
       }
 
-      if (device_idx == is_device_empty.size())
+      if (device_idx < 0)
         break;
 
       int subgraph_idx =
