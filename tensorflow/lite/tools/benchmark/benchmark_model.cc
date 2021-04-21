@@ -43,7 +43,6 @@ BenchmarkParams BenchmarkModel::DefaultParams() {
   // setting this to zero because the periodic benchmark takes long
   params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(0));
   params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.0f));
-  params.AddParam("profile_smoothing_constant", BenchmarkParam::Create<float>(0.1));
   params.AddParam("profile_num_runs", BenchmarkParam::Create<int32_t>(50));
   params.AddParam("profile_warmup_runs", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("json_path", BenchmarkParam::Create<std::string>(""));
@@ -108,9 +107,6 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
           "warmup_min_secs", &params_,
           "minimum number of seconds to rerun for, potentially making the "
           "actual number of warm-up runs to be greater than warmup_runs"),
-      CreateFlag<float>(
-          "profile_smoothing_constant", &params_,
-          "smoothing constant for profile update"),
       CreateFlag<int32_t>(
           "profile_num_runs", &params_,
           "expected number of runs for profiling"),
@@ -143,8 +139,6 @@ void BenchmarkModel::LogParams() {
                    << params_.Get<int32_t>("warmup_runs") << "]";
   TFLITE_LOG(INFO) << "Min warmup runs duration (seconds): ["
                    << params_.Get<float>("warmup_min_secs") << "]";
-  TFLITE_LOG(INFO) << "Profile Smoothing Constant: ["
-                   << params_.Get<float>("profile_smoothing_constant") << "]";
   TFLITE_LOG(INFO) << "Profile num runs: ["
                    << params_.Get<int32_t>("profile_num_runs") << "]";
   TFLITE_LOG(INFO) << "Profile warmup runs: ["

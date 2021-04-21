@@ -200,6 +200,7 @@ class BenchmarkModel {
     // Optional
     int cpu_masks = 0;
     int running_time_ms = 60000;
+    float profile_smoothing_constant = 0.1;
     std::string model_profile;
     std::string execution_mode;
     bool allow_work_steal = false;
