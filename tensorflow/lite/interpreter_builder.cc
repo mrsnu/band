@@ -796,6 +796,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     // there is no way of directly checking if a tensor is a parameter or not,
     // so instead we collect all non-parameter tensors and exclude the param
     // tensors in external_inputs_params that are not in the non-param list
+    // NOTE: need to check #65 (Tensor communications between subgraphs)
     std::set<int> non_param_tensors;
 
     std::vector<int> subgraph_input_vec =
