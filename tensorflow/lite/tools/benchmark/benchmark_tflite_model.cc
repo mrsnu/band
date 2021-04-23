@@ -626,6 +626,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       new Interpreter(LoggingReporter::DefaultLoggingReporter(),
                       runtime_config_.planner_type));
   interpreter_->SetWindowSize(runtime_config_.schedule_window_size);
+  interpreter_->SetProfileSmoothingConstant(
+      runtime_config_.profile_smoothing_factor);
   if (runtime_config_.allow_work_steal) {
     interpreter_->AllowWorkSteal();
   }
@@ -806,6 +808,8 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     runtime_config_.cpu_masks = root["cpu_masks"].asInt();
   if (!root["running_time_ms"].isNull())
     runtime_config_.running_time_ms = root["running_time_ms"].asInt();
+  if (!root["profile_smoothing_factor"].isNull())
+    runtime_config_.profile_smoothing_factor = root["profile_smoothing_factor"].asFloat();
   if (!root["model_profile"].isNull())
     runtime_config_.model_profile = root["model_profile"].asString();
   if (!root["allow_work_steal"].isNull())

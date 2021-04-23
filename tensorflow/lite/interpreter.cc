@@ -621,6 +621,14 @@ TfLiteStatus Interpreter::GetBufferHandle(int tensor_index,
   return kTfLiteOk;
 }
 
+void Interpreter::UpdateProfileResult(
+    const SubgraphKey& key, int64_t new_profile) {
+  int64_t prev_profile = subgraph_profiling_results_map_[key];
+  subgraph_profiling_results_map_[key] =
+      profile_smoothing_factor_ * prev_profile +
+      (1 - profile_smoothing_factor_) * new_profile;
+}
+
 void Interpreter::Profile(const int num_warm_ups, const int num_runs,
                           ModelDeviceToLatency& profiled) {
   tflite::Profiler* previous_profiler = GetProfiler();

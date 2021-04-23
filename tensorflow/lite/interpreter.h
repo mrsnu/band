@@ -645,6 +645,14 @@ class Interpreter {
 
   int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
+  void UpdateProfileResult(const SubgraphKey& key,
+                           int64_t new_profile);
+
+  void SetProfileSmoothingConstant(float profile_smoothing_factor) {
+    profile_smoothing_factor_ = profile_smoothing_factor;
+  }
+
+
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
   int GetWindowSize() const;
@@ -708,6 +716,10 @@ class Interpreter {
 
   // Get the error reporter associated with this interpreter.
   ErrorReporter* error_reporter() { return error_reporter_; }
+
+  // Smoothing constant to update profile result.
+  // The smaller profile_smoothing_factor_, the smoother the profile results.
+  float profile_smoothing_factor_ = 0.1;
 
   // A pure C data structure used to communicate with the pure C plugin
   // interface. To avoid copying tensor metadata, this is also the definitive
