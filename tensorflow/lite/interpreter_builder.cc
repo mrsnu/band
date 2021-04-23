@@ -805,7 +805,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     std::set<int>& model_outputs =
         (*interpreter)->GetModelSpec(subgraph_key.model_id).output_tensors;
 
-    std::set_union(model_outputs.begin(),model_outputs.end(),
+    std::set_union(model_outputs.begin(), model_outputs.end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
                    std::inserter(non_param_tensors, non_param_tensors.end()));
 

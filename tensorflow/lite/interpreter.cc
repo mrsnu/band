@@ -962,7 +962,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
 
-    if (device_flag == kTfLiteCPU) {
+    if (device_flag == kTfLiteCPU || device_flag == kTfLiteCPUFallback) {
       // no need to check supportability for CPU
       continue;
     }
