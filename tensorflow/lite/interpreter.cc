@@ -992,7 +992,7 @@ Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
                                 TfLiteDeviceFlags preceded_device) {
   std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,
                                                             preceded_device);
-  std::map<std::string, std::vector<int>> subgraph_map =
+  std::map<std::pair<int, int>, std::vector<int>> subgraph_map =
       GroupByStartEndIdx(subgraph_indices);
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
@@ -1028,14 +1028,12 @@ Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
 }
 
 
-std::map<std::string, std::vector<int>> Interpreter::GroupByStartEndIdx(std::vector<int> subgraph_indices) {
-  std::map<std::string, std::vector<int>> ret;
+std::map<std::pair<int, int>, std::vector<int>>
+Interpreter::GroupByStartEndIdx(std::vector<int> subgraph_indices) {
+  std::map<std::pair<int, int>, std::vector<int>> ret;
   for (auto subgraph_idx : subgraph_indices) {
-    SubgraphKey& subgraph_key = subgraph(subgraph_idx)->GetKey();
-    std::string key = std::to_string(subgraph_key.start_idx) +
-                      "/" +
-                      std::to_string(subgraph_key.end_idx);
-    ret[key].push_back(subgraph_idx);
+    SubgraphKey& key = subgraph(subgraph_idx)->GetKey();
+    ret[{key.start_idx, key.end_idx}].push_back(subgraph_idx);
   }
   return ret;
 }

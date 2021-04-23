@@ -755,8 +755,8 @@ class Interpreter {
 
   /* private methods related to subgraph scheduling */
   // divide the given subgraphs into groups that share the same start/end idxs
-  // e.g., {"0/10": [1,3], "0/20": [2,4]}
-  std::map<string, std::vector<int>>
+  // e.g., {(0,10): [1,3], (0,20): [2,4]}
+  std::map<std::pair<int, int>, std::vector<int>>
   GroupByStartEndIdx(std::vector<int> subgraph_indices);
 
   // return subgraph indices for model_id and start_idx,
