@@ -64,7 +64,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `2`: Big Cluster only
   * `3`: Primary Core only
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
-* `profile_smoothing_constant`: Current profile reflection ratio. `updated_profile = profile_smoothing_constant * prev_profile + (1 - profile_smoothing_constant) * curr_profile` [default: 0.1]
+* `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * prev_profile + (1 - profile_smoothing_factor) * curr_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
 * `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
 * `schedule_window_size`: The number of planning unit.
@@ -94,7 +94,7 @@ An example of complete JSON config file is as follows:
     "execution_mode": "periodic",
     "cpu_mask": 3,
     "running_time_ms": 60000,
-    "profile_smoothing_constant": 0.1,
+    "profile_smoothing_factor": 0.1,
     "model_profile": "/data/local/tmp/profile.json",
     "allow_work_steal": true,
     "schedule_window_size": 10

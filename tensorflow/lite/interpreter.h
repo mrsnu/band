@@ -634,8 +634,8 @@ class Interpreter {
   void UpdateProfileResult(const std::pair<int, TfLiteDeviceFlags>& key,
                            int64_t new_profile);
 
-  void SetProfileSmoothingConstant(float profile_smoothing_constant) {
-    profile_smoothing_constant_ = profile_smoothing_constant;
+  void SetProfileSmoothingConstant(float profile_smoothing_factor) {
+    profile_smoothing_factor_ = profile_smoothing_factor;
   }
 
   int64_t GetProfiledLatency(int model_id, TfLiteDeviceFlags device_id);
@@ -691,8 +691,8 @@ class Interpreter {
   ErrorReporter* error_reporter() { return error_reporter_; }
 
   // Smoothing constant to update profile result.
-  // The smaller profile_smoothing_constant_, the smoother the profile results.
-  float profile_smoothing_constant_ = 0.1;
+  // The smaller profile_smoothing_factor_, the smoother the profile results.
+  float profile_smoothing_factor_ = 0.1;
 
   // A pure C data structure used to communicate with the pure C plugin
   // interface. To avoid copying tensor metadata, this is also the definitive
