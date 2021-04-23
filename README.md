@@ -45,57 +45,59 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 ```
 
 ### JSON Config file arguments
+* `models`: TF Lite models to run. For each model, specify the following fields.
+  * `graph`: TF Lite model path.
+  * `period_ms`: The delay between subsequent requests in ms.
+  * `batch_size`: The number of model requests in a frame. [default: 1]
+  * `device`: Specify the processor to run in int. The argument is only effective with `FixedDevicePlanner`.
 * `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
 * `planner`: The planner type in `int`.
-    * `0`: Fixed Device Planner
-    * `1`: Round-Robin Planner
-    * `2`: Shortest Expected Latency Planner
-* `models`: TF Lite models to run. For each model, specify the following fields. 
-    * `graph`: TF Lite model path.
-    * `period_ms`: The delay between subsequent requests in ms.
-    * `batch_size`: The number of model requests in a frame. [default: 1]
-    * `device`: Specify the processor to run in int. The argument is only effective with `FixedDevicePlanner`.
-* `running_time_ms`: Experiment duration in ms. [default: 60000]
-* `model_profile`: The path to file with model profile results. [default: None]
-* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: 0]
-    * `0`: All Cluster
-    * `1`: LITTLE Cluster only
-    * `2`: Big Cluster only
-    * `3`: Primary Core only
+  * `0`: Fixed Device Planner
+  * `1`: Round-Robin Planner
+  * `2`: Shortest Expected Latency Planner
 * `execution_mode`: Specify a exeucution mode. Available execution modes are as follows:
-    * `stream`: consecutively run batches.
-    * `periodic`: invoke requests periodically.
-* `schedule_window_size`: The number of planning unit.
+  * `stream`: consecutively run batches.
+  * `periodic`: invoke requests periodically.
+* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: 0]
+  * `0`: All Cluster
+  * `1`: LITTLE Cluster only
+  * `2`: Big Cluster only
+  * `3`: Primary Core only
+* `running_time_ms`: Experiment duration in ms. [default: 60000]
+* `profile_smoothing_constant`: Current profile reflection ratio. `updated_profile = profile_smoothing_constant * prev_profile + (1 - profile_smoothing_constant) * curr_profile` [default: 0.1]
+* `model_profile`: The path to file with model profile results. [default: None]
 * `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
+* `schedule_window_size`: The number of planning unit.
 
 An example of complete JSON config file is as follows:
 ```json
 {
-    "log_path": "/data/local/tmp/log.csv",
-    "planner": 2,
     "models": [
         {
-          "graph": "/data/local/tmp/mobilenet.tflite",
-          "period_ms": 10,
-          "batch_size": 2
+            "graph": "/data/local/tmp/mobilenet.tflite",
+            "period_ms": 10,
+            "batch_size": 1
         },
         {
-          "graph": "/data/local/tmp/yolov3.tflite",
-          "period_ms": 20,
-          "batch_size": 2
+            "graph": "/data/local/tmp/yolov3.tflite",
+            "period_ms": 20,
+            "batch_size": 2
         },
         {
-          "graph": "/data/local/tmp/inception_v4.tflite",
-          "period_ms": 30,
-          "batch_size": 3
+            "graph": "/data/local/tmp/inception_v4.tflite",
+            "period_ms": 30,
+            "batch_size": 3
         }
     ],
-    "running_time_ms": 6000,
-    "model_profile": "/data/local/tmp/profile.csv",
-    "cpu_masks": 2,
-    "execution_mode": "stream",
-    "schedule_window_size": 4,
-    "allow_work_steal": true
+    "log_path": "/data/local/tmp/log.csv",
+    "planner": 2,
+    "execution_mode": "periodic",
+    "cpu_mask": 3,
+    "running_time_ms": 60000,
+    "profile_smoothing_constant": 0.1,
+    "model_profile": "/data/local/tmp/profile.json",
+    "allow_work_steal": true,
+    "schedule_window_size": 10
 }
 ```
 
