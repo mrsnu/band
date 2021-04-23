@@ -32,7 +32,6 @@ limitations under the License.
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/minimal_logging.h"
-#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
