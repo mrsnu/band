@@ -1019,7 +1019,6 @@ Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
   return min_subgraph;
 }
 
-
 std::map<std::pair<int, int>, std::vector<int>>
 Interpreter::GroupByStartEndIdx(std::vector<int> subgraph_indices) {
   std::map<std::pair<int, int>, std::vector<int>> ret;
