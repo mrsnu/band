@@ -22,7 +22,6 @@ limitations under the License.
 #include <cstdlib>
 #include <memory>
 #include <vector>
-#include <iostream>
 
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/allocation.h"

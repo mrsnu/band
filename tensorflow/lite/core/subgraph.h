@@ -366,7 +366,6 @@ class Subgraph {
 
   ModelPlan* GetModelPlan() { return model_plan_.get(); }
 
-  // Pass subgraph key in ctor?
   void SetKey(SubgraphKey key) { key_ = key; }
   SubgraphKey& GetKey() { return key_; }
 
