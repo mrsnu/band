@@ -46,8 +46,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
       std::vector<int64_t> device_waiting_time;
       for (int i = 0; i < kTfLiteNumDevices; ++i) {
         TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-        device_waiting_time.push_back(
-            GetInterpreter()->GetDeviceWaitingTime(device_flag));
+        Worker* worker = GetInterpreter()->GetWorker(device_flag);
+        device_waiting_time.push_back(worker->GetWaitingTime());
       }
 
       // find the most urgent job and save its index within the queue

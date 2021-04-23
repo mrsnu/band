@@ -664,14 +664,15 @@ class Interpreter {
   // fill in the ModelSpec for this model
   void InvestigateModelSpec(int model_id);
 
-  // return the subgraph that leads to the shortest final latency (not just the
-  // latency of the returned subgraph, but the )
+  // Return a pair of the subgraph idx that leads to the shortest final
+  // latency, and that final latency value.
+  // Note that the returned subgraph may only cover a subset of the remaining
+  // ops, but the latency value is calculated with all subgraphs leading to
+  // the final op (of the model) in mind.
   std::pair<int, int64_t>
   GetShortestLatency(int model_id, int start_idx, int64_t start_time,
                      std::vector<int64_t>& device_waiting,
                      TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
-
-  int64_t GetDeviceWaitingTime(TfLiteDeviceFlags device);
 
   // Generate explicit subgraphs for fallback ops in `model_id`.
   // Consecutive fallback ops are grouped as one fallback subgraph.

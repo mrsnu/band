@@ -32,6 +32,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/minimal_logging.h"
+#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
@@ -841,22 +842,6 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
   } else {
     return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
   }
-}
-
-int64_t Interpreter::GetDeviceWaitingTime(TfLiteDeviceFlags device) {
-  int64_t waiting_time = 0;
-  Worker* worker = GetWorker(device);
-  {
-    std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-    std::deque<Job>& requests = worker->GetDeviceRequests();
-    for (auto& job : requests) {
-      SubgraphKey subgraph_key(job.model_id, device, job.start_idx, job.end_idx);
-      // TODO (dhkim): what if no valid subgraph key is given?
-      waiting_time += GetSubgraphProfileResult(subgraph_key);
-    }
-  }
-
-  return waiting_time;
 }
 
 int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
