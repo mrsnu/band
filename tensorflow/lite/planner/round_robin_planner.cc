@@ -9,8 +9,12 @@ void RoundRobinPlanner::Plan() {
       return;
 
     std::vector<bool> is_device_empty;
-    for (int i = 0; i < GetInterpreter()->GetWorkersSize(); ++i) {
+    for (int i = 0; i < kTfLiteNumDevices; ++i) {
       Worker* worker = GetInterpreter()->GetWorker(i);
+      if (!worker) {
+        continue;
+      }
+
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
         bool is_empty = worker->GetDeviceRequests().empty();
