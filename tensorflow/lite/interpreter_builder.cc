@@ -32,6 +32,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/internal/compatibility.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
+#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/util.h"
 #include "tensorflow/lite/version.h"
 
@@ -621,12 +622,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         has_available_device = true;
       }
 
-      // TODO: more elegant way to print logs without "NOT AN ERROR"?
-      error_reporter_->Report("(NOT AN ERROR) ADDED Subgraph: %d %d %d %d",
-                              subgraph_key.model_id,
-                              subgraph_key.device_flag,
-                              subgraph_key.start_idx,
-                              subgraph_key.end_idx);
+      TFLITE_LOG(INFO) << "ADDED Subgraph: "
+                       << subgraph_key.model_id << " "
+                       << subgraph_key.device_flag << " "
+                       << subgraph_key.start_idx << " "
+                       << subgraph_key.end_idx;
     }
   }
 
