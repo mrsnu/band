@@ -31,15 +31,7 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
            << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
-           << "end_time\t"
-           << "waiting_CPU\t"
-           << "waiting_GPU\t"
-           << "waiting_DSP\t"
-           << "waiting_NPU\t"
-           << "profiled_CPU\t"
-           << "profiled_GPU\t"
-           << "profiled_DSP\t"
-           << "profiled_NPU\n";
+           << "end_time\n";
   log_file.close();
   
   return kTfLiteOk;
@@ -66,15 +58,7 @@ void Planner::Wait() {
              << job.subgraph_idx << "\t"
              << job.enqueue_time << "\t"
              << job.invoke_time << "\t"
-             << job.end_time << "\t"
-             << job.waiting_time[0] << "\t"
-             << job.waiting_time[1] << "\t"
-             << job.waiting_time[2] << "\t"
-             << job.waiting_time[3] << "\t"
-             << job.profiled_latency[0] << "\t"
-             << job.profiled_latency[1] << "\t"
-             << job.profiled_latency[2] << "\t"
-             << job.profiled_latency[3] << "\n";
+             << job.end_time << "\n";
   }
   log_file.close();
   lock.unlock();

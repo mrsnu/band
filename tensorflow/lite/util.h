@@ -45,8 +45,6 @@ struct Job {
   int sched_id = -1;
   std::string model_fname;
 
-  std::map<int, int64_t> waiting_time;
-  std::map<int, int64_t> profiled_latency;
   std::vector<Job> following_jobs;
 };
 
