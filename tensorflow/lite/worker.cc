@@ -180,7 +180,8 @@ void Worker::TryWorkSteal() {
   }
 
   int subgraph_idx =
-    interpreter_ptr->GetSubgraphIdx(job.model_id, device_flag_);
+    interpreter_ptr->GetSubgraphIdx(SubgraphKey(
+        job.model_id, device_flag_, job.start_idx, job.end_idx));
   job.subgraph_idx = subgraph_idx;
   job.device_id = device_flag_;
 
