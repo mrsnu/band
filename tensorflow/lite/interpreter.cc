@@ -38,6 +38,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
+#include "tensorflow/lite/tools/logging.h"
 
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
@@ -648,10 +649,12 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
       int64_t profiled_latency = it->second;
       subgraph_profiling_results_map_[subgraph_key] = profiled_latency;
 
-      error_reporter_->Report("Reusing profiled result\n model=%d avg=%d us device=%s start=%d end=%d.",
-          subgraph_key.model_id, profiled_latency,
-          TfLiteDeviceGetName(subgraph_key.device_flag),
-          subgraph_key.start_idx, subgraph_key.end_idx);
+      TFLITE_LOG(INFO) << "Reusing profiled result\n"
+                       << " model=" << subgraph_key.model_id
+                       << " avg=" << profiled_latency << " us"
+                       << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
+                       << " start=" << subgraph_key.start_idx
+                       << " end=" << subgraph_key.end_idx << ".";
 
     } else {
       // otherwise, proceed as normal
@@ -669,10 +672,14 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
       // record the profiled latency for subsequent benchmark runs
       profiled[subgraph_key] = latency;
 
-      error_reporter_->Report("Profiling result\n model=%d warmup=%d count=%d avg=%d us device=%s start=%d end=%d.",
-              subgraph_key.model_id, num_warm_ups, num_runs, latency,
-              TfLiteDeviceGetName(subgraph_key.device_flag),
-              subgraph_key.start_idx, subgraph_key.end_idx);
+      TFLITE_LOG(INFO) << "Profiling result\n"
+                       << " model=" << subgraph_key.model_id
+                       << " warmup=" << num_warm_ups
+                       << " count=" << num_runs
+                       << " avg=" << latency << " us"
+                       << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
+                       << " start=" << subgraph_key.start_idx
+                       << " end=" << subgraph_key.end_idx << ".";
     }
   }
 
