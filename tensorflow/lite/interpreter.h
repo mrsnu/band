@@ -670,7 +670,7 @@ class Interpreter {
   // the final op (of the model) in mind.
   std::pair<int, int64_t>
   GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                     std::vector<int64_t>& device_waiting,
+                     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
                      TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
 
   // Generate explicit subgraphs for fallback ops in `model_id`.
@@ -781,7 +781,7 @@ class Interpreter {
   std::pair<int, int64_t>
   GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
                            int64_t start_time,
-                           std::vector<int64_t>& device_waiting);
+                           std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
 };
 
 }  // namespace impl

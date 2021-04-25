@@ -799,8 +799,6 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
   if (it != workers_.end()) {
     return it->second.get();
   } else {
-    error_reporter_->Report("ERROR: Cannot find the worker.");
-    // TODO #21: Handle errors in multi-thread environment
     return nullptr;
   }
 }
@@ -980,7 +978,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
 std::pair<int, int64_t>
 Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                                std::vector<int64_t>& device_waiting,
+                                std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
                                 TfLiteDeviceFlags preceded_device) {
   std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,
                                                             preceded_device);
@@ -1047,7 +1045,7 @@ std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
 std::pair<int, int64_t>
 Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
                                       int64_t start_time,
-                                      std::vector<int64_t>& device_waiting) {
+                                      std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
   int64_t min_latency = INT_MAX;
   int min_idx = 0;
 
