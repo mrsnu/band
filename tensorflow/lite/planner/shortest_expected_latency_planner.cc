@@ -89,6 +89,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       most_urgent_job.end_idx = to_execute.end_idx;
       most_urgent_job.subgraph_idx = target_subgraph;
       most_urgent_job.device_id = to_execute.device_flag;
+      most_urgent_job.sched_id = sched_id++;
 
       ModelSpec& model_spec =
           GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
@@ -106,9 +107,6 @@ void ShortestExpectedLatencyPlanner::Plan() {
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        if (most_urgent_job.sched_id < 0) {
-          most_urgent_job.sched_id = sched_id++;
-        }
         worker->GetDeviceRequests().push_back(most_urgent_job);
         worker->GetRequestCv().notify_one();
       }

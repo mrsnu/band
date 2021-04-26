@@ -4,6 +4,7 @@ namespace tflite {
 namespace impl {
 
 void FixedDevicePlanner::Plan() {
+  int sched_id = 0;
   while (true) {
     if (GetSafeBool().wait())
       return;
@@ -77,6 +78,7 @@ void FixedDevicePlanner::Plan() {
       // TODO: fallback subgraphs for FixedDevicePlanner?
       to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
       to_execute.device_id = device_idx;
+      to_execute.sched_id = sched_id++;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
       {

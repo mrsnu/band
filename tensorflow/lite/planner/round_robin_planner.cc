@@ -4,6 +4,7 @@ namespace tflite {
 namespace impl {
 
 void RoundRobinPlanner::Plan() {
+  int sched_id = 0;
   while (true) {
     if (GetSafeBool().wait())
       return;
@@ -49,6 +50,7 @@ void RoundRobinPlanner::Plan() {
         GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device_idx);
       to_execute.subgraph_idx = subgraph_idx;
       to_execute.device_id = device_idx;
+      to_execute.sched_id = sched_id++;
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
       {
