@@ -150,7 +150,10 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     planner_.reset(new FixedDevicePlanner(this));
   }
 
-  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU, kTfLiteCPUFallback };
+  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
+  if (planner_type_ == kShortestExpectedLatency) {
+    valid_devices.insert(kTfLiteCPUFallback);
+  }
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
