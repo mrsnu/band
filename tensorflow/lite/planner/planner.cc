@@ -22,21 +22,16 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
   std::ofstream log_file(log_path_);
   if (!log_file.is_open())
     return kTfLiteError;
-  log_file << "model_name\t"
+  log_file << "sched_id\t"
+           << "model_name\t"
            << "model_id\t"
            << "device_id\t"
-           << "sched_id\t"
+           << "start_idx\t"
+           << "end_idx\t"
+           << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
-           << "end_time\t"
-           << "waiting_CPU\t"
-           << "waiting_GPU\t"
-           << "waiting_DSP\t"
-           << "waiting_NPU\t"
-           << "profiled_CPU\t"
-           << "profiled_GPU\t"
-           << "profiled_DSP\t"
-           << "profiled_NPU\n";
+           << "end_time\n";
   log_file.close();
   
   return kTfLiteOk;
@@ -54,21 +49,16 @@ void Planner::Wait() {
     jobs_finished_.pop_front();
 
     // write all timestamp statistics to log file
-    log_file << job.model_fname << "\t"
+    log_file << job.sched_id << "\t"
+             << job.model_fname << "\t"
              << job.model_id << "\t"
              << job.device_id << "\t"
-             << job.sched_id << "\t"
+             << job.start_idx << "\t"
+             << job.end_idx << "\t"
+             << job.subgraph_idx << "\t"
              << job.enqueue_time << "\t"
              << job.invoke_time << "\t"
-             << job.end_time << "\t"
-             << job.waiting_time[0] << "\t"
-             << job.waiting_time[1] << "\t"
-             << job.waiting_time[2] << "\t"
-             << job.waiting_time[3] << "\t"
-             << job.profiled_latency[0] << "\t"
-             << job.profiled_latency[1] << "\t"
-             << job.profiled_latency[2] << "\t"
-             << job.profiled_latency[3] << "\n";
+             << job.end_time << "\n";
   }
   log_file.close();
   lock.unlock();

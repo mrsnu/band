@@ -1306,6 +1306,9 @@ TfLiteStatus Subgraph::UndoAllDelegates() {
   state_ = kStateUninvokable;
 
   delegates_undone_ = true;
+
+  // Delete applied delegates from the subgraph.
+  delegates_applied_.clear();
   return kTfLiteOk;
 }
 

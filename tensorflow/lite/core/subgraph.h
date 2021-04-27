@@ -42,6 +42,35 @@ namespace impl {
 // Forward declare since NNAPIDelegate uses Interpreter.
 class NNAPIDelegate;
 
+// data structure for identifying subgraphs within whole models
+struct SubgraphKey {
+  SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
+              int start = -1, int end = -1)
+      : model_id(model_id), device_flag(device_flag),
+        start_idx(start), end_idx(end) {}
+
+  bool operator<(const SubgraphKey &key) const {
+    if (model_id != key.model_id) {
+      return model_id < key.model_id;
+    }
+
+    if (device_flag != key.device_flag) {
+      return device_flag < key.device_flag;
+    }
+
+    if (start_idx != key.start_idx) {
+      return start_idx < key.start_idx;
+    }
+
+    return end_idx < key.end_idx;
+  }
+
+  int model_id;
+  TfLiteDeviceFlags device_flag;
+  int start_idx;
+  int end_idx;
+};
+
 class Subgraph {
  public:
   friend class Interpreter;
@@ -336,6 +365,9 @@ class Subgraph {
   void SetModelPlan(TfLiteDeviceFlags device) { model_plan_->device_ = device; }
 
   ModelPlan* GetModelPlan() { return model_plan_.get(); }
+
+  void SetKey(SubgraphKey key) { key_ = key; }
+  SubgraphKey& GetKey() { return key_; }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
@@ -709,6 +741,8 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
+
+  SubgraphKey key_;
 };
 
 }  // namespace impl

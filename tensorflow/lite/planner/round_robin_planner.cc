@@ -4,13 +4,18 @@ namespace tflite {
 namespace impl {
 
 void RoundRobinPlanner::Plan() {
+  int sched_id = 0;
   while (true) {
     if (GetSafeBool().wait())
       return;
 
     std::vector<bool> is_device_empty;
-    for (int i = 0; i < GetInterpreter()->GetWorkersSize(); ++i) {
+    for (int i = 0; i < kTfLiteNumDevices; ++i) {
       Worker* worker = GetInterpreter()->GetWorker(i);
+      if (!worker) {
+        continue;
+      }
+
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
         bool is_empty = worker->GetDeviceRequests().empty();
@@ -22,7 +27,7 @@ void RoundRobinPlanner::Plan() {
     while (!GetRequests().empty()) {
       Job to_execute = Job(-1);
       int device_idx;
-      for (device_idx = 0; device_idx < is_device_empty.size(); ++device_idx) {
+      for (device_idx = is_device_empty.size() - 1; device_idx >= 0; --device_idx) {
         if (is_device_empty[device_idx]) {
           auto available_job =
             std::find_if(GetRequests().begin(), GetRequests().end(),
@@ -38,13 +43,14 @@ void RoundRobinPlanner::Plan() {
         }
       }
 
-      if (device_idx == is_device_empty.size())
+      if (device_idx < 0)
         break;
 
       int subgraph_idx =
         GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device_idx);
       to_execute.subgraph_idx = subgraph_idx;
       to_execute.device_id = device_idx;
+      to_execute.sched_id = sched_id++;
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
       {

@@ -32,6 +32,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/internal/compatibility.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
+#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/util.h"
 #include "tensorflow/lite/version.h"
 
@@ -224,12 +225,29 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
     const OpResolver& op_resolver,
     const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
     Subgraph* subgraph) {
+  return ParseNodes(model, op_resolver, operators, subgraph, -1, -1);
+}
+ 
+TfLiteStatus InterpreterBuilder::ParseNodes(
+    const ::tflite::Model* model,
+    const OpResolver& op_resolver,
+    const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
+    Subgraph* subgraph,
+    int start_op_idx, int end_op_idx) {
   TfLiteStatus status = kTfLiteOk;
 
-  // Reduce the number of redundant allocations
-  subgraph->ReserveNodes(operators->size());
+  end_op_idx = end_op_idx == -1 ? operators->size() - 1
+                                : end_op_idx;
+  start_op_idx = start_op_idx == -1 ? 0
+                                    : start_op_idx;
 
-  for (int i = 0; i < operators->size(); ++i) {
+  // TODO(dhkim): assert(end_op_idx >= start_op_idx)
+  int num_ops = end_op_idx - start_op_idx + 1;
+
+  // Reduce the number of redundant allocations
+  subgraph->ReserveNodes(num_ops);
+
+  for (int i = start_op_idx; i <= end_op_idx; ++i) {
     const auto* op = operators->Get(i);
     int index = op->opcode_index();
     if (index < 0 || index >= flatbuffer_op_index_to_registration_.size()) {
@@ -424,7 +442,8 @@ TfLiteStatus InterpreterBuilder::ParseSparsity(
 TfLiteStatus InterpreterBuilder::ParseTensors(
     const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
     const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-    Subgraph* subgraph) {
+    Subgraph* subgraph,
+    std::set<int> tensor_indices) {
   TfLiteStatus status = kTfLiteOk;
 
   // A little helper to get the names of inputs and outputs. Note that they
@@ -436,6 +455,10 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
   };
 
   for (int i = 0; i < tensors->size(); ++i) {
+    if (tensor_indices.find(i) == tensor_indices.end()) {
+      continue;
+    }
+
     const auto* tensor = tensors->Get(i);
     std::vector<int> dims = FlatBufferIntArrayToVector(tensor->shape());
 
@@ -446,6 +469,8 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
       continue;
     }
 
+    // TODO(dhkim): delete tensor_types_ from builder attribute.
+    // Let model_spec take the control.
     tensor_types_.insert(type);
 
     auto get_readonly_data = [&](const char** buffer_data,
@@ -562,37 +587,76 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int model_id = InterpreterBuilder::num_registered_model++;
   bool has_available_device = false;
 
+  // the start and end indices aren't valid at this point
+  // we fix this later in InvestigateModelSpec
+  tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU);
+  int subgraph_idx = AddSubgraph(
+    model, op_resolver, interpreter, subgraph_key, num_threads);
+  if (subgraph_idx != -1) {
+    // TODO(dhkim): Move RegisterSubgraphIdx inside AddSubgraph
+    (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
+    has_available_device = true;
+  }
+
+  // write the ModelSpec for this model
+  (*interpreter)->InvestigateModelSpec(model_id);
+
+  // register subgraphs for all devices
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    if (i == kTfLiteCPUFallback) {
+      // Skip for Fallback worker
+      continue;
+    }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    int subgraph_idx = AddSubgraph(
-        model, op_resolver, interpreter, num_threads, device_id);
-    if (subgraph_idx != -1) {
-      (*interpreter)->RegisterSubgraphIdx(model_id, device_id, subgraph_idx);
-      has_available_device = true;
+    std::vector<tflite::impl::SubgraphKey> subgraph_keys;
+
+    // separate the supported ops from unsupported, fallback ops
+    (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id,
+                                                subgraph_keys);
+
+    for (auto& subgraph_key : subgraph_keys) {
+      int subgraph_idx = AddSubgraph(
+        model, op_resolver, interpreter, subgraph_key, num_threads);
+      if (subgraph_idx != -1) {
+        (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
+        has_available_device = true;
+      }
+
+      TFLITE_LOG(INFO) << "ADDED Subgraph: "
+                       << subgraph_key.model_id << " "
+                       << subgraph_key.device_flag << " "
+                       << subgraph_key.start_idx << " "
+                       << subgraph_key.end_idx;
     }
   }
 
-  if (has_available_device)
+  if (has_available_device) {
     return model_id;
-  else {
+  } else {
     InterpreterBuilder::num_registered_model--;
     return -1;
   }
 }
 
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads,
-                     TfLiteDeviceFlags device_id) {
-  return AddSubgraph(model.GetModel(), op_resolver, interpreter, num_threads, device_id);
+                                    const OpResolver& op_resolver,
+                                    std::unique_ptr<Interpreter>* interpreter,
+                                    tflite::impl::SubgraphKey& subgraph_key,
+                                    int num_threads) {
+  return AddSubgraph(model.GetModel(), op_resolver, interpreter,
+                     subgraph_key, num_threads);
 }
 
-int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads,
-                     TfLiteDeviceFlags device_id) {
+int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
+                                    const OpResolver& op_resolver,
+                                    std::unique_ptr<Interpreter>* interpreter,
+                                    tflite::impl::SubgraphKey& subgraph_key,
+                                    int num_threads) {
+  int subgraph_exists = (*interpreter)->GetSubgraphIdx(subgraph_key);
+  if (subgraph_exists >= 0) {
+    return subgraph_exists;
+  }
+
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report(
         "Interpreter is invalid");
@@ -647,6 +711,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
   }
 
   int old_size = (*interpreter)->subgraphs_size();
+  // Only one subgraph will be generated.
   (*interpreter)->AddSubgraphs(subgraphs->size());
   (*interpreter)->SetNumThreads(num_threads, old_size);
 
@@ -666,6 +731,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     modified_subgraph_index = old_size + subgraph_index;
     tflite::Subgraph* modified_subgraph =
         (*interpreter)->subgraph(modified_subgraph_index);
+    modified_subgraph->SetKey(subgraph_key);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {
@@ -677,18 +743,90 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
       return cleanup_and_error();
     }
-    // Set num threads
-    // Parse inputs/outputs
-    modified_subgraph->SetInputs(
-        FlatBufferIntArrayToVector(subgraph->inputs()));
-    modified_subgraph->SetOutputs(
-        FlatBufferIntArrayToVector(subgraph->outputs()));
 
-    // Finally setup nodes and tensors
-    if (builder.ParseNodes(model, op_resolver, operators, modified_subgraph) != kTfLiteOk)
+    // we now parse nodes and tensors, and setup input and
+    // output tensors for this particular subgraph
+
+    // first, parse nodes to access `TfLiteNode` info below
+    if (builder.ParseNodes(model, op_resolver,
+                           operators,
+                           modified_subgraph,
+                           subgraph_key.start_idx,
+                           subgraph_key.end_idx) != kTfLiteOk) {
       return cleanup_and_error();
-    if (builder.ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
+    }
+
+    // Collect all input/output tensors for individual nodes.
+    // these include intermediate tensors that may be consumed by other
+    // nodes in the same model, as well as parameters tensors that aren't
+    // really "input" tensors
+    std::set<int> node_inputs, node_outputs;
+    auto nodes_and_registration = modified_subgraph->nodes_and_registration();
+    for (int node_index : modified_subgraph->execution_plan()) {
+      TfLiteNode node = nodes_and_registration[node_index].first;
+      for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
+        node_inputs.insert(input_tensor);
+      }
+      for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+        node_outputs.insert(output_tensor);
+      }
+    }
+
+    // merge inputs and outputs to call ParseTensors()
+    std::set<int> subgraph_tensors;
+    std::set_union(node_inputs.begin(), node_inputs.end(),
+                   node_outputs.begin(), node_outputs.end(),
+                   std::inserter(subgraph_tensors, subgraph_tensors.end()));
+
+    if (builder.ParseTensors(buffers, tensors, modified_subgraph,
+                             subgraph_tensors) != kTfLiteOk) {
       return cleanup_and_error();
+    }
+
+    // now filter out the intermediate tensors from node_input_tensors so we
+    // only have external inputs that are required from outside,
+    // as well as parameter tensors
+    std::set<int> external_inputs_params;
+    std::set_difference(node_inputs.begin(), node_inputs.end(),
+                        node_outputs.begin(), node_outputs.end(),
+                        std::inserter(external_inputs_params,
+                                      external_inputs_params.begin()));
+
+    // Next, we need to filter out param tensors from external_inputs_params.
+    // there is no way of directly checking if a tensor is a parameter or not,
+    // so instead we collect all non-parameter tensors and exclude the param
+    // tensors in external_inputs_params that are not in the non-param list
+    // NOTE: need to check #65 (Tensor communications between subgraphs)
+    std::set<int> non_param_tensors;
+
+    std::vector<int> subgraph_input_vec =
+        FlatBufferIntArrayToVector(subgraph->inputs());
+    std::set<int> subgraph_inputs =
+        std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
+    std::set<int>& model_outputs =
+        (*interpreter)->GetModelSpec(subgraph_key.model_id).output_tensors;
+
+    std::set_union(model_outputs.begin(), model_outputs.end(),
+                   subgraph_inputs.begin(), subgraph_inputs.end(),
+                   std::inserter(non_param_tensors, non_param_tensors.end()));
+
+    std::set<int> real_inputs;
+    std::set_intersection(non_param_tensors.begin(), non_param_tensors.end(),
+                          external_inputs_params.begin(),
+                          external_inputs_params.end(),
+                          std::inserter(real_inputs, real_inputs.begin()));
+
+    // we do a similar processing for output tensors, except
+    // this time we don't have to worry about param tensors
+    std::set<int> real_outputs;
+    std::set_difference(node_outputs.begin(), node_outputs.end(),
+                        node_inputs.begin(), node_inputs.end(),
+                        std::inserter(real_outputs, real_outputs.begin()));
+
+    modified_subgraph->SetInputs(
+        std::vector<int>(real_inputs.begin(), real_inputs.end()));
+    modified_subgraph->SetOutputs(
+        std::vector<int>(real_outputs.begin(), real_outputs.end()));
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
@@ -702,7 +840,7 @@ int  InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if ((*interpreter)->
           ApplyBestDeviceDelegate(
             modified_subgraph, 
-            device_id, 
+            subgraph_key.device_flag, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
     

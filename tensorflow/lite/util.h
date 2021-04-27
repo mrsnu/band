@@ -37,14 +37,14 @@ struct Job {
   int model_id;
   int subgraph_idx = -1;
   int device_id = -1;
+  int start_idx = 0;
+  int end_idx = -1;
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
   int sched_id = -1;
   std::string model_fname;
 
-  std::map<int, int64_t> waiting_time;
-  std::map<int, int64_t> profiled_latency;
   std::vector<Job> following_jobs;
 };
 

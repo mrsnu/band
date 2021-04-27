@@ -63,13 +63,13 @@ class InterpreterBuilder {
   static int AddSubgraph(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
-                        int num_threads = -1,
-                        TfLiteDeviceFlags device_id = kTfLiteCPU);
+                        tflite::impl::SubgraphKey& subgraph_key,
+                        int num_threads = -1);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads = -1,
-                     TfLiteDeviceFlags device_id = kTfLiteCPU);
+                     tflite::impl::SubgraphKey& subgraph_key,
+                     int num_threads = -1);
 
   // Adds NUM_DEVICES number of Subgraphs to the interpreter.
   // Returns the model id.
@@ -99,10 +99,17 @@ class InterpreterBuilder {
       const OpResolver& op_resolver,
       const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
       Subgraph* subgraph);
+  TfLiteStatus ParseNodes(
+      const ::tflite::Model* model,
+      const OpResolver& op_resolver,
+      const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
+      Subgraph* subgraph,
+      int start_op_idx, int end_op_idx);
   TfLiteStatus ParseTensors(
       const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
       const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-      Subgraph* subgraph);
+      Subgraph* subgraph,
+      std::set<int> tensor_indices);
   TfLiteStatus ParseQuantization(const QuantizationParameters* src_quantization,
                                  TfLiteQuantization* quantization,
                                  const std::vector<int>& dims);

@@ -32,6 +32,7 @@ limitations under the License.
 #include "ruy/profiler/profiler.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/cpu/cpu.h"
+#include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
@@ -52,6 +53,8 @@ void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 // register custom ops), that version will be used instead.
 void ABSL_ATTRIBUTE_WEAK
 RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {}
+
+using tflite::impl::SubgraphKey;
 
 namespace tflite {
 namespace benchmark {
@@ -884,9 +887,9 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 Interpreter::ModelDeviceToLatency
 BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
   Interpreter::ModelDeviceToLatency id_profile;
-  for (auto profile_it = name_profile.begin();
-       profile_it != name_profile.end(); ++profile_it) {
-    std::string model_name = profile_it.key().asString();
+  for (auto name_profile_it = name_profile.begin();
+       name_profile_it != name_profile.end(); ++name_profile_it) {
+    std::string model_name = name_profile_it.key().asString();
 
     // check the integer id of this model name
     auto name_to_id_it = model_name_to_id_.find(model_name);
@@ -896,19 +899,35 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
     }
     int model_id = name_to_id_it->second;
 
-    const Json::Value inner = *profile_it;
-    for (auto inner_it = inner.begin(); inner_it != inner.end(); ++inner_it) {
-      int device_id = inner_it.key().asInt();
-      int64_t profiled_latency = (*inner_it).asInt64();
+    const Json::Value idx_profile = *name_profile_it;
+    for (auto idx_profile_it = idx_profile.begin();
+         idx_profile_it != idx_profile.end(); ++idx_profile_it) {
+      std::string idx = idx_profile_it.key().asString();
 
-      if (profiled_latency <= 0) {
-        // jsoncpp treats missing values (null) as zero,
-        // so they will be filtered out here
-        continue;
+      // parse the key to retrieve start/end indices
+      // e.g., "25/50" --> delim_pos = 2
+      auto delim_pos = idx.find("/");
+      std::string start_idx = idx.substr(0, delim_pos);
+      std::string end_idx = idx.substr(delim_pos + 1, idx.length() - delim_pos - 1);
+      
+      const Json::Value device_profile = *idx_profile_it;
+      for (auto device_profile_it = device_profile.begin();
+           device_profile_it != device_profile.end();
+           ++device_profile_it) {
+        int device_id = device_profile_it.key().asInt();
+        TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+        int64_t profiled_latency = (*device_profile_it).asInt64();
+
+        if (profiled_latency <= 0) {
+          // jsoncpp treats missing values (null) as zero,
+          // so they will be filtered out here
+          continue;
+        }
+
+        SubgraphKey key(model_id, device_flag,
+                        std::stoi(start_idx), std::stoi(end_idx));
+        id_profile[key] = profiled_latency;
       }
-
-      // copy all entries in name_profile --> id_profile for this model
-      id_profile[{model_id, device_id}] = profiled_latency;
     }
   }
   return id_profile;
@@ -917,14 +936,16 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
 void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
                                                 Json::Value& name_profile) {
   for (auto& pair : id_profile) {
-    int model_id = pair.first.first;
-    int device_id = pair.first.second;
+    SubgraphKey key = pair.first;
+    int model_id = key.model_id;
+    std::string start_idx = std::to_string(key.start_idx);
+    std::string end_idx = std::to_string(key.end_idx);
     int64_t profiled_latency = pair.second;
 
     // check the string name of this model id
     std::string model_name;
     for (auto& name_id_pair : model_name_to_id_) {
-      if (name_id_pair.second == model_id) {
+      if (name_id_pair.second == key.model_id) {
         model_name = name_id_pair.first;
         break;
       }
@@ -937,7 +958,9 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
     }
 
     // copy all entries in id_profile --> name_profile
-    name_profile[model_name][device_id] = profiled_latency;
+    // as an ad-hoc method, we simply concat the start/end indices to form
+    // the level-two key in the final json value
+    name_profile[model_name][start_idx + "/" + end_idx][key.device_flag] = profiled_latency;
   }
 }
 
@@ -990,7 +1013,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
   TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
   TFLITE_LOG(INFO) << "Measured FPS: "
-                   << ((float)num_frames / ((end - start) / 1000000));
+                   << (num_frames / (float)(end - start)) * 1000000;
 
   return kTfLiteOk;
 }

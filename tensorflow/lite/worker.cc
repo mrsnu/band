@@ -77,7 +77,7 @@ void Worker::Work() {
       if (subgraph.Invoke() == kTfLiteOk) {
         job.end_time = profiling::time::NowMicros();
         interpreter_ptr->UpdateProfileResult(
-            {job.model_id, static_cast<TfLiteDeviceFlags>(job.device_id)},
+            subgraph.GetKey(),
             (job.end_time - job.invoke_time));
         // TODO #65: Tensor communications between subgraphs
         interpreter_ptr->InvokeModelsAsync(job.following_jobs);
@@ -136,8 +136,8 @@ void Worker::TryWorkSteal() {
     Job& job = target_worker->GetDeviceRequests().back();
     lock.unlock();
 
-    int64_t expected_latency =
-      interpreter_ptr->GetProfiledLatency(job.model_id, device_flag_);
+    SubgraphKey key(job.model_id, device_flag_, job.start_idx, job.end_idx);
+    int64_t expected_latency = interpreter_ptr->GetSubgraphProfileResult(key);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;
@@ -180,7 +180,8 @@ void Worker::TryWorkSteal() {
   }
 
   int subgraph_idx =
-    interpreter_ptr->GetSubgraphIdx(job.model_id, device_flag_);
+    interpreter_ptr->GetSubgraphIdx(SubgraphKey(
+        job.model_id, device_flag_, job.start_idx, job.end_idx));
   job.subgraph_idx = subgraph_idx;
   job.device_id = device_flag_;
 
@@ -204,8 +205,10 @@ int64_t Worker::GetWaitingTime() {
     int model_id = (*it).model_id;
     TfLiteDeviceFlags device_id =
         static_cast<TfLiteDeviceFlags>((*it).device_id);
-    int64_t profiled_latency =
-        interpreter->GetProfiledLatency(model_id, device_id);
+    int start_idx = (*it).start_idx;
+    int end_idx = (*it).end_idx;
+    SubgraphKey key(model_id, device_id, start_idx, end_idx);
+    int64_t profiled_latency = interpreter->GetSubgraphProfileResult(key);
 
     total += profiled_latency;
     if (it == requests_.begin()) {

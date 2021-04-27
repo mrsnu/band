@@ -23,6 +23,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
+#include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/util.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
@@ -85,6 +86,14 @@ namespace impl {
 /// foo.Invoke();
 /// </code></pre>
 ///
+
+// a convenient data structure for holding various model information
+struct ModelSpec {
+  int num_ops;
+  std::set<int> output_tensors;
+  std::set<TfLiteType> tensor_types;
+  std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
+};
 
 class Interpreter {
  public:
@@ -480,7 +489,7 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  using ModelDeviceToLatency = std::map<std::pair<int, int>, int64_t>;
+  using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
 
   void Profile(const int num_warm_ups, const int num_runs,
                ModelDeviceToLatency& profiled);
@@ -611,6 +620,8 @@ class Interpreter {
 
   int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
   int GetSubgraphIdx(int model_id, int device_idx);
+  int GetSubgraphIdx(SubgraphKey subgraph_key);
+  void DeleteKey(SubgraphKey subgraph_key);
 
   std::set<int> models() const;
 
@@ -631,24 +642,42 @@ class Interpreter {
   
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
 
-  void UpdateProfileResult(const std::pair<int, TfLiteDeviceFlags>& key,
+  int64_t GetSubgraphProfileResult(SubgraphKey& key);
+
+  void UpdateProfileResult(const SubgraphKey& key,
                            int64_t new_profile);
 
   void SetProfileSmoothingConstant(float profile_smoothing_factor) {
     profile_smoothing_factor_ = profile_smoothing_factor;
   }
 
-  int64_t GetProfiledLatency(int model_id, TfLiteDeviceFlags device_id);
 
-  int64_t GetLatency(TfLiteDeviceFlags device, Job& job);
-
-  TfLiteDeviceFlags GetDeviceWithShortestLatency(Job& job);
+  ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
   int GetWindowSize() const;
 
   void SetWindowSize(int schedule_window_size);
 
   void AllowWorkSteal();
+
+  // fill in the ModelSpec for this model
+  void InvestigateModelSpec(int model_id);
+
+  // Return a pair of the subgraph idx that leads to the shortest final
+  // latency, and that final latency value.
+  // Note that the returned subgraph may only cover a subset of the remaining
+  // ops, but the latency value is calculated with all subgraphs leading to
+  // the final op (of the model) in mind.
+  std::pair<int, int64_t>
+  GetShortestLatency(int model_id, int start_idx, int64_t start_time,
+                     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+                     TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
+
+  // Generate explicit subgraphs for fallback ops in `model_id`.
+  // Consecutive fallback ops are grouped as one fallback subgraph.
+  void MakeSubgraphsForFallbackOps(const int model_id,
+                                   const TfLiteDeviceFlags device_flag,
+                                   std::vector<SubgraphKey>& splitted_op_range);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
     return own_external_cpu_backend_context_.get();
@@ -663,12 +692,10 @@ class Interpreter {
   std::shared_ptr<Planner> planner_;
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 
-  // Map structure to find subgraph idx with (model_id, device_id)
-  std::map<std::pair<int, TfLiteDeviceFlags>, int> subgraph_idx_map_;
+  // Map structure to find subgraph idx with SubgraphKeys
+  std::map<SubgraphKey, int> subgraph_idx_map_;
 
-  void RegisterSubgraphIdx(int model_id,
-                           TfLiteDeviceFlags device_id,
-                           int subgraph_idx);
+  void RegisterSubgraphIdx(SubgraphKey subgraph_key, int subgraph_idx);
 
   // Applies best delegate from the given device to the subgraph.
   TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
@@ -706,7 +733,7 @@ class Interpreter {
   std::map<TfLiteDelegateFlags, TfLiteDelegatePtr> delegates_;
 
   // Map structure to store profiling results in microseconds of (model_id, device_id)
-  std::map<std::pair<int, TfLiteDeviceFlags>, int64_t> subgraph_profiling_results_map_;
+  std::map<SubgraphKey, int64_t> subgraph_profiling_results_map_;
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.
   std::unique_ptr<Profiler> owned_profiler_;
@@ -732,8 +759,30 @@ class Interpreter {
   // Maps to each model's configuration.
   std::map<int, ModelConfig> model_configs_;
 
+  // Maps to model spec
+  std::map<int, ModelSpec> model_specs_;
+
+  TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
+
+  /* private methods related to subgraph scheduling */
+  // divide the given subgraphs into groups that share the same start/end idxs
+  // e.g., {(0,10): [1,3], (0,20): [2,4]}
+  std::map<std::pair<int, int>, std::vector<int>>
+  GroupByStartEndIdx(std::vector<int> subgraph_indices);
+
+  // return subgraph indices for model_id and start_idx,
+  // excluding subgraphs on preceded_device
+  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx,
+                                         TfLiteDeviceFlags preceded_device);
+
+  // return the shortest subgraph out of given subgraphs, when the start time
+  // and per-device waiting times are taken into account
+  std::pair<int, int64_t>
+  GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
+                           int64_t start_time,
+                           std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
 };
 
 }  // namespace impl
