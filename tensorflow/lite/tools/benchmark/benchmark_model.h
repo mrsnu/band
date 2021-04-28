@@ -25,6 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/core/util/stats_calculator.h"
+#include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/profiling/memory_info.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_params.h"
@@ -193,13 +194,19 @@ class BenchmarkModel {
 
   // Keeps the runtime configuration from json config file.
   struct RuntimeConfig {
+    RuntimeConfig() {
+      // To avoid kTfLiteNumDevices dependent initialization
+      for (int i = 0; i < kTfLiteNumDevices; i++) {
+        worker_cpu_masks[i] = tflite::impl::kTfLiteNumCpuMasks;
+      }
+    }
     // Required
     std::string log_path;
     TfLitePlannerType planner_type;
     std::string execution_mode;
     // Optional
     size_t cpu_masks = 0;
-    size_t worker_cpu_masks[kTfLiteNumDevices] = {impl::kTfLiteNumCpuMasks};
+    size_t worker_cpu_masks[kTfLiteNumDevices];
     int running_time_ms = 60000;
     float profile_smoothing_factor = 0.1;
     std::string model_profile;
