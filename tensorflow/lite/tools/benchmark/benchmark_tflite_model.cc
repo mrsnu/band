@@ -652,6 +652,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     if (runtime_config_.cpu_masks != worker_mask_index) {
       TfLiteStatus status = interpreter_->SetWorkerThreadAffinity(worker_mask, device_id);
 
+      // Don't need to terminate the benchmark as workers are not always available
       if (status == kTfLiteOk) {
         TFLITE_LOG(INFO) << "Set affinity of "
                         << TfLiteDeviceGetName(device_id)
@@ -668,10 +669,10 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     std::string model_name = model_configs_[i].model_fname;
     TF_LITE_ENSURE_STATUS(LoadModel(model_name));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
-        *models_[i], model_configs_[i], *resolver, &interpreter_,
-        num_threads);
+        *models_[i], model_configs_[i], *resolver, &interpreter_, num_threads);
 
-    if (model_id == -1) return kTfLiteError;
+    if (model_id == -1) 
+      return kTfLiteError;
     model_name_to_id_[model_name] = model_id;
   }
 
