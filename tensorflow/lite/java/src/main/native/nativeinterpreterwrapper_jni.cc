@@ -361,24 +361,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_useXNNPACK(
       reinterpret_cast<decltype(TfLiteXNNPackDelegateUpdate)*>(
           dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateUpdate"));
 
-  if (xnnpack_options_default && xnnpack_create && xnnpack_delete && xnnpack_update) {
-    TfLiteXNNPackDelegateOptions options = xnnpack_options_default();
-    if (num_threads > 0) {
-      options.num_threads = num_threads;
-    }
-    tflite_api_dispatcher::Interpreter::TfLiteDelegatePtr delegate(
-        xnnpack_create(&options), xnnpack_delete);
-    if (interpreter->ModifyGraphWithDelegate(std::move(delegate)) !=
-        kTfLiteOk) {
-      ThrowException(env, kIllegalArgumentException,
-                     "Internal error: Failed to apply XNNPACK delegate: %s",
-                     error_reporter->CachedErrorMessage());
-    }
-  } else {
-    ThrowException(env, kIllegalArgumentException,
-                   "Failed to load XNNPACK delegate from current runtime. "
-                   "Have you added the necessary dependencies?");
-  }
+  // Let interpreter to create XNNPack delegate if we need one.
 }
 
 JNIEXPORT void JNICALL
@@ -466,26 +449,48 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createModelWithBuffer(
 
 JNIEXPORT jlong JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
-    JNIEnv* env, jclass clazz, jlong model_handle, jlong error_handle,
-    jint num_threads) {
-  tflite_api_dispatcher::TfLiteModel* model =
-      convertLongToModel(env, model_handle);
-  if (model == nullptr) return 0;
+    JNIEnv* env, jclass clazz, jlong error_handle) {
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return 0;
-  auto resolver = ::tflite::CreateOpResolver();
   std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter;
-  TfLiteStatus status = tflite_api_dispatcher::InterpreterBuilder(
-      *model, *(resolver.get()))(&interpreter, static_cast<int>(num_threads));
-  if (status != kTfLiteOk) {
+  // Note that tensor allocation is performed explicitly by the owning Java
+  // NativeInterpreterWrapper instance.
+  return reinterpret_cast<jlong>(interpreter.release());
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
+    JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong model_handle, 
+    jlong error_handle, jint period_ms, jint device = -1, jint batch_size = 1,
+    jint num_threads = 1) {
+
+  std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
+      convertLongToInterpreter(env, interpreter_handle));
+  if (interpreter == nullptr) return 0;
+
+  tflite_api_dispatcher::TfLiteModel* model =
+      convertLongToModel(env, model_handle);
+  if (model == nullptr) return 0;
+
+  BufferErrorReporter* error_reporter =
+      convertLongToErrorReporter(env, error_handle);
+  if (error_reporter == nullptr) return 0;
+
+  auto resolver = ::tflite::CreateOpResolver();
+  tflite::ModelConfig config(
+      model->filename(), period_ms, device, batch_size);
+
+  int status =
+      tflite_api_dispatcher::InterpreterBuilder::RegisterModel(
+          *model, config, *resolver.get(), &interpreter, num_threads);
+
+  if (status == -1) {
     ThrowException(env, kIllegalArgumentException,
                    "Internal error: Cannot create interpreter: %s",
                    error_reporter->CachedErrorMessage());
     return 0;
   }
-  // Note that tensor allocation is performed explicitly by the owning Java
-  // NativeInterpreterWrapper instance.
   return reinterpret_cast<jlong>(interpreter.release());
 }
 

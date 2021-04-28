@@ -69,6 +69,7 @@ std::unique_ptr<FlatBufferModel> FlatBufferModel::BuildFromFile(
                                           error_reporter, /*use_nnapi=*/true);
   model.reset(new FlatBufferModel(std::move(allocation), error_reporter));
   if (!model->initialized()) model.reset();
+  model->filename_ = filename;
   return model;
 }
 

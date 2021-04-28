@@ -136,6 +136,7 @@ class FlatBufferModel {
   const tflite::Model* GetModel() const { return model_; }
   ErrorReporter* error_reporter() const { return error_reporter_; }
   const Allocation* allocation() const { return allocation_.get(); }
+  const char* filename() const { return filename_; }
 
   // Returns the minimum runtime version from the flatbuffer. This runtime
   // version encodes the minimum required interpreter version to run the
@@ -173,6 +174,7 @@ class FlatBufferModel {
   /// The allocator used for holding memory of the model. Note that this will
   /// be null if the client provides a tflite::Model directly.
   std::unique_ptr<Allocation> allocation_;
+  const char* filename_ = nullptr;
 };
 
 }  // namespace tflite

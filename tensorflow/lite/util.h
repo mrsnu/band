@@ -54,6 +54,12 @@ struct Job {
 // Model configuration struct.
 // The configuration is given when registering the model.
 struct ModelConfig {
+  ModelConfig() {}
+  ModelConfig(std::string model_fname, int period_ms, int device, int batch_size)
+    :model_fname(model_fname),
+    period_ms(period_ms),
+    device(device),
+    batch_size(batch_size) {}
   std::string model_fname;
   int period_ms;
   int device = -1;
