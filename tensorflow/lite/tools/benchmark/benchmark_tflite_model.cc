@@ -634,9 +634,6 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   // Set log file path and write log headers
   TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
-
-  // Set worker threads and current thread affinity
-  TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(cpuMask));
   TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpuMask));
 
   TFLITE_LOG(INFO) << "Set affinity to "
@@ -646,22 +643,23 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   for (int i = 0; i < kTfLiteNumDevices; i++) {
     const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
+    // Skip as workers are not always available
+    if (!interpreter_->GetWorker(device_id))
+      continue;
     const int worker_mask_index = runtime_config_.worker_cpu_masks[i];
-    const tflite::impl::CpuSet worker_mask = tflite::impl::GetCPUThreadAffinityMask(
-      static_cast<tflite::impl::TFLiteCPUMasks>(worker_mask_index));
+    TFLiteCPUMasks worker_mask = 
+        static_cast<tflite::impl::TFLiteCPUMasks>(worker_mask_index);
+    // Use global mask only if worker_mask is invalid
+    if (worker_mask == tflite::impl::kTfLiteNumCpuMasks)
+      worker_mask = cpu_mask;
+    const tflite::impl::CpuSet worker_mask = tflite::impl::GetCPUThreadAffinityMask(worker_mask);
     if (runtime_config_.cpu_masks != worker_mask_index) {
-      TfLiteStatus status = interpreter_->SetWorkerThreadAffinity(worker_mask, device_id);
-
-      // Don't need to terminate the benchmark as workers are not always available
-      if (status == kTfLiteOk) {
-        TFLITE_LOG(INFO) << "Set affinity of "
-                         << TfLiteDeviceGetName(device_id)
-                         << " to "
-                         << tflite::impl::GetCPUThreadAffinityMaskString(
-                                static_cast<tflite::impl::TFLiteCPUMasks>(
-                                    worker_mask_index))
-                         << " cores";
-      }
+      TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(worker_mask, device_id));
+      TFLITE_LOG(INFO) << "Set affinity of "
+                        << TfLiteDeviceGetName(device_id)
+                        << " to "
+                        << tflite::impl::GetCPUThreadAffinityMaskString(worker_mask)
+                        << " cores";
     }
   }
 
@@ -825,13 +823,8 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 
   // Set Runtime Configurations
   // Optional
-  if (!root["cpu_masks"].isNull()) {
+  if (!root["cpu_masks"].isNull())
     runtime_config_.cpu_masks = root["cpu_masks"].asInt();
-    // Propagate global masks to workers
-    for (int i = 0; i < kTfLiteNumDevices; i++) {
-      runtime_config_.worker_cpu_masks[i] = root["cpu_masks"].asInt();
-    }
-  }
   if (!root["worker_cpu_masks"].isNull()) {
     for (auto const& key : root["worker_cpu_masks"].getMemberNames()) {
       int device_id = TfLiteDeviceGetFlag(key.c_str());
