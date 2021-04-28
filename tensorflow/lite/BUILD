@@ -232,10 +232,10 @@ cc_library(
 cc_library(
     name = "cpu",
     srcs = [
-        "core/cpu/cpu.cc",
+        "cpu.cc",
     ],
     hdrs = [
-        "core/cpu/cpu.h",
+        "cpu.h",
     ],
     deps = [
         "//tensorflow/lite/c:common",
