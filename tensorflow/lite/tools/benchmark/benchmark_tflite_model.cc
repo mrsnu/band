@@ -671,7 +671,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     int model_id = tflite::InterpreterBuilder::RegisterModel(
         *models_[i], model_configs_[i], *resolver, &interpreter_, num_threads);
 
-    if (model_id == -1) 
+    if (model_id == -1)
       return kTfLiteError;
     model_name_to_id_[model_name] = model_id;
   }
