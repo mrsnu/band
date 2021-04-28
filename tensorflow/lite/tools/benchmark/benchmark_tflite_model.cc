@@ -643,15 +643,35 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       << tflite::impl::GetCPUThreadAffinityMaskString(
              static_cast<tflite::impl::TFLiteCPUMasks>(runtime_config_.cpu_masks))
       << " cores";
-  
+
+  for (int i = 0; i < kTfLiteNumDevices; i++) {
+    const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
+    const int worker_mask_index = runtime_config_.worker_cpu_masks[i];
+    const tflite::impl::CpuSet worker_mask = tflite::impl::GetCPUThreadAffinityMask(
+      static_cast<tflite::impl::TFLiteCPUMasks>(worker_mask_index));
+    if (runtime_config_.cpu_masks != worker_mask_index) {
+      TfLiteStatus status = interpreter_->SetWorkerThreadAffinity(worker_mask, device_id);
+
+      if (status == kTfLiteOk) {
+        TFLITE_LOG(INFO) << "Set affinity of "
+                        << TfLiteDeviceGetName(device_id)
+                        << " to "
+                        << tflite::impl::GetCPUThreadAffinityMaskString(
+                                static_cast<tflite::impl::TFLiteCPUMasks>(
+                                    worker_mask_index))
+                        << " cores";
+      }
+    }
+  }
+
   for (int i = 0; i < model_configs_.size(); ++i) {
     std::string model_name = model_configs_[i].model_fname;
     TF_LITE_ENSURE_STATUS(LoadModel(model_name));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
-        *models_[i], model_configs_[i], *resolver, &interpreter_, num_threads);
+        *models_[i], model_configs_[i], *resolver, &interpreter_,
+        num_threads);
 
-    if (model_id == -1)
-      return kTfLiteError;
+    if (model_id == -1) return kTfLiteError;
     model_name_to_id_[model_name] = model_id;
   }
 
@@ -804,8 +824,22 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 
   // Set Runtime Configurations
   // Optional
-  if (!root["cpu_masks"].isNull())
+  if (!root["cpu_masks"].isNull()) {
     runtime_config_.cpu_masks = root["cpu_masks"].asInt();
+    // propagate global masks to workers
+    for (int i = 0; i < kTfLiteNumDevices; i++) {
+      runtime_config_.worker_cpu_masks[i] = root["cpu_masks"].asInt();
+    }
+  }
+  if (!root["worker_cpu_masks"].isNull()) {
+    for (auto const& key : root["worker_cpu_masks"].getMemberNames()) {
+      int device_id = TfLiteDeviceGetFlag(key.c_str());
+      if (device_id < kTfLiteNumDevices &&
+          root["worker_cpu_masks"][key].asInt() < impl::kTfLiteNumCpuMasks) {
+        runtime_config_.worker_cpu_masks[device_id] = root["worker_cpu_masks"][key].asInt();
+      }
+    }
+  }
   if (!root["running_time_ms"].isNull())
     runtime_config_.running_time_ms = root["running_time_ms"].asInt();
   if (!root["profile_smoothing_factor"].isNull())

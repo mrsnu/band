@@ -848,7 +848,10 @@ TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_
     }
     return kTfLiteOk;
   } else {
-    return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
+    if (workers_.find(device_id) == workers_.end()) 
+      return kTfLiteError;
+    else 
+      return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
   }
 }
 

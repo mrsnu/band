@@ -233,6 +233,16 @@ const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag) {
   return "Unknown type";  
 }
 
+const TfLiteDeviceFlags TfLiteDeviceGetFlag(const char* name) {
+  for (int i = 0; i < kTfLiteNumDevices; i++) {
+    TfLiteDeviceFlags flag = (TfLiteDeviceFlags)i;
+    if (strcmp(TfLiteDeviceGetName(flag), name) == 0) {
+      return flag;
+    }
+  }
+  return kTfLiteNumDevices;
+}
+
 const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
   switch (flag) {
     case kTfLiteDelegateFlagsNone:
