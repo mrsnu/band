@@ -655,10 +655,10 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     const tflite::impl::CpuSet worker_mask_set = tflite::impl::GetCPUThreadAffinityMask(worker_mask);
     TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(worker_mask_set, device_id));
     TFLITE_LOG(INFO) << "Set affinity of "
-                      << TfLiteDeviceGetName(device_id)
-                      << " to "
-                      << tflite::impl::GetCPUThreadAffinityMaskString(worker_mask)
-                      << " cores";
+                     << TfLiteDeviceGetName(device_id)
+                     << " to "
+                     << tflite::impl::GetCPUThreadAffinityMaskString(worker_mask)
+                     << " cores";
   }
 
   for (int i = 0; i < model_configs_.size(); ++i) {
