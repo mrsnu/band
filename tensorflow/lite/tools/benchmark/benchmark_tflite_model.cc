@@ -827,7 +827,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   // Optional
   if (!root["cpu_masks"].isNull()) {
     runtime_config_.cpu_masks = root["cpu_masks"].asInt();
-    // propagate global masks to workers
+    // Propagate global masks to workers
     for (int i = 0; i < kTfLiteNumDevices; i++) {
       runtime_config_.worker_cpu_masks[i] = root["cpu_masks"].asInt();
     }
