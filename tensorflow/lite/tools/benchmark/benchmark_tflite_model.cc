@@ -655,12 +655,12 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       // Don't need to terminate the benchmark as workers are not always available
       if (status == kTfLiteOk) {
         TFLITE_LOG(INFO) << "Set affinity of "
-                        << TfLiteDeviceGetName(device_id)
-                        << " to "
-                        << tflite::impl::GetCPUThreadAffinityMaskString(
+                         << TfLiteDeviceGetName(device_id)
+                         << " to "
+                         << tflite::impl::GetCPUThreadAffinityMaskString(
                                 static_cast<tflite::impl::TFLiteCPUMasks>(
                                     worker_mask_index))
-                        << " cores";
+                         << " cores";
       }
     }
   }
