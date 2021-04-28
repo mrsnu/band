@@ -5,7 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <deque>
-#include "tensorflow/lite/core/cpu/cpu.h"
+#include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
 
 namespace tflite {

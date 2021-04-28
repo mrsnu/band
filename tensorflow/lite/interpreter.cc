@@ -24,7 +24,7 @@ limitations under the License.
 #include <list>
 
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/core/cpu/cpu.h"
+#include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/delegates/status.h"
