@@ -634,6 +634,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   // Set log file path and write log headers
   TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
+  auto cpu_mask = tflite::impl::GetCPUThreadAffinityMask(
+      static_cast<tflite::impl::TFLiteCPUMasks>(runtime_config_.cpu_masks));
   TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpu_mask));
 
   TFLITE_LOG(INFO) << "Set affinity to "
@@ -825,7 +827,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     runtime_config_.cpu_masks = root["cpu_masks"].asUInt();
   if (!root["worker_cpu_masks"].isNull()) {
     for (auto const& key : root["worker_cpu_masks"].getMemberNames()) {
-      int device_id = TfLiteDeviceGetFlag(key.c_str());
+      size_t device_id = TfLiteDeviceGetFlag(key.c_str());
       if (device_id < kTfLiteNumDevices &&
           root["worker_cpu_masks"][key].asUInt() < impl::kTfLiteNumCpuMasks) {
         runtime_config_.worker_cpu_masks[device_id] = root["worker_cpu_masks"][key].asUInt();

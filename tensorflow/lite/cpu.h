@@ -34,7 +34,7 @@ typedef enum {
     kTfLiteBig,
     kTfLitePrimary,
     kTfLiteNumCpuMasks
-} TFLiteCPUMasks;
+} TfLiteCPUMasks;
 
 class CpuSet {
 public:
