@@ -59,10 +59,10 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `stream`: consecutively run batches.
   * `periodic`: invoke requests periodically.
 * `cpu_masks`: CPU cluster mask to set CPU affinity. [default: 0]
-  * `0`: All Cluster
-  * `1`: LITTLE Cluster only
-  * `2`: Big Cluster only
-  * `3`: Primary Core only
+  * `ALL`: All Cluster
+  * `LITTLE`: LITTLE Cluster only
+  * `BIG`: Big Cluster only
+  * `PRIMARY`: Primary Core only
 * `worker_cpu_masks`: CPU cluster mask to set CPU affinity of specific worker. For each worker, specify the mask. [default: `cpu_masks`]
   * `CPU`
   * `CPUFallback`

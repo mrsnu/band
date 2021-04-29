@@ -34,7 +34,7 @@ typedef enum {
     kTfLiteBig,
     kTfLitePrimary,
     kTfLiteNumCpuMasks
-} TfLiteCPUMasks;
+} TfLiteCPUMaskFlags;
 
 class CpuSet {
 public:
@@ -61,8 +61,9 @@ TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
-const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask);
-const char* GetCPUThreadAffinityMaskString(TFLiteCPUMasks mask);
+const CpuSet& TfLiteCPUMaskGetSet(TfLiteCPUMaskFlags flag);
+const char* TfLiteCPUMaskGetName(TfLiteCPUMaskFlags flag);
+const TfLiteCPUMaskFlags TfLiteCPUMaskGetMask(const char * name);
 
 } // namespace impl
 } // namespace tflite
