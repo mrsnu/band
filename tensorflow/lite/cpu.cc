@@ -14,6 +14,7 @@
 
 #include "tensorflow/lite/cpu.h"
 
+#include <cstring>
 #if defined __ANDROID__ || defined __linux__
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -97,9 +98,9 @@ int GetCPUCount() {
   return count;
 }
 
-int GetLittleCPUCount() { return GetCPUThreadAffinityMask(kTfLiteLittle).NumEnabled(); }
+int GetLittleCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteLittle).NumEnabled(); }
 
-int GetBigCPUCount() { return GetCPUThreadAffinityMask(kTfLiteBig).NumEnabled(); }
+int GetBigCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteBig).NumEnabled(); }
 
 #if defined __ANDROID__ || defined __linux__
 static int get_max_freq_khz(int cpuid) {
@@ -267,10 +268,10 @@ int SetupThreadAffinityMasks() {
   return 0;
 }
 
-const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask) {
+const CpuSet& TfLiteCPUMaskGetSet(TfLiteCPUMaskFlags flag) {
   SetupThreadAffinityMasks();
 
-  switch (mask) {
+  switch (flag) {
     case kTfLiteAll:
       return g_thread_affinity_mask_all;
     case kTfLiteLittle:
@@ -285,8 +286,8 @@ const CpuSet& GetCPUThreadAffinityMask(TFLiteCPUMasks mask) {
   }
 }
 
-const char* GetCPUThreadAffinityMaskString(TFLiteCPUMasks mask) {
-  switch (mask) {
+const char* TfLiteCPUMaskGetName(TfLiteCPUMaskFlags flag) {
+  switch (flag) {
     case kTfLiteAll:
       return "ALL";
     case kTfLiteLittle:
@@ -298,6 +299,17 @@ const char* GetCPUThreadAffinityMaskString(TFLiteCPUMasks mask) {
     default:
       return "UNKNOWN";
   }
+}
+
+const TfLiteCPUMaskFlags TfLiteCPUMaskGetMask(const char* name) {
+  for (int i = 0; i < kTfLiteNumCpuMasks; i++) {
+    const auto flag = static_cast<TfLiteCPUMaskFlags>(i);
+    if (strcmp(name, TfLiteCPUMaskGetName(flag)) == 0) {
+      return flag;
+    }
+  }
+  // Use all as a default flag
+  return kTfLiteAll;
 }
 
 }  // namespace impl

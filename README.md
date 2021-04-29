@@ -58,11 +58,17 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `execution_mode`: Specify a exeucution mode. Available execution modes are as follows:
   * `stream`: consecutively run batches.
   * `periodic`: invoke requests periodically.
-* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: 0]
-  * `0`: All Cluster
-  * `1`: LITTLE Cluster only
-  * `2`: Big Cluster only
-  * `3`: Primary Core only
+* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: `ALL`]
+  * `ALL`: All Cluster
+  * `LITTLE`: LITTLE Cluster only
+  * `BIG`: Big Cluster only
+  * `PRIMARY`: Primary Core only
+* `worker_cpu_masks`: CPU cluster mask to set CPU affinity of specific worker. For each worker, specify the mask. [default: `cpu_masks`]
+  * `CPU`
+  * `CPUFallback`
+  * `GPU`
+  * `DSP`
+  * `NPU`
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * prev_profile + (1 - profile_smoothing_factor) * curr_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
@@ -92,7 +98,11 @@ An example of complete JSON config file is as follows:
     "log_path": "/data/local/tmp/log.csv",
     "planner": 2,
     "execution_mode": "periodic",
-    "cpu_mask": 3,
+    "cpu_mask": "ALL",
+    "worker_cpu_masks": {
+      "CPUFallback": "LITTLE",
+      "GPU": "BIG"
+    },
     "running_time_ms": 60000,
     "profile_smoothing_factor": 0.1,
     "model_profile": "/data/local/tmp/profile.json",
