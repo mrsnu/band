@@ -58,7 +58,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `execution_mode`: Specify a exeucution mode. Available execution modes are as follows:
   * `stream`: consecutively run batches.
   * `periodic`: invoke requests periodically.
-* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: 0]
+* `cpu_masks`: CPU cluster mask to set CPU affinity. [default: `ALL`]
   * `ALL`: All Cluster
   * `LITTLE`: LITTLE Cluster only
   * `BIG`: Big Cluster only
