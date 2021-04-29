@@ -646,11 +646,10 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     // Skip as workers are not always available
     if (!interpreter_->GetWorker(device_id))
       continue;
-    size_t worker_mask_index = runtime_config_.worker_cpu_masks[i];
     // Use global mask only if worker_mask is invalid
     tflite::impl::TfLiteCPUMaskFlags worker_mask =
-        worker_mask_index == tflite::impl::kTfLiteNumCpuMasks ?
-        cpu_mask : static_cast<tflite::impl::TfLiteCPUMaskFlags>(worker_mask_index);
+        runtime_config_.worker_cpu_masks[i] == tflite::impl::kTfLiteNumCpuMasks ?
+        cpu_mask : runtime_config_.worker_cpu_masks[i];
     const tflite::impl::CpuSet worker_mask_set = tflite::impl::TfLiteCPUMaskGetSet(worker_mask);
     TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(worker_mask_set, device_id));
     TFLITE_LOG(INFO) << "Set affinity of "

@@ -100,8 +100,8 @@ An example of complete JSON config file is as follows:
     "execution_mode": "periodic",
     "cpu_mask": 3,
     "worker_cpu_masks": {
-      "CPUFallback": 1,
-      "GPU": 2
+      "CPUFallback": "LITTLE",
+      "GPU": "BIG"
     },
     "running_time_ms": 60000,
     "profile_smoothing_factor": 0.1,

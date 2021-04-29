@@ -301,7 +301,7 @@ const char* TfLiteCPUMaskGetName(TfLiteCPUMaskFlags flag) {
   }
 }
 
-const TfLiteCPUMaskFlags TfLiteCPUMaskGetMask(const char * name) {
+const TfLiteCPUMaskFlags TfLiteCPUMaskGetMask(const char* name) {
   for (int i = 0; i < kTfLiteNumCpuMasks; i++) {
     const auto flag = static_cast<TfLiteCPUMaskFlags>(i);
     if (strcmp(name, TfLiteCPUMaskGetName(flag)) == 0) {
