@@ -818,6 +818,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
   }
 
   // Note : program aborts when asX fails below
+  // e.g., asInt, asCString, ...
 
   // Set Runtime Configurations
   // Optional

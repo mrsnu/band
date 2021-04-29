@@ -205,7 +205,7 @@ class BenchmarkModel {
     TfLitePlannerType planner_type;
     std::string execution_mode;
     // Optional
-    impl::TfLiteCPUMaskFlags cpu_masks = kTfLiteAll;
+    impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
     impl::TfLiteCPUMaskFlags worker_cpu_masks[kTfLiteNumDevices];
     int running_time_ms = 60000;
     float profile_smoothing_factor = 0.1;
