@@ -151,7 +151,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;
   std::mt19937 random_engine_;
   std::vector<Interpreter::TfLiteDelegatePtr> owned_delegates_;
-  std::vector<Interpreter::ModelConfig> model_configs_;
   // Always TFLITE_LOG the benchmark result.
   BenchmarkLoggingListener log_output_;
 

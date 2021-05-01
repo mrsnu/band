@@ -30,6 +30,7 @@ limitations under the License.
 #include "tensorflow/lite/profiling/memory_info.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_params.h"
 #include "tensorflow/lite/tools/command_line_flags.h"
+#include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
 
 namespace tflite {
 namespace benchmark {
@@ -192,28 +193,6 @@ class BenchmarkModel {
   // will be updated accordingly.
   TfLiteStatus ParseFlags(int* argc, char** argv);
 
-  // Keeps the runtime configuration from json config file.
-  struct RuntimeConfig {
-    RuntimeConfig() {
-      // To avoid kTfLiteNumDevices dependent initialization
-      for (int i = 0; i < kTfLiteNumDevices; i++) {
-        worker_cpu_masks[i] = tflite::impl::kTfLiteNumCpuMasks;
-      }
-    }
-    // Required
-    std::string log_path;
-    TfLitePlannerType planner_type;
-    std::string execution_mode;
-    // Optional
-    impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
-    impl::TfLiteCPUMaskFlags worker_cpu_masks[kTfLiteNumDevices];
-    int running_time_ms = 60000;
-    float profile_smoothing_factor = 0.1;
-    std::string model_profile;
-    bool allow_work_steal = false;
-    int schedule_window_size = INT_MAX;
-  };
-
  protected:
   virtual void LogParams();
   virtual TfLiteStatus ValidateParams();
@@ -241,7 +220,7 @@ class BenchmarkModel {
   virtual TfLiteStatus RunStream() = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
-  RuntimeConfig runtime_config_;
+  util::RuntimeConfig runtime_config_;
 };
 
 }  // namespace benchmark

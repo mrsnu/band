@@ -13,8 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
+#include <json/json.h>
+#include <fstream>
 
+#include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
+#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
@@ -31,6 +34,116 @@ void SleepForSeconds(double sleep_seconds) {
   tflite::profiling::time::SleepForMicros(
       static_cast<uint64_t>(sleep_seconds * 1e6));
 }
+
+TfLiteStatus ParseJsonFile(std::string json_fname, RuntimeConfig& runtime_config) {
+  std::ifstream config(json_fname, std::ifstream::binary);
+
+  Json::Value root;
+  config >> root;
+
+  if (!root.isObject()) {
+    TFLITE_LOG(ERROR) << "Please validate the json config file.";
+    return kTfLiteError;
+  }
+
+  // Note : program aborts when asX fails below
+  // e.g., asInt, asCString, ...
+
+  // Set Runtime Configurations
+  // Optional
+  if (!root["cpu_masks"].isNull()) {
+    runtime_config.cpu_masks =
+        impl::TfLiteCPUMaskGetMask(root["cpu_masks"].asCString());
+  }
+  if (!root["worker_cpu_masks"].isNull()) {
+    for (auto const& key : root["worker_cpu_masks"].getMemberNames()) {
+      size_t device_id = TfLiteDeviceGetFlag(key.c_str());
+      impl::TfLiteCPUMaskFlags flag =  
+          impl::TfLiteCPUMaskGetMask(root["worker_cpu_masks"][key].asCString());
+      if (device_id < kTfLiteNumDevices && flag != impl::kTfLiteAll) {
+        runtime_config.worker_cpu_masks[device_id] = flag;
+      }
+    }
+  }
+  if (!root["running_time_ms"].isNull())
+    runtime_config.running_time_ms = root["running_time_ms"].asInt();
+  if (!root["profile_smoothing_factor"].isNull())
+    runtime_config.profile_smoothing_factor = root["profile_smoothing_factor"].asFloat();
+  if (!root["model_profile"].isNull())
+    runtime_config.model_profile = root["model_profile"].asString();
+  if (!root["allow_work_steal"].isNull())
+    runtime_config.allow_work_steal = root["allow_work_steal"].asBool();
+  if (!root["schedule_window_size"].isNull()) {
+    runtime_config.schedule_window_size = root["schedule_window_size"].asInt();
+    if (runtime_config.schedule_window_size <= 0) {
+      TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
+      return kTfLiteError;
+    }
+  }
+
+  // Required
+  if (root["log_path"].isNull() ||
+      root["planner"].isNull() ||
+      root["execution_mode"].isNull() ||
+      root["models"].isNull()) {
+    TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`, "
+                      << "`log_path`, `planner` and `models`"
+                      << " are given in the config file.";
+    return kTfLiteError;
+  }
+
+  runtime_config.log_path = root["log_path"].asString();
+  runtime_config.execution_mode = root["execution_mode"].asString();
+
+  int planner_id = root["planner"].asInt();
+  if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
+    TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
+    return kTfLiteError;
+  }
+  runtime_config.planner_type = static_cast<TfLitePlannerType>(planner_id);
+
+  // Set Model Configurations
+  for (int i = 0; i < root["models"].size(); ++i) {
+    ModelConfig model;
+    Json::Value model_json_value = root["models"][i];
+    if (model_json_value["graph"].isNull() ||
+        model_json_value["period_ms"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if arguments `graph` and `period_ms`"
+                           " are given in the model configs.";
+      return kTfLiteError;
+    }
+    model.model_fname = model_json_value["graph"].asString();
+    model.period_ms = model_json_value["period_ms"].asInt();
+    if (model.period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "Please check if arguments `period_ms` are positive.";
+      return kTfLiteError;
+    }
+
+    // Set `batch_size`.
+    // If no `batch_size` is given, the default batch size will be set to 1.
+    if (!model_json_value["batch_size"].isNull())
+      model.batch_size = model_json_value["batch_size"].asInt();
+
+    // Set `device`.
+    // Fixes to the device if specified in case of `FixedDevicePlanner`.
+    if (!model_json_value["device"].isNull())
+      model.device = model_json_value["device"].asInt();
+
+    runtime_config.model_configs.push_back(model);
+  }
+
+  if (runtime_config.model_configs.size() == 0) {
+    TFLITE_LOG(ERROR) << "Please specify at list one model "
+                      << "in `models` argument.";
+    return kTfLiteError;
+  }
+
+  TFLITE_LOG(INFO) << root;
+
+  return kTfLiteOk;
+}
+
+
 
 }  // namespace util
 }  // namespace benchmark

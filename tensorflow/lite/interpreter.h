@@ -625,13 +625,6 @@ class Interpreter {
 
   std::set<int> models() const;
 
-  struct ModelConfig {
-    std::string model_fname;
-    int period_ms;
-    int device = -1;
-    int batch_size = 1;
-  };
-
   void SetModelConfig(int model_id, ModelConfig model_config) {
     model_configs_[model_id] = model_config;
   }
