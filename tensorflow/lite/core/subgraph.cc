@@ -228,6 +228,7 @@ Subgraph::~Subgraph() {
           tensor->delegate_contexts[current_delegate];
       if (delegate_context.buffer_handle !=
           kTfLiteNullBufferHandle &&
+          delegate_context.delegate &&
           delegate_context.delegate->FreeBufferHandle != nullptr) {
         delegate_context.delegate->
             FreeBufferHandle(&context_, delegate_context.delegate,
@@ -386,7 +387,7 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
   execution_plan_.clear();
 
   TfLiteDelegateFlags current_delegate =
-      TfLiteDelegateGetPureType(delegate_applied_->flags);
+      TfLiteDelegateGetPureType(delegate->flags);
 
   for (auto& node_subset : node_subsets) {
     // Subsets claimed by the delegate should have a "macro" op created, the
@@ -944,7 +945,8 @@ TfLiteStatus Subgraph::Invoke() {
     TFLITE_SCOPED_TAGGED_OPERATOR_PROFILE(profiler_.get(), op_name, node_index);
 
     TfLiteDelegateFlags current_delegate =
-        TfLiteDelegateGetPureType(delegate_applied_->flags);
+        delegate_applied_ ? TfLiteDelegateGetPureType(delegate_applied_->flags)
+                          : kTfLiteDelegateFlagsNone;
 
     // TODO(ycling): This is an extra loop through inputs to check if the data
     // need to be copied from Delegate buffer to raw memory, which is often not
@@ -1323,7 +1325,9 @@ TfLiteStatus Subgraph::UndoAllDelegates() {
 
 TfLiteStatus Subgraph::RedoDelegate() {
   if (!delegates_undone_) return kTfLiteOk;
-  TF_LITE_ENSURE_STATUS(ModifyGraphWithDelegate(delegate_applied_));
+  delegates_undone_ = false;
+  if (delegate_applied_)
+    TF_LITE_ENSURE_STATUS(ModifyGraphWithDelegate(delegate_applied_));
   return kTfLiteOk;
 }
 

@@ -328,7 +328,6 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
           "input_layer_value_range of the input_name will be ignored. The file "
           "format is binary and it should be array format or null separated "
           "strings format."),
-      CreateFlag<bool>("use_legacy_nnapi", &params_, "use legacy nnapi api"),
       CreateFlag<bool>("allow_fp16", &params_, "allow fp16"),
       CreateFlag<bool>("require_full_delegation", &params_,
                        "require delegate to run the entire graph"),
@@ -366,10 +365,6 @@ void BenchmarkTfLiteModel::LogParams() {
   TFLITE_LOG(INFO) << "Input layer values files: ["
                    << params_.Get<std::string>("input_layer_value_files")
                    << "]";
-#if defined(__ANDROID__)
-  TFLITE_LOG(INFO) << "Use legacy nnapi : ["
-                   << params_.Get<bool>("use_legacy_nnapi") << "]";
-#endif
   TFLITE_LOG(INFO) << "Allow fp16 : [" << params_.Get<bool>("allow_fp16")
                    << "]";
   TFLITE_LOG(INFO) << "Require full delegation : ["

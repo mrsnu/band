@@ -203,6 +203,7 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code modelFile} does not encode a valid TensorFlow Lite
    *     model.
    */
+  @Deprecated
   public Interpreter(@NonNull File modelFile, Options options) {
     wrapper = new NativeInterpreterWrapper(modelFile.getAbsolutePath(), options);
   }
@@ -217,6 +218,7 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code byteBuffer} is not a {@link MappedByteBuffer} nor a
    *     direct {@link Bytebuffer} of nativeOrder.
    */
+  @Deprecated
   public Interpreter(@NonNull ByteBuffer byteBuffer) {
     this(byteBuffer, /* options= */ null);
   }
@@ -262,6 +264,7 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code byteBuffer} is not a {@link MappedByteBuffer} nor a
    *     direct {@link Bytebuffer} of nativeOrder.
    */
+  @Deprecated
   public Interpreter(@NonNull ByteBuffer byteBuffer, Options options) {
     wrapper = new NativeInterpreterWrapper(byteBuffer, options);
   }

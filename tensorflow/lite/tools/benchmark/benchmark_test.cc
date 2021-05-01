@@ -80,7 +80,6 @@ BenchmarkParams CreateParams(int32_t num_runs, float min_secs, float max_secs,
   params.AddParam("require_full_delegation",
                   BenchmarkParam::Create<bool>(false));
   params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.5f));
-  params.AddParam("use_legacy_nnapi", BenchmarkParam::Create<bool>(false));
   params.AddParam("enable_op_profiling", BenchmarkParam::Create<bool>(false));
   params.AddParam("max_profiling_buffer_entries",
                   BenchmarkParam::Create<int32_t>(1024));
