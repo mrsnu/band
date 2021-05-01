@@ -263,7 +263,7 @@ const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
   return "Unknown type";
 }
 
-TfLiteDelegateFlags TfLiteDelegateGetPureType(TfLiteDelegateFlags flag) {
+TfLiteDelegateFlags TfLiteDelegateGetPureType(int64_t flag) {
   return flag & ~kTfLiteDelegateFlagsAllowDynamicTensors;
 }
 

@@ -404,9 +404,6 @@ class Interpreter {
   void InvokeModelsSync();
   void InvokeModelsSync(std::vector<Job> requests);
 
-  /// Enable or disable the NN API (true to enable)
-  void UseNNAPI(bool enable);
-
   /// Set the number of threads available to the interpreter.
   ///
   /// NOTE: num_threads should be >= -1.

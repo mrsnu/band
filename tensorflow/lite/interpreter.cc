@@ -500,8 +500,6 @@ TfLiteStatus Interpreter::SetExecutionPlan(const std::vector<int>& new_plan) {
   return primary_subgraph().SetExecutionPlan(new_plan);
 }
 
-void Interpreter::UseNNAPI(bool enable) { primary_subgraph().UseNNAPI(enable); }
-
 void Interpreter::SetNumThreads(int num_threads,
                                 size_t first_subgraph_index,
                                 int last_subgraph_index) {
@@ -586,7 +584,7 @@ TfLiteStatus Interpreter::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
 
 TfLiteStatus Interpreter::RemoveAllDelegates() {
   for (auto& subgraph : subgraphs_) {
-    TF_LITE_ENSURE_STATUS(subgraph->RemoveAllDelegates());
+    TF_LITE_ENSURE_STATUS(subgraph->RemoveDelegate());
   }
   return kTfLiteOk;
 }
@@ -621,9 +619,11 @@ TfLiteStatus Interpreter::GetBufferHandle(int tensor_index,
   TF_LITE_ENSURE(context_, tensor_index < tensors_size());
   std::vector<TfLiteTensor>& tensors = primary_subgraph().tensors();
   TfLiteTensor* tensor = &tensors[tensor_index];
+  TfLiteTensorDelegateContext& delegate_context =
+      tensor->delegate_contexts[primary_subgraph().GetDelegate()->flags];
 
-  *delegate = tensor->delegate;
-  *buffer_handle = tensor->buffer_handle;
+  *delegate = delegate_context.delegate;
+  *buffer_handle = delegate_context.buffer_handle;
 
   return kTfLiteOk;
 }

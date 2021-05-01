@@ -406,7 +406,7 @@ typedef enum TfLiteDelegateFlags {
 } TfLiteDelegateFlags;
 
 const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag);
-TfLiteDelegateFlags TfLiteDelegateGetPureType(TfLiteDelegateFlags flag);
+TfLiteDelegateFlags TfLiteDelegateGetPureType(int64_t flag);
 
 // An tensor in the interpreter system which is a wrapper around a buffer of
 // data including a dimensionality (or NULL if not currently defined).
@@ -424,7 +424,8 @@ typedef struct TfLiteTensorDelegateContext {
   // `delegate->CopyFromBufferHandle` can be called to copy the data from
   // delegate buffer.
   bool data_is_stale;
-};
+} TfLiteTensorDelegateContext;
+
 typedef struct TfLiteTensor {
   // The data type specification for data stored in `data`. This affects
   // what member of `data` union should be used.

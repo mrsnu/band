@@ -290,8 +290,6 @@ class Subgraph {
   // Entry point for C node plugin API to report an error.
   void ReportError(const char* format, ...);
 
-  void UseNNAPI(bool enable);
-
   // Return the subgraph specific context.
   TfLiteContext* context() { return &context_; }
 
@@ -319,9 +317,7 @@ class Subgraph {
   // TODO(b/119495520): make this private when refactoring complete.
   TfLiteStatus EnsureTensorDataIsReadable(int tensor_index) {
     TfLiteDelegateFlags current_delegate =
-        TfLiteDelegateGetPureType(
-          static_cast<TfLiteDelegateFlags>(
-            delegates_applied_.back()->flags));
+        TfLiteDelegateGetPureType(delegate_applied_->flags);
     TfLiteTensor* t = &(*tensors_)[tensor_index];
     TF_LITE_ENSURE(&context_, t != nullptr);
     TfLiteTensorDelegateContext& tensor_context =
@@ -605,15 +601,17 @@ class Subgraph {
 
   // This re-applies all delegates that were undone.
   // Does nothing if UndoAllDelegates wasn't previously called.
-  TfLiteStatus RedoAllDelegates();
+  TfLiteStatus RedoDelegate();
 
   // This removes all delegates.
   // The old execution plan and nodes are restored. The graph is invokable
   // afterwards.
-  TfLiteStatus RemoveAllDelegates();
+  TfLiteStatus RemoveDelegate();
 
   // Returns true if the subgraph has delegates applied.
   bool HasDelegates();
+
+  TfLiteDelegate* GetDelegate() { return delegate_applied_; }
 
   // Cleanups up data reserved for the given node. Does not remove the {node,
   // registration} pair from nodes_and_registrations_.
@@ -710,11 +708,11 @@ class Subgraph {
   // applied. It is empty if no delegates were applied to this Subgraph.
   std::vector<int> pre_delegation_execution_plan_;
 
-  // Contains a list of delegates applied by the user so far, in order.
-  std::vector<TfLiteDelegate*> delegates_applied_;
+  // Contains a delegate applied by the user.
+  TfLiteDelegate* delegate_applied_;
 
   // Set to true if UndoAllDelegates was called, and to false during
-  // RedoAllDelegates.
+  // RedoDelegate.
   bool delegates_undone_ = false;
 
   // In the future, we'd like a TfLiteIntArray compatible representation.
@@ -723,10 +721,6 @@ class Subgraph {
 
   // Used by PreviewDelegateParitioning.
   std::vector<TfLiteDelegateParams> partitioning_preview_cache_;
-
-  // Whether to use delegate to modify the graph.
-  bool should_apply_nnapi_delegate_ = false;
-  bool applied_nnapi_delegate_ = false;
 
   std::unique_ptr<MemoryPlanner> memory_planner_;
 
