@@ -3205,6 +3205,10 @@ TfLiteStatus NNAPIDelegateKernel::Init(TfLiteContext* context,
     nodes_.push_back(node_index);
   }
 
+  delegate_type_ =
+      TfLiteDelegateGetPureType(
+        static_cast<TfLiteDelegateFlags>(params->delegate->flags));
+
   const auto delegate_options =
       StatefulNnApiDelegate::GetOptions(params->delegate);
   if (nnapi_->android_sdk_version >= kMinSdkVersionForNNAPI12 &&
@@ -3449,14 +3453,16 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
       continue;
     }
     TfLiteTensor* tensor = &context->tensors[absolute_input_index];
+    TfLiteTensorDelegateContext& delegate_context =
+        tensor->delegate_contexts[delegate_type_];
     if (tensor->allocation_type != kTfLiteMmapRo) {
-      if (tensor->buffer_handle != kTfLiteNullBufferHandle &&
-          tensor->buffer_handle < tensor_memory_map_->size()) {
+      if (delegate_context.buffer_handle != kTfLiteNullBufferHandle &&
+          delegate_context.buffer_handle < tensor_memory_map_->size()) {
         RETURN_TFLITE_ERROR_IF_NN_ERROR(
             context,
             nnapi_->ANeuralNetworksExecution_setInputFromMemory(
                 execution, relative_input_index, nullptr,
-                tensor_memory_map_->at(tensor->buffer_handle).memory, 0,
+                tensor_memory_map_->at(delegate_context.buffer_handle).memory, 0,
                 tensor->bytes),
             "associating NNAPI execution input with a memory object",
             nnapi_errno);
@@ -3537,13 +3543,13 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
       continue;
     }
     TfLiteTensor* tensor = &context->tensors[output_index];
-    if (tensor->buffer_handle != kTfLiteNullBufferHandle &&
-        tensor->buffer_handle < tensor_memory_map_->size()) {
+    if (tensor[delegate_type_].buffer_handle != kTfLiteNullBufferHandle &&
+        tensor[delegate_type_].buffer_handle < tensor_memory_map_->size()) {
       RETURN_TFLITE_ERROR_IF_NN_ERROR(
           context,
           nnapi_->ANeuralNetworksExecution_setOutputFromMemory(
               execution, relative_output_index, nullptr,
-              tensor_memory_map_->at(tensor->buffer_handle).memory, 0,
+              tensor_memory_map_->at(tensor[delegate_type_].buffer_handle).memory, 0,
               tensor->bytes),
           "associating NNAPI execution output to a memory object", nnapi_errno);
 
@@ -3599,7 +3605,7 @@ TfLiteStatus NNAPIDelegateKernel::Invoke(TfLiteContext* context,
   output_offset = 0;
   for (auto output_index : TfLiteIntArrayView(node->outputs)) {
     TfLiteTensor* tensor = &context->tensors[output_index];
-    if (tensor->buffer_handle != kTfLiteNullBufferHandle) {
+    if (tensor[delegate_type_].buffer_handle != kTfLiteNullBufferHandle) {
       continue;
     }
     TfLiteType ann_type_equivalent =

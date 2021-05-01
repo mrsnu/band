@@ -260,7 +260,11 @@ const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
     case kTfLiteDelegateFlagsFLEX:
       return "FLEX";
   }
-  return "Unknown type";  
+  return "Unknown type";
+}
+
+TfLiteDelegateFlags TfLiteDelegateGetPureType(TfLiteDelegateFlags flag) {
+  return flag & ~kTfLiteDelegateFlagsAllowDynamicTensors;
 }
 
 TfLiteDelegate TfLiteDelegateCreate() {

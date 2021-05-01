@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstdint>
 #include <cstdlib>
 #include <map>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -69,6 +70,12 @@ struct SubgraphKey {
   TfLiteDeviceFlags device_flag;
   int start_idx;
   int end_idx;
+};
+
+struct SubgraphSharedTensor {
+  TfLiteType& type;
+  TfLitePtrUnion& data;
+  TfLiteIntArray*& dims;
 };
 
 class Subgraph {
@@ -209,7 +216,7 @@ class Subgraph {
   // TODO(ycling): Move this function to an external context interface.
   resource::ResourceMap& resources() { return *resources_; }
 
-  size_t tensors_size() const { return tensors_.size(); }
+  size_t tensors_size() const { return tensors_->size(); }
 
   // Return the number of ops in the model.
   size_t nodes_size() const { return nodes_and_registration_.size(); }
@@ -222,7 +229,7 @@ class Subgraph {
 
   // Mutable form of tensors (TEMPORARY for refactor).
   // TODO(b/119495520): remove when refactoring complete.
-  std::vector<TfLiteTensor>& tensors() { return tensors_; }
+  std::vector<TfLiteTensor>& tensors() { return *tensors_; }
   // Mutable form of tensors (TEMPORARY for refactor).
   // TODO(b/119495520): remove when refactoring complete.
   std::vector<std::pair<TfLiteNode, TfLiteRegistration>>&
@@ -311,16 +318,24 @@ class Subgraph {
   // WARNING: This is an experimental API and subject to change.
   // TODO(b/119495520): make this private when refactoring complete.
   TfLiteStatus EnsureTensorDataIsReadable(int tensor_index) {
-    TfLiteTensor* t = &tensors_[tensor_index];
+    TfLiteDelegateFlags current_delegate =
+        TfLiteDelegateGetPureType(
+          static_cast<TfLiteDelegateFlags>(
+            delegates_applied_.back()->flags));
+    TfLiteTensor* t = &(*tensors_)[tensor_index];
     TF_LITE_ENSURE(&context_, t != nullptr);
-    if (t->data_is_stale) {
-      TF_LITE_ENSURE(&context_, t->delegate != nullptr);
-      TF_LITE_ENSURE(&context_, t->buffer_handle != kTfLiteNullBufferHandle);
-      TF_LITE_ENSURE(&context_, t->delegate->CopyFromBufferHandle != nullptr);
+    TfLiteTensorDelegateContext& tensor_context =
+        t->delegate_contexts[current_delegate];
+    if (tensor_context.data_is_stale) {
+      TF_LITE_ENSURE(&context_, tensor_context.delegate != nullptr);
+      TF_LITE_ENSURE(&context_,
+                     tensor_context.buffer_handle != kTfLiteNullBufferHandle);
+      TF_LITE_ENSURE(&context_,
+                     tensor_context.delegate->CopyFromBufferHandle != nullptr);
       // TODO(b/120420546): we must add a test that exercise this code.
-      TF_LITE_ENSURE_STATUS(t->delegate->CopyFromBufferHandle(
-          &context_, t->delegate, t->buffer_handle, t));
-      t->data_is_stale = false;
+      TF_LITE_ENSURE_STATUS(tensor_context.delegate->CopyFromBufferHandle(
+          &context_, tensor_context.delegate, tensor_context.buffer_handle, t));
+      tensor_context.data_is_stale = false;
     }
     return kTfLiteOk;
   }
@@ -460,11 +475,13 @@ class Subgraph {
   TfLiteStatus PrepareOpsStartingAt(int first_execution_plan_index,
                                     int* last_execution_plan_index_prepared);
 
+  static void TensorsDeleter(std::vector<TfLiteTensor>* tensors);
+
   // Tensors needed by the interpreter. Use `AddTensors` to add more blank
   // tensor entries. Note, `tensors_.data()` needs to be synchronized to the
   // `context_` whenever this std::vector is reallocated. Currently this
   // only happens in `AddTensors()`.
-  std::vector<TfLiteTensor> tensors_;
+  std::shared_ptr<std::vector<TfLiteTensor>> tensors_;
 
   // Check if an array of tensor indices are valid with respect to the Tensor
   // array.

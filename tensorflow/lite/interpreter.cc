@@ -600,15 +600,17 @@ TfLiteStatus Interpreter::SetBufferHandle(int tensor_index,
   std::vector<TfLiteTensor>& tensors = primary_subgraph().tensors();
   TfLiteTensor* tensor = &tensors[tensor_index];
 
-  TF_LITE_ENSURE(context_,
-                 tensor->delegate == nullptr || tensor->delegate == delegate);
-  tensor->delegate = delegate;
-  if (tensor->buffer_handle != kTfLiteNullBufferHandle) {
-    TF_LITE_ENSURE(context_, tensor->delegate->FreeBufferHandle != nullptr);
-    tensor->delegate->FreeBufferHandle(context_, tensor->delegate,
-                                       &tensor->buffer_handle);
+  auto delegate_flag = TfLiteDelegateGetPureType(delegate->flags);
+  auto delegate_context = tensor->delegate_contexts[delegate_flag];
+  delegate_context.delegate = delegate;
+  if (delegate_context.buffer_handle != kTfLiteNullBufferHandle) {
+    TF_LITE_ENSURE(context_,
+        delegate_context.delegate->FreeBufferHandle != nullptr);
+    delegate_context.delegate->
+        FreeBufferHandle(context_, delegate_context.delegate,
+                         &delegate_context.buffer_handle);
   }
-  tensor->buffer_handle = buffer_handle;
+  delegate_context.buffer_handle = buffer_handle;
 
   return kTfLiteOk;
 }

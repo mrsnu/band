@@ -201,8 +201,10 @@ Subgraph::Subgraph(ErrorReporter* error_reporter,
   context_.SetExternalContext = SetExternalContext;
   context_.profiler = nullptr;
 
+  tensors_ = std::shared_ptr<std::vector<TfLiteTensor>>(
+      new std::vector<TfLiteTensor>, TensorsDeleter);
   // Reserve some space for the tensors to avoid excessive resizing.
-  tensors_.reserve(kTensorsReservedCapacity);
+  tensors_->reserve(kTensorsReservedCapacity);
   nodes_and_registration().reserve(kTensorsReservedCapacity);
   // Invalid to call these these except from TfLiteDelegate
   SwitchToKernelContext();
@@ -216,14 +218,30 @@ Subgraph::~Subgraph() {
     CleanupNode(node_index);
   }
 
-  for (size_t i = 0; i < context_.tensors_size; i++) {
-    TfLiteTensor* tensor = &context_.tensors[i];
-    if (tensor->buffer_handle != kTfLiteNullBufferHandle &&
-        tensor->delegate->FreeBufferHandle != nullptr) {
-      tensor->delegate->FreeBufferHandle(&context_, tensor->delegate,
-                                         &tensor->buffer_handle);
+  if (HasDelegates()) {
+    TfLiteDelegateFlags current_delegate =
+        TfLiteDelegateGetPureType(
+          static_cast<TfLiteDelegateFlags>(
+            delegates_applied_.back()->flags));
+    
+    for (size_t i = 0; i < context_.tensors_size; i++) {
+      TfLiteTensor* tensor = &context_.tensors[i];
+      TfLiteTensorDelegateContext& delegate_context =
+          tensor->delegate_contexts[current_delegate];
+      if (delegate_context.buffer_handle !=
+          kTfLiteNullBufferHandle &&
+          delegate_context.delegate->FreeBufferHandle != nullptr) {
+        delegate_context.delegate->
+            FreeBufferHandle(&context_, delegate_context.delegate,
+                                          &delegate_context.buffer_handle);
+      }
     }
-    TfLiteTensorFree(tensor);
+  }
+}
+
+void Subgraph::TensorsDeleter(std::vector<TfLiteTensor>* tensors) {
+  for (size_t i = 0; i < tensors->size(); i++) {
+    TfLiteTensorFree(&(*tensors)[i]);
   }
 }
 
@@ -369,6 +387,11 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
 
   execution_plan_.clear();
 
+  TfLiteDelegateFlags current_delegate =
+      TfLiteDelegateGetPureType(
+        static_cast<TfLiteDelegateFlags>(
+          delegates_applied_.back()->flags));
+
   for (auto& node_subset : node_subsets) {
     // Subsets claimed by the delegate should have a "macro" op created, the
     // other node_subsets (kTfNonPartition) just have their nodes added back to
@@ -391,15 +414,18 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
 
         // Initialize the output tensors's delegate-related fields.
         for (int tensor_index : node_subset.output_tensors) {
-          TfLiteTensor* tensor = &tensors_[tensor_index];
-          if(tensor->delegate != nullptr && tensor->delegate != delegate) {
-            // TODO #13 : Print name of the delegate 
+          TfLiteTensor* tensor = &(*tensors_)[tensor_index];
+          TfLiteTensorDelegateContext& delegate_context =
+              tensor->delegate_contexts[current_delegate];
+          if (delegate_context.delegate != nullptr &&
+              delegate_context.delegate != delegate) {
+            // TODO #13 : Print name of the delegate
             // Expected output : Overwriting delegate from %s to %s.
             TFLITE_LOG(
               tflite::TFLITE_LOG_WARNING,
               "Overwriting delegate.");
           }
-          tensor->delegate = delegate;
+          delegate_context.delegate = delegate;
         }
 
         // Associate the node with the delegate.
@@ -649,9 +675,9 @@ TfLiteStatus Subgraph::AllocateTensors() {
 
   state_ = kStateInvokable;
 
-  // Reset the variable tensors to zero after (re)allocating the tensors.
+  // Reset the variable tensors to zero after (re)allocating the tensors->
   // Developers shouldn't rely on the side effect of this function to reset
-  // variable tensors. They should call `ResetVariableTensors` directly
+  // variable tensors-> They should call `ResetVariableTensors` directly
   // instead.
   ResetVariableTensors();
 
@@ -660,7 +686,7 @@ TfLiteStatus Subgraph::AllocateTensors() {
 
 // TODO(ycling): Support non-zero default values.
 TfLiteStatus Subgraph::ResetVariableTensors() {
-  for (auto& tensor : tensors_) {
+  for (auto& tensor : *tensors_) {
     if (!tensor.is_variable) {
       continue;
     }
@@ -908,6 +934,8 @@ TfLiteStatus Subgraph::Invoke() {
     applied_nnapi_delegate_ = true;
   }
 
+
+
   // Invocations are always done in node order.
   // Note that calling Invoke repeatedly will cause the original memory plan to
   // be reused, unless either ResizeInputTensor() or AllocateTensors() has been
@@ -928,6 +956,11 @@ TfLiteStatus Subgraph::Invoke() {
     if (profiler_) op_name = GetTFLiteOpName(registration);
     TFLITE_SCOPED_TAGGED_OPERATOR_PROFILE(profiler_.get(), op_name, node_index);
 
+    TfLiteDelegateFlags current_delegate =
+        TfLiteDelegateGetPureType(
+          static_cast<TfLiteDelegateFlags>(
+            delegates_applied_.back()->flags));
+
     // TODO(ycling): This is an extra loop through inputs to check if the data
     // need to be copied from Delegate buffer to raw memory, which is often not
     // needed. We may want to cache this in prepare to know if this needs to be
@@ -937,9 +970,13 @@ TfLiteStatus Subgraph::Invoke() {
       if (tensor_index == kTfLiteOptionalTensor) {
         continue;
       }
-      TfLiteTensor* tensor = &tensors_[tensor_index];
-      if (tensor->delegate && tensor->delegate != node.delegate &&
-          tensor->data_is_stale) {
+      TfLiteTensor* tensor = &(*tensors_)[tensor_index];
+      TfLiteTensorDelegateContext& delegate_context =
+          tensor->delegate_contexts[current_delegate];
+      if (delegate_context.delegate &&
+          delegate_context.delegate !=
+          node.delegate &&
+          delegate_context.data_is_stale) {
         TF_LITE_ENSURE_STATUS(EnsureTensorDataIsReadable(tensor_index));
       }
     }
@@ -1036,15 +1073,14 @@ void Subgraph::ReportError(const char* format, ...) {
 
 TfLiteStatus Subgraph::AddTensors(int tensors_to_add,
                                   int* first_new_tensor_index) {
-  const size_t base_index = tensors_.size();
+  const size_t base_index = tensors_->size();
   if (first_new_tensor_index) *first_new_tensor_index = base_index;
-  tensors_.resize(tensors_.size() + tensors_to_add);
-  for (size_t i = base_index; i < tensors_.size(); i++) {
-    memset(&tensors_[i], 0, sizeof(tensors_[i]));
-    tensors_[i].buffer_handle = kTfLiteNullBufferHandle;
+  tensors_->resize(tensors_->size() + tensors_to_add);
+  for (size_t i = base_index; i < tensors_->size(); i++) {
+    memset(&(*tensors_)[i], 0, sizeof((*tensors_)[i]));
   }
-  context_.tensors = tensors_.data();
-  context_.tensors_size = tensors_.size();
+  context_.tensors = tensors_->data();
+  context_.tensors_size = tensors_->size();
   return kTfLiteOk;
 }
 
@@ -1095,7 +1131,7 @@ TfLiteStatus Subgraph::SetTensorParametersReadOnly(
   // For most tensors we know exactly how much memory is necessary so we can
   // ensure the buffer is large enough. However, we need to skip string tensors
   // and sparse tensors because their sizes change with the contents.
-  // TODO(b/145615516): Extend BytesRequired to check sparse tensors.
+  // TODO(b/145615516): Extend BytesRequired to check sparse tensors->
   if (type != kTfLiteString && sparsity == nullptr) {
     size_t required_bytes;
     TF_LITE_ENSURE_OK(&context_,
@@ -1209,7 +1245,7 @@ TfLiteStatus Subgraph::ResizeTensorImpl(TfLiteTensor* tensor,
         return kTfLiteError;
       }
 
-      // Realloc space for heap-allocated tensors.
+      // Realloc space for heap-allocated tensors->
       TfLiteTensorRealloc(bytesRequired, tensor);
       tensor->bytes = bytesRequired;
     }
@@ -1335,16 +1371,16 @@ TfLiteStatus Subgraph::RemoveAllDelegates() {
 bool Subgraph::HasDelegates() { return !delegates_applied_.empty(); }
 
 void Subgraph::EnsureTensorsVectorCapacity() {
-  const size_t required_capacity = tensors_.size() + kTensorsCapacityHeadroom;
-  if (required_capacity > tensors_.capacity()) {
+  const size_t required_capacity = tensors_->size() + kTensorsCapacityHeadroom;
+  if (required_capacity > tensors_->capacity()) {
     // Whenever it's required to increase the vector capacity, make it at
     // least twice bigger. The behavior is consistent with the default
     // behavior of GCC STL's `std::vector::resize()`. This avoids frequently
     // allocating and copying the underlying buffer.
     size_t reserved_capacity =
-        std::max(required_capacity, tensors_.capacity() * 2);
-    tensors_.reserve(reserved_capacity);
-    context_.tensors = tensors_.data();
+        std::max(required_capacity, tensors_->capacity() * 2);
+    tensors_->reserve(reserved_capacity);
+    context_.tensors = tensors_->data();
   }
 }
 
@@ -1381,7 +1417,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
       TF_LITE_ENSURE_OK(&context_, EnsureMemoryAllocations());
       ReportError(
           "Attempting to use a delegate that only supports static-sized "
-          "tensors with a graph that has dynamic-sized tensors.");
+          "tensors with a graph that has dynamic-sized tensors->");
       return kTfLiteError;
     }
   }
