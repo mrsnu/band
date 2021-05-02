@@ -159,7 +159,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // TODO #13: Create mobile device independent delegate instances
   TfLiteDelegatePtr null_delegate =
       TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
-  delegates_.insert(std::make_pair(kTfLiteDelegateFlagsNone, std::move(null_delegate)));
+  delegates_.insert(std::make_pair(kTfLiteDelegateCPU, std::move(null_delegate)));
 
 #if defined(__ANDROID__)
   TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
@@ -174,7 +174,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   TfLiteDelegatePtr gpu_delegate = TfLiteDelegatePtr(
     TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
   if (gpu_delegate.get()) {
-    delegates_.insert(std::make_pair(kTfLiteDelegateFlagsGPU, std::move(gpu_delegate)));
+    delegates_.insert(std::make_pair(kTfLiteDelegateGPU, std::move(gpu_delegate)));
     valid_devices.insert(kTfLiteGPU);
   }
 
@@ -201,14 +201,13 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
           });
 
       if (nnapi_delegate.get()) {
-        TfLiteDelegateFlags delegate_flag =
-            static_cast<TfLiteDelegateFlags>(nnapi_delegate->flags);
+        TfLiteDelegateTypes delegate_type = nnapi_delegate->type;
         
-        switch (delegate_flag) {
-          case kTfLiteDelegateFlagsNNAPIDSP:
+        switch (delegate_type) {
+          case kTfLiteDelegateNNAPIDSP:
             valid_devices.insert(kTfLiteDSP);
             break;
-          case kTfLiteDelegateFlagsNNAPINPU:
+          case kTfLiteDelegateNNAPINPU:
             valid_devices.insert(kTfLiteNPU);
             break;
           default:
@@ -216,14 +215,14 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
         }
 
         delegates_.insert(
-          std::make_pair(delegate_flag, std::move(nnapi_delegate)));
+          std::make_pair(delegate_type, std::move(nnapi_delegate)));
       }
     }
   }
 
   TfLiteDelegatePtr xnnpack_delegate = MaybeCreateXNNPACKDelegate(1);
   if (xnnpack_delegate.get()) {
-    delegates_.insert(std::make_pair(kTfLiteDelegateFlagsXNNPACK, std::move(xnnpack_delegate)));
+    delegates_.insert(std::make_pair(kTfLiteDelegateXNNPACK, std::move(xnnpack_delegate)));
   }
 
   // TODO #23
@@ -536,7 +535,7 @@ void Interpreter::SetXNNPACKNumThreads(int num_threads) {
   }
 
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
-  TfLiteDelegate* delegate = delegates(kTfLiteDelegateFlagsXNNPACK);
+  TfLiteDelegate* delegate = delegates(kTfLiteDelegateXNNPACK);
   if (delegate != nullptr) {
       TfLiteXNNPackDelegateOptions options = TfLiteXNNPackDelegateOptionsDefault();
       // Modify -1 to 0 to match the XNNPACK runtime behavior 
@@ -598,8 +597,8 @@ TfLiteStatus Interpreter::SetBufferHandle(int tensor_index,
   std::vector<TfLiteTensor>& tensors = primary_subgraph().tensors();
   TfLiteTensor* tensor = &tensors[tensor_index];
 
-  auto delegate_flag = TfLiteDelegateGetPureType(delegate->flags);
-  auto delegate_context = tensor->delegate_contexts[delegate_flag];
+  int delegate_type = delegate->type;
+  auto delegate_context = tensor->delegate_contexts[delegate_type];
   delegate_context.delegate = delegate;
   if (delegate_context.buffer_handle != kTfLiteNullBufferHandle) {
     TF_LITE_ENSURE(context_,
@@ -751,19 +750,19 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
       break;
     
     case kTfLiteGPU:
-      targetDelegate = delegates(kTfLiteDelegateFlagsGPU);
+      targetDelegate = delegates(kTfLiteDelegateGPU);
       break;
 
     case kTfLiteDSP:
       if (tensor_types.find(kTfLiteInt8) != tensor_types.end() ||
           tensor_types.find(kTfLiteUInt8) != tensor_types.end())
-        targetDelegate = delegates(kTfLiteDelegateFlagsNNAPIDSP);
+        targetDelegate = delegates(kTfLiteDelegateNNAPIDSP);
       break;
       
     // TODO # 30
     // Add NPU / TPU / hta
     case kTfLiteNPU:
-        targetDelegate = delegates(kTfLiteDelegateFlagsNNAPINPU);
+        targetDelegate = delegates(kTfLiteDelegateNNAPINPU);
       break;
     
     default:

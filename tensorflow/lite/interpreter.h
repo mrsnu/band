@@ -586,7 +586,7 @@ class Interpreter {
   }
 #endif  // DOXYGEN_SKIP
 
-  TfLiteDelegate* delegates(TfLiteDelegateFlags delegate) {
+  TfLiteDelegate* delegates(TfLiteDelegateTypes delegate) {
     auto it = delegates_.find(delegate);
     if (it != delegates_.end())
       return it->second.get();
@@ -727,7 +727,7 @@ class Interpreter {
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;
 
-  std::map<TfLiteDelegateFlags, TfLiteDelegatePtr> delegates_;
+  std::map<TfLiteDelegateTypes, TfLiteDelegatePtr> delegates_;
 
   // Map structure to store profiling results in microseconds of (model_id, device_id)
   std::map<SubgraphKey, int64_t> subgraph_profiling_results_map_;

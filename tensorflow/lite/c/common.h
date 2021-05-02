@@ -380,33 +380,18 @@ typedef struct TfLiteSparsity {
   int dim_metadata_size;
 } TfLiteSparsity;
 
-// The flags used in `TfLiteDelegate`. Note that this is a bitmask, so the
-// values should be 1, 2, 4, 8, ...etc.
-typedef enum TfLiteDelegateFlags {
-  // This also means CPU Delegate
-  kTfLiteDelegateFlagsNone = 0,
-  // The flag is set if the delegate can handle dynamic sized tensors.
-  // For example, the output shape of a `Resize` op with non-constant shape
-  // can only be inferred when the op is invoked.
-  // In this case, the Delegate is responsible for calling
-  // `SetTensorToDynamic` to mark the tensor as a dynamic tensor, and calling
-  // `ResizeTensor` when invoking the op.
-  //
-  // If the delegate isn't capable to handle dynamic tensors, this flag need
-  // to be set to false.
-  kTfLiteDelegateFlagsAllowDynamicTensors = 1,
-  // Flags for delegates
-  kTfLiteDelegateFlagsGPU = 1 << 1,
-  kTfLiteDelegateFlagsNNAPIGPU = 1 << 2,
-  kTfLiteDelegateFlagsNNAPIDSP = 1 << 3,
-  kTfLiteDelegateFlagsNNAPINPU = 1 << 4,
-  kTfLiteDelegateFlagsXNNPACK = 1 << 5,
-  kTfLiteDelegateFlagsFLEX = 1 << 6,
-  kTfLiteNumDelegates = 8,
-} TfLiteDelegateFlags;
+typedef enum TfLiteDelegateTypes {
+  kTfLiteDelegateCPU,
+  kTfLiteDelegateGPU,
+  kTfLiteDelegateNNAPIGPU,
+  kTfLiteDelegateNNAPIDSP,
+  kTfLiteDelegateNNAPINPU,
+  kTfLiteDelegateXNNPACK,
+  kTfLiteDelegateFLEX,
+  kTfLiteNumDelegates,
+} TfLiteDelegateTypes;
 
-const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag);
-TfLiteDelegateFlags TfLiteDelegateGetPureType(int64_t flag);
+const char* TfLiteDelegateGetName(TfLiteDelegateTypes type);
 
 // An tensor in the interpreter system which is a wrapper around a buffer of
 // data including a dimensionality (or NULL if not currently defined).
@@ -809,6 +794,22 @@ typedef enum {
 const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag);
 const TfLiteDeviceFlags TfLiteDeviceGetFlag(const char* name);
 
+// The flags used in `TfLiteDelegate`. Note that this is a bitmask, so the
+// values should be 1, 2, 4, 8, ...etc.
+typedef enum TfLiteDelegateFlags {
+  kTfLiteDelegateFlagsNone = 0,
+  // The flag is set if the delegate can handle dynamic sized tensors.
+  // For example, the output shape of a `Resize` op with non-constant shape
+  // can only be inferred when the op is invoked.
+  // In this case, the Delegate is responsible for calling
+  // `SetTensorToDynamic` to mark the tensor as a dynamic tensor, and calling
+  // `ResizeTensor` when invoking the op.
+  //
+  // If the delegate isn't capable to handle dynamic tensors, this flag need
+  // to be set to false.
+  kTfLiteDelegateFlagsAllowDynamicTensors = 1,
+} TfLiteDelegateFlags;
+
 // WARNING: This is an experimental interface that is subject to change.
 typedef struct TfLiteDelegate {
   // Data that delegate needs to identify itself. This data is owned by the
@@ -850,6 +851,7 @@ typedef struct TfLiteDelegate {
 
   // Bitmask flags. See the comments in `TfLiteDelegateFlags`.
   int64_t flags;
+  TfLiteDelegateTypes type;
 } TfLiteDelegate;
 
 // Build a 'null' delegate, with all the fields properly set to their default

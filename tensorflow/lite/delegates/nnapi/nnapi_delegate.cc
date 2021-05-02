@@ -3205,8 +3205,7 @@ TfLiteStatus NNAPIDelegateKernel::Init(TfLiteContext* context,
     nodes_.push_back(node_index);
   }
 
-  delegate_type_ =
-      TfLiteDelegateGetPureType(params->delegate->flags);
+  delegate_type_ = params->delegate->type;
 
   const auto delegate_options =
       StatefulNnApiDelegate::GetOptions(params->delegate);
@@ -4188,7 +4187,7 @@ NNAPIDelegateKernel* StatefulNnApiDelegate::Data::MaybeGetCachedDelegateKernel(
   }
 }
 
-TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
+TfLiteDelegateTypes GetNNAPIDeviceType(std::string name) {
   auto contains_keywords = [&name](std::vector<std::string> keywords) {
     for(auto keyword : keywords) {
       if (name.find(keyword) != std::string::npos) 
@@ -4198,22 +4197,22 @@ TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
   };
 
   if (contains_keywords({ "gpu" })) {
-    return kTfLiteDelegateFlagsNNAPIGPU;
+    return kTfLiteDelegateNNAPIGPU;
   }
 
   if (contains_keywords({ "dsp" })) {
-    return kTfLiteDelegateFlagsNNAPIDSP;
+    return kTfLiteDelegateNNAPIDSP;
   }
 
   if (contains_keywords({ "google-edgetpu", "armnn", "neuron-ann", "qti-hta" })) {
-    return kTfLiteDelegateFlagsNNAPINPU;
+    return kTfLiteDelegateNNAPINPU;
   }
 
   // TODO #23 
   // 1. Add additional NPU / TPU names 
   // 2. Is 'hta' belongs to dsp or npu?
 
-  return kTfLiteDelegateFlagsNone;
+  return kTfLiteNumDelegates;
 }
 
 StatefulNnApiDelegate::StatefulNnApiDelegate(const NnApi* nnapi)
@@ -4246,7 +4245,7 @@ StatefulNnApiDelegate::StatefulNnApiDelegate(const NnApi* nnapi,
   CopyToBufferHandle = DoCopyToBufferHandle;
   FreeBufferHandle = DoFreeBufferHandle;
   data_ = &delegate_data_;
-  flags = GetNNAPIDeviceFlag(delegate_data_.accelerator_name);
+  type = GetNNAPIDeviceType(delegate_data_.accelerator_name);
 }
 
 StatefulNnApiDelegate::StatefulNnApiDelegate()

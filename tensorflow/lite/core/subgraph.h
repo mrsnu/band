@@ -315,10 +315,8 @@ class Subgraph {
   // WARNING: This is an experimental API and subject to change.
   // TODO(b/119495520): make this private when refactoring complete.
   TfLiteStatus EnsureTensorDataIsReadable(int tensor_index) {
-    TfLiteDelegateFlags current_delegate =
-        TfLiteDelegateGetPureType(
-          static_cast<TfLiteDelegateFlags>(
-            delegates_applied_.back()->flags));
+    TfLiteDelegateTypes current_delegate =
+            delegates_applied_.back()->type;
     TfLiteTensor* t = &(*tensors_)[tensor_index];
     TF_LITE_ENSURE(&context_, t != nullptr);
     TfLiteTensorDelegateContext& tensor_context =

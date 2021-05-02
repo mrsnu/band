@@ -216,10 +216,7 @@ Subgraph::~Subgraph() {
   }
 
   if (HasDelegates()) {
-    TfLiteDelegateFlags current_delegate =
-        TfLiteDelegateGetPureType(
-          static_cast<TfLiteDelegateFlags>(
-            delegates_applied_.back()->flags));
+    TfLiteDelegateTypes current_delegate = delegates_applied_.back()->type;
     
     for (size_t i = 0; i < context_.tensors_size; i++) {
       TfLiteTensor* tensor = &context_.tensors[i];
@@ -384,12 +381,9 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
 
   execution_plan_.clear();
 
-  TfLiteDelegateFlags current_delegate =
+  TfLiteDelegateTypes current_delegate =
       delegates_applied_.empty() ?
-      kTfLiteDelegateFlagsNone:
-      TfLiteDelegateGetPureType(
-        static_cast<TfLiteDelegateFlags>(
-          delegates_applied_.back()->flags));
+      kTfLiteDelegateCPU : delegates_applied_.back()->type;
 
   for (auto& node_subset : node_subsets) {
     // Subsets claimed by the delegate should have a "macro" op created, the
@@ -955,12 +949,9 @@ TfLiteStatus Subgraph::Invoke() {
     if (profiler_) op_name = GetTFLiteOpName(registration);
     TFLITE_SCOPED_TAGGED_OPERATOR_PROFILE(profiler_.get(), op_name, node_index);
 
-  TfLiteDelegateFlags current_delegate =
-      delegates_applied_.empty() ?
-      kTfLiteDelegateFlagsNone:
-      TfLiteDelegateGetPureType(
-        static_cast<TfLiteDelegateFlags>(
-          delegates_applied_.back()->flags));
+    TfLiteDelegateTypes current_delegate =
+        delegates_applied_.empty() ?
+        kTfLiteDelegateCPU : delegates_applied_.back()->type;
 
     // TODO(ycling): This is an extra loop through inputs to check if the data
     // need to be copied from Delegate buffer to raw memory, which is often not
@@ -1079,10 +1070,11 @@ TfLiteStatus Subgraph::AddTensors(int tensors_to_add,
   tensors_->resize(tensors_->size() + tensors_to_add);
   for (size_t i = base_index; i < tensors_->size(); i++) {
     memset(&(*tensors_)[i], 0, sizeof((*tensors_)[i]));
+    auto& contexts = (*tensors_)[i].delegate_contexts;
     for (size_t j = 0; j < kTfLiteNumDelegates; j++) {
-      (*tensors_)[i].delegate_contexts[j].buffer_handle =
+      contexts[j].buffer_handle =
           kTfLiteNullBufferHandle;
-      (*tensors_)[i].delegate_contexts[j].delegate = nullptr;
+      contexts[j].delegate = nullptr;
     }
   }
   context_.tensors = tensors_->data();

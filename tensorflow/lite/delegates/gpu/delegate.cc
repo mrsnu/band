@@ -98,7 +98,8 @@ class Delegate {
       .CopyFromBufferHandle = nullptr,
       .CopyToBufferHandle = nullptr,
       .FreeBufferHandle = nullptr,
-      .flags = kTfLiteDelegateFlagsGPU,
+      .flags = kTfLiteDelegateFlagsNone,
+      .type = kTfLiteDelegateGPU,
   };
 
   TfLiteGpuDelegateOptionsV2 options_;

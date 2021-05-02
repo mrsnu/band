@@ -305,7 +305,7 @@ class NNAPIDelegateKernel {
       int* nnapi_errno, std::set<std::string>& unsupported_nodes_info);
 
  private:
-  TfLiteDelegateFlags delegate_type_;
+  TfLiteDelegateTypes delegate_type_;
   // True if initialization has been completed successfully
   bool initialised_;
   // Access to NNApi.

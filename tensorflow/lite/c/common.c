@@ -243,28 +243,24 @@ const TfLiteDeviceFlags TfLiteDeviceGetFlag(const char* name) {
   return kTfLiteNumDevices;
 }
 
-const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
-  switch (flag) {
-    case kTfLiteDelegateFlagsNone:
-      return "NOTYPE";
-    case kTfLiteDelegateFlagsGPU:
+const char* TfLiteDelegateGetName(TfLiteDelegateTypes type) {
+  switch (type) {
+    case kTfLiteDelegateCPU:
+      return "CPU";
+    case kTfLiteDelegateGPU:
       return "GPU";
-    case kTfLiteDelegateFlagsNNAPIDSP:
+    case kTfLiteDelegateNNAPIGPU:
       return "NNAPI_DSP";
-    case kTfLiteDelegateFlagsNNAPIGPU:
+    case kTfLiteDelegateNNAPIDSP:
       return "NNAPI_GPU";
-    case kTfLiteDelegateFlagsNNAPINPU:
+    case kTfLiteDelegateNNAPINPU:
       return "NNAPI_NPU";
-    case kTfLiteDelegateFlagsXNNPACK:
+    case kTfLiteDelegateXNNPACK:
       return "XNNPACK";
-    case kTfLiteDelegateFlagsFLEX:
+    case kTfLiteDelegateFLEX:
       return "FLEX";
   }
   return "Unknown type";
-}
-
-TfLiteDelegateFlags TfLiteDelegateGetPureType(int64_t flag) {
-  return flag & ~kTfLiteDelegateFlagsAllowDynamicTensors;
 }
 
 TfLiteDelegate TfLiteDelegateCreate() {
@@ -275,6 +271,7 @@ TfLiteDelegate TfLiteDelegateCreate() {
       .CopyToBufferHandle = NULL,
       .FreeBufferHandle = NULL,
       .flags = kTfLiteDelegateFlagsNone,
+      .type = kTfLiteDelegateCPU,
   };
   return d;
 }
