@@ -584,7 +584,7 @@ TfLiteStatus Interpreter::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
 
 TfLiteStatus Interpreter::RemoveAllDelegates() {
   for (auto& subgraph : subgraphs_) {
-    TF_LITE_ENSURE_STATUS(subgraph->RemoveDelegate());
+    TF_LITE_ENSURE_STATUS(subgraph->RemoveAllDelegates());
   }
   return kTfLiteOk;
 }

@@ -1,11 +1,8 @@
 /* Copyright 2017 The TensorFlow Authors. All Rights Reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -220,15 +217,16 @@ Subgraph::~Subgraph() {
 
   if (HasDelegates()) {
     TfLiteDelegateFlags current_delegate =
-        TfLiteDelegateGetPureType(delegate_applied_->flags);
-
+        TfLiteDelegateGetPureType(
+          static_cast<TfLiteDelegateFlags>(
+            delegates_applied_.back()->flags));
+    
     for (size_t i = 0; i < context_.tensors_size; i++) {
       TfLiteTensor* tensor = &context_.tensors[i];
       TfLiteTensorDelegateContext& delegate_context =
           tensor->delegate_contexts[current_delegate];
       if (delegate_context.buffer_handle !=
           kTfLiteNullBufferHandle &&
-          delegate_context.delegate &&
           delegate_context.delegate->FreeBufferHandle != nullptr) {
         delegate_context.delegate->
             FreeBufferHandle(&context_, delegate_context.delegate,
@@ -387,7 +385,11 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
   execution_plan_.clear();
 
   TfLiteDelegateFlags current_delegate =
-      TfLiteDelegateGetPureType(delegate->flags);
+      delegates_applied_.empty() ?
+      kTfLiteDelegateFlagsNone:
+      TfLiteDelegateGetPureType(
+        static_cast<TfLiteDelegateFlags>(
+          delegates_applied_.back()->flags));
 
   for (auto& node_subset : node_subsets) {
     // Subsets claimed by the delegate should have a "macro" op created, the
@@ -645,7 +647,7 @@ TfLiteStatus Subgraph::AllocateTensors() {
   }
 
   // Restore delegation state if applicable.
-  TF_LITE_ENSURE_STATUS(RedoDelegate());
+  TF_LITE_ENSURE_STATUS(RedoAllDelegates());
 
   // Explicit (re)allocation is necessary if nodes have been changed or tensors
   // have been resized. For inputs marked as dynamic, we can't short-circuit the
@@ -924,6 +926,15 @@ TfLiteStatus Subgraph::Invoke() {
     return kTfLiteError;
   }
 
+  // This is only needed for UseNNAPI(true);
+  if (should_apply_nnapi_delegate_ && !applied_nnapi_delegate_) {
+    TF_LITE_ENSURE_OK(&context_, ModifyGraphWithDelegate(NnApiDelegate()));
+    // only need to modify the graph once upon the first invocation.
+    applied_nnapi_delegate_ = true;
+  }
+
+
+
   // Invocations are always done in node order.
   // Note that calling Invoke repeatedly will cause the original memory plan to
   // be reused, unless either ResizeInputTensor() or AllocateTensors() has been
@@ -944,9 +955,12 @@ TfLiteStatus Subgraph::Invoke() {
     if (profiler_) op_name = GetTFLiteOpName(registration);
     TFLITE_SCOPED_TAGGED_OPERATOR_PROFILE(profiler_.get(), op_name, node_index);
 
-    TfLiteDelegateFlags current_delegate =
-        delegate_applied_ ? TfLiteDelegateGetPureType(delegate_applied_->flags)
-                          : kTfLiteDelegateFlagsNone;
+  TfLiteDelegateFlags current_delegate =
+      delegates_applied_.empty() ?
+      kTfLiteDelegateFlagsNone:
+      TfLiteDelegateGetPureType(
+        static_cast<TfLiteDelegateFlags>(
+          delegates_applied_.back()->flags));
 
     // TODO(ycling): This is an extra loop through inputs to check if the data
     // need to be copied from Delegate buffer to raw memory, which is often not
@@ -1065,6 +1079,11 @@ TfLiteStatus Subgraph::AddTensors(int tensors_to_add,
   tensors_->resize(tensors_->size() + tensors_to_add);
   for (size_t i = base_index; i < tensors_->size(); i++) {
     memset(&(*tensors_)[i], 0, sizeof((*tensors_)[i]));
+    for (size_t j = 0; j < kTfLiteNumDelegates; j++) {
+      (*tensors_)[i].delegate_contexts[j].buffer_handle =
+          kTfLiteNullBufferHandle;
+      (*tensors_)[i].delegate_contexts[j].delegate = nullptr;
+    }
   }
   context_.tensors = tensors_->data();
   context_.tensors_size = tensors_->size();
@@ -1254,6 +1273,16 @@ TfLiteStatus Subgraph::ResizeTensorImpl(TfLiteTensor* tensor,
   return kTfLiteOk;
 }
 
+void Subgraph::UseNNAPI(bool enable) {
+  // Note that there is no way to disable the delegate once it modified the
+  // graph.
+  if (applied_nnapi_delegate_ && !enable) {
+    ReportError("Attempting to disable NNAPI delegate after it's applied.");
+  } else {
+    should_apply_nnapi_delegate_ = enable;
+  }
+}
+
 void Subgraph::SwitchToDelegateContext() {
   context_.GetNodeAndRegistration = GetNodeAndRegistration;
   context_.ReplaceNodeSubsetsWithDelegateKernels =
@@ -1319,27 +1348,33 @@ TfLiteStatus Subgraph::UndoAllDelegates() {
   state_ = kStateUninvokable;
 
   delegates_undone_ = true;
-  delegate_applied_ = nullptr;
+
+  // Delete applied delegates from the subgraph.
+  delegates_applied_.clear();
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::RedoDelegate() {
+TfLiteStatus Subgraph::RedoAllDelegates() {
   if (!delegates_undone_) return kTfLiteOk;
+
   delegates_undone_ = false;
-  if (delegate_applied_)
-    TF_LITE_ENSURE_STATUS(ModifyGraphWithDelegate(delegate_applied_));
+  std::vector<TfLiteDelegate*> delegates_to_apply;
+  delegates_applied_.swap(delegates_to_apply);
+  for (auto* delegate : delegates_to_apply) {
+    TF_LITE_ENSURE_STATUS(ModifyGraphWithDelegate(delegate));
+  }
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::RemoveDelegate() {
+TfLiteStatus Subgraph::RemoveAllDelegates() {
   TF_LITE_ENSURE_STATUS(UndoAllDelegates());
-  delegate_applied_ = nullptr;
+  delegates_applied_.clear();
   delegates_undone_ = false;
   TF_LITE_ENSURE_STATUS(EnsureMemoryAllocations());
   return kTfLiteOk;
 }
 
-bool Subgraph::HasDelegates() { return delegate_applied_; }
+bool Subgraph::HasDelegates() { return !delegates_applied_.empty(); }
 
 void Subgraph::EnsureTensorsVectorCapacity() {
   const size_t required_capacity = tensors_->size() + kTensorsCapacityHeadroom;
@@ -1370,7 +1405,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
                                        "ModifyGraphWithDelegate");
 
   // Restore delegation state if applicable.
-  TF_LITE_ENSURE_STATUS(RedoDelegate());
+  TF_LITE_ENSURE_STATUS(RedoAllDelegates());
 
   if (state_ == kStateInvokableAndImmutable) {
     ReportError(
@@ -1394,7 +1429,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
   }
 
   const bool was_invokable_before_delegate = state_ == kStateInvokable;
-  if (!delegate_applied_) {
+  if (delegates_applied_.empty()) {
     // This is the first delegate being applied, so remember original execution
     // plan.
     // TODO(b/119623453): Restore execution plan to this state if delegate
@@ -1408,7 +1443,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
 
   auto reset_delegation_if_not_ok = [this](TfLiteStatus status) {
     if (status != kTfLiteOk) {
-      TF_LITE_ENSURE_STATUS(RemoveDelegate());
+      TF_LITE_ENSURE_STATUS(RemoveAllDelegates());
       ReportError(
           "Restored original execution plan after delegate application "
           "failure.");
@@ -1438,7 +1473,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
     TF_LITE_ENSURE_STATUS(
         reset_delegation_if_not_ok(EnsureMemoryAllocations()));
   }
-  delegate_applied_ = delegate;
+  delegates_applied_.push_back(delegate);
 
   return status;
 }
