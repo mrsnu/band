@@ -129,6 +129,8 @@ class Subgraph {
   TfLiteStatus AddTensors(int tensors_to_add,
                           int* first_new_tensor_index = nullptr);
 
+  TfLiteStatus GetTensorsFrom(Subgraph* subgraph);
+
   // Set description of inputs/outputs/data/fptrs for node `node_index`.
   // This variant assumes an external buffer has been allocated of size
   // bytes. The lifetime of buffer must be ensured to be greater or equal

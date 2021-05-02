@@ -13,6 +13,7 @@ limitations under the License.
 #include "tensorflow/lite/core/subgraph.h"
 
 #include <algorithm>
+#include <iostream>
 
 #include "tensorflow/lite/arena_planner.h"
 #include "tensorflow/lite/c/common.h"
@@ -1077,6 +1078,17 @@ TfLiteStatus Subgraph::AddTensors(int tensors_to_add,
       contexts[j].delegate = nullptr;
     }
   }
+
+  context_.tensors = tensors_->data();
+  context_.tensors_size = tensors_->size();
+  return kTfLiteOk;
+}
+
+TfLiteStatus Subgraph::GetTensorsFrom(Subgraph* subgraph) {
+  if (!subgraph || !subgraph->tensors_) 
+    return kTfLiteError;
+  tensors_ = subgraph->tensors_;
+
   context_.tensors = tensors_->data();
   context_.tensors_size = tensors_->size();
   return kTfLiteOk;

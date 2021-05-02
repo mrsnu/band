@@ -724,6 +724,14 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
   (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
 #endif
 
+  tflite::Subgraph* model_subgraph = nullptr;
+
+  for (auto model_subgraph_idx : (*interpreter)->subgraph_idx_map_) {
+    if (model_subgraph_idx.first.model_id == subgraph_key.model_id) {
+      model_subgraph = (*interpreter)->subgraph(model_subgraph_idx.second);
+    }
+  }
+
   int modified_subgraph_index = -1;
   for (int subgraph_index = 0; subgraph_index < subgraphs->size();
        ++subgraph_index) {
@@ -740,7 +748,17 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
           subgraph_index);
       return cleanup_and_error();
     }
-    if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
+
+    auto status = kTfLiteOk;
+    if (model_subgraph) {
+      status = modified_subgraph->GetTensorsFrom(model_subgraph);
+      error_reporter_->Report(
+          "Get tensors from %d.\n", modified_subgraph_index);
+    } else {
+      status = modified_subgraph->AddTensors(tensors->size());
+    }
+
+    if (status != kTfLiteOk) {
       return cleanup_and_error();
     }
 
@@ -778,8 +796,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                    node_outputs.begin(), node_outputs.end(),
                    std::inserter(subgraph_tensors, subgraph_tensors.end()));
 
-    if (builder.ParseTensors(buffers, tensors, modified_subgraph,
-                             subgraph_tensors) != kTfLiteOk) {
+    if (builder.ParseTensors(buffers, tensors, modified_subgraph, subgraph_tensors) != kTfLiteOk) {
       return cleanup_and_error();
     }
 
@@ -844,7 +861,8 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
     
-    if (modified_subgraph->AllocateTensors() != kTfLiteOk)
+    if (!model_subgraph &&
+        (modified_subgraph->AllocateTensors() != kTfLiteOk))
       return cleanup_and_error();
   }
 
