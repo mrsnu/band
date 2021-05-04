@@ -143,7 +143,13 @@ TfLiteStatus ParseJsonFile(std::string json_fname, RuntimeConfig& runtime_config
   return kTfLiteOk;
 }
 
+TfLiteStatus LoadGen::RunPeriodic() {
 
+}
+
+TfLiteStatus LoadGen::RunStream() {
+
+}
 
 }  // namespace util
 }  // namespace benchmark

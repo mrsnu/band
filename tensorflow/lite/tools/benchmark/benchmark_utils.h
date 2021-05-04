@@ -50,7 +50,6 @@ struct RuntimeConfig {
   std::vector<ModelConfig> model_configs;
 };
 
-
 TfLiteStatus ParseJsonFile(std::string json_fname, RuntimeConfig& runtime_config);
 
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
@@ -73,6 +72,11 @@ bool SplitAndParse(const std::string& str, char delim, std::vector<T>* values) {
   }
   return true;
 }
+
+class LoadGen {
+  TfLiteStatus RunPeriodic(); 
+  TfLiteStatus RunStream();
+};
 
 }  // namespace util
 }  // namespace benchmark
