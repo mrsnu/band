@@ -921,26 +921,6 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
   return kTfLiteOk;
 }
 
-TfLiteStatus BenchmarkTfLiteModel::RunStream() {
-  int run_duration_us = runtime_config_.running_time_ms * 1000;
-  int num_frames = 0;
-  int64_t start = profiling::time::NowMicros();
-  while(true) {
-    interpreter_->InvokeModelsSync();
-    int64_t current = profiling::time::NowMicros();
-    num_frames++;
-    if (current - start >= run_duration_us)
-      break;
-  }
-  int64_t end = profiling::time::NowMicros();
-  TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
-  TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
-  TFLITE_LOG(INFO) << "Measured FPS: "
-                   << (num_frames / (float)(end - start)) * 1000000;
-
-  return kTfLiteOk;
-}
-
 void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
   for (auto& m : interpreter_->GetModelConfig()) {
     int model_id = m.first;

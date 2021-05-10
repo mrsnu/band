@@ -65,7 +65,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
   TfLiteStatus RunPeriodic() override;
-  TfLiteStatus RunStream() override;
   static BenchmarkParams DefaultParams();
   TfLiteStatus RunModelsSync(std::vector<Job> requests);
   TfLiteStatus RunModelsAsync(std::vector<Job> requests);
