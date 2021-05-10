@@ -45,7 +45,7 @@ class InterpreterTest : public ::testing::Test {
         delegate.release(), [](TfLiteDelegate* delegate) {
           delete reinterpret_cast<Delegate*>(delegate);
         });
-    return interpreter->ModifyGraphWithDelegate(std::move(tflite_delegate));
+    return interpreter->ModifyGraphWithDelegate(tflite_delegate.get());
   }
 
  protected:
@@ -957,17 +957,6 @@ TEST(BasicInterpreter, TestOverflow) {
   }
 }
 
-TEST(BasicInterpreter, TestUseNNAPI) {
-  TestErrorReporter reporter;
-  Interpreter interpreter(&reporter);
-  interpreter.UseNNAPI(true);
-  ASSERT_EQ(interpreter.AllocateTensors(), kTfLiteOk);
-  ASSERT_EQ(interpreter.Invoke(), kTfLiteOk);
-  interpreter.UseNNAPI(false);
-  ASSERT_EQ(reporter.error_messages(),
-            "Attempting to disable NNAPI delegate after it's applied.");
-}
-
 TEST(BasicInterpreter, TestUnsupportedDelegateFunctions) {
   Interpreter interpreter;
   ASSERT_EQ(interpreter.AddTensors(2), kTfLiteOk);
@@ -1157,6 +1146,7 @@ struct TestCpuBackendContext : public TfLiteInternalBackendContext {
   // Count the number of calls to ClearCaches for the backend context.
   void ClearCaches() override { ++num_calls; }
   void SetMaxNumThreads(int num_threads) override {}
+  void SetCpuSet(std::thread::id tid, impl::CpuSet cpu_mask) override {}
   int num_calls = 0;
 };
 
