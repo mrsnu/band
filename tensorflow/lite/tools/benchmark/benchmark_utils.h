@@ -75,19 +75,25 @@ struct RuntimeConfig {
   std::vector<ModelConfig> model_configs;
 };
 
+// LoadGen class is in charge of generating requests in specified execution
+// mode.
+// Execution primitives such as RunModelsSync/Async should be implemented by
+// the application(e.g., BenchmarkTfLiteModel). Please implement virtual
+// methods to exploit the LoadGen class.
 class LoadGen {
  public:
   // Enqueue the `requests` and wait until the execution is finished.
   virtual TfLiteStatus RunModelsSync(std::vector<Job> requests) = 0;
   // Enqueue the `requests`.
   virtual TfLiteStatus RunModelsAsync(std::vector<Job> requests) = 0;
-  // Wait.
+  // Wait the app to finsh async call.
   virtual void Wait() = 0;
   // Parse user given json config file.
   TfLiteStatus ParseJsonFile(std::string json_fname);
   RuntimeConfig GetRuntimeConfig() {
     return runtime_config_;
   }
+  // Return a vector of Jobs specified in the model configs.
   std::vector<Job> GetRequests() {
     std::vector<Job> requests;
     for (auto& model_config : runtime_config_.model_configs) {
@@ -99,7 +105,7 @@ class LoadGen {
     return requests;
   }
   // Run requests in back-to-back manner for `running_time_ms` milli-seconds.
-  // NOTE the workload is static.
+  // NOTE: the workload is static.
   TfLiteStatus RunStream() {
     int run_duration_us = runtime_config_.running_time_ms * 1000;
     int num_frames = 0;
@@ -121,6 +127,8 @@ class LoadGen {
     return kTfLiteOk;
   }
 
+  // Enqueue requests in asynchronous manner.
+  // NOTE: the workload is static.
   TfLiteStatus RunPeriodic() {
     // initialize values in case this isn't our first run
     kill_app_ = false;
