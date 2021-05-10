@@ -98,13 +98,13 @@ class LoadGen {
     }
     return requests;
   }
-  // Run the requests in back-to-back manner for `running_time_ms` milli-seconds.
+  // Run requests in back-to-back manner for `running_time_ms` milli-seconds.
   // NOTE the workload is static.
   TfLiteStatus RunStream() {
     int run_duration_us = runtime_config_.running_time_ms * 1000;
     int num_frames = 0;
     int64_t start = profiling::time::NowMicros();
-    while(true) {
+    while (true) {
       TF_LITE_ENSURE_STATUS(RunModelsSync(GetRequests()));
       int64_t current = profiling::time::NowMicros();
       num_frames++;
@@ -112,10 +112,11 @@ class LoadGen {
         break;
     }
     int64_t end = profiling::time::NowMicros();
+    float time_taken = static_cast<float>(end - start);
     TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
-    TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
+    TFLITE_LOG(INFO) << "Time taken (us): " << time_taken;
     TFLITE_LOG(INFO) << "Measured FPS: "
-                     << (num_frames / (float)(end - start)) * 1000000;
+                     << (num_frames / time_taken) * 1000000;
 
     return kTfLiteOk;
   }
