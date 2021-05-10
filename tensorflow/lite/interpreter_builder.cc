@@ -541,7 +541,7 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
                                 i);
         status = kTfLiteError;
       }
-    } else {
+    } else {      
       if (subgraph->SetTensorParametersReadWrite(
               i, type, get_name(tensor), dims, quantization, is_variable,
               dims_signature_rank, dims_signature_data) != kTfLiteOk) {
@@ -724,14 +724,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
   (*interpreter)->SetProfiler(tflite::profiling::CreatePlatformProfiler());
 #endif
 
-  tflite::Subgraph* model_subgraph = nullptr;
-
-  for (auto model_subgraph_idx : (*interpreter)->subgraph_idx_map_) {
-    if (model_subgraph_idx.first.model_id == subgraph_key.model_id) {
-      model_subgraph = (*interpreter)->subgraph(model_subgraph_idx.second);
-    }
-  }
-
   int modified_subgraph_index = -1;
   for (int subgraph_index = 0; subgraph_index < subgraphs->size();
        ++subgraph_index) {
@@ -748,12 +740,27 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
           subgraph_index);
       return cleanup_and_error();
     }
+    
+    tflite::Subgraph* model_subgraph = nullptr;
+    int model_subgraph_idx_ = 0;
+
+    // Searching for a subgraph for entire model
+    // for (auto model_subgraph_idx : (*interpreter)->subgraph_idx_map_) {
+    //   if (modified_subgraph_index != model_subgraph_idx.second &&
+    //       model_subgraph_idx.first.model_id == subgraph_key.model_id &&
+    //       model_subgraph_idx.first.start_idx == 0 &&
+    //       model_subgraph_idx.first.end_idx == (operators->size() - 1)) {
+    //     model_subgraph = (*interpreter)->subgraph(model_subgraph_idx.second);
+    //     model_subgraph_idx_ = model_subgraph_idx.second;
+    //     break;
+    //   }
+    // }
 
     auto status = kTfLiteOk;
     if (model_subgraph) {
       status = modified_subgraph->GetTensorsFrom(model_subgraph);
       error_reporter_->Report(
-          "Get tensors from %d.\n", modified_subgraph_index);
+          "Get tensors from %d.\n", model_subgraph_idx_);
     } else {
       status = modified_subgraph->AddTensors(tensors->size());
     }
@@ -795,8 +802,8 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     std::set_union(node_inputs.begin(), node_inputs.end(),
                    node_outputs.begin(), node_outputs.end(),
                    std::inserter(subgraph_tensors, subgraph_tensors.end()));
-
-    if (builder.ParseTensors(buffers, tensors, modified_subgraph, subgraph_tensors) != kTfLiteOk) {
+    if (!model_subgraph && builder.ParseTensors(buffers, tensors, modified_subgraph,
+                             subgraph_tensors) != kTfLiteOk) {
       return cleanup_and_error();
     }
 
@@ -853,6 +860,9 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       }
     }
     modified_subgraph->SetVariables(std::move(variables));
+    
+
+    int i= 0, o= 0, intermediate= 0, temporaries = 0;
 
     if ((*interpreter)->
           ApplyBestDeviceDelegate(
@@ -860,10 +870,36 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
             subgraph_key.device_flag, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
+      
+
     
-    if (!model_subgraph &&
-        (modified_subgraph->AllocateTensors() != kTfLiteOk))
+    if (modified_subgraph->AllocateTensors() != kTfLiteOk)
       return cleanup_and_error();
+
+    std::cout << 
+        "Subgraph " << 
+        modified_subgraph_index << 
+        " num tensors : " <<  
+        modified_subgraph->tensors().size() << 
+        " delegate " <<    
+        std::endl;
+
+    nodes_and_registration = modified_subgraph->nodes_and_registration();
+    for (int node_index : modified_subgraph->execution_plan()) {
+      TfLiteNode node = nodes_and_registration[node_index].first;
+        if (node.intermediates)
+        intermediate += TfLiteIntArrayView(node.intermediates).size();
+        if (node.temporaries)
+        temporaries += TfLiteIntArrayView(node.temporaries).size();
+    }
+    
+    std::cout << 
+        " i " << node_inputs.size() <<
+        " o " << node_outputs.size() <<
+        " subgraph tensors " << subgraph_tensors.size() <<
+        " inter " << intermediate <<
+        " tempo " << temporaries <<        
+        std::endl;
   }
 
   return modified_subgraph_index;

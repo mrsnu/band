@@ -571,7 +571,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   auto interpreter_inputs = interpreter_->inputs();
   for (int i = 0; i < interpreter_inputs.size(); ++i) {
     int tensor_index = interpreter_inputs[i];
-    const TfLiteTensor& t = *(interpreter_->tensor(tensor_index));
+    const TfLiteTensor* t = interpreter_->tensor(tensor_index);
     const InputLayerInfo* input_layer_info = nullptr;
     // Note that when input layer parameters (i.e. --input_layer,
     // --input_layer_shape) are not specified, inputs_ is empty.
@@ -579,9 +579,9 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
 
     InputTensorData t_data;
     if (input_layer_info && !input_layer_info->input_file_path.empty()) {
-      t_data = LoadInputTensorData(t, input_layer_info->input_file_path);
+      t_data = LoadInputTensorData(*t, input_layer_info->input_file_path);
     } else {
-      t_data = CreateRandomTensorData(t, input_layer_info);
+      t_data = CreateRandomTensorData(*t, input_layer_info);
     }
     inputs_data_.push_back(std::move(t_data));
   }
@@ -728,7 +728,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   profiling_listener_ = MayCreateProfilingListener();
   if (profiling_listener_) AddListener(profiling_listener_.get());
 
-  interpreter_->UseNNAPI(params_.Get<bool>("use_legacy_nnapi"));
+  //interpreter_->UseNNAPI(params_.Get<bool>("use_legacy_nnapi"));
   interpreter_->SetAllowFp16PrecisionForFp32(params_.Get<bool>("allow_fp16"));
 
   auto interpreter_inputs = interpreter_->inputs();

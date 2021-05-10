@@ -382,9 +382,7 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
 
   execution_plan_.clear();
 
-  TfLiteDelegateTypes current_delegate =
-      delegates_applied_.empty() ?
-      kTfLiteDelegateCPU : delegates_applied_.back()->type;
+  TfLiteDelegateTypes current_delegate = delegate->type;
 
   for (auto& node_subset : node_subsets) {
     // Subsets claimed by the delegate should have a "macro" op created, the
@@ -417,7 +415,10 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
             // Expected output : Overwriting delegate from %s to %s.
             TFLITE_LOG(
               tflite::TFLITE_LOG_WARNING,
-              "Overwriting delegate.");
+              "Overwriting delegate from %s to %s in field %s.", 
+              TfLiteDelegateGetName(delegate_context.delegate->type),
+              TfLiteDelegateGetName(delegate->type),
+              TfLiteDelegateGetName(current_delegate));
           }
           delegate_context.delegate = delegate;
         }
@@ -649,7 +650,8 @@ TfLiteStatus Subgraph::AllocateTensors() {
   // allocation as the client may have done the resize manually.
   if (state_ != kStateUninvokable &&
       !HasDynamicTensorImpl(context_, inputs())) {
-    if (memory_planner_ && !memory_planner_->HasNonPersistentMemory()) {
+    if (own_memory_planner_ && 
+        memory_planner_ && !memory_planner_->HasNonPersistentMemory()) {
       // If the only change was the release of non-persistent memory via
       // ReleaseNonPersistentMemory(), just re-allocate it. For any other type
       // of memory-planning change (for eg, ResizeInputTensor), the state would
@@ -661,7 +663,7 @@ TfLiteStatus Subgraph::AllocateTensors() {
 
   next_execution_plan_index_to_prepare_ = 0;
   next_execution_plan_index_to_plan_allocation_ = 0;
-  if (memory_planner_) {
+  if (own_memory_planner_ && memory_planner_) {
     TF_LITE_ENSURE_STATUS(memory_planner_->ResetAllocations());
   }
 
@@ -884,6 +886,7 @@ TfLiteStatus Subgraph::PrepareOpsStartingAt(
 
 TfLiteStatus Subgraph::PrepareOpsAndTensors() {
   if (!memory_planner_) {
+    own_memory_planner_ = true;
     memory_planner_.reset(new ArenaPlanner(
         &context_, std::unique_ptr<GraphInfo>(new InterpreterInfo(this)),
         /*preserve_inputs=*/true, /*preserve_intermediates*/ false));
@@ -896,11 +899,13 @@ TfLiteStatus Subgraph::PrepareOpsAndTensors() {
       next_execution_plan_index_to_prepare_, &last_exec_plan_index_prepared));
   next_execution_plan_index_to_prepare_ = last_exec_plan_index_prepared + 1;
 
-  TF_LITE_ENSURE_STATUS(memory_planner_->ExecuteAllocations(
-      next_execution_plan_index_to_plan_allocation_,
-      last_exec_plan_index_prepared));
-  next_execution_plan_index_to_plan_allocation_ =
-      last_exec_plan_index_prepared + 1;
+  if (own_memory_planner_) {
+    TF_LITE_ENSURE_STATUS(memory_planner_->ExecuteAllocations(
+        next_execution_plan_index_to_plan_allocation_,
+        last_exec_plan_index_prepared));
+    next_execution_plan_index_to_plan_allocation_ =
+        last_exec_plan_index_prepared + 1;
+  }
 
   return kTfLiteOk;
 }
@@ -1085,9 +1090,11 @@ TfLiteStatus Subgraph::AddTensors(int tensors_to_add,
 }
 
 TfLiteStatus Subgraph::GetTensorsFrom(Subgraph* subgraph) {
-  if (!subgraph || !subgraph->tensors_) 
+  if (!subgraph || !subgraph->tensors_ || !subgraph->memory_planner_) 
     return kTfLiteError;
   tensors_ = subgraph->tensors_;
+  memory_planner_ = subgraph->memory_planner_;
+  own_memory_planner_ = false;
 
   context_.tensors = tensors_->data();
   context_.tensors_size = tensors_->size();

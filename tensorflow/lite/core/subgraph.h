@@ -727,7 +727,8 @@ class Subgraph {
   bool should_apply_nnapi_delegate_ = false;
   bool applied_nnapi_delegate_ = false;
 
-  std::unique_ptr<MemoryPlanner> memory_planner_;
+  std::shared_ptr<MemoryPlanner> memory_planner_;
+  bool own_memory_planner_;
 
   // Tracking bit for whether a tensor was resized in the course of an op
   // invocation. This is a useful hint to ensure that dynamic tensor outputs
