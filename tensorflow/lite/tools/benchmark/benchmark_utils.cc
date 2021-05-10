@@ -112,6 +112,7 @@ TfLiteStatus ParseJsonFile(std::string json_fname, RuntimeConfig& runtime_config
                            " are given in the model configs.";
       return kTfLiteError;
     }
+    model.model_id = runtime_config.model_configs.size();
     model.model_fname = model_json_value["graph"].asString();
     model.period_ms = model_json_value["period_ms"].asInt();
     if (model.period_ms <= 0) {
@@ -142,15 +143,6 @@ TfLiteStatus ParseJsonFile(std::string json_fname, RuntimeConfig& runtime_config
 
   return kTfLiteOk;
 }
-
-TfLiteStatus LoadGen::RunPeriodic() {
-
-}
-
-TfLiteStatus LoadGen::RunStream() {
-
-}
-
 }  // namespace util
 }  // namespace benchmark
 }  // namespace tflite

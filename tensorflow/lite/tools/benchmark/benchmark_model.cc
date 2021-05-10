@@ -175,7 +175,15 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     if (mode == "periodic") {
       status = RunPeriodic();
     } else if (mode == "stream") {
-      status = RunStream();
+      std::vector<Job> requests;
+      for (auto& model_config : runtime_config_.model_configs) {
+        int model_id = model_config.model_id;
+        Job request = Job(model_id);
+        for (int k = 0; k < model_config.batch_size; ++k) {
+          requests.push_back(request);
+        }
+      }
+      status = load_gen_->RunStream(runtime_config_.running_time_ms, requests);
     } else if (mode == "default") {
       status = RunAll();
     } else {

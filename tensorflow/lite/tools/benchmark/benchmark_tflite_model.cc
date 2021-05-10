@@ -296,6 +296,7 @@ BenchmarkTfLiteModel::BenchmarkTfLiteModel(BenchmarkParams params)
     : BenchmarkModel(std::move(params)),
       random_engine_(std::random_device()()) {
   AddListener(&log_output_);
+  load_gen_.reset(new LoadGenImpl(this));
 }
 
 void BenchmarkTfLiteModel::CleanUp() {
@@ -968,6 +969,16 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     t.detach();
   }
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunModelsSync(std::vector<Job> requests) {
+  interpreter_->InvokeModelsSync(requests);
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunModelsAsync(std::vector<Job> requests) {
+  interpreter_->InvokeModelsAsync(requests);
+  return kTfLiteOk;
 }
 
 }  // namespace benchmark
