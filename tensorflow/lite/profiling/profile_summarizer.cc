@@ -36,7 +36,7 @@ struct OperatorDetails {
 std::string GetTensorName(const tflite::Interpreter& interpreter,
                           int subgraph_index,
                           int tensor_index) {
-  const auto tensor = interpreter.tensor(subgraph_index,tensor_index);
+  const auto tensor = interpreter.tensor(subgraph_index, tensor_index);
   if (tensor == nullptr || tensor->name == nullptr) {
     return "Unknown";
   }

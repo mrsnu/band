@@ -904,9 +904,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
           model_json_value["input_layer_value_range"].asString(),
           model_json_value["input_layer_value_files"].asString(),
           &inputs) != kTfLiteOk) {
-        TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`, "
-                          << "`log_path`, `planner` and `models`"
-                          << " are given in the config file.";
+        // Skip printing error here since PopulateInputLayerInfo does the job.
         return kTfLiteError;
       }
     }
