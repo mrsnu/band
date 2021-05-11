@@ -51,7 +51,8 @@ struct RuntimeConfig {
 };
 
 
-TfLiteStatus ParseJsonFile(std::string json_fname, RuntimeConfig& runtime_config);
+TfLiteStatus ParseJsonFile(std::string json_fname,
+                           RuntimeConfig* runtime_config);
 
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.
