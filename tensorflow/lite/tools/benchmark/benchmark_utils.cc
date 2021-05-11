@@ -53,7 +53,7 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
   // Set Runtime Configurations
   // Optional
   if (!root["cpu_masks"].isNull()) {
-    runtime_config.cpu_masks =
+    runtime_config->cpu_masks =
         impl::TfLiteCPUMaskGetMask(root["cpu_masks"].asCString());
   }
   if (!root["worker_cpu_masks"].isNull()) {
@@ -62,26 +62,26 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
       impl::TfLiteCPUMaskFlags flag =
           impl::TfLiteCPUMaskGetMask(root["worker_cpu_masks"][key].asCString());
       if (device_id < kTfLiteNumDevices && flag != impl::kTfLiteAll) {
-        runtime_config.worker_cpu_masks[device_id] = flag;
+        runtime_config->worker_cpu_masks[device_id] = flag;
       }
     }
   }
   if (!root["running_time_ms"].isNull()) {
-    runtime_config.running_time_ms = root["running_time_ms"].asInt();
+    runtime_config->running_time_ms = root["running_time_ms"].asInt();
   }
   if (!root["profile_smoothing_factor"].isNull()) {
-    runtime_config.profile_smoothing_factor =
+    runtime_config->profile_smoothing_factor =
       root["profile_smoothing_factor"].asFloat();
   }
   if (!root["model_profile"].isNull()) {
-    runtime_config.model_profile = root["model_profile"].asString();
+    runtime_config->model_profile = root["model_profile"].asString();
   }
   if (!root["allow_work_steal"].isNull()) {
-    runtime_config.allow_work_steal = root["allow_work_steal"].asBool();
+    runtime_config->allow_work_steal = root["allow_work_steal"].asBool();
   }
   if (!root["schedule_window_size"].isNull()) {
-    runtime_config.schedule_window_size = root["schedule_window_size"].asInt();
-    if (runtime_config.schedule_window_size <= 0) {
+    runtime_config->schedule_window_size = root["schedule_window_size"].asInt();
+    if (runtime_config->schedule_window_size <= 0) {
       TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
       return kTfLiteError;
     }
@@ -98,15 +98,15 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
     return kTfLiteError;
   }
 
-  runtime_config.log_path = root["log_path"].asString();
-  runtime_config.execution_mode = root["execution_mode"].asString();
+  runtime_config->log_path = root["log_path"].asString();
+  runtime_config->execution_mode = root["execution_mode"].asString();
 
   int planner_id = root["planner"].asInt();
   if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
     TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
     return kTfLiteError;
   }
-  runtime_config.planner_type = static_cast<TfLitePlannerType>(planner_id);
+  runtime_config->planner_type = static_cast<TfLitePlannerType>(planner_id);
 
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
@@ -135,10 +135,10 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
     if (!model_json_value["device"].isNull())
       model.device = model_json_value["device"].asInt();
 
-    runtime_config.model_configs.push_back(model);
+    runtime_config->model_configs.push_back(model);
   }
 
-  if (runtime_config.model_configs.size() == 0) {
+  if (runtime_config->model_configs.size() == 0) {
     TFLITE_LOG(ERROR) << "Please specify at list one model "
                       << "in `models` argument.";
     return kTfLiteError;

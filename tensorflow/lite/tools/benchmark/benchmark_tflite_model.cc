@@ -721,7 +721,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 TfLiteStatus BenchmarkTfLiteModel::Init() {
   TF_LITE_ENSURE_STATUS(
       util::ParseJsonFile(params_.Get<std::string>("json_path"),
-                          *runtime_config_)
+                          &runtime_config_)
   );
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
