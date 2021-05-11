@@ -145,13 +145,20 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   // spawn a thread that generates input requests periodically for all models
   void GeneratePeriodicRequests();
 
-  std::vector<InputLayerInfo> inputs_;
-  std::vector<InputTensorData> inputs_data_;
+  struct ModelInformation {
+    ModelInformation(std::vector<InputLayerInfo> inputs,
+                     Interpreter::ModelConfig config)
+      :inputs(inputs), config(config) {}
+    std::vector<InputLayerInfo> inputs;
+    std::vector<InputTensorData> inputs_data;
+    Interpreter::ModelConfig config;
+  };
+
   std::unique_ptr<BenchmarkListener> profiling_listener_ = nullptr;
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;
-  std::mt19937 random_engine_;
+  std::mt19937 random_engine_;   
   std::vector<Interpreter::TfLiteDelegatePtr> owned_delegates_;
-  std::vector<Interpreter::ModelConfig> model_configs_;
+  std::vector<ModelInformation> model_information_;
   // Always TFLITE_LOG the benchmark result.
   BenchmarkLoggingListener log_output_;
 

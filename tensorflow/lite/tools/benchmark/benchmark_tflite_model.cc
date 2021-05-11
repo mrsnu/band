@@ -262,16 +262,6 @@ inline bool FileExists(const std::string& name) {
 
 BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
   BenchmarkParams default_params = BenchmarkModel::DefaultParams();
-  default_params.AddParam("input_layer",
-                          BenchmarkParam::Create<std::string>(""));
-  default_params.AddParam("input_layer_shape",
-                          BenchmarkParam::Create<std::string>(""));
-  default_params.AddParam("input_layer_value_range",
-                          BenchmarkParam::Create<std::string>(""));
-  default_params.AddParam("input_layer_value_files",
-                          BenchmarkParam::Create<std::string>(""));
-  default_params.AddParam("use_legacy_nnapi",
-                          BenchmarkParam::Create<bool>(false));
   default_params.AddParam("allow_fp16", BenchmarkParam::Create<bool>(false));
   default_params.AddParam("require_full_delegation",
                           BenchmarkParam::Create<bool>(false));
@@ -302,8 +292,10 @@ BenchmarkTfLiteModel::BenchmarkTfLiteModel(BenchmarkParams params)
 void BenchmarkTfLiteModel::CleanUp() {
   // set this flag in case we had a abrupt shutdown
   kill_app_ = true;
-  // Free up any pre-allocated tensor data during PrepareInputData.
-  inputs_data_.clear();
+  for (int i = 0; i < model_information_.size(); i++) {
+    // Free up any pre-allocated tensor data during PrepareInputData.
+    model_information_[i].inputs_data.clear();
+  }
 }
 
 BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
@@ -311,26 +303,6 @@ BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
 std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkModel::GetFlags();
   std::vector<Flag> specific_flags = {
-      CreateFlag<std::string>("input_layer", &params_, "input layer names"),
-      CreateFlag<std::string>("input_layer_shape", &params_,
-                              "input layer shape"),
-      CreateFlag<std::string>(
-          "input_layer_value_range", &params_,
-          "A map-like string representing value range for *integer* input "
-          "layers. Each item is separated by ':', and the item value consists "
-          "of input layer name and integer-only range values (both low and "
-          "high are inclusive) separated by ',', e.g. input1,1,2:input2,0,254"),
-      CreateFlag<std::string>(
-          "input_layer_value_files", &params_,
-          "A map-like string representing value file. Each item is separated "
-          "by ',', and the item value consists "
-          "of input layer name and value file path separated by ':', e.g. "
-          "input1:file_path1,input2:file_path2. If the input_name appears both "
-          "in input_layer_value_range and input_layer_value_files, "
-          "input_layer_value_range of the input_name will be ignored. The file "
-          "format is binary and it should be array format or null separated "
-          "strings format."),
-      CreateFlag<bool>("use_legacy_nnapi", &params_, "use legacy nnapi api"),
       CreateFlag<bool>("allow_fp16", &params_, "allow fp16"),
       CreateFlag<bool>("require_full_delegation", &params_,
                        "require delegate to run the entire graph"),
@@ -358,20 +330,6 @@ std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
 
 void BenchmarkTfLiteModel::LogParams() {
   BenchmarkModel::LogParams();
-  TFLITE_LOG(INFO) << "Input layers: ["
-                   << params_.Get<std::string>("input_layer") << "]";
-  TFLITE_LOG(INFO) << "Input shapes: ["
-                   << params_.Get<std::string>("input_layer_shape") << "]";
-  TFLITE_LOG(INFO) << "Input value ranges: ["
-                   << params_.Get<std::string>("input_layer_value_range")
-                   << "]";
-  TFLITE_LOG(INFO) << "Input layer values files: ["
-                   << params_.Get<std::string>("input_layer_value_files")
-                   << "]";
-#if defined(__ANDROID__)
-  TFLITE_LOG(INFO) << "Use legacy nnapi : ["
-                   << params_.Get<bool>("use_legacy_nnapi") << "]";
-#endif
   TFLITE_LOG(INFO) << "Allow fp16 : [" << params_.Get<bool>("allow_fp16")
                    << "]";
   TFLITE_LOG(INFO) << "Require full delegation : ["
@@ -400,19 +358,20 @@ TfLiteStatus BenchmarkTfLiteModel::ValidateParams() {
     return kTfLiteError;
   }
 
-  return PopulateInputLayerInfo(
-      params_.Get<std::string>("input_layer"),
-      params_.Get<std::string>("input_layer_shape"),
-      params_.Get<std::string>("input_layer_value_range"),
-      params_.Get<std::string>("input_layer_value_files"), &inputs_);
+  return kTfLiteOk;
 }
 
 uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
   TFLITE_TOOLS_CHECK(interpreter_);
   uint64_t total_input_bytes = 0;
-  for (int input : interpreter_->inputs()) {
-    auto* t = interpreter_->tensor(input);
-    total_input_bytes += t->bytes;
+  
+  for (int i = 0; i < model_information_.size(); ++i) {
+    int subgraph_index = 
+        interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
+    for (int input : *interpreter_->inputs(subgraph_index)) {
+      auto* t = interpreter_->tensor(subgraph_index, input);
+      total_input_bytes += t->bytes;
+    }
   }
   return total_input_bytes;
 }
@@ -420,8 +379,8 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
 int64_t BenchmarkTfLiteModel::MayGetModelFileSize() {
   int64_t total_mem_size = 0;
 
-  for (int i = 0; i < model_configs_.size(); ++i) {
-    std::ifstream in_file(model_configs_[i].model_fname,
+  for (int i = 0; i < model_information_.size(); ++i) {
+    std::ifstream in_file(model_information_[i].config.model_fname,
                           std::ios::binary | std::ios::ate);
     total_mem_size += in_file.tellg();
   }
@@ -563,52 +522,74 @@ BenchmarkTfLiteModel::CreateRandomTensorData(const TfLiteTensor& t,
 TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
-  // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
-  // (i.e. the specified input layer info) has been checked in
-  // BenchmarkTfLiteModel::Init() before calling this function. So, we simply
-  // use the corresponding input layer info to initializethe input data value
-  // properly.
-  auto interpreter_inputs = interpreter_->inputs();
-  for (int i = 0; i < interpreter_inputs.size(); ++i) {
-    int tensor_index = interpreter_inputs[i];
-    const TfLiteTensor& t = *(interpreter_->tensor(tensor_index));
-    const InputLayerInfo* input_layer_info = nullptr;
-    // Note that when input layer parameters (i.e. --input_layer,
-    // --input_layer_shape) are not specified, inputs_ is empty.
-    if (!inputs_.empty()) input_layer_info = &inputs_[i];
+  for (int i = 0; i < model_information_.size(); ++i) {
+    // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
+    // (i.e. the specified input layer info) has been checked in
+    // BenchmarkTfLiteModel::Init() before calling this function. So, we simply
+    // use the corresponding input layer info to initializethe input data value
+    // properly.
+    auto subgraph_index = 
+        interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
+    auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
+    auto& inputs = model_information_[i].inputs;
+    auto& inputs_data = model_information_[i].inputs_data;
+    for (int j = 0; j < interpreter_inputs.size(); ++j) {
+      int tensor_index = interpreter_inputs[j];
+      const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
+      const InputLayerInfo* input_layer_info = nullptr;
+      // Note that when input layer parameters (i.e. --input_layer,
+      // --input_layer_shape) are not specified, inputs_ is empty.
+      if (!inputs.empty()) input_layer_info = &inputs[j];
 
-    InputTensorData t_data;
-    if (input_layer_info && !input_layer_info->input_file_path.empty()) {
-      t_data = LoadInputTensorData(t, input_layer_info->input_file_path);
-    } else {
-      t_data = CreateRandomTensorData(t, input_layer_info);
+      InputTensorData t_data;
+      if (input_layer_info && !input_layer_info->input_file_path.empty()) {
+        t_data = LoadInputTensorData(*t, input_layer_info->input_file_path);
+      } else {
+        t_data = CreateRandomTensorData(*t, input_layer_info);
+      }
+      inputs_data.push_back(std::move(t_data));
     }
-    inputs_data_.push_back(std::move(t_data));
   }
   return kTfLiteOk;
 }
 
 TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
-  auto interpreter_inputs = interpreter_->inputs();
-  // Set the values of the input tensors from inputs_data_.
-  for (int j = 0; j < interpreter_inputs.size(); ++j) {
-    int i = interpreter_inputs[j];
-    TfLiteTensor* t = interpreter_->tensor(i);
-    if (t->type == kTfLiteString) {
-      if (inputs_data_[j].data) {
-        static_cast<DynamicBuffer*>(inputs_data_[j].data.get())
-            ->WriteToTensor(t, /*new_shape=*/nullptr);
-      } else {
-        tflite::DynamicBuffer buffer;
-        FillRandomString(&buffer, t->dims, []() {
-          return "we're have some friends over saturday to hang out in the "
-                 "yard";
-        });
-        buffer.WriteToTensor(t, /*new_shape=*/nullptr);
+  for (int model_id = 0; model_id < model_information_.size(); ++model_id) {
+    auto& inputs = model_information_[model_id].inputs;
+    auto& inputs_data = model_information_[model_id].inputs_data;
+
+    // TODO: #73 share tensors across different subgraphs from same model
+    for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
+      if (device_id == kTfLiteCPUFallback) {
+        // Skip for Fallback worker
+        continue;
       }
-    } else {
-      std::memcpy(t->data.raw, inputs_data_[j].data.get(),
-                  inputs_data_[j].bytes);
+      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+      int subgraph_index = interpreter_->GetSubgraphIdx(model_id, device_flag);
+      if (subgraph_index < 0) 
+        continue;
+      auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
+      // Set the values of the input tensors from inputs_data_.
+      for (int j = 0; j < interpreter_inputs.size(); ++j) {
+        int i = interpreter_inputs[j];
+        TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
+        if (t->type == kTfLiteString) {
+          if (inputs_data[j].data) {
+            static_cast<DynamicBuffer*>(inputs_data[j].data.get())
+                ->WriteToTensor(t, /*new_shape=*/nullptr);
+          } else {
+            tflite::DynamicBuffer buffer;
+            FillRandomString(&buffer, t->dims, []() {
+              return "we're have some friends over saturday to hang out in the "
+                    "yard";
+            });
+            buffer.WriteToTensor(t, /*new_shape=*/nullptr);
+          }
+        } else {
+          std::memcpy(t->data.raw, inputs_data[j].data.get(),
+                      inputs_data[j].bytes);
+        }
+      }
     }
   }
 
@@ -659,11 +640,11 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                      << " cores";
   }
 
-  for (int i = 0; i < model_configs_.size(); ++i) {
-    std::string model_name = model_configs_[i].model_fname;
+  for (int i = 0; i < model_information_.size(); ++i) {
+    std::string model_name = model_information_[i].config.model_fname;
     TF_LITE_ENSURE_STATUS(LoadModel(model_name));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
-        *models_[i], model_configs_[i], *resolver, &interpreter_, num_threads);
+        *models_[i], model_information_[i].config, *resolver, &interpreter_, num_threads);
 
     if (model_id == -1)
       return kTfLiteError;
@@ -728,37 +709,49 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   profiling_listener_ = MayCreateProfilingListener();
   if (profiling_listener_) AddListener(profiling_listener_.get());
 
-  interpreter_->UseNNAPI(params_.Get<bool>("use_legacy_nnapi"));
   interpreter_->SetAllowFp16PrecisionForFp32(params_.Get<bool>("allow_fp16"));
 
-  auto interpreter_inputs = interpreter_->inputs();
+  for (int model_id = 0; model_id < model_information_.size(); model_id++) {
+    // TODO: #73 share tensors across different subgraphs from same model
+    for (int i = 0; i < kTfLiteNumDevices; i++) {
+      const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
+      // Skip as workers are not always available
+      if (!interpreter_->GetWorker(device_id))
+        continue;
+      auto subgraph_index = interpreter_->GetSubgraphIdx(model_id, device_id);
+      if (subgraph_index < 0) 
+        continue;
+      auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
+      auto& inputs = model_information_[model_id].inputs;
 
-  if (!inputs_.empty()) {
-    TFLITE_TOOLS_CHECK_EQ(inputs_.size(), interpreter_inputs.size())
-        << "Inputs mismatch: Model inputs #:" << inputs_.size()
-        << " expected: " << interpreter_inputs.size();
-  }
+      if (!inputs.empty()) {
+        TFLITE_TOOLS_CHECK_EQ(inputs.size(), interpreter_inputs.size())
+            << "Inputs mismatch: Model inputs #:" << inputs.size()
+            << " expected: " << interpreter_inputs.size();
+      }
 
-  // Check if the tensor names match, and log a warning if it doesn't.
-  // TODO(ycling): Consider to make this an error again when the new converter
-  // create tensors with consistent naming.
-  for (int j = 0; j < inputs_.size(); ++j) {
-    const InputLayerInfo& input = inputs_[j];
-    int i = interpreter_inputs[j];
-    TfLiteTensor* t = interpreter_->tensor(i);
-    if (input.name != t->name) {
-      TFLITE_LOG(WARN) << "Tensor # " << i << " is named " << t->name
-                       << " but flags call it " << input.name;
-    }
-  }
+      // Check if the tensor names match, and log a warning if it doesn't.
+      // TODO(ycling): Consider to make this an error again when the new converter
+      // create tensors with consistent naming.
+      for (int j = 0; j < inputs.size(); ++j) {
+        const InputLayerInfo& input = inputs[j];
+        int i = interpreter_inputs[j];
+        TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
+        if (input.name != t->name) {
+          TFLITE_LOG(WARN) << "Tensor # " << i << " is named " << t->name
+                          << " but flags call it " << input.name;
+        }
+      }
 
-  // Resize all non-string tensors.
-  for (int j = 0; j < inputs_.size(); ++j) {
-    const InputLayerInfo& input = inputs_[j];
-    int i = interpreter_inputs[j];
-    TfLiteTensor* t = interpreter_->tensor(i);
-    if (t->type != kTfLiteString) {
-      interpreter_->ResizeInputTensor(i, input.shape);
+      // Resize all non-string tensors.
+      for (int j = 0; j < inputs.size(); ++j) {
+        const InputLayerInfo& input = inputs[j];
+        int i = interpreter_inputs[j];
+        TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
+        if (t->type != kTfLiteString) {
+          interpreter_->ResizeInputTensor(subgraph_index, i, input.shape);
+        }
+      }
     }
   }
 
@@ -875,6 +868,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
+    std::vector<InputLayerInfo> inputs;
     Interpreter::ModelConfig model;
     Json::Value model_json_value = root["models"][i];
     if (model_json_value["graph"].isNull() ||
@@ -900,10 +894,27 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     if (!model_json_value["device"].isNull())
       model.device = model_json_value["device"].asInt();
 
-    model_configs_.push_back(model);
+    if (!model_json_value["input_layer"].isNull() &&
+        !model_json_value["input_layer_shape"].isNull() &&
+        !model_json_value["input_layer_value_range"].isNull() &&
+        !model_json_value["input_layer_value_files"].isNull()) {
+      if (PopulateInputLayerInfo(
+          model_json_value["input_layer"].asString(),
+          model_json_value["input_layer_shape"].asString(),
+          model_json_value["input_layer_value_range"].asString(),
+          model_json_value["input_layer_value_files"].asString(),
+          &inputs) != kTfLiteOk) {
+        TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`, "
+                          << "`log_path`, `planner` and `models`"
+                          << " are given in the config file.";
+        return kTfLiteError;
+      }
+    }
+
+    model_information_.push_back({inputs, model});
   }
 
-  if (model_configs_.size() == 0) {
+  if (model_information_.size() == 0) {
     TFLITE_LOG(ERROR) << "Please specify at list one model "
                       << "in `models` argument.";
     return kTfLiteError;
@@ -994,7 +1005,7 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
   }
 }
 
-TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(); }
+TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(0); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   int num_iters = 3;
