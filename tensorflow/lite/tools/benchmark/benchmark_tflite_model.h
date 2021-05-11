@@ -67,8 +67,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunPeriodic() override;
   TfLiteStatus RunStream() override;
   static BenchmarkParams DefaultParams();
-  TfLiteStatus RunModelsSync(std::vector<Job> requests);
-  TfLiteStatus RunModelsAsync(std::vector<Job> requests);
 
  protected:
   TfLiteStatus PrepareInputData() override;
@@ -158,22 +156,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   // boolean flag for letting child threads know that it's time to go home
   bool kill_app_ = false;
-};
-
-class LoadGenImpl : public util::LoadGen {
- public:
-  explicit LoadGenImpl(BenchmarkTfLiteModel* benchmark_model)
-    : benchmark_model_(benchmark_model) {}
-  TfLiteStatus RunModelsSync(std::vector<Job> requests) {
-    return benchmark_model_->RunModelsSync(requests);
-  }
-
-  TfLiteStatus RunModelsAsync(std::vector<Job> requests) {
-    return benchmark_model_->RunModelsAsync(requests);
-  }
-
- private:
-  BenchmarkTfLiteModel* benchmark_model_;
 };
 
 }  // namespace benchmark

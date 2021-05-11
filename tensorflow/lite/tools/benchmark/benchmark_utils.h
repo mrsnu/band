@@ -19,12 +19,9 @@ limitations under the License.
 #include <sstream>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
-#include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace benchmark {
@@ -77,33 +74,8 @@ bool SplitAndParse(const std::string& str, char delim, std::vector<T>* values) {
 }
 
 class LoadGen {
- public:
-  // Enqueue the `requests` and wait until the execution is finished.
-  virtual TfLiteStatus RunModelsSync(std::vector<Job> requests) = 0;
-  // Enqueue the `requests`.
-  virtual TfLiteStatus RunModelsAsync(std::vector<Job> requests) = 0;
-
-  // Run the `requests` in back-to-back manner for `running_time_ms` milli-seconds.
-  // NOTE the workload is static.
-  TfLiteStatus RunStream(size_t running_time_ms, std::vector<Job> requests) {
-    int run_duration_us = running_time_ms * 1000;
-    int num_frames = 0;
-    int64_t start = profiling::time::NowMicros();
-    while(true) {
-      TF_LITE_ENSURE_STATUS(RunModelsSync(requests));
-      int64_t current = profiling::time::NowMicros();
-      num_frames++;
-      if (current - start >= run_duration_us)
-        break;
-    }
-    int64_t end = profiling::time::NowMicros();
-    TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
-    TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
-    TFLITE_LOG(INFO) << "Measured FPS: "
-                     << (num_frames / (float)(end - start)) * 1000000;
-
-    return kTfLiteOk;
-  }
+  TfLiteStatus RunPeriodic(); 
+  TfLiteStatus RunStream();
 };
 
 }  // namespace util

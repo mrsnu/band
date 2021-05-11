@@ -221,7 +221,6 @@ class BenchmarkModel {
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
   util::RuntimeConfig runtime_config_;
-  std::unique_ptr<util::LoadGen> load_gen_;
 };
 
 }  // namespace benchmark
