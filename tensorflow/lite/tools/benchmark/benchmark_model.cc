@@ -173,9 +173,17 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     std::string mode = runtime_config_.execution_mode;
     TFLITE_LOG(INFO) << "Running in [" << mode << "] mode.";
     if (mode == "periodic") {
-      status = load_gen_->RunPeriodic();
+      status = RunPeriodic();
     } else if (mode == "stream") {
-      status = load_gen_->RunStream();
+      std::vector<Job> requests;
+      for (auto& model_config : runtime_config_.model_configs) {
+        int model_id = model_config.model_id;
+        Job request = Job(model_id);
+        for (int k = 0; k < model_config.batch_size; ++k) {
+          requests.push_back(request);
+        }
+      }
+      status = load_gen_->RunStream(runtime_config_.running_time_ms, requests);
     } else if (mode == "default") {
       status = RunAll();
     } else {

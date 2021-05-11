@@ -64,10 +64,10 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
+  TfLiteStatus RunPeriodic() override;
   static BenchmarkParams DefaultParams();
   TfLiteStatus RunModelsSync(std::vector<Job> requests);
   TfLiteStatus RunModelsAsync(std::vector<Job> requests);
-  void WaitAsync();
 
  protected:
   TfLiteStatus PrepareInputData() override;
@@ -169,10 +169,6 @@ class LoadGenImpl : public util::LoadGen {
 
   TfLiteStatus RunModelsAsync(std::vector<Job> requests) {
     return benchmark_model_->RunModelsAsync(requests);
-  }
-
-  void Wait() {
-    return benchmark_model_->WaitAsync();
   }
 
  private:

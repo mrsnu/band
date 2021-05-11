@@ -720,9 +720,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
-  TF_LITE_ENSURE_STATUS(
-      load_gen_->ParseJsonFile(params_.Get<std::string>("json_path")));
-  runtime_config_ = load_gen_->GetRuntimeConfig();
+  TF_LITE_ENSURE_STATUS(util::ParseJsonFile(params_.Get<std::string>("json_path"),
+                                      runtime_config_));
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
   // Install profilers if necessary right after interpreter is created so that
@@ -901,6 +900,57 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   return kTfLiteOk;
 }
 
+TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
+  // initialize values in case this isn't our first run
+  kill_app_ = false;
+
+  // spawn a child thread to do our work, since we're going to sleep
+  // Note: spawning a separate thread is technically unnecessary if we only
+  // have a single thread that generate requests, but we may have multiple
+  // threads doing that in the future so we might as well make the code easily
+  // adaptable to such situtations.
+  GeneratePeriodicRequests();
+
+  // wait for 60 seconds until we stop the benchmark
+  // we could set a command line arg for this value as well
+  std::this_thread::sleep_for(
+      std::chrono::milliseconds(runtime_config_.running_time_ms));
+  kill_app_ = true;
+
+  interpreter_->GetPlanner()->Wait();
+  return kTfLiteOk;
+}
+
+void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
+  for (auto& m : interpreter_->GetModelConfig()) {
+    int model_id = m.first;
+    ModelConfig& model_config = m.second;
+    int batch_size = model_config.batch_size,
+        period_ms = model_config.period_ms;
+
+    std::thread t([this, batch_size, model_id, period_ms]() {
+      std::vector<Job> requests(batch_size, Job(model_id));
+      while (true) {
+        // measure the time it took to generate requests
+        int64_t start = profiling::time::NowMicros();
+        interpreter_->InvokeModelsAsync(requests);
+        int64_t end = profiling::time::NowMicros();
+        int duration_ms = (end - start) / 1000;
+
+        // sleep until we reach period_ms
+        if (duration_ms < period_ms) {
+          std::this_thread::sleep_for(
+              std::chrono::milliseconds(period_ms - duration_ms));
+        }
+
+        if (kill_app_) return;
+      }
+    });
+
+    t.detach();
+  }
+}
+
 TfLiteStatus BenchmarkTfLiteModel::RunModelsSync(std::vector<Job> requests) {
   interpreter_->InvokeModelsSync(requests);
   return kTfLiteOk;
@@ -909,10 +959,6 @@ TfLiteStatus BenchmarkTfLiteModel::RunModelsSync(std::vector<Job> requests) {
 TfLiteStatus BenchmarkTfLiteModel::RunModelsAsync(std::vector<Job> requests) {
   interpreter_->InvokeModelsAsync(requests);
   return kTfLiteOk;
-}
-
-void BenchmarkTfLiteModel::WaitAsync() {
-  interpreter_->GetPlanner()->Wait();
 }
 
 }  // namespace benchmark
