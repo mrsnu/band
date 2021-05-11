@@ -58,6 +58,12 @@ class InterpreterUtils;  // Class for friend declarations.
 
 namespace impl {
 
+#define TF_LITE_ENSURE_SUBGRAPH_INDEX(i) \
+  do {                                 \
+    if (!subgraph(i))                  \
+      return kTfLiteError;             \
+  } while (0)
+
 /// An interpreter for a graph of nodes that input and output from tensors.
 /// Each node of the graph processes a set of input tensors and produces a
 /// set of output Tensors. All inputs/output tensors are referenced by index.
@@ -116,28 +122,29 @@ class Interpreter {
   /// Provide a list of tensor indexes that are inputs to the model.
   /// Each index is bound check and this modifies the consistent_ flag of the
   /// interpreter.
-  TfLiteStatus SetInputs(std::vector<int> inputs);
+  TfLiteStatus SetInputs(int subgraph_index, std::vector<int> inputs);
 
   /// Provide a list of tensor indexes that are outputs to the model
   /// Each index is bound check and this modifies the consistent_ flag of the
   /// interpreter.
-  TfLiteStatus SetOutputs(std::vector<int> outputs);
+  TfLiteStatus SetOutputs(int subgraph_index, std::vector<int> outputs);
 
   /// Provide a list of tensor indexes that are variable tensors.
   /// Each index is bound check and this modifies the consistent_ flag of the
   /// interpreter.
-  TfLiteStatus SetVariables(std::vector<int> variables);
+  TfLiteStatus SetVariables(int subgraph_index, std::vector<int> variables);
 
   /// Ensure the internal node storage memory allocates at least `count`
   /// spots for node. NOTE, this doesn't actually add operators. This is an
   /// efficiency optimization that is subject to change.
-  void ReserveNodes(int count);
+  void ReserveNodes(int subgraph_index, int count);
 
   /// Adds a node with the given parameters and returns the index of the new
   /// node in `node_index` (optionally). Interpreter will take ownership of
   /// `builtin_data` and destroy it with `free`. Ownership of 'init_data'
   /// remains with the caller.
-  TfLiteStatus AddNodeWithParameters(const std::vector<int>& inputs,
+  TfLiteStatus AddNodeWithParameters(int subgraph_index,
+                                     const std::vector<int>& inputs,
                                      const std::vector<int>& outputs,
                                      const char* init_data,
                                      size_t init_data_size, void* builtin_data,
@@ -147,7 +154,7 @@ class Interpreter {
   /// Adds `tensors_to_add` tensors, preserving pre-existing Tensor entries.
   /// The value pointed to by `first_new_tensor_index` will be set to the
   /// index of the first new tensor if `first_new_tensor_index` is non-null.
-  TfLiteStatus AddTensors(int tensors_to_add,
+  TfLiteStatus AddTensors(int subgraph_index, int tensors_to_add,
                           int* first_new_tensor_index = nullptr);
 
   /// Set description of inputs/outputs/data/fptrs for node `node_index`.
@@ -155,39 +162,39 @@ class Interpreter {
   /// bytes. The lifetime of buffer must be ensured to be greater or equal
   /// to Interpreter.
   TfLiteStatus SetTensorParametersReadOnly(
-      int tensor_index, TfLiteType type, const char* name,
+      int subgraph_index, int tensor_index, TfLiteType type, const char* name,
       const std::vector<int>& dims, TfLiteQuantization quantization,
       const char* buffer, size_t bytes, const Allocation* allocation = nullptr);
 
   /// Legacy. Deprecated in favor of above.
   inline TfLiteStatus SetTensorParametersReadOnly(
-      int tensor_index, TfLiteType type, const char* name,
+      int subgraph_index, int tensor_index, TfLiteType type, const char* name,
       const std::vector<int>& dims, TfLiteQuantizationParams quantization,
       const char* buffer, size_t bytes,
       const Allocation* allocation = nullptr) {
-    return SetTensorParametersReadOnly(tensor_index, type, name, dims.size(),
-                                       dims.data(), quantization, buffer, bytes,
-                                       allocation);
+    return SetTensorParametersReadOnly(subgraph_index, tensor_index, type, name,
+                                       dims.size(), dims.data(), quantization,
+                                       buffer, bytes, allocation);
   }
 
   TfLiteStatus SetTensorParametersReadOnly(
-      int tensor_index, TfLiteType type, const char* name, const size_t rank,
-      const int* dims, TfLiteQuantizationParams quantization,
+      int subgraph_index, int tensor_index, TfLiteType type, const char* name, 
+      const size_t rank, const int* dims, TfLiteQuantizationParams quantization,
       const char* buffer, size_t bytes, const Allocation* allocation = nullptr);
 
   /// Set description of inputs/outputs/data/fptrs for node `node_index`.
   /// This variant assumes an external buffer has been allocated of size
   /// bytes. The lifetime of buffer must be ensured to be greater or equal
   /// to Interpreter.
-  TfLiteStatus SetTensorParametersReadWrite(int tensor_index, TfLiteType type,
-                                            const char* name,
+  TfLiteStatus SetTensorParametersReadWrite(int subgraph_index, int tensor_index,
+                                            TfLiteType type, const char* name,
                                             const std::vector<int>& dims,
                                             TfLiteQuantization quantization,
                                             bool is_variable = false);
 
   /// Legacy. Deprecated in favor of above.
   inline TfLiteStatus SetTensorParametersReadWrite(
-      int tensor_index, TfLiteType type, const char* name,
+      int subgraph_index, int tensor_index, TfLiteType type, const char* name,
       const std::vector<int>& dims, TfLiteQuantizationParams quantization,
       bool is_variable = false,
       const std::vector<int>* dims_signature = nullptr) {
@@ -198,85 +205,94 @@ class Interpreter {
       dims_signature_pointer = dims_signature->data();
     }
     return SetTensorParametersReadWrite(
-        tensor_index, type, name, dims.size(), dims.data(), quantization,
-        is_variable, rank_dims_signature, dims_signature_pointer);
+        subgraph_index, tensor_index, type, name, dims.size(), dims.data(),
+        quantization, is_variable, rank_dims_signature, dims_signature_pointer);
   }
   TfLiteStatus SetTensorParametersReadWrite(
-      int tensor_index, TfLiteType type, const char* name, const size_t rank,
-      const int* dims, TfLiteQuantizationParams quantization,
+      int subgraph_index, int tensor_index, TfLiteType type, const char* name,
+      const size_t rank, const int* dims, TfLiteQuantizationParams quantization,
       bool is_variable = false, const size_t rank_dims_signature = 0,
       const int* dims_signature = nullptr);
 #endif  // DOXYGEN_SKIP
   // Functions to access tensor data
+  /// The given index must be valid.
 
   /// Read only access to list of inputs.
-  const std::vector<int>& inputs() const { return primary_subgraph().inputs(); }
+  const std::vector<int>* inputs(int subgraph_index) const {
+    return &subgraphs_[subgraph_index]->inputs();
+  }
 
-  /// Return the name of a given input. The given index must be between 0 and
-  /// inputs().size().
-  const char* GetInputName(int index) const {
-    return context_->tensors[inputs()[index]].name;
+  /// Return the name of a given input. 
+  const char* GetInputName(int subgraph_index, int index) const {
+    return subgraphs_[subgraph_index]->context_.
+        tensors[inputs(subgraph_index)->at(index)].name;
   }
 
   /// Read only access to list of outputs.
-  const std::vector<int>& outputs() const {
-    return primary_subgraph().outputs();
+  const std::vector<int>* outputs(int subgraph_index) const {
+    return &subgraphs_[subgraph_index]->outputs();
   }
 
   /// Read only access to list of variable tensors.
-  const std::vector<int>& variables() const {
-    return primary_subgraph().variables();
+  const std::vector<int>* variables(int subgraph_index) const {
+    return &subgraphs_[subgraph_index]->variables();
   }
 
-  /// Return the name of a given output. The given index must be between 0 and
-  /// outputs().size().
-  const char* GetOutputName(int index) const {
-    return context_->tensors[outputs()[index]].name;
+  /// Return the name of a given output. 
+  const char* GetOutputName(int subgraph_index, int index) const {
+    return subgraphs_[subgraph_index]->context_.
+        tensors[outputs(subgraph_index)->at(index)].name;
   }
 
   /// Return the number of tensors in the model.
-  size_t tensors_size() const { return context_->tensors_size; }
+  size_t tensors_size(int subgraph_index) const {
+    return subgraphs_[subgraph_index]->context_.tensors_size;
+  }
 
   /// Return the number of ops in the model.
-  size_t nodes_size() const { return primary_subgraph().nodes_size(); }
+  size_t nodes_size(int subgraph_index) const {
+    return subgraphs_[subgraph_index]->nodes_size(); 
+  }
 
   /// WARNING: Experimental interface, subject to change
-  const std::vector<int>& execution_plan() const {
-    return primary_subgraph().execution_plan();
+  const std::vector<int>* execution_plan(int subgraph_index) const {
+    return &subgraphs_[subgraph_index]->execution_plan();
   }
 
 #ifndef DOXYGEN_
   /// WARNING: Experimental interface, subject to change
   /// Overrides execution plan. This bounds checks indices sent in.
-  TfLiteStatus SetExecutionPlan(const std::vector<int>& new_plan);
+  TfLiteStatus SetExecutionPlan(int subgraph_index, const std::vector<int>& new_plan);
 #endif  // DOXYGEN_SKIP
 
   /// Get a mutable tensor data structure.
   // TODO(aselle): Create a safe ArrayHandle interface to avoid exposing this
   // read/write access to structure
-  TfLiteTensor* tensor(int tensor_index) {
-    return primary_subgraph().tensor(tensor_index);
+  TfLiteTensor* tensor(int subgraph_index, int tensor_index) {
+    return subgraphs_[subgraph_index]->tensor(tensor_index);
   }
 
   /// Get an immutable tensor data structure.
-  const TfLiteTensor* tensor(int tensor_index) const {
-    return primary_subgraph().tensor(tensor_index);
+  const TfLiteTensor* tensor(int subgraph_index, int tensor_index) const {
+    return subgraphs_[subgraph_index]->tensor(tensor_index);
   }
 
   /// Get a pointer to an operation and registration data structure if in
   /// bounds.
   const std::pair<TfLiteNode, TfLiteRegistration>* node_and_registration(
-      int node_index) const {
-    return primary_subgraph().node_and_registration(node_index);
+      int subgraph_index, int node_index) const {
+    return subgraphs_[subgraph_index]->node_and_registration(node_index);
   }
 
   /// Perform a checked cast to the appropriate tensor type (mutable pointer
   /// version).
   template <class T>
-  T* typed_tensor(int tensor_index) {
-    if (TfLiteTensor* tensor_ptr = tensor(tensor_index)) {
-      if (tensor_ptr->type == typeToTfLiteType<T>()) {
-        return reinterpret_cast<T*>(tensor_ptr->data.raw);
+  T* typed_tensor(int subgraph_index, int tensor_index) {
+    if (subgraph_index < subgraphs_size()) {
+      if (TfLiteTensor* tensor_ptr = tensor(subgraph_index, tensor_index)) {
+        if (tensor_ptr->type == typeToTfLiteType<T>()) {
+          return reinterpret_cast<T*>(tensor_ptr->data.raw);
+        }
       }
     }
     return nullptr;
@@ -285,10 +301,12 @@ class Interpreter {
   /// Perform a checked cast to the appropriate tensor type (immutable pointer
   /// version).
   template <class T>
-  const T* typed_tensor(int tensor_index) const {
-    if (const TfLiteTensor* tensor_ptr = tensor(tensor_index)) {
-      if (tensor_ptr->type == typeToTfLiteType<T>()) {
-        return reinterpret_cast<const T*>(tensor_ptr->data.raw);
+  const T* typed_tensor(int subgraph_index, int tensor_index) const {
+    if (subgraph_index < subgraphs_size()) {
+      if (const TfLiteTensor* tensor_ptr = tensor(subgraph_index, tensor_index)) {
+        if (tensor_ptr->type == typeToTfLiteType<T>()) {
+          return reinterpret_cast<const T*>(tensor_ptr->data.raw);
+        }
       }
     }
     return nullptr;
@@ -296,50 +314,54 @@ class Interpreter {
 
   /// Return a mutable pointer to the given input tensor. The given index must
   /// be between 0 and inputs().size().
-  TfLiteTensor* input_tensor(size_t index) { return tensor(inputs()[index]); }
+  TfLiteTensor* input_tensor(int subgraph_index, size_t index) { 
+    return tensor(subgraph_index, inputs(subgraph_index)->at(index)); 
+  }
 
   /// Return an immutable pointerto the given input tensor. The given index must
   /// be between 0 and inputs().size().
-  const TfLiteTensor* input_tensor(size_t index) const {
-    return tensor(inputs()[index]);
+  const TfLiteTensor* input_tensor(int subgraph_index, size_t index) const {
+    return tensor(subgraph_index, inputs(subgraph_index)->at(index)); 
   }
 
   /// Return a mutable pointer into the data of a given input tensor. The given
   /// index must be between 0 and inputs().size().
   template <class T>
-  T* typed_input_tensor(int index) {
-    return typed_tensor<T>(inputs()[index]);
+  T* typed_input_tensor(int subgraph_index, int index) {
+    return typed_tensor<T>(subgraph_index, inputs(subgraph_index)->at(index));
   }
 
   /// Return an immutable pointer into the data of a given input tensor. The
   /// given index must be between 0 and inputs().size().
   template <class T>
-  const T* typed_input_tensor(int index) const {
-    return typed_tensor<T>(inputs()[index]);
+  const T* typed_input_tensor(int subgraph_index, int index) const {
+    return typed_tensor<T>(subgraph_index, inputs(subgraph_index)->at(index));
   }
 
   /// Return a mutable pointer to the given output tensor. The given index must
   /// be between 0 and outputs().size().
-  TfLiteTensor* output_tensor(size_t index) { return tensor(outputs()[index]); }
+  TfLiteTensor* output_tensor(int subgraph_index, size_t index) {
+    return tensor(subgraph_index, outputs(subgraph_index)->at(index)); 
+  }
 
   /// Return an immutable pointer to the given output tensor. The given index
   /// must be between 0 and outputs().size().
-  const TfLiteTensor* output_tensor(size_t index) const {
-    return tensor(outputs()[index]);
+  const TfLiteTensor* output_tensor(int subgraph_index, size_t index) const {
+    return tensor(subgraph_index, outputs(subgraph_index)->at(index)); 
   }
 
   /// Return a mutable pointer into the data of a given output tensor. The given
   /// index must be between 0 and outputs().size().
   template <class T>
-  T* typed_output_tensor(int index) {
-    return typed_tensor<T>(outputs()[index]);
+  T* typed_output_tensor(int subgraph_index, int index) {
+    return typed_tensor<T>(subgraph_index, outputs(subgraph_index)->at(index));
   }
 
   /// Return an immutable pointer into the data of a given output tensor. The
   /// given index must be between 0 and outputs().size().
   template <class T>
-  const T* typed_output_tensor(int index) const {
-    return typed_tensor<T>(outputs()[index]);
+  const T* typed_output_tensor(int subgraph_index, int index) const {
+    return typed_tensor<T>(subgraph_index, outputs(subgraph_index)->at(index));
   }
 
   /// Change the dimensionality of a given tensor. Note, this is only acceptable
@@ -347,7 +369,7 @@ class Interpreter {
   /// Returns status of failure or success. Note that this doesn't actually
   /// resize any existing buffers. A call to AllocateTensors() is required to
   /// change the tensor input buffer.
-  TfLiteStatus ResizeInputTensor(int tensor_index,
+  TfLiteStatus ResizeInputTensor(int subgraph_index, int tensor_index,
                                  const std::vector<int>& dims);
 
   // WARNING: Experimental interface, subject to change
@@ -357,14 +379,14 @@ class Interpreter {
   // `dims_signature` attribute of a `TfLiteTensor`. Returns status of failure
   // or success.  Note that this doesn't actually resize any existing buffers.
   /// A call to AllocateTensors() is required to change the tensor input buffer.
-  TfLiteStatus ResizeInputTensorStrict(int tensor_index,
+  TfLiteStatus ResizeInputTensorStrict(int subgraph_index, int tensor_index,
                                        const std::vector<int>& dims);
 
   // This releases memory held by non-persistent tensors. It does NOT re-perform
   // memory planning.
   // AllocateTensors needs to be called before next invocation.
   /// WARNING: Experimental interface, subject to change
-  TfLiteStatus ReleaseNonPersistentMemory();
+  TfLiteStatus ReleaseNonPersistentMemory(int subgraph_index);
 
   // Update allocations for all tensors. This will redim dependent tensors
   // using the input tensor dimensionality as given. This is relatively
@@ -372,18 +394,10 @@ class Interpreter {
   // and before running inference (and accessing tensor buffers), and *must be*
   // called again if (and only if) an input tensor is resized. Returns status of
   // success or failure.
-  TfLiteStatus AllocateTensors();
-
-  /// Invoke the interpreter (run the whole graph in dependency order).
-  ///
-  /// NOTE: It is possible that the interpreter is not in a ready state
-  /// to evaluate (i.e. if a ResizeTensor() has been performed without an
-  /// AllocateTensors().
-  /// Returns status of success or failure.
-  TfLiteStatus Invoke();
+  TfLiteStatus AllocateTensors(int subgraph_index = -1);
 
   /// Invoke idx-th subgraph in the interpreter.
-  TfLiteStatus Invoke(int idx);
+  TfLiteStatus Invoke(int subgraph_index);
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
@@ -404,9 +418,6 @@ class Interpreter {
   void InvokeModelsSync();
   void InvokeModelsSync(std::vector<Job> requests);
 
-  /// Enable or disable the NN API (true to enable)
-  void UseNNAPI(bool enable);
-
   /// Set the number of threads available to the interpreter.
   ///
   /// NOTE: num_threads should be >= -1.
@@ -426,9 +437,7 @@ class Interpreter {
 
   /// Get the half precision flag.
   /// WARNING: This is an experimental API and subject to change.
-  bool GetAllowFp16PrecisionForFp32() const {
-    return context_->allow_fp32_relax_to_fp16;
-  }
+  bool GetAllowFp16PrecisionForFp32() const;
 
   /// Sets the cancellation function pointer in order to cancel a request in the
   /// middle of a call to Invoke(). The interpreter queries this function during
@@ -439,33 +448,14 @@ class Interpreter {
   /// WARNING: This is an experimental API and subject to change.
   void SetCancellationFunction(void* data, bool (*check_cancelled_func)(void*));
 
-  /// Allow a delegate to look at the graph and modify the graph to handle
-  /// parts of the graph themselves. After this is called, the graph may
-  /// contain new nodes that replace 1 more nodes.
-  /// 'delegate' must outlive the interpreter.
-  /// Returns one of the following three status codes:
-  /// 1. kTfLiteOk: Success.
-  /// 2. kTfLiteDelegateError: Delegation failed due to an error in the
-  /// delegate. The Interpreter has been restored to its pre-delegation state.
-  /// NOTE: This undoes all delegates previously applied to the Interpreter.
-  /// 3. kTfLiteError: Unexpected/runtime failure.
-  /// WARNING: This is an experimental API and subject to change.
-  TfLiteStatus ModifyGraphWithDelegate(TfLiteDelegate* delegate);
-
   // Owning handle to a TfLiteDelegate instance.
   using TfLiteDelegatePtr =
       std::unique_ptr<TfLiteDelegate, void (*)(TfLiteDelegate*)>;
-  
-  // Remove delegates (for fallback behaviour). The interpreter is invokable
-  // afterwards.
-  TfLiteStatus RemoveAllDelegates();
 
   /// Ensure the data in `tensor.data` is readable. In case delegate is used,
   /// it might require to copy the data from delegate buffer to raw memory.
   /// WARNING: This is an experimental API and subject to change.
-  TfLiteStatus EnsureTensorDataIsReadable(int tensor_index) {
-    return primary_subgraph().EnsureTensorDataIsReadable(tensor_index);
-  }
+  TfLiteStatus EnsureTensorDataIsReadable(int subgraph_index, int tensor_index);
 
   /// Set the delegate buffer handle to a tensor. It can be called in the
   /// following cases:
@@ -476,16 +466,16 @@ class Interpreter {
   ///    For example, set an OpenGL texture as the output of inference, while
   ///    the node which produces output is an OpenGL delegate node.
   /// WARNING: This is an experimental API and subject to change.
-  // TODO #7: Change how the interpreter manages context of each subgraph
-  TfLiteStatus SetBufferHandle(int tensor_index,
+  TfLiteStatus SetBufferHandle(int subgraph_index, 
+                               int tensor_index,
                                TfLiteBufferHandle buffer_handle,
                                TfLiteDelegate* delegate);
 
   /// Get the delegate buffer handle, and the delegate which can process the
   /// buffer handle.
   /// WARNING: This is an experimental API and subject to change.
-  // TODO #7: Change how the interpreter manages context of each subgraph
-  TfLiteStatus GetBufferHandle(int tensor_index,
+  TfLiteStatus GetBufferHandle(int subgraph_index, 
+                               int tensor_index,
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
@@ -536,14 +526,12 @@ class Interpreter {
   /// TODO(b/115961645): Implement - If a variable tensor has a buffer, reset it
   /// to the value of the buffer.
   /// WARNING: This is an experimental API and subject to change.
-  TfLiteStatus ResetVariableTensors();
+  TfLiteStatus ResetVariableTensors(int subgraph_index);
 
   /// Retrieve an operator's description of its work, for profiling purposes.
-  const char* OpProfilingString(const TfLiteRegistration& op_reg,
-                                const TfLiteNode* node) const {
-    if (op_reg.profiling_string == nullptr) return nullptr;
-    return op_reg.profiling_string(context_, node);
-  }
+  const char* OpProfilingString(int subgraph_index,
+                                const TfLiteRegistration& op_reg,
+                                const TfLiteNode* node) const;
 
   // Set the value of an external context. TFLite interpreter doesn't take the
   // memory ownership of this external context 'ctx', and the context should
@@ -574,18 +562,6 @@ class Interpreter {
         static_cast<size_t>(subgraph_index) >= subgraphs_size())
       return nullptr;
     return &*subgraphs_[subgraph_index];
-  }
-
-  /// WARNING: Experimental interface, subject to change
-  Subgraph& primary_subgraph() {
-    assert(!subgraphs_.empty());
-    return *subgraphs_.front();  /// Safe as subgraphs_ always has 1 entry.
-  }
-
-  /// WARNING: Experimental interface, subject to change
-  const Subgraph& primary_subgraph() const {
-    assert(!subgraphs_.empty());
-    return *subgraphs_.front();  // Safe as subgraphs_ always has 1 entry.
   }
 #endif  // DOXYGEN_SKIP
 
@@ -695,7 +671,7 @@ class Interpreter {
   // Map structure to find subgraph idx with SubgraphKeys
   std::map<SubgraphKey, int> subgraph_idx_map_;
 
-  void RegisterSubgraphIdx(SubgraphKey subgraph_key, int subgraph_idx);
+  void RegisterSubgraphIdx(SubgraphKey subgraph_key, int subgraph_index);
 
   // Applies best delegate from the given device to the subgraph.
   TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
@@ -709,10 +685,10 @@ class Interpreter {
   void SetSubgraphProfiler(Profiler * profiler);
 
   // Returns true if delegates have been applied.
-  bool HasDelegates();
+  bool HasDelegates(int subgraph_index);
 
   // Returns true if cancellation function returns true.
-  bool IsCancelled();
+  bool IsCancelled(int subgraph_index);
 
   // Get the error reporter associated with this interpreter.
   ErrorReporter* error_reporter() { return error_reporter_; }
@@ -720,12 +696,6 @@ class Interpreter {
   // Smoothing constant to update profile result.
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_ = 0.1;
-
-  // A pure C data structure used to communicate with the pure C plugin
-  // interface. To avoid copying tensor metadata, this is also the definitive
-  // structure to store tensors.
-  // This is the primary subgraph context.
-  TfLiteContext* context_ = nullptr;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;
