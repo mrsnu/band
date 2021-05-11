@@ -217,6 +217,7 @@ class BenchmarkModel {
   virtual TfLiteStatus RunImpl(int i) = 0;
   virtual TfLiteStatus RunAll() = 0;
   virtual TfLiteStatus RunPeriodic() = 0;
+  virtual TfLiteStatus RunStream() = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
   util::RuntimeConfig runtime_config_;
