@@ -632,7 +632,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   // Set log file path and write log headers
   TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
-  const tflite::impl::TfLiteCPUMaskFlags cpu_mask =
+  const tflite::impl::TfLiteCPUMaskFlags cpu_mask = 
       static_cast<tflite::impl::TfLiteCPUMaskFlags>(runtime_config_.cpu_masks);
   auto cpu_mask_set = tflite::impl::TfLiteCPUMaskGetSet(cpu_mask);
   TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpu_mask_set));
@@ -648,12 +648,10 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
       continue;
     // Use global mask only if worker_mask is invalid
     tflite::impl::TfLiteCPUMaskFlags worker_mask =
-      runtime_config_.worker_cpu_masks[i] == tflite::impl::kTfLiteNumCpuMasks ?
-      cpu_mask : runtime_config_.worker_cpu_masks[i];
-    const tflite::impl::CpuSet worker_mask_set =
-      tflite::impl::TfLiteCPUMaskGetSet(worker_mask);
-    TF_LITE_ENSURE_STATUS(
-        interpreter_->SetWorkerThreadAffinity(worker_mask_set, device_id));
+        runtime_config_.worker_cpu_masks[i] == tflite::impl::kTfLiteNumCpuMasks ?
+        cpu_mask : runtime_config_.worker_cpu_masks[i];
+    const tflite::impl::CpuSet worker_mask_set = tflite::impl::TfLiteCPUMaskGetSet(worker_mask);
+    TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(worker_mask_set, device_id));
     TFLITE_LOG(INFO) << "Set affinity of "
                      << TfLiteDeviceGetName(device_id)
                      << " to "
@@ -834,16 +832,14 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
       // e.g., "25/50" --> delim_pos = 2
       auto delim_pos = idx.find("/");
       std::string start_idx = idx.substr(0, delim_pos);
-      std::string end_idx =
-        idx.substr(delim_pos + 1, idx.length() - delim_pos - 1);
-
+      std::string end_idx = idx.substr(delim_pos + 1, idx.length() - delim_pos - 1);
+      
       const Json::Value device_profile = *idx_profile_it;
       for (auto device_profile_it = device_profile.begin();
            device_profile_it != device_profile.end();
            ++device_profile_it) {
         int device_id = device_profile_it.key().asInt();
-        TfLiteDeviceFlags device_flag =
-          static_cast<TfLiteDeviceFlags>(device_id);
+        TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
         int64_t profiled_latency = (*device_profile_it).asInt64();
 
         if (profiled_latency <= 0) {

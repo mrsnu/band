@@ -57,26 +57,21 @@ TfLiteStatus LoadGen::ParseJsonFile(std::string json_fname) {
   if (!root["worker_cpu_masks"].isNull()) {
     for (auto const& key : root["worker_cpu_masks"].getMemberNames()) {
       size_t device_id = TfLiteDeviceGetFlag(key.c_str());
-      impl::TfLiteCPUMaskFlags flag =
+      impl::TfLiteCPUMaskFlags flag =  
           impl::TfLiteCPUMaskGetMask(root["worker_cpu_masks"][key].asCString());
       if (device_id < kTfLiteNumDevices && flag != impl::kTfLiteAll) {
         runtime_config_.worker_cpu_masks[device_id] = flag;
       }
     }
   }
-  if (!root["running_time_ms"].isNull()) {
+  if (!root["running_time_ms"].isNull())
     runtime_config_.running_time_ms = root["running_time_ms"].asInt();
-  }
-  if (!root["profile_smoothing_factor"].isNull()) {
-    runtime_config_.profile_smoothing_factor =
-      root["profile_smoothing_factor"].asFloat();
-  }
-  if (!root["model_profile"].isNull()) {
+  if (!root["profile_smoothing_factor"].isNull())
+    runtime_config_.profile_smoothing_factor = root["profile_smoothing_factor"].asFloat();
+  if (!root["model_profile"].isNull())
     runtime_config_.model_profile = root["model_profile"].asString();
-  }
-  if (!root["allow_work_steal"].isNull()) {
+  if (!root["allow_work_steal"].isNull())
     runtime_config_.allow_work_steal = root["allow_work_steal"].asBool();
-  }
   if (!root["schedule_window_size"].isNull()) {
     runtime_config_.schedule_window_size = root["schedule_window_size"].asInt();
     if (runtime_config_.schedule_window_size <= 0) {
@@ -120,7 +115,7 @@ TfLiteStatus LoadGen::ParseJsonFile(std::string json_fname) {
     model.model_fname = model_json_value["graph"].asString();
     model.period_ms = model_json_value["period_ms"].asInt();
     if (model.period_ms <= 0) {
-      TFLITE_LOG(ERROR) << "Please check if `period_ms` is positive.";
+      TFLITE_LOG(ERROR) << "Please check if arguments `period_ms` are positive.";
       return kTfLiteError;
     }
 
