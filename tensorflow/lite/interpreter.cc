@@ -544,7 +544,7 @@ void Interpreter::SetNumThreads(int num_threads,
 }
 
 void Interpreter::SetXNNPACKNumThreads(int num_threads) {
-  if (num_threads < -1 ) {
+  if (num_threads < -1) {
     if (error_reporter_)
       error_reporter_->Report(
                             "num_threads should be >=0 or just -1 to let TFLite "
@@ -613,6 +613,7 @@ TfLiteStatus Interpreter::SetBufferHandle(int subgraph_index,
                                           int tensor_index,
                                           TfLiteBufferHandle buffer_handle,
                                           TfLiteDelegate* delegate) {
+  // Use error_reporter_ to report error since context is not safe yet.
   TF_LITE_ENSURE(error_reporter_, subgraph_index < subgraphs_size());
   TF_LITE_ENSURE(error_reporter_, tensor_index < tensors_size(subgraph_index));
   std::vector<TfLiteTensor>& tensors = subgraph(subgraph_index)->tensors();

@@ -59,9 +59,9 @@ class InterpreterUtils;  // Class for friend declarations.
 namespace impl {
 
 #define TF_LITE_ENSURE_SUBGRAPH_INDEX(i) \
-  do {                                 \
-    if (!subgraph(i))                  \
-      return kTfLiteError;             \
+  do {                                   \
+    if (!subgraph(i))                    \
+      return kTfLiteError;               \
   } while (0)
 
 /// An interpreter for a graph of nodes that input and output from tensors.
@@ -388,12 +388,8 @@ class Interpreter {
   /// WARNING: Experimental interface, subject to change
   TfLiteStatus ReleaseNonPersistentMemory(int subgraph_index);
 
-  // Update allocations for all tensors. This will redim dependent tensors
-  // using the input tensor dimensionality as given. This is relatively
-  // expensive. This *must be* called after the interpreter has been created
-  // and before running inference (and accessing tensor buffers), and *must be*
-  // called again if (and only if) an input tensor is resized. Returns status of
-  // success or failure.
+  // Update allocations for all tensors in subgraph that specified in index.
+  // User may pass -1 to updates all subgraphs.
   TfLiteStatus AllocateTensors(int subgraph_index = -1);
 
   /// Invoke idx-th subgraph in the interpreter.
@@ -466,7 +462,7 @@ class Interpreter {
   ///    For example, set an OpenGL texture as the output of inference, while
   ///    the node which produces output is an OpenGL delegate node.
   /// WARNING: This is an experimental API and subject to change.
-  TfLiteStatus SetBufferHandle(int subgraph_index, 
+  TfLiteStatus SetBufferHandle(int subgraph_index,
                                int tensor_index,
                                TfLiteBufferHandle buffer_handle,
                                TfLiteDelegate* delegate);
@@ -474,7 +470,7 @@ class Interpreter {
   /// Get the delegate buffer handle, and the delegate which can process the
   /// buffer handle.
   /// WARNING: This is an experimental API and subject to change.
-  TfLiteStatus GetBufferHandle(int subgraph_index, 
+  TfLiteStatus GetBufferHandle(int subgraph_index,
                                int tensor_index,
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
