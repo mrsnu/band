@@ -1,36 +1,24 @@
+#include "tensorflow/lite/worker.h"
+
 #include <algorithm>
-#include <memory>
-#include <mutex>
 
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
-#include "tensorflow/lite/util.h"
-#include "tensorflow/lite/worker.h"
 
 namespace tflite {
 namespace impl {
 
-std::deque<Job>& WorkerDeviceQueue::GetDeviceRequests() {
+std::deque<Job>& DeviceQueueWorker::GetDeviceRequests() {
   return requests_;
 }
 
-void WorkerDeviceQueue::AllowWorkSteal() {
+void DeviceQueueWorker::AllowWorkSteal() {
   allow_work_steal_ = true;
 }
 
-bool WorkerDeviceQueue::GiveJob(Job& job) {
-  TFLITE_LOG(ERROR) << "Not implemented.";
-  return false;
-}
-
-bool WorkerDeviceQueue::IsBusy() {
-  TFLITE_LOG(ERROR) << "Not implemented.";
-  return false;
-}
-
-int64_t WorkerDeviceQueue::GetWaitingTime() {
+int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
 
   std::shared_ptr<Planner> planner = planner_.lock();
@@ -67,7 +55,7 @@ int64_t WorkerDeviceQueue::GetWaitingTime() {
   return total;
 }
 
-void WorkerDeviceQueue::Work() {
+void DeviceQueueWorker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
@@ -88,7 +76,7 @@ void WorkerDeviceQueue::Work() {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
 
-      { 
+      {
         std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
         if (need_cpu_set_update_) {
           need_cpu_set_update_ = false;
@@ -137,7 +125,7 @@ void WorkerDeviceQueue::Work() {
   }
 }
 
-void WorkerDeviceQueue::TryWorkSteal() {
+void DeviceQueueWorker::TryWorkSteal() {
   std::shared_ptr<Planner> planner_ptr = planner_.lock();
   if (!planner_ptr) {
     TFLITE_LOG(ERROR) << "Worker " << device_flag_
@@ -148,7 +136,7 @@ void WorkerDeviceQueue::TryWorkSteal() {
   Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
   int64_t max_latency_gain = -1;
   int max_latency_gain_device = -1;
-  for (auto& device_and_worker: interpreter_ptr->GetWorkers()) {
+  for (auto& device_and_worker : interpreter_ptr->GetWorkers()) {
     TfLiteDeviceFlags target_device = device_and_worker.first;
     Worker* target_worker = device_and_worker.second.get();
     if (target_device == device_flag_) {
@@ -222,5 +210,5 @@ void WorkerDeviceQueue::TryWorkSteal() {
   requests_.push_back(job);
 }
 
-} // namespace impl
-} // namespace tflite
+}  // namespace impl
+}  // namespace tflite

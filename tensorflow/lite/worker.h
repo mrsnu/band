@@ -27,13 +27,13 @@ class Worker {
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
   virtual int64_t GetWaitingTime() = 0;
 
-  // WorkerDeviceQueue methods
-  virtual std::deque<Job>& GetDeviceRequests() = 0;
-  virtual void AllowWorkSteal() = 0;
+  // DeviceQueueWorker methods
+  virtual std::deque<Job>& GetDeviceRequests();
+  virtual void AllowWorkSteal();
 
-  // WorkerGlobalQueue methods
-  virtual bool GiveJob(Job& job) = 0;
-  virtual bool IsBusy() = 0;
+  // GlobalQueueWorker methods
+  virtual bool GiveJob(Job& job);
+  virtual bool IsBusy();
 
  protected:
   virtual void Work() = 0;
@@ -44,6 +44,10 @@ class Worker {
   std::condition_variable request_cv_;
   bool kill_worker_ = false;
 
+  // GlobalQueueWorker doesn't actually use this for scheduling, but we
+  // need this for the return value of GetDeviceRequests()
+  std::deque<Job> requests_;
+
   CpuSet cpu_set_;
   bool need_cpu_set_update_ = false;
   std::mutex cpu_set_mtx_;
@@ -51,21 +55,15 @@ class Worker {
   TfLiteDeviceFlags device_flag_;
 };
 
-class WorkerDeviceQueue : public Worker {
+class DeviceQueueWorker : public Worker {
  public:
-  explicit WorkerDeviceQueue(std::shared_ptr<Planner> planner,
+  explicit DeviceQueueWorker(std::shared_ptr<Planner> planner,
                              TfLiteDeviceFlags device_flag)
       : Worker(planner, device_flag) {}
 
   int64_t GetWaitingTime() override;
-
-  // WorkerDeviceQueue methods
   std::deque<Job>& GetDeviceRequests() override;
   void AllowWorkSteal() override;
-
-  // WorkerGlobalQueue methods
-  bool GiveJob(Job& job) override;
-  bool IsBusy() override;
 
  protected:
   void Work() override;
@@ -73,23 +71,16 @@ class WorkerDeviceQueue : public Worker {
  private:
   void TryWorkSteal();
 
-  std::deque<Job> requests_;
   bool allow_work_steal_ = false;
 };
 
-class WorkerGlobalQueue : public Worker {
+class GlobalQueueWorker : public Worker {
  public:
-  explicit WorkerGlobalQueue(std::shared_ptr<Planner> planner,
+  explicit GlobalQueueWorker(std::shared_ptr<Planner> planner,
                              TfLiteDeviceFlags device_flag)
       : Worker(planner, device_flag) {}
 
   int64_t GetWaitingTime() override;
-
-  // WorkerDeviceQueue methods
-  std::deque<Job>& GetDeviceRequests() override;
-  void AllowWorkSteal() override;
-
-  // WorkerGlobalQueue methods
   bool GiveJob(Job& job) override;
   bool IsBusy() override;
 
@@ -99,14 +90,9 @@ class WorkerGlobalQueue : public Worker {
  private:
   Job current_job_{-1};
   bool is_busy_ = false;
-
-  // we doesn't actually use this
-  // this was put here solely for GetDeviceRequests()
-  std::deque<Job> requests_dummy_;
 };
 
 }  // namespace impl
 }  // namespace tflite
 
 #endif  // TENSORFLOW_LITE_WORKER_H_
-

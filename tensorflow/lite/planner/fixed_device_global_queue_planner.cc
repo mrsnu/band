@@ -10,7 +10,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       return;
 
     std::set<int> models = GetInterpreter()->models();
-    if (models.size() != model_device_map.size()) {
+    if (models.size() != model_device_map_.size()) {
       // (# of available devices, vector of model_id)
       std::map<int, std::set<int>> devices_per_models_map;
       for (auto model_id : models) {
@@ -26,7 +26,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 
       int device_idx = 0;
       while (devices_per_models_map.size()) {
-        // Loop through models in ascending order 
+        // Loop through models in ascending order
         // based on # of available devices
         // (Assign models that has limited support first)
         int selected_model_id = -1;
@@ -48,12 +48,12 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         }
 
         if (selected_model_id != -1) {
-          model_device_map[selected_model_id] =
+          model_device_map_[selected_model_id] =
               static_cast<TfLiteDeviceFlags>(device_idx);
         }
 
         device_idx = (device_idx + 1) % kTfLiteNumDevices;
-      };
+      }
     }
 
     std::set<TfLiteDeviceFlags> idle_devices;
@@ -87,7 +87,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
           to_execute.device_id < kTfLiteNumDevices) {
         device_idx = to_execute.device_id;
       } else {
-        device_idx = model_device_map[model_id];
+        device_idx = model_device_map_[model_id];
       }
       TfLiteDeviceFlags device_flag =
           static_cast<TfLiteDeviceFlags>(device_idx);

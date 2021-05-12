@@ -1,28 +1,16 @@
+#include "tensorflow/lite/worker.h"
+
 #include <algorithm>
-#include <memory>
-#include <mutex>
 
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
-#include "tensorflow/lite/util.h"
-#include "tensorflow/lite/worker.h"
 
 namespace tflite {
 namespace impl {
 
-std::deque<Job>& WorkerGlobalQueue::GetDeviceRequests() {
-  TFLITE_LOG(ERROR) << "I don't have a device queue.";
-  return requests_dummy_;
-}
-
-void WorkerGlobalQueue::AllowWorkSteal() {
-  TFLITE_LOG(WARN) << "Work stealing is not applicable.";
-  // not an error, since the program can technically still go on
-}
-
-bool WorkerGlobalQueue::GiveJob(Job& job) {
+bool GlobalQueueWorker::GiveJob(Job& job) {
   std::lock_guard<std::mutex> lock(device_mtx_);
   if (is_busy_) {
     // I'm busy so I can't receive your request
@@ -35,16 +23,29 @@ bool WorkerGlobalQueue::GiveJob(Job& job) {
   return true;
 }
 
-bool WorkerGlobalQueue::IsBusy() {
+bool GlobalQueueWorker::IsBusy() {
   std::lock_guard<std::mutex> lock(device_mtx_);
   return is_busy_;
 }
 
-int64_t WorkerGlobalQueue::GetWaitingTime() {
+// This function returns the remaining time until this worker can start
+// processing another Job.
+//
+// The remaining time is calculated based on the profiled model time of the
+// Job, the timestamp of when this worker started processing the Job
+// (current_job_.invoke_time), and the current timestamp.
+// In case more time has passed (since invoke_time) than the profiled model
+// time, this function returns 0, as it is unable to predict when the current
+// job will finish.
+// This function can also return 0 if the worker is not working on any job at
+// the moment (IsBusy() returns false).
+//
+// In case this function fails to acquire a shared ptr to the Planner,
+// we print an error message and this function returns -1.
+int64_t GlobalQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!is_busy_) {
-    // NOTE: this is not an error case!
-    return -1;
+    return 0;
   }
 
   int64_t invoke_time = current_job_.invoke_time;
@@ -68,16 +69,17 @@ int64_t WorkerGlobalQueue::GetWaitingTime() {
   if (!planner) {
     TFLITE_LOG(ERROR) << "Worker " << device_flag_
                       << " failed to acquire ptr to planner";
-    return -2;
+    return -1;
   }
   Interpreter* interpreter = planner->GetInterpreter();
 
+  // TODO #80: Get profiled_latency from current_job_
   SubgraphKey key(model_id, device_flag_, start_idx, end_idx);
   int64_t profiled_latency = interpreter->GetSubgraphProfileResult(key);
 
   if (invoke_time == 0) {
-   // the worker has not started on processing the job yet
-   return profiled_latency;
+    // the worker has not started on processing the job yet
+    return profiled_latency;
   }
 
   int64_t current_time = profiling::time::NowMicros();
@@ -85,7 +87,7 @@ int64_t WorkerGlobalQueue::GetWaitingTime() {
   return std::max(profiled_latency - progress, 0L);
 }
 
-void WorkerGlobalQueue::Work() {
+void GlobalQueueWorker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
@@ -115,7 +117,7 @@ void WorkerGlobalQueue::Work() {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
 
-      { 
+      {
         std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
         if (need_cpu_set_update_) {
           need_cpu_set_update_ = false;
@@ -171,5 +173,5 @@ void WorkerGlobalQueue::Work() {
   }
 }
 
-} // namespace impl
-} // namespace tflite
+}  // namespace impl
+}  // namespace tflite

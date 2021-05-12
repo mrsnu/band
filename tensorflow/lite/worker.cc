@@ -1,8 +1,7 @@
-#include <memory>
-#include <mutex>
-
-#include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/worker.h"
+
+#include "tensorflow/lite/tools/logging.h"
+
 
 namespace tflite {
 namespace impl {
@@ -35,6 +34,25 @@ TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) 
     }
   }
   return kTfLiteOk;
+}
+
+std::deque<Job>& Worker::GetDeviceRequests() {
+  TFLITE_LOG(ERROR) << "WWorker::GetDeviceRequests() Not implemented.";
+  return requests_;
+}
+
+void Worker::AllowWorkSteal() {
+  TFLITE_LOG(ERROR) << "Worker::AllowWorkSteal() Not implemented.";
+}
+
+bool Worker::GiveJob(Job& job) {
+  TFLITE_LOG(ERROR) << "Worker::GiveJob() Not implemented.";
+  return false;
+}
+
+bool Worker::IsBusy() {
+  TFLITE_LOG(ERROR) << "Worker::IsBusy() Not implemented.";
+  return false;
 }
 
 }  // namespace impl

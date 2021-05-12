@@ -20,7 +20,7 @@ class FixedDevicePlanner : public Planner {
 
  private:
   // Map structure to find assigned device of model idx (model_id, device flag)
-  std::map<int, int> model_device_map;
+  std::map<int, int> model_device_map_;
 };
 
 class FixedDeviceGlobalQueuePlanner : public Planner {
@@ -34,7 +34,7 @@ class FixedDeviceGlobalQueuePlanner : public Planner {
 
  private:
   // Map structure to find assigned device of model idx (model_id, device flag)
-  std::map<int, int> model_device_map;
+  std::map<int, int> model_device_map_;
 };
 
 }  // namespace impl
