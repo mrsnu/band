@@ -631,6 +631,7 @@ class Interpreter {
     int period_ms;
     int device = -1;
     int batch_size = 1;
+    int64_t slo = -1;
   };
 
   void SetModelConfig(int model_id, ModelConfig model_config) {
@@ -706,6 +707,12 @@ class Interpreter {
 
   // Applies best delegate from the given device to the subgraph.
   TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
+
+  double scale_slo_ = 1.0;
+
+  void SetSLO();
+
+  int64_t GetWorstDeviceProfileResult(int model_id);
 
   /// Set the value of an external context.
   static void SetExternalContext(struct TfLiteContext* context,

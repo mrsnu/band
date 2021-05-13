@@ -208,6 +208,7 @@ class BenchmarkModel {
     impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
     impl::TfLiteCPUMaskFlags worker_cpu_masks[kTfLiteNumDevices];
     int running_time_ms = 60000;
+    int global_period_ms = 100;
     float profile_smoothing_factor = 0.1;
     std::string model_profile;
     bool allow_work_steal = false;

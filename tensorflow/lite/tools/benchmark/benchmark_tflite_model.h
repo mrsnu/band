@@ -142,8 +142,10 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   void ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
                             Json::Value& name_profile);
 
-  // spawn a thread that generates input requests periodically for all models
-  void GeneratePeriodicRequests();
+  // spawn threads that generate input requests periodically for all models
+  void GenerateRequestsPerModel();
+  // spawn a thread that generates random input requests periodically
+  void GenerateRequestsRandom();
 
   std::vector<InputLayerInfo> inputs_;
   std::vector<InputTensorData> inputs_data_;

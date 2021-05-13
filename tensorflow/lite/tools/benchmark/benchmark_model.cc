@@ -172,7 +172,7 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     TfLiteStatus status;
     std::string mode = runtime_config_.execution_mode;
     TFLITE_LOG(INFO) << "Running in [" << mode << "] mode.";
-    if (mode == "periodic") {
+    if (mode == "periodic" || mode == "random") {
       status = RunPeriodic();
     } else if (mode == "stream") {
       status = RunStream();

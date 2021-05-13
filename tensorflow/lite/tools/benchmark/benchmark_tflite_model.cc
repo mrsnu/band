@@ -844,6 +844,8 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     runtime_config_.model_profile = root["model_profile"].asString();
   if (!root["allow_work_steal"].isNull())
     runtime_config_.allow_work_steal = root["allow_work_steal"].asBool();
+  if (!root["global_period_ms"].isNull())
+    runtime_config_.global_period_ms = root["global_period_ms"].asInt();
   if (!root["schedule_window_size"].isNull()) {
     runtime_config_.schedule_window_size = root["schedule_window_size"].asInt();
     if (runtime_config_.schedule_window_size <= 0) {
@@ -1016,7 +1018,13 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
   // have a single thread that generate requests, but we may have multiple
   // threads doing that in the future so we might as well make the code easily
   // adaptable to such situtations.
-  GeneratePeriodicRequests();
+  if (runtime_config_.execution_mode == "periodic") {
+    GenerateRequestsPerModel();
+  } else if (runtime_config_.execution_mode == "random") {
+    GenerateRequestsRandom();
+  } else {
+    return kTfLiteError;
+  }
 
   // wait for 60 seconds until we stop the benchmark
   // we could set a command line arg for this value as well
@@ -1048,7 +1056,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   return kTfLiteOk;
 }
 
-void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
+void BenchmarkTfLiteModel::GenerateRequestsPerModel() {
   for (auto& m : interpreter_->GetModelConfig()) {
     int model_id = m.first;
     Interpreter::ModelConfig& model_config = m.second;
@@ -1076,6 +1084,32 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     t.detach();
   }
+}
+
+void BenchmarkTfLiteModel::GenerateRequestsRandom() {
+  std::thread t([this]() {
+    int period_ms = runtime_config_.global_period_ms;
+    std::mt19937 gen(random_engine_());
+    std::uniform_int_distribution<int> dist(0, model_configs_.size() - 1);
+    while (true) {
+      std::vector<Job> requests(1, Job(dist(gen)));
+      // measure the time it took to generate requests
+      int64_t start = profiling::time::NowMicros();
+      interpreter_->InvokeModelsAsync(requests);
+      int64_t end = profiling::time::NowMicros();
+      int duration_ms = (end - start) / 1000;
+
+      // sleep until we reach period_ms
+      if (duration_ms < period_ms) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(period_ms - duration_ms));
+      }
+
+      if (kill_app_) return;
+    }
+  });
+
+  t.detach();
 }
 
 }  // namespace benchmark

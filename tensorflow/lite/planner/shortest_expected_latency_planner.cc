@@ -78,6 +78,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // for some reason, this Job must NOT be a reference (&), otherwise
       // we get a segfault at push_back() below
       Job most_urgent_job = local_jobs[target_job_idx];
+      if (most_urgent_job.expected_latency_us == 0) {
+        most_urgent_job.expected_latency_us = largest_shortest_latency;
+      }
 
       // remove the job from the queue so that we don't meet it in the next loop
       local_jobs.erase(local_jobs.begin() + target_job_idx);
@@ -89,18 +92,23 @@ void ShortestExpectedLatencyPlanner::Plan() {
       most_urgent_job.subgraph_idx = target_subgraph;
       most_urgent_job.device_id = to_execute.device_flag;
       most_urgent_job.sched_id = sched_id++;
+      most_urgent_job.expected_execution_time_us =
+          GetInterpreter()->GetSubgraphProfileResult(to_execute);
+
 
       ModelSpec& model_spec =
           GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
       if (most_urgent_job.end_idx < model_spec.num_ops - 1) {
         Job remaining_ops(most_urgent_job.model_id);
         remaining_ops.enqueue_time = most_urgent_job.enqueue_time;
+        remaining_ops.expected_latency_us = most_urgent_job.expected_latency_us;
         remaining_ops.start_idx = most_urgent_job.end_idx + 1;
         remaining_ops.end_idx = model_spec.num_ops - 1;
         remaining_ops.following_jobs = most_urgent_job.following_jobs;
 
         most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);
+        most_urgent_job.is_finished = false;
       }
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
