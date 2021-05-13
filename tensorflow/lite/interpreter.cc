@@ -688,6 +688,32 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
   }
 
   SetSubgraphProfiler(previous_profiler);
+  SetSLO();
+}
+
+void Interpreter::SetSLO() {
+  for (auto& m : model_configs_) {
+    int model_id = m.first;
+    int64_t worst_latency = GetWorstDeviceProfileResult(model_id);
+    model_configs_[model_id].slo = worst_latency * scale_slo_;
+  }
+}
+
+int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
+  int64_t worst_latency = 0;
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    Subgraph* subgraph = subgraphs_[i].get();
+    SubgraphKey& subgraph_key = subgraph->GetKey();
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
+    int64_t latency = subgraph_profiling_results_map_[subgraph_key];
+    if (worst_latency < latency) {
+      worst_latency = latency;
+    }
+  }
+
+  return worst_latency;
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {
