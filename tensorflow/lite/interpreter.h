@@ -672,13 +672,13 @@ class Interpreter {
   // the final op (of the model) in mind.
   std::pair<int, int64_t>
   GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+                     std::map<TfLiteDeviceFlags, int64_t> device_waiting,
                      TfLiteDeviceFlags ignore_device);
 
 
   std::pair<int, int64_t>
   GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+                     std::map<TfLiteDeviceFlags, int64_t> device_waiting,
                      std::set<TfLiteDeviceFlags> ignore_devices = std::set<TfLiteDeviceFlags>());
 
   // Generate explicit subgraphs for fallback ops in `model_id`.
@@ -708,7 +708,7 @@ class Interpreter {
   // Applies best delegate from the given device to the subgraph.
   TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
 
-  double scale_slo_ = 1.0;
+  double scale_slo_ = 2.0;
 
   void SetSLO();
 

@@ -1037,7 +1037,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
 std::pair<int, int64_t>
 Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                                std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+                                std::map<TfLiteDeviceFlags, int64_t> device_waiting,
                                 TfLiteDeviceFlags ignore_device) {
   std::set<TfLiteDeviceFlags> ignore_devices;
   if (ignore_device != kTfLiteNumDevices) {
@@ -1048,7 +1048,7 @@ Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
 
 std::pair<int, int64_t>
 Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                                std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+                                std::map<TfLiteDeviceFlags, int64_t> device_waiting,
                                 std::set<TfLiteDeviceFlags> ignore_devices) {
   std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,
                                                             ignore_devices);

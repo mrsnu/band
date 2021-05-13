@@ -31,11 +31,15 @@ void GlobalQueuePlanner::Plan() {
     }
 
     std::set<TfLiteDeviceFlags> idle_devices;
+    std::map<TfLiteDeviceFlags, int64_t> device_waiting;
     for (int i = 0; i < kTfLiteNumDevices; ++i) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (worker != nullptr && !worker->IsBusy()) {
+      if (worker != nullptr) {
+        if (!worker->IsBusy()) {
         idle_devices.insert(device_flag);
+        }
+        device_waiting[device_flag] = worker->GetWaitingTime();
       }
     }
 
@@ -52,13 +56,17 @@ void GlobalQueuePlanner::Plan() {
 
     std::lock_guard<std::mutex> lock(GetRequestsMtx());
     auto it = ordered_requests_.begin();
-    std::map<TfLiteDeviceFlags, int64_t> empty_map;
     while (!idle_devices.empty() && it != ordered_requests_.end()) {
+      if (std::distance(ordered_requests_.begin(), it) > GetWindowSize()) {
+        // std::cout << "Limited by window size. " << std::endl;
+        break;
+      }
+
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatency(it->model_id,
                                                it->start_idx,
                                                0,
-                                               empty_map,
+                                               device_waiting,
                                                available_devices);
 
       int subgraph_idx = best_subgraph.first;
@@ -72,6 +80,19 @@ void GlobalQueuePlanner::Plan() {
       }
 
       Job job = *it;
+
+      /* Validate Queue Order
+      Job first_job = *(ordered_requests_.begin());
+      for (auto test_it = ordered_requests_.begin();
+           test_it != ordered_requests_.end();
+           ++test_it) {
+        double first_deadline = first_job.enqueue_time + first_job.slo;
+        double current_deadline = (*test_it).enqueue_time + (*test_it).slo;
+
+        if (first_deadline > current_deadline) {
+          std::cout << "Queue Order is not correct." << std::endl;
+        }
+      }*/
 
       int64_t current_time = profiling::time::NowMicros();
       if (current_time + expected_end_time > it->enqueue_time + it->slo) {
@@ -92,7 +113,12 @@ void GlobalQueuePlanner::Plan() {
         // but make sure to increase device waiting time
         // assuming the subgraph is assigned to the best device.
         ++it;
-        empty_map[key.device_flag] += profile_result;
+        device_waiting[key.device_flag] += profile_result;
+        /*
+        std::cout << "Selected Busy Device: " << key.device_flag
+                  << ", waiting time : " << device_waiting[key.device_flag]
+                  << std::endl;
+        */
         continue;
       }
       job.start_idx = key.start_idx;

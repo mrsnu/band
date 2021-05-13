@@ -874,6 +874,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
     return kTfLiteError;
   }
   runtime_config_.planner_type = static_cast<TfLitePlannerType>(planner_id);
+  TFLITE_LOG(INFO) << "PLANNER : " << runtime_config_.planner_type;
 
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
