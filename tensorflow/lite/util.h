@@ -52,8 +52,6 @@ struct Job {
   bool is_slo_violated = false;
   bool is_finished = true;
   std::string model_fname;
-  double slo = 50.;
-  bool is_finished = true;
 
   std::vector<Job> following_jobs;
 };

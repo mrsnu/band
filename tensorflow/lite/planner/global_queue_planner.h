@@ -11,11 +11,13 @@ namespace tflite {
 namespace impl {
 
 static bool compareJob(const Job& a, const Job& b) {
+  return a.enqueue_time + a.slo < b.enqueue_time + b.slo;
+  /*
   if (a.enqueue_time + a.slo != b.enqueue_time + b.slo) {
     return a.enqueue_time + a.slo != b.enqueue_time + b.slo;
   } else {
     return a.request_id < b.request_id;
-  }
+  }*/
 }
 
 class GlobalQueuePlanner : public Planner {

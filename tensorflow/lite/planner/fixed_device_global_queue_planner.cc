@@ -126,7 +126,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 }
 
 bool FixedDeviceGlobalQueuePlanner::NeedProfile() {
-  return false;
+  return true;
 }
 
 }  // namespace impl

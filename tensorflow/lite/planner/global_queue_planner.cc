@@ -59,7 +59,7 @@ void GlobalQueuePlanner::Plan() {
                                                it->start_idx,
                                                0,
                                                empty_map,
-                                               busy_devices);
+                                               available_devices);
 
       int subgraph_idx = best_subgraph.first;
       int64_t expected_end_time = best_subgraph.second;
@@ -73,22 +73,39 @@ void GlobalQueuePlanner::Plan() {
 
       Job job = *it;
 
-      if (expected_end_time > it->enqueue_time + it->slo) {
+      int64_t current_time = profiling::time::NowMicros();
+      if (current_time + expected_end_time > it->enqueue_time + it->slo) {
         // SLO violation!! drop!
         assert(job.is_finished);
-        job.end_time = INT_MAX;
+        job.end_time = LLONG_MAX;
         EnqueueFinishedJob(job);
         it = ordered_requests_.erase(it);
         continue;
       }
 
       SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
+      int64_t profile_result =
+          GetInterpreter()->GetSubgraphProfileResult(key);
+      if (busy_devices.find(key.device_flag) != busy_devices.end()) {
+        // Selected device is busy.
+        // just wait...
+        // but make sure to increase device waiting time
+        // assuming the subgraph is assigned to the best device.
+        ++it;
+        empty_map[key.device_flag] += profile_result;
+        continue;
+      }
       job.start_idx = key.start_idx;
       job.end_idx = key.end_idx;
       job.subgraph_idx = subgraph_idx;
       job.device_id = key.device_flag;
       job.sched_id = sched_id++;
-      
+
+      job.expected_execution_time_us = profile_result;
+      if (job.expected_latency_us == 0) {
+        job.expected_latency_us = expected_end_time;
+      }
+
       ModelSpec& model_spec = GetInterpreter()->GetModelSpec(job.model_id);
       if (job.end_idx < model_spec.num_ops - 1) {
         Job remaining_ops(job.model_id);
@@ -119,7 +136,9 @@ void GlobalQueuePlanner::Plan() {
 }
 
 void GlobalQueuePlanner::EnqueueRequest(Job job) {
-  job.enqueue_time = profiling::time::NowMicros();
+  if (job.enqueue_time == 0) {
+    job.enqueue_time = profiling::time::NowMicros();
+  }
   if (job.request_id < 0) {
     job.request_id = total_num_jobs_++;
   }
@@ -135,7 +154,9 @@ void GlobalQueuePlanner::EnqueueBatch(std::vector<Job> jobs) {
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
   for (Job job : jobs) {
-    job.enqueue_time = enqueue_time;
+    if (job.enqueue_time == 0) {
+      job.enqueue_time = enqueue_time;
+    }
     if (job.request_id < 0) {
       job.request_id = total_num_jobs_++;
     }
