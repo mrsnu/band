@@ -43,6 +43,13 @@ struct Job {
   int64_t invoke_time = 0;
   int64_t end_time = 0;
   int sched_id = -1;
+  int64_t expected_latency_us = 0;
+  int64_t actual_latency_us = -1;
+  int64_t expected_execution_time_us = 0;
+  int64_t actual_execution_time_us = 0;
+  double slo = 0.0;
+  bool is_slo_violated = false;
+  bool is_finished = true;
   std::string model_fname;
 
   std::vector<Job> following_jobs;

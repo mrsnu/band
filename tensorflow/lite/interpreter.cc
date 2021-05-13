@@ -430,8 +430,10 @@ void Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
 
   for (auto& request: requests) {
     int model_id = request.model_id;
-    request.model_fname = model_configs_[model_id].model_fname;
-    request.device_id = model_configs_[model_id].device;
+    ModelConfig& model_config = model_configs_[model_id];
+    request.model_fname = model_config.model_fname;
+    request.device_id = model_config.device;
+    request.slo = model_config.slo;
   }
 
   planner_->EnqueueBatch(requests);

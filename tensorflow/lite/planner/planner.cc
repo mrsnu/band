@@ -22,16 +22,23 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
   std::ofstream log_file(log_path_);
   if (!log_file.is_open())
     return kTfLiteError;
-  log_file << "sched_id\t"
-           << "model_name\t"
-           << "model_id\t"
-           << "device_id\t"
-           << "start_idx\t"
-           << "end_idx\t"
-           << "subgraph_idx\t"
-           << "enqueue_time\t"
-           << "invoke_time\t"
-           << "end_time\n";
+  log_file << "sched_id,"
+           << "model_name,"
+           << "model_id,"
+           << "device_id,"
+           << "start_idx,"
+           << "end_idx,"
+           << "subgraph_idx,"
+           << "enqueue_time,"
+           << "invoke_time,"
+           << "end_time,"
+           << "expected_execution_time,"
+           << "actual_execution_time,"
+           << "expected_latency,"
+           << "actual_latency,"
+           << "slo,"
+           << "is_finished,"
+           << "is_violated\n";
   log_file.close();
   
   return kTfLiteOk;
@@ -49,16 +56,23 @@ void Planner::Wait() {
     jobs_finished_.pop_front();
 
     // write all timestamp statistics to log file
-    log_file << job.sched_id << "\t"
-             << job.model_fname << "\t"
-             << job.model_id << "\t"
-             << job.device_id << "\t"
-             << job.start_idx << "\t"
-             << job.end_idx << "\t"
-             << job.subgraph_idx << "\t"
-             << job.enqueue_time << "\t"
-             << job.invoke_time << "\t"
-             << job.end_time << "\n";
+    log_file << job.sched_id << ","
+             << job.model_fname << ","
+             << job.model_id << ","
+             << job.device_id << ","
+             << job.start_idx << ","
+             << job.end_idx << ","
+             << job.subgraph_idx << ","
+             << job.enqueue_time << ","
+             << job.invoke_time << ","
+             << job.end_time << ","
+             << job.expected_execution_time_us << ","
+             << job.actual_execution_time_us << ","
+             << job.expected_latency_us << ","
+             << job.actual_latency_us << ","
+             << job.slo << ","
+             << job.is_finished << ","
+             << job. is_slo_violated << "\n";
   }
   log_file.close();
   lock.unlock();
@@ -66,6 +80,11 @@ void Planner::Wait() {
 
 void Planner::EnqueueFinishedJob(Job job) {
   std::unique_lock<std::mutex> lock(job_queue_mtx_);
+  if (job.is_finished) {
+    job.actual_latency_us = job.end_time - job.enqueue_time;
+    job.actual_execution_time_us = job.end_time - job.invoke_time;
+    job.is_slo_violated = (job.actual_latency_us > job.slo) ? true : false;
+  }
   jobs_finished_.push_back(job);
   lock.unlock();
 
@@ -86,7 +105,9 @@ void Planner::EnqueueBatch(std::vector<Job> jobs) {
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
   for (Job job : jobs) {
-    job.enqueue_time = enqueue_time;
+    if (job.enqueue_time == 0) {
+      job.enqueue_time = enqueue_time;
+    }
     requests_.push_back(job);
     num_submitted_jobs_++;
   }
