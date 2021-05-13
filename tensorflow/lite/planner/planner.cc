@@ -72,7 +72,7 @@ void Planner::Wait() {
              << job.actual_latency_us << ","
              << job.slo << ","
              << job.is_finished << ","
-             << job. is_slo_violated << "\n";
+             << job.is_slo_violated << "\n";
   }
   log_file.close();
   lock.unlock();
