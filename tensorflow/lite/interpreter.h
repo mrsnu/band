@@ -37,6 +37,7 @@ limitations under the License.
 #include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/planner/round_robin_planner.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/planner/global_queue_planner.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -671,7 +672,13 @@ class Interpreter {
   std::pair<int, int64_t>
   GetShortestLatency(int model_id, int start_idx, int64_t start_time,
                      std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-                     TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
+                     TfLiteDeviceFlags ignore_device);
+
+
+  std::pair<int, int64_t>
+  GetShortestLatency(int model_id, int start_idx, int64_t start_time,
+                     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+                     std::set<TfLiteDeviceFlags> ignore_devices = std::set<TfLiteDeviceFlags>());
 
   // Generate explicit subgraphs for fallback ops in `model_id`.
   // Consecutive fallback ops are grouped as one fallback subgraph.
@@ -775,7 +782,7 @@ class Interpreter {
   // return subgraph indices for model_id and start_idx,
   // excluding subgraphs on preceded_device
   std::vector<int> GetSubgraphCandidates(int model_id, int start_idx,
-                                         TfLiteDeviceFlags preceded_device);
+                                         std::set<TfLiteDeviceFlags> ignore_devices);
 
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account

@@ -15,13 +15,12 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
     std::deque<Job> local_jobs;
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
-    std::deque<Job>& requests = GetRequests();
-    if (!requests.empty()) {
+    if (!requests_.empty()) {
       // Gets the specific amount of jobs from requests
-      // and removes those jobs from the requests.
-      int window_size = std::min(GetWindowSize(), (int) requests.size());
-      local_jobs.insert(local_jobs.begin(), requests.begin(), requests.begin() + window_size);
-      requests.erase(requests.begin(), requests.begin() + window_size);
+      // and removes those jobs from the requests_.
+      int window_size = std::min(GetWindowSize(), (int) requests_.size());
+      local_jobs.insert(local_jobs.begin(), requests_.begin(), requests_.begin() + window_size);
+      requests_.erase(requests_.begin(), requests_.begin() + window_size);
     } else {
       continue;
     }

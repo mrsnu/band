@@ -67,7 +67,8 @@ typedef enum TfLitePlannerType {
   kRoundRobin = 1,
   kShortestExpectedLatency = 2,
   kFixedDeviceGlobalQueue = 3,
-  kNumPlannerTypes = 4
+  kGlobalQueuePlanner = 4,
+  kNumPlannerTypes = 5
 } TfLitePlannerType;
 
 // Forward declare so dependent structs and methods can reference these types

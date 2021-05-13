@@ -34,6 +34,7 @@ struct Job {
   explicit Job(int model_id) : model_id(model_id) {}
   explicit Job(int model_id, std::vector<Job>& following_jobs)
     : model_id(model_id), following_jobs(following_jobs) {}
+  int request_id = -1;
   int model_id;
   int subgraph_idx = -1;
   int device_id = -1;
@@ -44,6 +45,8 @@ struct Job {
   int64_t end_time = 0;
   int sched_id = -1;
   std::string model_fname;
+  double slo = 50.;
+  bool is_finished = true;
 
   std::vector<Job> following_jobs;
 };

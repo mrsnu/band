@@ -24,20 +24,20 @@ void RoundRobinPlanner::Plan() {
     }
 
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
-    while (!GetRequests().empty()) {
+    while (!requests_.empty()) {
       Job to_execute = Job(-1);
       int device_idx;
       for (device_idx = is_device_empty.size() - 1; device_idx >= 0; --device_idx) {
         if (is_device_empty[device_idx]) {
           auto available_job =
-            std::find_if(GetRequests().begin(), GetRequests().end(),
+            std::find_if(requests_.begin(), requests_.end(),
               [this, device_idx](const Job& job) {
                 return GetInterpreter()->GetSubgraphIdx(
                                             job.model_id, device_idx) != -1;
               });
-          if (available_job != GetRequests().end()) {
+          if (available_job != requests_.end()) {
             to_execute = *available_job;
-            GetRequests().erase(available_job);
+            requests_.erase(available_job);
             break;
           }
         }

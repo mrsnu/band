@@ -60,9 +60,9 @@ void FixedDevicePlanner::Plan() {
     // which means concurrent enqueue is not available.
     // This can affect the performance.
     std::unique_lock<std::mutex> lock(GetRequestsMtx());
-    while (!GetRequests().empty()) {
-      Job to_execute = GetRequests().front();
-      GetRequests().pop_front();
+    while (!requests_.empty()) {
+      Job to_execute = requests_.front();
+      requests_.pop_front();
 
       int model_id = to_execute.model_id;
       int device_idx;

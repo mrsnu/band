@@ -55,10 +55,10 @@ class Planner {
   virtual bool NeedProfile() = 0;
 
   // Enqueues a job to a worker request queue.
-  void EnqueueRequest(Job job);
+  virtual void EnqueueRequest(Job job);
 
   // Enqueues a batch of jobs to a worker request queue.
-  void EnqueueBatch(std::vector<Job> jobs);
+  virtual void EnqueueBatch(std::vector<Job> jobs);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
@@ -81,10 +81,6 @@ class Planner {
     return requests_mtx_;
   }
 
-  std::deque<Job>& GetRequests() {
-    return requests_;
-  }
-
   TfLiteStatus PrepareLogging(std::string log_path);
 
   int GetWindowSize() {
@@ -99,8 +95,8 @@ class Planner {
 
  protected:
   std::thread planner_thread_;
+  std::deque<Job> requests_;
 
- private:
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
 
@@ -110,7 +106,6 @@ class Planner {
 
   // Request Queue
   std::mutex requests_mtx_;
-  std::deque<Job> requests_;
 
   std::condition_variable end_invoke_;
 

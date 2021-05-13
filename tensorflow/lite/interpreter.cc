@@ -148,12 +148,15 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     planner_.reset(new ShortestExpectedLatencyPlanner(this));
   } else if (planner_type == kFixedDeviceGlobalQueue) {
     planner_.reset(new FixedDeviceGlobalQueuePlanner(this));
+  } else if (planner_type == kGlobalQueuePlanner) {
+    planner_.reset(new GlobalQueuePlanner(this));
   } else {
     planner_.reset(new FixedDevicePlanner(this));
   }
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (planner_type_ == kShortestExpectedLatency) {
+  if (planner_type_ == kShortestExpectedLatency ||
+      planner_type == kGlobalQueuePlanner) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
 
@@ -235,7 +238,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create workers.
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    if (planner_type == kFixedDeviceGlobalQueue) {
+    if (planner_type == kFixedDeviceGlobalQueue ||
+        planner_type == kGlobalQueuePlanner) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
     } else {
       workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
@@ -1006,9 +1010,20 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 std::pair<int, int64_t>
 Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
                                 std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-                                TfLiteDeviceFlags preceded_device) {
+                                TfLiteDeviceFlags ignore_device) {
+  std::set<TfLiteDeviceFlags> ignore_devices;
+  if (ignore_device != kTfLiteNumDevices) {
+    ignore_devices.insert(ignore_device);
+  }
+  return GetShortestLatency(model_id, start_idx, start_time, device_waiting, ignore_devices);
+}
+
+std::pair<int, int64_t>
+Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
+                                std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+                                std::set<TfLiteDeviceFlags> ignore_devices) {
   std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,
-                                                            preceded_device);
+                                                            ignore_devices);
   std::map<std::pair<int, int>, std::vector<int>> subgraph_map =
       GroupByStartEndIdx(subgraph_indices);
 
@@ -1055,14 +1070,15 @@ Interpreter::GroupByStartEndIdx(std::vector<int> subgraph_indices) {
 }
 
 std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
-                                                    TfLiteDeviceFlags preceded_device) {
+                                                    std::set<TfLiteDeviceFlags> ignore_devices) {
   std::vector<int> candidatesIds;
   // iterate thru all subgraphs and only pick the ones that match the criteria
   for (int i = 0; i < subgraphs_size(); ++i) {
     SubgraphKey& key = subgraph(i)->GetKey();
     if (key.model_id == model_id &&
         key.start_idx == start_idx &&
-        key.device_flag != preceded_device) {
+        ignore_devices.count(key.device_flag) == 0) {
+        // key.device_flag != preceded_device) {
       candidatesIds.push_back(i);
     }
   }
