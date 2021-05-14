@@ -98,6 +98,11 @@ void GlobalQueuePlanner::Plan() {
       if (current_time + expected_end_time > it->enqueue_time + it->slo) {
         // SLO violation!! drop!
         assert(job.is_finished);
+        /*
+        std::cout << "queue length : " << ordered_requests_.size() << std::endl;
+        std::cout << "Expected End : " << current_time << " + " << expected_end_time << " = " << current_time + expected_end_time << std::endl;
+        std::cout << "SLO Deadline : " << it->enqueue_time << " + " << it->slo << " = " << it->enqueue_time + it->slo << std::endl;
+        */
         job.end_time = LLONG_MAX;
         EnqueueFinishedJob(job);
         it = ordered_requests_.erase(it);
