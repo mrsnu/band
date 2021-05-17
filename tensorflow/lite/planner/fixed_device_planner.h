@@ -10,16 +10,31 @@ namespace impl {
 
 // assigns requested model to devices according to model_id.
 class FixedDevicePlanner : public Planner {
-  public:
-    explicit FixedDevicePlanner(Interpreter* interpreter)
+ public:
+  explicit FixedDevicePlanner(Interpreter* interpreter)
       : Planner(interpreter) {
-      planner_thread_ = std::thread([this]{this->Plan();});
-    }
-    void Plan() override;
-    bool NeedProfile() override;
-  private:
-    // Map structure to find assigned device of model idx (model_id, device flag)
-    std::map<int, int> model_device_map;
+    planner_thread_ = std::thread([this]{this->Plan();});
+  }
+  void Plan() override;
+  bool NeedProfile() override;
+
+ private:
+  // Map structure to find assigned device of model idx (model_id, device flag)
+  std::map<int, int> model_device_map_;
+};
+
+class FixedDeviceGlobalQueuePlanner : public Planner {
+ public:
+  explicit FixedDeviceGlobalQueuePlanner(Interpreter* interpreter)
+      : Planner(interpreter) {
+    planner_thread_ = std::thread([this]{this->Plan();});
+  }
+  void Plan() override;
+  bool NeedProfile() override;
+
+ private:
+  // Map structure to find assigned device of model idx (model_id, device flag)
+  std::map<int, int> model_device_map_;
 };
 
 }  // namespace impl
