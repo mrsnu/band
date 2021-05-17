@@ -156,7 +156,8 @@ void GlobalQueueWorker::Work() {
         current_job_.end_time = profiling::time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
         // Currently, put a job with a minus sign if Invoke() fails.
-        planner_ptr->EnqueueFinishedJob(Job(-1 * subgraph_idx));
+        // Model 0 fail --> Job(-1), Model 1 fail --> Job(-2), ...
+        planner_ptr->EnqueueFinishedJob(Job(-1 * current_job_.model_id - 1));
       }
 
       lock.lock();
