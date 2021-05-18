@@ -224,8 +224,8 @@ class Interpreter {
 
   /// Return the name of a given input. 
   const char* GetInputName(int subgraph_index, int index) const {
-    return subgraphs_[subgraph_index]->context_.
-        tensors[inputs(subgraph_index)->at(index)].name;
+    auto& context = subgraphs_[subgraph_index]->context_;
+    return context.tensors[inputs(subgraph_index)->at(index)].name;
   }
 
   /// Read only access to list of outputs.
@@ -240,8 +240,8 @@ class Interpreter {
 
   /// Return the name of a given output. 
   const char* GetOutputName(int subgraph_index, int index) const {
-    return subgraphs_[subgraph_index]->context_.
-        tensors[outputs(subgraph_index)->at(index)].name;
+    auto& context = subgraphs_[subgraph_index]->context_;
+    return context.tensors[outputs(subgraph_index)->at(index)].name;
   }
 
   /// Return the number of tensors in the model.

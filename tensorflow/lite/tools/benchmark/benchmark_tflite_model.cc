@@ -566,8 +566,9 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
       }
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
       int subgraph_index = interpreter_->GetSubgraphIdx(model_id, device_flag);
-      if (subgraph_index < 0) 
+      if (subgraph_index < 0) {
         continue;
+      }
       auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
       // Set the values of the input tensors from inputs_data_.
       for (int j = 0; j < interpreter_inputs.size(); ++j) {
@@ -719,8 +720,9 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
       if (!interpreter_->GetWorker(device_id))
         continue;
       auto subgraph_index = interpreter_->GetSubgraphIdx(model_id, device_id);
-      if (subgraph_index < 0) 
+      if (subgraph_index < 0) {
         continue;
+      }
       auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
       auto& inputs = model_information_[model_id].inputs;
 
@@ -739,7 +741,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
         TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
         if (input.name != t->name) {
           TFLITE_LOG(WARN) << "Tensor # " << i << " is named " << t->name
-                          << " but flags call it " << input.name;
+                           << " but flags call it " << input.name;
         }
       }
 

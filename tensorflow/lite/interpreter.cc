@@ -576,10 +576,11 @@ bool Interpreter::GetAllowFp16PrecisionForFp32() const {
   // TODO: #7, #77
   // Which context should we use here?
   // possibly move to external cpu contexts
-  if (subgraphs_size())
+  if (subgraphs_size()) {
     return subgraphs_[0]->context_.allow_fp32_relax_to_fp16;
-  else
+  } else {
     return false;
+  }
 }
 
 // TODO(b/121264966): Subgraphs added after cancellation is set will not get the
@@ -599,10 +600,11 @@ TfLiteStatus Interpreter::EnsureTensorDataIsReadable(int subgraph_index,
 }
 
 bool Interpreter::IsCancelled(int subgraph_index) {
-  if (subgraph(subgraph_index))
+  if (subgraph(subgraph_index)) {
     return subgraph(subgraph_index)->IsCancelled();
-  else
+  } else {
     return false;
+  }
 }
 
 bool Interpreter::HasDelegates(int subgraph_index) { 

@@ -88,7 +88,7 @@ An example of complete JSON config file is as follows:
             "period_ms": 10,
             "batch_size": 1,
             "input_layer" : "input",
-            "input_layar_shape" : "1,224,224,3",
+            "input_layer_shape" : "1,224,224,3",
             "input_layer_value_range" : "1:3"
         },
         {
