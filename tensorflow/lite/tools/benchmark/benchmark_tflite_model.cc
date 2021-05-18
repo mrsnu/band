@@ -737,10 +737,10 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
       // create tensors with consistent naming.
       for (int j = 0; j < input_layer_infos.size(); ++j) {
         const InputLayerInfo& input = input_layer_infos[j];
-        int i = interpreter_inputs[j];
-        TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
+        int tensor_index = interpreter_inputs[j];
+        TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
         if (input.name != t->name) {
-          TFLITE_LOG(WARN) << "Tensor # " << i << " is named " << t->name
+          TFLITE_LOG(WARN) << "Tensor # " << tensor_index << " is named " << t->name
                            << " but flags call it " << input.name;
         }
       }
@@ -748,10 +748,10 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
       // Resize all non-string tensors.
       for (int j = 0; j < input_layer_infos.size(); ++j) {
         const InputLayerInfo& input = input_layer_infos[j];
-        int i = interpreter_inputs[j];
-        TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
+        int tensor_index = interpreter_inputs[j];
+        TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
         if (t->type != kTfLiteString) {
-          interpreter_->ResizeInputTensor(subgraph_index, i, input.shape);
+          interpreter_->ResizeInputTensor(subgraph_index, tensor_index, input.shape);
         }
       }
     }
