@@ -30,6 +30,9 @@ limitations under the License.
 
 namespace tflite {
 
+// Job struct is the scheduling and executing unit.
+// The request can specify a model by indication the model id
+// and the start/end indices.
 struct Job {
   explicit Job(int model_id) : model_id(model_id) {}
   explicit Job(int model_id, std::vector<Job>& following_jobs)
@@ -46,6 +49,15 @@ struct Job {
   std::string model_fname;
 
   std::vector<Job> following_jobs;
+};
+
+// Model configuration struct.
+// The configuration is given when registering the model.
+struct ModelConfig {
+  std::string model_fname;
+  int period_ms;
+  int device = -1;
+  int batch_size = 1;
 };
 
 // The prefix of Flex op custom code.

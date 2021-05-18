@@ -169,7 +169,6 @@ cc_library(
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/strings",
         "@ruy//ruy/profiler",
-        "@jsoncpp_git//:jsoncpp",
     ],
 )
 
@@ -233,7 +232,14 @@ cc_library(
     ],
     hdrs = ["benchmark_utils.h"],
     copts = common_copts,
-    deps = ["//tensorflow/lite/profiling:time"],
+    deps = [
+        "//tensorflow/lite:cpu",
+        "//tensorflow/lite:util",
+        "//tensorflow/lite/c:common",
+        "//tensorflow/lite/profiling:time",
+        "//tensorflow/lite/tools:logging",
+        "@jsoncpp_git//:jsoncpp",
+    ],
 )
 
 cc_test(
