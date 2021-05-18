@@ -953,7 +953,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
   // at this point, the subgraph key for this model doesn't have valid start
   // and end indices so we don't need to specify them
-  size_t subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
+  int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
