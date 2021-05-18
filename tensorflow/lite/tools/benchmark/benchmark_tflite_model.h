@@ -146,11 +146,11 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   void GeneratePeriodicRequests();
 
   struct ModelInformation {
-    ModelInformation(std::vector<InputLayerInfo> inputs,
+    ModelInformation(std::vector<InputLayerInfo> input_layer_infos,
                      Interpreter::ModelConfig config)
-      :inputs(inputs), config(config) {}
-    std::vector<InputLayerInfo> inputs;
-    std::vector<InputTensorData> inputs_data;
+      :input_layer_infos(input_layer_infos), config(config) {}
+    std::vector<InputLayerInfo> input_layer_infos;
+    std::vector<InputTensorData> input_tensor_data;
     Interpreter::ModelConfig config;
   };
 

@@ -286,22 +286,22 @@ void Interpreter::SetExternalContext(TfLiteExternalContextType type,
   }
 }
 
-TfLiteStatus Interpreter::SetInputs(int subgraph_index, std::vector<int> inputs) {
+TfLiteStatus Interpreter::SetInputs(size_t subgraph_index, std::vector<int> inputs) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->SetInputs(std::move(inputs));
 }
 
-TfLiteStatus Interpreter::SetOutputs(int subgraph_index, std::vector<int> outputs) {
+TfLiteStatus Interpreter::SetOutputs(size_t subgraph_index, std::vector<int> outputs) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->SetOutputs(std::move(outputs));
 }
 
-TfLiteStatus Interpreter::SetVariables(int subgraph_index, std::vector<int> variables) {
+TfLiteStatus Interpreter::SetVariables(size_t subgraph_index, std::vector<int> variables) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->SetVariables(std::move(variables));
 }
 
-TfLiteStatus Interpreter::AllocateTensors(int subgraph_index) {
+TfLiteStatus Interpreter::AllocateTensors(size_t subgraph_index) {
   if (subgraph_index == -1) {
     TfLiteStatus status;
 
@@ -318,7 +318,7 @@ TfLiteStatus Interpreter::AllocateTensors(int subgraph_index) {
   }
 }
 
-void Interpreter::ReserveNodes(int subgraph_index, int count) {
+void Interpreter::ReserveNodes(size_t subgraph_index, int count) {
   if (subgraph(subgraph_index))
     subgraph(subgraph_index)->ReserveNodes(count);
 }
@@ -349,7 +349,7 @@ void Interpreter::DeleteSubgraphs(size_t starting_index_to_delete,
 }
 
 TfLiteStatus Interpreter::AddNodeWithParameters(
-    int subgraph_index,
+    size_t subgraph_index,
     const std::vector<int>& inputs, const std::vector<int>& outputs,
     const char* init_data, size_t init_data_size, void* builtin_data,
     const TfLiteRegistration* registration, int* node_index) {
@@ -359,24 +359,24 @@ TfLiteStatus Interpreter::AddNodeWithParameters(
       registration, node_index);
 }
 
-TfLiteStatus Interpreter::ResizeInputTensor(int subgraph_index, int tensor_index,
+TfLiteStatus Interpreter::ResizeInputTensor(size_t subgraph_index, size_t tensor_index,
                                             const std::vector<int>& dims) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->ResizeInputTensor(tensor_index, dims);
 }
 
-TfLiteStatus Interpreter::ResizeInputTensorStrict(int subgraph_index,
-    int tensor_index, const std::vector<int>& dims) {
+TfLiteStatus Interpreter::ResizeInputTensorStrict(size_t subgraph_index,
+    size_t tensor_index, const std::vector<int>& dims) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->ResizeInputTensorStrict(tensor_index, dims);
 }
 
-TfLiteStatus Interpreter::ReleaseNonPersistentMemory(int subgraph_index) {
+TfLiteStatus Interpreter::ReleaseNonPersistentMemory(size_t subgraph_index) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->ReleaseNonPersistentMemory();
 }
 
-TfLiteStatus Interpreter::Invoke(int subgraph_index) {
+TfLiteStatus Interpreter::Invoke(size_t subgraph_index) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   ScopedRuntimeInstrumentationProfile scoped_runtime_event(installed_profiler_,
                                                            "invoke");
@@ -384,7 +384,7 @@ TfLiteStatus Interpreter::Invoke(int subgraph_index) {
       scoped_runtime_event, (*subgraphs_[subgraph_index]).Invoke());
 
   if (!allow_buffer_handle_output_) {
-    for (int tensor_index : (*subgraphs_[subgraph_index]).outputs()) {
+    for (size_t tensor_index : (*subgraphs_[subgraph_index]).outputs()) {
       TF_LITE_ENSURE_STATUS_WITH_SCOPED_INSTRUMENTATION(
           scoped_runtime_event,
           (*subgraphs_[subgraph_index]).EnsureTensorDataIsReadable(tensor_index));
@@ -443,18 +443,18 @@ void Interpreter::InvokeModelsSync(std::vector<Job> requests) {
   planner_->Wait();
 }
 
-TfLiteStatus Interpreter::AddTensors(int subgraph_index, int tensors_to_add,
+TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
                                      int* first_new_tensor_index) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->AddTensors(tensors_to_add, first_new_tensor_index);
 }
 
-TfLiteStatus Interpreter::ResetVariableTensors(int subgraph_index) {
+TfLiteStatus Interpreter::ResetVariableTensors(size_t subgraph_index) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->ResetVariableTensors();
 }
 
-const char* Interpreter::OpProfilingString(int subgraph_index,
+const char* Interpreter::OpProfilingString(size_t subgraph_index,
                                            const TfLiteRegistration& op_reg,
                                            const TfLiteNode* node) const {
   if (subgraph_index < subgraphs_size() && op_reg.profiling_string) {
@@ -464,7 +464,7 @@ const char* Interpreter::OpProfilingString(int subgraph_index,
 }
 
 TfLiteStatus Interpreter::SetTensorParametersReadOnly(
-    int subgraph_index, int tensor_index, TfLiteType type, const char* name,
+    size_t subgraph_index, size_t tensor_index, TfLiteType type, const char* name,
     const std::vector<int>& dims, TfLiteQuantization quantization,
     const char* buffer, size_t bytes, const Allocation* allocation) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
@@ -474,7 +474,7 @@ TfLiteStatus Interpreter::SetTensorParametersReadOnly(
 }
 
 TfLiteStatus Interpreter::SetTensorParametersReadWrite(
-    int subgraph_index, int tensor_index, TfLiteType type, const char* name,
+    size_t subgraph_index, size_t tensor_index, TfLiteType type, const char* name,
     const std::vector<int>& dims, TfLiteQuantization quantization,
     bool is_variable) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
@@ -484,7 +484,7 @@ TfLiteStatus Interpreter::SetTensorParametersReadWrite(
 }
 
 TfLiteStatus Interpreter::SetTensorParametersReadOnly(
-    int subgraph_index, int tensor_index, TfLiteType type, const char* name,
+    size_t subgraph_index, size_t tensor_index, TfLiteType type, const char* name,
     const size_t rank, const int* dims, TfLiteQuantizationParams quantization,
     const char* buffer, size_t bytes, const Allocation* allocation) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
@@ -495,7 +495,7 @@ TfLiteStatus Interpreter::SetTensorParametersReadOnly(
 }
 
 TfLiteStatus Interpreter::SetTensorParametersReadWrite(
-    int subgraph_index, int tensor_index, TfLiteType type, const char* name, const size_t rank,
+    size_t subgraph_index, size_t tensor_index, TfLiteType type, const char* name, const size_t rank,
     const int* dims, TfLiteQuantizationParams quantization, bool is_variable,
     const size_t rank_dims_signature, const int* dims_signature) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
@@ -507,7 +507,7 @@ TfLiteStatus Interpreter::SetTensorParametersReadWrite(
 
 
 
-TfLiteStatus Interpreter::SetExecutionPlan(int subgraph_index, const std::vector<int>& new_plan) {
+TfLiteStatus Interpreter::SetExecutionPlan(size_t subgraph_index, const std::vector<int>& new_plan) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->SetExecutionPlan(new_plan);
 }
@@ -593,13 +593,13 @@ void Interpreter::SetCancellationFunction(void* data,
 }
 
 
-TfLiteStatus Interpreter::EnsureTensorDataIsReadable(int subgraph_index,
-                                                     int tensor_index) {
+TfLiteStatus Interpreter::EnsureTensorDataIsReadable(size_t subgraph_index,
+                                                     size_t tensor_index) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->EnsureTensorDataIsReadable(tensor_index);
 }
 
-bool Interpreter::IsCancelled(int subgraph_index) {
+bool Interpreter::IsCancelled(size_t subgraph_index) {
   if (subgraph(subgraph_index)) {
     return subgraph(subgraph_index)->IsCancelled();
   } else {
@@ -607,12 +607,12 @@ bool Interpreter::IsCancelled(int subgraph_index) {
   }
 }
 
-bool Interpreter::HasDelegates(int subgraph_index) { 
+bool Interpreter::HasDelegates(size_t subgraph_index) { 
   return subgraph(subgraph_index)->HasDelegates(); 
 }
 
-TfLiteStatus Interpreter::SetBufferHandle(int subgraph_index,
-                                          int tensor_index,
+TfLiteStatus Interpreter::SetBufferHandle(size_t subgraph_index,
+                                          size_t tensor_index,
                                           TfLiteBufferHandle buffer_handle,
                                           TfLiteDelegate* delegate) {
   // Use error_reporter_ to report error since context is not safe yet.
@@ -635,8 +635,8 @@ TfLiteStatus Interpreter::SetBufferHandle(int subgraph_index,
   return kTfLiteOk;
 }
 
-TfLiteStatus Interpreter::GetBufferHandle(int subgraph_index,
-                                          int tensor_index,
+TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
+                                          size_t tensor_index,
                                           TfLiteBufferHandle* buffer_handle,
                                           TfLiteDelegate** delegate) {
   TF_LITE_ENSURE(error_reporter_, subgraph_index < subgraphs_size());
@@ -729,7 +729,7 @@ void Interpreter::SetProfiler(std::unique_ptr<Profiler> profiler) {
 }
 
 void Interpreter::SetSubgraphProfiler(Profiler* profiler) {
-  for (int subgraph_index = 0; subgraph_index < subgraphs_.size();
+  for (size_t subgraph_index = 0; subgraph_index < subgraphs_.size();
        ++subgraph_index) {
     subgraphs_[subgraph_index]->SetProfiler(profiler,
                                             subgraph_index);
@@ -807,7 +807,7 @@ void Interpreter::DeleteKey(SubgraphKey subgraph_key) {
 }
 
 void Interpreter::RegisterSubgraphIdx(SubgraphKey subgraph_key,
-                                      int subgraph_index) {
+                                      size_t subgraph_index) {
   // Skip if exists.
   if (subgraph_idx_map_.find(subgraph_key) != subgraph_idx_map_.end()) {
     return;
@@ -953,7 +953,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
   // at this point, the subgraph key for this model doesn't have valid start
   // and end indices so we don't need to specify them
-  int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
+  size_t subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec

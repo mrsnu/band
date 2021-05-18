@@ -294,7 +294,7 @@ void BenchmarkTfLiteModel::CleanUp() {
   kill_app_ = true;
   for (int i = 0; i < model_information_.size(); i++) {
     // Free up any pre-allocated tensor data during PrepareInputData.
-    model_information_[i].inputs_data.clear();
+    model_information_[i].input_tensor_data.clear();
   }
 }
 
@@ -531,15 +531,15 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     auto subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
     auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
-    auto& inputs = model_information_[i].inputs;
-    auto& inputs_data = model_information_[i].inputs_data;
+    auto& input_layer_infos = model_information_[i].input_layer_infos;
+    auto& input_tensor_data = model_information_[i].input_tensor_data;
     for (int j = 0; j < interpreter_inputs.size(); ++j) {
       int tensor_index = interpreter_inputs[j];
       const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
       const InputLayerInfo* input_layer_info = nullptr;
       // Note that when input layer parameters (i.e. --input_layer,
       // --input_layer_shape) are not specified, inputs_ is empty.
-      if (!inputs.empty()) input_layer_info = &inputs[j];
+      if (!input_layer_infos.empty()) input_layer_info = &input_layer_infos[j];
 
       InputTensorData t_data;
       if (input_layer_info && !input_layer_info->input_file_path.empty()) {
@@ -547,7 +547,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
       } else {
         t_data = CreateRandomTensorData(*t, input_layer_info);
       }
-      inputs_data.push_back(std::move(t_data));
+      input_tensor_data.push_back(std::move(t_data));
     }
   }
   return kTfLiteOk;
@@ -555,8 +555,8 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
 
 TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
   for (int model_id = 0; model_id < model_information_.size(); ++model_id) {
-    auto& inputs = model_information_[model_id].inputs;
-    auto& inputs_data = model_information_[model_id].inputs_data;
+    auto& input_layer_infos = model_information_[model_id].input_layer_infos;
+    auto& input_tensor_data = model_information_[model_id].input_tensor_data;
 
     // TODO: #73 share tensors across different subgraphs from same model
     for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
@@ -575,8 +575,8 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
         int i = interpreter_inputs[j];
         TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
         if (t->type == kTfLiteString) {
-          if (inputs_data[j].data) {
-            static_cast<DynamicBuffer*>(inputs_data[j].data.get())
+          if (input_tensor_data[j].data) {
+            static_cast<DynamicBuffer*>(input_tensor_data[j].data.get())
                 ->WriteToTensor(t, /*new_shape=*/nullptr);
           } else {
             tflite::DynamicBuffer buffer;
@@ -587,8 +587,8 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
             buffer.WriteToTensor(t, /*new_shape=*/nullptr);
           }
         } else {
-          std::memcpy(t->data.raw, inputs_data[j].data.get(),
-                      inputs_data[j].bytes);
+          std::memcpy(t->data.raw, input_tensor_data[j].data.get(),
+                      input_tensor_data[j].bytes);
         }
       }
     }
@@ -724,19 +724,19 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
         continue;
       }
       auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
-      auto& inputs = model_information_[model_id].inputs;
+      auto& input_layer_infos = model_information_[model_id].input_layer_infos;
 
-      if (!inputs.empty()) {
-        TFLITE_TOOLS_CHECK_EQ(inputs.size(), interpreter_inputs.size())
-            << "Inputs mismatch: Model inputs #:" << inputs.size()
+      if (!input_layer_infos.empty()) {
+        TFLITE_TOOLS_CHECK_EQ(input_layer_infos.size(), interpreter_inputs.size())
+            << "Inputs mismatch: Model inputs #:" << input_layer_infos.size()
             << " expected: " << interpreter_inputs.size();
       }
 
       // Check if the tensor names match, and log a warning if it doesn't.
       // TODO(ycling): Consider to make this an error again when the new converter
       // create tensors with consistent naming.
-      for (int j = 0; j < inputs.size(); ++j) {
-        const InputLayerInfo& input = inputs[j];
+      for (int j = 0; j < input_layer_infos.size(); ++j) {
+        const InputLayerInfo& input = input_layer_infos[j];
         int i = interpreter_inputs[j];
         TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
         if (input.name != t->name) {
@@ -746,8 +746,8 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
       }
 
       // Resize all non-string tensors.
-      for (int j = 0; j < inputs.size(); ++j) {
-        const InputLayerInfo& input = inputs[j];
+      for (int j = 0; j < input_layer_infos.size(); ++j) {
+        const InputLayerInfo& input = input_layer_infos[j];
         int i = interpreter_inputs[j];
         TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
         if (t->type != kTfLiteString) {
@@ -870,7 +870,7 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
-    std::vector<InputLayerInfo> inputs;
+    std::vector<InputLayerInfo> input_layer_info;
     Interpreter::ModelConfig model;
     Json::Value model_json_value = root["models"][i];
     if (model_json_value["graph"].isNull() ||
@@ -897,21 +897,19 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
       model.device = model_json_value["device"].asInt();
 
     if (!model_json_value["input_layer"].isNull() &&
-        !model_json_value["input_layer_shape"].isNull() &&
-        !model_json_value["input_layer_value_range"].isNull() &&
-        !model_json_value["input_layer_value_files"].isNull()) {
+        !model_json_value["input_layer_shape"].isNull()) {
       if (PopulateInputLayerInfo(
           model_json_value["input_layer"].asString(),
           model_json_value["input_layer_shape"].asString(),
           model_json_value["input_layer_value_range"].asString(),
           model_json_value["input_layer_value_files"].asString(),
-          &inputs) != kTfLiteOk) {
+          &input_layer_info) != kTfLiteOk) {
         // Skip printing error here since PopulateInputLayerInfo does the job.
         return kTfLiteError;
       }
     }
 
-    model_information_.push_back({inputs, model});
+    model_information_.push_back({input_layer_info, model});
   }
 
   if (model_information_.size() == 0) {
