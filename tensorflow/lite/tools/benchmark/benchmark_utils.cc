@@ -199,7 +199,7 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
   }
   if (!root["profile_smoothing_factor"].isNull()) {
     runtime_config->profile_smoothing_factor =
-        root["profile_smoothing_factor"].asFloat();
+      root["profile_smoothing_factor"].asFloat();
   }
   if (!root["model_profile"].isNull()) {
     runtime_config->model_profile = root["model_profile"].asString();
