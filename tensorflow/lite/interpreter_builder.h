@@ -83,7 +83,7 @@ class InterpreterBuilder {
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1);
   static int RegisterModel(const FlatBufferModel& model,
-                        Interpreter::ModelConfig& model_config,
+                        ModelConfig& model_config,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1);

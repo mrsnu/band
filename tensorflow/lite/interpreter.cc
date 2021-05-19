@@ -146,6 +146,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     planner_.reset(new RoundRobinPlanner(this));
   } else if (planner_type == kShortestExpectedLatency) {
     planner_.reset(new ShortestExpectedLatencyPlanner(this));
+  } else if (planner_type == kFixedDeviceGlobalQueue) {
+    planner_.reset(new FixedDeviceGlobalQueuePlanner(this));
   } else {
     planner_.reset(new FixedDevicePlanner(this));
   }
@@ -233,7 +235,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create workers.
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    workers_[device_flag] = std::make_unique<Worker>(planner_, device_flag);
+    if (planner_type == kFixedDeviceGlobalQueue) {
+      workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
+    } else {
+      workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
+    }
   }
 }
 
@@ -910,7 +916,9 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   TfLiteDeviceFlags prev_device;
   int subgraph_min = 0;
 
-  if (planner_type_ == kFixedDevice || planner_type_ == kRoundRobin) {
+  if (planner_type_ == kFixedDevice ||
+      planner_type_ == kRoundRobin ||
+      planner_type_ == kFixedDeviceGlobalQueue) {
     splitted_op_range.push_back(SubgraphKey(model_id, device_flag, 0, num_ops - 1));
     return;
   }
