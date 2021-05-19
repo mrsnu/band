@@ -993,7 +993,6 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
   }
 }
 
-TfLiteStatus BenchmarkTfLiteModel::RunImpl() { return interpreter_->Invoke(0); }
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   int num_iters = 3;

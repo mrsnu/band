@@ -61,7 +61,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus ValidateParams() override;
   uint64_t ComputeInputBytes() override;
   TfLiteStatus Init() override;
-  TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
   TfLiteStatus RunPeriodic() override;
