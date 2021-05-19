@@ -28,7 +28,6 @@ limitations under the License.
 #include <vector>
 
 #include "absl/base/attributes.h"
-#include "absl/strings/numbers.h"
 #include "ruy/profiler/profiler.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
@@ -99,14 +98,6 @@ void RuyProfileListener::OnBenchmarkEnd(const BenchmarkResults& results) {
   ruy_profile_ = nullptr;
 }
 
-std::vector<std::string> Split(const std::string& str, const char delim) {
-  std::vector<std::string> results;
-  if (!util::SplitAndParse(str, delim, &results)) {
-    results.clear();
-  }
-  return results;
-}
-
 int GetNumElements(const TfLiteIntArray* dim_array) {
   int num_elements = 1;
   for (size_t i = 0; i < dim_array->size; i++) {
@@ -123,125 +114,6 @@ void FillRandomString(tflite::DynamicBuffer* buffer,
     auto str = random_func();
     buffer->AddString(str.data(), str.length());
   }
-}
-
-int FindLayerInfoIndex(std::vector<BenchmarkTfLiteModel::InputLayerInfo>* info,
-                       const std::string& input_name,
-                       const string& names_string) {
-  for (int i = 0; i < info->size(); ++i) {
-    if (info->at(i).name == input_name) {
-      return i;
-    }
-  }
-  TFLITE_LOG(FATAL) << "Cannot find the corresponding input_layer name("
-                    << input_name << ") in --input_layer as " << names_string;
-  return -1;
-}
-
-TfLiteStatus PopulateInputValueRanges(
-    const std::string& names_string, const std::string& value_ranges_string,
-    std::vector<BenchmarkTfLiteModel::InputLayerInfo>* info) {
-  std::vector<std::string> value_ranges = Split(value_ranges_string, ':');
-  for (const auto& val : value_ranges) {
-    std::vector<std::string> name_range = Split(val, ',');
-    if (name_range.size() != 3) {
-      TFLITE_LOG(ERROR) << "Wrong input value range item specified: " << val;
-      return kTfLiteError;
-    }
-
-    // Ensure the specific input layer name exists.
-    int layer_info_idx = FindLayerInfoIndex(info, name_range[0], names_string);
-
-    // Parse the range value.
-    int low, high;
-    bool has_low = absl::SimpleAtoi(name_range[1], &low);
-    bool has_high = absl::SimpleAtoi(name_range[2], &high);
-    if (!has_low || !has_high || low > high) {
-      TFLITE_LOG(ERROR)
-          << "Wrong low and high value of the input value range specified: "
-          << val;
-      return kTfLiteError;
-    }
-    info->at(layer_info_idx).has_value_range = true;
-    info->at(layer_info_idx).low = low;
-    info->at(layer_info_idx).high = high;
-  }
-  return kTfLiteOk;
-}
-
-TfLiteStatus PopulateInputValueFiles(
-    const std::string& names_string, const std::string& value_files_string,
-    std::vector<BenchmarkTfLiteModel::InputLayerInfo>* info) {
-  std::vector<std::string> value_files = Split(value_files_string, ',');
-  for (const auto& val : value_files) {
-    std::vector<std::string> name_file = Split(val, ':');
-    if (name_file.size() != 2) {
-      TFLITE_LOG(ERROR) << "Wrong input value file item specified: " << val;
-      return kTfLiteError;
-    }
-
-    // Ensure the specific input layer name exists.
-    int layer_info_idx = FindLayerInfoIndex(info, name_file[0], names_string);
-    if (info->at(layer_info_idx).has_value_range) {
-      TFLITE_LOG(WARN)
-          << "The input_name:" << info->at(layer_info_idx).name
-          << " appears both in input_layer_value_files and "
-             "input_layer_value_range. The input_layer_value_range of the "
-             "input_name will be ignored.";
-    }
-    info->at(layer_info_idx).input_file_path = name_file[1];
-  }
-  return kTfLiteOk;
-}
-
-TfLiteStatus PopulateInputLayerInfo(
-    const std::string& names_string, const std::string& shapes_string,
-    const std::string& value_ranges_string,
-    const std::string& value_files_string,
-    std::vector<BenchmarkTfLiteModel::InputLayerInfo>* info) {
-  info->clear();
-  std::vector<std::string> names = Split(names_string, ',');
-  std::vector<std::string> shapes = Split(shapes_string, ':');
-
-  if (names.size() != shapes.size()) {
-    TFLITE_LOG(ERROR) << "The number of items in"
-                      << " --input_layer_shape (" << shapes_string << ", with "
-                      << shapes.size() << " items)"
-                      << " must match the number of items in"
-                      << " --input_layer (" << names_string << ", with "
-                      << names.size() << " items)."
-                      << " For example --input_layer=input1,input2"
-                      << " --input_layer_shape=1,224,224,4:1,20";
-    return kTfLiteError;
-  }
-
-  for (int i = 0; i < names.size(); ++i) {
-    info->push_back(BenchmarkTfLiteModel::InputLayerInfo());
-    BenchmarkTfLiteModel::InputLayerInfo& input = info->back();
-
-    input.name = names[i];
-
-    TFLITE_TOOLS_CHECK(util::SplitAndParse(shapes[i], ',', &input.shape))
-        << "Incorrect size string specified: " << shapes[i];
-    for (int dim : input.shape) {
-      if (dim == -1) {
-        TFLITE_LOG(ERROR)
-            << "Any unknown sizes in the shapes (-1's) must be replaced"
-            << " with the size you want to benchmark with.";
-        return kTfLiteError;
-      }
-    }
-  }
-
-  // Populate input value range if it's specified.
-  TF_LITE_ENSURE_STATUS(
-      PopulateInputValueRanges(names_string, value_ranges_string, info));
-
-  // Populate input value files if it's specified.
-  TF_LITE_ENSURE_STATUS(
-      PopulateInputValueFiles(names_string, value_files_string, info));
-
-  return kTfLiteOk;
 }
 
 std::shared_ptr<profiling::ProfileSummaryFormatter>
@@ -291,9 +163,9 @@ BenchmarkTfLiteModel::BenchmarkTfLiteModel(BenchmarkParams params)
 void BenchmarkTfLiteModel::CleanUp() {
   // set this flag in case we had a abrupt shutdown
   kill_app_ = true;
-  for (int i = 0; i < model_information_.size(); i++) {
+  for (int i = 0; i < runtime_config_.model_information.size(); i++) {
     // Free up any pre-allocated tensor data during PrepareInputData.
-    model_information_[i].input_tensor_data.clear();
+    runtime_config_.model_information[i].input_tensor_data.clear();
   }
 }
 
@@ -364,7 +236,7 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
   TFLITE_TOOLS_CHECK(interpreter_);
   uint64_t total_input_bytes = 0;
   
-  for (int i = 0; i < model_information_.size(); ++i) {
+  for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
     int subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
     for (int input : interpreter_->inputs(subgraph_index)) {
@@ -377,9 +249,9 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
 
 int64_t BenchmarkTfLiteModel::MayGetModelFileSize() {
   int64_t total_mem_size = 0;
-  auto& model_configs = runtime_config_.model_information;
-  for (int i = 0; i < model_configs.size(); ++i) {
-    std::ifstream in_file(model_configs[i].model_fname,
+  auto& model_information = runtime_config_.model_information;
+  for (int i = 0; i < model_information.size(); ++i) {
+    std::ifstream in_file(model_information[i].config.model_fname,
                           std::ios::binary | std::ios::ate);
     total_mem_size += in_file.tellg();
   }
@@ -387,16 +259,16 @@ int64_t BenchmarkTfLiteModel::MayGetModelFileSize() {
   return total_mem_size;
 }
 
-BenchmarkTfLiteModel::InputTensorData BenchmarkTfLiteModel::LoadInputTensorData(
+util::InputTensorData BenchmarkTfLiteModel::LoadInputTensorData(
     const TfLiteTensor& t, const std::string& input_file_path) {
   std::ifstream value_file(input_file_path, std::ios::binary);
   if (!value_file.good()) {
     TFLITE_LOG(FATAL) << "Failed to read the input_layer_value_file:"
                       << input_file_path;
   }
-  InputTensorData t_data;
+  util::InputTensorData t_data;
   if (t.type == kTfLiteString) {
-    t_data.data = VoidUniquePtr(
+    t_data.data = util::VoidUniquePtr(
         static_cast<void*>(new tflite::DynamicBuffer()),
         [](void* ptr) { delete static_cast<DynamicBuffer*>(ptr); });
     std::string line;
@@ -422,7 +294,7 @@ BenchmarkTfLiteModel::InputTensorData BenchmarkTfLiteModel::LoadInputTensorData(
     }
     t_data.bytes = t.bytes;
     t_data.data =
-        VoidUniquePtr(static_cast<void*>(new char[t.bytes]),
+        util::VoidUniquePtr(static_cast<void*>(new char[t.bytes]),
                       [](void* ptr) { delete[] static_cast<char*>(ptr); });
     value_file.clear();
     value_file.seekg(0, std::ios_base::beg);
@@ -431,9 +303,9 @@ BenchmarkTfLiteModel::InputTensorData BenchmarkTfLiteModel::LoadInputTensorData(
   return t_data;
 }
 
-BenchmarkTfLiteModel::InputTensorData
+util::InputTensorData
 BenchmarkTfLiteModel::CreateRandomTensorData(const TfLiteTensor& t,
-                                             const InputLayerInfo* layer_info) {
+                                             const util::InputLayerInfo* layer_info) {
   bool has_value_range = false;
   int low_range = 0;
   int high_range = 0;
@@ -515,13 +387,13 @@ BenchmarkTfLiteModel::CreateRandomTensorData(const TfLiteTensor& t,
                         << " of type " << t.type;
     }
   }
-  return InputTensorData();
+  return util::InputTensorData();
 }
 
 TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
-  for (int i = 0; i < model_information_.size(); ++i) {
+  for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
     // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
     // (i.e. the specified input layer info) has been checked in
     // BenchmarkTfLiteModel::Init() before calling this function. So, we simply
@@ -530,17 +402,17 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     auto subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
     auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-    auto& input_layer_infos = model_information_[i].input_layer_infos;
-    auto& input_tensor_data = model_information_[i].input_tensor_data;
+    auto& input_layer_infos = runtime_config_.model_information[i].input_layer_infos;
+    auto& input_tensor_data = runtime_config_.model_information[i].input_tensor_data;
     for (int j = 0; j < interpreter_inputs.size(); ++j) {
       int tensor_index = interpreter_inputs[j];
       const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
-      const InputLayerInfo* input_layer_info = nullptr;
+      const util::InputLayerInfo* input_layer_info = nullptr;
       // Note that when input layer parameters (i.e. --input_layer,
       // --input_layer_shape) are not specified, inputs_ is empty.
       if (!input_layer_infos.empty()) input_layer_info = &input_layer_infos[j];
 
-      InputTensorData t_data;
+      util::InputTensorData t_data;
       if (input_layer_info && !input_layer_info->input_file_path.empty()) {
         t_data = LoadInputTensorData(*t, input_layer_info->input_file_path);
       } else {
@@ -553,9 +425,9 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
-  for (int model_id = 0; model_id < model_information_.size(); ++model_id) {
-    auto& input_layer_infos = model_information_[model_id].input_layer_infos;
-    auto& input_tensor_data = model_information_[model_id].input_tensor_data;
+  for (int model_id = 0; model_id < runtime_config_.model_information.size(); ++model_id) {
+    auto& input_layer_infos = runtime_config_.model_information[model_id].input_layer_infos;
+    auto& input_tensor_data = runtime_config_.model_information[model_id].input_tensor_data;
 
     // TODO: #73 share tensors across different subgraphs from same model
     for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
@@ -636,12 +508,12 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                      << " cores";
   }
 
-  auto& model_configs = runtime_config_.model_configs;
-  for (int i = 0; i < model_configs.size(); ++i) {
-    std::string model_name = model_configs[i].model_fname;
+  auto& model_information = runtime_config_.model_information;
+  for (int i = 0; i < model_information.size(); ++i) {
+    std::string model_name = model_information[i].config.model_fname;
     TF_LITE_ENSURE_STATUS(LoadModel(model_name));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
-        *models_[i], model_configs[i], *resolver, &interpreter_, num_threads);
+        *models_[i], model_information[i].config, *resolver, &interpreter_, num_threads);
 
     if (model_id == -1)
       return kTfLiteError;
@@ -711,7 +583,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
 
   interpreter_->SetAllowFp16PrecisionForFp32(params_.Get<bool>("allow_fp16"));
 
-  for (int model_id = 0; model_id < model_information_.size(); model_id++) {
+  for (int model_id = 0; model_id < runtime_config_.model_information.size(); model_id++) {
     // TODO: #73 share tensors across different subgraphs from same model
     for (int i = 0; i < kTfLiteNumDevices; i++) {
       const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
@@ -720,7 +592,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
         continue;
       }
       auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-      auto& input_layer_infos = model_information_[model_id].input_layer_infos;
+      auto& input_layer_infos = runtime_config_.model_information[model_id].input_layer_infos;
 
       if (!input_layer_infos.empty()) {
         TFLITE_TOOLS_CHECK_EQ(input_layer_infos.size(), interpreter_inputs.size())
@@ -732,7 +604,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
       // TODO(ycling): Consider to make this an error again when the new converter
       // create tensors with consistent naming.
       for (int j = 0; j < input_layer_infos.size(); ++j) {
-        const InputLayerInfo& input = input_layer_infos[j];
+        const util::InputLayerInfo& input = input_layer_infos[j];
         int tensor_index = interpreter_inputs[j];
         TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
         if (input.name != t->name) {
@@ -743,7 +615,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
 
       // Resize all non-string tensors.
       for (int j = 0; j < input_layer_infos.size(); ++j) {
-        const InputLayerInfo& input = input_layer_infos[j];
+        const util::InputLayerInfo& input = input_layer_infos[j];
         int tensor_index = interpreter_inputs[j];
         TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
         if (t->type != kTfLiteString) {

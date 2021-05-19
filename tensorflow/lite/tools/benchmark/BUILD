@@ -121,7 +121,6 @@ cc_test(
         "//tensorflow/lite/tools/delegates:delegate_provider_hdr",
         "@com_google_absl//absl/algorithm",
         "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -238,6 +237,7 @@ cc_library(
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/tools:logging",
+        "@com_google_absl//absl/strings:str_format",
         "@jsoncpp_git//:jsoncpp",
     ],
 )
