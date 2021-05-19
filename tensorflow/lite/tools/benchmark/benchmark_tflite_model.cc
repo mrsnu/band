@@ -368,7 +368,7 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
   for (int i = 0; i < model_information_.size(); ++i) {
     int subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
-    for (int input : *interpreter_->inputs(subgraph_index)) {
+    for (int input : interpreter_->inputs(subgraph_index)) {
       auto* t = interpreter_->tensor(subgraph_index, input);
       total_input_bytes += t->bytes;
     }
@@ -530,7 +530,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     // properly.
     auto subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
-    auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
+    auto interpreter_inputs = interpreter_->inputs(subgraph_index);
     auto& input_layer_infos = model_information_[i].input_layer_infos;
     auto& input_tensor_data = model_information_[i].input_tensor_data;
     for (int j = 0; j < interpreter_inputs.size(); ++j) {
@@ -560,16 +560,12 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
 
     // TODO: #73 share tensors across different subgraphs from same model
     for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
-      if (device_id == kTfLiteCPUFallback) {
-        // Skip for Fallback worker
-        continue;
-      }
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      int subgraph_index = interpreter_->GetSubgraphIdx(model_id, device_flag);
+      int subgraph_index = interpreter_->GetFirstSubgraphIdx(model_id, device_flag);
       if (subgraph_index < 0) {
         continue;
       }
-      auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
+      auto interpreter_inputs = interpreter_->inputs(subgraph_index);
       // Set the values of the input tensors from inputs_data_.
       for (int j = 0; j < interpreter_inputs.size(); ++j) {
         int i = interpreter_inputs[j];
@@ -723,7 +719,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
       if (subgraph_index < 0) {
         continue;
       }
-      auto interpreter_inputs = *interpreter_->inputs(subgraph_index);
+      auto interpreter_inputs = interpreter_->inputs(subgraph_index);
       auto& input_layer_infos = model_information_[model_id].input_layer_infos;
 
       if (!input_layer_infos.empty()) {
@@ -898,15 +894,12 @@ TfLiteStatus BenchmarkTfLiteModel::ParseJsonFile() {
 
     if (!model_json_value["input_layer"].isNull() &&
         !model_json_value["input_layer_shape"].isNull()) {
-      if (PopulateInputLayerInfo(
+      TF_LITE_ENSURE_STATUS(PopulateInputLayerInfo(
           model_json_value["input_layer"].asString(),
           model_json_value["input_layer_shape"].asString(),
           model_json_value["input_layer_value_range"].asString(),
           model_json_value["input_layer_value_files"].asString(),
-          &input_layer_info) != kTfLiteOk) {
-        // Skip printing error here since PopulateInputLayerInfo does the job.
-        return kTfLiteError;
-      }
+          &input_layer_info));
     }
 
     model_information_.push_back({input_layer_info, model});

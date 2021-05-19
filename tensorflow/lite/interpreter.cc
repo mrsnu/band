@@ -301,21 +301,21 @@ TfLiteStatus Interpreter::SetVariables(size_t subgraph_index, std::vector<int> v
   return subgraph(subgraph_index)->SetVariables(std::move(variables));
 }
 
-TfLiteStatus Interpreter::AllocateTensors(size_t subgraph_index) {
-  if (subgraph_index == -1) {
-    TfLiteStatus status;
+TfLiteStatus Interpreter::AllocateTensors() {
+  TfLiteStatus status;
 
-    for (int i = 0; i < subgraphs_.size(); ++i) {
-      status = (*subgraphs_[i]).AllocateTensors();
-      if (status != kTfLiteOk)
-        return status;
-    }
-
-    return kTfLiteOk;
-  } else {
-    TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
-    return subgraphs_[subgraph_index]->AllocateTensors();
+  for (int i = 0; i < subgraphs_.size(); ++i) {
+    status = subgraphs_[i]->AllocateTensors();
+    if (status != kTfLiteOk)
+      return status;
   }
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus Interpreter::AllocateTensors(size_t subgraph_index) {
+  TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
+  return subgraphs_[subgraph_index]->AllocateTensors();
 }
 
 void Interpreter::ReserveNodes(size_t subgraph_index, int count) {
@@ -505,8 +505,6 @@ TfLiteStatus Interpreter::SetTensorParametersReadWrite(
       rank_dims_signature, dims_signature);
 }
 
-
-
 TfLiteStatus Interpreter::SetExecutionPlan(size_t subgraph_index, const std::vector<int>& new_plan) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->SetExecutionPlan(new_plan);
@@ -516,10 +514,11 @@ void Interpreter::SetNumThreads(int num_threads,
                                 size_t first_subgraph_index,
                                 int last_subgraph_index) {
   if (num_threads < -1) {
-    if (error_reporter_)
+    if (error_reporter_) {
       error_reporter_->Report(
-                            "num_threads should be >=0 or just -1 to let TFLite "
-                            "runtime set the value.");
+          "num_threads should be >=0 or just -1 to let TFLite "
+          "runtime set the value.");
+    }
     return;
   }
 
@@ -545,10 +544,11 @@ void Interpreter::SetNumThreads(int num_threads,
 
 void Interpreter::SetXNNPACKNumThreads(int num_threads) {
   if (num_threads < -1) {
-    if (error_reporter_)
+    if (error_reporter_) {
       error_reporter_->Report(
-                            "num_threads should be >=0 or just -1 to let TFLite "
-                            "runtime set the value.");
+          "num_threads should be >=0 or just -1 to let TFLite "
+          "runtime set the value.");
+    }
     return;
   }
 
@@ -607,8 +607,9 @@ bool Interpreter::IsCancelled(size_t subgraph_index) {
   }
 }
 
-bool Interpreter::HasDelegates(size_t subgraph_index) { 
-  return subgraph(subgraph_index)->HasDelegates(); 
+bool Interpreter::HasDelegates(size_t subgraph_index) {
+  assert(subgraph_index < subgraphs_.size());
+  return subgraph(subgraph_index)->HasDelegates();
 }
 
 TfLiteStatus Interpreter::SetBufferHandle(size_t subgraph_index,
@@ -836,6 +837,16 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
   } else {
     return nullptr;
   }
+}
+
+int Interpreter::GetFirstSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
+  for (auto& subgraph_key_id: subgraph_idx_map_) {
+    const SubgraphKey& key = subgraph_key_id.first;
+    if (key.device_flag == device_id && key.start_idx == 0) {
+      return subgraph_key_id.second;
+    }
+  }
+  return -1;
 }
 
 int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {

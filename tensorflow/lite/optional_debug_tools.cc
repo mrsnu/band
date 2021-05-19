@@ -88,9 +88,9 @@ void PrintInterpreterState(Interpreter* interpreter, int subgraph_index) {
   printf("Interpreter has %zu tensors and %zu nodes\n",
          interpreter->tensors_size(subgraph_index), interpreter->nodes_size(subgraph_index));
   printf("Inputs:");
-  PrintIntVector(*interpreter->inputs(subgraph_index));
+  PrintIntVector(interpreter->inputs(subgraph_index));
   printf("Outputs:");
-  PrintIntVector(*interpreter->outputs(subgraph_index));
+  PrintIntVector(interpreter->outputs(subgraph_index));
   printf("\n");
   for (size_t tensor_index = 0; tensor_index < interpreter->tensors_size(subgraph_index);
        tensor_index++) {
