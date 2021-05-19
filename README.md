@@ -89,7 +89,7 @@ An example of complete JSON config file is as follows:
             "batch_size": 1,
             "input_layer" : "input",
             "input_layer_shape" : "1,224,224,3",
-            "input_layer_value_range" : "1:3"
+            "input_layer_value_range" : "input,1,3"
         },
         {
             "graph": "/data/local/tmp/yolov3.tflite",
