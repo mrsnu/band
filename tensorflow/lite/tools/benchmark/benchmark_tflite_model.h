@@ -34,25 +34,6 @@ namespace benchmark {
 // Benchmarks a TFLite model by running tflite interpreter.
 class BenchmarkTfLiteModel : public BenchmarkModel {
  public:
-  struct InputLayerInfo {
-    InputLayerInfo() : has_value_range(false) {}
-
-    std::string name;
-    std::vector<int> shape;
-
-    // The input value is randomly generated when benchmarking the NN model.
-    // However, the NN model might require the value be limited to a certain
-    // range [low, high] for this particular input layer. For simplicity,
-    // support integer value first.
-    bool has_value_range;
-    int low;
-    int high;
-
-    // The input value will be loaded from 'input_file_path' INSTEAD OF being
-    // randomly generated. Note the input file will be opened in binary mode.
-    std::string input_file_path;
-  };
-
   explicit BenchmarkTfLiteModel(BenchmarkParams params = DefaultParams());
   ~BenchmarkTfLiteModel() override;
 
@@ -61,7 +42,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus ValidateParams() override;
   uint64_t ComputeInputBytes() override;
   TfLiteStatus Init() override;
-  TfLiteStatus RunImpl() override;
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
   TfLiteStatus RunPeriodic() override;
@@ -100,37 +80,25 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   std::unique_ptr<tflite::ExternalCpuBackendContext> external_context_;
 
  private:
-  // Implement type erasure with unique_ptr with custom deleter.
-  using VoidUniquePtr = std::unique_ptr<void, void (*)(void*)>;
-
-  struct InputTensorData {
-    InputTensorData() : data(nullptr, nullptr) {}
-
-    VoidUniquePtr data;
-    size_t bytes;
-  };
-
   template <typename T, typename Distribution>
-  inline InputTensorData CreateInputTensorData(int num_elements,
+  inline util::InputTensorData CreateInputTensorData(int num_elements,
                                                Distribution distribution) {
-    InputTensorData tmp;
+    util::InputTensorData tmp;
     tmp.bytes = sizeof(T) * num_elements;
     T* raw = new T[num_elements];
     std::generate_n(raw, num_elements, [&]() {
       return static_cast<T>(distribution(random_engine_));
     });
-    tmp.data = VoidUniquePtr(static_cast<void*>(raw),
+    tmp.data = util::VoidUniquePtr(static_cast<void*>(raw),
                              [](void* ptr) { delete[] static_cast<T*>(ptr); });
     return tmp;
   }
 
-  InputTensorData CreateRandomTensorData(const TfLiteTensor& t,
-                                         const InputLayerInfo* layer_info);
+  util::InputTensorData CreateRandomTensorData(const TfLiteTensor& t,
+                                         const util::InputLayerInfo* layer_info);
 
-  InputTensorData LoadInputTensorData(const TfLiteTensor& t,
+  util::InputTensorData LoadInputTensorData(const TfLiteTensor& t,
                                       const std::string& input_file_path);
-
-  TfLiteStatus ParseJsonFile();
 
   // Convert model name strings to integer ids for the given model profiles.
   // The return val can be given to the interpreter via Interpreter::Profile().
@@ -145,8 +113,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   // spawn a thread that generates input requests periodically for all models
   void GeneratePeriodicRequests();
 
-  std::vector<InputLayerInfo> inputs_;
-  std::vector<InputTensorData> inputs_data_;
   std::unique_ptr<BenchmarkListener> profiling_listener_ = nullptr;
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;
   std::mt19937 random_engine_;

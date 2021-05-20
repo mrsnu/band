@@ -22,7 +22,7 @@ limitations under the License.
 namespace tflite {
 
 // Prints a dump of what tensors and what nodes are in the interpreter.
-void PrintInterpreterState(Interpreter* interpreter);
+void PrintInterpreterState(Interpreter* interpreter, int subgraph_index);
 
 }  // namespace tflite
 

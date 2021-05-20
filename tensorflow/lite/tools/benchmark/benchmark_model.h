@@ -213,7 +213,6 @@ class BenchmarkModel {
   virtual TfLiteStatus PrepareInputData();
 
   virtual TfLiteStatus ResetInputsAndOutputs();
-  virtual TfLiteStatus RunImpl() = 0;
   virtual TfLiteStatus RunImpl(int i) = 0;
   virtual TfLiteStatus RunAll() = 0;
   virtual TfLiteStatus RunPeriodic() = 0;
