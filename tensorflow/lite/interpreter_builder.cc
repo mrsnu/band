@@ -609,11 +609,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         has_available_device = true;
       }
 
-      TFLITE_LOG(INFO) << "ADDED Subgraph: "
-                       << subgraph_key.model_id << " "
-                       << subgraph_key.device_flag << " "
-                       << subgraph_key.start_idx << " "
-                       << subgraph_key.end_idx;
+      TFLITE_LOG(INFO) << "ADDED Subgraph "
+                       << "Model : " << subgraph_key.model_id << " "
+                       << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
+                       << "From " << subgraph_key.start_idx << " "
+                       << "To " << subgraph_key.end_idx;
     }
   }
 
