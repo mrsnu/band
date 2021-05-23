@@ -905,51 +905,107 @@ int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   }
 }
 
-void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
-                                              const TfLiteDeviceFlags device_flag,
-                                              std::vector<SubgraphKey>& splitted_op_range) {
+std::vector<std::pair<SubgraphKey, std::set<size_t>>>
+Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
+                                         const TfLiteDeviceFlags device_flag) {
   const int num_ops = model_specs_[model_id].num_ops;
-  const std::vector<int>& unsupported_ops =
+  const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
 
-  TfLiteDeviceFlags curr_device = device_flag;
-  TfLiteDeviceFlags prev_device;
   int subgraph_min = 0;
 
   if (planner_type_ == kFixedDevice ||
       planner_type_ == kRoundRobin ||
       planner_type_ == kFixedDeviceGlobalQueue) {
-    splitted_op_range.push_back(SubgraphKey(model_id, device_flag, 0, num_ops - 1));
-    return;
+    return {{SubgraphKey(model_id, device_flag, 0, num_ops - 1), {}}};
   }
 
-  // do a pass through all ops and create a subgraph every time the supported
-  // device changes, using `subgraph_min` to keep track of the current
-  // subgraph's starting op
-  for (int k = 0; k < num_ops; ++k) {
-    prev_device = curr_device;
+  std::vector<std::pair<SubgraphKey, std::set<size_t>>> subgraph_key_indexes;
+  int subgraph_index =
+      GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU, 0, num_ops - 1));
+  Subgraph* primary_subgraph = subgraph(subgraph_index);
 
-    // check if this ops is supported by `device_flag` or not
-    if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
-        != unsupported_ops.end()) {
-      curr_device = kTfLiteCPUFallback;
-    } else {
-      curr_device = device_flag;
+  std::set<int> resolved_tensors;
+  std::set<int> remaining_ops;
+
+  for (int input_index : primary_subgraph->inputs()) {
+    resolved_tensors.insert(input_index);
+    //std::cout << "Resolved tensor " << input_index << std::endl;
+  }
+
+  for (int i = 0; i < num_ops; i++) {
+    remaining_ops.insert(i);
+  }
+
+  auto is_resolved = [&](size_t op_index) {
+    auto op_inputs =
+        primary_subgraph->node_and_registration(op_index)->first.inputs;
+    for (int i = 0; i < op_inputs->size; i++) {
+      if (primary_subgraph->tensor(op_inputs->data[i])->allocation_type == kTfLiteMmapRo) {
+        continue;
+      }
+      //std::cout << "Resolved tensor? " << op_inputs->data[i] << std::endl;
+      if (resolved_tensors.find(op_inputs->data[i]) == resolved_tensors.end()) {
+        return false;
+      }
     }
+    return true;
+  };
 
-    // if the current op is supported while the prev op is unsupported
-    // (or vice versa), then make a subgraph up until the prev op
-    if (k > 0 && curr_device != prev_device) {
-      splitted_op_range.push_back(SubgraphKey(model_id, prev_device,
-                                              subgraph_min, k - 1));
-      subgraph_min = k;
-    }
+  TfLiteDeviceFlags curr_device = device_flag;
 
-    // if this is the last op, then there are no more ops to check so
-    // register the final subgraph
-    if (k == num_ops - 1) {
-      splitted_op_range.push_back(SubgraphKey(model_id, curr_device,
-                                              subgraph_min, num_ops - 1));
+  while (remaining_ops.size()) {
+    std::set<size_t> operator_set;
+    bool found = true;
+
+    // Get all op that has resolvable dependency to specific device
+    while (found) {
+      found = false;
+      for (int current_index : remaining_ops) {
+        // Searching for fallback op
+        if (curr_device != device_flag) {
+          if (unsupported_ops.find(current_index) ==
+              unsupported_ops.end()) {
+            continue;
+          }
+        // Searching for non-fallback op
+        } else {
+          if (unsupported_ops.find(current_index) !=
+              unsupported_ops.end()) {
+            continue;
+          }
+        }
+
+        //std::cout << "current_index " << current_index << std::endl;
+        if (!is_resolved(current_index)) {
+          continue;
+        }
+
+        found = true;
+        operator_set.insert(current_index);
+        remaining_ops.erase(current_index);
+
+        auto op_outputs =
+            primary_subgraph->node_and_registration(current_index)->first.outputs;
+        
+        // Resolve dependency of newly added op's output tensors
+        for (int i = 0; i < op_outputs->size; i++) {
+          resolved_tensors.insert(op_outputs->data[i]);
+        }
+      }
+    }  
+
+    if (operator_set.size()) {
+      subgraph_key_indexes.push_back(
+          {SubgraphKey(model_id, curr_device, subgraph_min, operator_set.size() - 1),
+          operator_set});
+      
+      std::cout << "Add subgraph " << model_id << " device : " << curr_device <<  " size : " << operator_set.size() << std::endl;
+      
+      subgraph_min += operator_set.size();
+      curr_device = 
+          curr_device == device_flag ?
+          kTfLiteCPUFallback : device_flag;
     }
   }
 }
@@ -1027,7 +1083,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       const TfLiteNode& node =
           primary_subgraph->node_and_registration(node_index)->first;
       if (node.delegate == nullptr) {
-        model_spec.unsupported_ops[device_flag].push_back(node_index);
+        model_spec.unsupported_ops[device_flag].insert(node_index);
       }
     }
 

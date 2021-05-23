@@ -608,25 +608,23 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       continue;
     }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    std::vector<tflite::impl::SubgraphKey> subgraph_keys;
+    std::vector<std::pair<tflite::impl::SubgraphKey, std::set<size_t>>>
+        subgraph_indexes =
+        (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
-    // separate the supported ops from unsupported, fallback ops
-    (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id,
-                                                subgraph_keys);
-
-    for (auto& subgraph_key : subgraph_keys) {
+    for (auto& subgraph_key : subgraph_indexes) {
       int subgraph_idx = AddSubgraph(
-        model, op_resolver, interpreter, subgraph_key, num_threads);
+        model, op_resolver, interpreter, subgraph_key.first, num_threads);
       if (subgraph_idx != -1) {
-        (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
+        (*interpreter)->RegisterSubgraphIdx(subgraph_key.first, subgraph_idx);
         has_available_device = true;
       }
 
       TFLITE_LOG(INFO) << "ADDED Subgraph "
-                       << "Model : " << subgraph_key.model_id << " "
-                       << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
-                       << "From " << subgraph_key.start_idx << " "
-                       << "To " << subgraph_key.end_idx;
+                       << "Model : " << subgraph_key.first.model_id << " "
+                       << TfLiteDeviceGetName(subgraph_key.first.device_flag) << " "
+                       << "From " << subgraph_key.first.start_idx << " "
+                       << "To " << subgraph_key.first.end_idx;
     }
   }
 
