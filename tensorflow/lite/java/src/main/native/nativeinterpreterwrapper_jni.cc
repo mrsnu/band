@@ -13,6 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, "libnav", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG  , "libnav", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libnav", __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN   , "libnav", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libnav", __VA_ARGS__)
+#include <android/log.h>
 #include <dlfcn.h>
 #include <jni.h>
 #include <stdio.h>
@@ -453,17 +459,19 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return 0;
-  std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter;
+  std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
+    new tflite_api_dispatcher::Interpreter(error_reporter, static_cast<TfLitePlannerType>(3)));
   // Note that tensor allocation is performed explicitly by the owning Java
   // NativeInterpreterWrapper instance.
+
+  // init interpreter process. (consistent regardless of model config)
   return reinterpret_cast<jlong>(interpreter.release());
 }
 
-JNIEXPORT jlong JNICALL
+JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong model_handle, 
-    jlong error_handle, jint period_ms, jint device = -1, jint batch_size = 1,
-    jint num_threads = 1) {
+    jlong error_handle) {
 
   std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
       convertLongToInterpreter(env, interpreter_handle));
@@ -478,25 +486,28 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   if (error_reporter == nullptr) return 0;
 
   auto resolver = ::tflite::CreateOpResolver();
-  tflite::ModelConfig config(
-      model->filename(), period_ms, device, batch_size);
+  // TODO : treat model->filename() null case when the model is registered with memory buffer
+  //tflite::ModelConfig config(
+      //model->filename(), period_ms, device, batch_size);
 
-  int status =
+  LOGI("Register Model starts");
+  int model_id =
       tflite_api_dispatcher::InterpreterBuilder::RegisterModel(
-          *model, config, *resolver.get(), &interpreter, num_threads);
+          *model, *resolver.get(), &interpreter, 1);
+  LOGI("Register Model finishes. model Id = %d ", model_id);
+  interpreter.release();
 
-  if (status == -1) {
+  if (model_id == -1) {
     ThrowException(env, kIllegalArgumentException,
                    "Internal error: Cannot create interpreter: %s",
                    error_reporter->CachedErrorMessage());
-    return 0;
   }
-  return reinterpret_cast<jlong>(interpreter.release());
+  return model_id;
 }
 
 // Sets inputs, runs inference, and returns outputs as long handles.
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_run(
-    JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong error_handle) {
+    JNIEnv* env, jclass clazz, jint model_id, jlong interpreter_handle, jlong error_handle) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
   if (interpreter == nullptr) return;
@@ -504,12 +515,14 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_run(
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return;
 
+  interpreter->InvokeModelAsync(model_id);
+  /*
   if (interpreter->Invoke() != kTfLiteOk) {
     ThrowException(env, kIllegalArgumentException,
                    "Internal error: Failed to run on the given Interpreter: %s",
                    error_reporter->CachedErrorMessage());
     return;
-  }
+  } */
 }
 
 JNIEXPORT jint JNICALL

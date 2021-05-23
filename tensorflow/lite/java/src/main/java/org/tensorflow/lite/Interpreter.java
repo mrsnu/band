@@ -172,30 +172,6 @@ public final class Interpreter implements AutoCloseable {
   }
 
   /**
-   * Initializes a {@code Interpreter}
-   *
-   * @param modelFile: a File of a pre-trained TF Lite model.
-   * @throws IllegalArgumentException if {@code modelFile} does not encode a valid TensorFlow Lite
-   *     model.
-   */
-  public Interpreter(@NonNull File modelFile) {
-    this(modelFile, /*options = */ null);
-  }
-
-  /**
-   * Initializes a {@code Interpreter} and specifies the number of threads used for inference.
-   *
-   * @param modelFile: a file of a pre-trained TF Lite model
-   * @param numThreads: number of threads to use for inference
-   * @deprecated Prefer using the {@link #Interpreter(File,Options)} constructor. This method will
-   *     be removed in a future release.
-   */
-  @Deprecated
-  public Interpreter(@NonNull File modelFile, int numThreads) {
-    this(modelFile, new Options().setNumThreads(numThreads));
-  }
-
-  /**
    * Initializes a {@code Interpreter} and specifies the number of threads used for inference.
    *
    * @param modelFile: a file of a pre-trained TF Lite model
@@ -203,67 +179,16 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code modelFile} does not encode a valid TensorFlow Lite
    *     model.
    */
-  public Interpreter(@NonNull File modelFile, Options options) {
-    wrapper = new NativeInterpreterWrapper(modelFile.getAbsolutePath(), options);
+  public Interpreter() {
+    wrapper = new NativeInterpreterWrapper();
   }
 
-  /**
-   * Initializes a {@code Interpreter} with a {@code ByteBuffer} of a model file.
-   *
-   * <p>The ByteBuffer should not be modified after the construction of a {@code Interpreter}. The
-   * {@code ByteBuffer} can be either a {@code MappedByteBuffer} that memory-maps a model file, or a
-   * direct {@code ByteBuffer} of nativeOrder() that contains the bytes content of a model.
-   *
-   * @throws IllegalArgumentException if {@code byteBuffer} is not a {@link MappedByteBuffer} nor a
-   *     direct {@link Bytebuffer} of nativeOrder.
-   */
-  public Interpreter(@NonNull ByteBuffer byteBuffer) {
-    this(byteBuffer, /* options= */ null);
+  public int registerModel(@NonNull File modelFile, Options options) {
+    return wrapper.registerModel(modelFile.getAbsolutePath(), options);
   }
 
-  /**
-   * Initializes a {@code Interpreter} with a {@code ByteBuffer} of a model file and specifies the
-   * number of threads used for inference.
-   *
-   * <p>The ByteBuffer should not be modified after the construction of a {@code Interpreter}. The
-   * {@code ByteBuffer} can be either a {@code MappedByteBuffer} that memory-maps a model file, or a
-   * direct {@code ByteBuffer} of nativeOrder() that contains the bytes content of a model.
-   *
-   * @deprecated Prefer using the {@link #Interpreter(ByteBuffer,Options)} constructor. This method
-   *     will be removed in a future release.
-   */
-  @Deprecated
-  public Interpreter(@NonNull ByteBuffer byteBuffer, int numThreads) {
-    this(byteBuffer, new Options().setNumThreads(numThreads));
-  }
-
-  /**
-   * Initializes a {@code Interpreter} with a {@code MappedByteBuffer} to the model file.
-   *
-   * <p>The {@code MappedByteBuffer} should remain unchanged after the construction of a {@code
-   * Interpreter}.
-   *
-   * @deprecated Prefer using the {@link #Interpreter(ByteBuffer,Options)} constructor. This method
-   *     will be removed in a future release.
-   */
-  @Deprecated
-  public Interpreter(@NonNull MappedByteBuffer mappedByteBuffer) {
-    this(mappedByteBuffer, /* options= */ null);
-  }
-
-  /**
-   * Initializes a {@code Interpreter} with a {@code ByteBuffer} of a model file and a set of custom
-   * {@link #Options}.
-   *
-   * <p>The ByteBuffer should not be modified after the construction of a {@code Interpreter}. The
-   * {@code ByteBuffer} can be either a {@link MappedByteBuffer} that memory-maps a model file, or a
-   * direct {@link ByteBuffer} of nativeOrder() that contains the bytes content of a model.
-   *
-   * @throws IllegalArgumentException if {@code byteBuffer} is not a {@link MappedByteBuffer} nor a
-   *     direct {@link Bytebuffer} of nativeOrder.
-   */
-  public Interpreter(@NonNull ByteBuffer byteBuffer, Options options) {
-    wrapper = new NativeInterpreterWrapper(byteBuffer, options);
+  public int registerModel(@NonNull ByteBuffer byteBuffer, Options options) {
+    return wrapper.registerModel(byteBuffer, options);
   }
 
   /**
@@ -297,11 +222,11 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code input} or {@code output} is null or empty, or if
    *     error occurs when running the inference.
    */
-  public void run(Object input, Object output) {
+  public void run(int modelId, Object input, Object output) {
     Object[] inputs = {input};
     Map<Integer, Object> outputs = new HashMap<>();
     outputs.put(0, output);
-    runForMultipleInputsOutputs(inputs, outputs);
+    runForMultipleInputsOutputs(modelId, inputs, outputs);
   }
 
   /**
@@ -337,10 +262,10 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code inputs} or {@code outputs} is null or empty, or if
    *     error occurs when running the inference.
    */
-  public void runForMultipleInputsOutputs(
+  public void runForMultipleInputsOutputs(int modelId,
       @NonNull Object[] inputs, @NonNull Map<Integer, Object> outputs) {
     checkNotClosed();
-    wrapper.run(inputs, outputs);
+    wrapper.run(modelId, inputs, outputs);
   }
 
   /**

@@ -33,45 +33,45 @@ import org.tensorflow.lite.nnapi.NnApiDelegate;
  */
 final class NativeInterpreterWrapper implements AutoCloseable {
 
-  NativeInterpreterWrapper(String modelPath) {
-    this(modelPath, /* options= */ null);
-  }
-
-  NativeInterpreterWrapper(ByteBuffer byteBuffer) {
-    this(byteBuffer, /* options= */ null);
-  }
-
-  NativeInterpreterWrapper(String modelPath, Interpreter.Options options) {
+  NativeInterpreterWrapper() {
     TensorFlowLite.init();
-    long errorHandle = createErrorReporter(ERROR_BUFFER_SIZE);
-    long modelHandle = createModel(modelPath, errorHandle);
-    init(errorHandle, modelHandle, options);
+    errorHandle = createErrorReporter(ERROR_BUFFER_SIZE);
+    interpreterHandle = createInterpreter(errorHandle);
   }
 
-  NativeInterpreterWrapper(ByteBuffer buffer, Interpreter.Options options) {
-    TensorFlowLite.init();
-    if (buffer == null
-        || (!(buffer instanceof MappedByteBuffer)
-            && (!buffer.isDirect() || buffer.order() != ByteOrder.nativeOrder()))) {
-      throw new IllegalArgumentException(
-          "Model ByteBuffer should be either a MappedByteBuffer of the model file, or a direct "
-              + "ByteBuffer using ByteOrder.nativeOrder() which contains bytes of model content.");
-    }
-    this.modelByteBuffer = buffer;
-    long errorHandle = createErrorReporter(ERROR_BUFFER_SIZE);
-    long modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
-    init(errorHandle, modelHandle, options);
-  }
-
-  private void init(long errorHandle, long modelHandle, Interpreter.Options options) {
+  int registerModel(String modelPath, Interpreter.Options options) {
     if (options == null) {
       options = new Interpreter.Options();
     }
-    this.errorHandle = errorHandle;
-    this.modelHandle = modelHandle;
-    this.interpreterHandle = createInterpreter(modelHandle, errorHandle, options.numThreads);
-    this.inputTensors = new Tensor[getInputCount(interpreterHandle)];
-    this.outputTensors = new Tensor[getOutputCount(interpreterHandle)];
+    modelHandle = createModel(modelPath, errorHandle);
+    int modelId = prepareModel(options);
+    return modelId;
+  }
+
+  int registerModel(ByteBuffer buffer, Interpreter.Options options) {
+    if (options == null) {
+      options = new Interpreter.Options();
+    }
+    if (buffer == null
+            || (!(buffer instanceof MappedByteBuffer)
+            && (!buffer.isDirect() || buffer.order() != ByteOrder.nativeOrder()))) {
+      throw new IllegalArgumentException(
+              "Model ByteBuffer should be either a MappedByteBuffer of the model file, or a direct "
+                      + "ByteBuffer using ByteOrder.nativeOrder() which contains bytes of model content.");
+    }
+    modelByteBuffer = buffer;
+    modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
+    return prepareModel(options);
+  }
+
+  private int prepareModel(Interpreter.Options options) {
+    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle);
+    if (modelId == -1) {
+      throw new IllegalArgumentException("Failed to register model");
+    }
+
+    inputTensors = new Tensor[getInputCount(interpreterHandle)];
+    outputTensors = new Tensor[getOutputCount(interpreterHandle)];
     if (options.allowFp16PrecisionForFp32 != null) {
       allowFp16PrecisionForFp32(
           interpreterHandle, options.allowFp16PrecisionForFp32.booleanValue());
@@ -85,7 +85,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
           interpreterHandle, errorHandle, options.useXNNPACK.booleanValue(), options.numThreads);
     }
     allocateTensors(interpreterHandle, errorHandle);
-    this.isMemoryAllocated = true;
+    isMemoryAllocated = true;
+    return modelId;
   }
 
   /** Releases resources associated with this {@code NativeInterpreterWrapper}. */
@@ -124,7 +125,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   /** Sets inputs, runs model inference and returns outputs. */
-  void run(Object[] inputs, Map<Integer, Object> outputs) {
+  void run(int modelId, Object[] inputs, Map<Integer, Object> outputs) {
     inferenceDurationNanoseconds = -1;
     if (inputs == null || inputs.length == 0) {
       throw new IllegalArgumentException("Input error: Inputs should not be null or empty.");
@@ -155,7 +156,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     }
 
     long inferenceStartNanos = System.nanoTime();
-    run(interpreterHandle, errorHandle);
+    run(modelId, interpreterHandle, errorHandle);
     long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
 
     // Allocation can trigger dynamic resizing of output tensors, so refresh all output shapes.
@@ -174,7 +175,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     this.inferenceDurationNanoseconds = inferenceDurationNanoseconds;
   }
 
-  private static native void run(long interpreterHandle, long errorHandle);
+  private static native void run(int modelId, long interpreterHandle, long errorHandle);
 
   /** Resizes dimensions of a specific input. */
   void resizeInput(int idx, int[] dims) {
@@ -451,7 +452,9 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private static native long createModelWithBuffer(ByteBuffer modelBuffer, long errorHandle);
 
-  private static native long createInterpreter(long modelHandle, long errorHandle, int numThreads);
+  private static native long createInterpreter(long errorHandle);
+
+  private static native int registerModel(long interpreterHandle, long modelHandle, long errorHandle);
 
   private static native void applyDelegate(
       long interpreterHandle, long errorHandle, long delegateHandle);
