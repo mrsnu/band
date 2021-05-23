@@ -708,8 +708,8 @@ class Interpreter {
   // Generate explicit subgraphs for fallback ops in `model_id`.
   // Each second element of return vector represents a set of original node indexes
   // for corresponding subgraph if it requires re-indexing.
-  std::vector<std::pair<SubgraphKey, std::set<size_t>>> MakeSubgraphsForFallbackOps(const int model_id,
-                                                                                    const TfLiteDeviceFlags device_flag);
+  std::vector<std::pair<SubgraphKey, std::set<int>>> MakeSubgraphsForFallbackOps(const int model_id,
+                                                                                 const TfLiteDeviceFlags device_flag);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
     return own_external_cpu_backend_context_.get();

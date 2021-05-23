@@ -905,7 +905,7 @@ int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   }
 }
 
-std::vector<std::pair<SubgraphKey, std::set<size_t>>>
+std::vector<std::pair<SubgraphKey, std::set<int>>>
 Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
                                          const TfLiteDeviceFlags device_flag) {
   const int num_ops = model_specs_[model_id].num_ops;
@@ -920,7 +920,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     return {{SubgraphKey(model_id, device_flag, 0, num_ops - 1), {}}};
   }
 
-  std::vector<std::pair<SubgraphKey, std::set<size_t>>> subgraph_key_indexes;
+  std::vector<std::pair<SubgraphKey, std::set<int>>> subgraph_key_indexes;
   int subgraph_index =
       GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU, 0, num_ops - 1));
   Subgraph* primary_subgraph = subgraph(subgraph_index);
@@ -937,7 +937,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     remaining_ops.insert(i);
   }
 
-  auto is_resolved = [&](size_t op_index) {
+  auto is_resolved = [&](int op_index) {
     auto op_inputs =
         primary_subgraph->node_and_registration(op_index)->first.inputs;
     for (int i = 0; i < op_inputs->size; i++) {
@@ -954,36 +954,42 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   TfLiteDeviceFlags curr_device = device_flag;
 
-  while (remaining_ops.size()) {
-    std::set<size_t> operator_set;
+  std::cout << "Num unsupported ops : " << unsupported_ops.size() << std::endl;
+
+  while (remaining_ops.size() > 0) {
+    std::set<int> operator_set;
     bool found = true;
 
     // Get all op that has resolvable dependency to specific device
     while (found) {
       found = false;
-      for (int current_index : remaining_ops) {
+      for (auto current_op = remaining_ops.begin();
+           current_op != remaining_ops.end();) {
+        int current_index = *current_op;
         // Searching for fallback op
         if (curr_device != device_flag) {
           if (unsupported_ops.find(current_index) ==
               unsupported_ops.end()) {
+            current_op++;
             continue;
           }
         // Searching for non-fallback op
         } else {
           if (unsupported_ops.find(current_index) !=
               unsupported_ops.end()) {
+            current_op++;
             continue;
           }
         }
 
         //std::cout << "current_index " << current_index << std::endl;
         if (!is_resolved(current_index)) {
+          current_op++;
           continue;
         }
 
         found = true;
         operator_set.insert(current_index);
-        remaining_ops.erase(current_index);
 
         auto op_outputs =
             primary_subgraph->node_and_registration(current_index)->first.outputs;
@@ -992,22 +998,27 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
         for (int i = 0; i < op_outputs->size; i++) {
           resolved_tensors.insert(op_outputs->data[i]);
         }
+
+        current_op = remaining_ops.erase(current_op);
       }
     }  
 
     if (operator_set.size()) {
       subgraph_key_indexes.push_back(
-          {SubgraphKey(model_id, curr_device, subgraph_min, operator_set.size() - 1),
+          {SubgraphKey(model_id, curr_device, subgraph_min, subgraph_min + operator_set.size() - 1),
           operator_set});
       
       std::cout << "Add subgraph " << model_id << " device : " << curr_device <<  " size : " << operator_set.size() << std::endl;
-      
+      std::cout << "Remaining ops : " << remaining_ops.size() << std::endl;
+
       subgraph_min += operator_set.size();
-      curr_device = 
-          curr_device == device_flag ?
-          kTfLiteCPUFallback : device_flag;
     }
+    curr_device = 
+        curr_device == device_flag ?
+        kTfLiteCPUFallback : device_flag;
   }
+
+  return subgraph_key_indexes;
 }
 
 int Interpreter::GetWindowSize() const {
