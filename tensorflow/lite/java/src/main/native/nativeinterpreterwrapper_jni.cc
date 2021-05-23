@@ -456,6 +456,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createModelWithBuffer(
 JNIEXPORT jlong JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
     JNIEnv* env, jclass clazz, jlong error_handle) {
+  LOGI("CreateInterpreter starts");
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return 0;
@@ -464,7 +465,32 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   // Note that tensor allocation is performed explicitly by the owning Java
   // NativeInterpreterWrapper instance.
 
-  // init interpreter process. (consistent regardless of model config)
+  // TODO : init interpreter process with our configuration
+  interpreter->SetWindowSize(4);
+  interpreter->SetProfileSmoothingConstant(4.);
+  interpreter->AllowWorkSteal();
+
+  // Set log file path and write log headers
+  interpreter->PrepareLogging("");
+  const tflite::impl::TfLiteCPUMaskFlags cpu_mask =
+      static_cast<tflite::impl::TfLiteCPUMaskFlags>(tflite::impl::kTfLiteAll);
+  auto cpu_mask_set = tflite::impl::TfLiteCPUMaskGetSet(cpu_mask);
+  SetCPUThreadAffinity(cpu_mask_set);
+
+  LOGI("Set affinity to %s cores", tflite::impl::TfLiteCPUMaskGetName(cpu_mask));
+
+  for (int i = 0; i < kTfLiteNumDevices; i++) {
+    const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
+    // Skip as workers are not always available
+    if (!interpreter->GetWorker(device_id))
+      continue;
+    // Use global mask only if worker_mask is invalid
+    tflite::impl::TfLiteCPUMaskFlags worker_mask = cpu_mask;
+    const tflite::impl::CpuSet worker_mask_set = tflite::impl::TfLiteCPUMaskGetSet(worker_mask);
+    interpreter->SetWorkerThreadAffinity(worker_mask_set, device_id);
+    LOGI("Set affinity of %s to %s cores", TfLiteDeviceGetName(device_id), tflite::impl::TfLiteCPUMaskGetName(worker_mask));
+  }
+  LOGI("CreateInterpreter finishes");
   return reinterpret_cast<jlong>(interpreter.release());
 }
 
@@ -472,7 +498,7 @@ JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong model_handle, 
     jlong error_handle) {
-
+  LOGI("RegisterModel starts");
   std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
       convertLongToInterpreter(env, interpreter_handle));
   if (interpreter == nullptr) return 0;
@@ -486,28 +512,30 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   if (error_reporter == nullptr) return 0;
 
   auto resolver = ::tflite::CreateOpResolver();
-  // TODO : treat model->filename() null case when the model is registered with memory buffer
+  // TODO : ModelConfig - Fix model->filename() null case of a model registered with memory buffer
   //tflite::ModelConfig config(
       //model->filename(), period_ms, device, batch_size);
 
-  LOGI("Register Model starts");
   int model_id =
       tflite_api_dispatcher::InterpreterBuilder::RegisterModel(
           *model, *resolver.get(), &interpreter, 1);
-  LOGI("Register Model finishes. model Id = %d ", model_id);
-  interpreter.release();
-
   if (model_id == -1) {
     ThrowException(env, kIllegalArgumentException,
                    "Internal error: Cannot create interpreter: %s",
                    error_reporter->CachedErrorMessage());
   }
+  interpreter.release();
+
+  // TODO : NeedProfile / useCaching / MayCreateProfilingListener / interpreter_inputs
+
+  LOGI("RegisterModel finishes. model_id = %d", model_id);
   return model_id;
 }
 
 // Sets inputs, runs inference, and returns outputs as long handles.
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_run(
     JNIEnv* env, jclass clazz, jint model_id, jlong interpreter_handle, jlong error_handle) {
+  LOGI("Run starts with model_id = %d", model_id);
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
   if (interpreter == nullptr) return;
@@ -516,6 +544,7 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_run(
   if (error_reporter == nullptr) return;
 
   interpreter->InvokeModelAsync(model_id);
+  LOGI("Run finishes");
   /*
   if (interpreter->Invoke() != kTfLiteOk) {
     ThrowException(env, kIllegalArgumentException,
