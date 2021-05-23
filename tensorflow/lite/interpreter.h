@@ -611,6 +611,13 @@ class Interpreter {
 
   /// Get a pointer to a subgraph if in bounds.
   /// WARNING: This is an experimental API and subject to change.
+  const Subgraph* subgraph(size_t subgraph_index) const {
+    if (subgraph_index < 0 ||
+        static_cast<size_t>(subgraph_index) >= subgraphs_size())
+      return nullptr;
+    return &*subgraphs_[subgraph_index];
+  }
+  
   Subgraph* subgraph(size_t subgraph_index) {
     if (subgraph_index < 0 ||
         static_cast<size_t>(subgraph_index) >= subgraphs_size())
