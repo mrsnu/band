@@ -64,11 +64,13 @@ class InterpreterBuilder {
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         SubgraphKey& subgraph_key,
+                        std::set<int> op_indexes = {},
                         int num_threads = -1);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      SubgraphKey& subgraph_key,
+                     std::set<int> op_indexes = {},
                      int num_threads = -1);
 
   // Adds a Subgraph to the interpreter and adds the subgraph index to
@@ -98,13 +100,8 @@ class InterpreterBuilder {
       const ::tflite::Model* model,
       const OpResolver& op_resolver,
       const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
-      Subgraph* subgraph);
-  TfLiteStatus ParseNodes(
-      const ::tflite::Model* model,
-      const OpResolver& op_resolver,
-      const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
       Subgraph* subgraph,
-      int start_op_idx, int end_op_idx);
+      std::set<int> op_indices);
   TfLiteStatus ParseTensors(
       const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
       const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
