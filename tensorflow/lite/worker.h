@@ -36,7 +36,8 @@ class Worker {
   virtual bool IsBusy();
 
  protected:
-  virtual void Work() = 0;
+  // Intentionally no-op to avoid calling pure virtual method in ctor
+  virtual void Work() {}
 
   std::weak_ptr<Planner> planner_;
   std::thread device_cpu_thread_;
