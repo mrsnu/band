@@ -53,11 +53,11 @@ final class NativeInterpreterWrapper implements AutoCloseable {
       options = new Interpreter.Options();
     }
     if (buffer == null
-            || (!(buffer instanceof MappedByteBuffer)
-            && (!buffer.isDirect() || buffer.order() != ByteOrder.nativeOrder()))) {
+        || (!(buffer instanceof MappedByteBuffer)
+        && (!buffer.isDirect() || buffer.order() != ByteOrder.nativeOrder()))) {
       throw new IllegalArgumentException(
-              "Model ByteBuffer should be either a MappedByteBuffer of the model file, or a direct "
-                      + "ByteBuffer using ByteOrder.nativeOrder() which contains bytes of model content.");
+          "Model ByteBuffer should be either a MappedByteBuffer of the model file, or a direct "
+              + "ByteBuffer using ByteOrder.nativeOrder() which contains bytes of model content.");
     }
     modelByteBuffer = buffer;
     modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);

@@ -13,12 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, "libnav", __VA_ARGS__)
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG  , "libnav", __VA_ARGS__)
+// Temporal usage for debugging
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libnav", __VA_ARGS__)
-#define LOGW(...) __android_log_print(ANDROID_LOG_WARN   , "libnav", __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libnav", __VA_ARGS__)
 #include <android/log.h>
+
 #include <dlfcn.h>
 #include <jni.h>
 #include <stdio.h>
@@ -462,8 +461,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   if (error_reporter == nullptr) return 0;
   std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
     new tflite_api_dispatcher::Interpreter(error_reporter, static_cast<TfLitePlannerType>(3)));
-  // Note that tensor allocation is performed explicitly by the owning Java
-  // NativeInterpreterWrapper instance.
 
   // TODO : init interpreter process with our configuration
   interpreter->SetWindowSize(4);
@@ -512,7 +509,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   if (error_reporter == nullptr) return 0;
 
   auto resolver = ::tflite::CreateOpResolver();
-  // TODO : ModelConfig - Fix model->filename() null case of a model registered with memory buffer
+  // TODO : Fix not to use model config for register model
   //tflite::ModelConfig config(
       //model->filename(), period_ms, device, batch_size);
 
@@ -551,7 +548,8 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_run(
                    "Internal error: Failed to run on the given Interpreter: %s",
                    error_reporter->CachedErrorMessage());
     return;
-  } */
+  }
+  */
 }
 
 JNIEXPORT jint JNICALL
