@@ -59,7 +59,9 @@ class DeviceQueueWorker : public Worker {
  public:
   explicit DeviceQueueWorker(std::shared_ptr<Planner> planner,
                              TfLiteDeviceFlags device_flag)
-      : Worker(planner, device_flag) {}
+      : Worker(planner, device_flag) {
+    device_cpu_thread_ = std::thread([this]{this->Work();});
+  }
 
   int64_t GetWaitingTime() override;
   std::deque<Job>& GetDeviceRequests() override;
@@ -78,7 +80,9 @@ class GlobalQueueWorker : public Worker {
  public:
   explicit GlobalQueueWorker(std::shared_ptr<Planner> planner,
                              TfLiteDeviceFlags device_flag)
-      : Worker(planner, device_flag) {}
+      : Worker(planner, device_flag) {
+    device_cpu_thread_ = std::thread([this]{this->Work();});
+  }
 
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;

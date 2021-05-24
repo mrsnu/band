@@ -7,7 +7,7 @@ namespace tflite {
 namespace impl {
 
 Worker::Worker(std::shared_ptr<Planner> planner, TfLiteDeviceFlags device_flag)
-  : device_cpu_thread_([this] { this->Work(); }), device_flag_(device_flag) {
+  : device_flag_(device_flag) {
   planner_ = planner;
 }
 
