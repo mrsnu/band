@@ -512,10 +512,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   if (error_reporter == nullptr) return 0;
 
   auto resolver = ::tflite::CreateOpResolver();
-  // TODO : Fix not to use model config for register model
-  //tflite::ModelConfig config(
-      //model->filename(), period_ms, device, batch_size);
-
   int model_id =
       tflite_api_dispatcher::InterpreterBuilder::RegisterModel(
           *model, *resolver.get(), &interpreter, 1);
