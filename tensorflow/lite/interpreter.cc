@@ -1033,7 +1033,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     return {{SubgraphKey(model_id, device_flag, 0, num_ops - 1), {}}};
   }
 
-  std::vector<std::pair<SubgraphKey, std::set<int>>> subgraph_key_indexes;
+  std::vector<std::pair<SubgraphKey, std::set<int>>> subgraph_key_indices;
   int subgraph_index =
       GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU, 0, num_ops - 1));
   Subgraph* primary_subgraph = subgraph(subgraph_index);
@@ -1043,7 +1043,6 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   for (int input_index : primary_subgraph->inputs()) {
     resolved_tensors.insert(input_index);
-    //std::cout << "Resolved tensor " << input_index << std::endl;
   }
 
   for (int i = 0; i < num_ops; i++) {
@@ -1057,7 +1056,6 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
       if (primary_subgraph->tensor(op_inputs->data[i])->allocation_type == kTfLiteMmapRo) {
         continue;
       }
-      //std::cout << "Resolved tensor? " << op_inputs->data[i] << std::endl;
       if (resolved_tensors.find(op_inputs->data[i]) == resolved_tensors.end()) {
         return false;
       }
@@ -1065,10 +1063,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     return true;
   };
 
-  TfLiteDeviceFlags curr_device = device_flag;
-
-  std::cout << "Num unsupported ops : " << unsupported_ops.size() << std::endl;
-
+  TfLiteDeviceFlags current_device = device_flag;
   while (remaining_ops.size() > 0) {
     std::set<int> operator_set;
     bool found = true;
@@ -1080,7 +1075,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
            current_op != remaining_ops.end();) {
         int current_index = *current_op;
         // Searching for fallback op
-        if (curr_device != device_flag) {
+        if (current_device != device_flag) {
           if (unsupported_ops.find(current_index) ==
               unsupported_ops.end()) {
             current_op++;
@@ -1094,8 +1089,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
             continue;
           }
         }
-
-        //std::cout << "current_index " << current_index << std::endl;
+        // Dependency check
         if (!is_resolved(current_index)) {
           current_op++;
           continue;
@@ -1117,21 +1111,19 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     }  
 
     if (operator_set.size()) {
-      subgraph_key_indexes.push_back(
-          {SubgraphKey(model_id, curr_device, subgraph_min, subgraph_min + operator_set.size() - 1),
+      subgraph_key_indices.push_back(
+          {SubgraphKey(model_id, current_device, subgraph_min, subgraph_min + operator_set.size() - 1),
           operator_set});
       
-      std::cout << "Add subgraph " << model_id << " device : " << curr_device <<  " size : " << operator_set.size() << std::endl;
-      std::cout << "Remaining ops : " << remaining_ops.size() << std::endl;
-
       subgraph_min += operator_set.size();
     }
-    curr_device = 
-        curr_device == device_flag ?
+    // Switch between device and fallback 
+    current_device = 
+        current_device == device_flag ?
         kTfLiteCPUFallback : device_flag;
   }
 
-  return subgraph_key_indexes;
+  return subgraph_key_indices;
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {

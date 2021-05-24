@@ -193,6 +193,9 @@ class Subgraph {
   // Return read-only vector of node indices in the order of execution.
   const std::vector<int>& execution_plan() const { return execution_plan_; }
 
+  void SetOperatorIndices(std::vector<int> op_indices) { op_indices_ = op_indices; }
+  const std::vector<int>& op_indices() { return op_indices_; }
+
   // Mutable form of tensors (TEMPORARY for refactor).
   // TODO(b/119495520): remove when refactoring complete.
   std::vector<TfLiteTensor>& tensors() { return tensors_; }
@@ -605,6 +608,8 @@ class Subgraph {
   // sits inside the associated TFLite interpreter instance.
   TfLiteExternalContext** external_contexts_;
 
+  // Array of indices representing the original op index of node.
+  std::vector<int> op_indices_;
   // Node inputs/outputs are stored in TfLiteNode and TfLiteRegistration stores
   // function pointers to actual implementation.
   // Nodes should appear in the order in which they are instantiated at runtime.

@@ -232,6 +232,9 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
   // Reduce the number of redundant allocations
   subgraph->ReserveNodes(num_ops);
 
+  // Operator indices (node index -> op index)
+  std::vector<int> node_to_operator_indices;
+
   for (int i : op_indices) {
     const auto* op = operators->Get(i);
     int index = op->opcode_index();
@@ -285,7 +288,11 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
           FlatBufferIntArrayToVector(op->intermediates()), nullptr, 0,
           builtin_data, registration);
     }
+
+    node_to_operator_indices.push_back(i);
   }
+
+  subgraph->SetOperatorIndices(node_to_operator_indices);
 
   return status;
 }
@@ -584,11 +591,15 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     std::vector<std::pair<SubgraphKey, std::set<size_t>>>
 =======
     std::vector<std::pair<tflite::impl::SubgraphKey, std::set<int>>>
+<<<<<<< HEAD
 >>>>>>> f88590a... Build subgraph based on op indexes
         subgraph_indexes =
+=======
+        subgraph_indices =
+>>>>>>> 8a7e1da... bug fix
         (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
-    for (auto& subgraph_key : subgraph_indexes) {
+    for (auto& subgraph_key : subgraph_indices) {
       int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, subgraph_key.first,
         subgraph_key.second, num_threads);
@@ -623,26 +634,18 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
-<<<<<<< HEAD
                                     SubgraphKey& subgraph_key,
-=======
-                                    tflite::impl::SubgraphKey& subgraph_key,
                                     std::set<int> op_indexes,
->>>>>>> f88590a... Build subgraph based on op indexes
                                     int num_threads) {
   return AddSubgraph(model.GetModel(), op_resolver, interpreter,
-                     subgraph_key, op_indexes, num_threads);
+                     subgraph_key, op_indices, num_threads);
 }
 
 int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
-<<<<<<< HEAD
                                     SubgraphKey& subgraph_key,
-=======
-                                    tflite::impl::SubgraphKey& subgraph_key,
                                     std::set<int> op_indexes,
->>>>>>> f88590a... Build subgraph based on op indexes
                                     int num_threads) {
   int subgraph_exists = (*interpreter)->GetSubgraphIdx(subgraph_key);
   if (subgraph_exists >= 0) {
@@ -735,20 +738,22 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
       return cleanup_and_error();
     }
-    
-    if (subgraph_key.start_idx == -1) {
-      subgraph_key.start_idx = 0;
+
+    int start_idx = subgraph_key.start_idx;
+    int end_idx = subgraph_key.end_idx;
+    if (start_idx == -1) {
+      start_idx = 0;
     }
 
-    if (subgraph_key.end_idx == -1) {
-      subgraph_key.end_idx = operators->size() - 1;
+    if (end_idx == -1) {
+      end_idx = operators->size() - 1;
     }
 
-    if (op_indexes.empty()) {
-      for (int op_index = subgraph_key.start_idx;
-           op_index < subgraph_key.end_idx;
+    if (op_indices.empty()) {
+      for (int op_index = start_idx;
+           op_index <= end_idx;
            op_index++) {
-        op_indexes.insert(op_index);
+        op_indices.insert(op_index);
       }
     }
 
@@ -759,9 +764,16 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (builder.ParseNodes(model, op_resolver,
                            operators,
                            modified_subgraph,
-                           op_indexes) != kTfLiteOk) {
+                           op_indices) != kTfLiteOk) {
       return cleanup_and_error();
     }
+
+    std::cout << "Num nodes : "
+              << modified_subgraph->nodes_and_registration().size()
+              << std::endl;
+
+    std::cout << "Num exe. plan : "
+              << modified_subgraph->execution_plan().size() << std::endl;
 
     // Collect all input/output tensors for individual nodes.
     // these include intermediate tensors that may be consumed by other
