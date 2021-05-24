@@ -768,13 +768,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       return cleanup_and_error();
     }
 
-    std::cout << "Num nodes : "
-              << modified_subgraph->nodes_and_registration().size()
-              << std::endl;
-
-    std::cout << "Num exe. plan : "
-              << modified_subgraph->execution_plan().size() << std::endl;
-
     // Collect all input/output tensors for individual nodes.
     // these include intermediate tensors that may be consumed by other
     // nodes in the same model, as well as parameters tensors that aren't
