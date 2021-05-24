@@ -75,7 +75,6 @@ class MinimalLogger {
   while (false) {                                     \
     TFLITE_LOG_PROD(severity, format, ##__VA_ARGS__); \
   }
-  
 #define TFLITE_LOG_ONCE(severity, format, ...) ({;})
 #endif
 

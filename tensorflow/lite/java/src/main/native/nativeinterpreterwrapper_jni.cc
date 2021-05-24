@@ -14,8 +14,8 @@ limitations under the License.
 ==============================================================================*/
 
 // Temporal usage for debugging
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libnav", __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libnav", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
 #include <android/log.h>
 
 #include <dlfcn.h>
@@ -366,7 +366,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_useXNNPACK(
       reinterpret_cast<decltype(TfLiteXNNPackDelegateUpdate)*>(
           dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateUpdate"));
 
-  // Let interpreter to create XNNPack delegate if we need one.
+  // Code applying XNNPack delegate is deleted.
+  // Create XNNPack delegate in the interpreter if we need one.
 }
 
 JNIEXPORT void JNICALL
@@ -459,8 +460,10 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return 0;
+  // Temporarily fix the planner type to `kFixedDeviceGlobalQueue`.
+  // TODO : pass the planner parameter.
   std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
-    new tflite_api_dispatcher::Interpreter(error_reporter, static_cast<TfLitePlannerType>(3)));
+  	new tflite_api_dispatcher::Interpreter(error_reporter, kFixedDeviceGlobalQueue));
 
   // TODO : init interpreter process with our configuration
   interpreter->SetWindowSize(4);
@@ -529,10 +532,9 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   return model_id;
 }
 
-// Sets inputs, runs inference, and returns outputs as long handles.
-JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_run(
+JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
     JNIEnv* env, jclass clazz, jint model_id, jlong interpreter_handle, jlong error_handle) {
-  LOGI("Run starts with model_id = %d", model_id);
+  LOGI("RunSync starts with model_id = %d", model_id);
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
   if (interpreter == nullptr) return;
@@ -540,16 +542,8 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_run(
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return;
 
-  interpreter->InvokeModelAsync(model_id);
-  LOGI("Run finishes");
-  /*
-  if (interpreter->Invoke() != kTfLiteOk) {
-    ThrowException(env, kIllegalArgumentException,
-                   "Internal error: Failed to run on the given Interpreter: %s",
-                   error_reporter->CachedErrorMessage());
-    return;
-  }
-  */
+  interpreter->InvokeModelsSync({tflite::Job(model_id)});
+  LOGI("RunSync finishes");
 }
 
 JNIEXPORT jint JNICALL

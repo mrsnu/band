@@ -156,7 +156,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     }
 
     long inferenceStartNanos = System.nanoTime();
-    run(modelId, interpreterHandle, errorHandle);
+    runSync(modelId, interpreterHandle, errorHandle);
     long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
 
     // Allocation can trigger dynamic resizing of output tensors, so refresh all output shapes.
@@ -175,7 +175,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     this.inferenceDurationNanoseconds = inferenceDurationNanoseconds;
   }
 
-  private static native void run(int modelId, long interpreterHandle, long errorHandle);
+  private static native void runSync(int modelId, long interpreterHandle, long errorHandle);
 
   /** Resizes dimensions of a specific input. */
   void resizeInput(int idx, int[] dims) {
