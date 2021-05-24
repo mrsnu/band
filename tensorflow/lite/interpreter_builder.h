@@ -64,13 +64,13 @@ class InterpreterBuilder {
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         tflite::impl::SubgraphKey& subgraph_key,
-                        std::set<int> op_indexes = {},
+                        std::set<int> op_indices = {},
                         int num_threads = -1);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      tflite::impl::SubgraphKey& subgraph_key,
-                     std::set<int> op_indexes = {},
+                     std::set<int> op_indices = {},
                      int num_threads = -1);
 
   // Adds NUM_DEVICES number of Subgraphs to the interpreter.
