@@ -14,7 +14,7 @@
 
 #include "tensorflow/lite/cpu.h"
 
-#include <cstring> // memcmp
+#include <cstring>
 #if defined __ANDROID__ || defined __linux__
 #include <stdint.h>
 #include <sys/syscall.h>

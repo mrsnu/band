@@ -61,7 +61,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     }
     modelByteBuffer = buffer;
     modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
-    return prepareModel(options);
+    int modelId = prepareModel(options)
+    return modelId;
   }
 
   private int prepareModel(Interpreter.Options options) {
