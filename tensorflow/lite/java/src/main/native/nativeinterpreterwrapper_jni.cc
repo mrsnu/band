@@ -462,8 +462,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   if (error_reporter == nullptr) return 0;
   // Temporarily fix the planner type to `kFixedDeviceGlobalQueue`.
   // TODO : pass the planner parameter.
-  std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
-  	new tflite_api_dispatcher::Interpreter(error_reporter, kFixedDeviceGlobalQueue));
+  auto interpreter(std::make_unique<tflite_api_dispatcher::Interpreter>(
+      error_reporter, kFixedDeviceGlobalQueue));
 
   // TODO : init interpreter process with our configuration
   interpreter->SetWindowSize(4);
