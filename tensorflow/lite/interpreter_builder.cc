@@ -739,24 +739,13 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       return cleanup_and_error();
     }
 
-    int start_idx = subgraph_key.start_idx;
-    int end_idx = subgraph_key.end_idx;
-    if (start_idx == -1) {
-      start_idx = 0;
-    }
-
-    if (end_idx == -1) {
-      end_idx = operators->size() - 1;
-    }
-
     if (op_indices.empty()) {
-      for (int op_index = start_idx;
-           op_index <= end_idx;
-           op_index++) {
+      int start_idx = subgraph_key.start_idx == -1 ? 0 : subgraph_key.start_idx;
+      int end_idx = subgraph_key.end_idx == -1 ? operators->size() - 1 : subgraph_key.end_idx;
+      for (int op_index = start_idx; op_index <= end_idx; op_index++) {
         op_indices.insert(op_index);
       }
     }
-
     // we now parse nodes and tensors, and setup input and
     // output tensors for this particular subgraph
 
