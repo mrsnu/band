@@ -75,7 +75,7 @@ class MinimalLogger {
   while (false) {                                     \
     TFLITE_LOG_PROD(severity, format, ##__VA_ARGS__); \
   }
-#define TFLITE_LOG_ONCE TFLITE_LOG
+#define TFLITE_LOG_ONCE(severity, format, ...) ({;})
 #endif
 
 #endif  // TENSORFLOW_LITE_MINIMAL_LOGGING_H_

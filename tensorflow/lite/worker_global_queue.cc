@@ -84,7 +84,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
 
   int64_t current_time = profiling::time::NowMicros();
   int64_t progress = current_time - invoke_time;
-  return std::max(profiled_latency - progress, 0L);
+  return std::max((long) (profiled_latency - progress), 0L);
 }
 
 void GlobalQueueWorker::Work() {
