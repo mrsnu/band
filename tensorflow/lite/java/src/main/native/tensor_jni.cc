@@ -37,14 +37,17 @@ namespace {
 class TensorHandle {
  public:
   TensorHandle(tflite_api_dispatcher::Interpreter* interpreter,
+               size_t subgraph_index,
                int tensor_index)
-      : interpreter_(interpreter), tensor_index_(tensor_index) {}
+      : interpreter_(interpreter), subgraph_index_(subgraph_index), tensor_index_(tensor_index) {}
 
-  TfLiteTensor* tensor() const { return interpreter_->tensor(tensor_index_); }
+  TfLiteTensor* tensor() const { return interpreter_->tensor(subgraph_index_,tensor_index_); }
+  int subgraph_index() const { return subgraph_index_; }
   int index() const { return tensor_index_; }
 
  private:
   tflite_api_dispatcher::Interpreter* const interpreter_;
+  const size_t subgraph_index_;
   const int tensor_index_;
 };
 
