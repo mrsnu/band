@@ -71,6 +71,7 @@ class TestRunner {
 
   // Run the model.
   virtual void Invoke() = 0;
+  virtual void Invoke(int subgraph_idx) = 0;
 
   // Verify that the contents of all outputs conform to the existing
   // expectations. Return true if there are no expectations or they are all

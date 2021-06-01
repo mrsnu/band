@@ -21,9 +21,11 @@ limitations under the License.
 
 #include "absl/strings/escaping.h"
 #include "tensorflow/lite/builtin_op_data.h"
+/*
 #if !defined(__APPLE__)
 #include "tensorflow/lite/delegates/flex/delegate.h"
 #endif
+*/
 #include "tensorflow/lite/kernels/custom_ops_register.h"
 #include "tensorflow/lite/kernels/hashtable/hashtable_ops.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -32,6 +34,7 @@ limitations under the License.
 #include "tensorflow/lite/testing/join.h"
 #include "tensorflow/lite/testing/split.h"
 #include "tensorflow/lite/tools/evaluation/utils.h"
+#include "tensorflow/lite/util.h"
 
 namespace tflite {
 namespace testing {
@@ -315,6 +318,7 @@ TfLiteDriver::TfLiteDriver(DelegateType delegate_type, bool reference_kernel)
       relative_threshold_(kRelativeThreshold),
       absolute_threshold_(kAbsoluteThreshold),
       quantization_error_multiplier_(kQuantizationErrorMultiplier) {
+  DUMP_METHOD_INFO;
   if (reference_kernel) {
     resolver_.reset(new ops::builtin::BuiltinRefOpResolver);
   } else {
@@ -336,11 +340,16 @@ TfLiteDriver::TfLiteDriver(DelegateType delegate_type, bool reference_kernel)
       delegate_ = evaluation::CreateGPUDelegate();
       break;
     case DelegateType::kFlex:
+/*
 #if !defined(__APPLE__)
       delegate_ = FlexDelegate::Create();
 #endif
+*/
       break;
   }
+
+  (&interpreter_)->reset(
+      new Interpreter(nullptr, kFixedDevice));
 }
 
 TfLiteDriver::~TfLiteDriver() {
@@ -368,7 +377,11 @@ void TfLiteDriver::LoadModel(const string& bin_file_path) {
     Invalidate("Failed to mmap model " + bin_file_path);
     return;
   }
-  InterpreterBuilder(*model_, *resolver_)(&interpreter_);
+
+  ModelConfig empty_config;
+  int model_id = InterpreterBuilder::RegisterModel(
+      *model_, empty_config, *resolver_, &interpreter_, 1);
+
   if (!interpreter_) {
     Invalidate("Failed build interpreter");
     return;
@@ -529,6 +542,11 @@ void TfLiteDriver::Invoke() {
   if (interpreter_->Invoke() != kTfLiteOk) {
     Invalidate("Failed to invoke interpreter");
   }
+}
+
+void TfLiteDriver::Invoke(int subgraph_idx) {
+  if (!IsValid()) return;
+  interpreter_->InvokeModelsSync({Job(subgraph_idx)});
 }
 
 bool TfLiteDriver::CheckResults() {

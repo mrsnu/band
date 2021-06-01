@@ -18,14 +18,17 @@ limitations under the License.
 #include <map>
 #include <memory>
 
+/*
 #if !defined(__APPLE__)
 #include "tensorflow/lite/delegates/flex/delegate.h"
 #endif
+*/
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/kernels/register_ref.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/testing/test_runner.h"
+#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace testing {
@@ -63,6 +66,7 @@ class TfLiteDriver : public TestRunner {
   void SetExpectation(int id, const string& csv_values) override;
   void SetShapeExpectation(int id, const string& csv_values) override;
   void Invoke() override;
+  void Invoke(int subgraph_idx) override;
   bool CheckResults() override;
   string ReadOutput(int id) override;
   void SetThreshold(double relative_threshold, double absolute_threshold);

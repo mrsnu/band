@@ -50,7 +50,7 @@ TEST(TfliteDriverTest, SimpleTest) {
   runner->SetExpectation(5, "0.101,0.202,0.303,0.404");
   runner->SetExpectation(6, "0.011,0.022,0.033,0.044");
 
-  runner->Invoke();
+  runner->Invoke(0);
   ASSERT_TRUE(runner->IsValid());
 
   ASSERT_TRUE(runner->CheckResults());
@@ -87,7 +87,7 @@ TEST(TfliteDriverTest, SingleAddOpTest) {
   runner->SetExpectation(5, "0.101,0.202,0.303,0.404");
   runner->SetExpectation(6, "0.011,0.022,0.033,0.044");
 
-  runner->Invoke();
+  runner->Invoke(0);
   ASSERT_TRUE(runner->IsValid());
 
   ASSERT_TRUE(runner->CheckResults());
@@ -114,7 +114,8 @@ TEST(TfliteDriverTest, AddQuantizedInt8Test) {
 
   runner->SetExpectation(2, "0.0117,0.0117,0.0117,0.0117");
 
-  runner->Invoke();
+  runner->Invoke(0);
+  TFLITE_LOG(INFO) << "INVOKED 0";
   ASSERT_TRUE(runner->IsValid());
 
   ASSERT_TRUE(runner->CheckResults());
