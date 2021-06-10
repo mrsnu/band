@@ -854,7 +854,7 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
     int subgraph_index = subgraph_key_id.second;
 
     if (key.model_id == model_id && key.device_flag == device_id
-        && key.start_idx == 0) {
+        && key.start_idx == start_idx) {
       indices.insert(subgraph_index);
     }
   }
