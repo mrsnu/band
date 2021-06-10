@@ -432,30 +432,32 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
     // TODO: #73 share tensors across different subgraphs from same model
     for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      int subgraph_index = interpreter_->GetFirstSubgraphIdx(model_id, device_flag);
-      if (subgraph_index < 0) {
-        continue;
-      }
-      auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-      // Set the values of the input tensors from inputs_data_.
-      for (int j = 0; j < interpreter_inputs.size(); ++j) {
-        int i = interpreter_inputs[j];
-        TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
-        if (t->type == kTfLiteString) {
-          if (input_tensor_data[j].data) {
-            static_cast<DynamicBuffer*>(input_tensor_data[j].data.get())
-                ->WriteToTensor(t, /*new_shape=*/nullptr);
+
+      // reset inputs for all subgraphs that start with op 0
+      // TODO: may need to do this for all subgraphs that require external inputs
+      for (int subgraph_index : interpreter_->GetSubgraphIdx(model_id,
+                                                             device_flag, 0)) {
+        auto interpreter_inputs = interpreter_->inputs(subgraph_index);
+        // Set the values of the input tensors from inputs_data_.
+        for (int j = 0; j < interpreter_inputs.size(); ++j) {
+          int i = interpreter_inputs[j];
+          TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
+          if (t->type == kTfLiteString) {
+            if (input_tensor_data[j].data) {
+              static_cast<DynamicBuffer*>(input_tensor_data[j].data.get())
+                  ->WriteToTensor(t, /*new_shape=*/nullptr);
+            } else {
+              tflite::DynamicBuffer buffer;
+              FillRandomString(&buffer, t->dims, []() {
+                return "we're have some friends over saturday to hang out in the "
+                      "yard";
+              });
+              buffer.WriteToTensor(t, /*new_shape=*/nullptr);
+            }
           } else {
-            tflite::DynamicBuffer buffer;
-            FillRandomString(&buffer, t->dims, []() {
-              return "we're have some friends over saturday to hang out in the "
-                    "yard";
-            });
-            buffer.WriteToTensor(t, /*new_shape=*/nullptr);
+            std::memcpy(t->data.raw, input_tensor_data[j].data.get(),
+                        input_tensor_data[j].bytes);
           }
-        } else {
-          std::memcpy(t->data.raw, input_tensor_data[j].data.get(),
-                      input_tensor_data[j].bytes);
         }
       }
     }

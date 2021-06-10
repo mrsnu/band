@@ -845,14 +845,21 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
   }
 }
 
-int Interpreter::GetFirstSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
-  for (auto& subgraph_key_id: subgraph_idx_map_) {
+std::set<int> Interpreter::GetSubgraphIdx(int model_id,
+                                          TfLiteDeviceFlags device_id,
+                                          int start_idx) {
+  std::set<int> indices;
+  for (auto& subgraph_key_id : subgraph_idx_map_) {
     const SubgraphKey& key = subgraph_key_id.first;
-    if (key.device_flag == device_id && key.start_idx == 0) {
-      return subgraph_key_id.second;
+    int subgraph_index = subgraph_key_id.second;
+
+    if (key.model_id == model_id && key.device_flag == device_id
+        && key.start_idx == start_idx) {
+      indices.insert(subgraph_index);
     }
   }
-  return -1;
+
+  return indices;
 }
 
 int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {
