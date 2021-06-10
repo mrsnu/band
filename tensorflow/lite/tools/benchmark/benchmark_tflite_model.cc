@@ -433,6 +433,8 @@ TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
     for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
 
+      // reset inputs for all subgraphs that start with op 0
+      // TODO: may need to do this for all subgraphs that require external inputs
       for (int subgraph_index : interpreter_->GetSubgraphIdx(model_id,
                                                              device_flag, 0)) {
         auto interpreter_inputs = interpreter_->inputs(subgraph_index);
