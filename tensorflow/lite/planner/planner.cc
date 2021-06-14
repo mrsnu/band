@@ -31,7 +31,11 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
            << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
-           << "end_time\n";
+           << "end_time\t"
+           << "expected_exec_time\t"
+           << "expected_latency\t"
+           << "slo\t"
+           << "is_final_subgraph\n";
   log_file.close();
   
   return kTfLiteOk;
@@ -58,7 +62,11 @@ void Planner::Wait() {
              << job.subgraph_idx << "\t"
              << job.enqueue_time << "\t"
              << job.invoke_time << "\t"
-             << job.end_time << "\n";
+             << job.end_time << "\t"
+             << job.expected_exec_time << "\t"
+             << job.expected_latency << "\t"
+             << job.slo << "\t"
+             << job.is_final_subgraph << "\n";
   }
   log_file.close();
   lock.unlock();
@@ -73,7 +81,11 @@ void Planner::EnqueueFinishedJob(Job job) {
 }
 
 void Planner::EnqueueRequest(Job job) {
-  job.enqueue_time = profiling::time::NowMicros();
+  if (job.enqueue_time == 0) {
+    // job.enqueue_time may already be set if this model contains a fallback
+    // op, in which case we do not overwrite the set value
+    job.enqueue_time = profiling::time::NowMicros();
+  }
   std::unique_lock<std::mutex> lock(requests_mtx_);
   requests_.push_back(job);
   num_submitted_jobs_++;
@@ -86,7 +98,11 @@ void Planner::EnqueueBatch(std::vector<Job> jobs) {
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
   for (Job job : jobs) {
-    job.enqueue_time = enqueue_time;
+    if (job.enqueue_time == 0) {
+      // job.enqueue_time may already be set if this model contains a fallback
+      // op, in which case we do not overwrite the set value
+      job.enqueue_time = enqueue_time;
+    }
     requests_.push_back(job);
     num_submitted_jobs_++;
   }

@@ -264,6 +264,21 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
     if (!model_json_value["device"].isNull())
       model.device = model_json_value["device"].asInt();
 
+    // Bounds checking is done internally in interpreter and planner, so
+    // we don't check the actual values here.
+    // See struct ModelConfig for default value.
+    if (!model_json_value["slo_ms"].isNull()) {
+      // convert ms --> us
+      model.slo = model_json_value["slo_ms"].asInt64() * 1000;
+    }
+
+    // Bounds checking is done internally in interpreter, so
+    // we don't check the actual values here.
+    // See struct ModelConfig for default value.
+    if (!model_json_value["slo_scale"].isNull()) {
+      model.slo_scale = model_json_value["slo_scale"].asFloat();
+    }
+
     if (!model_json_value["input_layer"].isNull() &&
         !model_json_value["input_layer_shape"].isNull()) {
       TF_LITE_ENSURE_STATUS(PopulateInputLayerInfo(

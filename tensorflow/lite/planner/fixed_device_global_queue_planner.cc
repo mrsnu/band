@@ -1,4 +1,5 @@
 #include "tensorflow/lite/planner/fixed_device_planner.h"
+#include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
 namespace impl {
@@ -57,11 +58,19 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
     }
 
     std::set<TfLiteDeviceFlags> idle_devices;
+    // for early-dropping requests that will miss their SLO
+    std::map<TfLiteDeviceFlags, int64_t> device_waiting;
     for (int i = 0; i < kTfLiteNumDevices; ++i) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (worker != nullptr && !worker->IsBusy()) {
-        idle_devices.insert(device_flag);
+      if (worker != nullptr) {
+        device_waiting[device_flag] = worker->GetWaitingTime();
+
+        // we could, technically, check waiting time and isBusy with a single
+        // function call if we slightly change Worker implementation
+        if (!worker->IsBusy()) {
+          idle_devices.insert(device_flag);
+        }
       }
     }
 
@@ -92,6 +101,32 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       TfLiteDeviceFlags device_flag =
           static_cast<TfLiteDeviceFlags>(device_idx);
 
+      // TODO: fallback subgraphs for FixedDevicePlanner?
+      int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
+      SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
+
+      int64_t profiled = GetInterpreter()->GetSubgraphProfileResult(key);
+      int64_t expected_latency = device_waiting[device_flag] + profiled;
+
+      to_execute.expected_exec_time = profiled;
+      to_execute.expected_latency = expected_latency;
+
+      // this job has an SLO; check if it's not too late already
+      if (to_execute.slo > 0) {
+        int64_t current_time = profiling::time::NowMicros();
+
+        if (current_time + expected_latency >
+            to_execute.enqueue_time + to_execute.slo) {
+          // SLO violation
+          // there is no hope left for this job, throw it away
+          to_execute.end_time = LLONG_MAX;
+          to_execute.sched_id = sched_id++;
+          EnqueueFinishedJob(to_execute);
+          it = requests.erase(it);
+          continue;
+        }
+      }
+
       auto idle_devices_it = idle_devices.find(device_flag);
       if (idle_devices_it == idle_devices.end()) {
         // that device is not idle, so leave this job alone for now
@@ -99,8 +134,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         continue;
       }
 
-      // TODO: fallback subgraphs for FixedDevicePlanner?
-      to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
+      to_execute.subgraph_idx = subgraph_idx;
       to_execute.device_id = device_idx;
       to_execute.sched_id = sched_id++;
 
@@ -127,7 +161,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 }
 
 bool FixedDeviceGlobalQueuePlanner::NeedProfile() {
-  return false;
+  return true;
 }
 
 }  // namespace impl
