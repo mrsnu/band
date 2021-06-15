@@ -801,11 +801,15 @@ void Interpreter::Profile(int model_id) {
       subgraph_profiling_results_map_[subgraph_key] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
-                       << " model=" << subgraph_key.model_id
+                       << " model=" << subgraph_key.model_id()
                        << " avg=" << profiled_latency << " us"
-                       << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
-                       << " start=" << subgraph_key.start_idx
-                       << " end=" << subgraph_key.end_idx << ".";
+                       << " device="
+                       << TfLiteDeviceGetName(subgraph_key.target_device())
+                       << " start="
+                       << subgraph_key.GetRootNodesString()
+                       << " end=" 
+                       << subgraph_key.GetLeafNodesString() << ".";
+
     } else {
       // otherwise, proceed as normal
       for (int i = 0; i < num_warmups_; i++) {
@@ -823,11 +827,12 @@ void Interpreter::Profile(int model_id) {
       profile_database_[subgraph_key] = latency;
 
       TFLITE_LOG(INFO) << "Profiling result\n"
-                       << " model=" << subgraph_key.model_id
+                       << " model=" << subgraph_key.model_id()
                        << " avg=" << latency << " us"
-                       << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
-                       << " start=" << subgraph_key.start_idx
-                       << " end=" << subgraph_key.end_idx << ".";
+                       << " start="
+                       << subgraph_key.GetRootNodesString()
+                       << " end=" 
+                       << subgraph_key.GetLeafNodesString() << ".";
     }
   }
 
@@ -961,8 +966,8 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
     const SubgraphKey& key = subgraph_key_id.first;
     int subgraph_index = subgraph_key_id.second;
 
-    if (key.model_id == model_id && key.device_flag == device_id
-        && key.start_idx == start_idx) {
+    if (key.model_id() == model_id && key.target_device() == device_id
+        && key.root_node_indices.find(start_idx) != key.root_node_indices.end()) {
       indices.insert(subgraph_index);
     }
   }
@@ -991,7 +996,7 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
 std::set<int> Interpreter::models() const {
   std::set<int> models;
   for (auto& key : subgraph_idx_map_) {
-    models.insert(key.first.model_id);
+    models.insert(key.first.model_id());
   }
   return models;
 }
@@ -1212,7 +1217,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 }
 
 std::pair<int, int64_t>
-Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
+Interpreter::GetShortestLatency(int model_id, std::set<int> executed_nodes, int64_t start_time,
                                 std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
                                 TfLiteDeviceFlags preceded_device) {
   std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,

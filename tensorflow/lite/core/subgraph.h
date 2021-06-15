@@ -15,6 +15,7 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 #define TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 
+#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <map>
@@ -41,9 +42,6 @@ namespace impl {
 
 // Forward declare since NNAPIDelegate uses Interpreter.
 class NNAPIDelegate;
-
-
-
 class Subgraph {
  public:
   friend class Interpreter;
@@ -69,6 +67,9 @@ class Subgraph {
   // Each index is bound check and this modifies the consistent_ flag of the
   // interpreter.
   TfLiteStatus SetOutputs(std::vector<int> outputs);
+
+  TfLiteStatus SetInputTensorToNodes(std::map<int, int> tensor_to_nodes);
+  TfLiteStatus SetOutputTensorToNodes(std::map<int, int> tensor_to_nodes);
 
   // Provide a list of tensor indexes that are variable tensors.
   // Each index is bound check and this modifies the consistent_ flag of the
@@ -140,6 +141,32 @@ class Subgraph {
   // Overrides execution plan. This bounds checks indices sent in.
   TfLiteStatus SetExecutionPlan(const std::vector<int>& new_plan);
 
+  std::set<int> GetParentNodes(size_t node_index) const {
+    auto node_registration = node_and_registration(node_index);
+    if (node_registration) {
+      auto& node = node_registration->first;
+      // Get node that outputs input of a current node
+      return TensorIndicesToNodeIndices(output_tensor_to_nodes_,
+                                        node.inputs->data,
+                                        node.inputs->size);
+    } else {
+      return {};
+    }
+  }
+
+  std::set<int> GetChildNodes(size_t node_index) const {
+    auto node_registration = node_and_registration(node_index);
+    if (node_registration) {
+      auto& node = node_registration->first;
+      // Get node that inputs output of a current node
+      return TensorIndicesToNodeIndices(input_tensor_to_nodes_,
+                                        node.outputs->data,
+                                        node.outputs->size);
+    } else {
+      return {};
+    }
+  }
+
   // Get a mutable tensor data structure.
   // TODO(aselle): Create a safe ArrayHandle interface to avoid exposing this
   // read/write access to structure
@@ -171,6 +198,16 @@ class Subgraph {
 
   // Read only access to list of outputs.
   const std::vector<int>& outputs() const { return outputs_; }
+
+  std::set<int> input_nodes() const {
+    return TensorIndicesToNodeIndices(
+        input_tensor_to_nodes_, inputs().data(), inputs().size());
+  }
+  
+  std::set<int> output_nodes() const  {
+    return TensorIndicesToNodeIndices(
+        output_tensor_to_nodes_, outputs().data(), outputs().size());
+  }
 
   // Read only access to list of variable tensors.
   std::vector<int>& variables() { return variables_; }
@@ -442,6 +479,10 @@ class Subgraph {
   TfLiteStatus CheckTensorIndices(const char* label, const int* indices,
                                   int length);
 
+  std::set<int> TensorIndicesToNodeIndices(const std::map<int, int>& tensor_to_nodes,
+                                           const int* indices, int length) const;
+  TfLiteStatus SetTensorToNodes(std::map<int, int>& dst, const std::map<int, int>& src);
+
   // Compute the number of bytes required to represent a tensor with dimensions
   // specified by the array dims (of length dims_size). Returns the status code
   // and bytes.
@@ -632,6 +673,9 @@ class Subgraph {
 
   // Array of indices representing the tensors that are variable tensors.
   std::vector<int> variables_;
+
+  std::map<int, int> input_tensor_to_nodes_;
+  std::map<int, int> output_tensor_to_nodes_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_;
