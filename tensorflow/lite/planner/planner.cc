@@ -31,8 +31,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "model_name\t"
            << "model_id\t"
            << "device_id\t"
-           << "start_idx\t"
-           << "end_idx\t"
            << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
@@ -171,14 +169,11 @@ void Planner::FlushFinishedJobs() {
         // update internal map to keep track of the # of inferences per model
         model_execution_count_[job.model_id]++;
       }
-
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
               << job.model_fname << "\t"
               << job.model_id << "\t"
               << job.device_id << "\t"
-              << job.start_idx << "\t"
-              << job.end_idx << "\t"
               << job.subgraph_idx << "\t"
               << job.enqueue_time << "\t"
               << job.invoke_time << "\t"

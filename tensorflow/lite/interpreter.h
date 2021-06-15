@@ -713,16 +713,6 @@ class Interpreter {
   // fill in the ModelSpec for this model
   void InvestigateModelSpec(int model_id);
 
-  // Return a pair of the subgraph idx that leads to the shortest final
-  // latency, and that final latency value.
-  // Note that the returned subgraph may only cover a subset of the remaining
-  // ops, but the latency value is calculated with all subgraphs leading to
-  // the final op (of the model) in mind.
-  std::pair<int, int64_t>
-  GetShortestLatency(int model_id, std::set<int> executed_nodes, int64_t start_time,
-                     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-                     TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
-
   // Generate explicit subgraphs for fallback ops in `model_id`.
   // Each second element of return vector represents a set of original node indexes
   // for corresponding subgraph if it requires re-indexing.
@@ -836,34 +826,6 @@ class Interpreter {
   TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
-
-  /* private methods related to subgraph scheduling */
-  // divide the given subgraphs into groups that share the same start/end idxs
-  // e.g., {(0,10): [1,3], (0,20): [2,4]}
-  std::map<std::pair<int, int>, std::vector<int>>
-  GroupByStartEndIdx(std::vector<int> subgraph_indices);
-
-  // return subgraph indices for model_id and start_idx,
-  // excluding subgraphs on preceded_device
-  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx,
-                                         TfLiteDeviceFlags preceded_device);
-
-  // return the shortest subgraph out of given subgraphs, when the start time
-  // and per-device waiting times are taken into account
-  std::pair<int, int64_t>
-  GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
-                           int64_t start_time,
-                           std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
-
-  // Update slo values in model_configs_ according to the worst profiled
-  // latency of that model x slo_scale.
-  // If slo has already been set, or slo_scale <= 0, then this does nothing.
-  // Must be called after the models have been profiled.
-  void SetSLOBasedOnProfile();
-
-  // Returns the largest profiled latency of `model_id`, across all devices.
-  // Must be called after this model has been profiled.
-  int64_t GetWorstDeviceProfileResult(int model_id);
 };
 
 }  // namespace impl

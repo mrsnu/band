@@ -190,11 +190,11 @@ std::string IndexSetToString(const std::set<int>& indices) {
 }
 
 std::string SubgraphKey::GetRootNodesString() const {
-  return IndexSetToString(root_node_indices_);
+  return IndexSetToString(root_op_indices_);
 }
 
 std::string SubgraphKey::GetLeafNodesString() const {
-  return IndexSetToString(leaf_node_indices_);
+  return IndexSetToString(leaf_op_indices_);
 }
 
 Subgraph::Subgraph(ErrorReporter* error_reporter,
