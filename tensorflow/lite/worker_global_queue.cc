@@ -57,10 +57,6 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // consider unlocking here if we need that teensy little extra perf boost
   // lock.unlock();
 
-  int model_id = current_job_.model_id;
-  int start_idx = current_job_.start_idx;
-  int end_idx = current_job_.end_idx;
-
   // we no longer read from this worker's member variables, so there is
   // no need to hold on to the lock anymore
   lock.unlock();
@@ -74,8 +70,9 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   Interpreter* interpreter = planner->GetInterpreter();
 
   // TODO #80: Get profiled_latency from current_job_
-  SubgraphKey key(model_id, device_flag_, start_idx, end_idx);
-  int64_t profiled_latency = interpreter->GetSubgraphProfileResult(key);
+  Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
+  int64_t profiled_latency =
+      interpreter->GetSubgraphProfileResult(current_subgraph->GetKey());
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet

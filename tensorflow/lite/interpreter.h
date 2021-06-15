@@ -701,7 +701,7 @@ class Interpreter {
   // ops, but the latency value is calculated with all subgraphs leading to
   // the final op (of the model) in mind.
   std::pair<int, int64_t>
-  GetShortestLatency(int model_id, int start_idx, int64_t start_time,
+  GetShortestLatency(int model_id, std::set<int> executed_nodes, int64_t start_time,
                      std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
                      TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
 

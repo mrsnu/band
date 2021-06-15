@@ -614,10 +614,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       }
 
       TFLITE_LOG(INFO) << "ADDED Subgraph "
-                       << "Model : " << subgraph_key.first.model_id << " "
-                       << TfLiteDeviceGetName(subgraph_key.first.device_flag) << " "
-                       << "From " << subgraph_key.first.start_idx << " "
-                       << "To " << subgraph_key.first.end_idx;
+                       << "Model : " << subgraph_key.first.model_id() << " "
+                       << TfLiteDeviceGetName(subgraph_key.first.target_device()) << " "
+                       << "From " << subgraph_key.first.GetRootNodesString() << " "
+                       << "To " << subgraph_key.first.GetLeafNodesString();
     }
   }
 
@@ -738,9 +738,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     }
 
     if (op_indices.empty()) {
-      int start_idx = subgraph_key.start_idx == -1 ? 0 : subgraph_key.start_idx;
-      int end_idx = subgraph_key.end_idx == -1 ? operators->size() - 1 : subgraph_key.end_idx;
-      for (int op_index = start_idx; op_index <= end_idx; op_index++) {
+      for (int op_index = 0; op_index <= operators->size() - 1; op_index++) {
         op_indices.insert(op_index);
       }
     }
@@ -760,14 +758,17 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     // nodes in the same model, as well as parameters tensors that aren't
     // really "input" tensors
     std::set<int> node_inputs, node_outputs;
+    std::map<int, int> input_tensor_to_nodes, output_tensor_to_nodes;
     auto nodes_and_registration = modified_subgraph->nodes_and_registration();
     for (int node_index : modified_subgraph->execution_plan()) {
       TfLiteNode node = nodes_and_registration[node_index].first;
       for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
         node_inputs.insert(input_tensor);
+        input_tensor_to_nodes[input_tensor] = node_index;
       }
       for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
         node_outputs.insert(output_tensor);
+        output_tensor_to_nodes[output_tensor] = node_index;
       }
     }
 
@@ -803,7 +804,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     std::set<int> subgraph_inputs =
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
     std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(subgraph_key.model_id).output_tensors;
+        (*interpreter)->GetModelSpec(subgraph_key.model_id()).output_tensors;
 
     std::set_union(model_outputs.begin(), model_outputs.end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
@@ -827,6 +828,43 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     modified_subgraph->SetOutputs(
         std::vector<int>(real_outputs.begin(), real_outputs.end()));
 
+    modified_subgraph->SetInputTensorToNodes(input_tensor_to_nodes);
+    modified_subgraph->SetOutputTensorToNodes(output_tensor_to_nodes);
+    std::cout << "Input tensors : " << std::endl;
+    for (int i : modified_subgraph->inputs()) {
+      std::cout << i << " " << std::endl;
+    }
+
+    std::cout << "Input nodes : " << std::endl;
+    auto i_nodes = modified_subgraph->input_nodes();
+    for (int i :i_nodes) {
+      std::cout << modified_subgraph->op_indices()[i] << " " << std::endl;
+    }
+
+    std::cout << "Output tensors : " << std::endl;
+    for (int i : modified_subgraph->outputs()) {
+      std::cout << i << " " << std::endl;
+    }
+
+    std::cout << "Output nodes : " << std::endl;
+    auto o_nodes = modified_subgraph->output_nodes();
+    for (int i : o_nodes) {
+      std::cout << modified_subgraph->op_indices()[i] << " " << std::endl;
+
+      std::cout << "Parent nodes of " << modified_subgraph->op_indices()[i] << " : "  << std::endl;
+      auto parent_nodes = modified_subgraph->GetParentNodes(i);
+      for (int j :parent_nodes) {
+        std::cout << modified_subgraph->op_indices()[j] << " " << std::endl;
+      }
+
+      std::cout << "Child nodes of " << modified_subgraph->op_indices()[i] << " : "  << std::endl;
+      auto child_nodes = modified_subgraph->GetChildNodes(i);
+
+      for(int j : child_nodes) {
+        std::cout << modified_subgraph->op_indices()[j] << " " << std::endl;
+      }
+    }
+
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
       auto* tensor = modified_subgraph->tensor(i);
@@ -839,7 +877,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if ((*interpreter)->
           ApplyBestDeviceDelegate(
             modified_subgraph, 
-            subgraph_key.device_flag, 
+            subgraph_key.device(), 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
     

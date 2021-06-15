@@ -16,6 +16,7 @@ limitations under the License.
 #include "tensorflow/lite/core/subgraph.h"
 
 #include <algorithm>
+#include <iostream>
 
 #include "tensorflow/lite/arena_planner.h"
 #include "tensorflow/lite/c/common.h"
@@ -178,6 +179,23 @@ class InterpreterInfo : public GraphInfo {
  public:
   Subgraph* subgraph_;
 };
+
+std::string IndexSetToString(const std::set<int>& indices) {
+    std::string result;
+    for (const int& index : indices) {
+      result += std::to_string(index) + ",";
+    }
+    result.pop_back();
+    return result;
+}
+
+std::string SubgraphKey::GetRootNodesString() const {
+  return IndexSetToString(root_node_indices_);
+}
+
+std::string SubgraphKey::GetLeafNodesString() const {
+  return IndexSetToString(leaf_node_indices_);
+}
 
 Subgraph::Subgraph(ErrorReporter* error_reporter,
                    TfLiteExternalContext** external_contexts,
@@ -527,6 +545,31 @@ TfLiteStatus Subgraph::SetOutputs(std::vector<int> outputs) {
   return kTfLiteOk;
 }
 
+TfLiteStatus Subgraph::SetTensorToNodes(std::map<int, int>& dst, 
+                                        const std::map<int, int>& src) {
+  std::vector<int> tensor_indices;
+  for (auto& tensor_to_node : src) {
+    tensor_indices.push_back(tensor_to_node.first);
+    // Check whether node index is valid
+    if (tensor_to_node.second >= nodes_and_registration_.size() ||
+        tensor_to_node.second < 0) {
+      return kTfLiteError;
+    }
+  }
+  TF_LITE_ENSURE_OK(
+      &context_, CheckTensorIndices("tensors", tensor_indices.data(), tensor_indices.size()));
+  dst = std::move(src);
+  return kTfLiteOk;
+}
+
+TfLiteStatus Subgraph::SetInputTensorToNodes(std::map<int, int> tensor_to_nodes) {
+  return SetTensorToNodes(input_tensor_to_nodes_, tensor_to_nodes);
+}
+
+TfLiteStatus Subgraph::SetOutputTensorToNodes(std::map<int, int> tensor_to_nodes) {
+  return SetTensorToNodes(output_tensor_to_nodes_, tensor_to_nodes);
+}
+
 TfLiteStatus Subgraph::SetVariables(std::vector<int> variables) {
   TF_LITE_ENSURE_OK(&context_, CheckTensorIndices("variables", variables.data(),
                                                   variables.size()));
@@ -572,6 +615,19 @@ TfLiteStatus Subgraph::CheckTensorIndices(const char* label, const int* indices,
     }
   }
   return kTfLiteOk;
+}
+
+std::set<int> Subgraph::TensorIndicesToNodeIndices(const std::map<int, int>& tensor_to_nodes,
+                                                   const int* indices, int length) const {
+  std::set<int> node_indices;
+  for (int i = 0; i < length; i++) {
+    int index = indices[i];
+    // Skip nodes attached to constant tensors (e.g., weight)
+    if (tensor_to_nodes.find(index) != tensor_to_nodes.end()) {
+      node_indices.insert(tensor_to_nodes.at(index));
+    }
+  }
+  return node_indices;
 }
 
 namespace {

@@ -670,6 +670,20 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 
 Interpreter::ModelDeviceToLatency
 BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
+  auto string_to_node_indices = [](std::string index_string) {
+    std::set<int> node_indices;
+    std::stringstream ss(index_string);
+
+    for (int i; ss >> i;) {
+      node_indices.insert(i);
+      if (ss.peek() == ',') {
+        ss.ignore();
+      }
+    }
+
+    return node_indices;
+  };
+
   Interpreter::ModelDeviceToLatency id_profile;
   for (auto name_profile_it = name_profile.begin();
        name_profile_it != name_profile.end(); ++name_profile_it) {
@@ -691,8 +705,10 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
       // parse the key to retrieve start/end indices
       // e.g., "25/50" --> delim_pos = 2
       auto delim_pos = idx.find("/");
-      std::string start_idx = idx.substr(0, delim_pos);
-      std::string end_idx = idx.substr(delim_pos + 1, idx.length() - delim_pos - 1);
+      std::set<int> root_indices =
+          string_to_node_indices(idx.substr(0, delim_pos));
+      std::set<int> leaf_indices =
+          string_to_node_indices(idx.substr(delim_pos + 1, idx.length() - delim_pos - 1));
       
       const Json::Value device_profile = *idx_profile_it;
       for (auto device_profile_it = device_profile.begin();
@@ -709,7 +725,7 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
         }
 
         SubgraphKey key(model_id, device_flag,
-                        std::stoi(start_idx), std::stoi(end_idx));
+                        root_indices, leaf_indices);
         id_profile[key] = profiled_latency;
       }
     }
@@ -719,11 +735,20 @@ BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
 
 void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
                                                 Json::Value& name_profile) {
+  auto node_indices_to_string = [](const std::set<int>& indices) {
+    std::string index_string;
+    for (int i : indices) {
+      index_string += std::to_string(i) + ",";
+    }
+    index_string.pop_back();
+    return index_string;
+  };
+
   for (auto& pair : id_profile) {
     SubgraphKey key = pair.first;
     int model_id = key.model_id;
-    std::string start_idx = std::to_string(key.start_idx);
-    std::string end_idx = std::to_string(key.end_idx);
+    std::string start_idx = node_indices_to_string(key.root_node_indices);
+    std::string end_idx = node_indices_to_string(key.leaf_node_indices);
     int64_t profiled_latency = pair.second;
 
     // check the string name of this model id
