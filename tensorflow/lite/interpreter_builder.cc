@@ -615,7 +615,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
       TFLITE_LOG(INFO) << "ADDED Subgraph "
                        << "Model : " << subgraph_key.first.model_id() << " "
-                       << TfLiteDeviceGetName(subgraph_key.first.target_device()) << " "
+                       << TfLiteDeviceGetName(subgraph_key.first.target_device_flag()) << " "
                        << "From " << subgraph_key.first.GetRootNodesString() << " "
                        << "To " << subgraph_key.first.GetLeafNodesString();
     }

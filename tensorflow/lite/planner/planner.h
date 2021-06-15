@@ -98,10 +98,10 @@ class Planner {
   }
 
  protected:
+  Interpreter* interpreter_;
   std::thread planner_thread_;
 
  private:
-  Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
 
   // Jobs Finished

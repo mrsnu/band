@@ -688,7 +688,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
                        << " model=" << subgraph_key.model_id()
                        << " avg=" << profiled_latency << " us"
                        << " device="
-                       << TfLiteDeviceGetName(subgraph_key.target_device())
+                       << TfLiteDeviceGetName(subgraph_key.target_device_flag())
                        << " start="
                        << subgraph_key.GetRootNodesString()
                        << " end=" 
@@ -852,7 +852,7 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
 int Interpreter::GetFirstSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
   for (auto& subgraph_key_id: subgraph_idx_map_) {
     const SubgraphKey& key = subgraph_key_id.first;
-    if (key.target_device() == device_id &&
+    if (key.target_device_flag() == device_id &&
         key.root_node_indices().find(0) != key.root_node_indices().end()) {
       return subgraph_key_id.second;
     }
@@ -1101,95 +1101,6 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
   primary_subgraph->AllocateTensors();
 }
-
-std::pair<int, int64_t>
-Interpreter::GetShortestLatency(int model_id, std::set<int> executed_nodes, int64_t start_time,
-                                std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-                                TfLiteDeviceFlags preceded_device) {
-  std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,
-                                                            preceded_device);
-  std::map<std::pair<int, int>, std::vector<int>> subgraph_map =
-      GroupByStartEndIdx(subgraph_indices);
-
-  std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
-  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end() ; iter++) {
-    // first, filter out the subgraphs that take longer than others with the
-    // same start/end indices, since there's no reason to pick them
-    std::pair<int, int64_t> target_subgraph =
-        GetShortestSubgraphIndex(iter->second, start_time, device_waiting);
-    SubgraphKey& key = subgraph(target_subgraph.first)->GetKey();
-
-    std::pair<int, int64_t> local_min;
-    if (key.end_idx != model_specs_[model_id].num_ops - 1) {
-      // there's more ops left for this model, so we need to look further to
-      // get the final latency
-      local_min = GetShortestLatency(model_id, key.end_idx + 1,
-                                     target_subgraph.second, device_waiting,
-                                     key.device_flag);
-    } else {
-      // nothing else after this
-      local_min = target_subgraph;
-    }
-
-    // check if this subgraph is better than the best one
-    if (local_min.second < min_subgraph.second) {
-      // note the subgraph to return is the next immediate one (start_idx, XX),
-      // but the latency to return is that of the final subgraph (XX, #ops)
-      // hence, target_subgraph.first & local_min.second
-      min_subgraph.first = target_subgraph.first;
-      min_subgraph.second = local_min.second;
-    }
-  }
-  return min_subgraph;
-}
-
-std::map<std::pair<int, int>, std::vector<int>>
-Interpreter::GroupByStartEndIdx(std::vector<int> subgraph_indices) {
-  std::map<std::pair<int, int>, std::vector<int>> ret;
-  for (auto subgraph_index : subgraph_indices) {
-    SubgraphKey& key = subgraph(subgraph_index)->GetKey();
-    ret[{key.start_idx, key.end_idx}].push_back(subgraph_index);
-  }
-  return ret;
-}
-
-std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
-                                                    TfLiteDeviceFlags preceded_device) {
-  std::vector<int> candidatesIds;
-  // iterate thru all subgraphs and only pick the ones that match the criteria
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    SubgraphKey& key = subgraph(i)->GetKey();
-    if (key.model_id == model_id &&
-        key.start_idx == start_idx &&
-        key.device_flag != preceded_device) {
-      candidatesIds.push_back(i);
-    }
-  }
-  return candidatesIds;
-}
-
-std::pair<int, int64_t>
-Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
-                                      int64_t start_time,
-                                      std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
-  int64_t min_latency = INT_MAX;
-  int min_idx = 0;
-
-  for (auto subgraph_index : subgraph_indices) {
-    SubgraphKey& key = subgraph(subgraph_index)->GetKey();
-
-    int64_t waiting_time = device_waiting[key.device_flag];
-    int64_t profiled = GetSubgraphProfileResult(key);
-    int64_t expected_latency = profiled + std::max(waiting_time, start_time);
-
-    if (min_latency > expected_latency) {
-      min_latency = expected_latency;
-      min_idx = subgraph_index;
-    }
-  }
-  return { min_idx, min_latency };
-}
-
 }  // namespace impl
 
 }  // namespace tflite

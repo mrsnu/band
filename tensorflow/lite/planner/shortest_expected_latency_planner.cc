@@ -1,4 +1,5 @@
 #include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
+
 #include "tensorflow/lite/profiling/time.h"
 
 // for the std::cout commented out in Plan()
@@ -10,8 +11,7 @@ namespace impl {
 void ShortestExpectedLatencyPlanner::Plan() {
   int sched_id = 0;
   while (true) {
-    if (GetSafeBool().wait())
-      return;
+    if (GetSafeBool().wait()) return;
 
     std::deque<Job> local_jobs;
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
@@ -19,8 +19,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
     if (!requests.empty()) {
       // Gets the specific amount of jobs from requests
       // and removes those jobs from the requests.
-      int window_size = std::min(GetWindowSize(), (int) requests.size());
-      local_jobs.insert(local_jobs.begin(), requests.begin(), requests.begin() + window_size);
+      int window_size = std::min(GetWindowSize(), (int)requests.size());
+      local_jobs.insert(local_jobs.begin(), requests.begin(),
+                        requests.begin() + window_size);
       requests.erase(requests.begin(), requests.begin() + window_size);
     } else {
       continue;
@@ -34,9 +35,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // gone through all jobs.
       // There should be a more quicker way do this, but I'm leaving this as-is
       // to make it simple.
-      // E.g., we add interpreter.GetProfiledLatency() to the expected_latency map
-      // of all Jobs instead of calling GetShortestLatency() a gazillion times
-      // again.
+      // E.g., we add interpreter.GetProfiledLatency() to the expected_latency
+      // map of all Jobs instead of calling GetShortestLatency() a gazillion
+      // times again.
 
       // Note that we are NOT considering enqueue_time at the moment;
       // no request is given higher priority even if it had stayed in the queue
@@ -60,11 +61,18 @@ void ShortestExpectedLatencyPlanner::Plan() {
       int64_t sched_start = profiling::time::NowMicros();
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
+
+        Subgraph* start_subgraph = interpreter_->subgraph(
+            interpreter_->GetFirstSubgraphIdx(next_job.model_id, kTfLiteCPU));
+
+        std::set<int> start_ops;
+
+        for (const int& input_node : start_subgraph->input_nodes()) {
+          start_ops.insert(start_subgraph->op_indices()[input_node]);
+        }
+
         std::pair<int, int64_t> best_subgraph =
-            GetInterpreter()->GetShortestLatency(next_job.model_id,
-                                                 next_job.start_idx,
-                                                 0,
-                                                 device_waiting_time);
+            GetShortestLatency(next_job.model_id, start_ops, 0, device_waiting_time);
 
         if (largest_shortest_latency < best_subgraph.second) {
           largest_shortest_latency = best_subgraph.second;
@@ -74,7 +82,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
       }
       int64_t sched_end = profiling::time::NowMicros();
       // quick check for roughly examining the planning overhead
-      // std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
+      // std::cout << "Time to Find the next job(us) : " <<  sched_end -
+      // sched_start << std::endl;
 
       // for some reason, this Job must NOT be a reference (&), otherwise
       // we get a segfault at push_back() below
@@ -85,10 +94,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       SubgraphKey& to_execute =
           GetInterpreter()->subgraph(target_subgraph)->GetKey();
-      most_urgent_job.start_idx = to_execute.start_idx;
-      most_urgent_job.end_idx = to_execute.end_idx;
       most_urgent_job.subgraph_idx = target_subgraph;
-      most_urgent_job.device_id = to_execute.device_flag;
+      most_urgent_job.device_id = to_execute.device_flag();
       most_urgent_job.sched_id = sched_id++;
 
       ModelSpec& model_spec =
@@ -114,8 +121,107 @@ void ShortestExpectedLatencyPlanner::Plan() {
   }
 }
 
-bool ShortestExpectedLatencyPlanner::NeedProfile() {
-  return true;
+bool ShortestExpectedLatencyPlanner::NeedProfile() { return true; }
+
+std::pair<int, int64_t> ShortestExpectedLatencyPlanner::GetShortestLatency(
+    int model_id, std::set<int> next_ops, int64_t start_time,
+    std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+    TfLiteDeviceFlags preceded_device) {
+  std::vector<int> subgraph_indices =
+      GetSubgraphCandidates(model_id, next_ops, preceded_device);
+  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
+      subgraph_map = GroupByStartEndIdx(subgraph_indices);
+
+  std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
+  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
+    // first, filter out the subgraphs that take longer than others with the
+    // same start/end indices, since there's no reason to pick them
+    std::pair<int, int64_t> target_subgraph =
+        GetShortestSubgraphIndex(iter->second, start_time, device_waiting);
+    SubgraphKey& key = interpreter_->subgraph(target_subgraph.first)->GetKey();
+
+    std::pair<int, int64_t> local_min;
+    if (key.leaf_node_indices() != model_specs_[model_id].num_ops - 1) {
+      // there's more ops left for this model, so we need to look further to
+      // get the final latency
+      local_min =
+          GetShortestLatency(model_id, key.end_idx + 1, target_subgraph.second,
+                             device_waiting, key.device_flag);
+    } else {
+      // nothing else after this
+      local_min = target_subgraph;
+    }
+
+    // check if this subgraph is better than the best one
+    if (local_min.second < min_subgraph.second) {
+      // note the subgraph to return is the next immediate one (start_idx, XX),
+      // but the latency to return is that of the final subgraph (XX, #ops)
+      // hence, target_subgraph.first & local_min.second
+      min_subgraph.first = target_subgraph.first;
+      min_subgraph.second = local_min.second;
+    }
+  }
+  return min_subgraph;
+}
+
+std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
+ShortestExpectedLatencyPlanner::GroupByStartEndIdx(
+    std::vector<int> subgraph_indices) {
+  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>> ret;
+  for (auto subgraph_index : subgraph_indices) {
+    SubgraphKey& key = interpreter_->subgraph(subgraph_index)->GetKey();
+    ret[{key.root_node_indices(), key.leaf_node_indices()}].push_back(
+        subgraph_index);
+  }
+  return ret;
+}
+
+std::vector<int> ShortestExpectedLatencyPlanner::GetSubgraphCandidates(
+    int model_id, std::set<int> next_ops, TfLiteDeviceFlags preceded_device) {
+  std::vector<int> candidatesIds;
+
+  // iterate thru all subgraphs and only pick the ones that match the criteria
+  for (int i = 0; i < interpreter_->subgraphs_size(); ++i) {
+    SubgraphKey& key = interpreter_->subgraph(i)->GetKey();
+    if (key.model_id() == model_id &&
+        key.target_device_flag() != preceded_device) {
+      bool is_executable = true;
+      for (const int& next_op_index : next_ops) {
+        if (key.root_node_indices().find(next_op_index) ==
+            key.root_node_indices().end()) {
+          is_executable = false;
+          break;
+        }
+
+        if (is_executable) {
+          candidatesIds.push_back(i);
+        }
+      }
+    }
+  }
+  return candidatesIds;
+}
+
+std::pair<int, int64_t>
+ShortestExpectedLatencyPlanner::GetShortestSubgraphIndex(
+    std::vector<int> subgraph_indices, int64_t start_time,
+    std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
+  int64_t min_latency = INT_MAX;
+  int min_idx = 0;
+
+  for (auto subgraph_index : subgraph_indices) {
+    SubgraphKey& key = interpreter_->subgraph(subgraph_index)->GetKey();
+
+    int64_t waiting_time = device_waiting[key.target_device_flag()];
+    int64_t profiled = interpreter_->GetSubgraphProfileResult(key);
+    int64_t expected_latency = profiled + std::max(waiting_time, start_time);
+
+    if (min_latency > expected_latency) {
+      min_latency = expected_latency;
+      min_idx = subgraph_index;
+    }
+  }
+  return {min_idx, min_latency};
 }
 
 }  // namespace impl
