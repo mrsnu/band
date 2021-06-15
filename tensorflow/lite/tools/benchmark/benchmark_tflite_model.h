@@ -45,6 +45,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunImpl(int i) override;
   TfLiteStatus RunAll() override;
   TfLiteStatus RunPeriodic() override;
+  TfLiteStatus RunPeriodicSingleThread() override;
   TfLiteStatus RunStream() override;
   static BenchmarkParams DefaultParams();
 
@@ -110,8 +111,11 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   void ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
                             Json::Value& name_profile);
 
-  // spawn a thread that generates input requests periodically for all models
+  // spawn threads that generate input requests periodically for all models
   void GeneratePeriodicRequests();
+
+  // spawn a thread that generates input requests periodically for all models
+  void GeneratePeriodicRequestsSingleThread();
 
   std::unique_ptr<BenchmarkListener> profiling_listener_ = nullptr;
   std::unique_ptr<BenchmarkListener> ruy_profiling_listener_ = nullptr;

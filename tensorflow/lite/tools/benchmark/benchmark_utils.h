@@ -85,6 +85,9 @@ struct RuntimeConfig {
   bool allow_work_steal = false;
   int schedule_window_size = INT_MAX;
   std::vector<ModelInformation> model_information;
+  // for period_single_thread
+  int global_period_ms;
+  unsigned model_id_random_seed;
 };
 
 

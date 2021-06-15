@@ -766,15 +766,28 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
   // initialize values in case this isn't our first run
   kill_app_ = false;
 
-  // spawn a child thread to do our work, since we're going to sleep
-  // Note: spawning a separate thread is technically unnecessary if we only
-  // have a single thread that generate requests, but we may have multiple
-  // threads doing that in the future so we might as well make the code easily
-  // adaptable to such situtations.
+  // spawn child threads to do our work, since we're going to sleep
   GeneratePeriodicRequests();
 
-  // wait for 60 seconds until we stop the benchmark
-  // we could set a command line arg for this value as well
+  // wait for some time until we stop the benchmark
+  std::this_thread::sleep_for(
+      std::chrono::milliseconds(runtime_config_.running_time_ms));
+  kill_app_ = true;
+
+  interpreter_->GetPlanner()->Wait();
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunPeriodicSingleThread() {
+  // initialize values in case this isn't our first run
+  kill_app_ = false;
+
+  // spawn a child thread to do our work, since we're going to sleep
+  // Note: spawning a separate thread is technically unnecessary since we can
+  // just do the work ourselves; this is just a lazy copy-paste of RunPeriodic
+  GeneratePeriodicRequestsSingleThread();
+
+  // wait for some time until we stop the benchmark
   std::this_thread::sleep_for(
       std::chrono::milliseconds(runtime_config_.running_time_ms));
   kill_app_ = true;
@@ -831,6 +844,44 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     t.detach();
   }
+}
+
+void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
+  std::thread t([this]() {
+    int period_ms = runtime_config_.global_period_ms;
+    if (period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "global_period_ms is <= 0. "
+                        << "Will do nothing and return immediately.";
+      return;
+    }
+
+    unsigned seed = runtime_config_.model_id_random_seed;
+    // only use seed if it's != 0, otherwise use current time so that
+    // the seed changes for every run
+    std::srand(seed == 0 ? std::time(nullptr) : seed);
+
+    while (true) {
+      int num_models = interpreter_->GetModelConfig().size();
+      int model_id = std::rand() % num_models;
+      std::vector<Job> requests(1, Job(model_id));
+
+      // measure the time it took to generate requests
+      int64_t start = profiling::time::NowMicros();
+      interpreter_->InvokeModelsAsync(requests);
+      int64_t end = profiling::time::NowMicros();
+      int duration_ms = (end - start) / 1000;
+
+      // sleep until we reach period_ms
+      if (duration_ms < period_ms) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(period_ms - duration_ms));
+      }
+
+      if (kill_app_) return;
+    }
+  });
+
+  t.detach();
 }
 
 }  // namespace benchmark

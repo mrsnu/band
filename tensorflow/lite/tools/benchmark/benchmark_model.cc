@@ -174,6 +174,8 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
     TFLITE_LOG(INFO) << "Running in [" << mode << "] mode.";
     if (mode == "periodic") {
       status = RunPeriodic();
+    } else if (mode == "periodic_single_thread") {
+      status = RunPeriodicSingleThread();
     } else if (mode == "stream") {
       status = RunStream();
     } else if (mode == "default") {
