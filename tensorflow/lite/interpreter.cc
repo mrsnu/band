@@ -827,21 +827,7 @@ void Interpreter::Profile(int model_id) {
       profile_database_[subgraph_key] = latency;
 
       TFLITE_LOG(INFO) << "Profiling result\n"
-<<<<<<< HEAD
-                       << " model=" << subgraph_key.model_id()
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
                        << " model=" << subgraph_key.model_id
-=======
-                       << " model=" << subgraph_key.model_id()
-=======
-                       << " model=" << subgraph_key.model_id
->>>>>>> 7cbff9b... update subgraph key / planner wip
-                       << " warmup=" << num_warm_ups
-                       << " count=" << num_runs
->>>>>>> 5d87c7f... wip
->>>>>>> 47f6f4b... update subgraph key / planner wip
                        << " avg=" << latency << " us"
                        << " start="
                        << subgraph_key.GetInputOpsString()
@@ -981,7 +967,7 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
     int subgraph_index = subgraph_key_id.second;
 
     if (key.model_id == model_id && key.device_flag == device_id
-        && key.input_ops.find(start_idx) != key.input_ops().end()) {
+        && key.input_ops.find(start_idx) != key.input_ops.end()) {
       indices.insert(subgraph_index);
     }
   }
@@ -1044,12 +1030,16 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
 
-  int subgraph_min = 0;
+  if (planner_type_ == kFixedDevice ||
+      planner_type_ == kRoundRobin ||
+      planner_type_ == kFixedDeviceGlobalQueue) {
+    return {{}};
+  }
 
   // TODO: Context-independent code / move to interpreter builder
   std::vector<std::set<int>> subgraph_indices;
   int subgraph_index =
-      GetFirstSubgraphIdx(model_id, kTfLiteCPU);
+      GetSubgraphIdx(model_id, kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   std::set<int> resolved_tensors;
@@ -1061,12 +1051,6 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   for (int i = 0; i < num_ops; i++) {
     remaining_ops.insert(i);
-  }
-
-  if (planner_type_ == kFixedDevice ||
-      planner_type_ == kRoundRobin ||
-      planner_type_ == kFixedDeviceGlobalQueue) {
-    return {remaining_ops};
   }
 
   auto is_resolved = [&](int op_index) {
@@ -1132,8 +1116,6 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
     if (operator_set.size()) {
       subgraph_indices.push_back(operator_set);
-      
-      subgraph_min += operator_set.size();
     }
     // Switch between device and fallback 
     current_device = 
@@ -1148,7 +1130,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
   // at this point, the subgraph key for this model doesn't have valid start
   // and end indices so we don't need to specify them
-  int subgraph_index = GetFirstSubgraphIdx(model_id, kTfLiteCPU);
+  int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
@@ -1229,6 +1211,51 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   }
 
   primary_subgraph->AllocateTensors();
+}
+
+void Interpreter::SetSLOBasedOnProfile() {
+  for (auto& m : model_configs_) {
+    int model_id = m.first;
+    ModelConfig& config = m.second;
+
+    if (config.slo_us > 0) {
+      // slo has already been set by the model json config file
+      continue;
+    }
+
+    if (config.slo_scale <= 0) {
+      // this model doesn't have an slo
+      continue;
+    }
+
+    int64_t worst_latency = GetWorstDeviceProfileResult(model_id);
+    config.slo_us = worst_latency * config.slo_scale;
+  }
+}
+
+int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
+  int64_t worst_latency = 0;
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    SubgraphKey& subgraph_key = subgraphs_[i]->GetKey();
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
+
+    auto it = subgraph_profiling_results_map_.find(subgraph_key);
+    if (it != subgraph_profiling_results_map_.end()) {
+      int64_t latency = it->second;
+      if (worst_latency < latency) {
+        worst_latency = latency;
+      }
+    }
+  }
+
+  if (worst_latency == 0) {
+    TFLITE_LOG(ERROR) << "Model #" << model_id << " has no profile results, "
+                      << "but GetWorstDeviceProfileResult was called.";
+  }
+
+  return worst_latency;
 }
 }  // namespace impl
 

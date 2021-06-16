@@ -157,18 +157,18 @@ void Planner::FlushFinishedJobs() {
       Job job = jobs_finished_.queue.front();
       jobs_finished_.queue.pop_front();
 
-      if (job.slo_us > 0 && job.is_final_subgraph &&
-          job.status == kTfLiteJobSuccess) {
+      if (job.slo_us > 0 && job.is_final_subgraph && job.status == kTfLiteJobSuccess) {
         // check if slo has been violated or not
         auto latency = job.end_time - job.enqueue_time;
         job.status =
             latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
       }
 
-      if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
+      if (job.is_final_subgraph) {
         // update internal map to keep track of the # of inferences per model
         model_execution_count_[job.model_id]++;
       }
+      
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
               << job.model_fname << "\t"

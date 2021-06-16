@@ -180,23 +180,6 @@ class InterpreterInfo : public GraphInfo {
   Subgraph* subgraph_;
 };
 
-std::string IndexSetToString(const std::set<int>& indices) {
-    std::string result;
-    for (const int& index : indices) {
-      result += std::to_string(index) + ",";
-    }
-    result.pop_back();
-    return result;
-}
-
-std::string SubgraphKey::GetInputOpsString() const {
-  return IndexSetToString(input_ops);
-}
-
-std::string SubgraphKey::GetOutputOpsString() const {
-  return IndexSetToString(output_ops);
-}
-
 Subgraph::Subgraph(ErrorReporter* error_reporter,
                    TfLiteExternalContext** external_contexts,
                    std::vector<std::unique_ptr<Subgraph>>* subgraphs,

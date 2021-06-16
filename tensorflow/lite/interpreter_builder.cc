@@ -587,24 +587,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       continue;
     }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-<<<<<<< HEAD
-<<<<<<< HEAD
-    std::vector<std::pair<SubgraphKey, std::set<size_t>>>
-=======
-    std::vector<std::pair<tflite::impl::SubgraphKey, std::set<int>>>
-<<<<<<< HEAD
->>>>>>> f88590a... Build subgraph based on op indexes
-        subgraph_indexes =
-=======
-=======
-    std::vector<std::set<int>>
->>>>>>> 7cbff9b... update subgraph key / planner wip
-        subgraph_indices =
->>>>>>> 8a7e1da... bug fix
+    std::vector<std::pair<SubgraphKey, std::set<size_t>>> subgraph_indices =
         (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
     for (auto& op_indices : subgraph_indices) {
-      tflite::impl::SubgraphKey key(model_id, device_id);
+      SubgraphKey key(model_id, device_id);
       int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, key,
         op_indices, num_threads);
@@ -640,7 +627,7 @@ int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
                                     SubgraphKey& subgraph_key,
-                                    std::set<int> op_indexes,
+                                    std::set<int> op_indices,
                                     int num_threads) {
   return AddSubgraph(model.GetModel(), op_resolver, interpreter,
                      subgraph_key, op_indices, num_threads);
@@ -650,7 +637,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
                                     SubgraphKey& subgraph_key,
-                                    std::set<int> op_indexes,
+                                    std::set<int> op_indices,
                                     int num_threads) {
   int subgraph_exists = (*interpreter)->GetSubgraphIdx(subgraph_key);
   if (subgraph_exists >= 0) {
@@ -742,6 +729,9 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
       return cleanup_and_error();
     }
+
+    std::cout << "# of operators " << operators->size() <<
+        " # of tensors " << tensors->size() << std::endl;
 
     if (op_indices.empty()) {
       for (int op_index = 0; op_index <= operators->size() - 1; op_index++) {

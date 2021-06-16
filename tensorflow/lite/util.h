@@ -28,13 +28,15 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
 #include <map>
 #include <fstream>
 
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
-// data structure for identifying subgraphs within whole modelsstruct SubgraphKey {
+// data structure for identifying subgraphs within whole models
+struct SubgraphKey {
   public:
     SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
                 int start = -1, int end = -1)

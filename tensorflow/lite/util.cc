@@ -25,6 +25,23 @@ limitations under the License.
 namespace tflite {
 namespace {
 
+std::string IndexSetToString(const std::set<int>& indices) {
+    std::string result;
+    for (const int& index : indices) {
+      result += std::to_string(index) + ",";
+    }
+    result.pop_back();
+    return result;
+}
+
+std::string SubgraphKey::GetInputOpsString() const {
+  return IndexSetToString(input_ops);
+}
+
+std::string SubgraphKey::GetOutputOpsString() const {
+  return IndexSetToString(output_ops);
+}
+
 TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
   context->ReportError(context,
                        "Encountered an unresolved custom op. Did you miss "
