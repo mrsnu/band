@@ -829,6 +829,8 @@ void Interpreter::Profile(int model_id) {
       TFLITE_LOG(INFO) << "Profiling result\n"
                        << " model=" << subgraph_key.model_id
                        << " avg=" << latency << " us"
+                       << " device="
+                       << TfLiteDeviceGetName(subgraph_key.device_flag)
                        << " start="
                        << subgraph_key.GetInputOpsString()
                        << " end=" 
