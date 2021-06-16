@@ -100,6 +100,7 @@ namespace impl {
 struct ModelSpec {
   int num_ops;
   std::set<int> output_tensors;
+  std::set<int> all_output_tensors;
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
 };
@@ -711,6 +712,7 @@ class Interpreter {
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
   // fill in the ModelSpec for this model
+  // TODO: Remove status dependency.
   void InvestigateModelSpec(int model_id);
 
   // Generate explicit subgraphs for fallback ops in `model_id`.

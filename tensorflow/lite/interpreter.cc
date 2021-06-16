@@ -994,13 +994,15 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
   // start_idx and end_idx weren't specified, so we assume that the caller
   // intended to retrieve the whole model
   ModelSpec& spec = model_specs_[model_id];
-  SubgraphKey key(model_id, device_id, 0, spec.num_ops - 1);
-  auto it = subgraph_idx_map_.find(key);
-  if (it != subgraph_idx_map_.end()) {
-    return it->second;
-  } else {
-    return -1;
+  for (int i = 0; i < subgraphs_size(); i++) {
+    Subgraph* current_subgraph = subgraph(i);
+    if (current_subgraph->key_.model_id == model_id &&
+        current_subgraph->key_.device_flag == device_id &&
+        current_subgraph->nodes_size() == spec.num_ops) {
+      return i;
+    }
   }
+  return -1;
 }
 
 std::set<int> Interpreter::models() const {
@@ -1137,10 +1139,14 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {
+<<<<<<< HEAD
   // get the subgraph index for this model
   // at this point, the subgraph key for this model doesn't have valid start
   // and end indices so we don't need to specify them
   int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
+=======
+  int subgraph_index = GetFirstSubgraphIdx(model_id, kTfLiteCPU);
+>>>>>>> 8b74616... Update model spec
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
@@ -1153,10 +1159,9 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   SubgraphKey& key = primary_subgraph->GetKey();
   DeleteKey(key);
 
-  SubgraphKey new_key(key.model_id, key.device_flag,
-                      primary_subgraph->input_nodes(),
-                      primary_subgraph->output_nodes());
-  RegisterSubgraphIdx(new_key, subgraph_index);
+  key.input_ops = primary_subgraph->input_ops();
+  key.output_ops = primary_subgraph->output_ops();
+  RegisterSubgraphIdx(key, subgraph_index);
 
   // allocate circular buffer for model IO
   std::vector<TfLiteTensor*> input_tensors;
@@ -1186,7 +1191,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
     for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
       tensor_indices.insert(output_tensor);
-      model_spec.output_tensors.insert(output_tensor);
+      model_spec.all_output_tensors.insert(output_tensor);
     }
 
     for (auto i : tensor_indices) {
@@ -1194,6 +1199,11 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       model_spec.tensor_types.insert(tensor->type);
     }
   }
+
+  std::copy(primary_subgraph->outputs().begin(),
+            primary_subgraph->outputs().end(),
+            std::inserter(model_spec.output_tensors,
+                          model_spec.output_tensors.begin()));
 
   // also check unsupported ops to fill in model_spec.unsupported_ops
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
