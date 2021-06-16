@@ -34,68 +34,46 @@ limitations under the License.
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
-// data structure for identifying subgraphs within whole models
-class SubgraphKey {
+// data structure for identifying subgraphs within whole modelsstruct SubgraphKey {
   public:
     SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
                 int start = -1, int end = -1)
-        : model_id_(model_id), device_flag_(device_flag),
-          root_op_indices_(start != -1 ? std::set<int>({start}) : std::set<int>({})),
-          leaf_op_indices_(end != -1 ? std::set<int>({end}) : std::set<int>({})) {}
+        : model_id(model_id), device_flag(device_flag),
+          input_ops(start != -1 ? std::set<int>({start}) : std::set<int>()),
+          output_ops(end != -1 ? std::set<int>({end}) : std::set<int>()) {}
 
     SubgraphKey(int model_id, TfLiteDeviceFlags device_flag,
-                std::set<int> root_node_indices,
-                std::set<int> leaf_node_indices,
-                bool is_fallback = false)
-          : model_id_(model_id), device_flag_(device_flag),
-            root_op_indices_(root_node_indices),
-            leaf_op_indices_(leaf_node_indices),
-            is_fallback_(is_fallback) {}
+                std::set<int> input_ops,
+                std::set<int> output_ops)
+          : model_id(model_id), device_flag(device_flag),
+            input_ops(input_ops),
+            output_ops(output_ops) {
+      assert(device_flag != kTfLiteCPUFallback);
+    }
 
     bool operator<(const SubgraphKey &key) const {
-      if (model_id_ != key.model_id_) {
-        return model_id_ < key.model_id_;
+      if (model_id != key.model_id) {
+        return model_id < key.model_id;
       }
 
-      if (device_flag_ != key.device_flag_) {
-        return device_flag_ < key.device_flag_;
+      if (device_flag != key.device_flag) {
+        return device_flag < key.device_flag;
       }
 
-      if (root_op_indices_ != key.root_op_indices_) {
-        return root_op_indices_ < key.root_op_indices_;
+      if (input_ops != key.input_ops) {
+        return input_ops < key.input_ops;
       }
 
-      return leaf_op_indices_ < key.leaf_op_indices_;
+      return output_ops < key.output_ops;
     }
 
-    int model_id() const { return model_id_; }
+    std::string GetInputOpsString() const;
+    std::string GetOutputOpsString() const;
 
-    TfLiteDeviceFlags device_flag() const { return device_flag_; }
-
-    TfLiteDeviceFlags target_device_flag() const {
-      return is_fallback_ ? kTfLiteCPUFallback : device_flag_;
-    }
-    
-    const std::set<int>& root_node_indices() const {
-      return root_op_indices_;
-    }
-
-    std::string GetRootNodesString() const;
-
-    const std::set<int>& leaf_node_indices() const {
-      return leaf_op_indices_;
-    }
-
-    std::string GetLeafNodesString() const;
-
-    bool is_fallback() const { return is_fallback_; }
-
-   private:
-    int model_id_;
-    TfLiteDeviceFlags device_flag_;
-    std::set<int> root_op_indices_;
-    std::set<int> leaf_op_indices_;
-    bool is_fallback_;
+    int model_id;
+    TfLiteDeviceFlags device_flag;
+    std::set<int> input_ops;
+    std::set<int> output_ops;
 };
 
 using Tensors = std::vector<TfLiteTensor*>;

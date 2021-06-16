@@ -801,14 +801,14 @@ void Interpreter::Profile(int model_id) {
       subgraph_profiling_results_map_[subgraph_key] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
-                       << " model=" << subgraph_key.model_id()
+                       << " model=" << subgraph_key.model_id
                        << " avg=" << profiled_latency << " us"
                        << " device="
-                       << TfLiteDeviceGetName(subgraph_key.target_device_flag())
+                       << TfLiteDeviceGetName(subgraph_key.device_flag)
                        << " start="
-                       << subgraph_key.GetRootNodesString()
+                       << subgraph_key.GetInputOpsString()
                        << " end=" 
-                       << subgraph_key.GetLeafNodesString() << ".";
+                       << subgraph_key.GetOutputOpsString() << ".";
 
     } else {
       // otherwise, proceed as normal
@@ -827,12 +827,26 @@ void Interpreter::Profile(int model_id) {
       profile_database_[subgraph_key] = latency;
 
       TFLITE_LOG(INFO) << "Profiling result\n"
+<<<<<<< HEAD
                        << " model=" << subgraph_key.model_id()
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+                       << " model=" << subgraph_key.model_id
+=======
+                       << " model=" << subgraph_key.model_id()
+=======
+                       << " model=" << subgraph_key.model_id
+>>>>>>> 7cbff9b... update subgraph key / planner wip
+                       << " warmup=" << num_warm_ups
+                       << " count=" << num_runs
+>>>>>>> 5d87c7f... wip
+>>>>>>> 47f6f4b... update subgraph key / planner wip
                        << " avg=" << latency << " us"
                        << " start="
-                       << subgraph_key.GetRootNodesString()
+                       << subgraph_key.GetInputOpsString()
                        << " end=" 
-                       << subgraph_key.GetLeafNodesString() << ".";
+                       << subgraph_key.GetOutputOpsString() << ".";
     }
   }
 
@@ -966,8 +980,8 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
     const SubgraphKey& key = subgraph_key_id.first;
     int subgraph_index = subgraph_key_id.second;
 
-    if (key.model_id() == model_id && key.device_id() == device_id
-        && key.root_node_indices().find(start_idx) != key.root_node_indices().end()) {
+    if (key.model_id == model_id && key.device_flag == device_id
+        && key.input_ops.find(start_idx) != key.input_ops().end()) {
       indices.insert(subgraph_index);
     }
   }
@@ -996,7 +1010,7 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
 std::set<int> Interpreter::models() const {
   std::set<int> models;
   for (auto& key : subgraph_idx_map_) {
-    models.insert(key.first.model_id());
+    models.insert(key.first.model_id);
   }
   return models;
 }
@@ -1023,7 +1037,7 @@ int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   }
 }
 
-std::vector<std::pair<SubgraphKey, std::set<int>>>
+std::vector<std::set<int>>
 Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
                                          const TfLiteDeviceFlags device_flag) {
   const int num_ops = model_specs_[model_id].num_ops;
@@ -1032,15 +1046,10 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   int subgraph_min = 0;
 
-  if (planner_type_ == kFixedDevice ||
-      planner_type_ == kRoundRobin ||
-      planner_type_ == kFixedDeviceGlobalQueue) {
-    return {{SubgraphKey(model_id, device_flag, 0, num_ops - 1), {}}};
-  }
-
-  std::vector<std::pair<SubgraphKey, std::set<int>>> subgraph_key_indices;
+  // TODO: Context-independent code / move to interpreter builder
+  std::vector<std::set<int>> subgraph_indices;
   int subgraph_index =
-      GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU, 0, num_ops - 1));
+      GetFirstSubgraphIdx(model_id, kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   std::set<int> resolved_tensors;
@@ -1052,6 +1061,12 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   for (int i = 0; i < num_ops; i++) {
     remaining_ops.insert(i);
+  }
+
+  if (planner_type_ == kFixedDevice ||
+      planner_type_ == kRoundRobin ||
+      planner_type_ == kFixedDeviceGlobalQueue) {
+    return {remaining_ops};
   }
 
   auto is_resolved = [&](int op_index) {
@@ -1116,9 +1131,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     }  
 
     if (operator_set.size()) {
-      subgraph_key_indices.push_back(
-          {SubgraphKey(model_id, current_device, subgraph_min, subgraph_min + operator_set.size() - 1),
-          operator_set});
+      subgraph_indices.push_back(operator_set);
       
       subgraph_min += operator_set.size();
     }
@@ -1128,14 +1141,14 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
         kTfLiteCPUFallback : device_flag;
   }
 
-  return subgraph_key_indices;
+  return subgraph_indices;
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
   // at this point, the subgraph key for this model doesn't have valid start
   // and end indices so we don't need to specify them
-  int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
+  int subgraph_index = GetFirstSubgraphIdx(model_id, kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
@@ -1147,9 +1160,11 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   // delete the current key and replace it with valid start/end indices
   SubgraphKey& key = primary_subgraph->GetKey();
   DeleteKey(key);
-  key.start_idx = 0;
-  key.end_idx = model_spec.num_ops - 1;
-  RegisterSubgraphIdx(key, subgraph_index);
+
+  SubgraphKey new_key(key.model_id, key.device_flag,
+                      primary_subgraph->input_nodes(),
+                      primary_subgraph->output_nodes());
+  RegisterSubgraphIdx(new_key, subgraph_index);
 
   // allocate circular buffer for model IO
   std::vector<TfLiteTensor*> input_tensors;

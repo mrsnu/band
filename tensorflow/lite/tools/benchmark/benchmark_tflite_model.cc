@@ -467,6 +467,32 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
     if (model_id == -1)
       return kTfLiteError;
+    model_name_to_id_[model_name] = model_id;
+  }
+
+  if (interpreter_->NeedProfile()) {
+    Json::Value model_name_profile;
+
+    // load data from the given model profile file
+    // if there is no such file, then `model_name_profile` will be empty
+    if (FileExists(runtime_config_.model_profile)) {
+      std::ifstream model_profile_file(runtime_config_.model_profile,
+                                       std::ifstream::binary);
+      model_profile_file >> model_name_profile;
+    }
+
+    // convert the model name strings to integer ids for the interpreter
+    auto model_idprofile = ConvertModelNameToId(model_name_profile);
+    interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
+                          params_.Get<int32_t>("profile_num_runs"),
+                          model_idprofile);
+
+    // update the profile file to include all new profile results from this run
+    if (!runtime_config_.model_profile.empty()) {
+      ConvertModelIdToName(model_idprofile, model_name_profile);
+      std::ofstream out_file(runtime_config_.model_profile, std::ios::out);
+      out_file << model_name_profile;
+    }
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()

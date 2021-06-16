@@ -209,6 +209,22 @@ class Subgraph {
         output_tensor_to_nodes_, outputs().data(), outputs().size());
   }
 
+  std::set<int> input_ops() const {
+    std::set<int> input_ops;
+    for(const int& i : input_nodes()) {
+      input_ops.insert(op_indices_[i]);
+    }
+    return input_ops;
+  }
+
+  std::set<int> output_ops() const {
+    std::set<int> output_ops;
+    for(const int& i : input_nodes()) {
+      output_ops.insert(op_indices_[i]);
+    }
+    return output_ops;
+  }
+
   // Read only access to list of variable tensors.
   std::vector<int>& variables() { return variables_; }
 
@@ -231,7 +247,7 @@ class Subgraph {
   const std::vector<int>& execution_plan() const { return execution_plan_; }
 
   void SetOperatorIndices(std::vector<int> op_indices) { op_indices_ = op_indices; }
-  const std::vector<int>& op_indices() { return op_indices_; }
+  const std::vector<int>& op_indices() const { return op_indices_; }
 
   // Mutable form of tensors (TEMPORARY for refactor).
   // TODO(b/119495520): remove when refactoring complete.

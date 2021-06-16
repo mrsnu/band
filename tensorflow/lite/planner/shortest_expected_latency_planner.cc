@@ -156,7 +156,7 @@ std::pair<int, int64_t> ShortestExpectedLatencyPlanner::GetShortestLatency(
       subgraph_map = GroupByStartEndIdx(subgraph_indices);
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
-  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
+  /*for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
     // first, filter out the subgraphs that take longer than others with the
     // same start/end indices, since there's no reason to pick them
     std::pair<int, int64_t> target_subgraph =
@@ -164,7 +164,7 @@ std::pair<int, int64_t> ShortestExpectedLatencyPlanner::GetShortestLatency(
     SubgraphKey& key = interpreter_->subgraph(target_subgraph.first)->GetKey();
 
     std::pair<int, int64_t> local_min;
-    if (key.leaf_node_indices() != model_specs_[model_id].num_ops - 1) {
+    if (key.output_ops != model_specs_[model_id].num_ops - 1) {
       // there's more ops left for this model, so we need to look further to
       // get the final latency
       local_min =
@@ -184,6 +184,7 @@ std::pair<int, int64_t> ShortestExpectedLatencyPlanner::GetShortestLatency(
       min_subgraph.second = local_min.second;
     }
   }
+  */
   return min_subgraph;
 }
 
@@ -193,7 +194,7 @@ ShortestExpectedLatencyPlanner::GroupByStartEndIdx(
   std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>> ret;
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = interpreter_->subgraph(subgraph_index)->GetKey();
-    ret[{key.root_node_indices(), key.leaf_node_indices()}].push_back(
+    ret[{key.input_ops, key.output_ops}].push_back(
         subgraph_index);
   }
   return ret;
@@ -206,12 +207,12 @@ std::vector<int> ShortestExpectedLatencyPlanner::GetSubgraphCandidates(
   // iterate thru all subgraphs and only pick the ones that match the criteria
   for (int i = 0; i < interpreter_->subgraphs_size(); ++i) {
     SubgraphKey& key = interpreter_->subgraph(i)->GetKey();
-    if (key.model_id() == model_id &&
-        key.target_device_flag() != preceded_device) {
+    if (key.model_id == model_id &&
+        key.device_flag != preceded_device) {
       bool is_executable = true;
       for (const int& next_op_index : next_ops) {
-        if (key.root_node_indices().find(next_op_index) ==
-            key.root_node_indices().end()) {
+        if (key.input_ops.find(next_op_index) ==
+            key.input_ops.end()) {
           is_executable = false;
           break;
         }
@@ -235,7 +236,7 @@ ShortestExpectedLatencyPlanner::GetShortestSubgraphIndex(
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = interpreter_->subgraph(subgraph_index)->GetKey();
 
-    int64_t waiting_time = device_waiting[key.target_device_flag()];
+    int64_t waiting_time = device_waiting[key.device_flag];
     int64_t profiled = interpreter_->GetSubgraphProfileResult(key);
     int64_t expected_latency = profiled + std::max(waiting_time, start_time);
 
