@@ -715,6 +715,8 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
                        << " warmup=" << num_warm_ups
                        << " count=" << num_runs
                        << " avg=" << latency << " us"
+                       << " device="
+                       << TfLiteDeviceGetName(subgraph_key.device_flag)
                        << " start="
                        << subgraph_key.GetInputOpsString()
                        << " end=" 

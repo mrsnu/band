@@ -263,7 +263,7 @@ class Subgraph {
 
   std::set<int> output_ops() const {
     std::set<int> output_ops;
-    for(const int& i : input_nodes()) {
+    for(const int& i : output_nodes()) {
       output_ops.insert(op_indices_[i]);
     }
     return output_ops;
