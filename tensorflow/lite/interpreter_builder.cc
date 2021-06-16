@@ -737,6 +737,9 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       return cleanup_and_error();
     }
 
+    std::cout << "# of operators " << operators->size() <<
+        " # of tensors " << tensors->size() << std::endl;
+
     if (op_indices.empty()) {
       for (int op_index = 0; op_index <= operators->size() - 1; op_index++) {
         op_indices.insert(op_index);

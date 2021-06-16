@@ -852,7 +852,8 @@ Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
 int Interpreter::GetFirstSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
   for (auto& subgraph_key_id: subgraph_idx_map_) {
     const SubgraphKey& key = subgraph_key_id.first;
-    if (key.device_flag == device_id &&
+    if (key.model_id == model_id &&
+        key.device_flag == device_id &&
         key.input_ops.find(0) != key.input_ops.end()) {
       return subgraph_key_id.second;
     }
@@ -917,7 +918,11 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
 
-  int subgraph_min = 0;
+  if (planner_type_ == kFixedDevice ||
+      planner_type_ == kRoundRobin ||
+      planner_type_ == kFixedDeviceGlobalQueue) {
+    return {{}};
+  }
 
   // TODO: Context-independent code / move to interpreter builder
   std::vector<std::set<int>> subgraph_indices;
@@ -934,12 +939,6 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   for (int i = 0; i < num_ops; i++) {
     remaining_ops.insert(i);
-  }
-
-  if (planner_type_ == kFixedDevice ||
-      planner_type_ == kRoundRobin ||
-      planner_type_ == kFixedDeviceGlobalQueue) {
-    return {remaining_ops};
   }
 
   auto is_resolved = [&](int op_index) {
@@ -1005,8 +1004,6 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
     if (operator_set.size()) {
       subgraph_indices.push_back(operator_set);
-      
-      subgraph_min += operator_set.size();
     }
     // Switch between device and fallback 
     current_device = 
