@@ -1025,7 +1025,7 @@ int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   }
 }
 
-std::vector<std::set<int>>
+std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
 Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
                                          const TfLiteDeviceFlags device_flag) {
   const int num_ops = model_specs_[model_id].num_ops;
@@ -1035,11 +1035,11 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   if (planner_type_ == kFixedDevice ||
       planner_type_ == kRoundRobin ||
       planner_type_ == kFixedDeviceGlobalQueue) {
-    return {{}};
+    return {{device_flag, {}}};
   }
 
   // TODO: Context-independent code / move to interpreter builder
-  std::vector<std::set<int>> subgraph_indices;
+  std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> subgraph_indices;
   int subgraph_index =
       GetSubgraphIdx(model_id, kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(subgraph_index);
@@ -1117,7 +1117,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     }  
 
     if (operator_set.size()) {
-      subgraph_indices.push_back(operator_set);
+      subgraph_indices.push_back({current_device, operator_set});
     }
     // Switch between device and fallback 
     current_device = 
@@ -1204,7 +1204,9 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       const TfLiteNode& node =
           primary_subgraph->node_and_registration(node_index)->first;
       if (node.delegate == nullptr) {
-        model_spec.unsupported_ops[device_flag].insert(node_index);
+        model_spec.unsupported_ops[device_flag].insert(
+          primary_subgraph->op_indices()[node_index]
+        );
       }
     }
 
