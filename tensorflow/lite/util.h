@@ -50,7 +50,6 @@ struct SubgraphKey {
           : model_id(model_id), device_flag(device_flag),
             input_ops(input_ops),
             output_ops(output_ops) {
-      assert(device_flag != kTfLiteCPUFallback);
     }
 
     bool operator<(const SubgraphKey &key) const {

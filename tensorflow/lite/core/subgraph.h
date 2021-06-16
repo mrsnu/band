@@ -141,32 +141,6 @@ class Subgraph {
   // Overrides execution plan. This bounds checks indices sent in.
   TfLiteStatus SetExecutionPlan(const std::vector<int>& new_plan);
 
-  std::set<int> GetParentNodes(size_t node_index) const {
-    auto node_registration = node_and_registration(node_index);
-    if (node_registration) {
-      auto& node = node_registration->first;
-      // Get node that outputs input of a current node
-      return TensorIndicesToNodeIndices(output_tensor_to_nodes_,
-                                        node.inputs->data,
-                                        node.inputs->size);
-    } else {
-      return {};
-    }
-  }
-
-  std::set<int> GetChildNodes(size_t node_index) const {
-    auto node_registration = node_and_registration(node_index);
-    if (node_registration) {
-      auto& node = node_registration->first;
-      // Get node that inputs output of a current node
-      return TensorIndicesToNodeIndices(input_tensor_to_nodes_,
-                                        node.outputs->data,
-                                        node.outputs->size);
-    } else {
-      return {};
-    }
-  }
-
   // Get a mutable tensor data structure.
   // TODO(aselle): Create a safe ArrayHandle interface to avoid exposing this
   // read/write access to structure
@@ -393,6 +367,10 @@ class Subgraph {
 
   void SetKey(SubgraphKey key) { key_ = key; }
   SubgraphKey& GetKey() { return key_; }
+
+  Subgraph* GetNextSubgraph() const { return next_subgraph_ ? (*subgraphs_)[next_subgraph_].get() : nullptr; }
+  void SetNextSubgraph(int index) { next_subgraph_ = index; }
+  int GetNextSubgraphIndex() const { return next_subgraph_; }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
@@ -773,6 +751,8 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
+
+  int next_subgraph_ = -1;
 
   SubgraphKey key_;
 };
