@@ -604,14 +604,20 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         subgraph_indices =
         (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
+    Subgraph* previous_subgraph = nullptr;
+
     for (auto& device_op_indices : subgraph_indices) {
       tflite::impl::SubgraphKey key(model_id, device_op_indices.first);
       int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, key,
         device_op_indices.second, num_threads);
       if (subgraph_idx != -1) {
+        if (previous_subgraph) {
+          previous_subgraph->SetNextSubgraph(subgraph_idx);
+        }
         (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
         has_available_device = true;
+        previous_subgraph = (*interpreter)->subgraph(subgraph_idx);
       }
 
       TFLITE_LOG(INFO) << "ADDED Subgraph "
@@ -619,6 +625,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                        << TfLiteDeviceGetName(key.device_flag) << " "
                        << "From " << key.GetInputOpsString() << " "
                        << "To " << key.GetOutputOpsString();
+
     }
   }
 
@@ -853,19 +860,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     auto o_nodes = modified_subgraph->output_nodes();
     for (int i : o_nodes) {
       std::cout << modified_subgraph->op_indices()[i] << " " << std::endl;
-
-      std::cout << "Parent nodes of " << modified_subgraph->op_indices()[i] << " : "  << std::endl;
-      auto parent_nodes = modified_subgraph->GetParentNodes(i);
-      for (int j :parent_nodes) {
-        std::cout << modified_subgraph->op_indices()[j] << " " << std::endl;
-      }
-
-      std::cout << "Child nodes of " << modified_subgraph->op_indices()[i] << " : "  << std::endl;
-      auto child_nodes = modified_subgraph->GetChildNodes(i);
-
-      for(int j : child_nodes) {
-        std::cout << modified_subgraph->op_indices()[j] << " " << std::endl;
-      }
     }
 
     std::vector<int> variables;
