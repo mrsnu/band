@@ -600,15 +600,15 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       continue;
     }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    std::vector<std::set<int>>
+    std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
         subgraph_indices =
         (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
-    for (auto& op_indices : subgraph_indices) {
-      tflite::impl::SubgraphKey key(model_id, device_id);
+    for (auto& device_op_indices : subgraph_indices) {
+      tflite::impl::SubgraphKey key(model_id, device_op_indices.first);
       int subgraph_idx = AddSubgraph(
         model, op_resolver, interpreter, key,
-        op_indices, num_threads);
+        device_op_indices.second, num_threads);
       if (subgraph_idx != -1) {
         (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
         has_available_device = true;
