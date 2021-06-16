@@ -349,6 +349,14 @@ void Interpreter::DeleteSubgraphs(size_t starting_index_to_delete,
     subgraphs_to_delete = subgraphs_.size() - starting_index_to_delete;
 
   if (starting_index_to_delete + subgraphs_to_delete <= subgraphs_.size()) {
+    for (int i = 0; i < subgraphs_.size(); i++) {
+        if ((subgraph(i)->next_subgraph_ >= starting_index_to_delete) &&
+            (subgraph(i)->next_subgraph_ <
+                starting_index_to_delete + subgraphs_to_delete)) {
+          subgraph(i)->next_subgraph_ = -1;
+        }
+    }
+
     subgraphs_.erase(subgraphs_.begin() + starting_index_to_delete,
     subgraphs_.begin() + starting_index_to_delete + subgraphs_to_delete);
   }
