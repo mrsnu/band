@@ -532,14 +532,14 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     }
 
     // convert the model name strings to integer ids for the interpreter
-    auto model_id_profile = ConvertModelNameToId(model_name_profile);
+    auto model_idprofile = ConvertModelNameToId(model_name_profile);
     interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
                           params_.Get<int32_t>("profile_num_runs"),
-                          model_id_profile);
+                          model_idprofile);
 
     // update the profile file to include all new profile results from this run
     if (!runtime_config_.model_profile.empty()) {
-      ConvertModelIdToName(model_id_profile, model_name_profile);
+      ConvertModelIdToName(model_idprofile, model_name_profile);
       std::ofstream out_file(runtime_config_.model_profile, std::ios::out);
       out_file << model_name_profile;
     }
@@ -747,8 +747,8 @@ void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceTo
   for (auto& pair : id_profile) {
     SubgraphKey key = pair.first;
     int model_id = key.model_id;
-    std::string start_idx = node_indices_to_string(key.root_node_indices);
-    std::string end_idx = node_indices_to_string(key.leaf_node_indices);
+    std::string start_idx = key.GetInputOpsString();
+    std::string end_idx = key.GetOutputOpsString();
     int64_t profiled_latency = pair.second;
 
     // check the string name of this model id
