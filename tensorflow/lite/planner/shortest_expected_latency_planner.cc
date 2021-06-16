@@ -65,14 +65,14 @@ void ShortestExpectedLatencyPlanner::Plan() {
         Subgraph* start_subgraph = interpreter_->subgraph(
             interpreter_->GetFirstSubgraphIdx(next_job.model_id, kTfLiteCPU));
 
-        std::set<int> start_ops;
+        std::set<int> resolved_output;
 
         for (const int& input_node : start_subgraph->input_nodes()) {
-          start_ops.insert(start_subgraph->op_indices()[input_node]);
+          resolved_output.insert(start_subgraph->outputs().begin(), start_subgraph->outputs().end());
         }
 
         std::pair<int, int64_t> best_subgraph =
-            GetShortestLatency(next_job.model_id, start_ops, 0, device_waiting_time);
+            GetShortestLatency(next_job.model_id, resolved_output, 0, device_waiting_time);
 
         if (largest_shortest_latency < best_subgraph.second) {
           largest_shortest_latency = best_subgraph.second;
@@ -124,28 +124,38 @@ void ShortestExpectedLatencyPlanner::Plan() {
 bool ShortestExpectedLatencyPlanner::NeedProfile() { return true; }
 
 std::pair<int, int64_t> ShortestExpectedLatencyPlanner::GetShortestLatency(
-    int model_id, std::set<int> next_ops, int64_t start_time,
+    int model_id, std::set<int> resolved_output, int64_t start_time,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
     TfLiteDeviceFlags preceded_device) {
   std::vector<int> subgraph_indices =
-      GetSubgraphCandidates(model_id, next_ops, preceded_device);
+      GetSubgraphCandidates(model_id, resolved_output, preceded_device);
   std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
       subgraph_map = GroupByStartEndIdx(subgraph_indices);
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
-  /*for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
+  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
     // first, filter out the subgraphs that take longer than others with the
     // same start/end indices, since there's no reason to pick them
     std::pair<int, int64_t> target_subgraph =
         GetShortestSubgraphIndex(iter->second, start_time, device_waiting);
-    SubgraphKey& key = interpreter_->subgraph(target_subgraph.first)->GetKey();
+    Subgraph* subgraph = interpreter_->subgraph(target_subgraph.first);
+    SubgraphKey& key = subgraph->GetKey();
+
+    std::set<int> next_resolved_output = resolved_output;
+    
+    for (const int& input_tensor : subgraph->inputs()) {
+      next_resolved_output.erase(input_tensor);
+    }
+
+    std::copy(subgraph->outputs().begin(), subgraph->outputs().end(),
+              std::inserter(next_resolved_output, next_resolved_output.begin()));
 
     std::pair<int, int64_t> local_min;
-    if (key.output_ops != model_specs_[model_id].num_ops - 1) {
+    if (next_resolved_output != interpreter_->GetModelSpec(model_id).output_tensors) {
       // there's more ops left for this model, so we need to look further to
       // get the final latency
       local_min =
-          GetShortestLatency(model_id, key.end_idx + 1, target_subgraph.second,
+          GetShortestLatency(model_id, next_resolved_output, target_subgraph.second,
                              device_waiting, key.device_flag);
     } else {
       // nothing else after this
@@ -161,7 +171,7 @@ std::pair<int, int64_t> ShortestExpectedLatencyPlanner::GetShortestLatency(
       min_subgraph.second = local_min.second;
     }
   }
-  */
+
   return min_subgraph;
 }
 
@@ -178,29 +188,30 @@ ShortestExpectedLatencyPlanner::GroupByStartEndIdx(
 }
 
 std::vector<int> ShortestExpectedLatencyPlanner::GetSubgraphCandidates(
-    int model_id, std::set<int> next_ops, TfLiteDeviceFlags preceded_device) {
-  std::vector<int> candidatesIds;
+    int model_id, std::set<int> resolved_output, TfLiteDeviceFlags preceded_device) {
+  std::vector<int> candidate_indices;
 
   // iterate thru all subgraphs and only pick the ones that match the criteria
   for (int i = 0; i < interpreter_->subgraphs_size(); ++i) {
-    SubgraphKey& key = interpreter_->subgraph(i)->GetKey();
+    Subgraph* subgraph = interpreter_->subgraph(i);
+    SubgraphKey& key = subgraph->GetKey();
     if (key.model_id == model_id &&
         key.device_flag != preceded_device) {
       bool is_executable = true;
-      for (const int& next_op_index : next_ops) {
-        if (key.input_ops.find(next_op_index) ==
-            key.input_ops.end()) {
+
+      for (const int& input_tensor : subgraph->inputs()) {
+        if (resolved_output.find(input_tensor) == resolved_output.end()) {
           is_executable = false;
           break;
         }
+      }
 
-        if (is_executable) {
-          candidatesIds.push_back(i);
-        }
+      if (is_executable) {
+        candidate_indices.push_back(i);
       }
     }
   }
-  return candidatesIds;
+  return candidate_indices;
 }
 
 std::pair<int, int64_t>
