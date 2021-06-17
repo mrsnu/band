@@ -1,5 +1,6 @@
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/interpreter.h"
 #include <fstream>
 
 namespace tflite {
@@ -48,10 +49,12 @@ void Planner::Wait() {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
-    if (model_execution_count_.find(job.model_id) == model_execution_count_.end()) {
-      model_execution_count_[job.model_id] = 0;
+    if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
+      if (model_execution_count_.find(job.model_id) == model_execution_count_.end()) {
+        model_execution_count_[job.model_id] = 0;
+      }
+      model_execution_count_[job.model_id]++;
     }
-    model_execution_count_[job.model_id]++;
 
     // write all timestamp statistics to log file
     log_file << job.sched_id << "\t"
