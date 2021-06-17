@@ -374,10 +374,10 @@ extern "C" {
 #endif  // __cplusplus
 
 JNIEXPORT jlong JNICALL Java_org_tensorflow_lite_Tensor_create(
-    JNIEnv* env, jclass clazz, jlong interpreter_handle, jint tensor_index) {
+    JNIEnv* env, jclass clazz, jlong interpreter_handle, jint subgraph_index, jint tensor_index) {
   tflite_api_dispatcher::Interpreter* interpreter =
       reinterpret_cast<tflite_api_dispatcher::Interpreter*>(interpreter_handle);
-  return reinterpret_cast<jlong>(new TensorHandle(interpreter, tensor_index));
+  return reinterpret_cast<jlong>(new TensorHandle(interpreter, subgraph_index, tensor_index));
 }
 
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_Tensor_delete(JNIEnv* env,
