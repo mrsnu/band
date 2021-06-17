@@ -62,6 +62,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `execution_mode`: Specify a exeucution mode. Available execution modes are as follows:
   * `stream`: consecutively run batches.
   * `periodic`: invoke requests periodically.
+  * `periodic_single_thread`: invoke requests periodically with a single thread.
 * `cpu_masks`: CPU cluster mask to set CPU affinity. [default: `ALL`]
   * `ALL`: All Cluster
   * `LITTLE`: LITTLE Cluster only
@@ -78,6 +79,8 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `model_profile`: The path to file with model profile results. [default: None]
 * `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
 * `schedule_window_size`: The number of planning unit.
+* `global_period_ms`: Request interval value used for execution mode `periodic_single_thread` only. Should be > 0.
+* `model_id_random_seed`: Random seed value used for picking model ids, in `periodic_single_thread` only. 0 is treated as the current timestamp.
 
 An example of complete JSON config file is as follows:
 ```json
