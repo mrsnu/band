@@ -103,9 +103,9 @@ class Planner {
 
  protected:
   std::thread planner_thread_;
-  Interpreter* interpreter_;
 
  private:
+  Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
 
   // Jobs Finished
