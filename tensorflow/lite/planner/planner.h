@@ -104,7 +104,6 @@ class Planner {
  protected:
   Interpreter* interpreter_;
   std::thread planner_thread_;
-  Interpreter* interpreter_;
 
  private:
   SafeBool planner_safe_bool_;
