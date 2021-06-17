@@ -1,5 +1,4 @@
 #include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
-
 #include "tensorflow/lite/profiling/time.h"
 
 // for the std::cout commented out in Plan()
@@ -42,20 +41,17 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // find the most urgent job and save its index within the queue
       int64_t largest_shortest_latency = -1;
       int target_job_idx;
-      int target_subgraph;
+      int target_subgraph_idx;
 
       int64_t sched_start = profiling::time::NowMicros();
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
 
         Subgraph* start_subgraph = interpreter_->subgraph(
-            interpreter_->GetFirstSubgraphIdx(next_job.model_id, kTfLiteCPU));
+            interpreter_->GetSubgraphIdx(SubgraphKey(next_job.model_id, kTfLiteCPU)));
 
         std::set<int> resolved_output;
-
-        for (const int& input_node : start_subgraph->input_nodes()) {
-          resolved_output.insert(start_subgraph->outputs().begin(), start_subgraph->outputs().end());
-        }
+        resolved_output.insert(start_subgraph->inputs().begin(), start_subgraph->inputs().end());
 
         std::pair<int, int64_t> best_subgraph =
             GetShortestLatency(next_job.model_id, resolved_output, 0, device_waiting_time);
@@ -63,7 +59,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         if (largest_shortest_latency < best_subgraph.second) {
           largest_shortest_latency = best_subgraph.second;
           target_job_idx = it - local_jobs.begin();
-          target_subgraph = best_subgraph.first;
+          target_subgraph_idx = best_subgraph.first;
         }
       }
       int64_t sched_end = profiling::time::NowMicros();
@@ -78,10 +74,12 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // remove the job from the queue so that we don't meet it in the next loop
       local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-      SubgraphKey& to_execute =
-          GetInterpreter()->subgraph(target_subgraph)->GetKey();
-      most_urgent_job.subgraph_idx = target_subgraph;
-      most_urgent_job.device_id = to_execute.device_id;
+      Subgraph* target_subgraph =
+          GetInterpreter()->subgraph(target_subgraph_idx);
+      SubgraphKey& to_execute = target_subgraph->GetKey();
+      most_urgent_job.subgraph_idx = target_subgraph_idx;
+      most_urgent_job.device_id = to_execute.device_flag;
+      most_urgent_job.sched_id = sched_id++;
       most_urgent_job.profiled_time =
           GetInterpreter()->GetSubgraphProfileResult(to_execute);
 
@@ -95,7 +93,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       if (most_urgent_job.slo_us > 0) {
         int64_t current_time = profiling::time::NowMicros();
         int64_t expected_latency =
-            device_waiting_time[to_execute.device_id] +
+            device_waiting_time[to_execute.device_flag] +
             most_urgent_job.profiled_time;
 
         if (current_time + expected_latency >
@@ -116,11 +114,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       ModelSpec& model_spec =
           GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
-      if (most_urgent_job.end_idx < model_spec.num_ops - 1) {
+      if (!target_subgraph->GetNextSubgraph()) {
         Job remaining_ops(most_urgent_job.model_id);
         remaining_ops.enqueue_time = most_urgent_job.enqueue_time;
-        remaining_ops.start_idx = most_urgent_job.end_idx + 1;
-        remaining_ops.end_idx = model_spec.num_ops - 1;
         remaining_ops.following_jobs = most_urgent_job.following_jobs;
         remaining_ops.expected_latency = most_urgent_job.expected_latency;
         remaining_ops.sched_id = most_urgent_job.sched_id;
@@ -131,10 +127,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
         most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);
-        most_urgent_job.is_final_subgraph = false;
       }
 
-      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag());
+      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
         worker->GetDeviceRequests().push_back(most_urgent_job);

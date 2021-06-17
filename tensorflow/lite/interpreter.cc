@@ -1139,14 +1139,10 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {
-<<<<<<< HEAD
   // get the subgraph index for this model
   // at this point, the subgraph key for this model doesn't have valid start
   // and end indices so we don't need to specify them
   int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
-=======
-  int subgraph_index = GetFirstSubgraphIdx(model_id, kTfLiteCPU);
->>>>>>> 8b74616... Update model spec
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
