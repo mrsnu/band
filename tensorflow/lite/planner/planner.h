@@ -97,6 +97,10 @@ class Planner {
     num_submitted_jobs_ = 0;
   }
 
+  const std::map<int, int>& GetModelExecutionCounts() const {
+    return model_execution_count_;
+  }
+
  protected:
   std::thread planner_thread_;
 
@@ -107,6 +111,7 @@ class Planner {
   // Jobs Finished
   std::mutex job_queue_mtx_;
   std::deque<Job> jobs_finished_;
+  std::map<int, int> model_execution_count_;
 
   // Request Queue
   std::mutex requests_mtx_;

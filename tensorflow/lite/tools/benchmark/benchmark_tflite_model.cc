@@ -780,6 +780,12 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
   kill_app_ = true;
 
   interpreter_->GetPlanner()->Wait();
+
+  for (auto model_count : interpreter_->GetPlanner()->GetModelExecutionCounts()) {
+    TFLITE_LOG(INFO) << "Model id : " << model_count.first
+                     << " # of execution : " << model_count.second;
+  }
+
   return kTfLiteOk;
 }
 

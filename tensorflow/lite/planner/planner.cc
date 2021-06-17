@@ -48,6 +48,11 @@ void Planner::Wait() {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
+    if (model_execution_count_.find(job.model_id) == model_execution_count_.end()) {
+      model_execution_count_[job.model_id] = 0;
+    }
+    model_execution_count_[job.model_id]++;
+
     // write all timestamp statistics to log file
     log_file << job.sched_id << "\t"
              << job.model_fname << "\t"
