@@ -21,6 +21,7 @@ limitations under the License.
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
+#include "tensorflow/lite/util.h"
 #include "tensorflow/lite/version.h"
 
 #ifdef __cplusplus
@@ -121,21 +122,6 @@ TfLiteInterpreter* TfLiteInterpreterCreate(
     return nullptr;
   }
 
-  if (optional_options) {
-    interpreter->UseNNAPI(optional_options->use_nnapi);
-
-    if (optional_options->num_threads !=
-        TfLiteInterpreterOptions::kDefaultNumThreads) {
-      interpreter->SetNumThreads(optional_options->num_threads);
-    }
-
-    for (auto* delegate : optional_options->delegates) {
-      if (interpreter->ModifyGraphWithDelegate(delegate) != kTfLiteOk) {
-        return nullptr;
-      }
-    }
-  }
-
   return new TfLiteInterpreter{model->impl, std::move(optional_error_reporter),
                                std::move(interpreter)};
 }
@@ -145,40 +131,53 @@ void TfLiteInterpreterDelete(TfLiteInterpreter* interpreter) {
 }
 
 int32_t TfLiteInterpreterGetInputTensorCount(
-    const TfLiteInterpreter* interpreter) {
-  return static_cast<int32_t>(interpreter->impl->inputs().size());
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index) {
+  return static_cast<int32_t>(interpreter->impl->inputs(subgraph_index).size());
 }
 
 TfLiteTensor* TfLiteInterpreterGetInputTensor(
-    const TfLiteInterpreter* interpreter, int32_t input_index) {
-  return interpreter->impl->tensor(interpreter->impl->inputs()[input_index]);
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t input_index) {
+  return interpreter->impl->tensor(subgraph_index, interpreter->impl->inputs(subgraph_index)[input_index]);
 }
 
 TfLiteStatus TfLiteInterpreterResizeInputTensor(TfLiteInterpreter* interpreter,
+                                                int32_t subgraph_index,
                                                 int32_t input_index,
                                                 const int* input_dims,
                                                 int32_t input_dims_size) {
   std::vector<int> dims{input_dims, input_dims + input_dims_size};
-  return interpreter->impl->ResizeInputTensor(
-      interpreter->impl->inputs()[input_index], dims);
+  return interpreter->impl->ResizeInputTensor(subgraph_index,
+      interpreter->impl->inputs(subgraph_index)[input_index], dims);
 }
 
 TfLiteStatus TfLiteInterpreterAllocateTensors(TfLiteInterpreter* interpreter) {
   return interpreter->impl->AllocateTensors();
 }
 
-TfLiteStatus TfLiteInterpreterInvoke(TfLiteInterpreter* interpreter) {
-  return interpreter->impl->Invoke();
+void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter, int32_t* model_id, uint32_t count) {
+  std::vector<tflite::Job> jobs;
+  for (uint32_t i = 0; i < count; i++) {
+    jobs.push_back(model_id[i]);
+  }
+  interpreter->impl->InvokeModelsSync(jobs);
+}
+
+void TfLiteInterpreterInvokeAsync(TfLiteInterpreter* interpreter, int32_t* model_id, uint32_t count) {
+  std::vector<tflite::Job> jobs;
+  for (uint32_t i = 0; i < count; i++) {
+    jobs.push_back(model_id[i]);
+  }
+  interpreter->impl->InvokeModelsAsync(jobs);
 }
 
 int32_t TfLiteInterpreterGetOutputTensorCount(
-    const TfLiteInterpreter* interpreter) {
-  return static_cast<int32_t>(interpreter->impl->outputs().size());
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index) {
+  return static_cast<int32_t>(interpreter->impl->outputs(subgraph_index).size());
 }
 
 const TfLiteTensor* TfLiteInterpreterGetOutputTensor(
-    const TfLiteInterpreter* interpreter, int32_t output_index) {
-  return interpreter->impl->tensor(interpreter->impl->outputs()[output_index]);
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t output_index) {
+  return interpreter->impl->tensor(subgraph_index, interpreter->impl->outputs(subgraph_index)[output_index]);
 }
 
 TfLiteType TfLiteTensorType(const TfLiteTensor* tensor) { return tensor->type; }
