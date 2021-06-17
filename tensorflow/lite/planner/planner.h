@@ -97,6 +97,7 @@ class Planner {
 
   std::thread planner_thread_;
   int sched_id_ = 0;
+  Interpreter* interpreter_;
 
  private:
   bool IsJobIdValid(int job_id);
