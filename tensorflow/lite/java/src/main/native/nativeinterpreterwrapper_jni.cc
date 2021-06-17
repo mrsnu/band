@@ -166,7 +166,8 @@ extern "C" {
 JNIEXPORT jobjectArray JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputNames(JNIEnv* env,
                                                                 jclass clazz,
-                                                                jlong handle) {
+                                                                jlong handle,
+                                                                jint model_id) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return nullptr;
@@ -177,12 +178,13 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputNames(JNIEnv* env,
                    "input names.");
     return nullptr;
   }
-  size_t size = interpreter->inputs().size();
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  size_t size = interpreter->inputs(subgraph_index).size();
   jobjectArray names = static_cast<jobjectArray>(
       env->NewObjectArray(size, string_class, env->NewStringUTF("")));
   for (int i = 0; i < size; ++i) {
     env->SetObjectArrayElement(names, i,
-                               env->NewStringUTF(interpreter->GetInputName(i)));
+                               env->NewStringUTF(interpreter->GetInputName(subgraph_index, i)));
   }
   return names;
 }
@@ -206,81 +208,68 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateTensors(
   }
 }
 
-JNIEXPORT jboolean JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_hasUnresolvedFlexOp(
-    JNIEnv* env, jclass clazz, jlong handle) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, handle);
-  if (interpreter == nullptr) return JNI_FALSE;
-
-  // TODO(b/132995737): Remove this logic by caching whether an unresolved
-  // Flex op is present during Interpreter creation.
-  for (size_t subgraph_i = 0; subgraph_i < interpreter->subgraphs_size();
-       ++subgraph_i) {
-    const auto* subgraph = interpreter->subgraph(static_cast<int>(subgraph_i));
-    for (int node_i : subgraph->execution_plan()) {
-      const auto& registration =
-          subgraph->node_and_registration(node_i)->second;
-      if (tflite::IsUnresolvedCustomOp(registration) &&
-          tflite::IsFlexOp(registration.custom_name)) {
-        return JNI_TRUE;
-      }
-    }
-  }
-  return JNI_FALSE;
-}
-
 JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputTensorIndex(
-    JNIEnv* env, jclass clazz, jlong handle, jint input_index) {
+    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint input_index) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  return interpreter->inputs()[input_index];
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  return interpreter->inputs(subgraph_index)[input_index];
 }
 
 JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputTensorIndex(
-    JNIEnv* env, jclass clazz, jlong handle, jint output_index) {
+    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint output_index) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  return interpreter->outputs()[output_index];
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  return interpreter->outputs(subgraph_index)[output_index];
 }
 
 JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getExecutionPlanLength(
-    JNIEnv* env, jclass clazz, jlong handle) {
+    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint device_id) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  return static_cast<jint>(interpreter->execution_plan().size());
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, device_id);
+  return subgraph_index >= 0
+             ? static_cast<jint>(
+                   interpreter->execution_plan(subgraph_index).size())
+             : 0;
 }
 
 JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputCount(JNIEnv* env,
                                                                 jclass clazz,
-                                                                jlong handle) {
+                                                                jlong handle,
+                                                                jint model_id) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  return static_cast<jint>(interpreter->inputs().size());
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  return static_cast<jint>(interpreter->inputs(subgraph_index).size());
 }
 
 JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputCount(JNIEnv* env,
                                                                  jclass clazz,
-                                                                 jlong handle) {
+                                                                 jlong handle,
+                                                                 jint model_id) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  return static_cast<jint>(interpreter->outputs().size());
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  return static_cast<jint>(interpreter->outputs(subgraph_index).size());
 }
 
 JNIEXPORT jobjectArray JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputNames(JNIEnv* env,
                                                                  jclass clazz,
-                                                                 jlong handle) {
+                                                                 jlong handle,
+                                                                 jint model_id) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return nullptr;
@@ -291,25 +280,15 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputNames(JNIEnv* env,
                    "output names.");
     return nullptr;
   }
-  size_t size = interpreter->outputs().size();
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  size_t size = interpreter->outputs(subgraph_index).size();
   jobjectArray names = static_cast<jobjectArray>(
       env->NewObjectArray(size, string_class, env->NewStringUTF("")));
   for (int i = 0; i < size; ++i) {
     env->SetObjectArrayElement(
-        names, i, env->NewStringUTF(interpreter->GetOutputName(i)));
+        names, i, env->NewStringUTF(interpreter->GetOutputName(subgraph_index, i)));
   }
   return names;
-}
-
-JNIEXPORT void JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_useNNAPI(JNIEnv* env,
-                                                           jclass clazz,
-                                                           jlong handle,
-                                                           jboolean state) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, handle);
-  if (interpreter == nullptr) return;
-  interpreter->UseNNAPI(static_cast<bool>(state));
 }
 
 JNIEXPORT void JNICALL
@@ -544,18 +523,19 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync
 
 JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputDataType(
-    JNIEnv* env, jclass clazz, jlong handle, jint output_idx) {
+    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint output_idx) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return -1;
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
   const int idx = static_cast<int>(output_idx);
-  if (output_idx < 0 || output_idx >= interpreter->outputs().size()) {
+  if (output_idx < 0 || output_idx >= interpreter->outputs(subgraph_index).size()) {
     ThrowException(env, kIllegalArgumentException,
                    "Failed to get %d-th output out of %d outputs", output_idx,
                    interpreter->outputs().size());
     return -1;
   }
-  TfLiteTensor* target = interpreter->tensor(interpreter->outputs()[idx]);
+  TfLiteTensor* target = interpreter->tensor(interpreter->outputs(subgraph_index)[idx]);
   int type = getDataType(target->type);
   return static_cast<jint>(type);
 }
@@ -598,48 +578,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resizeInput(
     }
   }
   return is_changed ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT void JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_applyDelegate(
-    JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong error_handle,
-    jlong delegate_handle) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, interpreter_handle);
-  if (interpreter == nullptr) return;
-
-  BufferErrorReporter* error_reporter =
-      convertLongToErrorReporter(env, error_handle);
-  if (error_reporter == nullptr) return;
-
-  TfLiteDelegate* delegate = convertLongToDelegate(env, delegate_handle);
-  if (delegate == nullptr) return;
-
-  TfLiteStatus status = interpreter->ModifyGraphWithDelegate(delegate);
-  if (status != kTfLiteOk) {
-    ThrowException(env, kIllegalArgumentException,
-                   "Internal error: Failed to apply delegate: %s",
-                   error_reporter->CachedErrorMessage());
-  }
-}
-
-JNIEXPORT void JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_resetVariableTensors(
-    JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong error_handle) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, interpreter_handle);
-  if (interpreter == nullptr) return;
-
-  BufferErrorReporter* error_reporter =
-      convertLongToErrorReporter(env, error_handle);
-  if (error_reporter == nullptr) return;
-
-  TfLiteStatus status = interpreter->ResetVariableTensors();
-  if (status != kTfLiteOk) {
-    ThrowException(env, kIllegalArgumentException,
-                   "Internal error: Failed to reset variable tensors: %s",
-                   error_reporter->CachedErrorMessage());
-  }
 }
 
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_delete(
