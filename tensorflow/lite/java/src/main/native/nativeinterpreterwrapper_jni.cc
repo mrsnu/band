@@ -592,6 +592,34 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resizeInput(
   return is_changed_global ? JNI_TRUE : JNI_FALSE;
 }
 
+JNIEXPORT void JNICALL
+Java_org_tensorflow_lite_NativeInterpreterWrapper_resetVariableTensors(
+    JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong error_handle, jint model_id) {
+  tflite_api_dispatcher::Interpreter* interpreter =
+      convertLongToInterpreter(env, interpreter_handle);
+  if (interpreter == nullptr) return;
+
+  BufferErrorReporter* error_reporter =
+      convertLongToErrorReporter(env, error_handle);
+  if (error_reporter == nullptr) return;
+
+  for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+    // Get all starting subgraphs.
+    // TODO(#73): Remove duplicate memcopy for same model
+    std::set<int> subgraph_indices = interpreter->GetSubgraphIdx(
+        model_id, static_cast<TfLiteDeviceFlags>(device_id), 0);
+    
+    for (int subgraph_idx : subgraph_indices) {
+      TfLiteStatus status = interpreter->ResetVariableTensors(subgraph_idx);
+      if (status != kTfLiteOk) {
+        ThrowException(env, kIllegalArgumentException,
+                      "Internal error: Failed to reset variable tensors: %s",
+                      error_reporter->CachedErrorMessage());
+      }
+    }
+  }
+}
+
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_delete(
     JNIEnv* env, jclass clazz, jlong error_handle, jlong model_handle,
     jlong interpreter_handle) {
