@@ -179,13 +179,13 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   private static native void runSync(int modelId, long interpreterHandle, long errorHandle);
 
   /** Resizes dimensions of a specific input. */
-  void resizeInput(int idx, int[] dims) {
+  void resizeInput(int model_id, int idx, int[] dims) {
     resizeInput(idx, dims, false);
   }
 
   /** Resizes dimensions of a specific input. */
-  void resizeInput(int idx, int[] dims, boolean strict) {
-    if (resizeInput(interpreterHandle, errorHandle, idx, dims, strict)) {
+  void resizeInput(int model_id, int idx, int[] dims, boolean strict) {
+    if (resizeInput(model_id, interpreterHandle, errorHandle, idx, dims, strict)) {
       // Tensor allocation is deferred until either an explicit `allocateTensors()` call or
       // `invoke()` avoiding redundant allocations if multiple tensors are simultaneosly resized.
       isMemoryAllocated = false;
@@ -196,7 +196,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   private static native boolean resizeInput(
-      long interpreterHandle, long errorHandle, int inputIdx, int[] dims, boolean strict);
+      long interpreterHandle, long errorHandle, int model_id, int inputIdx, int[] dims, boolean strict);
 
   /** Triggers explicit allocation of tensors. */
   void allocateTensors() {
@@ -368,19 +368,19 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private static native boolean hasUnresolvedFlexOp(long interpreterHandle);
 
-  private static native int getInputTensorIndex(long interpreterHandle, int inputIdx);
+  private static native int getInputTensorIndex(long interpreterHandle, int modelId, int inputIdx);
 
-  private static native int getOutputTensorIndex(long interpreterHandle, int outputIdx);
+  private static native int getOutputTensorIndex(long interpreterHandle, int modelId, int outputIdx);
 
-  private static native int getInputCount(long interpreterHandle);
+  private static native int getInputCount(long interpreterHandle, int modelId);
 
-  private static native int getOutputCount(long interpreterHandle);
+  private static native int getOutputCount(long interpreterHandle, int modelId);
 
   private static native int getExecutionPlanLength(long interpreterHandle);
 
-  private static native String[] getInputNames(long interpreterHandle);
+  private static native String[] getInputNames(long interpreterHandle, int modelId);
 
-  private static native String[] getOutputNames(long interpreterHandle);
+  private static native String[] getOutputNames(long interpreterHandle, int modelId);
 
   private static native void useNNAPI(long interpreterHandle, boolean state);
 
@@ -406,7 +406,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   private static native void applyDelegate(
       long interpreterHandle, long errorHandle, long delegateHandle);
 
-  private static native void resetVariableTensors(long interpreterHandle, long errorHandle);
+  private static native void resetVariableTensors(long interpreterHandle, long errorHandle, int modelId);
 
   private static native void delete(long errorHandle, long modelHandle, long interpreterHandle);
 }
