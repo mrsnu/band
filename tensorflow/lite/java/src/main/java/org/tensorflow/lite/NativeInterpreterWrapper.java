@@ -294,7 +294,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
    *
    * @throws IllegalArgumentException if the input index is invalid.
    */
-  Tensor getInputTensor(int index) {
+  Tensor getInputTensor(int model_id, int index) {
     if (index < 0 || index >= inputTensors.length) {
       throw new IllegalArgumentException("Invalid input Tensor index: " + index);
     }
@@ -302,7 +302,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (inputTensor == null) {
       inputTensor =
           inputTensors[index] =
-              Tensor.fromIndex(interpreterHandle, getInputTensorIndex(interpreterHandle, index));
+              Tensor.fromIndex(interpreterHandle, getInputTensorIndex(interpreterHandle, model_id, index));
     }
     return inputTensor;
   }
@@ -317,7 +317,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
    *
    * @throws IllegalArgumentException if the output index is invalid.
    */
-  Tensor getOutputTensor(int index) {
+  Tensor getOutputTensor(int model_id, int index) {
     if (index < 0 || index >= outputTensors.length) {
       throw new IllegalArgumentException("Invalid output Tensor index: " + index);
     }
@@ -325,7 +325,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (outputTensor == null) {
       outputTensor =
           outputTensors[index] =
-              Tensor.fromIndex(interpreterHandle, getOutputTensorIndex(interpreterHandle, index));
+              Tensor.fromIndex(interpreterHandle, getOutputTensorIndex(interpreterHandle, model_id, index));
     }
     return outputTensor;
   }
@@ -333,60 +333,6 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   /** Gets the number of ops in the execution plan. */
   int getExecutionPlanLength() {
     return getExecutionPlanLength(interpreterHandle);
-  }
-
-  private void applyDelegates(Interpreter.Options options) {
-    // First apply the flex delegate if necessary. This ensures the graph is fully resolved before
-    // applying other delegates.
-    boolean originalGraphHasUnresolvedFlexOp = hasUnresolvedFlexOp(interpreterHandle);
-    if (originalGraphHasUnresolvedFlexOp) {
-      Delegate optionalFlexDelegate = maybeCreateFlexDelegate(options.delegates);
-      if (optionalFlexDelegate != null) {
-        ownedDelegates.add((AutoCloseable) optionalFlexDelegate);
-        applyDelegate(interpreterHandle, errorHandle, optionalFlexDelegate.getNativeHandle());
-      }
-    }
-
-    // Now apply the user-supplied delegates.
-    try {
-      for (Delegate delegate : options.delegates) {
-        applyDelegate(interpreterHandle, errorHandle, delegate.getNativeHandle());
-        delegates.add(delegate);
-      }
-      if (options.useNNAPI != null && options.useNNAPI.booleanValue()) {
-        NnApiDelegate optionalNnApiDelegate = new NnApiDelegate();
-        ownedDelegates.add(optionalNnApiDelegate);
-        applyDelegate(interpreterHandle, errorHandle, optionalNnApiDelegate.getNativeHandle());
-      }
-    } catch (IllegalArgumentException e) {
-      // Suppress exceptions where a delegate fails to apply after the flex delegate is successfuly
-      // applied. This can be a common occurrence, as the flex delegate makes the graph dynamic,
-      // which is typically unsupported by most delegates (e.g., NNAPI, GPU delegates). We should
-      // still log an error to indicate that the delegate application was a no-op.
-      // TODO(b/142678372): Fix the flex delegate to not unconditionally mark graphs as dynamic.
-      boolean shouldSuppressException =
-          originalGraphHasUnresolvedFlexOp && !hasUnresolvedFlexOp(interpreterHandle);
-      if (!shouldSuppressException) {
-        throw e;
-      }
-      System.err.println("Ignoring failed delegate application: " + e);
-    }
-  }
-
-  private static Delegate maybeCreateFlexDelegate(List<Delegate> delegates) {
-    try {
-      Class<?> clazz = Class.forName("org.tensorflow.lite.flex.FlexDelegate");
-      // No need to create the Flex delegate if one has already been provided.
-      for (Delegate delegate : delegates) {
-        if (clazz.isInstance(delegate)) {
-          return null;
-        }
-      }
-      return (Delegate) clazz.getConstructor().newInstance();
-    } catch (Exception e) {
-      // The error will propagate when tensors are allocated.
-      return null;
-    }
   }
 
   private static native int getOutputDataType(long interpreterHandle, int outputIdx);

@@ -157,7 +157,7 @@ TfLiteStatus TfLiteInterpreterAllocateTensors(TfLiteInterpreter* interpreter) {
 void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter, int32_t* model_id, uint32_t count) {
   std::vector<tflite::Job> jobs;
   for (uint32_t i = 0; i < count; i++) {
-    jobs.push_back(model_id[i]);
+    jobs.push_back(tflite::Job(model_id[i]));
   }
   interpreter->impl->InvokeModelsSync(jobs);
 }
@@ -165,7 +165,7 @@ void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter, int32_t* model_
 void TfLiteInterpreterInvokeAsync(TfLiteInterpreter* interpreter, int32_t* model_id, uint32_t count) {
   std::vector<tflite::Job> jobs;
   for (uint32_t i = 0; i < count; i++) {
-    jobs.push_back(model_id[i]);
+    jobs.push_back(tflite::Job(model_id[i]));
   }
   interpreter->impl->InvokeModelsAsync(jobs);
 }
