@@ -48,6 +48,7 @@ struct Job {
   int64_t profiled_time = 0;
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
+  int job_id = -1;
   int sched_id = -1;
   bool slo_violated = false;
   bool is_final_subgraph = true;

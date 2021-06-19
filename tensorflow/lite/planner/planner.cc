@@ -91,38 +91,53 @@ void Planner::EnqueueFinishedJob(Job job) {
   jobs_finished_.push_back(job);
   lock.unlock();
 
+  std::lock_guard<std::mutex> record_lock(record_mtx_);
+  finished_job_to_subgraph_[job.job_id] = std::make_shared<int>(job.subgraph_idx);
+
+  if (subgraph_to_latest_finished_job_.find(job.subgraph_idx) !=
+      subgraph_to_latest_finished_job_.end()) {
+    // Invalidate previosly finished job at subgraph.
+    finished_job_to_subgraph_.erase(
+        subgraph_to_latest_finished_job_[job.subgraph_idx]);
+  }
+  subgraph_to_latest_finished_job_[job.subgraph_idx] = job.job_id;
+
   end_invoke_.notify_one();
 }
 
-void Planner::EnqueueRequest(Job job) {
-  if (job.enqueue_time == 0) {
-    // job.enqueue_time may already be set if this model contains a fallback
-    // op, in which case we do not overwrite the set value
-    job.enqueue_time = profiling::time::NowMicros();
-  }
-  std::unique_lock<std::mutex> lock(requests_mtx_);
-  requests_.push_back(job);
-  num_submitted_jobs_++;
-  lock.unlock();
+int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
 
-  planner_safe_bool_.notify();
-}
-
-void Planner::EnqueueBatch(std::vector<Job> jobs) {
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
+  std::vector<int> job_ids(jobs.size());
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
-  for (Job job : jobs) {
+  for (int i = 0; i < jobs.size();  i++) {
+    Job job = jobs[i];
     if (job.enqueue_time == 0) {
       // job.enqueue_time may already be set if this model contains a fallback
       // op, in which case we do not overwrite the set value
       job.enqueue_time = enqueue_time;
     }
+    job.job_id = num_total_submitted_jobs_;
+    job_ids[i] = num_total_submitted_jobs_++;
     requests_.push_back(job);
     num_submitted_jobs_++;
   }
   lock.unlock();
 
   planner_safe_bool_.notify();
+
+  return job_ids;
+}
+
+
+std::weak_ptr<int> Planner::GetFinishedSubgraphIdx(int job_id) {
+  std::lock_guard<std::mutex> record_lock(record_mtx_);
+  if (finished_job_to_subgraph_.find(job_id) != finished_job_to_subgraph_.end()) {
+    return finished_job_to_subgraph_[job_id];
+  } else {
+    return {};
+  }
 }
 
 void Planner::SetWindowSize(int schedule_window_size) {

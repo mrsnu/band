@@ -55,10 +55,10 @@ class Planner {
   virtual bool NeedProfile() = 0;
 
   // Enqueues a job to a worker request queue.
-  void EnqueueRequest(Job job);
+  int EnqueueRequest(Job job);
 
   // Enqueues a batch of jobs to a worker request queue.
-  void EnqueueBatch(std::vector<Job> jobs);
+  std::vector<int> EnqueueBatch(std::vector<Job> jobs);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
@@ -68,6 +68,8 @@ class Planner {
   // A worker calls the method.
   // TODO #18: Make the planner run in a different thread
   void EnqueueFinishedJob(Job job);
+
+  std::weak_ptr<int> GetFinishedSubgraphIdx(int job_id);
 
   Interpreter* GetInterpreter() {
     return interpreter_;
@@ -121,8 +123,15 @@ class Planner {
 
   std::string log_path_;
 
+  std::mutex record_mtx_;
+  // Lastest finished (job id to subgraph idx) or vice versa.
+  // Utilize shared / weak ptr to represent lifetime of terminal subgraph.
+  std::map<int, std::shared_ptr<int>> finished_job_to_subgraph_;
+  std::map<int, int> subgraph_to_latest_finished_job_;
+
   int schedule_window_size_ = INT_MAX;
   int num_submitted_jobs_ = 0;
+  int num_total_submitted_jobs_ = 0;
 };
 
 }  // namespace impl

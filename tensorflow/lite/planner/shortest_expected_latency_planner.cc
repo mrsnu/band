@@ -131,6 +131,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         remaining_ops.following_jobs = most_urgent_job.following_jobs;
         remaining_ops.expected_latency = most_urgent_job.expected_latency;
         remaining_ops.sched_id = most_urgent_job.sched_id;
+        remaining_ops.job_id = most_urgent_job.job_id;
 
         most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);

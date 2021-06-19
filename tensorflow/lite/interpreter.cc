@@ -400,15 +400,16 @@ TfLiteStatus Interpreter::Invoke(size_t subgraph_index) {
   return kTfLiteOk;
 }
 
-void Interpreter::InvokeModelAsync(int model_id) {
-  InvokeModelAsync(Job(model_id));
+int Interpreter::InvokeModelAsync(int model_id) {
+  return InvokeModelAsync(Job(model_id));
 }
  
-void Interpreter::InvokeModelAsync(Job request) {
-  InvokeModelsAsync({request});
+int Interpreter::InvokeModelAsync(Job request) {
+  std::vector<int> job_ids = InvokeModelsAsync({request});
+  return job_ids.size() > 0 ? job_ids[0] : -1;
 }
 
-void Interpreter::InvokeModelsAsync() {
+std::vector<int> Interpreter::InvokeModelsAsync() {
   std::vector<Job> requests;
 
   for (auto& m : model_configs_) {
@@ -420,12 +421,12 @@ void Interpreter::InvokeModelsAsync() {
     }
   }
   
-  InvokeModelsAsync(requests);
+  return InvokeModelsAsync(requests);
 }
 
-void Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
+std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
   if (requests.size() == 0) {
-    return;
+    return {};
   }
 
   for (auto& request: requests) {
@@ -436,19 +437,25 @@ void Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
     request.slo_us = model_config.slo_us;
   }
 
-  planner_->EnqueueBatch(requests);
+  return planner_->EnqueueBatch(requests);
 }
 
-void Interpreter::InvokeModelsSync() {
+std::vector<int> Interpreter::InvokeModelsSync() {
   planner_->InitNumSubmittedJobs();
-  InvokeModelsAsync();
+  std::vector<int> job_ids = InvokeModelsAsync();
   planner_->Wait();
+  return job_ids;
 }
 
-void Interpreter::InvokeModelsSync(std::vector<Job> requests) {
+std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests) {
   planner_->InitNumSubmittedJobs();
-  InvokeModelsAsync(requests);
+  std::vector<int> job_ids = InvokeModelsAsync(requests);
   planner_->Wait();
+  return job_ids;
+}
+
+std::weak_ptr<int> Interpreter::GetOutputSubgraphIdx(int job_id) {
+  return planner_->GetFinishedSubgraphIdx(job_id);
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
