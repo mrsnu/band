@@ -349,9 +349,9 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private ByteBuffer modelByteBuffer;
 
-  // Lazily constructed maps of input and output names to input and output Tensor indexes.
-  private Map<String, Integer> inputsIndexes;
-  private Map<String, Integer> outputsIndexes;
+  // Lazily constructed maps of i th model's input and output names to input and output Tensor indexes.
+  private List<Map<String, Integer>> inputsIndexes;
+  private List<Map<String, Integer>> outputsIndexes;
 
   // Lazily constructed and populated arrays of input and output Tensor wrappers.
   private Tensor[] inputTensors;
