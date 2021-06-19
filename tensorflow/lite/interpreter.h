@@ -472,6 +472,7 @@ class Interpreter {
   std::vector<int> InvokeModelsSync();
   std::vector<int> InvokeModelsSync(std::vector<Job> requests);
 
+  // Output subgraph index is valid until next overriding execution.
   std::weak_ptr<int> GetOutputSubgraphIdx(int job_id);
 
   /// Set the number of threads available to the interpreter.
