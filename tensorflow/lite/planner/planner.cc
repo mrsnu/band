@@ -130,7 +130,6 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
   return job_ids;
 }
 
-
 std::weak_ptr<int> Planner::GetFinishedSubgraphIdx(int job_id) {
   std::lock_guard<std::mutex> record_lock(record_mtx_);
   if (finished_job_to_subgraph_.find(job_id) != finished_job_to_subgraph_.end()) {
