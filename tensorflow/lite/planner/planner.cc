@@ -32,9 +32,10 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
            << "enqueue_time\t"
            << "invoke_time\t"
            << "end_time\t"
-           << "expected_exec_time\t"
+           << "profiled_time\t"
            << "expected_latency\t"
-           << "slo\t"
+           << "slo_us\t"
+           << "slo_violated\t"
            << "is_final_subgraph\n";
   log_file.close();
   
@@ -52,6 +53,11 @@ void Planner::Wait() {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
+    if (job.slo_us > 0 && job.is_final_subgraph) {
+      auto latency = job.end_time - job.enqueue_time;
+      job.slo_violated = latency > job.slo_us;
+    }
+
     // write all timestamp statistics to log file
     log_file << job.sched_id << "\t"
              << job.model_fname << "\t"
@@ -63,9 +69,10 @@ void Planner::Wait() {
              << job.enqueue_time << "\t"
              << job.invoke_time << "\t"
              << job.end_time << "\t"
-             << job.expected_exec_time << "\t"
+             << job.profiled_time << "\t"
              << job.expected_latency << "\t"
-             << job.slo << "\t"
+             << job.slo_us << "\t"
+             << job.slo_violated << "\t"
              << job.is_final_subgraph << "\n";
   }
   log_file.close();

@@ -108,15 +108,15 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       int64_t profiled = GetInterpreter()->GetSubgraphProfileResult(key);
       int64_t expected_latency = device_waiting[device_flag] + profiled;
 
-      to_execute.expected_exec_time = profiled;
+      to_execute.profiled_time = profiled;
       to_execute.expected_latency = expected_latency;
 
       // this job has an SLO; check if it's not too late already
-      if (to_execute.slo > 0) {
+      if (to_execute.slo_us > 0) {
         int64_t current_time = profiling::time::NowMicros();
 
         if (current_time + expected_latency >
-            to_execute.enqueue_time + to_execute.slo) {
+            to_execute.enqueue_time + to_execute.slo_us) {
           // SLO violation
           // there is no hope left for this job, throw it away
           to_execute.end_time = LLONG_MAX;
@@ -161,6 +161,9 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 }
 
 bool FixedDeviceGlobalQueuePlanner::NeedProfile() {
+  // Required for checking SLO violation.
+  // We could add an option to this planner for skipping the SLO check,
+  // in which case this function can return false.
   return true;
 }
 

@@ -45,10 +45,11 @@ struct Job {
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
-  int64_t expected_exec_time = 0;
+  int64_t profiled_time = 0;
   int64_t expected_latency = 0;
-  int64_t slo = 0;
+  int64_t slo_us = 0;
   int sched_id = -1;
+  bool slo_violated = false;
   bool is_final_subgraph = true;
   std::string model_fname;
 
@@ -62,7 +63,7 @@ struct ModelConfig {
   int period_ms;
   int device = -1;
   int batch_size = 1;
-  int64_t slo = -1;
+  int64_t slo_us = -1;
   float slo_scale = -1.f;
 };
 

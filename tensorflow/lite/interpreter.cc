@@ -433,7 +433,7 @@ void Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
     ModelConfig& model_config = model_configs_[model_id];
     request.model_fname = model_config.model_fname;
     request.device_id = model_config.device;
-    request.slo = model_config.slo;
+    request.slo_us = model_config.slo_us;
   }
 
   planner_->EnqueueBatch(requests);
@@ -721,6 +721,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
   }
 
   SetSubgraphProfiler(previous_profiler);
+  SetSLOBasedOnProfile();
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {
@@ -759,43 +760,6 @@ bool Interpreter::NeedProfile() {
     return planner_->NeedProfile();
   else
     return false;
-}
-
-void Interpreter::SetSLOBasedOnProfile() {
-  for (auto& m : model_configs_) {
-    int model_id = m.first;
-    ModelConfig& config = m.second;
-
-    if (config.slo > 0) {
-      // slo has already been set by the model json config file
-      continue;
-    }
-
-    if (config.slo_scale <= 0) {
-      // this model doesn't have an slo
-      continue;
-    }
-
-    int64_t worst_latency = GetWorstDeviceProfileResult(model_id);
-    config.slo = worst_latency * config.slo_scale;
-  }
-}
-
-int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
-  int64_t worst_latency = 0;
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    SubgraphKey& subgraph_key = subgraphs_[i]->GetKey();
-    if (subgraph_key.model_id != model_id) {
-      continue;
-    }
-
-    int64_t latency = subgraph_profiling_results_map_[subgraph_key];
-    if (worst_latency < latency) {
-      worst_latency = latency;
-    }
-  }
-
-  return worst_latency;
 }
 
 TfLiteStatus Interpreter::PrepareLogging(std::string log_path) {
@@ -1170,6 +1134,51 @@ Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
     }
   }
   return { min_idx, min_latency };
+}
+
+void Interpreter::SetSLOBasedOnProfile() {
+  for (auto& m : model_configs_) {
+    int model_id = m.first;
+    ModelConfig& config = m.second;
+
+    if (config.slo_us > 0) {
+      // slo has already been set by the model json config file
+      continue;
+    }
+
+    if (config.slo_scale <= 0) {
+      // this model doesn't have an slo
+      continue;
+    }
+
+    int64_t worst_latency = GetWorstDeviceProfileResult(model_id);
+    config.slo_us = worst_latency * config.slo_scale;
+  }
+}
+
+int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
+  int64_t worst_latency = 0;
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    SubgraphKey& subgraph_key = subgraphs_[i]->GetKey();
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
+
+    auto it = subgraph_profiling_results_map_.find(subgraph_key);
+    if (it != subgraph_profiling_results_map_.end()) {
+      int64_t latency = it->second;
+      if (worst_latency < latency) {
+        worst_latency = latency;
+      }
+    }
+  }
+
+  if (worst_latency == 0) {
+    TFLITE_LOG(ERROR) << "Model #" << model_id << " has no profile results, "
+                      << "but GetWorstDeviceProfileResult was called.";
+  }
+
+  return worst_latency;
 }
 
 }  // namespace impl

@@ -555,16 +555,6 @@ class Interpreter {
   /// Check whether profiling is required or not.
   bool NeedProfile();
 
-  /// Update slo values in model_configs_ according to the worst profiled
-  /// latency of that model x slo_scale.
-  /// If slo has already been set, or slo_scale <= 0, then this does nothing.
-  /// Must be called after Profile().
-  void SetSLOBasedOnProfile();
-
-  /// Returns the largest profiled latency of this model, across all devices.
-  /// Must be called after Profile().
-  int64_t GetWorstDeviceProfileResult(int model_id);
-
   // The default capacity of `tensors_` vector.
   static constexpr int kTensorsReservedCapacity = 128;
   /// The capacity headroom of `tensors_` vector before calling ops'
@@ -828,6 +818,16 @@ class Interpreter {
   GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
                            int64_t start_time,
                            std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
+
+  // Update slo values in model_configs_ according to the worst profiled
+  // latency of that model x slo_scale.
+  // If slo has already been set, or slo_scale <= 0, then this does nothing.
+  // Must be called after the models have been profiled.
+  void SetSLOBasedOnProfile();
+
+  // Returns the largest profiled latency of `model_id`, across all devices.
+  // Must be called after this model has been profiled.
+  int64_t GetWorstDeviceProfileResult(int model_id);
 };
 
 }  // namespace impl

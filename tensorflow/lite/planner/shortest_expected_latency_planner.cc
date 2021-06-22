@@ -59,15 +59,12 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       int64_t sched_start = profiling::time::NowMicros();
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
-        // make a copy of this map, since GetShortestLatency() will mutate it
-        auto device_waiting_time_copy = device_waiting_time;
-
         Job& next_job = *it;
         std::pair<int, int64_t> best_subgraph =
             GetInterpreter()->GetShortestLatency(next_job.model_id,
                                                  next_job.start_idx,
                                                  0,
-                                                 device_waiting_time_copy);
+                                                 device_waiting_time);
 
         if (largest_shortest_latency < best_subgraph.second) {
           largest_shortest_latency = best_subgraph.second;
@@ -92,7 +89,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       most_urgent_job.end_idx = to_execute.end_idx;
       most_urgent_job.subgraph_idx = target_subgraph;
       most_urgent_job.device_id = to_execute.device_flag;
-      most_urgent_job.expected_exec_time =
+      most_urgent_job.profiled_time =
           GetInterpreter()->GetSubgraphProfileResult(to_execute);
 
       if (most_urgent_job.expected_latency == 0) {
@@ -102,14 +99,14 @@ void ShortestExpectedLatencyPlanner::Plan() {
       }
 
       // this job has an SLO; check if it's not too late already
-      if (most_urgent_job.slo > 0) {
+      if (most_urgent_job.slo_us > 0) {
         int64_t current_time = profiling::time::NowMicros();
         int64_t expected_latency =
             device_waiting_time[to_execute.device_flag] +
-            most_urgent_job.expected_exec_time;
+            most_urgent_job.profiled_time;
 
         if (current_time + expected_latency >
-            most_urgent_job.enqueue_time + most_urgent_job.slo) {
+            most_urgent_job.enqueue_time + most_urgent_job.slo_us) {
           // SLO violation
           // no point in running this job anymore
           most_urgent_job.end_time = LLONG_MAX;

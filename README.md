@@ -54,7 +54,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `input_layer_shape`: Input layer shape.
   * `input_layer_value_range`: A map-like string representing value range for *integer* input layers. Each item is separated by ':', and the item value consists of input layer name and integer-only range values (both low and high are inclusive) separated by ',', e.g. input1,1,2:input2,0,254.
   * `input_layer_value_files`: A map-like string representing value file. Each item is separated by ',', and the item value consists of input layer name and value file path separated by ':', e.g. input1:file_path1,input2:file_path2. If the input_name appears both in input_layer_value_range and input_layer_value_files, input_layer_value_range of the input_name will be ignored. The file format is binary and it should be array format or null separated strings format.
-  * `slo_ms` and `slo_scale`: **Optional** fields for specifying an SLO value for a model. Setting `slo_scale` will make the SLO = worst profiled latency of that model * `slo_scale`.
+  * `slo_us` and `slo_scale`: **Optional** fields for specifying an SLO value for a model. Setting `slo_scale` will make the SLO = worst profiled latency of that model * `slo_scale`. `slo_scale` will be ignored if `slo_us` is given (i.e., no reason to specify both options).
 * `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
 * `planner`: The planner type in `int`.
   * `0`: Fixed Device Planner
@@ -102,7 +102,7 @@ An example of complete JSON config file is as follows:
             "graph": "/data/local/tmp/inception_v4.tflite",
             "period_ms": 30,
             "batch_size": 3,
-            "slo_ms": 30
+            "slo_us": 30000
         }
     ],
     "log_path": "/data/local/tmp/log.csv",

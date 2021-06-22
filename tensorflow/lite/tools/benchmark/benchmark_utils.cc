@@ -267,9 +267,9 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
     // Bounds checking is done internally in interpreter and planner, so
     // we don't check the actual values here.
     // See struct ModelConfig for default value.
-    if (!model_json_value["slo_ms"].isNull()) {
+    if (!model_json_value["slo_us"].isNull()) {
       // convert ms --> us
-      model.slo = model_json_value["slo_ms"].asInt64() * 1000;
+      model.slo_us = model_json_value["slo_us"].asInt64();
     }
 
     // Bounds checking is done internally in interpreter, so
