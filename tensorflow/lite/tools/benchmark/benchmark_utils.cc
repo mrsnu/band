@@ -283,7 +283,6 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
     // we don't check the actual values here.
     // See struct ModelConfig for default value.
     if (!model_json_value["slo_us"].isNull()) {
-      // convert ms --> us
       model.slo_us = model_json_value["slo_us"].asInt64();
     }
 

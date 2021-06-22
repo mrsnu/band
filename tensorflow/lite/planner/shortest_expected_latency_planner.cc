@@ -109,7 +109,13 @@ void ShortestExpectedLatencyPlanner::Plan() {
             most_urgent_job.enqueue_time + most_urgent_job.slo_us) {
           // SLO violation
           // no point in running this job anymore
-          most_urgent_job.end_time = LLONG_MAX;
+          most_urgent_job.slo_violated = true;
+
+          // mark this as -1 to differentiate it from the default value, 0
+          most_urgent_job.invoke_time = -1;
+
+          // mark the time of this decision (of early-dropping this job)
+          most_urgent_job.end_time = current_time;
           EnqueueFinishedJob(most_urgent_job);
           continue;
         }

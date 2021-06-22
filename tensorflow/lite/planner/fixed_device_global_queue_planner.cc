@@ -119,7 +119,13 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
             to_execute.enqueue_time + to_execute.slo_us) {
           // SLO violation
           // there is no hope left for this job, throw it away
-          to_execute.end_time = LLONG_MAX;
+          to_execute.slo_violated = true;
+
+          // mark this as -1 to differentiate it from the default value, 0
+          to_execute.invoke_time = -1;
+
+          // mark the time of this decision (of early-dropping this job)
+          to_execute.end_time = current_time;
           to_execute.sched_id = sched_id++;
           EnqueueFinishedJob(to_execute);
           it = requests.erase(it);
