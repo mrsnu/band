@@ -1,5 +1,6 @@
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/interpreter.h"
 #include <fstream>
 
 namespace tflite {
@@ -54,8 +55,14 @@ void Planner::Wait() {
     jobs_finished_.pop_front();
 
     if (job.slo_us > 0 && job.is_final_subgraph) {
+      // check if slo has been violated or not
       auto latency = job.end_time - job.enqueue_time;
       job.slo_violated = latency > job.slo_us;
+    }
+
+    if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
+      // update internal map to keep track of the # of inferences per model
+      model_execution_count_[job.model_id]++;
     }
 
     // write all timestamp statistics to log file

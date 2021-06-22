@@ -214,6 +214,21 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
       return kTfLiteError;
     }
   }
+  if (!root["global_period_ms"].isNull()) {
+    runtime_config->global_period_ms = root["global_period_ms"].asInt();
+    if (runtime_config->global_period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "Make sure `global_period_ms` > 0.";
+      return kTfLiteError;
+    }
+  }
+  if (!root["model_id_random_seed"].isNull()) {
+    runtime_config->model_id_random_seed = root["model_id_random_seed"].asUInt();
+    if (runtime_config->model_id_random_seed == 0) {
+      TFLITE_LOG(WARN) << "Because `model_id_random_seed` == 0, the request "
+                       << "generator thread will ignore the seed and use "
+                       << "current timestamp as seed instead.";
+    }
+  }
 
   // Required
   if (root["log_path"].isNull() ||
