@@ -64,9 +64,9 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+  auto input_buffer = interpreter->model_input_buffer[job.model_id].get();
 
-  const std::vector<TfLiteTensor>* input_tensors =
-      interpreter->GetInputTensors(job.model_id, job.input_handle);
+  const std::vector<TfLiteTensor>* input_tensors = input_buffer->Get(job.input_handle);
 
   if (input_tensors) {
     auto input_indices = subgraph->inputs();

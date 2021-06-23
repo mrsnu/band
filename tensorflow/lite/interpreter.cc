@@ -442,9 +442,9 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     assert(inputs.size() == requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
-      int input_handle = model_input_buffers.at(request.model_id)->Alloc();
+      int input_handle = model_input_buffer[request.model_id]->Alloc();
 
-      model_input_buffers.at(request.model_id)->Put(inputs[i], input_handle);
+      model_input_buffer[request.model_id]->Put(inputs[i], input_handle);
 
       request.input_handle = input_handle;
     }
@@ -471,17 +471,6 @@ std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests,
 std::weak_ptr<int> Interpreter::GetOutputSubgraphIdx(int job_id) {
   return planner_->GetFinishedSubgraphIdx(job_id);
 }
-
-const std::vector<TfLiteTensor>* Interpreter::GetInputTensors(int model_id, int input_handle) {
-  if (model_input_buffers.find(model_id) != model_input_buffers.end()) {
-    return model_input_buffers.at(model_id)->Get(input_handle);
-  } else {
-    std::cout << "Get input tensors returns null" << std::endl;
-    error_reporter_->Report("Get input tensors returns null");
-    return nullptr;
-  }
-}
-
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
                                      int* first_new_tensor_index) {
@@ -1042,8 +1031,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     output_tensors.push_back(primary_subgraph->tensor(output_tensor));
   }
 
-  model_input_buffers.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
-  model_output_buffers.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, output_tensors));
+  model_input_buffer.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
+  model_output_buffer.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, output_tensors));
 
   // check input/output/intermediate tensors to fill in
   // model_spec.output_tensors and model_spec.tensor_types

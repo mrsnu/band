@@ -54,10 +54,11 @@ void Planner::Wait() {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
-    if (job.slo_us > 0 && job.is_final_subgraph && !job.slo_violated) {
+    if (job.slo_us > 0 && job.is_final_subgraph && job.status == kTfLiteJobSuccess) {
       // check if slo has been violated or not
       auto latency = job.end_time - job.enqueue_time;
-      job.slo_violated = latency > job.slo_us;
+      job.status =
+          latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
     }
 
     if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
@@ -79,7 +80,7 @@ void Planner::Wait() {
              << job.profiled_time << "\t"
              << job.expected_latency << "\t"
              << job.slo_us << "\t"
-             << job.slo_violated << "\t"
+             << job.status << "\t"
              << job.is_final_subgraph << "\n";
   }
   log_file.close();

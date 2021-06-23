@@ -106,14 +106,14 @@ void DeviceQueueWorker::Work() {
         } else {
           job.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment
-          // Currently, put a job with a minus sign if Invoke() fails.
-          // Model 0 fail --> Job(-1), Model 1 fail --> Job(-2), ...
-          planner_ptr->EnqueueFinishedJob(Job(-1 * job.model_id - 1));
+          job.status = kTfLiteJobInvokeFailure;
+          planner_ptr->EnqueueFinishedJob(job);
         }
       } else {
         TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
-        planner_ptr->EnqueueFinishedJob(Job(-1 * job.model_id - 1));
+        job.status = kTfLiteJobInputCopyFailure;
+        planner_ptr->EnqueueFinishedJob(job);
       }
 
       

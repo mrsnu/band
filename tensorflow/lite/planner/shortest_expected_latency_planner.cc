@@ -109,7 +109,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
             most_urgent_job.enqueue_time + most_urgent_job.slo_us) {
           // SLO violation
           // no point in running this job anymore
-          most_urgent_job.slo_violated = true;
+          most_urgent_job.status = kTfLiteJobSLOViolation;
 
           // mark this as -1 to differentiate it from the default value, 0
           most_urgent_job.invoke_time = -1;

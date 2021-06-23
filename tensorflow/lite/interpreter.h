@@ -475,8 +475,6 @@ class Interpreter {
 
   // Output subgraph index is valid until next overriding execution.
   std::weak_ptr<int> GetOutputSubgraphIdx(int job_id);
-  const std::vector<TfLiteTensor>* GetInputTensors(int model_id,
-                                                   int input_handle);
 
   /// Set the number of threads available to the interpreter.
   ///
@@ -731,6 +729,7 @@ class Interpreter {
   }
 
  private:
+  friend class Worker;
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
@@ -803,8 +802,8 @@ class Interpreter {
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
 
-  std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffers;
-  std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffers;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffer;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffer;
 
   TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.

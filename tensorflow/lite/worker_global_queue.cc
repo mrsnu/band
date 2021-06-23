@@ -156,14 +156,14 @@ void GlobalQueueWorker::Work() {
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job_.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment
-          // Currently, put a job with a minus sign if Invoke() fails.
-          // Model 0 fail --> Job(-1), Model 1 fail --> Job(-2), ...
-          planner_ptr->EnqueueFinishedJob(Job(-1 * current_job_.model_id - 1));
+          current_job_.status = kTfLiteJobInvokeFailure;
+          planner_ptr->EnqueueFinishedJob(current_job_);
         }
       } else {
         TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
-        planner_ptr->EnqueueFinishedJob(Job(-1 * current_job_.model_id - 1));
+        current_job_.status = kTfLiteJobInputCopyFailure;
+        planner_ptr->EnqueueFinishedJob(current_job_);
       }
 
 
