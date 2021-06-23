@@ -466,8 +466,9 @@ std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests,
   return job_ids;
 }
 
-std::weak_ptr<int> Interpreter::GetOutputSubgraphIdx(int job_id) {
-  return planner_->GetFinishedSubgraphIdx(job_id);
+const std::vector<TfLiteTensor>* Interpreter::GetOutputTensors(
+    int job_id) const {
+
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
