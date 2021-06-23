@@ -89,7 +89,37 @@ void ShortestExpectedLatencyPlanner::Plan() {
       most_urgent_job.end_idx = to_execute.end_idx;
       most_urgent_job.subgraph_idx = target_subgraph;
       most_urgent_job.device_id = to_execute.device_flag;
-      most_urgent_job.sched_id = sched_id++;
+      most_urgent_job.profiled_time =
+          GetInterpreter()->GetSubgraphProfileResult(to_execute);
+
+      if (most_urgent_job.expected_latency == 0) {
+        // only set these fields if this is the first subgraph of this model
+        most_urgent_job.expected_latency = largest_shortest_latency;
+        most_urgent_job.sched_id = sched_id++;
+      }
+
+      // this job has an SLO; check if it's not too late already
+      if (most_urgent_job.slo_us > 0) {
+        int64_t current_time = profiling::time::NowMicros();
+        int64_t expected_latency =
+            device_waiting_time[to_execute.device_flag] +
+            most_urgent_job.profiled_time;
+
+        if (current_time + expected_latency >
+            most_urgent_job.enqueue_time + most_urgent_job.slo_us) {
+          // SLO violation
+          // no point in running this job anymore
+          most_urgent_job.slo_violated = true;
+
+          // mark this as -1 to differentiate it from the default value, 0
+          most_urgent_job.invoke_time = -1;
+
+          // mark the time of this decision (of early-dropping this job)
+          most_urgent_job.end_time = current_time;
+          EnqueueFinishedJob(most_urgent_job);
+          continue;
+        }
+      }
 
       ModelSpec& model_spec =
           GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
@@ -99,9 +129,12 @@ void ShortestExpectedLatencyPlanner::Plan() {
         remaining_ops.start_idx = most_urgent_job.end_idx + 1;
         remaining_ops.end_idx = model_spec.num_ops - 1;
         remaining_ops.following_jobs = most_urgent_job.following_jobs;
+        remaining_ops.expected_latency = most_urgent_job.expected_latency;
+        remaining_ops.sched_id = most_urgent_job.sched_id;
 
         most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);
+        most_urgent_job.is_final_subgraph = false;
       }
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);

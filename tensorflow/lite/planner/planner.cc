@@ -32,7 +32,12 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
            << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
-           << "end_time\n";
+           << "end_time\t"
+           << "profiled_time\t"
+           << "expected_latency\t"
+           << "slo_us\t"
+           << "slo_violated\t"
+           << "is_final_subgraph\n";
   log_file.close();
   
   return kTfLiteOk;
@@ -49,7 +54,14 @@ void Planner::Wait() {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
+    if (job.slo_us > 0 && job.is_final_subgraph && !job.slo_violated) {
+      // check if slo has been violated or not
+      auto latency = job.end_time - job.enqueue_time;
+      job.slo_violated = latency > job.slo_us;
+    }
+
     if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
+      // update internal map to keep track of the # of inferences per model
       model_execution_count_[job.model_id]++;
     }
 
@@ -63,7 +75,12 @@ void Planner::Wait() {
              << job.subgraph_idx << "\t"
              << job.enqueue_time << "\t"
              << job.invoke_time << "\t"
-             << job.end_time << "\n";
+             << job.end_time << "\t"
+             << job.profiled_time << "\t"
+             << job.expected_latency << "\t"
+             << job.slo_us << "\t"
+             << job.slo_violated << "\t"
+             << job.is_final_subgraph << "\n";
   }
   log_file.close();
   lock.unlock();
@@ -78,7 +95,11 @@ void Planner::EnqueueFinishedJob(Job job) {
 }
 
 void Planner::EnqueueRequest(Job job) {
-  job.enqueue_time = profiling::time::NowMicros();
+  if (job.enqueue_time == 0) {
+    // job.enqueue_time may already be set if this model contains a fallback
+    // op, in which case we do not overwrite the set value
+    job.enqueue_time = profiling::time::NowMicros();
+  }
   std::unique_lock<std::mutex> lock(requests_mtx_);
   requests_.push_back(job);
   num_submitted_jobs_++;
@@ -91,7 +112,11 @@ void Planner::EnqueueBatch(std::vector<Job> jobs) {
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
   for (Job job : jobs) {
-    job.enqueue_time = enqueue_time;
+    if (job.enqueue_time == 0) {
+      // job.enqueue_time may already be set if this model contains a fallback
+      // op, in which case we do not overwrite the set value
+      job.enqueue_time = enqueue_time;
+    }
     requests_.push_back(job);
     num_submitted_jobs_++;
   }
