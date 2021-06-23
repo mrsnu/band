@@ -33,6 +33,7 @@ limitations under the License.
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
+#include "tensorflow/lite/tensor_ring_buffer.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/planner/round_robin_planner.h"
@@ -799,6 +800,9 @@ class Interpreter {
 
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
+
+  std::map<int, TensorRingBuffer> model_input_buffers;
+  std::map<int, TensorRingBuffer> model_output_buffers;
 
   TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
