@@ -443,9 +443,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
       int input_handle = model_input_buffer[request.model_id]->Alloc();
-
       model_input_buffer[request.model_id]->Put(inputs[i], input_handle);
-
       request.input_handle = input_handle;
     }
   }
