@@ -1,5 +1,6 @@
+#include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/worker.h"
-
+#include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/tools/logging.h"
 
 
@@ -53,6 +54,31 @@ bool Worker::GiveJob(Job& job) {
 bool Worker::IsBusy() {
   TFLITE_LOG(ERROR) << "Worker::IsBusy() Not implemented.";
   return false;
+}
+
+TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
+  // Compute only.
+  if (job.input_handle < 0) {
+    return kTfLiteOk;
+  }
+
+  Interpreter* interpreter = planner_.lock()->GetInterpreter();
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+
+  const std::vector<TfLiteTensor>* input_tensors =
+      interpreter->GetInputTensors(job.model_id, job.input_handle);
+
+  if (input_tensors) {
+    auto input_indices = subgraph->inputs();
+    for (size_t i = 0; i < input_indices.size(); i++) {
+      std::memcpy(subgraph->tensor(i)->data.raw, input_tensors->at(i).data.raw,
+                  input_tensors->at(i).bytes);
+    }
+    return kTfLiteOk;
+  } else {
+    TFLITE_LOG(ERROR) << "Input tensors are null model " << job.model_id << " input handle " << job.input_handle;
+    return kTfLiteError;
+  }
 }
 
 }  // namespace impl

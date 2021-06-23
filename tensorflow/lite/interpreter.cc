@@ -400,16 +400,16 @@ TfLiteStatus Interpreter::Invoke(size_t subgraph_index) {
   return kTfLiteOk;
 }
 
-int Interpreter::InvokeModelAsync(int model_id) {
-  return InvokeModelAsync(Job(model_id));
+int Interpreter::InvokeModelAsync(int model_id, std::vector<TfLiteTensor> inputs) {
+  return InvokeModelAsync(Job(model_id), inputs);
 }
  
-int Interpreter::InvokeModelAsync(Job request) {
-  std::vector<int> job_ids = InvokeModelsAsync({request});
+int Interpreter::InvokeModelAsync(Job request, std::vector<TfLiteTensor> inputs) {
+  std::vector<int> job_ids = InvokeModelsAsync({request}, {inputs});
   return job_ids.size() > 0 ? job_ids[0] : -1;
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync() {
+std::vector<int> Interpreter::InvokeModelsAsync(std::vector<std::vector<TfLiteTensor>> inputs) {
   std::vector<Job> requests;
 
   for (auto& m : model_configs_) {
@@ -421,10 +421,11 @@ std::vector<int> Interpreter::InvokeModelsAsync() {
     }
   }
   
-  return InvokeModelsAsync(requests);
+  return InvokeModelsAsync(requests, inputs);
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
+std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests, 
+                                                std::vector<std::vector<TfLiteTensor>> inputs) {
   if (requests.size() == 0) {
     return {};
   }
@@ -437,17 +438,30 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests) {
     request.slo_us = model_config.slo_us;
   }
 
+  if (inputs.size() > 0) {
+    assert(inputs.size() == requests.size());
+    for (size_t i = 0; i < requests.size(); i++) {
+      Job& request = requests[i];
+      int input_handle = model_input_buffers.at(request.model_id)->Alloc();
+
+      model_input_buffers.at(request.model_id)->Put(inputs[i], input_handle);
+
+      request.input_handle = input_handle;
+    }
+  }
+
   return planner_->EnqueueBatch(requests);
 }
 
-std::vector<int> Interpreter::InvokeModelsSync() {
+std::vector<int> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTensor>> inputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync();
   planner_->Wait();
   return job_ids;
 }
 
-std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests) {
+std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests, 
+                                               std::vector<std::vector<TfLiteTensor>> inputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync(requests);
   planner_->Wait();
@@ -457,6 +471,17 @@ std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests) {
 std::weak_ptr<int> Interpreter::GetOutputSubgraphIdx(int job_id) {
   return planner_->GetFinishedSubgraphIdx(job_id);
 }
+
+const std::vector<TfLiteTensor>* Interpreter::GetInputTensors(int model_id, int input_handle) {
+  if (model_input_buffers.find(model_id) != model_input_buffers.end()) {
+    return model_input_buffers.at(model_id)->Get(input_handle);
+  } else {
+    std::cout << "Get input tensors returns null" << std::endl;
+    error_reporter_->Report("Get input tensors returns null");
+    return nullptr;
+  }
+}
+
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
                                      int* first_new_tensor_index) {
@@ -1004,6 +1029,21 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   key.start_idx = 0;
   key.end_idx = model_spec.num_ops - 1;
   RegisterSubgraphIdx(key, subgraph_index);
+
+  // allocate circular buffer for model IO
+  std::vector<const TfLiteTensor*> input_tensors;
+  std::vector<const TfLiteTensor*> output_tensors;
+
+  for (int input_tensor : primary_subgraph->inputs()) {
+    input_tensors.push_back(primary_subgraph->tensor(input_tensor));
+  }
+
+  for (int output_tensor : primary_subgraph->outputs()) {
+    output_tensors.push_back(primary_subgraph->tensor(output_tensor));
+  }
+
+  model_input_buffers.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
+  model_output_buffers.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, output_tensors));
 
   // check input/output/intermediate tensors to fill in
   // model_spec.output_tensors and model_spec.tensor_types

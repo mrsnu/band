@@ -167,6 +167,7 @@ void BenchmarkTfLiteModel::CleanUp() {
     // Free up any pre-allocated tensor data during PrepareInputData.
     runtime_config_.model_information[i].input_tensor_data.clear();
   }
+  model_input_tensors_.clear();
 }
 
 BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
@@ -393,6 +394,7 @@ BenchmarkTfLiteModel::CreateRandomTensorData(const TfLiteTensor& t,
 TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
+  model_input_tensors_.resize(runtime_config_.model_information.size());
   for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
     // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
     // (i.e. the specified input layer info) has been checked in
@@ -404,6 +406,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     auto interpreter_inputs = interpreter_->inputs(subgraph_index);
     auto& input_layer_infos = runtime_config_.model_information[i].input_layer_infos;
     auto& input_tensor_data = runtime_config_.model_information[i].input_tensor_data;
+    model_input_tensors_[i].resize(interpreter_inputs.size());
     for (int j = 0; j < interpreter_inputs.size(); ++j) {
       int tensor_index = interpreter_inputs[j];
       const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
@@ -418,6 +421,15 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
       } else {
         t_data = CreateRandomTensorData(*t, input_layer_info);
       }
+
+      TfLiteIntArray* shape = TfLiteIntArrayCopy(t->dims);
+      TfLiteTensorReset(t->type, t->name, shape, t->params, nullptr, 0,
+                        kTfLiteDynamic, nullptr, t->is_variable,
+                        &model_input_tensors_[i][j]);
+      TfLiteTensorRealloc(t_data.bytes, &model_input_tensors_[i][j]);
+      std::memcpy(model_input_tensors_[i][j].data.raw, t_data.data.get(),
+                  t_data.bytes);
+
       input_tensor_data.push_back(std::move(t_data));
     }
   }
@@ -755,7 +767,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   int num_iters = 3;
   for (int i = 0; i < num_iters; ++i) {
     for (int j = 0; j < models_.size(); ++j) {
-      interpreter_->InvokeModelAsync(j);
+      interpreter_->InvokeModelAsync(j, model_input_tensors_[j]);
     }
   }
   interpreter_->GetPlanner()->Wait();
@@ -807,7 +819,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
-    interpreter_->InvokeModelsSync();
+    interpreter_->InvokeModelsSync(model_input_tensors_);
     int64_t current = profiling::time::NowMicros();
     num_frames++;
     if (current - start >= run_duration_us)
@@ -831,10 +843,11 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
+      std::vector<std::vector<TfLiteTensor>> input_tensors(batch_size, model_input_tensors_[model_id]);
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
-        interpreter_->InvokeModelsAsync(requests);
+        interpreter_->InvokeModelsAsync(requests, input_tensors);
         int64_t end = profiling::time::NowMicros();
         int duration_ms = (end - start) / 1000;
 
@@ -873,7 +886,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
 
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
-      interpreter_->InvokeModelsAsync(requests);
+      interpreter_->InvokeModelsAsync(requests, model_input_tensors_);
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;
 

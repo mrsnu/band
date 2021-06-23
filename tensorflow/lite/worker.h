@@ -36,6 +36,7 @@ class Worker {
   virtual bool IsBusy();
 
  protected:
+  TfLiteStatus TryCopyInputTensors(const Job& job);
   virtual void Work() = 0;
 
   std::weak_ptr<Planner> planner_;

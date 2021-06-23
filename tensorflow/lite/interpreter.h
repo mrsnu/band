@@ -456,25 +456,27 @@ class Interpreter {
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
-  int InvokeModelAsync(int model_id);
-  int InvokeModelAsync(Job request);
+  int InvokeModelAsync(int model_id, std::vector<TfLiteTensor> inputs = {});
+  int InvokeModelAsync(Job request, std::vector<TfLiteTensor> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
   /// This method is an asychronous call.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
-  std::vector<int> InvokeModelsAsync();
-  std::vector<int> InvokeModelsAsync(std::vector<Job> requests);
+  std::vector<int> InvokeModelsAsync(std::vector<std::vector<TfLiteTensor>> inputs = {});
+  std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor>> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
   /// Returns when all the requests are done.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
-  std::vector<int> InvokeModelsSync();
-  std::vector<int> InvokeModelsSync(std::vector<Job> requests);
+  std::vector<int> InvokeModelsSync(std::vector<std::vector<TfLiteTensor>> inputs = {});
+  std::vector<int> InvokeModelsSync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor>> inputs = {});
 
   // Output subgraph index is valid until next overriding execution.
   std::weak_ptr<int> GetOutputSubgraphIdx(int job_id);
+  const std::vector<TfLiteTensor>* GetInputTensors(int model_id,
+                                                   int input_handle);
 
   /// Set the number of threads available to the interpreter.
   ///
@@ -801,8 +803,8 @@ class Interpreter {
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
 
-  std::map<int, TensorRingBuffer> model_input_buffers;
-  std::map<int, TensorRingBuffer> model_output_buffers;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffers;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffers;
 
   TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.

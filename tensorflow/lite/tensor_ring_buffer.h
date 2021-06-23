@@ -11,18 +11,18 @@ namespace tflite {
 class ErrorReporter;
 class TensorRingBuffer {
  public:
-  TensorRingBuffer(ErrorReporter* error_reporter, std::vector<TfLiteTensor*> tensors, size_t size = 32);
+  TensorRingBuffer(ErrorReporter* error_reporter, std::vector<const TfLiteTensor*> tensors, size_t size = 64);
   ~TensorRingBuffer();
 
-  size_t Alloc();
-  bool IsValid(size_t handle) const;
-  const std::vector<TfLiteTensor>* Get(size_t handle) const;
-  TfLiteStatus Put(std::vector<TfLiteTensor*> tensors, size_t handle);
+  int Alloc();
+  bool IsValid(int handle) const;
+  const std::vector<TfLiteTensor>* Get(int handle) const;
+  TfLiteStatus Put(std::vector<TfLiteTensor> tensors, int handle);
 
  private:
-  size_t GetIndex(size_t handle) const;
+  size_t GetIndex(int handle) const;
 
-  size_t head_ = 0;
+  int head_ = 0;
   size_t size_;
   std::vector<TfLiteTensor>* tensors_;
   ErrorReporter* error_reporter_;

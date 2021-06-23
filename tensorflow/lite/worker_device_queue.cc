@@ -92,23 +92,31 @@ void DeviceQueueWorker::Work() {
         }
       }
 
-      job.invoke_time = profiling::time::NowMicros();
+      if(TryCopyInputTensors(job) == kTfLiteOk) {
+        job.invoke_time = profiling::time::NowMicros();
 
-      if (subgraph.Invoke() == kTfLiteOk) {
-        job.end_time = profiling::time::NowMicros();
-        interpreter_ptr->UpdateProfileResult(
-            subgraph.GetKey(),
-            (job.end_time - job.invoke_time));
-        // TODO #65: Tensor communications between subgraphs
-        interpreter_ptr->InvokeModelsAsync(job.following_jobs);
-        planner_ptr->EnqueueFinishedJob(job);
+        if (subgraph.Invoke() == kTfLiteOk) {
+          job.end_time = profiling::time::NowMicros();
+          interpreter_ptr->UpdateProfileResult(
+              subgraph.GetKey(),
+              (job.end_time - job.invoke_time));
+          // TODO #65: Tensor communications between subgraphs
+          interpreter_ptr->InvokeModelsAsync(job.following_jobs);
+          planner_ptr->EnqueueFinishedJob(job);
+        } else {
+          job.end_time = profiling::time::NowMicros();
+          // TODO #21: Handle errors in multi-thread environment
+          // Currently, put a job with a minus sign if Invoke() fails.
+          // Model 0 fail --> Job(-1), Model 1 fail --> Job(-2), ...
+          planner_ptr->EnqueueFinishedJob(Job(-1 * job.model_id - 1));
+        }
       } else {
-        job.end_time = profiling::time::NowMicros();
+        TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
-        // Currently, put a job with a minus sign if Invoke() fails.
-        // Model 0 fail --> Job(-1), Model 1 fail --> Job(-2), ...
         planner_ptr->EnqueueFinishedJob(Job(-1 * job.model_id - 1));
       }
+
+      
       lock.lock();
       requests_.pop_front();
       bool empty = requests_.empty();
