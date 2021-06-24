@@ -28,6 +28,19 @@ const char kUnsupportedOperationException[] =
 
 namespace tflite {
 namespace jni {
+TensorHandle::TensorHandle(tflite::TensorUniquePtr tensor)
+  : tensor_(std::move(tensor)) {}
+
+TfLiteTensor* TensorHandle::tensor() const { return tensor_.get(); }
+
+TfLiteTensor* GetTensorFromHandle(JNIEnv* env, jlong handle) {
+  if (handle == 0) {
+    ThrowException(env, kIllegalArgumentException,
+                   "Internal error: Invalid handle to TfLiteTensor.");
+    return nullptr;
+  }
+  return reinterpret_cast<TensorHandle*>(handle)->tensor();
+}
 
 void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...) {
   va_list args;
