@@ -26,7 +26,6 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #include "tensorflow/lite/experimental/tflite_api_dispatcher/tflite_api_dispatcher.h"
 #include "tensorflow/lite/java/src/main/native/jni_utils.h"
 #include "tensorflow/lite/util.h"
@@ -68,15 +67,6 @@ BufferErrorReporter* convertLongToErrorReporter(JNIEnv* env, jlong handle) {
     return nullptr;
   }
   return reinterpret_cast<BufferErrorReporter*>(handle);
-}
-
-TfLiteDelegate* convertLongToDelegate(JNIEnv* env, jlong handle) {
-  if (handle == 0) {
-    ThrowException(env, kIllegalArgumentException,
-                   "Internal error: Invalid handle to delegate.");
-    return nullptr;
-  }
-  return reinterpret_cast<TfLiteDelegate*>(handle);
 }
 
 std::vector<int> convertJIntArrayToVector(JNIEnv* env, jintArray inputs) {
@@ -189,56 +179,24 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputNames(JNIEnv* env,
   return names;
 }
 
-JNIEXPORT void JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateTensors(
-    JNIEnv* env, jclass clazz, jlong handle, jlong error_handle) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, handle);
-  if (interpreter == nullptr) return;
-  BufferErrorReporter* error_reporter =
-      convertLongToErrorReporter(env, error_handle);
-  if (error_reporter == nullptr) return;
-
-  if (interpreter->AllocateTensors() != kTfLiteOk) {
-    ThrowException(
-        env, kIllegalStateException,
-        "Internal error: Unexpected failure when preparing tensor allocations:"
-        " %s",
-        error_reporter->CachedErrorMessage());
-  }
-}
-
-JNIEXPORT jint JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputTensorIndex(
+JNIEXPORT jlong JNICALL
+Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateInputTensor(
     JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint input_index) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
   size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
-  return interpreter->inputs(subgraph_index)[input_index];
-}
 
-JNIEXPORT jint JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputTensorIndex(
-    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint output_index) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, handle);
-  if (interpreter == nullptr) return 0;
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
-  return interpreter->outputs(subgraph_index)[output_index];
-}
+  TfLiteTensor* input = TfLiteTensorCopy(
+      interpreter->tensor(interpreter->inputs(subgraph_index)[input_index]));
 
-JNIEXPORT jint JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_getExecutionPlanLength(
-    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint device_id) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, handle);
-  if (interpreter == nullptr) return 0;
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, device_id);
-  return subgraph_index >= 0
-             ? static_cast<jint>(
-                   interpreter->execution_plan(subgraph_index).size())
-             : 0;
+  tflite::TensorUniquePtr tensor(input, [](TfLiteTensor* t) {
+    TfLiteTensorFree(t);
+    free(t);
+  });
+
+  return reinterpret_cast<jlong>(
+      new tflite::jni::TensorHandle(std::move(tensor)));
 }
 
 JNIEXPORT jint JNICALL
@@ -307,46 +265,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allowBufferHandleOutput(
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return;
   interpreter->SetAllowBufferHandleOutput(allow);
-}
-
-JNIEXPORT void JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_useXNNPACK(
-    JNIEnv* env, jclass clazz, jlong handle, jlong error_handle, jboolean state,
-    jint num_threads) {
-  // If not using xnnpack, simply don't apply the delegate.
-  if (!state) {
-    return;
-  }
-
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, handle);
-  if (interpreter == nullptr) {
-    return;
-  }
-
-  BufferErrorReporter* error_reporter =
-      convertLongToErrorReporter(env, error_handle);
-  if (error_reporter == nullptr) {
-    return;
-  }
-
-  // We use dynamic loading to avoid taking a hard dependency on XNNPack.
-  // This allows clients that use trimmed builds to save on binary size.
-  auto xnnpack_options_default =
-      reinterpret_cast<decltype(TfLiteXNNPackDelegateOptionsDefault)*>(
-          dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateOptionsDefault"));
-  auto xnnpack_create =
-      reinterpret_cast<decltype(TfLiteXNNPackDelegateCreate)*>(
-          dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateCreate"));
-  auto xnnpack_delete =
-      reinterpret_cast<decltype(TfLiteXNNPackDelegateDelete)*>(
-          dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateDelete"));
-  auto xnnpack_update =
-      reinterpret_cast<decltype(TfLiteXNNPackDelegateUpdate)*>(
-          dlsym(RTLD_DEFAULT, "TfLiteXNNPackDelegateUpdate"));
-
-  // Code applying XNNPack delegate is deleted.
-  // Create XNNPack delegate in the interpreter if we need one.
 }
 
 JNIEXPORT void JNICALL
@@ -507,8 +425,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   return model_id;
 }
 
-JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
-    JNIEnv* env, jclass clazz, jint model_id, jlong interpreter_handle, jlong error_handle) {
+JNIEXPORT jlongArray JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
+    JNIEnv* env, jclass clazz, jint model_id, jlongArray input_tensor_handles, jlong interpreter_handle, jlong error_handle) {
   LOGI("RunSync starts with model_id = %d", model_id);
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
@@ -517,8 +435,29 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return;
 
-  interpreter->InvokeModelsSync({tflite::Job(model_id)});
+  std::vector<TfLiteTensor*> input_tensors;
+  jlong* tensor_handles = env->GetLongArrayElements(input_tensor_handles, NULL);
+  for (size_t i = 0; i < env->GetArrayLength(input_tensor_handles); i++) {
+    input_tensors.push_back(
+        tflite::jni::GetTensorFromHandle(env, tensor_handles[i]));
+  }
+
+  auto output_tensors = interpreter->InvokeModelsSync({tflite::Job(model_id)}, {input_tensors})[0];
+
+  jlongArray results = env->NewLongArray(output_tensors.size());
+  std::vector<jlong> output_handles;
+
+  for (size_t i = 0; i < output_tensors.size(); i++) {
+    output_handles.push_back(
+        reinterpret_cast<jlong>(new tflite::jni::TensorHandle(std::move(output_tensors[i]))))
+  }
+
+  env->SetLongArrayRegion(results, 0, output_tensors.size(),
+                          output_handles.data());
+
   LOGI("RunSync finishes");
+
+  return results;
 }
 
 JNIEXPORT jint JNICALL
@@ -621,16 +560,19 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resetVariableTensors(
 }
 
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_delete(
-    JNIEnv* env, jclass clazz, jlong error_handle, jlong model_handle,
-    jlong interpreter_handle) {
+    JNIEnv* env, jclass clazz, jlong error_handle, jlong interpreter_handle) {
   if (interpreter_handle != 0) {
     delete convertLongToInterpreter(env, interpreter_handle);
   }
-  if (model_handle != 0) {
-    delete convertLongToModel(env, model_handle);
-  }
   if (error_handle != 0) {
     delete convertLongToErrorReporter(env, error_handle);
+  }
+}
+
+JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_deleteModel(
+    JNIEnv* env, jclass clazz, jlong model_handle) {
+  if (model_handle != 0) {
+    delete convertLongToModel(env, model_handle);
   }
 }
 

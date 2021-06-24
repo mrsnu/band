@@ -43,8 +43,9 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (options == null) {
       options = new Interpreter.Options();
     }
-    modelHandle = createModel(modelPath, errorHandle);
-    int modelId = prepareModel(options);
+    long modelHandle = createModel(modelPath, errorHandle);
+    int modelId = prepareModel(options, modelHandle);
+    modelHandles.put(modelId, modelHandle);
     return modelId;
   }
 
@@ -59,133 +60,76 @@ final class NativeInterpreterWrapper implements AutoCloseable {
           "Model ByteBuffer should be either a MappedByteBuffer of the model file, or a direct "
               + "ByteBuffer using ByteOrder.nativeOrder() which contains bytes of model content.");
     }
-    modelByteBuffer = buffer;
-    modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
-    int modelId = prepareModel(options);
+    ByteBuffer modelByteBuffer = buffer;
+    long modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
+    int modelId = prepareModel(options, modelHandle);
+    modelHandles.put(modelId, modelHandle);
+    modelByteBuffers.put(modelId, modelByteBuffer);
     return modelId;
   }
 
-  private int prepareModel(Interpreter.Options options) {
+  private int prepareModel(Interpreter.Options options, long modelHandle) {
     int modelId = registerModel(interpreterHandle, modelHandle, errorHandle);
     if (modelId == -1) {
       throw new IllegalArgumentException("Failed to register model");
     }
 
-    inputTensors = new Tensor[getInputCount(interpreterHandle)];
-    outputTensors = new Tensor[getOutputCount(interpreterHandle)];
-    if (options.allowFp16PrecisionForFp32 != null) {
-      allowFp16PrecisionForFp32(
-          interpreterHandle, options.allowFp16PrecisionForFp32.booleanValue());
-    }
-    if (options.allowBufferHandleOutput != null) {
-      allowBufferHandleOutput(interpreterHandle, options.allowBufferHandleOutput.booleanValue());
-    }
-    applyDelegates(options);
-    if (options.useXNNPACK != null) {
-      useXNNPACK(
-          interpreterHandle, errorHandle, options.useXNNPACK.booleanValue(), options.numThreads);
-    }
-    allocateTensors(interpreterHandle, errorHandle);
-    isMemoryAllocated = true;
     return modelId;
   }
 
   /** Releases resources associated with this {@code NativeInterpreterWrapper}. */
   @Override
   public void close() {
-    // Close the tensors first as they may reference the native interpreter.
-    for (int i = 0; i < inputTensors.length; ++i) {
-      if (inputTensors[i] != null) {
-        inputTensors[i].close();
-        inputTensors[i] = null;
-      }
-    }
-    for (int i = 0; i < outputTensors.length; ++i) {
-      if (outputTensors[i] != null) {
-        outputTensors[i].close();
-        outputTensors[i] = null;
-      }
-    }
-    delete(errorHandle, modelHandle, interpreterHandle);
+    delete(errorHandle, interpreterHandle);
+
+    modelHandles.forEach((modelId, modelHandle) -> deleteModel(modelHandle));
+
     errorHandle = 0;
-    modelHandle = 0;
     interpreterHandle = 0;
-    modelByteBuffer = null;
-    inputsIndexes = null;
-    outputsIndexes = null;
-    isMemoryAllocated = false;
-    delegates.clear();
-    for (AutoCloseable ownedDelegate : ownedDelegates) {
-      try {
-        ownedDelegate.close();
-      } catch (Exception e) {
-        System.err.println("Failed to close flex delegate: " + e);
-      }
-    }
-    ownedDelegates.clear();
+    
+    modelHandles.clear();
+    modelByteBuffers.clear();
   }
 
   /** Sets inputs, runs model inference and returns outputs. */
-  void run(int modelId, Object[] inputs, Map<Integer, Object> outputs) {
+  Tensor[] run(int modelId, Tensor[] inputs) {
     inferenceDurationNanoseconds = -1;
     if (inputs == null || inputs.length == 0) {
       throw new IllegalArgumentException("Input error: Inputs should not be null or empty.");
     }
-    if (outputs == null || outputs.isEmpty()) {
-      throw new IllegalArgumentException("Input error: Outputs should not be null or empty.");
-    }
 
-    // TODO(b/80431971): Remove implicit resize after deprecating multi-dimensional array inputs.
-    // Rather than forcing an immediate resize + allocation if an input's shape differs, we first
-    // flush all resizes, avoiding redundant allocations.
-    for (int i = 0; i < inputs.length; ++i) {
-      Tensor tensor = getInputTensor(i);
-      int[] newShape = tensor.getInputShapeIfDifferent(inputs[i]);
-      if (newShape != null) {
-        resizeInput(i, newShape);
-      }
-    }
+    long[] inputHandles = new long[inputs.length];
 
-    boolean needsAllocation = !isMemoryAllocated;
-    if (needsAllocation) {
-      allocateTensors(interpreterHandle, errorHandle);
-      isMemoryAllocated = true;
-    }
-
-    for (int i = 0; i < inputs.length; ++i) {
-      getInputTensor(i).setTo(inputs[i]);
+    for (int i = 0; i < inputs.length; i++) {
+      inputHandles[i] = inputs[i].handle();
     }
 
     long inferenceStartNanos = System.nanoTime();
-    runSync(modelId, interpreterHandle, errorHandle);
+    long[] outputHandles = runSync(modelId, inputHandles, interpreterHandle, errorHandle);
     long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
 
-    // Allocation can trigger dynamic resizing of output tensors, so refresh all output shapes.
-    if (needsAllocation) {
-      for (int i = 0; i < outputTensors.length; ++i) {
-        if (outputTensors[i] != null) {
-          outputTensors[i].refreshShape();
-        }
-      }
-    }
-    for (Map.Entry<Integer, Object> output : outputs.entrySet()) {
-      getOutputTensor(output.getKey()).copyTo(output.getValue());
+    Tensor[] outputs = new Tensor[outputHandles.length];
+
+    for (int i = 0; i < outputHandles.length; i++) {
+      outputs[i] = new Tensor(outputHandles[i]);
     }
 
     // Only set if the entire operation succeeds.
     this.inferenceDurationNanoseconds = inferenceDurationNanoseconds;
+
+    return outputs;
   }
 
-  private static native void runSync(int modelId, long interpreterHandle, long errorHandle);
+  private static native long[] runSync(int modelId, long[] inputTensorHandles, long interpreterHandle, long errorHandle);
 
   /** Resizes dimensions of a specific input. */
-  void resizeInput(int model_id, int idx, int[] dims) {
+  void resizeInput(int modelId, int idx, int[] dims) {
     resizeInput(idx, dims, false);
   }
 
   /** Resizes dimensions of a specific input. */
-  void resizeInput(int model_id, int idx, int[] dims, boolean strict) {
-    if (resizeInput(model_id, interpreterHandle, errorHandle, idx, dims, strict)) {
+  void resizeInput(int modelId, int idx, int[] dims, boolean strict) {
+    if (resizeInput(modelId, interpreterHandle, errorHandle, idx, dims, strict)) {
       // Tensor allocation is deferred until either an explicit `allocateTensors()` call or
       // `invoke()` avoiding redundant allocations if multiple tensors are simultaneosly resized.
       isMemoryAllocated = false;
@@ -196,29 +140,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   private static native boolean resizeInput(
-      long interpreterHandle, long errorHandle, int model_id, int inputIdx, int[] dims, boolean strict);
-
-  /** Triggers explicit allocation of tensors. */
-  void allocateTensors() {
-    if (isMemoryAllocated) {
-      return;
-    }
-
-    isMemoryAllocated = true;
-    allocateTensors(interpreterHandle, errorHandle);
-    for (int i = 0; i < outputTensors.length; ++i) {
-      if (outputTensors[i] != null) {
-        outputTensors[i].refreshShape();
-      }
-    }
-  }
-
-  private static native long allocateTensors(long interpreterHandle, long errorHandle);
-
-  void setUseNNAPI(boolean useNNAPI) {
-    useNNAPI(interpreterHandle, useNNAPI);
-  }
-
+      long interpreterHandle, long errorHandle, int modelId, int inputIdx, int[] dims, boolean strict);
+  
   void setNumThreads(int numThreads) {
     numThreads(interpreterHandle, numThreads);
   }
@@ -232,50 +155,6 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     resetVariableTensors(interpreterHandle, errorHandle);
   }
 
-  /** Gets index of an input given its name. */
-  int getInputIndex(String name) {
-    if (inputsIndexes == null) {
-      String[] names = getInputNames(interpreterHandle);
-      inputsIndexes = new HashMap<>();
-      if (names != null) {
-        for (int i = 0; i < names.length; ++i) {
-          inputsIndexes.put(names[i], i);
-        }
-      }
-    }
-    if (inputsIndexes.containsKey(name)) {
-      return inputsIndexes.get(name);
-    } else {
-      throw new IllegalArgumentException(
-          String.format(
-              "Input error: '%s' is not a valid name for any input. Names of inputs and their "
-                  + "indexes are %s",
-              name, inputsIndexes.toString()));
-    }
-  }
-
-  /** Gets index of an output given its name. */
-  int getOutputIndex(String name) {
-    if (outputsIndexes == null) {
-      String[] names = getOutputNames(interpreterHandle);
-      outputsIndexes = new HashMap<>();
-      if (names != null) {
-        for (int i = 0; i < names.length; ++i) {
-          outputsIndexes.put(names[i], i);
-        }
-      }
-    }
-    if (outputsIndexes.containsKey(name)) {
-      return outputsIndexes.get(name);
-    } else {
-      throw new IllegalArgumentException(
-          String.format(
-              "Input error: '%s' is not a valid name for any output. Names of outputs and their "
-                  + "indexes are %s",
-              name, outputsIndexes.toString()));
-    }
-  }
-
   /**
    * Gets the last inference duration in nanoseconds. It returns null if there is no previous
    * inference run or the last inference run failed.
@@ -285,8 +164,8 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   /** Gets the number of input tensors. */
-  int getInputTensorCount() {
-    return inputTensors.length;
+  int getInputTensorCount(int modelId) {
+    return getInputCount(interpreterHandle, modelId);
   }
 
   /**
@@ -294,48 +173,23 @@ final class NativeInterpreterWrapper implements AutoCloseable {
    *
    * @throws IllegalArgumentException if the input index is invalid.
    */
-  Tensor getInputTensor(int model_id, int index) {
-    if (index < 0 || index >= inputTensors.length) {
+  Tensor allocateInputTensor(int modelId, int index) {
+    if (index < 0 || index >= getInputTensorCount(modelId)) {
       throw new IllegalArgumentException("Invalid input Tensor index: " + index);
     }
-    Tensor inputTensor = inputTensors[index];
-    if (inputTensor == null) {
-      inputTensor =
-          inputTensors[index] =
-              Tensor.fromIndex(interpreterHandle, getInputTensorIndex(interpreterHandle, model_id, index));
-    }
-    return inputTensor;
+
+    return new Tensor(allocateInputTensor(interpreterHandle, modelId, index));
   }
+
+  // Allocate new tensor for model's inputIdx th input
+  private static native long allocateInputTensor(long interpreterHandle, int modelId, int inputIdx);
 
   /** Gets the number of output tensors. */
-  int getOutputTensorCount() {
-    return outputTensors.length;
+  int getOutputTensorCount(int modelId) {
+    return getOutputCount(interpreterHandle, modelId);
   }
 
-  /**
-   * Gets the output {@link Tensor} for the provided output index.
-   *
-   * @throws IllegalArgumentException if the output index is invalid.
-   */
-  Tensor getOutputTensor(int model_id, int index) {
-    if (index < 0 || index >= outputTensors.length) {
-      throw new IllegalArgumentException("Invalid output Tensor index: " + index);
-    }
-    Tensor outputTensor = outputTensors[index];
-    if (outputTensor == null) {
-      outputTensor =
-          outputTensors[index] =
-              Tensor.fromIndex(interpreterHandle, getOutputTensorIndex(interpreterHandle, model_id, index));
-    }
-    return outputTensor;
-  }
-
-  /** Gets the number of ops in the execution plan. */
-  int getExecutionPlanLength() {
-    return getExecutionPlanLength(interpreterHandle);
-  }
-
-  private static native int getOutputDataType(long interpreterHandle, int outputIdx);
+  private static native int getOutputDataType(long interpreterHandle, int modelId, int outputIdx);
 
   private static final int ERROR_BUFFER_SIZE = 512;
 
@@ -343,55 +197,26 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private long interpreterHandle;
 
-  private long modelHandle;
-
   private long inferenceDurationNanoseconds = -1;
 
-  private ByteBuffer modelByteBuffer;
-
-  // Lazily constructed maps of i th model's input and output names to input and output Tensor indexes.
-  private List<Map<String, Integer>> inputsIndexes;
-  private List<Map<String, Integer>> outputsIndexes;
-
-  // Lazily constructed and populated arrays of input and output Tensor wrappers.
-  private Tensor[] inputTensors;
-  private Tensor[] outputTensors;
-
-  private boolean isMemoryAllocated = false;
-
-  // As the Java Delegate owns the native delegate instance, we keep a strong ref to any injected
-  // delegates for safety.
-  private final List<Delegate> delegates = new ArrayList<>();
-
-  // List of owned delegates that must be closed when the interpreter is closed.
-  private final List<AutoCloseable> ownedDelegates = new ArrayList<>();
+  private Map<Integer, Long> modelHandles = new HashMap<>();
+  private Map<Integer, ByteBuffer> modelByteBuffers = new HashMap<>();
 
   private static native boolean hasUnresolvedFlexOp(long interpreterHandle);
-
-  private static native int getInputTensorIndex(long interpreterHandle, int modelId, int inputIdx);
-
-  private static native int getOutputTensorIndex(long interpreterHandle, int modelId, int outputIdx);
 
   private static native int getInputCount(long interpreterHandle, int modelId);
 
   private static native int getOutputCount(long interpreterHandle, int modelId);
 
-  private static native int getExecutionPlanLength(long interpreterHandle);
-
   private static native String[] getInputNames(long interpreterHandle, int modelId);
 
   private static native String[] getOutputNames(long interpreterHandle, int modelId);
-
-  private static native void useNNAPI(long interpreterHandle, boolean state);
 
   private static native void numThreads(long interpreterHandle, int numThreads);
 
   private static native void allowFp16PrecisionForFp32(long interpreterHandle, boolean allow);
 
   private static native void allowBufferHandleOutput(long interpreterHandle, boolean allow);
-
-  private static native void useXNNPACK(
-      long interpreterHandle, long errorHandle, boolean state, int numThreads);
 
   private static native long createErrorReporter(int size);
 
@@ -403,10 +228,9 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private static native int registerModel(long interpreterHandle, long modelHandle, long errorHandle);
 
-  private static native void applyDelegate(
-      long interpreterHandle, long errorHandle, long delegateHandle);
-
   private static native void resetVariableTensors(long interpreterHandle, long errorHandle, int modelId);
 
-  private static native void delete(long errorHandle, long modelHandle, long interpreterHandle);
+  private static native void delete(long errorHandle, long interpreterHandle);
+  
+  private static native void deleteModel(long modelHandle);
 }

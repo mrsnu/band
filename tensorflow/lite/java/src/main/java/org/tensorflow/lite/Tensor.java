@@ -33,17 +33,6 @@ import java.util.Arrays;
  */
 // TODO(b/153882978): Add scalar getters similar to TF's Java API.
 public final class Tensor {
-
-  /**
-   * Creates a Tensor wrapper from the provided interpreter instance and tensor index.
-   *
-   * <p>The caller is responsible for closing the created wrapper, and ensuring the provided native
-   * interpreter is valid until the tensor is closed.
-   */
-  static Tensor fromIndex(long nativeInterpreterHandle, int tensorIndex) {
-    return new Tensor(create(nativeInterpreterHandle, tensorIndex));
-  }
-
   /**
    * Quantization parameters that corresponds to the table, {@code QuantizationParameters}, in the
    * <a
@@ -139,13 +128,8 @@ public final class Tensor {
     return shapeSignatureCopy;
   }
 
-  /**
-   * Returns the (global) index of the tensor within the owning {@link Interpreter}.
-   *
-   * @hide
-   */
-  public int index() {
-    return index(nativeHandle);
+  public long handle() {
+    return nativeHandle;
   }
 
   /**
@@ -479,7 +463,7 @@ public final class Tensor {
   private final int[] shapeSignatureCopy;
   private final QuantizationParams quantizationParamsCopy;
 
-  private Tensor(long nativeHandle) {
+  public Tensor(long nativeHandle) {
     this.nativeHandle = nativeHandle;
     this.dtype = DataType.fromC(dtype(nativeHandle));
     this.shapeCopy = shape(nativeHandle);

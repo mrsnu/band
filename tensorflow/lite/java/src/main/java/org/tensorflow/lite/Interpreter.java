@@ -232,19 +232,12 @@ public final class Interpreter implements AutoCloseable {
    *     appropriate read position. A {@code null} value is allowed only if the caller is using a
    *     {@link Delegate} that allows buffer handle interop, and such a buffer has been bound to the
    *     input {@link Tensor}.
-   * @param output a multidimensional array of output data, or a {@link Buffer} of primitive types
-   *     including int, float, long, and byte. When a {@link Buffer} is used, the caller must ensure
-   *     that it is set the appropriate write position. A null value is allowed only if the caller
-   *     is using a {@link Delegate} that allows buffer handle interop, and such a buffer has been
-   *     bound to the output {@link Tensor}. See {@link Options#setAllowBufferHandleOutput()}.
    * @throws IllegalArgumentException if {@code input} or {@code output} is null or empty, or if
    *     error occurs when running the inference.
    */
-  public void run(int modelId, Object input, Object output) {
-    Object[] inputs = {input};
-    Map<Integer, Object> outputs = new HashMap<>();
-    outputs.put(0, output);
-    runForMultipleInputsOutputs(modelId, inputs, outputs);
+  public Tensor[] run(int modelId, Tensor input) {
+    Tensor[] inputs = {input};
+    return runForMultipleInputs(modelId, inputs);
   }
 
   /**
@@ -274,17 +267,13 @@ public final class Interpreter implements AutoCloseable {
    *     input path. When {@link Buffer} is used, its content should remain unchanged until model
    *     inference is done, and the caller must ensure that the {@link Buffer} is at the appropriate
    *     read position.
-   * @param outputs a map mapping output indices to multidimensional arrays of output data or {@link
-   *     Buffer}s of primitive types including int, float, long, and byte. It only needs to keep
-   *     entries for the outputs to be used. When a {@link Buffer} is used, the caller must ensure
-   *     that it is set the appropriate write position.
    * @throws IllegalArgumentException if {@code inputs} or {@code outputs} is null or empty, or if
    *     error occurs when running the inference.
    */
-  public void runForMultipleInputsOutputs(
-      int modelId, @NonNull Object[] inputs, @NonNull Map<Integer, Object> outputs) {
+  public Tensor[] runForMultipleInputs(
+      int modelId, @NonNull Tensor[] inputs) {
     checkNotClosed();
-    wrapper.run(modelId, inputs, outputs);
+    return wrapper.run(modelId, inputs);
   }
 
   /**
@@ -319,9 +308,9 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code idx} is negtive or is not smaller than the number of
    *     model inputs; or if error occurs when resizing the idx-th input.
    */
-  public void resizeInput(int idx, @NonNull int[] dims) {
+  public void resizeInput(int modelId, int idx, @NonNull int[] dims) {
     checkNotClosed();
-    wrapper.resizeInput(idx, dims, false);
+    wrapper.resizeInput(modelId, idx, dims, false);
   }
 
   /**
@@ -334,74 +323,23 @@ public final class Interpreter implements AutoCloseable {
    *     model inputs; or if error occurs when resizing the idx-th input. Additionally, the error
    *     occurs when attempting to resize a tensor with fixed dimensions when `struct` is True.
    */
-  public void resizeInput(int idx, @NonNull int[] dims, boolean strict) {
+  public void resizeInput(int modelId, int idx, @NonNull int[] dims, boolean strict) {
     checkNotClosed();
-    wrapper.resizeInput(idx, dims, strict);
+    wrapper.resizeInput(modelId, idx, dims, strict);
   }
 
   /** Gets the number of input tensors. */
-  public int getInputTensorCount() {
+  public int getInputTensorCount(int modelId) {
     checkNotClosed();
-    return wrapper.getInputTensorCount();
-  }
-
-  /**
-   * Gets index of an input given the op name of the input.
-   *
-   * @throws IllegalArgumentException if {@code opName} does not match any input in the model used
-   *     to initialize the {@link Interpreter}.
-   */
-  public int getInputIndex(String opName) {
-    checkNotClosed();
-    return wrapper.getInputIndex(opName);
-  }
-
-  /**
-   * Gets the Tensor associated with the provdied input index.
-   *
-   * @throws IllegalArgumentException if {@code inputIndex} is negtive or is not smaller than the
-   *     number of model inputs.
-   */
-  public Tensor getInputTensor(int inputIndex) {
-    checkNotClosed();
-    return wrapper.getInputTensor(inputIndex);
+    return wrapper.getInputTensorCount(modelId);
   }
 
   /** Gets the number of output Tensors. */
-  public int getOutputTensorCount() {
+  public int getOutputTensorCount(int modelId) {
     checkNotClosed();
-    return wrapper.getOutputTensorCount();
+    return wrapper.getOutputTensorCount(modelId);
   }
-
-  /**
-   * Gets index of an output given the op name of the output.
-   *
-   * @throws IllegalArgumentException if {@code opName} does not match any output in the model used
-   *     to initialize the {@link Interpreter}.
-   */
-  public int getOutputIndex(String opName) {
-    checkNotClosed();
-    return wrapper.getOutputIndex(opName);
-  }
-
-  /**
-   * Gets the Tensor associated with the provdied output index.
-   *
-   * <p>Note: Output tensor details (e.g., shape) may not be fully populated until after inference
-   * is executed. If you need updated details *before* running inference (e.g., after resizing an
-   * input tensor, which may invalidate output tensor shapes), use {@link #allocateTensors()} to
-   * explicitly trigger allocation and shape propagation. Note that, for graphs with output shapes
-   * that are dependent on input *values*, the output shape may not be fully determined until
-   * running inference.
-   *
-   * @throws IllegalArgumentException if {@code outputIndex} is negtive or is not smaller than the
-   *     number of model outputs.
-   */
-  public Tensor getOutputTensor(int outputIndex) {
-    checkNotClosed();
-    return wrapper.getOutputTensor(outputIndex);
-  }
-
+  
   /**
    * Returns native inference timing.
    *
@@ -410,18 +348,6 @@ public final class Interpreter implements AutoCloseable {
   public Long getLastNativeInferenceDurationNanoseconds() {
     checkNotClosed();
     return wrapper.getLastNativeInferenceDurationNanoseconds();
-  }
-
-  /**
-   * Turns on/off Android NNAPI for hardware acceleration when it is available.
-   *
-   * @deprecated Prefer using {@link Options#setUseNNAPI(boolean)} directly for enabling NN API.
-   *     This method will be removed in a future release.
-   */
-  @Deprecated
-  public void setUseNNAPI(boolean useNNAPI) {
-    checkNotClosed();
-    wrapper.setUseNNAPI(useNNAPI);
   }
 
   /**
@@ -437,22 +363,6 @@ public final class Interpreter implements AutoCloseable {
   }
 
   /**
-   * Advanced: Modifies the graph with the provided {@link Delegate}.
-   *
-   * <p>Note: The typical path for providing delegates is via {@link Options#addDelegate}, at
-   * creation time. This path should only be used when a delegate might require coordinated
-   * interaction between Interpeter creation and delegate application.
-   *
-   * <p>WARNING: This is an experimental API and subject to change.
-   *
-   * @throws IllegalArgumentException if error occurs when modifying graph with {@code delegate}.
-   */
-  public void modifyGraphWithDelegate(Delegate delegate) {
-    checkNotClosed();
-    wrapper.modifyGraphWithDelegate(delegate);
-  }
-
-  /**
    * Advanced: Resets all variable tensors to the default value.
    *
    * <p>If a variable tensor doesn't have an associated buffer, it will be reset to zero.
@@ -462,11 +372,6 @@ public final class Interpreter implements AutoCloseable {
   public void resetVariableTensors() {
     checkNotClosed();
     wrapper.resetVariableTensors();
-  }
-
-  int getExecutionPlanLength() {
-    checkNotClosed();
-    return wrapper.getExecutionPlanLength();
   }
 
   /** Release resources associated with the {@code Interpreter}. */
