@@ -445,30 +445,63 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
       int input_handle = model_input_buffer[request.model_id]->Alloc();
       model_input_buffer[request.model_id]->Put(inputs[i], input_handle);
       request.input_handle = input_handle;
+      request.output_handle = model_output_buffer[request.model_id]->Alloc();
     }
   }
 
   return planner_->EnqueueBatch(requests);
 }
 
-std::vector<int> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs) {
+std::vector<std::vector<TensorUniquePtr>> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync();
   planner_->Wait();
-  return job_ids;
+  std::vector<std::vector<TensorUniquePtr>> outputs;
+  for (int job_id: job_ids) {
+    outputs.push_back(GetOutputTensors(job_id));
+  }
+  return outputs;
 }
 
-std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests, 
+std::vector<std::vector<TensorUniquePtr>> Interpreter::InvokeModelsSync(std::vector<Job> requests, 
                                                std::vector<std::vector<TfLiteTensor*>> inputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync(requests);
   planner_->Wait();
-  return job_ids;
+  std::vector<std::vector<TensorUniquePtr>> outputs;
+  for (int job_id: job_ids) {
+    outputs.push_back(GetOutputTensors(job_id));
+  }
+  return outputs;
 }
 
-const std::vector<TfLiteTensor*>* Interpreter::GetOutputTensors(
-    int job_id) const {
+std::vector<TensorUniquePtr> Interpreter::GetOutputTensors(int job_id) const {
+  const Job* job = planner_->GetFinishedJob(job_id);
 
+  if (!job) {
+    return {};
+  }
+
+  auto output_tensors =
+      model_output_buffer.at(job->model_id)->Get(job->output_handle);
+
+  if (!output_tensors) {
+    return {};
+  }
+
+  std::vector<TensorUniquePtr> results;
+
+  auto deleter = [](TfLiteTensor* t) {
+    TfLiteTensorFree(t);
+    free(t);
+  };
+
+  for(const TfLiteTensor* output_tensor : *output_tensors) {
+    results.push_back(
+        std::move(TensorUniquePtr(TfLiteTensorCopy(output_tensor), deleter)));
+  }
+
+  return results;
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,

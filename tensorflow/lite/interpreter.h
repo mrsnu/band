@@ -470,10 +470,10 @@ class Interpreter {
   /// Returns when all the requests are done.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
-  std::vector<int> InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs = {});
-  std::vector<int> InvokeModelsSync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor*>> inputs = {});
+  std::vector<std::vector<TensorUniquePtr>> InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs = {});
+  std::vector<std::vector<TensorUniquePtr>> InvokeModelsSync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor*>> inputs = {});
 
-  const std::vector<TfLiteTensor*>* GetOutputTensors(int job_id) const;
+  std::vector<TensorUniquePtr> GetOutputTensors(int job_id) const;
 
   /// Set the number of threads available to the interpreter.
   ///

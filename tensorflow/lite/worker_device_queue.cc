@@ -92,7 +92,7 @@ void DeviceQueueWorker::Work() {
         }
       }
 
-      if(TryCopyInputTensors(job) == kTfLiteOk) {
+      if(CopyInputTensors(job) == kTfLiteOk) {
         job.invoke_time = profiling::time::NowMicros();
 
         if (subgraph.Invoke() == kTfLiteOk) {
@@ -102,6 +102,7 @@ void DeviceQueueWorker::Work() {
               (job.end_time - job.invoke_time));
           // TODO #65: Tensor communications between subgraphs
           interpreter_ptr->InvokeModelsAsync(job.following_jobs);
+          CopyOutputTensors(job);
           planner_ptr->EnqueueFinishedJob(job);
         } else {
           job.end_time = profiling::time::NowMicros();

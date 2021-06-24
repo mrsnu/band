@@ -135,7 +135,7 @@ void GlobalQueueWorker::Work() {
         }
       }
 
-      if(TryCopyInputTensors(current_job_) == kTfLiteOk) {
+      if(CopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();
         lock.unlock();
@@ -149,6 +149,7 @@ void GlobalQueueWorker::Work() {
               (current_job_.end_time - current_job_.invoke_time));
           // TODO #65: Tensor communications between subgraphs
           interpreter_ptr->InvokeModelsAsync(current_job_.following_jobs);
+          CopyOutputTensors(current_job_);
           planner_ptr->EnqueueFinishedJob(current_job_);
 
         } else {

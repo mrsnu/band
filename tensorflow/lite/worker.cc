@@ -56,7 +56,7 @@ bool Worker::IsBusy() {
   return false;
 }
 
-TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
+TfLiteStatus Worker::CopyInputTensors(const Job& job) {
   // Compute only.
   if (job.input_handle < 0) {
     return kTfLiteOk;
@@ -65,13 +65,18 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
   auto input_buffer = interpreter->model_input_buffer[job.model_id].get();
+  
+  if (!input_buffer) {
+    TFLITE_LOG(ERROR) << "No input buffer for model id " << job.model_id;
+    return kTfLiteError;
+  }
 
   const std::vector<TfLiteTensor*>* input_tensors = input_buffer->Get(job.input_handle);
 
   if (input_tensors) {
     auto input_indices = subgraph->inputs();
     for (size_t i = 0; i < input_indices.size(); i++) {
-      std::memcpy(subgraph->tensor(i)->data.raw, input_tensors->at(i)->data.raw,
+      std::memcpy(subgraph->tensor(input_indices[i])->data.raw, input_tensors->at(i)->data.raw,
                   input_tensors->at(i)->bytes);
     }
     return kTfLiteOk;
@@ -79,6 +84,30 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
     TFLITE_LOG(ERROR) << "Input tensors are null model " << job.model_id << " input handle " << job.input_handle;
     return kTfLiteError;
   }
+}
+
+TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
+  // Compute only.
+  if (job.output_handle < 0) {
+    return kTfLiteOk;
+  }
+
+  Interpreter* interpreter = planner_.lock()->GetInterpreter();
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+  auto output_buffer = interpreter->model_output_buffer[job.model_id].get();
+  
+  if (!output_buffer) {
+    TFLITE_LOG(ERROR) << "No output buffer for model id " << job.model_id;
+    return kTfLiteError;
+  }
+
+  auto output_indices = subgraph->outputs();
+  std::vector<TfLiteTensor*> output_tensors(output_indices.size());
+  for (size_t i = 0; i < output_indices.size(); i++) {
+    output_tensors[i] = subgraph->tensor(output_indices[i]);
+  }
+
+  return output_buffer->Put(output_tensors, job.output_handle);
 }
 
 }  // namespace impl

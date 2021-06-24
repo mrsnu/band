@@ -93,15 +93,7 @@ void Planner::EnqueueFinishedJob(Job job) {
   lock.unlock();
 
   std::lock_guard<std::mutex> record_lock(record_mtx_);
-  finished_job_to_subgraph_[job.job_id] = std::make_shared<int>(job.subgraph_idx);
-
-  if (subgraph_to_latest_finished_job_.find(job.subgraph_idx) !=
-      subgraph_to_latest_finished_job_.end()) {
-    // Invalidate previosly finished job at subgraph.
-    finished_job_to_subgraph_.erase(
-        subgraph_to_latest_finished_job_[job.subgraph_idx]);
-  }
-  subgraph_to_latest_finished_job_[job.subgraph_idx] = job.job_id;
+  jobs_finished_record_.emplace(job.job_id, job);
 
   end_invoke_.notify_one();
 }
@@ -129,15 +121,6 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
   planner_safe_bool_.notify();
 
   return job_ids;
-}
-
-std::weak_ptr<int> Planner::GetFinishedSubgraphIdx(int job_id) {
-  std::lock_guard<std::mutex> record_lock(record_mtx_);
-  if (finished_job_to_subgraph_.find(job_id) != finished_job_to_subgraph_.end()) {
-    return finished_job_to_subgraph_[job_id];
-  } else {
-    return {};
-  }
 }
 
 void Planner::SetWindowSize(int schedule_window_size) {

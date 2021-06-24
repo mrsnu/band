@@ -69,8 +69,6 @@ class Planner {
   // TODO #18: Make the planner run in a different thread
   void EnqueueFinishedJob(Job job);
 
-  std::weak_ptr<int> GetFinishedSubgraphIdx(int job_id);
-
   Interpreter* GetInterpreter() {
     return interpreter_;
   }
@@ -103,6 +101,14 @@ class Planner {
     return model_execution_count_;
   }
 
+  const Job* GetFinishedJob(int job_id) const {
+    if (jobs_finished_record_.find(job_id) != jobs_finished_record_.end()) {
+      return &jobs_finished_record_.at(job_id);
+    } else {
+      return nullptr;
+    }
+  }
+
  protected:
   std::thread planner_thread_;
 
@@ -120,17 +126,13 @@ class Planner {
   std::deque<Job> requests_;
 
   std::condition_variable end_invoke_;
-
   std::string log_path_;
-
-  std::mutex record_mtx_;
-  // Lastest finished (job id to subgraph idx) or vice versa.
-  // Utilize shared / weak ptr to represent lifetime of terminal subgraph.
-  std::map<int, std::shared_ptr<int>> finished_job_to_subgraph_;
-  std::map<int, int> subgraph_to_latest_finished_job_;
 
   int schedule_window_size_ = INT_MAX;
   int num_submitted_jobs_ = 0;
+
+  std::mutex record_mtx_;
+  std::map<int, Job> jobs_finished_record_;
   int num_total_submitted_jobs_ = 0;
 };
 

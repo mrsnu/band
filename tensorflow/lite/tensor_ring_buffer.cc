@@ -71,7 +71,7 @@ TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor*>& tensors,
 
     if (!TfLiteIntArrayEqual(src->dims, dst->dims)) {
       TF_LITE_REPORT_ERROR(error_reporter_,
-                           "Tensor assignment to different size.");
+                           "Tensor assignment to different size. src name : %s, dst name : %s", src->name, dst->name);
       return kTfLiteError;
     }
 
