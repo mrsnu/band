@@ -135,8 +135,10 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
         most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);
-        most_urgent_job.is_final_subgraph = false;
       }
+      
+      most_urgent_job.is_final_subgraph =
+          most_urgent_job.end_idx == model_spec.num_ops - 1;
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {

@@ -88,7 +88,7 @@ TfLiteStatus Worker::CopyInputTensors(const Job& job) {
 
 TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
   // Compute only.
-  if (job.output_handle < 0) {
+  if (job.output_handle < 0 || !job.is_final_subgraph) {
     return kTfLiteOk;
   }
 

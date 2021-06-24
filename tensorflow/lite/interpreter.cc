@@ -1057,10 +1057,14 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
   for (int input_tensor : primary_subgraph->inputs()) {
     input_tensors.push_back(primary_subgraph->tensor(input_tensor));
+    std::cout << "model: " << model_id << " input tensor: "
+              << primary_subgraph->tensor(input_tensor)->name << std::endl;
   }
 
   for (int output_tensor : primary_subgraph->outputs()) {
     output_tensors.push_back(primary_subgraph->tensor(output_tensor));
+    std::cout << "model: " << model_id << " output tensor: "
+              << primary_subgraph->tensor(output_tensor)->name << std::endl;
   }
 
   model_input_buffer.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
