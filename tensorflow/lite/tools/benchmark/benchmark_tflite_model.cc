@@ -847,17 +847,34 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
       std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
+      std::set<int> requested_job_ids;
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
-        interpreter_->InvokeModelsAsync(requests, input_tensors);
+        auto job_ids = interpreter_->InvokeModelsAsync(requests, input_tensors);
         int64_t end = profiling::time::NowMicros();
         int duration_ms = (end - start) / 1000;
+
+        requested_job_ids.insert(job_ids.begin(), job_ids.end());
 
         // sleep until we reach period_ms
         if (duration_ms < period_ms) {
           std::this_thread::sleep_for(
               std::chrono::milliseconds(period_ms - duration_ms));
+        }
+
+        for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
+          auto output_tensors = interpreter_->GetOutputTensors(*it);
+          if (output_tensors.size()) {
+            for (int i = 0; i < output_tensors.size(); i++) {
+              TFLITE_LOG(INFO)
+                  << "Output tensor " << output_tensors[i]->name << " from " << *it;
+            }
+
+            requested_job_ids.erase(it++);
+          } else {
+            it++;
+          }
         }
 
         if (kill_app_) return;
@@ -886,17 +903,34 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       int num_models = interpreter_->GetModelConfig().size();
       int model_id = std::rand() % num_models;
       std::vector<Job> requests(1, Job(model_id));
+      std::set<int> requested_job_ids;
 
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
-      interpreter_->InvokeModelsAsync(requests, model_input_tensors_);
+      auto job_ids = interpreter_->InvokeModelsAsync(requests, model_input_tensors_);
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;
+
+      requested_job_ids.insert(job_ids.begin(), job_ids.end());
 
       // sleep until we reach period_ms
       if (duration_ms < period_ms) {
         std::this_thread::sleep_for(
             std::chrono::milliseconds(period_ms - duration_ms));
+      }
+
+      for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
+        auto output_tensors = interpreter_->GetOutputTensors(*it);
+        if (output_tensors.size()) {
+          for (int i = 0; i < output_tensors.size(); i++) {
+            TFLITE_LOG(INFO)
+                << "Output tensor " << output_tensors[i]->name << " from " << *it;
+          }
+
+          requested_job_ids.erase(it++);
+        } else {
+          it++;
+        }
       }
 
       if (kill_app_) return;
