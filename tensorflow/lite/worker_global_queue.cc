@@ -135,7 +135,7 @@ void GlobalQueueWorker::Work() {
         }
       }
 
-      if(CopyInputTensors(current_job_) == kTfLiteOk) {
+      if (CopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();
         lock.unlock();
@@ -150,23 +150,19 @@ void GlobalQueueWorker::Work() {
           // TODO #65: Tensor communications between subgraphs
           interpreter_ptr->InvokeModelsAsync(current_job_.following_jobs);
           CopyOutputTensors(current_job_);
-          planner_ptr->EnqueueFinishedJob(current_job_);
-
         } else {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job_.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment
           current_job_.status = kTfLiteJobInvokeFailure;
-          planner_ptr->EnqueueFinishedJob(current_job_);
         }
       } else {
         TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
         current_job_.status = kTfLiteJobInputCopyFailure;
-        planner_ptr->EnqueueFinishedJob(current_job_);
       }
-
+      planner_ptr->EnqueueFinishedJob(current_job_);
 
       lock.lock();
       is_busy_ = false;

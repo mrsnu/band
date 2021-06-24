@@ -92,7 +92,7 @@ void DeviceQueueWorker::Work() {
         }
       }
 
-      if(CopyInputTensors(job) == kTfLiteOk) {
+      if (CopyInputTensors(job) == kTfLiteOk) {
         job.invoke_time = profiling::time::NowMicros();
 
         if (subgraph.Invoke() == kTfLiteOk) {
@@ -103,20 +103,17 @@ void DeviceQueueWorker::Work() {
           // TODO #65: Tensor communications between subgraphs
           interpreter_ptr->InvokeModelsAsync(job.following_jobs);
           CopyOutputTensors(job);
-          planner_ptr->EnqueueFinishedJob(job);
         } else {
           job.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment
           job.status = kTfLiteJobInvokeFailure;
-          planner_ptr->EnqueueFinishedJob(job);
         }
       } else {
         TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
         job.status = kTfLiteJobInputCopyFailure;
-        planner_ptr->EnqueueFinishedJob(job);
       }
-
+      planner_ptr->EnqueueFinishedJob(job);
       
       lock.lock();
       requests_.pop_front();
