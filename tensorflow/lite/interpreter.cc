@@ -454,7 +454,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
 
 std::vector<std::vector<TensorUniquePtr>> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs) {
   planner_->InitNumSubmittedJobs();
-  std::vector<int> job_ids = InvokeModelsAsync();
+  std::vector<int> job_ids = InvokeModelsAsync(inputs);
   planner_->Wait();
   std::vector<std::vector<TensorUniquePtr>> outputs;
   for (int job_id: job_ids) {
@@ -466,7 +466,7 @@ std::vector<std::vector<TensorUniquePtr>> Interpreter::InvokeModelsSync(std::vec
 std::vector<std::vector<TensorUniquePtr>> Interpreter::InvokeModelsSync(std::vector<Job> requests, 
                                                std::vector<std::vector<TfLiteTensor*>> inputs) {
   planner_->InitNumSubmittedJobs();
-  std::vector<int> job_ids = InvokeModelsAsync(requests);
+  std::vector<int> job_ids = InvokeModelsAsync(requests, inputs);
   planner_->Wait();
   std::vector<std::vector<TensorUniquePtr>> outputs;
   for (int job_id: job_ids) {
