@@ -121,38 +121,13 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   private static native long[] runSync(int modelId, long[] inputTensorHandles, long interpreterHandle, long errorHandle);
-
-  /** Resizes dimensions of a specific input. */
-  void resizeInput(int modelId, int idx, int[] dims) {
-    resizeInput(idx, dims, false);
-  }
-
-  /** Resizes dimensions of a specific input. */
-  void resizeInput(int modelId, int idx, int[] dims, boolean strict) {
-    if (resizeInput(modelId, interpreterHandle, errorHandle, idx, dims, strict)) {
-      // Tensor allocation is deferred until either an explicit `allocateTensors()` call or
-      // `invoke()` avoiding redundant allocations if multiple tensors are simultaneosly resized.
-      isMemoryAllocated = false;
-      if (inputTensors[idx] != null) {
-        inputTensors[idx].refreshShape();
-      }
-    }
-  }
-
-  private static native boolean resizeInput(
-      long interpreterHandle, long errorHandle, int modelId, int inputIdx, int[] dims, boolean strict);
   
   void setNumThreads(int numThreads) {
     numThreads(interpreterHandle, numThreads);
   }
 
-  void modifyGraphWithDelegate(Delegate delegate) {
-    applyDelegate(interpreterHandle, errorHandle, delegate.getNativeHandle());
-    delegates.add(delegate);
-  }
-
-  void resetVariableTensors() {
-    resetVariableTensors(interpreterHandle, errorHandle);
+  void resetVariableTensors(int modelId) {
+    resetVariableTensors(interpreterHandle, errorHandle, modelId);
   }
 
   /**
