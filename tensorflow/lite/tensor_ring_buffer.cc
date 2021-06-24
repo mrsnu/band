@@ -32,12 +32,7 @@ TensorRingBuffer::~TensorRingBuffer() {
 int TensorRingBuffer::Alloc() { return head_++; }
 
 bool TensorRingBuffer::IsValid(int handle) const {
-  if (handle >= 0 && (head_ / size_) > (handle / size_) &&
-      GetIndex(head_) >= handle) {
-    return false;
-  } else {
-    return true;
-  }
+  return handle >= 0 && head_ - size_ <= handle && handle < head_;
 }
 
 const std::vector<TfLiteTensor*>* TensorRingBuffer::Get(int handle) const {
