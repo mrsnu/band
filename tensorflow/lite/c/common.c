@@ -146,6 +146,7 @@ TfLiteTensor* TfLiteTensorCopy(const TfLiteTensor* src) {
                     src->params, NULL, NULL, kTfLiteDynamic, NULL,
                     src->is_variable, ret);
   TfLiteTensorRealloc(src->bytes, ret);
+  memcpy(ret->data.raw, src->data.raw, src->bytes);
   return ret;
 }
 
