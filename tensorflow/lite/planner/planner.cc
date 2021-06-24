@@ -36,7 +36,7 @@ TfLiteStatus Planner::PrepareLogging(std::string log_path) {
            << "profiled_time\t"
            << "expected_latency\t"
            << "slo_us\t"
-           << "slo_violated\t"
+           << "job status\t"
            << "is_final_subgraph\n";
   log_file.close();
   
