@@ -8,16 +8,12 @@ TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
                                    std::vector<const TfLiteTensor*> tensors,
                                    size_t size)
     : error_reporter_(error_reporter),
-      tensors_(new std::vector<TfLiteTensor>[size]),
+      tensors_(new std::vector<TfLiteTensor*>[size]),
       size_(size) {
   for (size_t i = 0; i < size_; i++) {
     tensors_[i].resize(tensors.size());
     for (size_t j = 0; j < tensors_[i].size(); j++) {
-      TfLiteIntArray* shape = TfLiteIntArrayCopy(tensors[j]->dims);
-      TfLiteTensorReset(tensors[j]->type, tensors[j]->name, shape,
-                        tensors[j]->params, nullptr, 0, kTfLiteDynamic, nullptr,
-                        tensors[j]->is_variable, &tensors_[i][j]);
-      TfLiteTensorRealloc(tensors[j]->bytes, &tensors_[i][j]);
+      tensors_[i][j] = TfLiteTensorCopy(tensors[j]);
     }
   }
 }
@@ -25,7 +21,8 @@ TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
 TensorRingBuffer::~TensorRingBuffer() {
   for (size_t i = 0; i < size_; i++) {
     for (size_t j = 0; j < tensors_[i].size(); j++) {
-      TfLiteTensorFree(&tensors_[i][j]);
+      TfLiteTensorFree(tensors_[i][j]);
+      free(tensors_[i][j]);
     }
   }
 
@@ -43,7 +40,7 @@ bool TensorRingBuffer::IsValid(int handle) const {
   }
 }
 
-const std::vector<TfLiteTensor>* TensorRingBuffer::Get(int handle) const {
+const std::vector<TfLiteTensor*>* TensorRingBuffer::Get(int handle) const {
   if (IsValid(handle)) {
     return &tensors_[GetIndex(handle)];
   } else {
@@ -52,7 +49,7 @@ const std::vector<TfLiteTensor>* TensorRingBuffer::Get(int handle) const {
   }
 }
 
-TfLiteStatus TensorRingBuffer::Put(std::vector<TfLiteTensor> tensors,
+TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor>& tensors,
                                    int handle) {
   if (!IsValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
@@ -69,8 +66,8 @@ TfLiteStatus TensorRingBuffer::Put(std::vector<TfLiteTensor> tensors,
   }
 
   for (size_t i = 0; i < tensors.size(); i++) {
-    TfLiteTensor& src = tensors[i];
-    TfLiteTensor* dst = &tensors_[index][i];
+    const TfLiteTensor& src = tensors[i];
+    TfLiteTensor* dst = tensors_[index][i];
 
     if (!TfLiteIntArrayEqual(src.dims, dst->dims)) {
       TF_LITE_REPORT_ERROR(error_reporter_,

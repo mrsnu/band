@@ -66,13 +66,13 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
   auto input_buffer = interpreter->model_input_buffer[job.model_id].get();
 
-  const std::vector<TfLiteTensor>* input_tensors = input_buffer->Get(job.input_handle);
+  const std::vector<TfLiteTensor*>* input_tensors = input_buffer->Get(job.input_handle);
 
   if (input_tensors) {
     auto input_indices = subgraph->inputs();
     for (size_t i = 0; i < input_indices.size(); i++) {
-      std::memcpy(subgraph->tensor(i)->data.raw, input_tensors->at(i).data.raw,
-                  input_tensors->at(i).bytes);
+      std::memcpy(subgraph->tensor(i)->data.raw, input_tensors->at(i)->data.raw,
+                  input_tensors->at(i)->bytes);
     }
     return kTfLiteOk;
   } else {

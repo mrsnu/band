@@ -495,6 +495,8 @@ typedef struct TfLiteTensor {
 #endif  // TF_LITE_STATIC_MEMORY
 
 #ifndef TF_LITE_STATIC_MEMORY
+
+TfLiteTensor* TfLiteTensorCopy(const TfLiteTensor* src);
 // Free data memory of tensor `t`.
 void TfLiteTensorDataFree(TfLiteTensor* t);
 
