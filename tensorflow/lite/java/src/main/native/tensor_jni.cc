@@ -331,16 +331,6 @@ void WriteScalarString(JNIEnv* env, jobject src, TfLiteTensor* tensor) {
 extern "C" {
 #endif  // __cplusplus
 
-JNIEXPORT jlong JNICALL Java_org_tensorflow_lite_Tensor_create(
-    JNIEnv* env, jclass clazz) {
-  tflite::TensorUniquePtr tensor(TfLiteTensorCreate(), [](TfLiteTensor* t) {
-    TfLiteTensorFree(t);
-    free(t);
-  });
-  return reinterpret_cast<jlong>(
-      new tflite::jni::TensorHandle(std::move(tensor)));
-}
-
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_Tensor_delete(JNIEnv* env,
                                                               jclass clazz,
                                                               jlong handle) {
