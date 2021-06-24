@@ -400,16 +400,16 @@ TfLiteStatus Interpreter::Invoke(size_t subgraph_index) {
   return kTfLiteOk;
 }
 
-int Interpreter::InvokeModelAsync(int model_id, std::vector<TfLiteTensor> inputs) {
+int Interpreter::InvokeModelAsync(int model_id, std::vector<TfLiteTensor*> inputs) {
   return InvokeModelAsync(Job(model_id), inputs);
 }
  
-int Interpreter::InvokeModelAsync(Job request, std::vector<TfLiteTensor> inputs) {
+int Interpreter::InvokeModelAsync(Job request, std::vector<TfLiteTensor*> inputs) {
   std::vector<int> job_ids = InvokeModelsAsync({request}, {inputs});
   return job_ids.size() > 0 ? job_ids[0] : -1;
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync(std::vector<std::vector<TfLiteTensor>> inputs) {
+std::vector<int> Interpreter::InvokeModelsAsync(std::vector<std::vector<TfLiteTensor*>> inputs) {
   std::vector<Job> requests;
 
   for (auto& m : model_configs_) {
@@ -425,7 +425,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<std::vector<TfLiteTe
 }
 
 std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests, 
-                                                std::vector<std::vector<TfLiteTensor>> inputs) {
+                                                std::vector<std::vector<TfLiteTensor*>> inputs) {
   if (requests.size() == 0) {
     return {};
   }
@@ -451,7 +451,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
   return planner_->EnqueueBatch(requests);
 }
 
-std::vector<int> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTensor>> inputs) {
+std::vector<int> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync();
   planner_->Wait();
@@ -459,14 +459,14 @@ std::vector<int> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTen
 }
 
 std::vector<int> Interpreter::InvokeModelsSync(std::vector<Job> requests, 
-                                               std::vector<std::vector<TfLiteTensor>> inputs) {
+                                               std::vector<std::vector<TfLiteTensor*>> inputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync(requests);
   planner_->Wait();
   return job_ids;
 }
 
-const std::vector<TfLiteTensor>* Interpreter::GetOutputTensors(
+const std::vector<TfLiteTensor*>* Interpreter::GetOutputTensors(
     int job_id) const {
 
 }

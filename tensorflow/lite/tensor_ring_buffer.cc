@@ -49,7 +49,7 @@ const std::vector<TfLiteTensor*>* TensorRingBuffer::Get(int handle) const {
   }
 }
 
-TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor>& tensors,
+TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor*>& tensors,
                                    int handle) {
   if (!IsValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
@@ -66,16 +66,16 @@ TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor>& tensors,
   }
 
   for (size_t i = 0; i < tensors.size(); i++) {
-    const TfLiteTensor& src = tensors[i];
+    const TfLiteTensor* src = tensors[i];
     TfLiteTensor* dst = tensors_[index][i];
 
-    if (!TfLiteIntArrayEqual(src.dims, dst->dims)) {
+    if (!TfLiteIntArrayEqual(src->dims, dst->dims)) {
       TF_LITE_REPORT_ERROR(error_reporter_,
                            "Tensor assignment to different size.");
       return kTfLiteError;
     }
 
-    std::memcpy(dst->data.raw, src.data.raw, dst->bytes);
+    std::memcpy(dst->data.raw, src->data.raw, dst->bytes);
   }
 
   return kTfLiteOk;

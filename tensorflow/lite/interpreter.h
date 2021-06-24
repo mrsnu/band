@@ -456,24 +456,24 @@ class Interpreter {
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
-  int InvokeModelAsync(int model_id, std::vector<TfLiteTensor> inputs = {});
-  int InvokeModelAsync(Job request, std::vector<TfLiteTensor> inputs = {});
+  int InvokeModelAsync(int model_id, std::vector<TfLiteTensor*> inputs = {});
+  int InvokeModelAsync(Job request, std::vector<TfLiteTensor*> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
   /// This method is an asychronous call.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
-  std::vector<int> InvokeModelsAsync(std::vector<std::vector<TfLiteTensor>> inputs = {});
-  std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor>> inputs = {});
+  std::vector<int> InvokeModelsAsync(std::vector<std::vector<TfLiteTensor*>> inputs = {});
+  std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor*>> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
   /// Returns when all the requests are done.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
-  std::vector<int> InvokeModelsSync(std::vector<std::vector<TfLiteTensor>> inputs = {});
-  std::vector<int> InvokeModelsSync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor>> inputs = {});
+  std::vector<int> InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs = {});
+  std::vector<int> InvokeModelsSync(std::vector<Job> requests, std::vector<std::vector<TfLiteTensor*>> inputs = {});
 
-  const std::vector<TfLiteTensor>* GetOutputTensors(int job_id) const;
+  const std::vector<TfLiteTensor*>* GetOutputTensors(int job_id) const;
 
   /// Set the number of threads available to the interpreter.
   ///

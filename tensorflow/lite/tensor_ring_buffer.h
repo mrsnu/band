@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 
+#include "tensorflow/lite/util.h"
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
@@ -17,7 +18,7 @@ class TensorRingBuffer {
   int Alloc();
   bool IsValid(int handle) const;
   const std::vector<TfLiteTensor*>* Get(int handle) const;
-  TfLiteStatus Put(const std::vector<TfLiteTensor>& tensors, int handle);
+  TfLiteStatus Put(const std::vector<TfLiteTensor*>& tensors, int handle);
 
  private:
   size_t GetIndex(int handle) const;

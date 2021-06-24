@@ -168,6 +168,13 @@ void BenchmarkTfLiteModel::CleanUp() {
     runtime_config_.model_information[i].input_tensor_data.clear();
   }
   model_input_tensors_.clear();
+
+  for (std::vector<TfLiteTensor*> input_tensors : model_input_tensors_) {
+    for (TfLiteTensor* t : input_tensors) {
+      TfLiteTensorFree(t);
+      free(t);
+    }
+  }
 }
 
 BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
@@ -422,12 +429,8 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
         t_data = CreateRandomTensorData(*t, input_layer_info);
       }
 
-      TfLiteIntArray* shape = TfLiteIntArrayCopy(t->dims);
-      TfLiteTensorReset(t->type, t->name, shape, t->params, nullptr, 0,
-                        kTfLiteDynamic, nullptr, t->is_variable,
-                        &model_input_tensors_[i][j]);
-      TfLiteTensorRealloc(t_data.bytes, &model_input_tensors_[i][j]);
-      std::memcpy(model_input_tensors_[i][j].data.raw, t_data.data.get(),
+      model_input_tensors_[i][j] = TfLiteTensorCopy(t);
+      std::memcpy(model_input_tensors_[i][j]->data.raw, t_data.data.get(),
                   t_data.bytes);
 
       input_tensor_data.push_back(std::move(t_data));
@@ -843,7 +846,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
-      std::vector<std::vector<TfLiteTensor>> input_tensors(batch_size, model_input_tensors_[model_id]);
+      std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();

@@ -30,7 +30,9 @@ limitations under the License.
 
 namespace tflite {
 
-enum TfLiteJobStatus {
+using TensorUniquePtr = std::unique_ptr<TfLiteTensor, void (*)(TfLiteTensor*)>;
+
+enum JobStatus {
   kTfLiteJobSuccess,
   kTfLiteJobSLOViolation,
   kTfLiteJobInputCopyFailure,
@@ -58,7 +60,7 @@ struct Job {
   int output_handle = -1;
   int job_id = -1;
   int sched_id = -1;
-  TfLiteJobStatus status = kTfLiteJobSuccess;
+  JobStatus status = kTfLiteJobSuccess;
   bool is_final_subgraph = true;
   std::string model_fname;
 
