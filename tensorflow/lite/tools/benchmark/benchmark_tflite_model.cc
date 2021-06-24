@@ -167,7 +167,6 @@ void BenchmarkTfLiteModel::CleanUp() {
     // Free up any pre-allocated tensor data during PrepareInputData.
     runtime_config_.model_information[i].input_tensor_data.clear();
   }
-  model_input_tensors_.clear();
 
   for (std::vector<TfLiteTensor*> input_tensors : model_input_tensors_) {
     for (TfLiteTensor* t : input_tensors) {
@@ -175,6 +174,8 @@ void BenchmarkTfLiteModel::CleanUp() {
       free(t);
     }
   }
+  
+  model_input_tensors_.clear();
 }
 
 BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
