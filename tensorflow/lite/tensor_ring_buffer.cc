@@ -6,7 +6,7 @@
 namespace tflite {
 TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
                                    std::vector<const TfLiteTensor*> tensors,
-                                   size_t size)
+                                   int size)
     : error_reporter_(error_reporter),
       tensors_(new std::vector<TfLiteTensor*>[size]),
       size_(size) {
@@ -32,7 +32,7 @@ TensorRingBuffer::~TensorRingBuffer() {
 int TensorRingBuffer::Alloc() { return head_++; }
 
 bool TensorRingBuffer::IsValid(int handle) const {
-  return handle >= 0 && head_ - size_ <= handle && handle < head_;
+  return (handle >= 0) && (head_ - size_ <= handle) && (handle < head_);
 }
 
 const std::vector<TfLiteTensor*>* TensorRingBuffer::Get(int handle) const {
@@ -51,7 +51,7 @@ TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor*>& tensors,
     return kTfLiteError;
   }
 
-  size_t index = GetIndex(handle);
+  int index = GetIndex(handle);
 
   if (tensors.size() != tensors_[index].size()) {
     TF_LITE_REPORT_ERROR(error_reporter_,
@@ -76,5 +76,5 @@ TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor*>& tensors,
   return kTfLiteOk;
 }
 
-size_t TensorRingBuffer::GetIndex(int handle) const { return handle % size_; }
+int TensorRingBuffer::GetIndex(int handle) const { return handle % size_; }
 }  // namespace tflite
