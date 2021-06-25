@@ -92,12 +92,6 @@ public final class Interpreter implements AutoCloseable {
       return this;
     }
 
-    /** Sets whether to use NN API (if available) for op execution. Defaults to false (disabled). */
-    public Options setUseNNAPI(boolean useNNAPI) {
-      this.useNNAPI = useNNAPI;
-      return this;
-    }
-
     /**
      * Sets whether to allow float16 precision for FP32 calculation when possible. Defaults to false
      * (disallow).
@@ -108,16 +102,6 @@ public final class Interpreter implements AutoCloseable {
     @Deprecated
     public Options setAllowFp16PrecisionForFp32(boolean allow) {
       this.allowFp16PrecisionForFp32 = allow;
-      return this;
-    }
-
-    /**
-     * Adds a {@link Delegate} to be applied during interpreter creation.
-     *
-     * <p>WARNING: This is an experimental interface that is subject to change.
-     */
-    public Options addDelegate(Delegate delegate) {
-      delegates.add(delegate);
       return this;
     }
 
@@ -137,38 +121,9 @@ public final class Interpreter implements AutoCloseable {
       return this;
     }
 
-    /**
-     * Experimental: Enable an optimized set of floating point CPU kernels (provided by XNNPACK).
-     *
-     * <p>Enabling this flag will enable use of a new, highly optimized set of CPU kernels provided
-     * via the XNNPACK delegate. Currently, this is restricted to a subset of floating point
-     * operations. Eventually, we plan to enable this by default, as it can provide significant
-     * peformance benefits for many classes of floating point models. See
-     * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/delegates/xnnpack/README.md
-     * for more details.
-     *
-     * <p>Things to keep in mind when enabling this flag:
-     *
-     * <ul>
-     *   <li>Startup time and resize time may increase.
-     *   <li>Baseline memory consumption may increase.
-     *   <li>Compatibility with other delegates (e.g., GPU) has not been fully validated.
-     *   <li>Quantized models will not see any benefit.
-     * </ul>
-     *
-     * <p>WARNING: This is an experimental interface that is subject to change.
-     */
-    public Options setUseXNNPACK(boolean useXNNPACK) {
-      this.useXNNPACK = useXNNPACK;
-      return this;
-    }
-
     int numThreads = -1;
-    Boolean useNNAPI;
     Boolean allowFp16PrecisionForFp32;
     Boolean allowBufferHandleOutput;
-    Boolean useXNNPACK;
-    final List<Delegate> delegates = new ArrayList<>();
   }
 
   /**
@@ -209,38 +164,6 @@ public final class Interpreter implements AutoCloseable {
   }
 
   /**
-   * Runs model inference if the model takes only one input, and provides only one output.
-   *
-   * <p>Warning: The API is more efficient if a {@link Buffer} (preferably direct, but not required)
-   * is used as the input/output data type. Please consider using {@link Buffer} to feed and fetch
-   * primitive data for better performance. The following concrete {@link Buffer} types are
-   * supported:
-   *
-   * <ul>
-   *   <li>{@link ByteBuffer} - compatible with any underlying primitive Tensor type.
-   *   <li>{@link FloatBuffer} - compatible with float Tensors.
-   *   <li>{@link IntBuffer} - compatible with int32 Tensors.
-   *   <li>{@link LongBuffer} - compatible with int64 Tensors.
-   * </ul>
-   *
-   * @param modelId an ID of the target model to run inference
-   * @param input an array or multidimensional array, or a {@link Buffer} of primitive types
-   *     including int, float, long, and byte. {@link Buffer} is the preferred way to pass large
-   *     input data for primitive types, whereas string types require using the (multi-dimensional)
-   *     array input path. When a {@link Buffer} is used, its content should remain unchanged until
-   *     model inference is done, and the caller must ensure that the {@link Buffer} is at the
-   *     appropriate read position. A {@code null} value is allowed only if the caller is using a
-   *     {@link Delegate} that allows buffer handle interop, and such a buffer has been bound to the
-   *     input {@link Tensor}.
-   * @throws IllegalArgumentException if {@code input} or {@code output} is null or empty, or if
-   *     error occurs when running the inference.
-   */
-  public Tensor[] run(int modelId, Tensor input) {
-    Tensor[] inputs = {input};
-    return runForMultipleInputs(modelId, inputs);
-  }
-
-  /**
    * Runs model inference if the model takes multiple inputs, or returns multiple outputs.
    *
    * <p>Warning: The API is more efficient if {@link Buffer}s (preferably direct, but not required)
@@ -270,10 +193,10 @@ public final class Interpreter implements AutoCloseable {
    * @throws IllegalArgumentException if {@code inputs} or {@code outputs} is null or empty, or if
    *     error occurs when running the inference.
    */
-  public Tensor[] runForMultipleInputs(
-      int modelId, @NonNull Tensor[] inputs) {
+  public void run(
+      int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    return wrapper.run(modelId, inputs);
+    wrapper.run(modelId, inputs, outputs);
   }
 
   /** Gets the number of input tensors. */

@@ -28,10 +28,10 @@ const char kUnsupportedOperationException[] =
 
 namespace tflite {
 namespace jni {
-TensorHandle::TensorHandle(tflite::TensorUniquePtr tensor)
-  : tensor_(std::move(tensor)) {}
+TensorHandle::TensorHandle(TfLiteTensor* tensor)
+  : tensor_(tensor) {}
 
-TfLiteTensor* TensorHandle::tensor() const { return tensor_.get(); }
+TfLiteTensor* TensorHandle::tensor() const { return tensor_; }
 
 TfLiteTensor* GetTensorFromHandle(JNIEnv* env, jlong handle) {
   if (handle == 0) {

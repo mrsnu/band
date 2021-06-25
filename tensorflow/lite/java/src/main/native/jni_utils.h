@@ -31,12 +31,12 @@ namespace tflite {
 namespace jni {
 class TensorHandle {
  public:
-  TensorHandle(tflite::TensorUniquePtr tensor);
+  TensorHandle(TfLiteTensor* tensor);
 
   TfLiteTensor* tensor() const;
 
  private:
-  tflite::TensorUniquePtr tensor_;
+  TfLiteTensor* tensor_;
 };
 
 TfLiteTensor* GetTensorFromHandle(JNIEnv* env, jlong handle);

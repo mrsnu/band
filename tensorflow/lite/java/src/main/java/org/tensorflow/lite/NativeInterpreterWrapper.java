@@ -83,6 +83,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     delete(errorHandle, interpreterHandle);
 
     modelHandles.forEach((modelId, modelHandle) -> deleteModel(modelHandle));
+    tensorHandles.forEach((tensorHandle) -> deleteTensor(tensorHandle));
 
     errorHandle = 0;
     interpreterHandle = 0;
@@ -92,10 +93,14 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   /** Sets inputs, runs model inference and returns outputs. */
-  Tensor[] run(int modelId, Tensor[] inputs) {
+  void run(int modelId, Tensor[] inputs, Tensor[] outputs) {
     inferenceDurationNanoseconds = -1;
-    if (inputs == null || inputs.length == 0) {
-      throw new IllegalArgumentException("Input error: Inputs should not be null or empty.");
+    if (inputs == null || inputs.length == getInputTensorCount(modelId)) {
+      throw new IllegalArgumentException("Input error: Inputs should not be null or equal to input count.");
+    }
+
+    if (outputs == null || outputs.length == getOutputTensorCount(modelId)) {
+      throw new IllegalArgumentException("Output error: Outputs should not be null or equal to output count.");
     }
 
     long[] inputHandles = new long[inputs.length];
@@ -104,23 +109,21 @@ final class NativeInterpreterWrapper implements AutoCloseable {
       inputHandles[i] = inputs[i].handle();
     }
 
-    long inferenceStartNanos = System.nanoTime();
-    long[] outputHandles = runSync(modelId, inputHandles, interpreterHandle, errorHandle);
-    long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
+    long[] outputHandles = new long[outputs.length];
 
-    Tensor[] outputs = new Tensor[outputHandles.length];
-
-    for (int i = 0; i < outputHandles.length; i++) {
-      outputs[i] = new Tensor(outputHandles[i]);
+    for (int i = 0; i < inputs.length; i++) {
+      outputHandles[i] = outputs[i].handle();
     }
+
+    long inferenceStartNanos = System.nanoTime();
+    runSync(modelId, inputHandles, outputHandles, interpreterHandle, errorHandle);
+    long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
 
     // Only set if the entire operation succeeds.
     this.inferenceDurationNanoseconds = inferenceDurationNanoseconds;
-
-    return outputs;
   }
 
-  private static native long[] runSync(int modelId, long[] inputTensorHandles, long interpreterHandle, long errorHandle);
+  private static native void runSync(int modelId, long[] inputTensorHandles, long[] outputTensorHandles, long interpreterHandle, long errorHandle);
   
   void setNumThreads(int numThreads) {
     numThreads(interpreterHandle, numThreads);
@@ -152,8 +155,9 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (index < 0 || index >= getInputTensorCount(modelId)) {
       throw new IllegalArgumentException("Invalid input Tensor index: " + index);
     }
-
-    return new Tensor(allocateInputTensor(interpreterHandle, modelId, index));
+    long handle = allocateInputTensor(interpreterHandle, modelId, index);
+    tensorHandles.add(handle);
+    return new Tensor(handle);
   }
 
   // Allocate new tensor for model's inputIdx th input
@@ -163,6 +167,24 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   int getOutputTensorCount(int modelId) {
     return getOutputCount(interpreterHandle, modelId);
   }
+  
+  /**
+   * Gets the output {@link Tensor} for the provided output index.
+   *
+   * @throws IllegalArgumentException if the output index is invalid.
+   */
+  Tensor allocateOutputTensor(int modelId, int index) {
+    if (index < 0 || index >= getOutputTensorCount(modelId)) {
+      throw new IllegalArgumentException("Invalid input Tensor index: " + index);
+    }
+    
+    long handle = allocateOutputTensor(interpreterHandle, modelId, index);
+    tensorHandles.add(handle);
+    return new Tensor(handle);
+  }
+
+  // Allocate new tensor for model's outputIdx th output
+  private static native long allocateOutputTensor(long interpreterHandle, int modelId, int outputIdx);
 
   private static native int getOutputDataType(long interpreterHandle, int modelId, int outputIdx);
 
@@ -176,6 +198,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private Map<Integer, Long> modelHandles = new HashMap<>();
   private Map<Integer, ByteBuffer> modelByteBuffers = new HashMap<>();
+  private List<Long> tensorHandles = new ArrayList<>();
 
   private static native boolean hasUnresolvedFlexOp(long interpreterHandle);
 
@@ -208,4 +231,6 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   private static native void delete(long errorHandle, long interpreterHandle);
   
   private static native void deleteModel(long modelHandle);
+
+  private static native void deleteTensor(long tensorHandle);
 }
