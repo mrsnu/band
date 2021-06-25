@@ -5,7 +5,7 @@
 
 namespace tflite {
 TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
-                                   std::vector<const TfLiteTensor*> tensors,
+                                   Tensors tensors,
                                    int size)
     : error_reporter_(error_reporter),
       tensors_(new std::vector<TfLiteTensor*>[size]),
@@ -35,7 +35,7 @@ bool TensorRingBuffer::IsValid(int handle) const {
   return (handle >= 0) && (head_ - size_ <= handle) && (handle < head_);
 }
 
-const std::vector<TfLiteTensor*>* TensorRingBuffer::Get(int handle) const {
+const Tensors* TensorRingBuffer::Get(int handle) const {
   if (IsValid(handle)) {
     return &tensors_[GetIndex(handle)];
   } else {
@@ -44,7 +44,7 @@ const std::vector<TfLiteTensor*>* TensorRingBuffer::Get(int handle) const {
   }
 }
 
-TfLiteStatus TensorRingBuffer::Put(const std::vector<TfLiteTensor*>& tensors,
+TfLiteStatus TensorRingBuffer::Put(const Tensors& tensors,
                                    int handle) {
   if (!IsValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);

@@ -71,7 +71,7 @@ TfLiteStatus Worker::CopyInputTensors(const Job& job) {
     return kTfLiteError;
   }
 
-  const std::vector<TfLiteTensor*>* input_tensors = input_buffer->Get(job.input_handle);
+  const Tensors* input_tensors = input_buffer->Get(job.input_handle);
 
   if (input_tensors) {
     auto input_indices = subgraph->inputs();

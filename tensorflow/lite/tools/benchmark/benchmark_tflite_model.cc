@@ -403,6 +403,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
   model_input_tensors_.resize(runtime_config_.model_information.size());
+  model_output_tensors_.resize(runtime_config_.model_information.size())
   for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
     // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
     // (i.e. the specified input layer info) has been checked in
@@ -411,12 +412,14 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     // properly.
     auto subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
-    auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-    auto& input_layer_infos = runtime_config_.model_information[i].input_layer_infos;
+    auto subgraph_inputs = interpreter_->inputs(subgraph_index);
+    auto subgraph_outputs = interpreter_->outputs(subgraph_index);
+    auto& input_layer_infos =
+        runtime_config_.model_information[i].input_layer_infos;
     auto& input_tensor_data = runtime_config_.model_information[i].input_tensor_data;
-    model_input_tensors_[i].resize(interpreter_inputs.size());
-    for (int j = 0; j < interpreter_inputs.size(); ++j) {
-      int tensor_index = interpreter_inputs[j];
+    model_input_tensors_[i].resize(subgraph_inputs.size());
+    for (int j = 0; j < subgraph_inputs.size(); ++j) {
+      int tensor_index = subgraph_inputs[j];
       const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
       const util::InputLayerInfo* input_layer_info = nullptr;
       // Note that when input layer parameters (i.e. --input_layer,
@@ -436,7 +439,16 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
 
       input_tensor_data.push_back(std::move(t_data));
     }
+
+    model_output_tensors_[i].resize(subgraph_outputs.size());
+    for (int j = 0; j < subgraph_outputs.size(); ++j) {
+      int tensor_index = subgraph_outputs[j];
+      const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
+
+      model_output_tensors_[i][j] = TfLiteTensorCopy(t);
+    }
   }
+
   return kTfLiteOk;
 }
 
@@ -865,7 +877,8 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
         }
 
         for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
-          auto output_tensors = interpreter_->GetOutputTensors(*it);
+          interpreter_->GetOutputTensors(*it, 
+          auto output_tensors = ;
           if (output_tensors.size()) {
             for (int i = 0; i < output_tensors.size(); i++) {
               TFLITE_LOG(INFO)

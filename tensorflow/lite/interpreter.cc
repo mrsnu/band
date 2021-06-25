@@ -400,16 +400,16 @@ TfLiteStatus Interpreter::Invoke(size_t subgraph_index) {
   return kTfLiteOk;
 }
 
-int Interpreter::InvokeModelAsync(int model_id, std::vector<TfLiteTensor*> inputs) {
+int Interpreter::InvokeModelAsync(int model_id, Tensors inputs) {
   return InvokeModelAsync(Job(model_id), inputs);
 }
  
-int Interpreter::InvokeModelAsync(Job request, std::vector<TfLiteTensor*> inputs) {
+int Interpreter::InvokeModelAsync(Job request, Tensors inputs) {
   std::vector<int> job_ids = InvokeModelsAsync({request}, {inputs});
   return job_ids.size() > 0 ? job_ids[0] : -1;
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync(std::vector<std::vector<TfLiteTensor*>> inputs) {
+std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Tensors> inputs) {
   std::vector<Job> requests;
 
   for (auto& m : model_configs_) {
@@ -425,7 +425,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<std::vector<TfLiteTe
 }
 
 std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests, 
-                                                std::vector<std::vector<TfLiteTensor*>> inputs) {
+                                                std::vector<Tensors> inputs) {
   if (requests.size() == 0) {
     return {};
   }
@@ -452,56 +452,57 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
   return planner_->EnqueueBatch(requests);
 }
 
-std::vector<std::vector<TensorUniquePtr>> Interpreter::InvokeModelsSync(std::vector<std::vector<TfLiteTensor*>> inputs) {
+void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs, std::vector<Tensors> outputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync(inputs);
   planner_->Wait();
-  std::vector<std::vector<TensorUniquePtr>> outputs;
-  for (int job_id: job_ids) {
-    outputs.push_back(GetOutputTensors(job_id));
+  for (size_t i = 0; i < job_ids.size(); i++) {
+    GetOutputTensors(job_ids[i], outputs[i]);
   }
-  return outputs;
 }
 
-std::vector<std::vector<TensorUniquePtr>> Interpreter::InvokeModelsSync(std::vector<Job> requests, 
-                                               std::vector<std::vector<TfLiteTensor*>> inputs) {
+void Interpreter::InvokeModelsSync(std::vector<Job> requests, 
+                                               std::vector<Tensors> inputs, std::vector<Tensors> outputs) {
   planner_->InitNumSubmittedJobs();
   std::vector<int> job_ids = InvokeModelsAsync(requests, inputs);
   planner_->Wait();
-  std::vector<std::vector<TensorUniquePtr>> outputs;
-  for (int job_id: job_ids) {
-    outputs.push_back(GetOutputTensors(job_id));
+  for (size_t i = 0; i < job_ids.size(); i++) {
+    GetOutputTensors(job_ids[i], outputs[i]);
   }
-  return outputs;
 }
 
-std::vector<TensorUniquePtr> Interpreter::GetOutputTensors(int job_id) const {
+void Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
   const Job* job = planner_->GetFinishedJob(job_id);
 
   if (!job) {
-    return {};
+    error_reporter_->Report("Invalid job_id : %d", job_id);
+    return;
   }
 
   auto output_tensors =
       model_output_buffer.at(job->model_id)->Get(job->output_handle);
 
   if (!output_tensors) {
-    return {};
+    error_reporter_->Report("Invalid model_id : %d, output handle: %d", job->model_id, job->output_handle);
+    return;
   }
 
-  std::vector<TensorUniquePtr> results;
-
-  auto deleter = [](TfLiteTensor* t) {
-    TfLiteTensorFree(t);
-    free(t);
-  };
-
-  for(const TfLiteTensor* output_tensor : *output_tensors) {
-    results.push_back(
-        std::move(TensorUniquePtr(TfLiteTensorCopy(output_tensor), deleter)));
+  if (output_tensors->size() != outputs.size()) {
+    error_reporter_->Report("Expected number of output is wrong");
+    return;
   }
 
-  return results;
+  for (size_t i = 0; i < outputs.size(); i++) {
+    const TfLiteTensor* src = (*output_tensors)[i];
+    TfLiteTensor* dst = outputs[i];
+
+    if (src->type == dst->type && TfLiteIntArrayEqual(src->dims, dst->dims)) {
+      std::memcpy(dst->data.raw, src->data.raw_const, dst->bytes);
+    } else {
+      error_reporter_->Report("Output tensor data assignment to different type or dims");
+      return;
+    }
+  }
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
@@ -1057,14 +1058,10 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
   for (int input_tensor : primary_subgraph->inputs()) {
     input_tensors.push_back(primary_subgraph->tensor(input_tensor));
-    std::cout << "model: " << model_id << " input tensor: "
-              << primary_subgraph->tensor(input_tensor)->name << std::endl;
   }
 
   for (int output_tensor : primary_subgraph->outputs()) {
     output_tensors.push_back(primary_subgraph->tensor(output_tensor));
-    std::cout << "model: " << model_id << " output tensor: "
-              << primary_subgraph->tensor(output_tensor)->name << std::endl;
   }
 
   model_input_buffer.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));

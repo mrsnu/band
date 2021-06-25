@@ -12,13 +12,13 @@ namespace tflite {
 class ErrorReporter;
 class TensorRingBuffer {
  public:
-  TensorRingBuffer(ErrorReporter* error_reporter, std::vector<const TfLiteTensor*> tensors, int size = 64);
+  TensorRingBuffer(ErrorReporter* error_reporter, Tensors tensors, int size = 64);
   ~TensorRingBuffer();
 
   int Alloc();
   bool IsValid(int handle) const;
-  const std::vector<TfLiteTensor*>* Get(int handle) const;
-  TfLiteStatus Put(const std::vector<TfLiteTensor*>& tensors, int handle);
+  const Tensors* Get(int handle) const;
+  TfLiteStatus Put(const Tensors& tensors, int handle);
 
  private:
   int GetIndex(int handle) const;
