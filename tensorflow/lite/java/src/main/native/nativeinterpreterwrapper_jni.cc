@@ -85,6 +85,16 @@ std::vector<int> convertJIntArrayToVector(JNIEnv* env, jintArray inputs) {
   return outputs;
 }
 
+tflite::Tensors convertJLongArrayToTensors(JNIEnv* env, jlongArray handles) {
+  std::vector<TfLiteTensor*> tensors;
+  jlong* tensor_handles = env->GetLongArrayElements(handles, NULL);
+  for (size_t i = 0; i < env->GetArrayLength(handles); i++) {
+    tensors.push_back(
+        tflite::jni::GetTensorFromHandle(env, tensor_handles[i]));
+  }
+  return tensors;
+}
+
 int getDataType(TfLiteType data_type) {
   switch (data_type) {
     case kTfLiteFloat32:
@@ -190,13 +200,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateInputTensor(
   TfLiteTensor* input = TfLiteTensorCopy(
       interpreter->tensor(subgraph_index, interpreter->inputs(subgraph_index)[input_index]));
 
-  tflite::TensorUniquePtr tensor(input, [](TfLiteTensor* t) {
-    TfLiteTensorFree(t);
-    free(t);
-  });
-
   return reinterpret_cast<jlong>(
-      new tflite::jni::TensorHandle(std::move(tensor)));
+      new tflite::jni::TensorHandle(input));
 }
 
 JNIEXPORT jint JNICALL
@@ -209,6 +214,21 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputCount(JNIEnv* env,
   if (interpreter == nullptr) return 0;
   size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
   return static_cast<jint>(interpreter->inputs(subgraph_index).size());
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateOutputTensor(
+    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint input_index) {
+  tflite_api_dispatcher::Interpreter* interpreter =
+      convertLongToInterpreter(env, handle);
+  if (interpreter == nullptr) return 0;
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+
+  TfLiteTensor* output = TfLiteTensorCopy(
+      interpreter->tensor(subgraph_index, interpreter->outputs(subgraph_index)[input_index]));
+
+  return reinterpret_cast<jlong>(
+      new tflite::jni::TensorHandle(output));
 }
 
 JNIEXPORT jint JNICALL
@@ -425,39 +445,27 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   return model_id;
 }
 
-JNIEXPORT jlongArray JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
-    JNIEnv* env, jclass clazz, jint model_id, jlongArray input_tensor_handles, jlong interpreter_handle, jlong error_handle) {
+JNIEXPORT void JNICALL
+Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
+    JNIEnv* env, jclass clazz, jint model_id, jlongArray input_tensor_handles,
+    jlongArray output_tensor_handles, jlong interpreter_handle,
+    jlong error_handle) {
   LOGI("RunSync starts with model_id = %d", model_id);
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
-  if (interpreter == nullptr) return NULL;
+  if (interpreter == nullptr) return;
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
-  if (error_reporter == nullptr) return NULL;
+  if (error_reporter == nullptr) return;
 
-  std::vector<TfLiteTensor*> input_tensors;
-  jlong* tensor_handles = env->GetLongArrayElements(input_tensor_handles, NULL);
-  for (size_t i = 0; i < env->GetArrayLength(input_tensor_handles); i++) {
-    input_tensors.push_back(
-        tflite::jni::GetTensorFromHandle(env, tensor_handles[i]));
-  }
+  tflite::Tensors input_tensors =
+      convertJLongArrayToTensors(env, input_tensor_handles);
+  tflite::Tensors output_tensors =
+      convertJLongArrayToTensors(env, output_tensor_handles);
 
-  auto& output_tensors = interpreter->InvokeModelsSync({tflite::Job(model_id)}, {input_tensors})[0];
-
-  jlongArray results = env->NewLongArray(output_tensors.size());
-  std::vector<jlong> output_handles;
-
-  for (size_t i = 0; i < output_tensors.size(); i++) {
-    output_handles.push_back(reinterpret_cast<jlong>(
-        new tflite::jni::TensorHandle(std::move(output_tensors.at(i)))));
-  }
-
-  env->SetLongArrayRegion(results, 0, output_tensors.size(),
-                          output_handles.data());
+  interpreter->InvokeModelsSync({tflite::Job(model_id)}, {input_tensors}, {output_tensors});
 
   LOGI("RunSync finishes");
-
-  return results;
 }
 
 JNIEXPORT jint JNICALL
@@ -573,6 +581,16 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_deleteM
     JNIEnv* env, jclass clazz, jlong model_handle) {
   if (model_handle != 0) {
     delete convertLongToModel(env, model_handle);
+  }
+}
+
+JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_deleteTensor(
+    JNIEnv* env, jclass clazz, jlong tensor_handle) {
+  if (tensor_handle != 0) {
+    TfLiteTensor* t = tflite::jni::GetTensorFromHandle(env, tensor_handle);
+
+    TfLiteTensorFree(t);
+    free(t);
   }
 }
 
