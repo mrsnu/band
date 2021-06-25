@@ -447,10 +447,9 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
 
 JNIEXPORT void JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
-    JNIEnv* env, jclass clazz, jint model_id, jlongArray input_tensor_handles,
-    jlongArray output_tensor_handles, jlong interpreter_handle,
+    JNIEnv* env, jclass clazz, jintArray model_ids, jobjectArray input_tensor_handles,
+    jobjectArray output_tensor_handles, jlong interpreter_handle,
     jlong error_handle) {
-  LOGI("RunSync starts with model_id = %d", model_id);
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
   if (interpreter == nullptr) return;
@@ -458,12 +457,34 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return;
 
-  tflite::Tensors input_tensors =
-      convertJLongArrayToTensors(env, input_tensor_handles);
-  tflite::Tensors output_tensors =
-      convertJLongArrayToTensors(env, output_tensor_handles);
+  jsize num_models = env->GetArrayLength(model_ids);
+  jint* model_ids_elements = env->GetIntArrayElements(model_ids, NULL);
 
-  interpreter->InvokeModelsSync({tflite::Job(model_id)}, {input_tensors}, {output_tensors});
+  jsize num_model_inputs = env->GetArrayLength(input_tensor_handles);
+  jsize num_model_outputs = env->GetArrayLength(output_tensor_handles);
+
+  std::vector<tflite::Job> jobs;
+  std::vector<tflite::Tensors> input_tensors(num_model_inputs);
+  std::vector<tflite::Tensors> output_tensors(num_model_outputs);
+
+  for (int i = 0; i < num_models; i++) {
+    jobs.push_back(tflite::Job(model_ids_elements[i]));
+    LOGI("RunSync starts with model_id = %d", model_ids_elements[i]);
+
+    if (input_tensors.size()) {
+      jlongArray input_handles =
+          (jlongArray)(env->GetObjectArrayElement(input_tensor_handles, i));
+      input_tensors[i] = convertJLongArrayToTensors(env, input_handles);
+    }
+
+    if (output_tensors.size()) {
+      jlongArray output_handles =
+          (jlongArray)(env->GetObjectArrayElement(output_tensor_handles, i));
+      output_tensors[i] = convertJLongArrayToTensors(env, output_handles);
+    }
+  }
+
+  interpreter->InvokeModelsSync(jobs, input_tensors, output_tensors);
 
   LOGI("RunSync finishes");
 }

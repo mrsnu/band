@@ -93,37 +93,59 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   /** Sets inputs, runs model inference and returns outputs. */
-  void run(int modelId, Tensor[] inputs, Tensor[] outputs) {
+  void run(int[] modelIds, Tensor[][] modelInputs, Tensor[][] modelOutputs) {
     inferenceDurationNanoseconds = -1;
-    if (inputs == null || inputs.length == getInputTensorCount(modelId)) {
-      throw new IllegalArgumentException("Input error: Inputs should not be null or equal to input count.");
+    if (modelInputs == null || modelInputs.length == modelIds.length) {
+      throw new IllegalArgumentException("Input error: modelInputs should not be null or equal to model count.");
     }
 
-    if (outputs == null || outputs.length == getOutputTensorCount(modelId)) {
-      throw new IllegalArgumentException("Output error: Outputs should not be null or equal to output count.");
+    if (modelInputs == null || modelOutputs.length == modelIds.length) {
+      throw new IllegalArgumentException("Output error: modelOutputs should not be null or equal to model count.");
     }
 
-    long[] inputHandles = new long[inputs.length];
-
-    for (int i = 0; i < inputs.length; i++) {
-      inputHandles[i] = inputs[i].handle();
+    if (modelInputs != null) {
+      for (int i = 0; i < modelInputs.length; i++) {
+        int modelId = modelIds[i];
+        if (modelInputs[i] == null || modelInputs[i].length == getInputTensorCount(modelId)) {
+          throw new IllegalArgumentException("Input error: Inputs should not be null or equal to input count.");
+        }
+      }
     }
 
-    long[] outputHandles = new long[outputs.length];
+    if (modelOutputs != null) {
+      for (int i = 0; i < modelOutputs.length; i++) {
+        int modelId = modelIds[i];
+        if (modelOutputs[i] == null || modelOutputs[i].length == getOutputTensorCount(modelId)) {
+          throw new IllegalArgumentException("Output error: Outputs should not be null or equal to output count.");
+        }
+      }
+    }
 
-    for (int i = 0; i < inputs.length; i++) {
-      outputHandles[i] = outputs[i].handle();
+    long[][] inputHandles = new long[modelIds.length][];
+    long[][] outputHandles = new long[modelIds.length][];
+
+    for (int i = 0; i < modelIds.length; i++) {
+      inputHandles[i] = new long[modelInputs[i].length];
+      outputHandles[i] = new long[modelOutputs[i].length];
+      
+      for (int j = 0; j < inputHandles[i].length; j++) {
+        inputHandles[i][j] = modelInputs[i][j].handle();
+      }
+
+      for (int j = 0; j < outputHandles[i].length; j++) {
+        outputHandles[i][j] = modelOutputs[i][j].handle();
+      }
     }
 
     long inferenceStartNanos = System.nanoTime();
-    runSync(modelId, inputHandles, outputHandles, interpreterHandle, errorHandle);
+    runSync(modelIds, inputHandles, outputHandles, interpreterHandle, errorHandle);
     long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
 
     // Only set if the entire operation succeeds.
     this.inferenceDurationNanoseconds = inferenceDurationNanoseconds;
   }
 
-  private static native void runSync(int modelId, long[] inputTensorHandles, long[] outputTensorHandles, long interpreterHandle, long errorHandle);
+  private static native void runSync(int[] modelIds, long[][] inputTensorHandles, long[][] outputTensorHandles, long interpreterHandle, long errorHandle);
   
   void setNumThreads(int numThreads) {
     numThreads(interpreterHandle, numThreads);

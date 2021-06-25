@@ -163,40 +163,20 @@ public final class Interpreter implements AutoCloseable {
     return wrapper.registerModel(byteBuffer, options);
   }
 
-  /**
-   * Runs model inference if the model takes multiple inputs, or returns multiple outputs.
-   *
-   * <p>Warning: The API is more efficient if {@link Buffer}s (preferably direct, but not required)
-   * are used as the input/output data types. Please consider using {@link Buffer} to feed and fetch
-   * primitive data for better performance. The following concrete {@link Buffer} types are
-   * supported:
-   *
-   * <ul>
-   *   <li>{@link ByteBuffer} - compatible with any underlying primitive Tensor type.
-   *   <li>{@link FloatBuffer} - compatible with float Tensors.
-   *   <li>{@link IntBuffer} - compatible with int32 Tensors.
-   *   <li>{@link LongBuffer} - compatible with int64 Tensors.
-   * </ul>
-   *
-   * <p>Note: {@code null} values for invididual elements of {@code inputs} and {@code outputs} is
-   * allowed only if the caller is using a {@link Delegate} that allows buffer handle interop, and
-   * such a buffer has been bound to the corresponding input or output {@link Tensor}(s).
-   *
-   * @param modelId an ID of the target model to run inference
-   * @param inputs an array of input data. The inputs should be in the same order as inputs of the
-   *     model. Each input can be an array or multidimensional array, or a {@link Buffer} of
-   *     primitive types including int, float, long, and byte. {@link Buffer} is the preferred way
-   *     to pass large input data, whereas string types require using the (multi-dimensional) array
-   *     input path. When {@link Buffer} is used, its content should remain unchanged until model
-   *     inference is done, and the caller must ensure that the {@link Buffer} is at the appropriate
-   *     read position.
-   * @throws IllegalArgumentException if {@code inputs} or {@code outputs} is null or empty, or if
-   *     error occurs when running the inference.
-   */
   public void run(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    wrapper.run(modelId, inputs, outputs);
+    int[] modelIds = {modelId};
+    Tensor[][] modelInputs = {inputs};
+    Tensor[][] modelOutputs = {outputs};
+    
+    wrapper.run(modelIds, modelInputs, modelOutputs);
+  }
+
+  public void runMultipleModels(
+      int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
+    checkNotClosed();
+    wrapper.run(modelIds, inputs, outputs);
   }
 
   /** Gets the number of input tensors. */
