@@ -403,7 +403,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
   model_input_tensors_.resize(runtime_config_.model_information.size());
-  model_output_tensors_.resize(runtime_config_.model_information.size())
+  model_output_tensors_.resize(runtime_config_.model_information.size());
   for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
     // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
     // (i.e. the specified input layer info) has been checked in
@@ -860,6 +860,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
       std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
+      std::vector<TfLiteTensor*> output_tensors = model_output_tensors_[model_id];
       std::set<int> requested_job_ids;
       while (true) {
         // measure the time it took to generate requests
@@ -877,14 +878,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
         }
 
         for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
-          interpreter_->GetOutputTensors(*it, 
-          auto output_tensors = ;
-          if (output_tensors.size()) {
-            for (int i = 0; i < output_tensors.size(); i++) {
-              TFLITE_LOG(INFO)
-                  << "Output tensor " << output_tensors[i]->name << " from " << *it;
-            }
-
+          if (interpreter_ && (interpreter_->GetOutputTensors(*it, output_tensors) == kTfLiteOk)) {
             requested_job_ids.erase(it++);
           } else {
             it++;
@@ -918,6 +912,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       int model_id = std::rand() % num_models;
       std::vector<Job> requests(1, Job(model_id));
       std::set<int> requested_job_ids;
+      std::vector<TfLiteTensor*> output_tensors = model_output_tensors_[model_id];
 
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
@@ -934,13 +929,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       }
 
       for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
-        auto output_tensors = interpreter_->GetOutputTensors(*it);
-        if (output_tensors.size()) {
-          for (int i = 0; i < output_tensors.size(); i++) {
-            TFLITE_LOG(INFO)
-                << "Output tensor " << output_tensors[i]->name << " from " << *it;
-          }
-
+        if (interpreter_ && (interpreter_->GetOutputTensors(*it, output_tensors) == kTfLiteOk)) {
           requested_job_ids.erase(it++);
         } else {
           it++;

@@ -471,12 +471,12 @@ void Interpreter::InvokeModelsSync(std::vector<Job> requests,
   }
 }
 
-void Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
+TfLiteStatus Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
   const Job* job = planner_->GetFinishedJob(job_id);
 
   if (!job) {
-    error_reporter_->Report("Invalid job_id : %d", job_id);
-    return;
+    // Not finished yet.
+    return kTfLiteOk;
   }
 
   auto output_tensors =
@@ -484,12 +484,12 @@ void Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
 
   if (!output_tensors) {
     error_reporter_->Report("Invalid model_id : %d, output handle: %d", job->model_id, job->output_handle);
-    return;
+    return kTfLiteError;
   }
 
   if (output_tensors->size() != outputs.size()) {
     error_reporter_->Report("Expected number of output is wrong");
-    return;
+    return kTfLiteError;
   }
 
   for (size_t i = 0; i < outputs.size(); i++) {
@@ -500,9 +500,11 @@ void Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
       std::memcpy(dst->data.raw, src->data.raw_const, dst->bytes);
     } else {
       error_reporter_->Report("Output tensor data assignment to different type or dims");
-      return;
+      return kTfLiteError;
     }
   }
+
+  return kTfLiteOk;
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
@@ -1053,8 +1055,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   RegisterSubgraphIdx(key, subgraph_index);
 
   // allocate circular buffer for model IO
-  std::vector<const TfLiteTensor*> input_tensors;
-  std::vector<const TfLiteTensor*> output_tensors;
+  std::vector<TfLiteTensor*> input_tensors;
+  std::vector<TfLiteTensor*> output_tensors;
 
   for (int input_tensor : primary_subgraph->inputs()) {
     input_tensors.push_back(primary_subgraph->tensor(input_tensor));

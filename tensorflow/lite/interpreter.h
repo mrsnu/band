@@ -473,7 +473,7 @@ class Interpreter {
   void InvokeModelsSync(std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
   void InvokeModelsSync(std::vector<Job> requests, std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
 
-  void GetOutputTensors(int job_id, Tensors& outputs) const;
+  TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
   /// Set the number of threads available to the interpreter.
   ///
