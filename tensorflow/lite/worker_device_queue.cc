@@ -4,7 +4,6 @@
 
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
-#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
@@ -91,16 +90,8 @@ void DeviceQueueWorker::Work() {
           }
         }
       }
-
-      auto pre_invoke = [&job]() {
-        job.invoke_time = profiling::time::NowMicros();
-      };
-
-      auto post_invoke = [&job]() {
-        job.end_invoke_time = profiling::time::NowMicros();
-      };
-
-      if (ProcessJob(job, pre_invoke, post_invoke) != kTfLiteOk) {
+      
+      if (ProcessJob(job) != kTfLiteOk) {
         // TODO #21: Handle errors in multi-thread environment
       }
       

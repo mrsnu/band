@@ -135,17 +135,19 @@ void GlobalQueueWorker::Work() {
         }
       }
 
-      auto pre_invoke = [this, &lock]() {
+      auto pre_process = [&lock](Job& job) {
         lock.lock();
-        current_job_.invoke_time = profiling::time::NowMicros();
+        job.process_time = profiling::time::NowMicros();
         lock.unlock();
       };
 
-      auto post_invoke = [this]() {
-        current_job_.end_invoke_time = profiling::time::NowMicros();
+      auto pre_invoke = [&lock](Job& job) {
+        lock.lock();
+        job.invoke_time = profiling::time::NowMicros();
+        lock.unlock();
       };
 
-      if (ProcessJob(current_job_, pre_invoke, post_invoke) != kTfLiteOk) {
+      if (ProcessJob(current_job_, pre_process, pre_invoke) != kTfLiteOk) {
         // TODO #21: Handle errors in multi-thread environment
       }
 

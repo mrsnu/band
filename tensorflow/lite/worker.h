@@ -9,6 +9,7 @@
 
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
+#include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
 
@@ -40,8 +41,18 @@ class Worker {
   TfLiteStatus CopyOutputTensors(const Job& job);
   TfLiteStatus ProcessJob(
       Job& job,
-      std::function<void()> pre_invoke = []() {},
-      std::function<void()> post_invoke = []() {});
+      std::function<void(Job&)> pre_process = [](Job& job) {
+        job.process_time = profiling::time::NowMicros();
+      },
+      std::function<void(Job&)> pre_invoke = [](Job& job) {
+        job.invoke_time = profiling::time::NowMicros();
+      },
+      std::function<void(Job&)> post_invoke = [](Job& job) {
+        job.end_invoke_time = profiling::time::NowMicros();
+      },
+      std::function<void(Job&)> post_process = [](Job& job) {
+        job.end_time = profiling::time::NowMicros();
+      });
   virtual void Work() = 0;
 
   std::weak_ptr<Planner> planner_;

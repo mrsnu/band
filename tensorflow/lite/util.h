@@ -53,6 +53,7 @@ struct Job {
   int start_idx = 0;
   int end_idx = -1;
   int64_t enqueue_time = 0;
+  int64_t process_time = 0;
   int64_t invoke_time = 0;
   int64_t end_invoke_time = 0;
   int64_t end_time = 0;

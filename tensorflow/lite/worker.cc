@@ -1,7 +1,6 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/core/subgraph.h"
-#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
 
@@ -113,20 +112,20 @@ TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
   return output_buffer->Put(output_tensors, job.output_handle);
 }
 
-TfLiteStatus Worker::ProcessJob(Job& job, std::function<void()> pre_invoke,
-                                std::function<void()> post_invoke) {
+TfLiteStatus Worker::ProcessJob(Job& job, std::function<void(Job&)> pre_process, std::function<void(Job&)> pre_invoke,
+                                std::function<void(Job&)> post_invoke, std::function<void(Job&)> post_process) {
   std::shared_ptr<Planner> planner = planner_.lock();
   if (!planner) {
     return kTfLiteError;
   }
   Interpreter* interpreter = planner->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-
+  pre_process(job);
   if (CopyInputTensors(job) == kTfLiteOk) {
-    pre_invoke();
+    pre_invoke(job);
 
     if (subgraph->Invoke() == kTfLiteOk) {
-      post_invoke();
+      post_invoke(job);
       interpreter->UpdateProfileResult(subgraph->GetKey(),
                                        (job.end_time - job.invoke_time));
       // TODO #65: Tensor communications between subgraphs
@@ -139,7 +138,7 @@ TfLiteStatus Worker::ProcessJob(Job& job, std::function<void()> pre_invoke,
     TFLITE_LOG(ERROR) << "Worker failed to copy input.";
     job.status = kTfLiteJobInputCopyFailure;
   }
-  job.end_time = profiling::time::NowMicros();
+  post_process(job);
   job.status = kTfLiteJobSuccess;
   if (job.slo_us > 0 && job.is_final_subgraph) {
     // check if slo has been violated or not
