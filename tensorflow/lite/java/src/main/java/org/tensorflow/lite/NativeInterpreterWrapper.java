@@ -95,18 +95,18 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   /** Sets inputs, runs model inference and returns outputs. */
   void run(int[] modelIds, Tensor[][] modelInputs, Tensor[][] modelOutputs) {
     inferenceDurationNanoseconds = -1;
-    if (modelInputs == null || modelInputs.length == modelIds.length) {
+    if (modelInputs == null || modelInputs.length != modelIds.length) {
       throw new IllegalArgumentException("Input error: modelInputs should not be null or equal to model count.");
     }
 
-    if (modelInputs == null || modelOutputs.length == modelIds.length) {
+    if (modelOutputs == null || modelOutputs.length != modelIds.length) {
       throw new IllegalArgumentException("Output error: modelOutputs should not be null or equal to model count.");
     }
 
     if (modelInputs != null) {
       for (int i = 0; i < modelInputs.length; i++) {
         int modelId = modelIds[i];
-        if (modelInputs[i] == null || modelInputs[i].length == getInputTensorCount(modelId)) {
+        if (modelInputs[i] == null || modelInputs[i].length != getInputTensorCount(modelId)) {
           throw new IllegalArgumentException("Input error: Inputs should not be null or equal to input count.");
         }
       }
@@ -115,7 +115,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (modelOutputs != null) {
       for (int i = 0; i < modelOutputs.length; i++) {
         int modelId = modelIds[i];
-        if (modelOutputs[i] == null || modelOutputs[i].length == getOutputTensorCount(modelId)) {
+        if (modelOutputs[i] == null || modelOutputs[i].length != getOutputTensorCount(modelId)) {
           throw new IllegalArgumentException("Output error: Outputs should not be null or equal to output count.");
         }
       }

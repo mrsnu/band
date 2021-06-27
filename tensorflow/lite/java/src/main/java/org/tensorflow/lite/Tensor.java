@@ -161,7 +161,7 @@ public final class Tensor {
    * @throws IllegalArgumentException if the tensor is a scalar or if {@code src} is not compatible
    *     with the tensor (for example, mismatched data types or shapes).
    */
-  void setTo(Object src) {
+  public void setTo(Object src) {
     if (src == null) {
       if (hasDelegateBufferHandle(nativeHandle)) {
         return;
@@ -473,7 +473,7 @@ public final class Tensor {
             quantizationScale(nativeHandle), quantizationZeroPoint(nativeHandle));
   }
 
-  private ByteBuffer buffer() {
+  public ByteBuffer buffer() {
     return buffer(nativeHandle).order(ByteOrder.nativeOrder());
   }
 
