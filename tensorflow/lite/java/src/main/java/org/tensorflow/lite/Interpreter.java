@@ -185,10 +185,20 @@ public final class Interpreter implements AutoCloseable {
     return wrapper.getInputTensorCount(modelId);
   }
 
+  public Tensor allocateInputTensor(int modelId, int index) {
+    checkNotClosed();
+    return wrapper.allocateInputTensor(modelId, index);
+  }
+
   /** Gets the number of output Tensors. */
   public int getOutputTensorCount(int modelId) {
     checkNotClosed();
     return wrapper.getOutputTensorCount(modelId);
+  }
+
+  public Tensor allocateOutputTensor(int modelId, int index) {
+    checkNotClosed();
+    return wrapper.allocateOutputTensor(modelId, index);
   }
   
   /**
