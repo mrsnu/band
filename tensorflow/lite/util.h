@@ -34,6 +34,7 @@ using TensorUniquePtr = std::unique_ptr<TfLiteTensor, void (*)(TfLiteTensor*)>;
 using Tensors = std::vector<TfLiteTensor*>;
 
 enum JobStatus {
+  kTfLiteJobQueued,
   kTfLiteJobSuccess,
   kTfLiteJobSLOViolation,
   kTfLiteJobInputCopyFailure,
@@ -53,6 +54,7 @@ struct Job {
   int end_idx = -1;
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
+  int64_t end_invoke_time = 0;
   int64_t end_time = 0;
   int64_t profiled_time = 0;
   int64_t expected_latency = 0;
@@ -61,7 +63,7 @@ struct Job {
   int output_handle = -1;
   int job_id = -1;
   int sched_id = -1;
-  JobStatus status = kTfLiteJobSuccess;
+  JobStatus status = kTfLiteJobQueued;
   bool is_final_subgraph = true;
   std::string model_fname;
 

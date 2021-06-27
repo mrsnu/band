@@ -38,6 +38,10 @@ class Worker {
  protected:
   TfLiteStatus CopyInputTensors(const Job& job);
   TfLiteStatus CopyOutputTensors(const Job& job);
+  TfLiteStatus ProcessJob(
+      Job& job,
+      std::function<void()> pre_invoke = []() {},
+      std::function<void()> post_invoke = []() {});
   virtual void Work() = 0;
 
   std::weak_ptr<Planner> planner_;

@@ -1,6 +1,7 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/core/subgraph.h"
+#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
 
@@ -110,6 +111,45 @@ TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
   }
 
   return output_buffer->Put(output_tensors, job.output_handle);
+}
+
+TfLiteStatus Worker::ProcessJob(Job& job, std::function<void()> pre_invoke,
+                                std::function<void()> post_invoke) {
+  std::shared_ptr<Planner> planner = planner_.lock();
+  if (!planner) {
+    return kTfLiteError;
+  }
+  Interpreter* interpreter = planner->GetInterpreter();
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+
+  if (CopyInputTensors(job) == kTfLiteOk) {
+    pre_invoke();
+
+    if (subgraph->Invoke() == kTfLiteOk) {
+      post_invoke();
+      interpreter->UpdateProfileResult(subgraph->GetKey(),
+                                       (job.end_time - job.invoke_time));
+      // TODO #65: Tensor communications between subgraphs
+      interpreter->InvokeModelsAsync(job.following_jobs);
+      CopyOutputTensors(job);
+    } else {
+      job.status = kTfLiteJobInvokeFailure;
+    }
+  } else {
+    TFLITE_LOG(ERROR) << "Worker failed to copy input.";
+    job.status = kTfLiteJobInputCopyFailure;
+  }
+  job.end_time = profiling::time::NowMicros();
+  job.status = kTfLiteJobSuccess;
+  if (job.slo_us > 0 && job.is_final_subgraph) {
+    // check if slo has been violated or not
+    auto latency = job.end_time - job.enqueue_time;
+    if (latency > job.slo_us) {
+      job.status = kTfLiteJobSLOViolation;
+    }
+  }
+  planner->EnqueueFinishedJob(job);
+  return job.status == kTfLiteJobSuccess ? kTfLiteOk : kTfLiteError;
 }
 
 }  // namespace impl
