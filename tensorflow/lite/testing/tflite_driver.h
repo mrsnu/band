@@ -48,16 +48,15 @@ class TfLiteDriver : public TestRunner {
    * @param  delegate         The (optional) delegate to use.
    * @param  reference_kernel Whether to use the builtin reference kernel ops.
    */
-  explicit TfLiteDriver(DelegateType delegate_type = DelegateType::kNone,
-                        bool reference_kernel = false);
+  explicit TfLiteDriver(bool reference_kernel = false);
   ~TfLiteDriver() override;
 
   void LoadModel(const string& bin_file_path) override;
   const std::vector<int>& GetInputs() override {
-    return interpreter_->inputs();
+    return interpreter_->inputs(0);
   }
   const std::vector<int>& GetOutputs() override {
-    return interpreter_->outputs();
+    return interpreter_->outputs(0);
   }
   void ReshapeTensor(int id, const string& csv_values) override;
   void AllocateTensors() override;
@@ -71,9 +70,6 @@ class TfLiteDriver : public TestRunner {
   string ReadOutput(int id) override;
   void SetThreshold(double relative_threshold, double absolute_threshold);
   void SetQuantizationErrorMultiplier(int quantization_error_multiplier);
-
- protected:
-  Interpreter::TfLiteDelegatePtr delegate_;
 
  private:
   void DeallocateStringTensor(TfLiteTensor* t) {

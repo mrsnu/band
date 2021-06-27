@@ -313,12 +313,10 @@ bool TfLiteDriver::DataExpectation::Check(bool verbose,
   }
 }
 
-TfLiteDriver::TfLiteDriver(DelegateType delegate_type, bool reference_kernel)
-    : delegate_(nullptr, nullptr),
-      relative_threshold_(kRelativeThreshold),
+TfLiteDriver::TfLiteDriver(bool reference_kernel)
+    : relative_threshold_(kRelativeThreshold),
       absolute_threshold_(kAbsoluteThreshold),
       quantization_error_multiplier_(kQuantizationErrorMultiplier) {
-  DUMP_METHOD_INFO;
   if (reference_kernel) {
     resolver_.reset(new ops::builtin::BuiltinRefOpResolver);
   } else {
@@ -328,24 +326,6 @@ TfLiteDriver::TfLiteDriver(DelegateType delegate_type, bool reference_kernel)
     buildinop_resolver_->AddCustom("RFFT2D",
                                    tflite::ops::custom::Register_RFFT2D());
     tflite::ops::custom::AddHashtableOps(buildinop_resolver_);
-  }
-
-  switch (delegate_type) {
-    case DelegateType::kNone:
-      break;
-    case DelegateType::kNnapi:
-      delegate_ = evaluation::CreateNNAPIDelegate();
-      break;
-    case DelegateType::kGpu:
-      delegate_ = evaluation::CreateGPUDelegate();
-      break;
-    case DelegateType::kFlex:
-/*
-#if !defined(__APPLE__)
-      delegate_ = FlexDelegate::Create();
-#endif
-*/
-      break;
   }
 
   (&interpreter_)->reset(
@@ -386,26 +366,20 @@ void TfLiteDriver::LoadModel(const string& bin_file_path) {
     Invalidate("Failed build interpreter");
     return;
   }
-  if (delegate_) {
-    if (interpreter_->ModifyGraphWithDelegate(delegate_.get()) != kTfLiteOk) {
-      Invalidate("Unable to the build graph using the delegate");
-      return;
-    }
-  }
 
   must_allocate_tensors_ = true;
 }
 
 void TfLiteDriver::ResetTensor(int id) {
   if (!IsValid()) return;
-  auto* tensor = interpreter_->tensor(id);
+  auto* tensor = interpreter_->tensor(0, id);
   memset(tensor->data.raw, 0, tensor->bytes);
 }
 
 void TfLiteDriver::ReshapeTensor(int id, const string& csv_values) {
   if (!IsValid()) return;
   if (interpreter_->ResizeInputTensor(
-          id, testing::Split<int>(csv_values, ",")) != kTfLiteOk) {
+          0, id, testing::Split<int>(csv_values, ",")) != kTfLiteOk) {
     Invalidate("Failed to resize input tensor " + std::to_string(id));
     return;
   }
@@ -414,7 +388,7 @@ void TfLiteDriver::ReshapeTensor(int id, const string& csv_values) {
 
 void TfLiteDriver::SetInput(int id, const string& csv_values) {
   if (!IsValid()) return;
-  auto* tensor = interpreter_->tensor(id);
+  auto* tensor = interpreter_->tensor(0, id);
   switch (tensor->type) {
     case kTfLiteFloat32: {
       const auto& values = testing::Split<float>(csv_values, ",");
@@ -482,7 +456,7 @@ void TfLiteDriver::SetQuantizationErrorMultiplier(
 
 void TfLiteDriver::SetExpectation(int id, const string& csv_values) {
   if (!IsValid()) return;
-  auto* tensor = interpreter_->tensor(id);
+  auto* tensor = interpreter_->tensor(0, id);
   if (expected_output_.count(id) != 0) {
     Invalidate(absl::StrCat("Overridden expectation for tensor '", id, "'"));
   }
@@ -539,7 +513,7 @@ void TfLiteDriver::SetShapeExpectation(int id, const string& csv_values) {
 
 void TfLiteDriver::Invoke() {
   if (!IsValid()) return;
-  if (interpreter_->Invoke() != kTfLiteOk) {
+  if (interpreter_->Invoke(0) != kTfLiteOk) {
     Invalidate("Failed to invoke interpreter");
   }
 }
@@ -554,7 +528,7 @@ bool TfLiteDriver::CheckResults() {
   bool success = true;
   for (const auto& p : expected_output_) {
     int id = p.first;
-    auto* tensor = interpreter_->tensor(id);
+    auto* tensor = interpreter_->tensor(0, id);
     if (!p.second->Check(/*verbose=*/false, *tensor)) {
       // Do not invalidate anything here. Instead, simply output the
       // differences and return false. Invalidating would prevent all
@@ -568,7 +542,7 @@ bool TfLiteDriver::CheckResults() {
   }
   for (const auto& p : expected_output_shape_) {
     int id = p.first;
-    auto* tensor = interpreter_->tensor(id);
+    auto* tensor = interpreter_->tensor(0, id);
     if (!p.second->CheckShape(/*verbose=*/false, *tensor)) {
       // Do not invalidate anything here. Instead, simply output the
       // differences and return false. Invalidating would prevent all
@@ -585,11 +559,11 @@ bool TfLiteDriver::CheckResults() {
 }
 
 void TfLiteDriver::ResetLSTMStateTensors() {
-  interpreter_->ResetVariableTensors();
+  interpreter_->ResetVariableTensors(0);
 }
 
 string TfLiteDriver::ReadOutput(int id) {
-  auto* tensor = interpreter_->tensor(id);
+  auto* tensor = interpreter_->tensor(0, id);
   int num_elements = 1;
 
   for (int i = 0; i < tensor->dims->size; ++i) {
