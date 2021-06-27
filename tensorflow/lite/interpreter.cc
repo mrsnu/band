@@ -479,32 +479,13 @@ TfLiteStatus Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
     return kTfLiteOk;
   }
 
-  auto output_tensors =
-      model_output_buffer.at(job->model_id)->Get(job->output_handle);
-
-  if (!output_tensors) {
-    error_reporter_->Report("Invalid model_id : %d, output handle: %d", job->model_id, job->output_handle);
+  if (model_output_buffer.find(job->model_id) == model_output_buffer.end()) {
+    error_reporter_->Report("Invalid model_id : %d", job->model_id);
     return kTfLiteError;
   }
 
-  if (output_tensors->size() != outputs.size()) {
-    error_reporter_->Report("Expected number of output is wrong");
-    return kTfLiteError;
-  }
-
-  for (size_t i = 0; i < outputs.size(); i++) {
-    const TfLiteTensor* src = (*output_tensors)[i];
-    TfLiteTensor* dst = outputs[i];
-
-    if (src->type == dst->type && TfLiteIntArrayEqual(src->dims, dst->dims)) {
-      std::memcpy(dst->data.raw, src->data.raw_const, dst->bytes);
-    } else {
-      error_reporter_->Report("Output tensor data assignment to different type or dims");
-      return kTfLiteError;
-    }
-  }
-
-  return kTfLiteOk;
+  return model_output_buffer.at(job->model_id)
+      ->Get(outputs, job->output_handle);
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,

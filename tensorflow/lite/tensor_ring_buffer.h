@@ -17,11 +17,12 @@ class TensorRingBuffer {
 
   int Alloc();
   bool IsValid(int handle) const;
-  const Tensors* Get(int handle) const;
-  TfLiteStatus Put(const Tensors& tensors, int handle);
+  TfLiteStatus Get(Tensors& dst_tensors, int handle) const;
+  TfLiteStatus Put(const Tensors& src_tensors, int handle);
 
  private:
   int GetIndex(int handle) const;
+  TfLiteStatus CopyTensors(const Tensors& src_tensors, Tensors& dst_tensors) const;
 
   int head_ = 0;
   int size_;

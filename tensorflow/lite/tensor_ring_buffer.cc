@@ -35,42 +35,42 @@ bool TensorRingBuffer::IsValid(int handle) const {
   return (handle >= 0) && (head_ - size_ <= handle) && (handle < head_);
 }
 
-const Tensors* TensorRingBuffer::Get(int handle) const {
-  if (IsValid(handle)) {
-    return &tensors_[GetIndex(handle)];
-  } else {
+TfLiteStatus TensorRingBuffer::Get(Tensors& dst_tensors, int handle) const {
+  if (!IsValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
-    return nullptr;
+    return kTfLiteError;
   }
+
+  return CopyTensors(tensors_[GetIndex(handle)], dst_tensors);
 }
 
-TfLiteStatus TensorRingBuffer::Put(const Tensors& tensors,
+TfLiteStatus TensorRingBuffer::Put(const Tensors& src_tensors,
                                    int handle) {
   if (!IsValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
     return kTfLiteError;
   }
 
-  int index = GetIndex(handle);
+  return CopyTensors(src_tensors, tensors_[GetIndex(handle)]);
+}
 
-  if (tensors.size() != tensors_[index].size()) {
+TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors, Tensors& dst_tensors) const {
+  if (src_tensors.size() != dst_tensors.size()) {
     TF_LITE_REPORT_ERROR(error_reporter_,
-                         "Invalid tensor size: %d expected: %d", tensors.size(),
-                         tensors_[index].size());
+                         "Invalid tensor size: %d expected: %d", src_tensors.size(),
+                         dst_tensors.size());
     return kTfLiteError;
   }
 
-  for (size_t i = 0; i < tensors.size(); i++) {
-    const TfLiteTensor* src = tensors[i];
-    TfLiteTensor* dst = tensors_[index][i];
+  for (size_t i = 0; i < src_tensors.size(); i++) {
+    const TfLiteTensor* src = src_tensors[i];
+    TfLiteTensor* dst = dst_tensors[i];
 
-    if (!TfLiteIntArrayEqual(src->dims, dst->dims)) {
+    if (!TfLiteTensorDataCopy(src, dst)) {
       TF_LITE_REPORT_ERROR(error_reporter_,
-                           "Tensor assignment to different size. src name : %s, dst name : %s", src->name, dst->name);
+                           "Tensor data copy failure. src name : %s, dst name : %s", src->name, dst->name);
       return kTfLiteError;
     }
-
-    std::memcpy(dst->data.raw, src->data.raw, dst->bytes);
   }
 
   return kTfLiteOk;
