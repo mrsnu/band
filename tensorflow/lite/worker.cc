@@ -130,17 +130,19 @@ TfLiteStatus Worker::ProcessJob(Job& job, std::function<void(Job&)> pre_process,
                                        (job.end_time - job.invoke_time));
       // TODO #65: Tensor communications between subgraphs
       interpreter->InvokeModelsAsync(job.following_jobs);
-      CopyOutputTensors(job);
+      if (CopyOutputTensors(job) == kTfLiteOk) {
+        job.status = kTfLiteJobSuccess;
+      } else {
+        job.status = kTfLiteJobOutputCopyFailure;
+      }
     } else {
       job.status = kTfLiteJobInvokeFailure;
     }
   } else {
-    TFLITE_LOG(ERROR) << "Worker failed to copy input.";
     job.status = kTfLiteJobInputCopyFailure;
   }
   post_process(job);
-  job.status = kTfLiteJobSuccess;
-  if (job.slo_us > 0 && job.is_final_subgraph) {
+  if (job.slo_us > 0 && job.is_final_subgraph && job.status == kTfLiteJobSuccess) {
     // check if slo has been violated or not
     auto latency = job.end_time - job.enqueue_time;
     if (latency > job.slo_us) {
