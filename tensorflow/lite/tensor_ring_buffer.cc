@@ -66,7 +66,7 @@ TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors, Tensors& 
     const TfLiteTensor* src = src_tensors[i];
     TfLiteTensor* dst = dst_tensors[i];
 
-    if (!TfLiteTensorDataCopy(src, dst)) {
+    if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
       TF_LITE_REPORT_ERROR(error_reporter_,
                            "Tensor data copy failure. src name : %s, dst name : %s", src->name, dst->name);
       return kTfLiteError;
