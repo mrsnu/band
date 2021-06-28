@@ -40,7 +40,7 @@ TfLiteStatus TensorRingBuffer::Get(Tensors& dst_tensors, int handle) const {
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
     return kTfLiteError;
   }
-
+  
   return CopyTensors(tensors_[GetIndex(handle)], dst_tensors);
 }
 
@@ -54,11 +54,13 @@ TfLiteStatus TensorRingBuffer::Put(const Tensors& src_tensors,
   return CopyTensors(src_tensors, tensors_[GetIndex(handle)]);
 }
 
-TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors, Tensors& dst_tensors) const {
+TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors,
+                                           Tensors& dst_tensors) const {
   if (src_tensors.size() != dst_tensors.size()) {
-    TF_LITE_REPORT_ERROR(error_reporter_,
-                         "Invalid tensor size: %d expected: %d", src_tensors.size(),
-                         dst_tensors.size());
+    TF_LITE_REPORT_ERROR(
+        error_reporter_,
+        "Invalid tensor length. src tensors: %d dst tensors: %d",
+        src_tensors.size(), dst_tensors.size());
     return kTfLiteError;
   }
 
@@ -67,8 +69,10 @@ TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors, Tensors& 
     TfLiteTensor* dst = dst_tensors[i];
 
     if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
-      TF_LITE_REPORT_ERROR(error_reporter_,
-                           "Tensor data copy failure. src name : %s, dst name : %s", src->name, dst->name);
+      TF_LITE_REPORT_ERROR(
+          error_reporter_,
+          "Tensor data copy failure. src name : %s, dst name : %s", src->name,
+          dst->name);
       return kTfLiteError;
     }
   }

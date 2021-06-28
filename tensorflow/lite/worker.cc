@@ -71,21 +71,13 @@ TfLiteStatus Worker::CopyInputTensors(const Job& job) {
     return kTfLiteError;
   }
 
-  Tensors input_tensors;
-  if (input_buffer->Get(input_tensors, job.input_handle) == kTfLiteOk) {
-    auto input_indices = subgraph->inputs();
-    for (size_t i = 0; i < input_indices.size(); i++) {
-      if (TfLiteTensorDataCopy(subgraph->tensor(input_indices[i]),
-                               input_tensors[i]) != kTfLiteOk) {
-        TFLITE_LOG(ERROR) << "Input copy failure.";
-      }
-    }
-    return kTfLiteOk;
-  } else {
-    TFLITE_LOG(ERROR) << "Input tensors are null model " << job.model_id
-                      << " input handle " << job.input_handle;
-    return kTfLiteError;
+  auto input_indices = subgraph->inputs();
+  std::vector<TfLiteTensor*> input_tensors(input_indices.size());
+  for (size_t i = 0; i < input_indices.size(); i++) {
+    input_tensors[i] = subgraph->tensor(input_indices[i]);
   }
+
+  return input_buffer->Get(input_tensors, job.input_handle);
 }
 
 TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
