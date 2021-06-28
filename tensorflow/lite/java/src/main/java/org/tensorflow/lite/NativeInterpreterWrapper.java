@@ -102,22 +102,13 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     if (modelOutputs == null || modelOutputs.length != modelIds.length) {
       throw new IllegalArgumentException("Output error: modelOutputs should not be null or equal to model count.");
     }
-
-    if (modelInputs != null) {
-      for (int i = 0; i < modelInputs.length; i++) {
-        int modelId = modelIds[i];
-        if (modelInputs[i] == null || modelInputs[i].length != getInputTensorCount(modelId)) {
-          throw new IllegalArgumentException("Input error: Inputs should not be null or equal to input count.");
-        }
+    for (int i = 0; i < modelIds.length; i++) {
+      int modelId = modelIds[i];
+      if (modelInputs[i] == null || modelInputs[i].length != getInputTensorCount(modelId)) {
+        throw new IllegalArgumentException("Input error: Inputs should not be null or equal to input count.");
       }
-    }
-
-    if (modelOutputs != null) {
-      for (int i = 0; i < modelOutputs.length; i++) {
-        int modelId = modelIds[i];
-        if (modelOutputs[i] == null || modelOutputs[i].length != getOutputTensorCount(modelId)) {
-          throw new IllegalArgumentException("Output error: Outputs should not be null or equal to output count.");
-        }
+      if (modelOutputs[i] == null || modelOutputs[i].length != getOutputTensorCount(modelId)) {
+        throw new IllegalArgumentException("Output error: Outputs should not be null or equal to output count.");
       }
     }
 
@@ -197,7 +188,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
    */
   Tensor allocateOutputTensor(int modelId, int index) {
     if (index < 0 || index >= getOutputTensorCount(modelId)) {
-      throw new IllegalArgumentException("Invalid input Tensor index: " + index);
+      throw new IllegalArgumentException("Invalid output Tensor index: " + index);
     }
     
     long handle = allocateOutputTensor(interpreterHandle, modelId, index);
