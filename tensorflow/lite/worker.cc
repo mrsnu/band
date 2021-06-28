@@ -58,7 +58,7 @@ bool Worker::IsBusy() {
 
 TfLiteStatus Worker::CopyInputTensors(const Job& job) {
   // Compute only.
-  if (job.input_handle < 0) {
+  if (job.input_handle < 0 || job.start_idx != 0) {
     return kTfLiteOk;
   }
 
