@@ -447,6 +447,10 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
 
       model_output_tensors_[i][j] = TfLiteTensorCopy(t);
     }
+    TFLITE_LOG(INFO) << "Model "
+                     << runtime_config_.model_information[i].config.model_fname
+                     << " # of inputs " << subgraph_inputs.size()
+                     << " # of outputs " << subgraph_outputs.size();
   }
 
   return kTfLiteOk;
@@ -929,7 +933,8 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       }
 
       for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
-        if (interpreter_ && (interpreter_->GetOutputTensors(*it, output_tensors) == kTfLiteOk)) {
+        if (interpreter_ && (interpreter_->GetOutputTensors(
+                                 *it, output_tensors) == kTfLiteOk)) {
           requested_job_ids.erase(it++);
         } else {
           it++;
