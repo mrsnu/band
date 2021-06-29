@@ -667,8 +667,7 @@ void Interpreter::UpdateProfileResult(
       (1 - profile_smoothing_factor_) * prev_profile;
 }
 
-void Interpreter::Profile(const int num_warm_ups, const int num_runs,
-                          ModelDeviceToLatency& profiled) {
+void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler timer;
@@ -679,8 +678,8 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
 
-    auto it = profiled.find(subgraph_key);
-    if (it != profiled.end()) {
+    auto it = profile_database_.find(subgraph_key);
+    if (it != profile_database_.end()) {
       // if an entry for this SubgraphKey exists in the profiled data,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
@@ -707,7 +706,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
       subgraph_profiling_results_map_[subgraph_key] = latency;
 
       // record the profiled latency for subsequent benchmark runs
-      profiled[subgraph_key] = latency;
+      profile_database[subgraph_key] = latency;
 
       TFLITE_LOG(INFO) << "Profiling result\n"
                        << " model=" << subgraph_key.model_id

@@ -692,6 +692,10 @@ class Interpreter {
     profile_smoothing_factor_ = profile_smoothing_factor;
   }
 
+  // You can set profile data from the previous runs if you have any.
+  void SetProfileDatabase(ModelDeviceToLatency profile_database) {
+    profile_database_ = profile_database;
+  }
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
@@ -761,6 +765,10 @@ class Interpreter {
   // Smoothing constant to update profile result.
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_ = 0.1;
+
+  // Stores the profile reulsts
+  // When a subgraph key is given, returns the profile results in int64_t.
+  ModelDeviceToLatency profile_database_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;

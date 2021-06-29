@@ -535,9 +535,9 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
     // convert the model name strings to integer ids for the interpreter
     auto model_id_profile = ConvertModelNameToId(model_name_profile);
+    interpreter_->SetProfileDatabase(model_id_profile);
     interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
-                          params_.Get<int32_t>("profile_num_runs"),
-                          model_id_profile);
+                          params_.Get<int32_t>("profile_num_runs"));
 
     // update the profile file to include all new profile results from this run
     if (!runtime_config_.model_profile.empty()) {
