@@ -533,8 +533,6 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
-
   void Profile(const int num_warm_ups, const int num_runs,
                ModelDeviceToLatency& profiled);
 

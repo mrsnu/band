@@ -21,6 +21,7 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_UTIL_H_
 #define TENSORFLOW_LITE_UTIL_H_
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -66,6 +67,34 @@ struct ModelConfig {
   int64_t slo_us = -1;
   float slo_scale = -1.f;
 };
+
+// Find model id from model name.
+// If model name is not found, return -1.
+int GetModelId(std::string model_name,
+               std::map<int, ModelConfig>& model_configs) {
+  auto target = std::find_if(model_configs.begin(),
+                             model_configs.end(),
+                             [model_name](auto const& x) {
+                               return x.second.model_fname == model_name;
+                             });
+  if (target == model_configs.end()) {
+    return -1;
+  }
+  return target->first;
+}
+
+std::string GetModelName(int model_id,
+                         std::map<int, ModelConfig>& model_configs) {
+  auto target = std::find_if(model_configs.begin(),
+                             model_configs.end(),
+                             [model_id](auto const& x) {
+                               return x.first == model_id;
+                             });
+  if (target == model_configs.end()) {
+    return "";
+  }
+  return target->second.model_fname;
+}
 
 // The prefix of Flex op custom code.
 // This will be matched agains the `custom_code` field in `OperatorCode`
