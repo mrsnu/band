@@ -23,7 +23,6 @@ limitations under the License.
 #include <memory>
 #include <random>
 #include <string>
-#include <sys/stat.h>
 #include <unordered_set>
 #include <vector>
 
@@ -121,12 +120,6 @@ CreateProfileSummaryFormatter(bool format_as_csv) {
   return format_as_csv
              ? std::make_shared<profiling::ProfileSummaryCSVFormatter>()
              : std::make_shared<profiling::ProfileSummaryDefaultFormatter>();
-}
-
-// https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
-inline bool FileExists(const std::string& name) {
-  struct stat buffer;
-  return stat(name.c_str(), &buffer) == 0;
 }
 
 }  // namespace
@@ -522,16 +515,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   }
 
   if (interpreter_->NeedProfile()) {
-    Json::Value model_name_profile;
-
-    // load data from the given model profile file
-    // if there is no such file, then `model_name_profile` will be empty
-    if (FileExists(runtime_config_.model_profile)) {
-      std::ifstream model_profile_file(runtime_config_.model_profile,
-                                       std::ifstream::binary);
-      model_profile_file >> model_name_profile;
-    }
-
+    Json::Value model_name_profile = LoadJsonObjectFromFile(
+                                       runtime_config_.model_profile);
     // convert the model name strings to integer ids for the interpreter
     auto model_id_profile = ConvertModelNameToId(model_name_profile);
     interpreter_->SetProfileDatabase(model_id_profile);
@@ -539,11 +524,8 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                           params_.Get<int32_t>("profile_num_runs"));
 
     // update the profile file to include all new profile results from this run
-    if (!runtime_config_.model_profile.empty()) {
-      ConvertModelIdToName(model_id_profile, model_name_profile);
-      std::ofstream out_file(runtime_config_.model_profile, std::ios::out);
-      out_file << model_name_profile;
-    }
+    ConvertModelIdToName(model_id_profile, interpreter_->GetProfileDatabase());
+    WriteJsonObjectToFile(runtime_config_.model_profile, model_name_profile);
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()

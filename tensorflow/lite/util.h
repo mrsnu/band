@@ -26,8 +26,12 @@ limitations under the License.
 #include <string>
 #include <vector>
 #include <map>
+#include <fstream>
+#include <sys/stat.h>
+#include <json/json.h>
 
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 
@@ -69,7 +73,7 @@ struct ModelConfig {
 };
 
 // Find model id from model name.
-// If model name is not found, return -1.
+// If the model name is not found, return -1.
 int GetModelId(std::string model_name,
                std::map<int, ModelConfig>& model_configs) {
   auto target = std::find_if(model_configs.begin(),
@@ -83,6 +87,8 @@ int GetModelId(std::string model_name,
   return target->first;
 }
 
+// Find model name from model id.
+// If the model id is not found, return an empty string.
 std::string GetModelName(int model_id,
                          std::map<int, ModelConfig>& model_configs) {
   auto target = std::find_if(model_configs.begin(),
@@ -94,6 +100,35 @@ std::string GetModelName(int model_id,
     return "";
   }
   return target->second.model_fname;
+}
+
+// https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
+inline bool FileExists(const std::string& name) {
+  struct stat buffer;
+  return stat(name.c_str(), &buffer) == 0;
+}
+
+// load data from the given file
+// if there is no such file, then the json object will be empty
+Json::Value LoadJsonObjectFromFile(std::string file_path) {
+  Json::Value json_object;
+  if (FileExists(file_path)) {
+    std::ifstream in(file_path, std::ifstream::binary);
+    in >> json_object;
+  } else {
+    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
+  }
+  return json_object;
+}
+
+// Write json object.
+void WriteJsonObjectToFile(std::string file_path, Json::Value& json_object) {
+  if (FileExists(file_path)) {
+    std::ofstream out_file(file_path, std::ios::out);
+    out_file << json_object;
+  } else {
+    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
+  }
 }
 
 // The prefix of Flex op custom code.

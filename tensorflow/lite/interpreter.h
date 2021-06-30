@@ -695,6 +695,10 @@ class Interpreter {
     profile_database_ = profile_database;
   }
 
+  ModelDeviceToLatency GetProfileDatabase() {
+    return profile_database_;
+  }
+
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
   int GetWindowSize() const;
