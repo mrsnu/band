@@ -92,6 +92,9 @@ cc_library(
     srcs = ["util.cc"],
     hdrs = ["util.h"],
     copts = common_copts,
+    deps = [
+        "@jsoncpp_git//:jsoncpp",
+    ],
 )
 
 cc_library(

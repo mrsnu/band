@@ -18,7 +18,6 @@ limitations under the License.
 #include <map>
 #include <json/json.h>
 
-#include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/util.h"
 
 namespace tflite {
@@ -28,7 +27,7 @@ namespace util {
 using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
 
 // Convert model name strings to integer ids for the given model profiles.
-// The return val can be given to the interpreter via Interpreter::Profile().
+// The return val can be given to the interpreter.
 ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
                                           std::map<int, ModelConfig>& model_configs);
 

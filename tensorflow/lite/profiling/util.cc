@@ -72,7 +72,7 @@ ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
 
 void ConvertModelIdToName(const ModelDeviceToLatency id_profile,
                           Json::Value& name_profile,
-                          std::map<int, ModelConfig>& model_configs);
+                          std::map<int, ModelConfig>& model_configs) {
   for (auto& pair : id_profile) {
     SubgraphKey key = pair.first;
     int model_id = key.model_id;
