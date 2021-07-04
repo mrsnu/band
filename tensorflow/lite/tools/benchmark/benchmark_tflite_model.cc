@@ -525,7 +525,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
     // update the profile file to include all new profile results from this run
     ConvertModelIdToName(model_id_profile, interpreter_->GetProfileDatabase());
-    WriteJsonObjectToFile(runtime_config_.model_profile, model_name_profile);
+    WriteJsonObjectToFile(model_name_profile, runtime_config_.model_profile);
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()

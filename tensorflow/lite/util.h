@@ -138,26 +138,10 @@ inline bool FileExists(const std::string& name) {
 
 // load data from the given file
 // if there is no such file, then the json object will be empty
-Json::Value LoadJsonObjectFromFile(std::string file_path) {
-  Json::Value json_object;
-  if (FileExists(file_path)) {
-    std::ifstream in(file_path, std::ifstream::binary);
-    in >> json_object;
-  } else {
-    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
-  }
-  return json_object;
-}
+Json::Value LoadJsonObjectFromFile(std::string file_path);
 
 // Write json object.
-void WriteJsonObjectToFile(std::string file_path, Json::Value& json_object) {
-  if (FileExists(file_path)) {
-    std::ofstream out_file(file_path, std::ios::out);
-    out_file << json_object;
-  } else {
-    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
-  }
-}
+void WriteJsonObjectToFile(Json::Value& json_object, std::string file_path);
 
 // The prefix of Flex op custom code.
 // This will be matched agains the `custom_code` field in `OperatorCode`

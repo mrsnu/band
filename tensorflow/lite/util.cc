@@ -33,6 +33,26 @@ TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace
 
+Json::Value LoadJsonObjectFromFile(std::string file_path) {
+  Json::Value json_object;
+  if (FileExists(file_path)) {
+    std::ifstream in(file_path, std::ifstream::binary);
+    in >> json_object;
+  } else {
+    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
+  }
+  return json_object;
+}
+
+void WriteJsonObjectToFile(Json::Value& json_object, std::string file_path) {
+  if (FileExists(file_path)) {
+    std::ofstream out_file(file_path, std::ios::out);
+    out_file << json_object;
+  } else {
+    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
+  }
+}
+
 bool IsFlexOp(const char* custom_name) {
   return custom_name && strncmp(custom_name, kFlexCustomCodePrefix,
                                 strlen(kFlexCustomCodePrefix)) == 0;
