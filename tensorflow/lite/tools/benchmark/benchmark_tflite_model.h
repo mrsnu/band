@@ -73,6 +73,8 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   // Map structure to find FlatBufferModel pointer with a model file name.
   std::vector<std::unique_ptr<tflite::FlatBufferModel>> models_;
+  std::vector<std::vector<TfLiteTensor*>> model_input_tensors_;
+  std::vector<std::vector<TfLiteTensor*>> model_output_tensors_;
 
   std::unique_ptr<tflite::Interpreter> interpreter_;
   std::unique_ptr<tflite::ExternalCpuBackendContext> external_context_;
