@@ -504,17 +504,6 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                      << " cores";
   }
 
-  auto& model_information = runtime_config_.model_information;
-  for (int i = 0; i < model_information.size(); ++i) {
-    std::string model_name = model_information[i].config.model_fname;
-    TF_LITE_ENSURE_STATUS(LoadModel(model_name));
-    int model_id = tflite::InterpreterBuilder::RegisterModel(
-        *models_[i], model_information[i].config, *resolver, &interpreter_, num_threads);
-
-    if (model_id == -1)
-      return kTfLiteError;
-  }
-
   if (interpreter_->NeedProfile()) {
     interpreter_->SetProfileDataPath(runtime_config_.model_profile);
     Json::Value model_name_profile = LoadJsonObjectFromFile(
@@ -526,6 +515,17 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     interpreter_->SetProfileDatabase(model_id_profile);
     interpreter_->SetProfileConfig(params_.Get<int32_t>("profile_warmup_runs"),
                                    params_.Get<int32_t>("profile_num_runs"));
+  }
+
+  auto& model_information = runtime_config_.model_information;
+  for (int i = 0; i < model_information.size(); ++i) {
+    std::string model_name = model_information[i].config.model_fname;
+    TF_LITE_ENSURE_STATUS(LoadModel(model_name));
+    int model_id = tflite::InterpreterBuilder::RegisterModel(
+        *models_[i], model_information[i].config, *resolver, &interpreter_, num_threads);
+
+    if (model_id == -1)
+      return kTfLiteError;
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
