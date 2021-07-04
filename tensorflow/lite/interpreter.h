@@ -534,7 +534,10 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  void Profile(const int num_warm_ups, const int num_runs);
+  // Profile the subgraphs with the given model id.
+  // NOTE: the profiling step may affects other running requests,
+  // and vice versa.
+  void Profile(int model_id);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
@@ -690,18 +693,15 @@ class Interpreter {
     profile_smoothing_factor_ = profile_smoothing_factor;
   }
 
-  void SetProfileConfig(const int num_warmups, const int num_runs) {
-    num_warmups_ = num_warmups;
-    num_runs_ = run_runs;
+  void SetProfileDataPath(std::string fname) {
+    profile_data_path_ = fname;
   }
+
+  void SetProfileConfig(const int num_warmups, const int num_runs);
 
   // You can set profile data from the previous runs if you have any.
   void SetProfileDatabase(profiling::util::ModelDeviceToLatency profile_database) {
     profile_database_ = profile_database;
-  }
-
-  profiling::util::ModelDeviceToLatency GetProfileDatabase() {
-    return profile_database_;
   }
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
@@ -778,6 +778,11 @@ class Interpreter {
   int num_warmups_ = 3;
 
   int num_runs_ = 50;
+
+  // Path to the profile data.
+  // The data in the path will be read during initial phase, and also
+  // will be updated at the end of the run.
+  std::string profile_data_path_;
 
   // Stores the profile reulsts
   // When a subgraph key is given, returns the profile results in int64_t.

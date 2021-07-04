@@ -516,6 +516,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   }
 
   if (interpreter_->NeedProfile()) {
+    interpreter_->SetProfileDataPath(runtime_config_.model_profile);
     Json::Value model_name_profile = LoadJsonObjectFromFile(
                                        runtime_config_.model_profile);
     // convert the model name strings to integer ids for the interpreter
@@ -525,12 +526,6 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     interpreter_->SetProfileDatabase(model_id_profile);
     interpreter_->SetProfileConfig(params_.Get<int32_t>("profile_warmup_runs"),
                                    params_.Get<int32_t>("profile_num_runs"));
-
-    // update the profile file to include all new profile results from this run
-    profiling::util::ConvertModelIdToName(interpreter_->GetProfileDatabase(),
-                                          model_name_profile,
-                                          interpreter_->GetModelConfig());
-    WriteJsonObjectToFile(model_name_profile, runtime_config_.model_profile);
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()

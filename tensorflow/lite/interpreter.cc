@@ -258,6 +258,11 @@ Interpreter::~Interpreter() {
       internal_context->ClearCaches();
     }
   }
+
+  // update the profile file to include all new profile results from this run
+  Json::Value profile_dict =
+    profiling::util::ConvertModelIdToName(profile_database_, model_configs_);
+  WriteJsonObjectToFile(profile_dict, profile_data_path_);
 }
 
 void Interpreter::SetExternalContext(TfLiteExternalContextType type,
@@ -662,7 +667,15 @@ void Interpreter::UpdateProfileResult(
       (1 - profile_smoothing_factor_) * prev_profile;
 }
 
-void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
+void Interpreter::SetProfileConfig(const int num_warmups, const int num_runs) {
+  TFLITE_LOG(INFO) << "Set Profiling Configuration: "
+                   << " warmup=" << num_warmups_
+                   << " count=" << num_runs_;
+  num_warmups_ = num_warmups;
+  num_runs_ = num_runs;
+}
+
+void Interpreter::Profile(int model_id) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler timer;
@@ -672,6 +685,10 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
+
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
 
     auto it = profile_database_.find(subgraph_key);
     if (it != profile_database_.end()) {
@@ -686,14 +703,13 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
                        << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
                        << " start=" << subgraph_key.start_idx
                        << " end=" << subgraph_key.end_idx << ".";
-
     } else {
       // otherwise, proceed as normal
-      for (int i = 0; i < num_warm_ups; i++) {
+      for (int i = 0; i < num_warmups_; i++) {
         subgraph->Invoke();
       }
       timer.ClearRecords();
-      for (int i = 0; i < num_runs; i++) {
+      for (int i = 0; i < num_runs_; i++) {
         subgraph->Invoke();
       }
 
@@ -705,8 +721,6 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
 
       TFLITE_LOG(INFO) << "Profiling result\n"
                        << " model=" << subgraph_key.model_id
-                       << " warmup=" << num_warm_ups
-                       << " count=" << num_runs
                        << " avg=" << latency << " us"
                        << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
                        << " start=" << subgraph_key.start_idx
