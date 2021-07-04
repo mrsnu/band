@@ -690,6 +690,11 @@ class Interpreter {
     profile_smoothing_factor_ = profile_smoothing_factor;
   }
 
+  void SetProfileConfig(const int num_warmups, const int num_runs) {
+    num_warmups_ = num_warmups;
+    num_runs_ = run_runs;
+  }
+
   // You can set profile data from the previous runs if you have any.
   void SetProfileDatabase(profiling::util::ModelDeviceToLatency profile_database) {
     profile_database_ = profile_database;
@@ -767,6 +772,12 @@ class Interpreter {
   // Smoothing constant to update profile result.
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_ = 0.1;
+
+  // Parameters for profiling.
+  // The results during warmup period are not counted.
+  int num_warmups_ = 3;
+
+  int num_runs_ = 50;
 
   // Stores the profile reulsts
   // When a subgraph key is given, returns the profile results in int64_t.
