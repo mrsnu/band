@@ -26,35 +26,6 @@ limitations under the License.
 namespace tflite {
 namespace benchmark {
 namespace util {
-struct InputLayerInfo {
-  InputLayerInfo() : has_value_range(false) {}
-
-  std::string name;
-  std::vector<int> shape;
-
-  // The input value is randomly generated when benchmarking the NN model.
-  // However, the NN model might require the value be limited to a certain
-  // range [low, high] for this particular input layer. For simplicity,
-  // support integer value first.
-  bool has_value_range;
-  int low;
-  int high;
-
-  // The input value will be loaded from 'input_file_path' INSTEAD OF being
-  // randomly generated. Note the input file will be opened in binary mode.
-  std::string input_file_path;
-};
-
-// Implement type erasure with unique_ptr with custom deleter.
-using VoidUniquePtr = std::unique_ptr<void, void (*)(void*)>;
-
-struct InputTensorData {
-  InputTensorData() : data(nullptr, nullptr) {}
-
-  VoidUniquePtr data;
-  size_t bytes;
-};
-
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.
 void SleepForSeconds(double sleep_seconds);

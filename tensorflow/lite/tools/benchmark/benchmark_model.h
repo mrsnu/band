@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "tensorflow/core/util/stats_calculator.h"
 #include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/profiling/memory_info.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_params.h"
@@ -220,7 +221,8 @@ class BenchmarkModel {
   virtual TfLiteStatus RunStream() = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
-  util::RuntimeConfig runtime_config_;
+  RuntimeConfig runtime_config_;
+  BenchmarkConfig benchmark_config_;
 };
 
 }  // namespace benchmark

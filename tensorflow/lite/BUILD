@@ -280,6 +280,7 @@ cc_library(
         ":tflite_with_xnnpack_optional",
         ":type_to_tflitetype",
         ":util",
+        ":config",
         ":version",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/core/api",
@@ -594,6 +595,18 @@ cc_test(
         ":framework",
         "//tensorflow/lite/testing:util",
         "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
+    name = "config",
+    srcs = ["config.cc"],
+    hdrs = ["config.h"],
+    copts = TFLITE_DEFAULT_COPTS,
+    deps = [
+        "//tensorflow/lite:cpu",
+        "//tensorflow/lite/c:common",
+        "@jsoncpp_git//:jsoncpp",
     ],
 )
 
