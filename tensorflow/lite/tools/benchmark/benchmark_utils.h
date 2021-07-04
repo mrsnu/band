@@ -55,45 +55,6 @@ struct InputTensorData {
   size_t bytes;
 };
 
-struct ModelInformation {
-  ModelInformation(std::vector<InputLayerInfo> input_layer_infos,
-                   ModelConfig config)
-    :input_layer_infos(input_layer_infos), config(config) {}
-  std::vector<InputLayerInfo> input_layer_infos;
-  std::vector<InputTensorData> input_tensor_data;
-  ModelConfig config;
-};
-
-// Keeps the runtime configuration from json config file.
-struct RuntimeConfig {
-  RuntimeConfig() {
-    // To avoid kTfLiteNumDevices dependent initialization
-    for (int i = 0; i < kTfLiteNumDevices; i++) {
-      worker_cpu_masks[i] = tflite::impl::kTfLiteNumCpuMasks;
-    }
-  }
-  // Required
-  std::string log_path;
-  TfLitePlannerType planner_type;
-  std::string execution_mode;
-  // Optional
-  impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
-  impl::TfLiteCPUMaskFlags worker_cpu_masks[kTfLiteNumDevices];
-  int running_time_ms = 60000;
-  float profile_smoothing_factor = 0.1;
-  std::string model_profile;
-  bool allow_work_steal = false;
-  int schedule_window_size = INT_MAX;
-  std::vector<ModelInformation> model_information;
-  // for period_single_thread
-  int global_period_ms;
-  unsigned model_id_random_seed;
-};
-
-
-TfLiteStatus ParseJsonFile(std::string json_fname,
-                           RuntimeConfig* runtime_config);
-
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.
 void SleepForSeconds(double sleep_seconds);

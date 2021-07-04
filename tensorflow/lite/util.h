@@ -31,6 +31,7 @@ limitations under the License.
 #include <json/json.h>
 
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/config.h"
 
 namespace tflite {
 // data structure for identifying subgraphs within whole models
@@ -86,17 +87,6 @@ struct Job {
   std::string model_fname;
 
   std::vector<Job> following_jobs;
-};
-
-// Model configuration struct.
-// The configuration is given when registering the model.
-struct ModelConfig {
-  std::string model_fname;
-  int period_ms;
-  int device = -1;
-  int batch_size = 1;
-  int64_t slo_us = -1;
-  float slo_scale = -1.f;
 };
 
 // Find model id from model name.

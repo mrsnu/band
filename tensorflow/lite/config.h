@@ -16,6 +16,10 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_CONFIG_H_
 #define TENSORFLOW_LITE_CONFIG_H_
 
+#include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
+
 namespace tflite {
   struct ProfileConfig {
     int num_warmups = 3;
@@ -47,6 +51,24 @@ namespace tflite {
     int running_time_ms = 60000;
   };
 
+  struct ModelConfig {
+    std::string model_fname;
+    int period_ms;
+    int device = -1;
+    int batch_size = 1;
+    int64_t slo_us = -1;
+    float slo_scale = -1.f;
+  };
+
+  struct ModelInformation {
+    ModelInformation(std::vector<InputLayerInfo> input_layer_infos,
+                     ModelConfig config)
+      :input_layer_infos(input_layer_infos), config(config) {}
+    std::vector<InputLayerInfo> input_layer_infos;
+    std::vector<InputTensorData> input_tensor_data;
+    ModelConfig config;
+  };
+
   struct RuntimeConfig {
     InterpreterConfig interpreter_config;
     PlannerConfig planner_config;
@@ -54,6 +76,10 @@ namespace tflite {
     BenchmarkConfig benchmark_config;
     std::vector<ModelInformation> model_information;
   };
+
+  TfLiteStatus ParseJsonFile(std::string json_fname,
+                             RuntimeConfig* runtime_config);
+
 }  // namespace tflite
 
 #endif  // TENSORFLOW_LITE_CONFIG_H_
