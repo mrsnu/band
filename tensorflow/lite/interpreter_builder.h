@@ -63,12 +63,12 @@ class InterpreterBuilder {
   static int AddSubgraph(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
-                        tflite::impl::SubgraphKey& subgraph_key,
+                        SubgraphKey& subgraph_key,
                         int num_threads = -1);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     tflite::impl::SubgraphKey& subgraph_key,
+                     SubgraphKey& subgraph_key,
                      int num_threads = -1);
 
   // Adds NUM_DEVICES number of Subgraphs to the interpreter.

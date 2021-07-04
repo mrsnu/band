@@ -75,7 +75,6 @@ cc_library(
     deps = [
         ":memory_info",
         ":time",
-        ":util",
         "//tensorflow/lite/core/api",
     ],
 )
@@ -85,16 +84,6 @@ cc_library(
     srcs = ["time.cc"],
     hdrs = ["time.h"],
     copts = common_copts,
-)
-
-cc_library(
-    name = "util",
-    srcs = ["util.cc"],
-    hdrs = ["util.h"],
-    copts = common_copts,
-    deps = [
-        "@jsoncpp_git//:jsoncpp",
-    ],
 )
 
 cc_library(

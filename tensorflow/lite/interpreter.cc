@@ -31,7 +31,6 @@ limitations under the License.
 #include "tensorflow/lite/graph_info.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
-#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
@@ -117,11 +116,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
-#if defined(TFLITE_IS_MOBILE_PLATFORM)
-  TFLITE_LOG_PROD_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#else
-  TFLITE_LOG_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#endif
+  TFLITE_LOG(INFO) << "Initialized TensorFlow Lite runtime.";
 
   // Reserve some space for the tensors to avoid excessive resizing.
   for (int i = 0; i < kTfLiteMaxExternalContexts; ++i) {
@@ -706,7 +701,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
       subgraph_profiling_results_map_[subgraph_key] = latency;
 
       // record the profiled latency for subsequent benchmark runs
-      profile_database[subgraph_key] = latency;
+      profile_database_[subgraph_key] = latency;
 
       TFLITE_LOG(INFO) << "Profiling result\n"
                        << " model=" << subgraph_key.model_id

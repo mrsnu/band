@@ -31,7 +31,6 @@ limitations under the License.
 #include <json/json.h>
 
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 // data structure for identifying subgraphs within whole models
@@ -103,32 +102,26 @@ struct ModelConfig {
 // Find model id from model name.
 // If the model name is not found, return -1.
 int GetModelId(std::string model_name,
-               std::map<int, ModelConfig>& model_configs) {
-  auto target = std::find_if(model_configs.begin(),
-                             model_configs.end(),
-                             [model_name](auto const& x) {
-                               return x.second.model_fname == model_name;
-                             });
-  if (target == model_configs.end()) {
-    return -1;
-  }
-  return target->first;
-}
+               std::map<int, ModelConfig>& model_configs);
 
 // Find model name from model id.
 // If the model id is not found, return an empty string.
 std::string GetModelName(int model_id,
-                         std::map<int, ModelConfig>& model_configs) {
-  auto target = std::find_if(model_configs.begin(),
-                             model_configs.end(),
-                             [model_id](auto const& x) {
-                               return x.first == model_id;
-                             });
-  if (target == model_configs.end()) {
-    return "";
-  }
-  return target->second.model_fname;
-}
+                         std::map<int, ModelConfig>& model_configs);
+
+using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
+
+// Convert model name strings to integer ids for the given model profiles.
+// The return val can be given to the interpreter.
+ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
+                                          std::map<int, ModelConfig>& model_configs);
+
+// Convert model integer ids back to string-type names for model profiles.
+// This function does not erase entries in name_profile for models that were
+// not run during this benchmark run.
+void ConvertModelIdToName(const ModelDeviceToLatency id_profile,
+                          Json::Value& name_profile,
+                          std::map<int, ModelConfig>& model_configs);
 
 // https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
 inline bool FileExists(const std::string& name) {

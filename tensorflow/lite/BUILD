@@ -292,7 +292,6 @@ cc_library(
         "//tensorflow/lite/profiling:time_profiler",
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
-        "//tensorflow/lite/profiling:util",
         "//tensorflow/lite/tools:logging",
     ] + select({
         ":enable_default_profiler": [
@@ -606,6 +605,8 @@ cc_library(
         ":kernel_api",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/schema:schema_fbs",
+        "//tensorflow/lite/tools:logging",
+        "@jsoncpp_git//:jsoncpp",
     ],
 )
 
