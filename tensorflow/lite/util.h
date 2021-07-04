@@ -88,6 +88,8 @@ struct Job {
   std::vector<Job> following_jobs;
 };
 
+// Model configuration struct.
+// The configuration is given when registering the model.
 struct ModelConfig {
   std::string model_fname;
   int period_ms;
