@@ -719,7 +719,7 @@ class Interpreter {
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
 
-  InterpreterConfig interpreter_config_;
+  TfLitePlannerType planner_type_;
 
   std::shared_ptr<Planner> planner_;
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;

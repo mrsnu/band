@@ -20,7 +20,7 @@ Worker::~Worker() {
   device_cpu_thread_.join();
 }
 
-TfLiteStatus Init(WorkerConfig& config) {
+TfLiteStatus Worker::Init(WorkerConfig& config) {
   if (config.allow_worksteal) {
     AllowWorkSteal();
   }

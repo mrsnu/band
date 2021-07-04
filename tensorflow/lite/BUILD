@@ -606,6 +606,8 @@ cc_library(
     deps = [
         "//tensorflow/lite:cpu",
         "//tensorflow/lite/c:common",
+        "//tensorflow/lite:util",
+        "//tensorflow/lite/tools:logging",
         "@jsoncpp_git//:jsoncpp",
     ],
 )

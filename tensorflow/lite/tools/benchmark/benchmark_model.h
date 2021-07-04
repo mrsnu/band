@@ -222,7 +222,7 @@ class BenchmarkModel {
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
   RuntimeConfig runtime_config_;
-  BenchmarkConfig benchmark_config_;
+  util::BenchmarkConfig benchmark_config_;
 };
 
 }  // namespace benchmark

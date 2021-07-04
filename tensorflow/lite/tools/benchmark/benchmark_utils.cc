@@ -20,6 +20,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/config.h"
 
 namespace tflite {
 namespace benchmark {
@@ -44,7 +45,7 @@ std::vector<std::string> Split(const std::string& str, const char delim) {
   return results;
 }
 
-int FindLayerInfoIndex(std::vector<util::InputLayerInfo>* info,
+int FindLayerInfoIndex(std::vector<InputLayerInfo>* info,
                        const std::string& input_name,
                        const std::string& names_string) {
   for (int i = 0; i < info->size(); ++i) {
@@ -159,6 +160,102 @@ TfLiteStatus PopulateInputLayerInfo(
   // Populate input value files if it's specified.
   TF_LITE_ENSURE_STATUS(
       PopulateInputValueFiles(names_string, value_files_string, info));
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
+                                          util::BenchmarkConfig* benchmark_config) {
+  std::ifstream config(json_fname, std::ifstream::binary);
+
+  Json::Value root;
+  config >> root;
+
+  if (!root.isObject()) {
+    TFLITE_LOG(ERROR) << "Please validate the json config file.";
+    return kTfLiteError;
+  }
+
+  benchmark_config->execution_mode = root["execution_mode"].asString();
+  if (!root["running_time_ms"].isNull()) {
+    benchmark_config->running_time_ms = root["running_time_ms"].asInt();
+  }
+  if (!root["global_period_ms"].isNull()) {
+    benchmark_config->global_period_ms = root["global_period_ms"].asInt();
+    if (benchmark_config->global_period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "Make sure `global_period_ms` > 0.";
+      return kTfLiteError;
+    }
+  }
+  if (!root["model_id_random_seed"].isNull()) {
+    benchmark_config->model_id_random_seed =
+      root["model_id_random_seed"].asUInt();
+    if (benchmark_config->model_id_random_seed == 0) {
+      TFLITE_LOG(WARN) << "Because `model_id_random_seed` == 0, the request "
+                       << "generator thread will ignore the seed and use "
+                       << "current timestamp as seed instead.";
+    }
+  }
+  // Set Model Configurations
+  for (int i = 0; i < root["models"].size(); ++i) {
+    std::vector<InputLayerInfo> input_layer_info;
+    ModelConfig model;
+    Json::Value model_json_value = root["models"][i];
+    if (model_json_value["graph"].isNull() ||
+        model_json_value["period_ms"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if arguments `graph` and `period_ms`"
+                           " are given in the model configs.";
+      return kTfLiteError;
+    }
+    model.model_fname = model_json_value["graph"].asString();
+    model.period_ms = model_json_value["period_ms"].asInt();
+    if (model.period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "Please check if `period_ms` are positive.";
+      return kTfLiteError;
+    }
+
+    // Set `batch_size`.
+    // If no `batch_size` is given, the default batch size will be set to 1.
+    if (!model_json_value["batch_size"].isNull())
+      model.batch_size = model_json_value["batch_size"].asInt();
+
+    // Set `device`.
+    // Fixes to the device if specified in case of `FixedDevicePlanner`.
+    if (!model_json_value["device"].isNull())
+      model.device = model_json_value["device"].asInt();
+
+    // Bounds checking is done internally in interpreter and planner, so
+    // we don't check the actual values here.
+    // See struct ModelConfig for default value.
+    if (!model_json_value["slo_us"].isNull()) {
+      model.slo_us = model_json_value["slo_us"].asInt64();
+    }
+
+    // Bounds checking is done internally in interpreter, so
+    // we don't check the actual values here.
+    // See struct ModelConfig for default value.
+    if (!model_json_value["slo_scale"].isNull()) {
+      model.slo_scale = model_json_value["slo_scale"].asFloat();
+    }
+
+    if (!model_json_value["input_layer"].isNull() &&
+        !model_json_value["input_layer_shape"].isNull()) {
+      TF_LITE_ENSURE_STATUS(PopulateInputLayerInfo(
+          model_json_value["input_layer"].asString(),
+          model_json_value["input_layer_shape"].asString(),
+          model_json_value["input_layer_value_range"].asString(),
+          model_json_value["input_layer_value_files"].asString(),
+          &input_layer_info));
+    }
+
+    benchmark_config->model_information.push_back({input_layer_info, model});
+  }
+
+  if (benchmark_config->model_information.size() == 0) {
+    TFLITE_LOG(ERROR) << "Please specify at list one model "
+                      << "in `models` argument.";
+    return kTfLiteError;
+  }
 
   return kTfLiteOk;
 }

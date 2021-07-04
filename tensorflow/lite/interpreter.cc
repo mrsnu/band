@@ -136,19 +136,19 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create a Planner instance.
   // FixedDevicePlanner is the default planner.
-  auto planner_type = runtime_config.planner_config.planner_type;
-  if (planner_type == kRoundRobin) {
+  planner_type_ = runtime_config.planner_config.planner_type;
+  if (planner_type_ == kRoundRobin) {
     planner_.reset(new RoundRobinPlanner(this));
-  } else if (planner_type == kShortestExpectedLatency) {
+  } else if (planner_type_ == kShortestExpectedLatency) {
     planner_.reset(new ShortestExpectedLatencyPlanner(this));
-  } else if (planner_type == kFixedDeviceGlobalQueue) {
+  } else if (planner_type_ == kFixedDeviceGlobalQueue) {
     planner_.reset(new FixedDeviceGlobalQueuePlanner(this));
   } else {
     planner_.reset(new FixedDevicePlanner(this));
   }
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (planner_type == kShortestExpectedLatency) {
+  if (planner_type_ == kShortestExpectedLatency) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
 
@@ -230,7 +230,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create workers.
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    if (planner_type == kFixedDeviceGlobalQueue) {
+    if (planner_type_ == kFixedDeviceGlobalQueue) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
     } else {
       workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
@@ -278,7 +278,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
     Json::Value model_name_profile =
-      LoadJsonObjectFromFile(config.model_profile);
+      LoadJsonObjectFromFile(config.profile_data_path);
     // convert the model name strings to integer ids for the interpreter
     // You can set profile data from the previous runs if you have any.
     profile_database_ =
@@ -295,7 +295,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   }
 
   const TfLiteCPUMaskFlags cpu_mask = 
-      static_cast<TfLiteCPUMaskFlags>(interpreter_config.cpu_masks);
+      static_cast<TfLiteCPUMaskFlags>(config.cpu_masks);
   auto cpu_mask_set = TfLiteCPUMaskGetSet(cpu_mask);
 
   TFLITE_LOG(INFO) << "Set affinity to "
@@ -944,9 +944,9 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   TfLiteDeviceFlags prev_device;
   int subgraph_min = 0;
 
-  if (planner_type == kFixedDevice ||
-      planner_type == kRoundRobin ||
-      planner_type == kFixedDeviceGlobalQueue) {
+  if (planner_type_ == kFixedDevice ||
+      planner_type_ == kRoundRobin ||
+      planner_type_ == kFixedDeviceGlobalQueue) {
     splitted_op_range.push_back(SubgraphKey(model_id, device_flag, 0, num_ops - 1));
     return;
   }
