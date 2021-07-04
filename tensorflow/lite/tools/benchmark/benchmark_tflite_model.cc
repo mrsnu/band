@@ -37,6 +37,7 @@ limitations under the License.
 #include "tensorflow/lite/op_resolver.h"
 #include "tensorflow/lite/profiling/platform_profiler.h"
 #include "tensorflow/lite/profiling/profile_summary_formatter.h"
+#include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/string_util.h"
 #include "tensorflow/lite/tools/benchmark/profiling_listener.h"
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
@@ -519,14 +520,14 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                                        runtime_config_.model_profile);
     // convert the model name strings to integer ids for the interpreter
     auto model_id_profile =
-      ConvertModelNameToId(model_name_profile,
+      profiling::util::ConvertModelNameToId(model_name_profile,
                                             interpreter_->GetModelConfig());
     interpreter_->SetProfileDatabase(model_id_profile);
     interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
                           params_.Get<int32_t>("profile_num_runs"));
 
     // update the profile file to include all new profile results from this run
-    ConvertModelIdToName(interpreter_->GetProfileDatabase(),
+    profiling::util::ConvertModelIdToName(interpreter_->GetProfileDatabase(),
                                           model_name_profile,
                                           interpreter_->GetModelConfig());
     WriteJsonObjectToFile(model_name_profile, runtime_config_.model_profile);

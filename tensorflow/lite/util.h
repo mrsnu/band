@@ -109,20 +109,6 @@ int GetModelId(std::string model_name,
 std::string GetModelName(int model_id,
                          std::map<int, ModelConfig>& model_configs);
 
-using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
-
-// Convert model name strings to integer ids for the given model profiles.
-// The return val can be given to the interpreter.
-ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
-                                          std::map<int, ModelConfig>& model_configs);
-
-// Convert model integer ids back to string-type names for model profiles.
-// This function does not erase entries in name_profile for models that were
-// not run during this benchmark run.
-void ConvertModelIdToName(const ModelDeviceToLatency id_profile,
-                          Json::Value& name_profile,
-                          std::map<int, ModelConfig>& model_configs);
-
 // https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
 inline bool FileExists(const std::string& name) {
   struct stat buffer;
