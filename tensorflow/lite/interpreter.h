@@ -33,6 +33,7 @@ limitations under the License.
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
+#include "tensorflow/lite/tensor_ring_buffer.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/planner/round_robin_planner.h"
@@ -455,22 +456,24 @@ class Interpreter {
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
-  void InvokeModelAsync(int model_id);
-  void InvokeModelAsync(Job request);
+  int InvokeModelAsync(int model_id, Tensors inputs = {});
+  int InvokeModelAsync(Job request, Tensors inputs = {});
 
   /// Invoke models with a batch size given by the model config.
   /// This method is an asychronous call.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
-  void InvokeModelsAsync();
-  void InvokeModelsAsync(std::vector<Job> requests);
+  std::vector<int> InvokeModelsAsync(std::vector<Tensors> inputs = {});
+  std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<Tensors> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
   /// Returns when all the requests are done.
   /// We assume InvokeModelsSync() and InvokeModelsAsync() are
   /// not called consecutively.
-  void InvokeModelsSync();
-  void InvokeModelsSync(std::vector<Job> requests);
+  void InvokeModelsSync(std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+  void InvokeModelsSync(std::vector<Job> requests, std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+
+  TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
   /// Set the number of threads available to the interpreter.
   ///
@@ -725,6 +728,7 @@ class Interpreter {
   }
 
  private:
+  friend class Worker;
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
@@ -796,6 +800,9 @@ class Interpreter {
 
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
+
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffer;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffer;
 
   TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
