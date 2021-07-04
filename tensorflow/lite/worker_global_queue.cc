@@ -135,30 +135,34 @@ void GlobalQueueWorker::Work() {
         }
       }
 
-      lock.lock();
-      current_job_.invoke_time = profiling::time::NowMicros();
-      lock.unlock();
+      if (CopyInputTensors(current_job_) == kTfLiteOk) {
+        lock.lock();
+        current_job_.invoke_time = profiling::time::NowMicros();
+        lock.unlock();
 
-      if (subgraph.Invoke() == kTfLiteOk) {
-        // end_time is never read/written by any other thread as long as
-        // is_busy == true, so it's safe to update it w/o grabbing the lock
-        current_job_.end_time = profiling::time::NowMicros();
-        interpreter_ptr->UpdateProfileResult(
-            subgraph.GetKey(),
-            (current_job_.end_time - current_job_.invoke_time));
-        // TODO #65: Tensor communications between subgraphs
-        interpreter_ptr->InvokeModelsAsync(current_job_.following_jobs);
-        planner_ptr->EnqueueFinishedJob(current_job_);
-
+        if (subgraph.Invoke() == kTfLiteOk) {
+          // end_time is never read/written by any other thread as long as
+          // is_busy == true, so it's safe to update it w/o grabbing the lock
+          current_job_.end_time = profiling::time::NowMicros();
+          interpreter_ptr->UpdateProfileResult(
+              subgraph.GetKey(),
+              (current_job_.end_time - current_job_.invoke_time));
+          // TODO #65: Tensor communications between subgraphs
+          interpreter_ptr->InvokeModelsAsync(current_job_.following_jobs);
+          CopyOutputTensors(current_job_);
+        } else {
+          // end_time is never read/written by any other thread as long as
+          // is_busy == true, so it's safe to update it w/o grabbing the lock
+          current_job_.end_time = profiling::time::NowMicros();
+          // TODO #21: Handle errors in multi-thread environment
+          current_job_.status = kTfLiteJobInvokeFailure;
+        }
       } else {
-        // end_time is never read/written by any other thread as long as
-        // is_busy == true, so it's safe to update it w/o grabbing the lock
-        current_job_.end_time = profiling::time::NowMicros();
+        TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
-        // Currently, put a job with a minus sign if Invoke() fails.
-        // Model 0 fail --> Job(-1), Model 1 fail --> Job(-2), ...
-        planner_ptr->EnqueueFinishedJob(Job(-1 * current_job_.model_id - 1));
+        current_job_.status = kTfLiteJobInputCopyFailure;
       }
+      planner_ptr->EnqueueFinishedJob(current_job_);
 
       lock.lock();
       is_busy_ = false;

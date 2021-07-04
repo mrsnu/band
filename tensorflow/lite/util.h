@@ -65,6 +65,13 @@ struct SubgraphKey {
 
 using Tensors = std::vector<TfLiteTensor*>;
 
+enum JobStatus {
+  kTfLiteJobSuccess,
+  kTfLiteJobSLOViolation,
+  kTfLiteJobInputCopyFailure,
+  kTfLiteJobOutputCopyFailure,
+  kTfLiteJobInvokeFailure
+};
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
 // and the start/end indices.
@@ -87,7 +94,7 @@ struct Job {
   int output_handle = -1;
   int job_id = -1;
   int sched_id = -1;
-  bool slo_violated = false;
+  JobStatus status = kTfLiteJobSuccess;
   bool is_final_subgraph = true;
   std::string model_fname;
 
