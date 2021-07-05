@@ -17,8 +17,8 @@ class TensorRingBuffer {
 
   int Alloc();
   bool IsValid(int handle) const;
-  TfLiteStatus Get(Tensors& dst_tensors, int handle) const;
-  TfLiteStatus Put(const Tensors& src_tensors, int handle);
+  TfLiteStatus GetTensorsFromHandle(Tensors& dst_tensors, int handle) const;
+  TfLiteStatus PutTensorsToHandle(const Tensors& src_tensors, int handle);
 
  private:
   int GetIndex(int handle) const;

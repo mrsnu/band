@@ -22,8 +22,7 @@ TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
 TensorRingBuffer::~TensorRingBuffer() {
   for (size_t i = 0; i < size_; i++) {
     for (size_t j = 0; j < tensors_[i].size(); j++) {
-      TfLiteTensorFree(tensors_[i][j]);
-      free(tensors_[i][j]);
+      TfLiteTensorDelete(tensors_[i][j]);
     }
   }
 
@@ -39,7 +38,7 @@ bool TensorRingBuffer::IsValid(int handle) const {
   return (handle >= 0) && (head_ - size_ <= handle) && (handle < head_);
 }
 
-TfLiteStatus TensorRingBuffer::Get(Tensors& dst_tensors, int handle) const {
+TfLiteStatus TensorRingBuffer::GetTensorsFromHandle(Tensors& dst_tensors, int handle) const {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
@@ -49,7 +48,7 @@ TfLiteStatus TensorRingBuffer::Get(Tensors& dst_tensors, int handle) const {
   return CopyTensors(tensors_[GetIndex(handle)], dst_tensors);
 }
 
-TfLiteStatus TensorRingBuffer::Put(const Tensors& src_tensors,
+TfLiteStatus TensorRingBuffer::PutTensorsToHandle(const Tensors& src_tensors,
                                    int handle) {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsValid(handle)) {

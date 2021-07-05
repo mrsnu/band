@@ -443,7 +443,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
       int input_handle = model_input_buffer[request.model_id]->Alloc();
-      model_input_buffer[request.model_id]->Put(inputs[i], input_handle);
+      model_input_buffer[request.model_id]->PutTensorsToHandle(inputs[i], input_handle);
       request.input_handle = input_handle;
       request.output_handle = model_output_buffer[request.model_id]->Alloc();
     }
@@ -483,7 +483,7 @@ TfLiteStatus Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
   }
 
   return model_output_buffer.at(job->model_id)
-      ->Get(outputs, job->output_handle);
+      ->GetTensorsFromHandle(outputs, job->output_handle);
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,

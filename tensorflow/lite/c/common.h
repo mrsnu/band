@@ -496,11 +496,18 @@ typedef struct TfLiteTensor {
 
 #ifndef TF_LITE_STATIC_MEMORY
 
+// Allocate new TfLiteTensor.
+TfLiteTensor* TfLiteTensorCreate();
+
+// Free memory of tensor `t` and tensor memory itself.
+void TfLiteTensorDelete(TfLiteTensor* t);
+
 // Copy data from src tensor to dst tensor. The dimensions should be equal. 
 TfLiteStatus TfLiteTensorDataCopy(const TfLiteTensor* src, TfLiteTensor* dst);
 
 // Copy the tensor. Note that the memory area for the new TfLiteTensor is allocated inside.
 TfLiteTensor* TfLiteTensorCopy(const TfLiteTensor* src);
+
 // Free data memory of tensor `t`.
 void TfLiteTensorDataFree(TfLiteTensor* t);
 

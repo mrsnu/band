@@ -137,6 +137,17 @@ void TfLiteSparsityFree(TfLiteSparsity* sparsity) {
   free(sparsity);
 }
 
+TfLiteTensor* TfLiteTensorCreate() {
+  // Requires zero initialization to avoid invalid free from reset.
+  return (TfLiteTensor*)calloc(1, sizeof(TfLiteTensor));
+}
+
+void TfLiteTensorDelete(TfLiteTensor* t) {
+  if (!t) return;
+  TfLiteTensorFree(t);
+  free(t);
+}
+
 TfLiteStatus TfLiteTensorDataCopy(const TfLiteTensor* src, TfLiteTensor* dst) {
   if (!src || !dst) return kTfLiteError;
   if (!TfLiteIntArrayEqual(src->dims, dst->dims)) return kTfLiteError;
@@ -146,8 +157,7 @@ TfLiteStatus TfLiteTensorDataCopy(const TfLiteTensor* src, TfLiteTensor* dst) {
 
 TfLiteTensor* TfLiteTensorCopy(const TfLiteTensor* src) {
   if (!src) return NULL;
-  // Requires zero initialization to avoid invalid free from reset.
-  TfLiteTensor* ret = (TfLiteTensor*)calloc(1, sizeof(TfLiteTensor));
+  TfLiteTensor* ret = TfLiteTensorCreate();
   TfLiteIntArray* dims = TfLiteIntArrayCopy(src->dims);
   TfLiteTensorReset(src->type, src->name, dims,
                     src->params, NULL, NULL, kTfLiteDynamic, NULL,
