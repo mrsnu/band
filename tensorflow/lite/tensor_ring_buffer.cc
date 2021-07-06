@@ -44,7 +44,6 @@ TfLiteStatus TensorRingBuffer::GetTensorsFromHandle(Tensors& dst_tensors, int ha
     TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
     return kTfLiteError;
   }
-  
   return CopyTensors(tensors_[GetIndex(handle)], dst_tensors);
 }
 
