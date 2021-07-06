@@ -704,6 +704,11 @@ class Interpreter {
     profile_database_ = profile_database;
   }
 
+  profiling::util::ModelDeviceToLatency GetProfileDatabase() {
+    return profile_database_;
+  }
+>>>>>>> e00a984... [refactoring] util for profiling (#103)
+
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
   int GetWindowSize() const;

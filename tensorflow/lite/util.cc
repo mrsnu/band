@@ -35,7 +35,7 @@ TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
 }  // namespace
 
 int GetModelId(std::string model_name,
-               std::map<int, ModelConfig>& model_configs) {
+               const std::map<int, ModelConfig>& model_configs) {
   auto target = std::find_if(model_configs.begin(),
                              model_configs.end(),
                              [model_name](auto const& x) {
@@ -48,7 +48,7 @@ int GetModelId(std::string model_name,
 }
 
 std::string GetModelName(int model_id,
-                         std::map<int, ModelConfig>& model_configs) {
+                         const std::map<int, ModelConfig>& model_configs) {
   auto target = std::find_if(model_configs.begin(),
                              model_configs.end(),
                              [model_id](auto const& x) {
@@ -71,7 +71,8 @@ Json::Value LoadJsonObjectFromFile(std::string file_path) {
   return json_object;
 }
 
-void WriteJsonObjectToFile(Json::Value& json_object, std::string file_path) {
+void WriteJsonObjectToFile(const Json::Value& json_object,
+                           std::string file_path) {
   if (FileExists(file_path)) {
     std::ofstream out_file(file_path, std::ios::out);
     out_file << json_object;
@@ -79,8 +80,6 @@ void WriteJsonObjectToFile(Json::Value& json_object, std::string file_path) {
     TFLITE_LOG(WARN) << "There is no such file: " << file_path;
   }
 }
-
-
 
 bool IsFlexOp(const char* custom_name) {
   return custom_name && strncmp(custom_name, kFlexCustomCodePrefix,

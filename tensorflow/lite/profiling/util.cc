@@ -70,9 +70,9 @@ ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
   return id_profile;
 }
 
-Json::Value ConvertModelIdToName(const ModelDeviceToLatency id_profile,
-                                 std::map<int, ModelConfig>& model_configs) {
-  Json::Value name_profile;
+void ConvertModelIdToName(const ModelDeviceToLatency id_profile,
+                          Json::Value& name_profile,
+                          std::map<int, ModelConfig>& model_configs) {
   for (auto& pair : id_profile) {
     SubgraphKey key = pair.first;
     int model_id = key.model_id;
@@ -92,7 +92,6 @@ Json::Value ConvertModelIdToName(const ModelDeviceToLatency id_profile,
     // the level-two key in the final json value
     name_profile[model_name][start_idx + "/" + end_idx][key.device_flag] = profiled_latency;
   }
-  return name_profile;
 }
 
 }  // namespace util
