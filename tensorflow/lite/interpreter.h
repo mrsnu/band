@@ -768,7 +768,7 @@ class Interpreter {
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_ = 0.1;
 
-  // Stores the profile reulsts
+  // Stores the profile results
   // When a subgraph key is given, returns the profile results in int64_t.
   profiling::util::ModelDeviceToLatency profile_database_;
 
