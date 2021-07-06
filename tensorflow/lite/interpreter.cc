@@ -31,7 +31,6 @@ limitations under the License.
 #include "tensorflow/lite/graph_info.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
-#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
@@ -117,11 +116,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
-#if defined(TFLITE_IS_MOBILE_PLATFORM)
-  TFLITE_LOG_PROD_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#else
-  TFLITE_LOG_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#endif
+  TFLITE_LOG(INFO) << "Initialized TensorFlow Lite runtime.";
 
   // Reserve some space for the tensors to avoid excessive resizing.
   for (int i = 0; i < kTfLiteMaxExternalContexts; ++i) {
@@ -667,8 +662,7 @@ void Interpreter::UpdateProfileResult(
       (1 - profile_smoothing_factor_) * prev_profile;
 }
 
-void Interpreter::Profile(const int num_warm_ups, const int num_runs,
-                          ModelDeviceToLatency& profiled) {
+void Interpreter::Profile(const int num_warm_ups, const int num_runs) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler timer;
@@ -679,8 +673,8 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
 
-    auto it = profiled.find(subgraph_key);
-    if (it != profiled.end()) {
+    auto it = profile_database_.find(subgraph_key);
+    if (it != profile_database_.end()) {
       // if an entry for this SubgraphKey exists in the profiled data,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
@@ -707,7 +701,7 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
       subgraph_profiling_results_map_[subgraph_key] = latency;
 
       // record the profiled latency for subsequent benchmark runs
-      profiled[subgraph_key] = latency;
+      profile_database_[subgraph_key] = latency;
 
       TFLITE_LOG(INFO) << "Profiling result\n"
                        << " model=" << subgraph_key.model_id

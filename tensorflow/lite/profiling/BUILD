@@ -87,6 +87,18 @@ cc_library(
 )
 
 cc_library(
+    name = "util",
+    srcs = ["util.cc"],
+    hdrs = ["util.h"],
+    copts = common_copts,
+    deps = [
+        "//tensorflow/lite:util",
+        "//tensorflow/lite/tools:logging",
+        "@jsoncpp_git//:jsoncpp",
+    ],
+)
+
+cc_library(
     name = "memory_info",
     srcs = ["memory_info.cc"],
     hdrs = ["memory_info.h"],

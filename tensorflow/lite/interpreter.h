@@ -37,6 +37,7 @@ limitations under the License.
 #include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/planner/round_robin_planner.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -533,10 +534,7 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
-
-  void Profile(const int num_warm_ups, const int num_runs,
-               ModelDeviceToLatency& profiled);
+  void Profile(const int num_warm_ups, const int num_runs);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
@@ -692,6 +690,14 @@ class Interpreter {
     profile_smoothing_factor_ = profile_smoothing_factor;
   }
 
+  // You can set profile data from the previous runs if you have any.
+  void SetProfileDatabase(profiling::util::ModelDeviceToLatency profile_database) {
+    profile_database_ = profile_database;
+  }
+
+  profiling::util::ModelDeviceToLatency GetProfileDatabase() {
+    return profile_database_;
+  }
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
@@ -761,6 +767,10 @@ class Interpreter {
   // Smoothing constant to update profile result.
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_ = 0.1;
+
+  // Stores the profile results
+  // When a subgraph key is given, returns the profile results in int64_t.
+  profiling::util::ModelDeviceToLatency profile_database_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;

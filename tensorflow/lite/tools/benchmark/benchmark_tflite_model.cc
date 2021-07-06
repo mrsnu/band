@@ -23,7 +23,6 @@ limitations under the License.
 #include <memory>
 #include <random>
 #include <string>
-#include <sys/stat.h>
 #include <unordered_set>
 #include <vector>
 
@@ -38,6 +37,7 @@ limitations under the License.
 #include "tensorflow/lite/op_resolver.h"
 #include "tensorflow/lite/profiling/platform_profiler.h"
 #include "tensorflow/lite/profiling/profile_summary_formatter.h"
+#include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/string_util.h"
 #include "tensorflow/lite/tools/benchmark/profiling_listener.h"
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
@@ -52,7 +52,7 @@ void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 void ABSL_ATTRIBUTE_WEAK
 RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {}
 
-using tflite::impl::SubgraphKey;
+using tflite::SubgraphKey;
 
 namespace tflite {
 namespace benchmark {
@@ -121,12 +121,6 @@ CreateProfileSummaryFormatter(bool format_as_csv) {
   return format_as_csv
              ? std::make_shared<profiling::ProfileSummaryCSVFormatter>()
              : std::make_shared<profiling::ProfileSummaryDefaultFormatter>();
-}
-
-// https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
-inline bool FileExists(const std::string& name) {
-  struct stat buffer;
-  return stat(name.c_str(), &buffer) == 0;
 }
 
 }  // namespace
@@ -519,32 +513,24 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
     if (model_id == -1)
       return kTfLiteError;
-    model_name_to_id_[model_name] = model_id;
   }
 
   if (interpreter_->NeedProfile()) {
-    Json::Value model_name_profile;
-
-    // load data from the given model profile file
-    // if there is no such file, then `model_name_profile` will be empty
-    if (FileExists(runtime_config_.model_profile)) {
-      std::ifstream model_profile_file(runtime_config_.model_profile,
-                                       std::ifstream::binary);
-      model_profile_file >> model_name_profile;
-    }
-
+    Json::Value model_name_profile = LoadJsonObjectFromFile(
+                                       runtime_config_.model_profile);
     // convert the model name strings to integer ids for the interpreter
-    auto model_id_profile = ConvertModelNameToId(model_name_profile);
+    auto model_id_profile =
+      profiling::util::ConvertModelNameToId(model_name_profile,
+                                            interpreter_->GetModelConfig());
+    interpreter_->SetProfileDatabase(model_id_profile);
     interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
-                          params_.Get<int32_t>("profile_num_runs"),
-                          model_id_profile);
+                          params_.Get<int32_t>("profile_num_runs"));
 
     // update the profile file to include all new profile results from this run
-    if (!runtime_config_.model_profile.empty()) {
-      ConvertModelIdToName(model_id_profile, model_name_profile);
-      std::ofstream out_file(runtime_config_.model_profile, std::ios::out);
-      out_file << model_name_profile;
-    }
+    profiling::util::ConvertModelIdToName(interpreter_->GetProfileDatabase(),
+                                          model_name_profile,
+                                          interpreter_->GetModelConfig());
+    WriteJsonObjectToFile(model_name_profile, runtime_config_.model_profile);
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
@@ -668,86 +654,6 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
       params_.Get<std::string>("profiling_output_csv_file"),
       CreateProfileSummaryFormatter(
           !params_.Get<std::string>("profiling_output_csv_file").empty())));
-}
-
-Interpreter::ModelDeviceToLatency
-BenchmarkTfLiteModel::ConvertModelNameToId(const Json::Value name_profile) {
-  Interpreter::ModelDeviceToLatency id_profile;
-  for (auto name_profile_it = name_profile.begin();
-       name_profile_it != name_profile.end(); ++name_profile_it) {
-    std::string model_name = name_profile_it.key().asString();
-
-    // check the integer id of this model name
-    auto name_to_id_it = model_name_to_id_.find(model_name);
-    if (name_to_id_it == model_name_to_id_.end()) {
-      // we're not interested in this model for this run
-      continue;
-    }
-    int model_id = name_to_id_it->second;
-
-    const Json::Value idx_profile = *name_profile_it;
-    for (auto idx_profile_it = idx_profile.begin();
-         idx_profile_it != idx_profile.end(); ++idx_profile_it) {
-      std::string idx = idx_profile_it.key().asString();
-
-      // parse the key to retrieve start/end indices
-      // e.g., "25/50" --> delim_pos = 2
-      auto delim_pos = idx.find("/");
-      std::string start_idx = idx.substr(0, delim_pos);
-      std::string end_idx = idx.substr(delim_pos + 1, idx.length() - delim_pos - 1);
-      
-      const Json::Value device_profile = *idx_profile_it;
-      for (auto device_profile_it = device_profile.begin();
-           device_profile_it != device_profile.end();
-           ++device_profile_it) {
-        int device_id = device_profile_it.key().asInt();
-        TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-        int64_t profiled_latency = (*device_profile_it).asInt64();
-
-        if (profiled_latency <= 0) {
-          // jsoncpp treats missing values (null) as zero,
-          // so they will be filtered out here
-          continue;
-        }
-
-        SubgraphKey key(model_id, device_flag,
-                        std::stoi(start_idx), std::stoi(end_idx));
-        id_profile[key] = profiled_latency;
-      }
-    }
-  }
-  return id_profile;
-}
-
-void BenchmarkTfLiteModel::ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
-                                                Json::Value& name_profile) {
-  for (auto& pair : id_profile) {
-    SubgraphKey key = pair.first;
-    int model_id = key.model_id;
-    std::string start_idx = std::to_string(key.start_idx);
-    std::string end_idx = std::to_string(key.end_idx);
-    int64_t profiled_latency = pair.second;
-
-    // check the string name of this model id
-    std::string model_name;
-    for (auto& name_id_pair : model_name_to_id_) {
-      if (name_id_pair.second == key.model_id) {
-        model_name = name_id_pair.first;
-        break;
-      }
-    }
-
-    if (model_name.empty()) {
-      TFLITE_LOG(WARN) << "Cannot find model #" << model_id
-                       << " in model_name_to_id_. Will ignore.";
-      continue;
-    }
-
-    // copy all entries in id_profile --> name_profile
-    // as an ad-hoc method, we simply concat the start/end indices to form
-    // the level-two key in the final json value
-    name_profile[model_name][start_idx + "/" + end_idx][key.device_flag] = profiled_latency;
-  }
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }

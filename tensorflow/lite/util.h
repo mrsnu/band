@@ -21,14 +21,47 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_UTIL_H_
 #define TENSORFLOW_LITE_UTIL_H_
 
+#include <sys/stat.h>
+#include <json/json.h>
+
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 #include <map>
+#include <fstream>
 
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
+// data structure for identifying subgraphs within whole models
+struct SubgraphKey {
+  SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
+              int start = -1, int end = -1)
+      : model_id(model_id), device_flag(device_flag),
+        start_idx(start), end_idx(end) {}
+
+  bool operator<(const SubgraphKey &key) const {
+    if (model_id != key.model_id) {
+      return model_id < key.model_id;
+    }
+
+    if (device_flag != key.device_flag) {
+      return device_flag < key.device_flag;
+    }
+
+    if (start_idx != key.start_idx) {
+      return start_idx < key.start_idx;
+    }
+
+    return end_idx < key.end_idx;
+  }
+
+  int model_id;
+  TfLiteDeviceFlags device_flag;
+  int start_idx;
+  int end_idx;
+};
 
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
@@ -66,6 +99,30 @@ struct ModelConfig {
   int64_t slo_us = -1;
   float slo_scale = -1.f;
 };
+
+// Find model id from model name.
+// If the model name is not found, return -1.
+int GetModelId(std::string model_name,
+               const std::map<int, ModelConfig>& model_configs);
+
+// Find model name from model id.
+// If the model id is not found, return an empty string.
+std::string GetModelName(int model_id,
+                         const std::map<int, ModelConfig>& model_configs);
+
+// https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
+inline bool FileExists(const std::string& name) {
+  struct stat buffer;
+  return stat(name.c_str(), &buffer) == 0;
+}
+
+// load data from the given file
+// if there is no such file, then the json object will be empty
+Json::Value LoadJsonObjectFromFile(std::string file_path);
+
+// Write json object.
+void WriteJsonObjectToFile(const Json::Value& json_object,
+                           std::string file_path);
 
 // The prefix of Flex op custom code.
 // This will be matched agains the `custom_code` field in `OperatorCode`
