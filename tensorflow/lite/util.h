@@ -30,7 +30,6 @@ limitations under the License.
 
 namespace tflite {
 
-using TensorUniquePtr = std::unique_ptr<TfLiteTensor, void (*)(TfLiteTensor*)>;
 using Tensors = std::vector<TfLiteTensor*>;
 
 // Job struct is the scheduling and executing unit.

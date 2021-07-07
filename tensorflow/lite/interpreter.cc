@@ -442,10 +442,10 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     assert(inputs.size() == requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
-      int input_handle = model_input_buffer[request.model_id]->Alloc();
-      model_input_buffer[request.model_id]->PutTensorsToHandle(inputs[i], input_handle);
+      int input_handle = model_input_buffer_[request.model_id]->Alloc();
+      model_input_buffer_[request.model_id]->PutTensorsToHandle(inputs[i], input_handle);
       request.input_handle = input_handle;
-      request.output_handle = model_output_buffer[request.model_id]->Alloc();
+      request.output_handle = model_output_buffer_[request.model_id]->Alloc();
     }
   }
 
@@ -477,12 +477,12 @@ TfLiteStatus Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
     return kTfLiteOk;
   }
 
-  if (model_output_buffer.find(job->model_id) == model_output_buffer.end()) {
+  if (model_output_buffer_.find(job->model_id) == model_output_buffer_.end()) {
     error_reporter_->Report("Invalid model_id : %d", job->model_id);
     return kTfLiteError;
   }
 
-  return model_output_buffer.at(job->model_id)
+  return model_output_buffer_.at(job->model_id)
       ->GetTensorsFromHandle(outputs, job->output_handle);
 }
 
@@ -1045,8 +1045,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     output_tensors.push_back(primary_subgraph->tensor(output_tensor));
   }
 
-  model_input_buffer.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
-  model_output_buffer.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, output_tensors));
+  model_input_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
+  model_output_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, output_tensors));
 
   // check input/output/intermediate tensors to fill in
   // model_spec.output_tensors and model_spec.tensor_types

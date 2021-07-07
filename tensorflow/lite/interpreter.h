@@ -801,8 +801,8 @@ class Interpreter {
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
 
-  std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffer;
-  std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffer;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffer_;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
 
   TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.

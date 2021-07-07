@@ -32,4 +32,4 @@ class TensorRingBuffer {
 };
 }  // namespace tflite
 
-#endif TENSORFLOW_LITE_RING_BUFFER_H_
+#endif TENSORFLOW_LITE_TENSOR_RING_BUFFER_H_
