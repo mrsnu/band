@@ -542,7 +542,6 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                                           model_name_profile,
                                           interpreter_->GetModelConfig());
     WriteJsonObjectToFile(model_name_profile, runtime_config_.model_profile);
->>>>>>> e00a984... [refactoring] util for profiling (#103)
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
