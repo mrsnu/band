@@ -17,51 +17,54 @@ limitations under the License.
 #define TENSORFLOW_LITE_CONFIG_H_
 
 #include <string>
+#include <vector>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
 
 namespace tflite {
-  struct ProfileConfig {
-    int num_warmups = 3;
-    int num_runs = 50;
-  };
+struct ProfileConfig {
+  int num_warmups = 3;
+  int num_runs = 50;
+};
 
-  struct InterpreterConfig {
-    std::string profile_data_path;
-    ProfileConfig profile_config;
-    float profile_smoothing_factor = 0.1;
-    impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
-  };
+struct InterpreterConfig {
+  std::string profile_data_path;
+  ProfileConfig profile_config;
+  float profile_smoothing_factor = 0.1;
+  impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
+};
 
-  struct PlannerConfig {
-    TfLitePlannerType planner_type = kFixedDevice;
-    std::string log_path;
-    int schedule_window_size = INT_MAX;
-  };
+struct PlannerConfig {
+  TfLitePlannerType planner_type = kFixedDevice;
+  std::string log_path;
+  int schedule_window_size = INT_MAX;
+};
 
-  struct WorkerConfig {
-    WorkerConfig() {
-      // To avoid kTfLiteNumDevices dependent initialization
-      for (int i = 0; i < kTfLiteNumDevices; i++) {
-        cpu_masks[i] = impl::kTfLiteNumCpuMasks;
-      }
+struct WorkerConfig {
+  WorkerConfig() {
+    for (int i = 0; i < kTfLiteNumDevices; i++) {
+      cpu_masks[i] = impl::kTfLiteNumCpuMasks;
     }
-    impl::TfLiteCPUMaskFlags cpu_masks[kTfLiteNumDevices];
-    bool allow_worksteal = false;
-  };
+  }
+  impl::TfLiteCPUMaskFlags cpu_masks[kTfLiteNumDevices];
+  bool allow_worksteal = false;
+};
 
 
-  struct RuntimeConfig {
-    InterpreterConfig interpreter_config;
-    PlannerConfig planner_config;
-    WorkerConfig worker_config;
-  };
+struct RuntimeConfig {
+  InterpreterConfig interpreter_config;
+  PlannerConfig planner_config;
+  WorkerConfig worker_config;
+};
 
-  TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
-                                          RuntimeConfig* runtime_config);
+// Parse runtime config from a json file path
+TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
+                                        RuntimeConfig* runtime_config);
 
+// Check if the keys exist in the config
+TfLiteStatus ValidateJsonConfig(const Json::Value& json_config,
+                                std::vector<std::string> keys);
 }  // namespace tflite
-
 #endif  // TENSORFLOW_LITE_CONFIG_H_

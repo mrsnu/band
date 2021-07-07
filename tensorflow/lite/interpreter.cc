@@ -289,7 +289,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
     num_warmups_ = config.profile_config.num_warmups;
     num_runs_ = config.profile_config.num_runs;
 
-    TFLITE_LOG(INFO) << "Set Profiling Configuration: "
+    TFLITE_LOG(INFO) << "Set Profiling Configuration:"
                      << " warmup=" << num_warmups_
                      << " count=" << num_runs_;
   }
