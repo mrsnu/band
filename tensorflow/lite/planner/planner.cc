@@ -97,35 +97,30 @@ void Planner::EnqueueFinishedJob(Job job) {
   end_invoke_.notify_one();
 }
 
-void Planner::EnqueueRequest(Job job) {
-  if (job.enqueue_time == 0) {
-    // job.enqueue_time may already be set if this model contains a fallback
-    // op, in which case we do not overwrite the set value
-    job.enqueue_time = profiling::time::NowMicros();
-  }
-  std::unique_lock<std::mutex> lock(requests_mtx_);
-  requests_.push_back(job);
-  num_submitted_jobs_++;
-  lock.unlock();
+int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
 
-  planner_safe_bool_.notify();
-}
-
-void Planner::EnqueueBatch(std::vector<Job> jobs) {
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool is_continuous) {
+  std::vector<int> job_ids(jobs.size());
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
-  for (Job job : jobs) {
+  for (int i = 0; i < jobs.size();  i++) {
+    Job job = jobs[i];
     if (job.enqueue_time == 0) {
       // job.enqueue_time may already be set if this model contains a fallback
       // op, in which case we do not overwrite the set value
       job.enqueue_time = enqueue_time;
     }
+    if (!is_continuous) {
+      job.job_id = num_total_submitted_jobs_++;
+    }
+    job_ids[i] = job.job_id;
     requests_.push_back(job);
-    num_submitted_jobs_++;
   }
   lock.unlock();
 
   planner_safe_bool_.notify();
+
+  return job_ids;
 }
 
 }  // namespace impl

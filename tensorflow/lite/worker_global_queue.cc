@@ -148,7 +148,7 @@ void GlobalQueueWorker::Work() {
               subgraph.GetKey(),
               (current_job_.end_time - current_job_.invoke_time));
           // TODO #65: Tensor communications between subgraphs
-          interpreter_ptr->InvokeModelsAsync(current_job_.following_jobs);
+          planner_ptr->EnqueueBatch(current_job_.following_jobs, true);
           CopyOutputTensors(current_job_);
         } else {
           // end_time is never read/written by any other thread as long as

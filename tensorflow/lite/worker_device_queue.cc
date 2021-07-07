@@ -101,7 +101,7 @@ void DeviceQueueWorker::Work() {
               subgraph.GetKey(),
               (job.end_time - job.invoke_time));
           // TODO #65: Tensor communications between subgraphs
-          interpreter_ptr->InvokeModelsAsync(job.following_jobs);
+          planner_ptr->EnqueueBatch(job.following_jobs, true);
           CopyOutputTensors(job);
         } else {
           job.end_time = profiling::time::NowMicros();
