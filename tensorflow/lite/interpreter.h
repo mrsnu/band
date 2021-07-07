@@ -788,7 +788,7 @@ class Interpreter {
   // will be updated at the end of the run.
   std::string profile_data_path_;
 
-  // Stores the profile reulsts
+  // Stores the profile results
   // When a subgraph key is given, returns the profile results in int64_t.
   profiling::util::ModelDeviceToLatency profile_database_;
 
