@@ -406,7 +406,7 @@ int Interpreter::InvokeModelAsync(int model_id, Tensors inputs) {
  
 int Interpreter::InvokeModelAsync(Job request, Tensors inputs) {
   std::vector<int> job_ids = InvokeModelsAsync({request}, {inputs});
-  return job_ids.size() > 0 ? job_ids[0] : -1;
+  return job_ids.size() == 1 ? job_ids[0] : -1;
 }
 
 std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Tensors> inputs) {
