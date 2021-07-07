@@ -438,18 +438,36 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     request.slo_us = model_config.slo_us;
   }
 
+  std::vector<Job> valid_requests;
+  std::vector<bool> valid_requests_masks(requests.size(), true);
+
   if (inputs.size() > 0) {
     assert(inputs.size() == requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
       int input_handle = model_input_buffer_[request.model_id]->Alloc();
-      model_input_buffer_[request.model_id]->PutTensorsToHandle(inputs[i], input_handle);
-      request.input_handle = input_handle;
-      request.output_handle = model_output_buffer_[request.model_id]->Alloc();
+      if (model_input_buffer_[request.model_id]->PutTensorsToHandle(
+              inputs[i], input_handle) == kTfLiteOk) {
+        request.input_handle = input_handle;
+        request.output_handle = model_output_buffer_[request.model_id]->Alloc();
+        valid_requests.push_back(std::move(request));
+      } else {
+        valid_requests_masks[i] = false;
+      }
     }
   }
 
-  return planner_->EnqueueBatch(requests);
+  std::vector<int> job_ids(requests.size(), -1);
+  std::vector<int> valid_job_ids = planner_->EnqueueBatch(valid_requests);
+
+  int valid_index = 0;
+  for (size_t i = 0; i < requests.size(); i++) {
+    if (valid_requests_masks[i]) {
+      job_ids[i] = valid_job_ids[valid_index++];
+    }
+  }
+  
+  return job_ids;
 }
 
 void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs, std::vector<Tensors> outputs) {
