@@ -21,14 +21,15 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_UTIL_H_
 #define TENSORFLOW_LITE_UTIL_H_
 
+#include <sys/stat.h>
+#include <json/json.h>
+
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 #include <map>
 #include <fstream>
-#include <sys/stat.h>
-#include <json/json.h>
 
 #include "tensorflow/lite/c/common.h"
 
@@ -102,12 +103,12 @@ struct ModelConfig {
 // Find model id from model name.
 // If the model name is not found, return -1.
 int GetModelId(std::string model_name,
-               std::map<int, ModelConfig>& model_configs);
+               const std::map<int, ModelConfig>& model_configs);
 
 // Find model name from model id.
 // If the model id is not found, return an empty string.
 std::string GetModelName(int model_id,
-                         std::map<int, ModelConfig>& model_configs);
+                         const std::map<int, ModelConfig>& model_configs);
 
 // https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
 inline bool FileExists(const std::string& name) {
@@ -120,7 +121,8 @@ inline bool FileExists(const std::string& name) {
 Json::Value LoadJsonObjectFromFile(std::string file_path);
 
 // Write json object.
-void WriteJsonObjectToFile(Json::Value& json_object, std::string file_path);
+void WriteJsonObjectToFile(const Json::Value& json_object,
+                           std::string file_path);
 
 // The prefix of Flex op custom code.
 // This will be matched agains the `custom_code` field in `OperatorCode`

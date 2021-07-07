@@ -34,8 +34,9 @@ ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
 // Convert model integer ids back to string-type names for model profiles.
 // This function does not erase entries in name_profile for models that were
 // not run during this benchmark run.
-Json::Value ConvertModelIdToName(const ModelDeviceToLatency id_profile,
-                                 std::map<int, ModelConfig>& model_configs);
+void ConvertModelIdToName(const ModelDeviceToLatency id_profile,
+                          Json::Value& name_profile,
+                          std::map<int, ModelConfig>& model_configs);
 }  // namespace util
 }  // namespace profiling
 }  // namespace tflite
