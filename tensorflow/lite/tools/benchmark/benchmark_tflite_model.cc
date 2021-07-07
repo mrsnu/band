@@ -52,8 +52,6 @@ void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 void ABSL_ATTRIBUTE_WEAK
 RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {}
 
-using tflite::SubgraphKey;
-
 namespace tflite {
 namespace benchmark {
 namespace {
@@ -504,6 +502,19 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
                      << " cores";
   }
 
+  if (interpreter_->NeedProfile()) {
+    interpreter_->SetProfileDataPath(runtime_config_.model_profile);
+    Json::Value model_name_profile = LoadJsonObjectFromFile(
+                                       runtime_config_.model_profile);
+    // convert the model name strings to integer ids for the interpreter
+    auto model_id_profile =
+      profiling::util::ConvertModelNameToId(model_name_profile,
+                                            interpreter_->GetModelConfig());
+    interpreter_->SetProfileDatabase(model_id_profile);
+    interpreter_->SetProfileConfig(params_.Get<int32_t>("profile_warmup_runs"),
+                                   params_.Get<int32_t>("profile_num_runs"));
+  }
+
   auto& model_information = runtime_config_.model_information;
   for (int i = 0; i < model_information.size(); ++i) {
     std::string model_name = model_information[i].config.model_fname;
@@ -513,24 +524,6 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
     if (model_id == -1)
       return kTfLiteError;
-  }
-
-  if (interpreter_->NeedProfile()) {
-    Json::Value model_name_profile = LoadJsonObjectFromFile(
-                                       runtime_config_.model_profile);
-    // convert the model name strings to integer ids for the interpreter
-    auto model_id_profile =
-      profiling::util::ConvertModelNameToId(model_name_profile,
-                                            interpreter_->GetModelConfig());
-    interpreter_->SetProfileDatabase(model_id_profile);
-    interpreter_->Profile(params_.Get<int32_t>("profile_warmup_runs"),
-                          params_.Get<int32_t>("profile_num_runs"));
-
-    // update the profile file to include all new profile results from this run
-    profiling::util::ConvertModelIdToName(interpreter_->GetProfileDatabase(),
-                                          model_name_profile,
-                                          interpreter_->GetModelConfig());
-    WriteJsonObjectToFile(model_name_profile, runtime_config_.model_profile);
   }
 
   TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size()
