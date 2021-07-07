@@ -80,7 +80,7 @@ TfLiteStatus Worker::CopyInputTensors(const Job& job) {
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-  auto input_buffer = interpreter->model_input_buffer[job.model_id].get();
+  auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
   
   if (!input_buffer) {
     TFLITE_LOG(ERROR) << "No input buffer for model id " << job.model_id;
@@ -93,7 +93,7 @@ TfLiteStatus Worker::CopyInputTensors(const Job& job) {
     input_tensors[i] = subgraph->tensor(input_indices[i]);
   }
 
-  return input_buffer->Get(input_tensors, job.input_handle);
+  return input_buffer->GetTensorsFromHandle(input_tensors, job.input_handle);
 }
 
 TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
@@ -104,7 +104,7 @@ TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-  auto output_buffer = interpreter->model_output_buffer[job.model_id].get();
+  auto output_buffer = interpreter->model_output_buffer_[job.model_id].get();
   
   if (!output_buffer) {
     TFLITE_LOG(ERROR) << "No output buffer for model id " << job.model_id;
@@ -117,7 +117,7 @@ TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
     output_tensors[i] = subgraph->tensor(output_indices[i]);
   }
 
-  return output_buffer->Put(output_tensors, job.output_handle);
+  return output_buffer->PutTensorsToHandle(output_tensors, job.output_handle);
 }
 
 }  // namespace impl
