@@ -49,7 +49,8 @@ class Planner {
 
   // Enqueues a batch of jobs to a worker request queue.
   // Assigns new job id for non-continuous job.
-  std::vector<int> EnqueueBatch(std::vector<Job> jobs, bool is_continuous = false);
+  std::vector<int> EnqueueBatch(std::vector<Job> jobs,
+                                bool is_continuous = false);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
