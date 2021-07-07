@@ -52,7 +52,6 @@ void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
 void ABSL_ATTRIBUTE_WEAK
 RegisterSelectedOps(::tflite::MutableOpResolver* resolver) {}
 
-using tflite::SubgraphKey;
 
 namespace tflite {
 namespace benchmark {
