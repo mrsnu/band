@@ -74,7 +74,7 @@ struct BenchmarkConfig {
 };
 
 TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
-                                          BenchmarkConfig* benchmark_config);
+                                          BenchmarkConfig& benchmark_config);
 
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.

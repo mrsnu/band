@@ -61,7 +61,7 @@ struct RuntimeConfig {
 
 // Parse runtime config from a json file path
 TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
-                                        RuntimeConfig* runtime_config);
+                                        RuntimeConfig& runtime_config);
 
 // Check if the keys exist in the config
 TfLiteStatus ValidateJsonConfig(const Json::Value& json_config,

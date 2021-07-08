@@ -24,7 +24,7 @@ namespace tflite {
 // Note : program aborts when asX fails below
 // e.g., asInt, asCString, ...
 TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
-                                        RuntimeConfig* runtime_config) {
+                                        RuntimeConfig& runtime_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
   Json::Value root;
@@ -41,9 +41,9 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     return kTfLiteError;
   }
 
-  auto& interpreter_config = runtime_config->interpreter_config;
-  auto& planner_config = runtime_config->planner_config;
-  auto& worker_config = runtime_config->worker_config;
+  auto& interpreter_config = runtime_config.interpreter_config;
+  auto& planner_config = runtime_config.planner_config;
+  auto& worker_config = runtime_config.worker_config;
 
   // Set Interpreter Configs
   // 1. CPU mask

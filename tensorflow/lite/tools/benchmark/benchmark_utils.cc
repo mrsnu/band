@@ -165,7 +165,7 @@ TfLiteStatus PopulateInputLayerInfo(
 }
 
 TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
-                                          util::BenchmarkConfig* benchmark_config) {
+                                          util::BenchmarkConfig& benchmark_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
   Json::Value root;
@@ -176,21 +176,21 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
     return kTfLiteError;
   }
 
-  benchmark_config->execution_mode = root["execution_mode"].asString();
+  benchmark_config.execution_mode = root["execution_mode"].asString();
   if (!root["running_time_ms"].isNull()) {
-    benchmark_config->running_time_ms = root["running_time_ms"].asInt();
+    benchmark_config.running_time_ms = root["running_time_ms"].asInt();
   }
   if (!root["global_period_ms"].isNull()) {
-    benchmark_config->global_period_ms = root["global_period_ms"].asInt();
-    if (benchmark_config->global_period_ms <= 0) {
+    benchmark_config.global_period_ms = root["global_period_ms"].asInt();
+    if (benchmark_config.global_period_ms <= 0) {
       TFLITE_LOG(ERROR) << "Make sure `global_period_ms` > 0.";
       return kTfLiteError;
     }
   }
   if (!root["model_id_random_seed"].isNull()) {
-    benchmark_config->model_id_random_seed =
+    benchmark_config.model_id_random_seed =
       root["model_id_random_seed"].asUInt();
-    if (benchmark_config->model_id_random_seed == 0) {
+    if (benchmark_config.model_id_random_seed == 0) {
       TFLITE_LOG(WARN) << "Because `model_id_random_seed` == 0, the request "
                        << "generator thread will ignore the seed and use "
                        << "current timestamp as seed instead.";
@@ -248,10 +248,10 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
           &input_layer_info));
     }
 
-    benchmark_config->model_information.push_back({input_layer_info, model});
+    benchmark_config.model_information.push_back({input_layer_info, model});
   }
 
-  if (benchmark_config->model_information.size() == 0) {
+  if (benchmark_config.model_information.size() == 0) {
     TFLITE_LOG(ERROR) << "Please specify at list one model "
                       << "in `models` argument.";
     return kTfLiteError;
