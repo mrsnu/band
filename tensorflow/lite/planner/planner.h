@@ -7,6 +7,7 @@
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/config.h"
 
 namespace tflite {
 
@@ -31,6 +32,8 @@ class Planner {
  public:
   explicit Planner(Interpreter* interpreter);
   ~Planner();
+
+  TfLiteStatus Init(PlannerConfig& config);
 
 	/*
 	Derived classes should generally follow this template when implementing `Plan()`:
@@ -90,8 +93,6 @@ class Planner {
   int GetWindowSize() {
     return schedule_window_size_;
   }
-
-  void SetWindowSize(int schedule_window_size);
 
   void InitNumSubmittedJobs() {
     num_submitted_jobs_ = 0;

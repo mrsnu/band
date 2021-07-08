@@ -20,6 +20,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/config.h"
 
 namespace tflite {
 namespace benchmark {
@@ -44,7 +45,7 @@ std::vector<std::string> Split(const std::string& str, const char delim) {
   return results;
 }
 
-int FindLayerInfoIndex(std::vector<util::InputLayerInfo>* info,
+int FindLayerInfoIndex(std::vector<InputLayerInfo>* info,
                        const std::string& input_name,
                        const std::string& names_string) {
   for (int i = 0; i < info->size(); ++i) {
@@ -163,8 +164,8 @@ TfLiteStatus PopulateInputLayerInfo(
   return kTfLiteOk;
 }
 
-TfLiteStatus ParseJsonFile(std::string json_fname,
-                           RuntimeConfig* runtime_config) {
+TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
+                                          util::BenchmarkConfig& benchmark_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
   Json::Value root;
@@ -175,82 +176,26 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
     return kTfLiteError;
   }
 
-  // Note : program aborts when asX fails below
-  // e.g., asInt, asCString, ...
-
-  // Set Runtime Configurations
-  // Optional
-  if (!root["cpu_masks"].isNull()) {
-    runtime_config->cpu_masks =
-        impl::TfLiteCPUMaskGetMask(root["cpu_masks"].asCString());
-  }
-  if (!root["worker_cpu_masks"].isNull()) {
-    for (auto const& key : root["worker_cpu_masks"].getMemberNames()) {
-      size_t device_id = TfLiteDeviceGetFlag(key.c_str());
-      impl::TfLiteCPUMaskFlags flag =
-          impl::TfLiteCPUMaskGetMask(root["worker_cpu_masks"][key].asCString());
-      if (device_id < kTfLiteNumDevices && flag != impl::kTfLiteAll) {
-        runtime_config->worker_cpu_masks[device_id] = flag;
-      }
-    }
-  }
+  benchmark_config.execution_mode = root["execution_mode"].asString();
   if (!root["running_time_ms"].isNull()) {
-    runtime_config->running_time_ms = root["running_time_ms"].asInt();
-  }
-  if (!root["profile_smoothing_factor"].isNull()) {
-    runtime_config->profile_smoothing_factor =
-      root["profile_smoothing_factor"].asFloat();
-  }
-  if (!root["model_profile"].isNull()) {
-    runtime_config->model_profile = root["model_profile"].asString();
-  }
-  if (!root["allow_work_steal"].isNull()) {
-    runtime_config->allow_work_steal = root["allow_work_steal"].asBool();
-  }
-  if (!root["schedule_window_size"].isNull()) {
-    runtime_config->schedule_window_size = root["schedule_window_size"].asInt();
-    if (runtime_config->schedule_window_size <= 0) {
-      TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
-      return kTfLiteError;
-    }
+    benchmark_config.running_time_ms = root["running_time_ms"].asInt();
   }
   if (!root["global_period_ms"].isNull()) {
-    runtime_config->global_period_ms = root["global_period_ms"].asInt();
-    if (runtime_config->global_period_ms <= 0) {
+    benchmark_config.global_period_ms = root["global_period_ms"].asInt();
+    if (benchmark_config.global_period_ms <= 0) {
       TFLITE_LOG(ERROR) << "Make sure `global_period_ms` > 0.";
       return kTfLiteError;
     }
   }
   if (!root["model_id_random_seed"].isNull()) {
-    runtime_config->model_id_random_seed = root["model_id_random_seed"].asUInt();
-    if (runtime_config->model_id_random_seed == 0) {
+    benchmark_config.model_id_random_seed =
+      root["model_id_random_seed"].asUInt();
+    if (benchmark_config.model_id_random_seed == 0) {
       TFLITE_LOG(WARN) << "Because `model_id_random_seed` == 0, the request "
                        << "generator thread will ignore the seed and use "
                        << "current timestamp as seed instead.";
     }
   }
-
-  // Required
-  if (root["log_path"].isNull() ||
-      root["planner"].isNull() ||
-      root["execution_mode"].isNull() ||
-      root["models"].isNull()) {
-    TFLITE_LOG(ERROR) << "Please check if arguments `execution_mode`, "
-                      << "`log_path`, `planner` and `models`"
-                      << " are given in the config file.";
-    return kTfLiteError;
-  }
-
-  runtime_config->log_path = root["log_path"].asString();
-  runtime_config->execution_mode = root["execution_mode"].asString();
-
-  int planner_id = root["planner"].asInt();
-  if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
-    TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
-    return kTfLiteError;
-  }
-  runtime_config->planner_type = static_cast<TfLitePlannerType>(planner_id);
-
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
     std::vector<InputLayerInfo> input_layer_info;
@@ -303,16 +248,14 @@ TfLiteStatus ParseJsonFile(std::string json_fname,
           &input_layer_info));
     }
 
-    runtime_config->model_information.push_back({input_layer_info, model});
+    benchmark_config.model_information.push_back({input_layer_info, model});
   }
 
-  if (runtime_config->model_information.size() == 0) {
+  if (benchmark_config.model_information.size() == 0) {
     TFLITE_LOG(ERROR) << "Please specify at list one model "
                       << "in `models` argument.";
     return kTfLiteError;
   }
-
-  TFLITE_LOG(INFO) << root;
 
   return kTfLiteOk;
 }

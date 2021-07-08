@@ -155,9 +155,10 @@ BenchmarkTfLiteModel::BenchmarkTfLiteModel(BenchmarkParams params)
 void BenchmarkTfLiteModel::CleanUp() {
   // set this flag in case we had a abrupt shutdown
   kill_app_ = true;
-  for (int i = 0; i < runtime_config_.model_information.size(); i++) {
+  auto& model_information = benchmark_config_.model_information;
+  for (int i = 0; i < model_information.size(); i++) {
     // Free up any pre-allocated tensor data during PrepareInputData.
-    runtime_config_.model_information[i].input_tensor_data.clear();
+    model_information[i].input_tensor_data.clear();
   }
 }
 
@@ -228,7 +229,7 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
   TFLITE_TOOLS_CHECK(interpreter_);
   uint64_t total_input_bytes = 0;
   
-  for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
+  for (int i = 0; i < benchmark_config_.model_information.size(); ++i) {
     int subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
     for (int input : interpreter_->inputs(subgraph_index)) {
@@ -241,7 +242,7 @@ uint64_t BenchmarkTfLiteModel::ComputeInputBytes() {
 
 int64_t BenchmarkTfLiteModel::MayGetModelFileSize() {
   int64_t total_mem_size = 0;
-  auto& model_information = runtime_config_.model_information;
+  auto& model_information = benchmark_config_.model_information;
   for (int i = 0; i < model_information.size(); ++i) {
     std::ifstream in_file(model_information[i].config.model_fname,
                           std::ios::binary | std::ios::ate);
@@ -385,7 +386,8 @@ BenchmarkTfLiteModel::CreateRandomTensorData(const TfLiteTensor& t,
 TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
-  for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
+  auto& model_information = benchmark_config_.model_information;
+  for (int i = 0; i < model_information.size(); ++i) {
     // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
     // (i.e. the specified input layer info) has been checked in
     // BenchmarkTfLiteModel::Init() before calling this function. So, we simply
@@ -394,8 +396,8 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     auto subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
     auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-    auto& input_layer_infos = runtime_config_.model_information[i].input_layer_infos;
-    auto& input_tensor_data = runtime_config_.model_information[i].input_tensor_data;
+    auto& input_layer_infos = model_information[i].input_layer_infos;
+    auto& input_tensor_data = model_information[i].input_tensor_data;
     for (int j = 0; j < interpreter_inputs.size(); ++j) {
       int tensor_index = interpreter_inputs[j];
       const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
@@ -417,9 +419,11 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
-  for (int model_id = 0; model_id < runtime_config_.model_information.size(); ++model_id) {
-    auto& input_layer_infos = runtime_config_.model_information[model_id].input_layer_infos;
-    auto& input_tensor_data = runtime_config_.model_information[model_id].input_tensor_data;
+
+  auto& model_information = benchmark_config_.model_information;
+  for (int model_id = 0; model_id < model_information.size(); ++model_id) {
+    auto& input_layer_infos = model_information[model_id].input_layer_infos;
+    auto& input_tensor_data = model_information[model_id].input_tensor_data;
 
     // TODO: #73 share tensors across different subgraphs from same model
     for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
@@ -465,57 +469,9 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   (&interpreter_)->reset(
       new Interpreter(LoggingReporter::DefaultLoggingReporter(),
-                      runtime_config_.planner_type));
-  interpreter_->SetWindowSize(runtime_config_.schedule_window_size);
-  interpreter_->SetProfileSmoothingConstant(
-      runtime_config_.profile_smoothing_factor);
-  if (runtime_config_.allow_work_steal) {
-    interpreter_->AllowWorkSteal();
-  }
+                      runtime_config_));
 
-  // Set log file path and write log headers
-  TF_LITE_ENSURE_STATUS(interpreter_->PrepareLogging(runtime_config_.log_path));
-  const tflite::impl::TfLiteCPUMaskFlags cpu_mask = 
-      static_cast<tflite::impl::TfLiteCPUMaskFlags>(runtime_config_.cpu_masks);
-  auto cpu_mask_set = tflite::impl::TfLiteCPUMaskGetSet(cpu_mask);
-  TF_LITE_ENSURE_STATUS(SetCPUThreadAffinity(cpu_mask_set));
-
-  TFLITE_LOG(INFO) << "Set affinity to "
-      << tflite::impl::TfLiteCPUMaskGetName(cpu_mask)
-      << " cores";
-
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
-    const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    // Skip as workers are not always available
-    if (!interpreter_->GetWorker(device_id))
-      continue;
-    // Use global mask only if worker_mask is invalid
-    tflite::impl::TfLiteCPUMaskFlags worker_mask =
-        runtime_config_.worker_cpu_masks[i] == tflite::impl::kTfLiteNumCpuMasks ?
-        cpu_mask : runtime_config_.worker_cpu_masks[i];
-    const tflite::impl::CpuSet worker_mask_set = tflite::impl::TfLiteCPUMaskGetSet(worker_mask);
-    TF_LITE_ENSURE_STATUS(interpreter_->SetWorkerThreadAffinity(worker_mask_set, device_id));
-    TFLITE_LOG(INFO) << "Set affinity of "
-                     << TfLiteDeviceGetName(device_id)
-                     << " to "
-                     << tflite::impl::TfLiteCPUMaskGetName(worker_mask)
-                     << " cores";
-  }
-
-  if (interpreter_->NeedProfile()) {
-    interpreter_->SetProfileDataPath(runtime_config_.model_profile);
-    Json::Value model_name_profile = LoadJsonObjectFromFile(
-                                       runtime_config_.model_profile);
-    // convert the model name strings to integer ids for the interpreter
-    auto model_id_profile =
-      profiling::util::ConvertModelNameToId(model_name_profile,
-                                            interpreter_->GetModelConfig());
-    interpreter_->SetProfileDatabase(model_id_profile);
-    interpreter_->SetProfileConfig(params_.Get<int32_t>("profile_warmup_runs"),
-                                   params_.Get<int32_t>("profile_num_runs"));
-  }
-
-  auto& model_information = runtime_config_.model_information;
+  auto& model_information = benchmark_config_.model_information;
   for (int i = 0; i < model_information.size(); ++i) {
     std::string model_name = model_information[i].config.model_fname;
     TF_LITE_ENSURE_STATUS(LoadModel(model_name));
@@ -551,8 +507,12 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
 TfLiteStatus BenchmarkTfLiteModel::Init() {
   TF_LITE_ENSURE_STATUS(
-      util::ParseJsonFile(params_.Get<std::string>("json_path"),
-                          &runtime_config_)
+      ParseRuntimeConfigFromJson(params_.Get<std::string>("json_path"),
+                                 runtime_config_)
+  );
+  TF_LITE_ENSURE_STATUS(
+      util::ParseBenchmarkConfigFromJson(params_.Get<std::string>("json_path"),
+                                         benchmark_config_)
   );
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
@@ -564,7 +524,8 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
 
   interpreter_->SetAllowFp16PrecisionForFp32(params_.Get<bool>("allow_fp16"));
 
-  for (int model_id = 0; model_id < runtime_config_.model_information.size(); model_id++) {
+  auto& model_information = benchmark_config_.model_information;
+  for (int model_id = 0; model_id < model_information.size(); model_id++) {
     // TODO: #73 share tensors across different subgraphs from same model
     for (int i = 0; i < kTfLiteNumDevices; i++) {
       const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
@@ -573,7 +534,7 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
         continue;
       }
       auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-      auto& input_layer_infos = runtime_config_.model_information[model_id].input_layer_infos;
+      auto& input_layer_infos = model_information[model_id].input_layer_infos;
 
       if (!input_layer_infos.empty()) {
         TFLITE_TOOLS_CHECK_EQ(input_layer_infos.size(), interpreter_inputs.size())
@@ -670,7 +631,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
 
   // wait for some time until we stop the benchmark
   std::this_thread::sleep_for(
-      std::chrono::milliseconds(runtime_config_.running_time_ms));
+      std::chrono::milliseconds(benchmark_config_.running_time_ms));
   kill_app_ = true;
 
   interpreter_->GetPlanner()->Wait();
@@ -688,7 +649,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodicSingleThread() {
 
   // wait for some time until we stop the benchmark
   std::this_thread::sleep_for(
-      std::chrono::milliseconds(runtime_config_.running_time_ms));
+      std::chrono::milliseconds(benchmark_config_.running_time_ms));
   kill_app_ = true;
 
   interpreter_->GetPlanner()->Wait();
@@ -702,7 +663,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodicSingleThread() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunStream() {
-  int run_duration_us = runtime_config_.running_time_ms * 1000;
+  int run_duration_us = benchmark_config_.running_time_ms * 1000;
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
@@ -753,14 +714,14 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
 void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
   std::thread t([this]() {
-    int period_ms = runtime_config_.global_period_ms;
+    int period_ms = benchmark_config_.global_period_ms;
     if (period_ms <= 0) {
       TFLITE_LOG(ERROR) << "global_period_ms is <= 0. "
                         << "Will do nothing and return immediately.";
       return;
     }
 
-    unsigned seed = runtime_config_.model_id_random_seed;
+    unsigned seed = benchmark_config_.model_id_random_seed;
     // only use seed if it's != 0, otherwise use current time so that
     // the seed changes for every run
     std::srand(seed == 0 ? std::time(nullptr) : seed);

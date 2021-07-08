@@ -170,7 +170,7 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
 
     // main run method
     TfLiteStatus status;
-    std::string mode = runtime_config_.execution_mode;
+    std::string mode = benchmark_config_.execution_mode;
     TFLITE_LOG(INFO) << "Running in [" << mode << "] mode.";
     if (mode == "periodic") {
       status = RunPeriodic();
