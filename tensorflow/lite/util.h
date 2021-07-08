@@ -66,6 +66,7 @@ struct SubgraphKey {
 using Tensors = std::vector<TfLiteTensor*>;
 
 enum JobStatus {
+  kTfLiteJobQueued,
   kTfLiteJobSuccess,
   kTfLiteJobSLOViolation,
   kTfLiteJobInputCopyFailure,

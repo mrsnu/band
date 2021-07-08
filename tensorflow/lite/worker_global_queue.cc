@@ -148,8 +148,9 @@ void GlobalQueueWorker::Work() {
               subgraph.GetKey(),
               (current_job_.end_time - current_job_.invoke_time));
           // TODO #65: Tensor communications between subgraphs
-          planner_ptr->EnqueueBatch(current_job_.following_jobs, true);
+          planner_ptr->EnqueueBatch(current_job_.following_jobs);
           CopyOutputTensors(current_job_);
+          current_job_.status = kTfLiteJobSuccess;
         } else {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock

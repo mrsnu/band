@@ -99,19 +99,18 @@ void Planner::EnqueueFinishedJob(Job job) {
 
 int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
 
-std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs,
-                                       bool is_continuous) {
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
   std::vector<int> job_ids(jobs.size());
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
   for (int i = 0; i < jobs.size(); i++) {
-    Job job = jobs[i];
+    Job& job = jobs[i];
     if (job.enqueue_time == 0) {
       // job.enqueue_time may already be set if this model contains a fallback
       // op, in which case we do not overwrite the set value
       job.enqueue_time = enqueue_time;
     }
-    if (!is_continuous) {
+    if (job.job_id == -1) {
       job.job_id = num_total_submitted_jobs_++;
     }
     job_ids[i] = job.job_id;

@@ -101,8 +101,9 @@ void DeviceQueueWorker::Work() {
               subgraph.GetKey(),
               (job.end_time - job.invoke_time));
           // TODO #65: Tensor communications between subgraphs
-          planner_ptr->EnqueueBatch(job.following_jobs, true);
+          planner_ptr->EnqueueBatch(job.following_jobs);
           CopyOutputTensors(job);
+          job.status = kTfLiteJobSuccess;
         } else {
           job.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment
