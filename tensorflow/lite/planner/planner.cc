@@ -1,5 +1,6 @@
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/interpreter.h"
 #include <fstream>
 
@@ -11,6 +12,7 @@ Planner::Planner(Interpreter* interpreter) {
 }
 
 Planner::~Planner() {
+  FlushFinishedJobs();
   planner_safe_bool_.terminate();
   planner_thread_.join();
 }
@@ -51,8 +53,23 @@ void Planner::Wait() {
     return jobs_finished_.size() >= num_submitted_jobs_;
   });
 
+  FlushFinishedJobs();
+}
+
+void Planner::WaitAll() {
+  std::unique_lock<std::mutex> record_lock(record_mtx_);
+  end_invoke_.wait(record_lock, [this]() {
+    return jobs_finished_record_.size() >= num_submitted_jobs_;
+  });
+
+  FlushFinishedJobs();
+}
+
+void Planner::FlushFinishedJobs() {
+  std::lock_guard<std::mutex> queue_lock(job_queue_mtx_);
   std::ofstream log_file(log_path_, std::ofstream::app);
-  while (!jobs_finished_.empty()) {
+  if (log_file.is_open()) {
+    while (!jobs_finished_.empty()) {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
@@ -84,9 +101,11 @@ void Planner::Wait() {
              << job.slo_us << "\t"
              << job.status << "\t"
              << job.is_final_subgraph << "\n";
+    }
+    log_file.close();
+  } else {
+    TFLITE_LOG(ERROR) << "Invalid log file path :" << log_path_;
   }
-  log_file.close();
-  lock.unlock();
 }
 
 void Planner::EnqueueFinishedJob(Job job) {
@@ -111,7 +130,7 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
       job.enqueue_time = enqueue_time;
     }
     if (job.job_id == -1) {
-      job.job_id = num_total_submitted_jobs_++;
+      job.job_id = num_submitted_jobs_++;
     }
     job_ids[i] = job.job_id;
     requests_.push_back(job);

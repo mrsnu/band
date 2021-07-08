@@ -91,6 +91,7 @@ class Planner {
   }
 
  protected:
+  void FlushFinishedJobs();
   std::thread planner_thread_;
 
  private:
