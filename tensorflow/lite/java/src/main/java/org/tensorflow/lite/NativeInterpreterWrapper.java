@@ -33,10 +33,10 @@ import org.tensorflow.lite.nnapi.NnApiDelegate;
  */
 final class NativeInterpreterWrapper implements AutoCloseable {
 
-  NativeInterpreterWrapper() {
+  NativeInterpreterWrapper(String jsonPath) {
     TensorFlowLite.init();
     errorHandle = createErrorReporter(ERROR_BUFFER_SIZE);
-    interpreterHandle = createInterpreter(errorHandle);
+    interpreterHandle = createInterpreter(errorHandle, jsonPath);
   }
 
   int registerModel(String modelPath, Interpreter.Options options) {
@@ -229,7 +229,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private static native long createModelWithBuffer(ByteBuffer modelBuffer, long errorHandle);
 
-  private static native long createInterpreter(long errorHandle);
+  private static native long createInterpreter(long errorHandle, String jsonPath);
 
   private static native int registerModel(long interpreterHandle, long modelHandle, long errorHandle);
 
