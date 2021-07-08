@@ -163,20 +163,47 @@ public final class Interpreter implements AutoCloseable {
     return wrapper.registerModel(byteBuffer, options);
   }
 
-  public void run(
+  public void runSync(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
     checkNotClosed();
     int[] modelIds = {modelId};
     Tensor[][] modelInputs = {inputs};
     Tensor[][] modelOutputs = {outputs};
     
-    wrapper.run(modelIds, modelInputs, modelOutputs);
+    wrapper.runSync(modelIds, modelInputs, modelOutputs);
   }
 
-  public void runMultipleModels(
+  public void runSyncMultipleRequests(
       int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
     checkNotClosed();
-    wrapper.run(modelIds, inputs, outputs);
+    wrapper.runSync(modelIds, inputs, outputs);
+  }
+
+  public int runAsync(
+    int modelId, @NonNull Tensor[] inputs) {
+    checkNotClosed();
+    int[] modelIds = {modelId};
+    Tensor[][] modelInputs = {inputs};
+    return wrapper.runAsync(modelIds, modelInputs)[0];
+  }
+
+  public int[] runSyncMultipleRequests(
+    int[] modelIds, @NonNull Tensor[][] inputs) {
+    checkNotClosed();
+    return wrapper.runAsync(modelIds, inputs);
+  }
+
+  public void wait(int jobId, @NonNull Tensor[] outputs) {
+    checkNotClosed();
+    int[] jobIds = {jobId};
+    Tensor[][] modelOutputs = {outputs};
+
+    wrapper.wait(jobIds, modelOutputs);
+  }
+
+  public void waitMultipleRequests(int[] jobIds, @NonNull Tensor[][] outputs) {
+    checkNotClosed();
+    wrapper.wait(jobIds, outputs);
   }
 
   /** Gets the number of input tensors. */
