@@ -63,8 +63,6 @@ struct SubgraphKey {
   int end_idx;
 };
 
-using Tensors = std::vector<TfLiteTensor*>;
-
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
 // and the start/end indices.
@@ -83,9 +81,6 @@ struct Job {
   int64_t profiled_time = 0;
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
-  int input_handle = -1;
-  int output_handle = -1;
-  int job_id = -1;
   int sched_id = -1;
   bool slo_violated = false;
   bool is_final_subgraph = true;
