@@ -129,8 +129,8 @@ public final class Interpreter implements AutoCloseable {
   /**
    * Initializes a {@code Interpreter}
    */
-  public Interpreter() {
-    wrapper = new NativeInterpreterWrapper();
+  public Interpreter(String jsonPath) {
+    wrapper = new NativeInterpreterWrapper(jsonPath);
   }
 
   /**

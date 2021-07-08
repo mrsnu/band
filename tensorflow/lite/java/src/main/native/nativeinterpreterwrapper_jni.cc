@@ -25,6 +25,7 @@ limitations under the License.
 
 #include <vector>
 
+#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/experimental/tflite_api_dispatcher/tflite_api_dispatcher.h"
 #include "tensorflow/lite/java/src/main/native/jni_utils.h"
@@ -372,35 +373,23 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createModelWithBuffer(
 
 JNIEXPORT jlong JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
-    JNIEnv* env, jclass clazz, jlong error_handle) {
+    JNIEnv* env, jclass clazz, jlong error_handle, jstring json_file) {
   LOGI("CreateInterpreter starts");
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return 0;
-  // Temporarily fix the planner type to `kFixedDeviceGlobalQueue`.
-  // TODO : pass the planner parameter.
+
+  const char* path = env->GetStringUTFChars(json_file, nullptr);
+  LOGI("CreateInterpreter path : %s", path);
+
+  tflite::RuntimeConfig runtime_config;
+  ParseRuntimeConfigFromJson(path, runtime_config);
+
+  LOGI("Parse done planner : %d", runtime_config.planner_config.planner_type);
   auto interpreter(std::make_unique<tflite_api_dispatcher::Interpreter>(
-      error_reporter, kFixedDeviceGlobalQueue));
+      error_reporter, runtime_config));
+  env->ReleaseStringUTFChars(json_file, path);
 
-  // TODO : init interpreter process with our configuration
-  const tflite::impl::TfLiteCPUMaskFlags cpu_mask =
-      static_cast<tflite::impl::TfLiteCPUMaskFlags>(tflite::impl::kTfLiteAll);
-  auto cpu_mask_set = tflite::impl::TfLiteCPUMaskGetSet(cpu_mask);
-  SetCPUThreadAffinity(cpu_mask_set);
-
-  LOGI("Set affinity to %s cores", tflite::impl::TfLiteCPUMaskGetName(cpu_mask));
-
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
-    const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    // Skip as workers are not always available
-    if (!interpreter->GetWorker(device_id))
-      continue;
-    // Use global mask only if worker_mask is invalid
-    tflite::impl::TfLiteCPUMaskFlags worker_mask = cpu_mask;
-    const tflite::impl::CpuSet worker_mask_set = tflite::impl::TfLiteCPUMaskGetSet(worker_mask);
-    interpreter->SetWorkerThreadAffinity(worker_mask_set, device_id);
-    LOGI("Set affinity of %s to %s cores", TfLiteDeviceGetName(device_id), tflite::impl::TfLiteCPUMaskGetName(worker_mask));
-  }
   LOGI("CreateInterpreter finishes");
   return reinterpret_cast<jlong>(interpreter.release());
 }
@@ -518,7 +507,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resizeInput(
     // TODO(#73): Remove duplicate memcopy for same model
     std::set<int> subgraph_indices = interpreter->GetSubgraphIdx(
         model_id, static_cast<TfLiteDeviceFlags>(device_id), 0);
-    
+
     for (int subgraph_idx : subgraph_indices) {
       if (input_idx < 0 || input_idx >= interpreter->inputs(subgraph_idx).size()) {
         ThrowException(
@@ -570,7 +559,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resetVariableTensors(
     // TODO(#73): Remove duplicate memcopy for same model
     std::set<int> subgraph_indices = interpreter->GetSubgraphIdx(
         model_id, static_cast<TfLiteDeviceFlags>(device_id), 0);
-    
+
     for (int subgraph_idx : subgraph_indices) {
       TfLiteStatus status = interpreter->ResetVariableTensors(subgraph_idx);
       if (status != kTfLiteOk) {
