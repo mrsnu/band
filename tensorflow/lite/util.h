@@ -95,7 +95,7 @@ struct Job {
   int output_handle = -1;
   int job_id = -1;
   int sched_id = -1;
-  JobStatus status = kTfLiteJobSuccess;
+  JobStatus status = kTfLiteJobQueued;
   bool is_final_subgraph = true;
   std::string model_fname;
 
