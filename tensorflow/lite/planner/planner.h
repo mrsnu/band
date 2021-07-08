@@ -82,9 +82,7 @@ class Planner {
     return schedule_window_size_;
   }
 
-  void InitNumSubmittedJobs() {
-    num_submitted_jobs_ = 0;
-  }
+  void SetWindowSize(int schedule_window_size);
 
   const std::map<int, int>& GetModelExecutionCounts() const {
     return model_execution_count_;
