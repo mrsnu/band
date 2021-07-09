@@ -47,22 +47,96 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   return kTfLiteOk;
 }
 
-void Planner::Wait() {
-  std::unique_lock<std::mutex> lock(job_queue_mtx_);
-  end_invoke_.wait(lock, [this]{
-    return jobs_finished_.size() >= num_submitted_jobs_;
+void Planner::Wait(std::vector<int> job_ids) {
+  if (job_ids.size() == 0) {
+    return;
+  }
+  
+  std::unique_lock<std::mutex> record_lock(record_mtx_);
+  std::unique_lock<std::mutex> request_lock(requests_mtx_);
+  end_invoke_.wait(record_lock, [this, job_ids] {
+    for (int job_id : job_ids) {
+      if (!IsJobValid(job_id)) {
+        continue;
+      }
+      if (jobs_finished_record_[GetJobRecordIndex(job_id)].job_id == -1) {
+        return false;
+      }
+    }
+    return true;
   });
+
+  request_lock.unlock();
+  record_lock.unlock();
 
   FlushFinishedJobs();
 }
 
 void Planner::WaitAll() {
   std::unique_lock<std::mutex> record_lock(record_mtx_);
+  std::unique_lock<std::mutex> request_lock(requests_mtx_);
   end_invoke_.wait(record_lock, [this]() {
-    return jobs_finished_record_.size() >= num_submitted_jobs_;
+    return num_finished_jobs_ >= num_submitted_jobs_;
   });
 
+  request_lock.unlock();
+  record_lock.unlock();
+
   FlushFinishedJobs();
+}
+
+void Planner::EnqueueFinishedJob(Job job) {
+  std::unique_lock<std::mutex> lock(job_queue_mtx_);
+  jobs_finished_.push_back(job);
+  lock.unlock();
+
+  std::lock_guard<std::mutex> record_lock(record_mtx_);
+  
+  if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
+    jobs_finished_record_[job.job_id % jobs_finished_record_.size()] = job;
+    num_finished_jobs_++;
+  }
+}
+
+int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
+
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
+  std::vector<int> job_ids(jobs.size());
+  std::unique_lock<std::mutex> lock(requests_mtx_);
+  auto enqueue_time = profiling::time::NowMicros();
+  for (int i = 0; i < jobs.size(); i++) {
+    Job& job = jobs[i];
+    if (job.enqueue_time == 0) {
+      // job.enqueue_time may already be set if this model contains a fallback
+      // op, in which case we do not overwrite the set value
+      job.enqueue_time = enqueue_time;
+    }
+    if (job.job_id == -1) {
+      job.job_id = num_submitted_jobs_++;
+    }
+    job_ids[i] = job.job_id;
+    requests_.push_back(job);
+  }
+  lock.unlock();
+
+  planner_safe_bool_.notify();
+
+  return job_ids;
+}
+
+void Planner::SetWindowSize(int schedule_window_size) {
+  schedule_window_size_ = schedule_window_size;
+}
+
+Job Planner::GetFinishedJob(int job_id) {
+  std::lock_guard<std::mutex> lock(record_mtx_);
+  std::lock_guard<std::mutex> request_lock(requests_mtx_);
+  if (IsJobValid(job_id) &&
+      jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != -1) {
+    return jobs_finished_record_[GetJobRecordIndex(job_id)];
+  } else {
+    return Job();
+  }
 }
 
 void Planner::FlushFinishedJobs() {
@@ -108,38 +182,12 @@ void Planner::FlushFinishedJobs() {
   }
 }
 
-void Planner::EnqueueFinishedJob(Job job) {
-  std::unique_lock<std::mutex> lock(job_queue_mtx_);
-  jobs_finished_.push_back(job);
-  lock.unlock();
-
-  end_invoke_.notify_one();
+bool Planner::IsJobValid(int job_id) {
+  return num_submitted_jobs_ - job_id < jobs_finished_record_.size();
 }
 
-int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
-
-std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
-  std::vector<int> job_ids(jobs.size());
-  std::unique_lock<std::mutex> lock(requests_mtx_);
-  auto enqueue_time = profiling::time::NowMicros();
-  for (int i = 0; i < jobs.size(); i++) {
-    Job& job = jobs[i];
-    if (job.enqueue_time == 0) {
-      // job.enqueue_time may already be set if this model contains a fallback
-      // op, in which case we do not overwrite the set value
-      job.enqueue_time = enqueue_time;
-    }
-    if (job.job_id == -1) {
-      job.job_id = num_submitted_jobs_++;
-    }
-    job_ids[i] = job.job_id;
-    requests_.push_back(job);
-  }
-  lock.unlock();
-
-  planner_safe_bool_.notify();
-
-  return job_ids;
+int Planner::GetJobRecordIndex(int job_id) const {
+  return job_id % jobs_finished_record_.size();
 }
 
 }  // namespace impl

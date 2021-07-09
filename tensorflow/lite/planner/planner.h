@@ -88,11 +88,16 @@ class Planner {
     return model_execution_count_;
   }
 
+  Job GetFinishedJob(int job_id);
+
  protected:
   void FlushFinishedJobs();
   std::thread planner_thread_;
 
  private:
+  bool IsJobValid(int job_id);
+  int GetJobRecordIndex(int job_id) const;
+
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
 
@@ -104,14 +109,16 @@ class Planner {
   // Request Queue
   std::mutex requests_mtx_;
   std::deque<Job> requests_;
+  int num_submitted_jobs_ = 0;
+  int num_finished_jobs_ = 0;
 
   std::condition_variable end_invoke_;
 
   std::string log_path_;
 
-  int schedule_window_size_ = INT_MAX;
-  int num_submitted_jobs_ = 0;
-  int num_total_submitted_jobs_ = 0;
+  std::mutex record_mtx_;
+  std::array<Job, 1000> jobs_finished_record_;
+  int schedule_window_size_;
 };
 
 }  // namespace impl
