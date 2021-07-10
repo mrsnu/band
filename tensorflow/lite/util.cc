@@ -73,11 +73,11 @@ Json::Value LoadJsonObjectFromFile(std::string file_path) {
 
 void WriteJsonObjectToFile(const Json::Value& json_object,
                            std::string file_path) {
-  if (FileExists(file_path)) {
-    std::ofstream out_file(file_path, std::ios::out);
+  std::ofstream out_file(file_path, std::ios::out);
+  if (out_file.is_open()) {
     out_file << json_object;
   } else {
-    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
+    TFLITE_LOG(ERROR) << "Cannot save profiled results to " << file_path;
   }
 }
 
