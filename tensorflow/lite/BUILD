@@ -78,7 +78,6 @@ FRAMEWORK_LIB_HDRS = [
     "op_resolver.h",
     "optional_debug_tools.h",
     "stderr_reporter.h",
-    "tensor_ring_buffer.h",
     "planner/planner.h",
     "planner/fixed_device_planner.h",
     "planner/round_robin_planner.h",
@@ -244,6 +243,21 @@ cc_library(
 )
 
 cc_library(
+    name = "tensor_ring_buffer",
+    srcs = [
+        "tensor_ring_buffer.cc",
+    ],
+    hdrs = [
+        "tensor_ring_buffer.h",
+    ],
+    deps = [
+        ":util",
+        "//tensorflow/lite/c:common",
+        "//tensorflow/lite/core/api",
+    ],
+)
+
+cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
@@ -254,7 +268,6 @@ cc_library(
         "mutable_op_resolver.cc",
         "optional_debug_tools.cc",
         "stderr_reporter.cc",
-        "tensor_ring_buffer.cc",
         "planner/planner.cc",
         "planner/fixed_device_planner.cc",
         "planner/fixed_device_global_queue_planner.cc",
@@ -279,6 +292,7 @@ cc_library(
         ":minimal_logging",
         ":simple_memory_arena",
         ":string",
+        ":tensor_ring_buffer",
         ":tflite_with_xnnpack_optional",
         ":type_to_tflitetype",
         ":util",
@@ -674,6 +688,19 @@ cc_test(
     ],
     deps = [
         ":minimal_logging",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "tensor_ring_buffer",
+    size = "small",
+    srcs = ["tensor_ring_buffer.cc"],
+    tags = [
+        "tflite_not_portable_ios",  # TODO(b/117786830)
+    ],
+    deps = [
+        ":tensor_ring_buffer",
         "@com_google_googletest//:gtest",
     ],
 )

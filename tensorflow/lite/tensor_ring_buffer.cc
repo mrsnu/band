@@ -1,14 +1,14 @@
 #include <cstring>  // memcpy
 #include <mutex>
 
+#include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/tensor_ring_buffer.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 
 namespace tflite {
 TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
-                                   Tensors tensors,
-                                   int size)
-    : error_reporter_(error_reporter),
+                                   Tensors tensors, int size)
+    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()),
       tensors_(new std::vector<TfLiteTensor*>[size]),
       size_(size) {
   for (size_t i = 0; i < size_; i++) {
