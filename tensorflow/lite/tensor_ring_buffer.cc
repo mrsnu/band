@@ -41,7 +41,7 @@ bool TensorRingBuffer::IsValid(int handle) const {
 TfLiteStatus TensorRingBuffer::GetTensorsFromHandle(Tensors& dst_tensors, int handle) const {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsValid(handle)) {
-    TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
+    TF_LITE_REPORT_ERROR(error_reporter_, "GetTensorsFromHandle: Invalid memory handle: %d head: %d.", handle, head_);
     return kTfLiteError;
   }
   return CopyTensors(tensors_[GetIndex(handle)], dst_tensors);
@@ -51,7 +51,7 @@ TfLiteStatus TensorRingBuffer::PutTensorsToHandle(const Tensors& src_tensors,
                                    int handle) {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsValid(handle)) {
-    TF_LITE_REPORT_ERROR(error_reporter_, "Invalid memory handle: %d head: %d.", handle, head_);
+    TF_LITE_REPORT_ERROR(error_reporter_, "PutTensorsToHandle: Invalid memory handle: %d head: %d.", handle, head_);
     return kTfLiteError;
   }
 

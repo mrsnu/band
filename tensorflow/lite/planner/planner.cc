@@ -52,14 +52,16 @@ void Planner::Wait(std::vector<int> job_ids) {
     return;
   }
   
-  std::unique_lock<std::mutex> record_lock(record_mtx_);
   std::unique_lock<std::mutex> request_lock(requests_mtx_);
-  end_invoke_.wait(record_lock, [this, job_ids] {
+  end_invoke_.wait(request_lock, [this, job_ids] {
+
     for (int job_id : job_ids) {
       if (!IsJobValid(job_id)) {
+        TFLITE_LOG(INFO) << "Wait: " << job_id << " is not valid";
         continue;
       }
       if (jobs_finished_record_[GetJobRecordIndex(job_id)].job_id == -1) {
+        TFLITE_LOG(INFO) << "Wait: " << job_id << " is not finished";
         return false;
       }
     }
@@ -67,20 +69,16 @@ void Planner::Wait(std::vector<int> job_ids) {
   });
 
   request_lock.unlock();
-  record_lock.unlock();
-
   FlushFinishedJobs();
 }
 
 void Planner::WaitAll() {
-  std::unique_lock<std::mutex> record_lock(record_mtx_);
   std::unique_lock<std::mutex> request_lock(requests_mtx_);
-  end_invoke_.wait(record_lock, [this]() {
+  end_invoke_.wait(request_lock, [this]() {
     return num_finished_jobs_ >= num_submitted_jobs_;
   });
 
   request_lock.unlock();
-  record_lock.unlock();
 
   FlushFinishedJobs();
 }
@@ -90,12 +88,14 @@ void Planner::EnqueueFinishedJob(Job job) {
   jobs_finished_.push_back(job);
   lock.unlock();
 
-  std::lock_guard<std::mutex> record_lock(record_mtx_);
+  std::lock_guard<std::mutex> request_lock(requests_mtx_);
   
-  if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
-    jobs_finished_record_[job.job_id % jobs_finished_record_.size()] = job;
+  if (job.is_final_subgraph) {
+    jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
   }
+
+  end_invoke_.notify_all();
 }
 
 int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
@@ -129,7 +129,6 @@ void Planner::SetWindowSize(int schedule_window_size) {
 }
 
 Job Planner::GetFinishedJob(int job_id) {
-  std::lock_guard<std::mutex> lock(record_mtx_);
   std::lock_guard<std::mutex> request_lock(requests_mtx_);
   if (IsJobValid(job_id) &&
       jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != -1) {

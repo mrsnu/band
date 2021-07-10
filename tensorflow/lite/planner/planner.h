@@ -109,6 +109,7 @@ class Planner {
   // Request Queue
   std::mutex requests_mtx_;
   std::deque<Job> requests_;
+  std::array<Job, 1000> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
   int num_finished_jobs_ = 0;
 
@@ -116,8 +117,6 @@ class Planner {
 
   std::string log_path_;
 
-  std::mutex record_mtx_;
-  std::array<Job, 1000> jobs_finished_record_;
   int schedule_window_size_;
 };
 
