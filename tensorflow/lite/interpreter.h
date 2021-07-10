@@ -99,8 +99,9 @@ namespace impl {
 // a convenient data structure for holding various model information
 struct ModelSpec {
   int num_ops;
+  std::set<int> input_tensors;
   std::set<int> output_tensors;
-  std::set<int> all_output_tensors;
+  std::set<int> node_output_tensors;
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
 };

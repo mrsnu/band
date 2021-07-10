@@ -368,10 +368,6 @@ class Subgraph {
   void SetKey(SubgraphKey key) { key_ = key; }
   SubgraphKey& GetKey() { return key_; }
 
-  Subgraph* GetNextSubgraph() const { return next_subgraph_ ? (*subgraphs_)[next_subgraph_].get() : nullptr; }
-  void SetNextSubgraph(int index) { next_subgraph_ = index; }
-  int GetNextSubgraphIndex() const { return next_subgraph_; }
-
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
   // BufferedProfiler instance, and takes care of event profiling/tracing in a
@@ -751,9 +747,6 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
-
-  int next_subgraph_ = -1;
-
   SubgraphKey key_;
 };
 

@@ -599,9 +599,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         model, op_resolver, interpreter, key,
         device_op_indices.second, num_threads);
       if (subgraph_idx != -1) {
-        if (previous_subgraph) {
-          previous_subgraph->SetNextSubgraph(subgraph_idx);
-        }
         (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
         has_available_device = true;
         previous_subgraph = (*interpreter)->subgraph(subgraph_idx);
@@ -808,7 +805,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     std::set<int> subgraph_inputs =
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
     std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(subgraph_key.model_id).all_output_tensors;
+        (*interpreter)->GetModelSpec(subgraph_key.model_id).node_output_tensors;
 
     std::set_union(model_outputs.begin(), model_outputs.end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),

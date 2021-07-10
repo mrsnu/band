@@ -385,14 +385,6 @@ void Interpreter::DeleteSubgraphs(size_t starting_index_to_delete,
     subgraphs_to_delete = subgraphs_.size() - starting_index_to_delete;
 
   if (starting_index_to_delete + subgraphs_to_delete <= subgraphs_.size()) {
-    for (int i = 0; i < subgraphs_.size(); i++) {
-        if ((subgraph(i)->next_subgraph_ >= starting_index_to_delete) &&
-            (subgraph(i)->next_subgraph_ <
-                starting_index_to_delete + subgraphs_to_delete)) {
-          subgraph(i)->next_subgraph_ = -1;
-        }
-    }
-
     subgraphs_.erase(subgraphs_.begin() + starting_index_to_delete,
     subgraphs_.begin() + starting_index_to_delete + subgraphs_to_delete);
   }
@@ -1142,7 +1134,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
   // at this point, the subgraph key for this model doesn't have valid start
   // and end indices so we don't need to specify them
-  int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
+  int subgraph_index = *GetSubgraphIdx(model_id, kTfLiteCPU, 0).begin();
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
@@ -1187,7 +1179,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
     for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
       tensor_indices.insert(output_tensor);
-      model_spec.all_output_tensors.insert(output_tensor);
+      model_spec.node_output_tensors.insert(output_tensor);
     }
 
     for (auto i : tensor_indices) {
@@ -1195,6 +1187,11 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       model_spec.tensor_types.insert(tensor->type);
     }
   }
+
+  std::copy(primary_subgraph->inputs().begin(),
+            primary_subgraph->inputs().end(),
+            std::inserter(model_spec.input_tensors,
+                          model_spec.input_tensors.begin()));
 
   std::copy(primary_subgraph->outputs().begin(),
             primary_subgraph->outputs().end(),

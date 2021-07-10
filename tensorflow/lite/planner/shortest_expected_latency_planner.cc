@@ -46,12 +46,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
       int64_t sched_start = profiling::time::NowMicros();
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
-
-        Subgraph* start_subgraph = interpreter_->subgraph(
-            interpreter_->GetSubgraphIdx(SubgraphKey(next_job.model_id, kTfLiteCPU)));
-
-        std::set<int> resolved_output;
-        resolved_output.insert(start_subgraph->inputs().begin(), start_subgraph->inputs().end());
+        auto& model_spec = interpreter_->GetModelSpec(next_job.model_id);
+        std::set<int> resolved_output = model_spec.input_tensors;
 
         std::pair<int, int64_t> best_subgraph =
             GetShortestLatency(next_job.model_id, resolved_output, 0, device_waiting_time);
