@@ -18,11 +18,7 @@ limitations under the License.
 #include <map>
 #include <memory>
 
-/*
-#if !defined(__APPLE__)
-#include "tensorflow/lite/delegates/flex/delegate.h"
-#endif
-*/
+// NOTE: flex:delegate is removed for simple testing
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/kernels/register_ref.h"

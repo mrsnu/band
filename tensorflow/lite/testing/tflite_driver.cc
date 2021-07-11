@@ -21,11 +21,8 @@ limitations under the License.
 
 #include "absl/strings/escaping.h"
 #include "tensorflow/lite/builtin_op_data.h"
-/*
-#if !defined(__APPLE__)
-#include "tensorflow/lite/delegates/flex/delegate.h"
-#endif
-*/
+
+// NOTE: flex:delegate is removed for simple testing
 #include "tensorflow/lite/kernels/custom_ops_register.h"
 #include "tensorflow/lite/kernels/hashtable/hashtable_ops.h"
 #include "tensorflow/lite/kernels/register.h"

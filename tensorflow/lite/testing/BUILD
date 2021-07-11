@@ -230,10 +230,7 @@ cc_library(
         "//tensorflow/lite/kernels/hashtable:hashtable_op_kernels",
         "//tensorflow/lite/kernels:reference_ops",
         "//tensorflow/lite/tools/evaluation:utils",
-    ]#  + select({
-    #     "//tensorflow:ios": [],
-    #     "//conditions:default": ["//tensorflow/lite/delegates/flex:delegate"],
-    # }),
+    ]# NOTE: flex:delegate is removed for simple testing
 )
 
 tf_cc_test(
