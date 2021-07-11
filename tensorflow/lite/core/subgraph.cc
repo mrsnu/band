@@ -713,20 +713,17 @@ TfLiteStatus Subgraph::ResetVariableTensors() {
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::SetNextSubgraph(Subgraph* next) {
-  std::set<int> potential_output_tensors = outputs();
-  if (
-}
-
 TfLiteStatus Subgraph::SetPrevSubgraph(Subgraph* prev) {
-
+  prev->next_ = this;
+  prev_ = prev;
+  return kTfLiteOk;
 }
 
-Subgraph* Subgraph::GetNextSubgraphs() const {
+Subgraph* Subgraph::GetNextSubgraph() const {
   return next_;
 }
 
-Subgraph* Subgraph::GetPrevSubgraphs() const {
+Subgraph* Subgraph::GetPrevSubgraph() const {
   return prev_;
 }
 

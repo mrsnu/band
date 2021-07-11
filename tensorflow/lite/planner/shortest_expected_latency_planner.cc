@@ -46,8 +46,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       int64_t sched_start = profiling::time::NowMicros();
       for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
         Job& next_job = *it;
-        auto& model_spec = interpreter_->GetModelSpec(next_job.model_id);
-        std::set<int> resolved_output = model_spec.input_tensors;
+        std::set<int> resolved_output = next_job.resolved_tensors;
 
         std::pair<int, int64_t> best_subgraph =
             GetShortestLatency(next_job.model_id, resolved_output, 0, device_waiting_time);
@@ -110,7 +109,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       ModelSpec& model_spec =
           GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
-      if (!target_subgraph->GetNextSubgraph()) {
+      if (target_subgraph->GetNextSubgraph() != nullptr) {
         Job remaining_ops(most_urgent_job.model_id);
         remaining_ops.enqueue_time = most_urgent_job.enqueue_time;
         remaining_ops.following_jobs = most_urgent_job.following_jobs;
@@ -120,12 +119,21 @@ void ShortestExpectedLatencyPlanner::Plan() {
         remaining_ops.input_handle = most_urgent_job.input_handle;
         remaining_ops.output_handle = most_urgent_job.output_handle;
         remaining_ops.previous_subgraph_idx = most_urgent_job.subgraph_idx;
+        remaining_ops.resolved_tensors = most_urgent_job.resolved_tensors;
+
+        for (int input_index : target_subgraph->inputs()) {
+          remaining_ops.resolved_tensors.erase(input_index);
+        }
+        
+        for (int output_index : target_subgraph->outputs()) {
+          remaining_ops.resolved_tensors.insert(output_index);
+        }
 
         most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);
       }
 
-      Worker* worker = GetInterpreter()->GetWorker(to_execute.target_device());
+      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
         worker->GetDeviceRequests().push_back(most_urgent_job);

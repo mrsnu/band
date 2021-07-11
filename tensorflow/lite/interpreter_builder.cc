@@ -580,6 +580,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // write the ModelSpec for this model
   (*interpreter)->InvestigateModelSpec(model_id);
 
+  ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
+
   // register subgraphs for all devices
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     if (i == kTfLiteCPUFallback) {
@@ -587,6 +589,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       continue;
     }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
+    
     std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
         subgraph_indices =
         (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
@@ -600,8 +603,16 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         device_op_indices.second, num_threads);
       if (subgraph_idx != -1) {
         (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
+        Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
+        if (previous_subgraph) {
+          if (subgraph->SetPrevSubgraph(
+                  previous_subgraph) != kTfLiteOk) {
+            TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
+            return -1;
+          }
+        }
         has_available_device = true;
-        previous_subgraph = (*interpreter)->subgraph(subgraph_idx);
+        previous_subgraph = subgraph;
       }
 
       TFLITE_LOG(INFO) << "ADDED Subgraph "

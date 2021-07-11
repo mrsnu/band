@@ -368,10 +368,9 @@ class Subgraph {
   void SetKey(SubgraphKey key) { key_ = key; }
   SubgraphKey& GetKey() { return key_; }
 
-  TfLiteStatus SetNextSubgraph(Subgraph* next);
   TfLiteStatus SetPrevSubgraph(Subgraph* prev);
-  Subgraph* GetNextSubgraphs() const;
-  Subgraph* GetPrevSubgraphs() const;
+  Subgraph* GetNextSubgraph() const;
+  Subgraph* GetPrevSubgraph() const;
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a

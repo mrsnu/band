@@ -41,12 +41,10 @@ struct SubgraphKey {
     SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
                 int start = -1, int end = -1)
         : model_id(model_id), device_flag(device_flag),
-          is_fallback(false),
           input_ops(start != -1 ? std::set<int>({start}) : std::set<int>()),
           output_ops(end != -1 ? std::set<int>({end}) : std::set<int>()) {}
 
     SubgraphKey(int model_id, TfLiteDeviceFlags device_flag,
-                bool is_fallback,
                 std::set<int> input_ops,
                 std::set<int> output_ops)
           : model_id(model_id), device_flag(device_flag),
@@ -73,13 +71,12 @@ struct SubgraphKey {
 
     std::string GetInputOpsString() const;
     std::string GetOutputOpsString() const;
-    TfLiteDeviceFlags target_device() const;
 
-    const int model_id;
-    const TfLiteDeviceFlags device_flag;
-    const bool is_fallback;
-    const std::set<int> input_ops;
-    const std::set<int> output_ops;
+    int model_id;
+    TfLiteDeviceFlags device_flag;
+    bool is_fallback;
+    std::set<int> input_ops;
+    std::set<int> output_ops;
 };
 
 using Tensors = std::vector<TfLiteTensor*>;
@@ -123,6 +120,7 @@ struct Job {
   int device_id = -1;
   std::vector<Job> following_jobs;
   int previous_subgraph_idx = -1;
+  std::set<int> resolved_tensors;
 };
 
 // Model configuration struct.

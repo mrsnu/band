@@ -41,10 +41,6 @@ std::string SubgraphKey::GetOutputOpsString() const {
   return IndexSetToString(output_ops);
 }
 
-TfLiteDeviceFlags SubgraphKey::target_device() const {
-  return is_fallback ? kTfLiteCPUFallback : device_flag;
-}
-
 TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
   context->ReportError(context,
                        "Encountered an unresolved custom op. Did you miss "
