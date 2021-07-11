@@ -15,14 +15,18 @@ class TensorRingBuffer {
   TensorRingBuffer(ErrorReporter* error_reporter, Tensors tensors, int size = 128);
   ~TensorRingBuffer();
 
+  const int GetTensorsLength() const;
   int Alloc();
   bool IsValid(int handle) const;
-  TfLiteStatus GetTensorsFromHandle(Tensors& dst_tensors, int handle) const;
-  TfLiteStatus PutTensorsToHandle(const Tensors& src_tensors, int handle);
+  TfLiteStatus GetTensorsFromHandle(Tensors& dst_tensors, int handle,
+                                    std::vector<bool> mask = {}) const;
+  TfLiteStatus PutTensorsToHandle(const Tensors& src_tensors, int handle,
+                                  std::vector<bool> mask = {});
 
  private:
   int GetIndex(int handle) const;
-  TfLiteStatus CopyTensors(const Tensors& src_tensors, Tensors& dst_tensors) const;
+  TfLiteStatus CopyTensors(const Tensors& src_tensors, Tensors& dst_tensors,
+                           std::vector<bool> mask) const;
 
   mutable std::mutex head_mtx_;
   int head_ = 0;
