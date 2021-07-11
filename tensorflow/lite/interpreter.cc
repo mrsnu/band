@@ -1198,8 +1198,12 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     output_tensors.push_back(primary_subgraph->tensor(output_tensor));
   }
 
-  model_input_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
-  model_output_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, output_tensors));
+  model_input_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(
+                                            error_reporter_, input_tensors,
+                                            primary_subgraph->inputs()));
+  model_output_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(
+                                             error_reporter_, output_tensors,
+                                             primary_subgraph->outputs()));
 
   // check input/output/intermediate tensors to fill in
   // model_spec.output_tensors and model_spec.tensor_types

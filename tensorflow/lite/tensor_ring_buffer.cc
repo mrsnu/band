@@ -8,6 +8,7 @@
 namespace tflite {
 TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
                                    Tensors tensors,
+                                   std::vector<int> tensor_indices,
                                    int size)
     : error_reporter_(error_reporter),
       tensors_(new std::vector<TfLiteTensor*>[size]),
@@ -18,6 +19,10 @@ TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
     for (size_t j = 0; j < tensors_[i].size(); j++) {
       tensors_[i][j] = TfLiteTensorCreateLike(tensors[j]);
     }
+  }
+
+  for (int i = 0; i < tensor_indices.size(); i++) {
+    model_to_buffer_[tensor_indices[i]] = i;
   }
 }
 
@@ -38,32 +43,71 @@ int TensorRingBuffer::Alloc() {
   return head_++;
 }
 
-bool TensorRingBuffer::IsValid(int handle) const {
+bool TensorRingBuffer::IsTensorIndexValid(int tensor_index) const {
+  return model_to_buffer_.find(tensor_index) != model_to_buffer_.end();
+}
+
+bool TensorRingBuffer::IsHandleValid(int handle) const {
   return (handle >= 0) && (head_ - size_ <= handle) && (handle < head_);
 }
 
-TfLiteStatus TensorRingBuffer::GetTensorsFromHandle(Tensors& dst_tensors, int handle, std::vector<bool> mask) const {
+TfLiteStatus TensorRingBuffer::GetTensorFromHandle(TfLiteTensor* dst,
+                                                   int tensor_index,
+                                                   int handle) const {
+  if (!IsTensorIndexValid(tensor_index)) {
+    TF_LITE_REPORT_ERROR(error_reporter_, "GetTensorFromHandle: Invalid tensor index: %d.", tensor_index);
+    return kTfLiteError;
+  }
+
   std::lock_guard<std::mutex> lock(head_mtx_);
-  if (!IsValid(handle)) {
+  if (!IsHandleValid(handle)) {
+    TF_LITE_REPORT_ERROR(error_reporter_, "GetTensorFromHandle: Invalid memory handle: %d head: %d.", handle, head_);
+    return kTfLiteError;
+  }
+
+  return CopyTensor(tensors_[GetIndex(handle)][model_to_buffer_.at(tensor_index)],
+                    dst);
+}
+
+TfLiteStatus TensorRingBuffer::PutTensorToHandle(const TfLiteTensor* src,
+                                                 int tensor_index, int handle) {
+  if (!IsTensorIndexValid(tensor_index)) {
+    TF_LITE_REPORT_ERROR(error_reporter_, "GetTensorFromHandle: Invalid tensor index: %d.", tensor_index);
+    return kTfLiteError;
+  }
+
+  std::lock_guard<std::mutex> lock(head_mtx_);
+  if (!IsHandleValid(handle)) {
+    TF_LITE_REPORT_ERROR(error_reporter_, "PutTensorToHandle: Invalid memory handle: %d head: %d.", handle, head_);
+    return kTfLiteError;
+  }
+
+  return CopyTensor(
+      src, tensors_[GetIndex(handle)][model_to_buffer_.at(tensor_index)]);
+}
+
+TfLiteStatus TensorRingBuffer::GetTensorsFromHandle(Tensors& dst_tensors, int handle) const {
+  std::lock_guard<std::mutex> lock(head_mtx_);
+  if (!IsHandleValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "GetTensorsFromHandle: Invalid memory handle: %d head: %d.", handle, head_);
     return kTfLiteError;
   }
-  return CopyTensors(tensors_[GetIndex(handle)], dst_tensors, mask);
+  return CopyTensors(tensors_[GetIndex(handle)], dst_tensors);
 }
 
 TfLiteStatus TensorRingBuffer::PutTensorsToHandle(const Tensors& src_tensors,
-                                   int handle, std::vector<bool> mask) {
+                                   int handle) {
   std::lock_guard<std::mutex> lock(head_mtx_);
-  if (!IsValid(handle)) {
+  if (!IsHandleValid(handle)) {
     TF_LITE_REPORT_ERROR(error_reporter_, "PutTensorsToHandle: Invalid memory handle: %d head: %d.", handle, head_);
     return kTfLiteError;
   }
 
-  return CopyTensors(src_tensors, tensors_[GetIndex(handle)], mask);
+  return CopyTensors(src_tensors, tensors_[GetIndex(handle)]);
 }
 
 TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors,
-                                           Tensors& dst_tensors, std::vector<bool> mask) const {
+                                           Tensors& dst_tensors) const {
   const int tensors_length = GetTensorsLength();
   if ((src_tensors.size() != tensors_length) ||
       (dst_tensors.size() != tensors_length)) {
@@ -74,35 +118,24 @@ TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors,
     return kTfLiteError;
   }
 
-  if (mask.size() == 0) {
-    mask = std::vector<bool>(true, tensors_length);
-  }
-
-  if (mask.size() != tensors_length) {
-    TF_LITE_REPORT_ERROR(
-        error_reporter_,
-        "Invalid mask length. mask: %d expected: %d",
-        mask.size(), tensors_length);
-    return kTfLiteError;
-  }
-
   for (size_t i = 0; i < tensors_length; i++) {
-    if (!mask[i]) {
-      continue;
-    }
-    
-    const TfLiteTensor* src = src_tensors[i];
-    TfLiteTensor* dst = dst_tensors[i];
-
-    if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
-      TF_LITE_REPORT_ERROR(
-          error_reporter_,
-          "Tensor data copy failure. src name : %s, dst name : %s", src->name,
-          dst->name);
+    if (CopyTensor(src_tensors[i], dst_tensors[i]) != kTfLiteOk) {
       return kTfLiteError;
     }
   }
 
+  return kTfLiteOk;
+}
+
+TfLiteStatus TensorRingBuffer::CopyTensor(const TfLiteTensor* src,
+                                          TfLiteTensor* dst) const {
+  if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
+    TF_LITE_REPORT_ERROR(
+        error_reporter_,
+        "Tensor data copy failure. src name : %s, dst name : %s", src->name,
+        dst->name);
+    return kTfLiteError;
+  }
   return kTfLiteOk;
 }
 
