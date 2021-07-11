@@ -335,10 +335,6 @@ class Subgraph {
   // Before `AllocateTensors` is called, this will always return true;
   bool HasDynamicTensors() { return has_dynamic_tensors_; }
 
-  void SetModelPlan(TfLiteDeviceFlags device) { model_plan_->device_ = device; }
-
-  ModelPlan* GetModelPlan() { return model_plan_.get(); }
-
   void SetKey(SubgraphKey key) { key_ = key; }
   SubgraphKey& GetKey() { return key_; }
 
@@ -385,9 +381,7 @@ class Subgraph {
     Profiler* const profiler_;
     const int64_t subgraph_index_;
   };
-
-  std::unique_ptr<ModelPlan> model_plan_;
-
+  
   // Prevent 'context_' from accessing functions that are only available to
   // delegated kernels.
   void SwitchToKernelContext();
