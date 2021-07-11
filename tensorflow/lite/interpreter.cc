@@ -494,7 +494,6 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
       if (model_input_buffer_[request.model_id]->PutTensorsToHandle(
               inputs[i], input_handle) == kTfLiteOk) {
         request.input_handle = input_handle;
-        request.
         request.output_handle = model_output_buffer_[request.model_id]->Alloc();
         valid_requests.push_back(std::move(request));
       } else {

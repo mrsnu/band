@@ -89,13 +89,13 @@ enum JobStatus {
 };
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
-// and the start/end indices.
 struct Job {
   explicit Job() : model_id(-1) {}
   explicit Job(int model_id) : model_id(model_id) {}
   explicit Job(int model_id, std::vector<Job>& following_jobs)
     : model_id(model_id), following_jobs(following_jobs) {}
-  int model_id;
+
+  // For record (Valid after execution)
   int subgraph_idx = -1;
   int device_id = -1;
   int64_t enqueue_time = 0;
@@ -104,14 +104,20 @@ struct Job {
   int64_t profiled_time = 0;
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
+
+  // Constant variables (Valid after invoke)
+  // TODO: better job life-cycle to change these to `const`
+  int model_id;
   int input_handle = -1;
   int output_handle = -1;
   int job_id = -1;
   int sched_id = -1;
-  JobStatus status = kTfLiteJobQueued;
-  bool is_final_subgraph = true;
   std::string model_fname;
 
+  // Current status for execution
+  JobStatus status = kTfLiteJobQueued;
+  // 
+  std::set<int> unused_tensor_indices;
   std::vector<Job> following_jobs;
   int previous_subgraph_idx = -1;
 };
