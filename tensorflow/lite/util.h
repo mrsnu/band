@@ -25,14 +25,8 @@ limitations under the License.
 #include <string>
 #include <vector>
 #include <map>
-#include <iostream>
 
 #include "tensorflow/lite/c/common.h"
-
-#define DUMP_METHOD_INFO \
-  do { \
-  DumpCurrentMethod(); \
-  } while(0)
 
 namespace tflite {
 
@@ -71,17 +65,6 @@ struct ModelConfig {
   int batch_size = 1;
   int64_t slo_us = -1;
   float slo_scale = -1.f;
-};
-
-class DumpCurrentMethod {
- public:
-  DumpCurrentMethod() {
-    std::cout << "Start Executing - " << __PRETTY_FUNCTION__ << std::endl;
-  }
-
-  ~DumpCurrentMethod() {
-    std::cout << "Done Executing - " << __PRETTY_FUNCTION__ << std::endl;
-  }
 };
 
 // The prefix of Flex op custom code.
