@@ -746,9 +746,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       return cleanup_and_error();
     }
 
-    std::cout << "# of operators " << operators->size() <<
-        " # of tensors " << tensors->size() << std::endl;
-
     if (op_indices.empty()) {
       for (int op_index = 0; op_index <= operators->size() - 1; op_index++) {
         op_indices.insert(op_index);
@@ -842,27 +839,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
 
     modified_subgraph->SetInputTensorToNodes(input_tensor_to_nodes);
     modified_subgraph->SetOutputTensorToNodes(output_tensor_to_nodes);
-    std::cout << "Input tensors : " << std::endl;
-    for (int i : modified_subgraph->inputs()) {
-      std::cout << i << " " << std::endl;
-    }
-
-    std::cout << "Input nodes : " << std::endl;
-    auto i_nodes = modified_subgraph->input_nodes();
-    for (int i :i_nodes) {
-      std::cout << modified_subgraph->op_indices()[i] << " " << std::endl;
-    }
-
-    std::cout << "Output tensors : " << std::endl;
-    for (int i : modified_subgraph->outputs()) {
-      std::cout << i << " " << std::endl;
-    }
-
-    std::cout << "Output nodes : " << std::endl;
-    auto o_nodes = modified_subgraph->output_nodes();
-    for (int i : o_nodes) {
-      std::cout << modified_subgraph->op_indices()[i] << " " << std::endl;
-    }
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
