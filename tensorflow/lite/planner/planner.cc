@@ -60,7 +60,7 @@ void Planner::Wait(std::vector<int> job_ids) {
         TFLITE_LOG(INFO) << "Wait: " << job_id << " is not valid";
         continue;
       }
-      if (jobs_finished_record_[GetJobRecordIndex(job_id)].job_id == -1) {
+      if (jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != job_id) {
         TFLITE_LOG(INFO) << "Wait: " << job_id << " is not finished";
         return false;
       }
