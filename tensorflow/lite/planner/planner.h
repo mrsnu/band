@@ -14,19 +14,6 @@ namespace tflite {
 namespace impl {
 
 class Interpreter;
-
-// Contains how a Subgraph should be executed.
-// Currently, the unit of device placement is a `Subgraph`.
-// Each Subgraph contains one `ModelPlan` as a member.
-struct ModelPlan {
- public:
-  ModelPlan():device_(kTfLiteCPU) {}
-  ModelPlan(ModelPlan&&) = default;
-  ModelPlan(const ModelPlan&) = delete;
-  TfLiteDeviceFlags device_;  
-};
-
-// assigns requested model to devices according to `ModelPlan` of a `Subgraph`.
 // The interpreter manages a `Planner`.
 class Planner {
  public:
