@@ -41,13 +41,16 @@ struct SubgraphKey {
     SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
                 int start = -1, int end = -1)
         : model_id(model_id), device_flag(device_flag),
+          is_fallback(false),
           input_ops(start != -1 ? std::set<int>({start}) : std::set<int>()),
           output_ops(end != -1 ? std::set<int>({end}) : std::set<int>()) {}
 
     SubgraphKey(int model_id, TfLiteDeviceFlags device_flag,
+                bool is_fallback,
                 std::set<int> input_ops,
                 std::set<int> output_ops)
           : model_id(model_id), device_flag(device_flag),
+            is_fallback(is_fallback),
             input_ops(input_ops),
             output_ops(output_ops) {
     }
@@ -70,11 +73,13 @@ struct SubgraphKey {
 
     std::string GetInputOpsString() const;
     std::string GetOutputOpsString() const;
+    TfLiteDeviceFlags target_device() const;
 
-    int model_id;
-    TfLiteDeviceFlags device_flag;
-    std::set<int> input_ops;
-    std::set<int> output_ops;
+    const int model_id;
+    const TfLiteDeviceFlags device_flag;
+    const bool is_fallback;
+    const std::set<int> input_ops;
+    const std::set<int> output_ops;
 };
 
 using Tensors = std::vector<TfLiteTensor*>;
@@ -96,8 +101,6 @@ struct Job {
     : model_id(model_id), following_jobs(following_jobs) {}
 
   // For record (Valid after execution)
-  int subgraph_idx = -1;
-  int device_id = -1;
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
@@ -114,10 +117,10 @@ struct Job {
   int sched_id = -1;
   std::string model_fname;
 
-  // Current status for execution
+  // Current status for execution (Valid after planning)
   JobStatus status = kTfLiteJobQueued;
-  // 
-  std::set<int> unused_tensor_indices;
+  int subgraph_idx = -1;
+  int device_id = -1;
   std::vector<Job> following_jobs;
   int previous_subgraph_idx = -1;
 };

@@ -125,7 +125,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         most_urgent_job.following_jobs.push_back(remaining_ops);
       }
 
-      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
+      Worker* worker = GetInterpreter()->GetWorker(to_execute.target_device());
       {
         std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
         worker->GetDeviceRequests().push_back(most_urgent_job);
