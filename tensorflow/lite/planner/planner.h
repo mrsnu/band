@@ -45,10 +45,11 @@ class Planner {
   virtual bool NeedProfile() = 0;
 
   // Enqueues a job to a worker request queue.
-  void EnqueueRequest(Job job);
+  int EnqueueRequest(Job job);
 
   // Enqueues a batch of jobs to a worker request queue.
-  void EnqueueBatch(std::vector<Job> jobs);
+  // Assigns new job id for non-continuous job.
+  std::vector<int> EnqueueBatch(std::vector<Job> jobs);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
@@ -111,6 +112,7 @@ class Planner {
 
   int schedule_window_size_ = INT_MAX;
   int num_submitted_jobs_ = 0;
+  int num_total_submitted_jobs_ = 0;
 };
 
 }  // namespace impl

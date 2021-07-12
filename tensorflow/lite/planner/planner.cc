@@ -38,7 +38,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "profiled_time\t"
            << "expected_latency\t"
            << "slo_us\t"
-           << "slo_violated\t"
+           << "job status\t"
            << "is_final_subgraph\n";
   log_file.close();
   
@@ -56,10 +56,11 @@ void Planner::Wait() {
     Job job = jobs_finished_.front();
     jobs_finished_.pop_front();
 
-    if (job.slo_us > 0 && job.is_final_subgraph && !job.slo_violated) {
+    if (job.slo_us > 0 && job.is_final_subgraph && job.status == kTfLiteJobSuccess) {
       // check if slo has been violated or not
       auto latency = job.end_time - job.enqueue_time;
-      job.slo_violated = latency > job.slo_us;
+      job.status =
+          latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
     }
 
     if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
@@ -81,7 +82,7 @@ void Planner::Wait() {
              << job.profiled_time << "\t"
              << job.expected_latency << "\t"
              << job.slo_us << "\t"
-             << job.slo_violated << "\t"
+             << job.status << "\t"
              << job.is_final_subgraph << "\n";
   }
   log_file.close();
@@ -96,35 +97,30 @@ void Planner::EnqueueFinishedJob(Job job) {
   end_invoke_.notify_one();
 }
 
-void Planner::EnqueueRequest(Job job) {
-  if (job.enqueue_time == 0) {
-    // job.enqueue_time may already be set if this model contains a fallback
-    // op, in which case we do not overwrite the set value
-    job.enqueue_time = profiling::time::NowMicros();
-  }
-  std::unique_lock<std::mutex> lock(requests_mtx_);
-  requests_.push_back(job);
-  num_submitted_jobs_++;
-  lock.unlock();
+int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
 
-  planner_safe_bool_.notify();
-}
-
-void Planner::EnqueueBatch(std::vector<Job> jobs) {
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
+  std::vector<int> job_ids(jobs.size());
   std::unique_lock<std::mutex> lock(requests_mtx_);
   auto enqueue_time = profiling::time::NowMicros();
-  for (Job job : jobs) {
+  for (int i = 0; i < jobs.size(); i++) {
+    Job& job = jobs[i];
     if (job.enqueue_time == 0) {
       // job.enqueue_time may already be set if this model contains a fallback
       // op, in which case we do not overwrite the set value
       job.enqueue_time = enqueue_time;
     }
+    if (job.job_id == -1) {
+      job.job_id = num_total_submitted_jobs_++;
+    }
+    job_ids[i] = job.job_id;
     requests_.push_back(job);
-    num_submitted_jobs_++;
   }
   lock.unlock();
 
   planner_safe_bool_.notify();
+
+  return job_ids;
 }
 
 }  // namespace impl
