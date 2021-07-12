@@ -494,6 +494,11 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
         valid_requests_masks[i] = false;
       }
     }
+  } else {
+    // we don't care about the inputs, just make input/output-less requests
+    for (Job& request : requests) {
+      valid_requests.push_back(std::move(request));
+    }
   }
 
   std::vector<int> job_ids(requests.size(), -1);
