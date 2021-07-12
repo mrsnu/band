@@ -56,7 +56,7 @@ void Planner::Wait(std::vector<int> job_ids) {
   end_invoke_.wait(request_lock, [this, job_ids] {
 
     for (int job_id : job_ids) {
-      if (!IsJobValid(job_id)) {
+      if (!IsJobIdValid(job_id)) {
         TFLITE_LOG(INFO) << "Wait: " << job_id << " is not valid";
         continue;
       }
@@ -130,7 +130,7 @@ void Planner::SetWindowSize(int schedule_window_size) {
 
 Job Planner::GetFinishedJob(int job_id) {
   std::lock_guard<std::mutex> request_lock(requests_mtx_);
-  if (IsJobValid(job_id) &&
+  if (IsJobIdValid(job_id) &&
       jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != -1) {
     return jobs_finished_record_[GetJobRecordIndex(job_id)];
   } else {
@@ -182,12 +182,12 @@ void Planner::FlushFinishedJobs() {
   }
 }
 
-bool Planner::IsJobValid(int job_id) {
-  return num_submitted_jobs_ - job_id <= jobs_finished_record_.size();
+bool Planner::IsJobIdValid(int job_id) {
+  return num_submitted_jobs_ - job_id <= NUM_FINISHED_RECORDS;
 }
 
 int Planner::GetJobRecordIndex(int job_id) const {
-  return job_id % jobs_finished_record_.size();
+  return job_id % NUM_FINISHED_RECORDS;
 }
 
 }  // namespace impl

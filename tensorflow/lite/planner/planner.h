@@ -14,6 +14,8 @@ namespace tflite {
 namespace impl {
 
 class Interpreter;
+#define NUM_FINISHED_RECORDS 1000
+
 // The interpreter manages a `Planner`.
 class Planner {
  public:
@@ -95,7 +97,7 @@ class Planner {
   std::thread planner_thread_;
 
  private:
-  bool IsJobValid(int job_id);
+  bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
   Interpreter* interpreter_;
@@ -109,7 +111,7 @@ class Planner {
   // Request Queue
   std::mutex requests_mtx_;
   std::deque<Job> requests_;
-  std::array<Job, 1000> jobs_finished_record_;
+  std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
   int num_finished_jobs_ = 0;
 
