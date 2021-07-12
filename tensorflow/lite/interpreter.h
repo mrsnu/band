@@ -767,7 +767,7 @@ class Interpreter {
 
   int num_runs_ = 50;
 
-  int model_id_ = 0;
+  int next_model_id_ = 0;
 
   // Path to the profile data.
   // The data in the path will be read during initial phase, and also
