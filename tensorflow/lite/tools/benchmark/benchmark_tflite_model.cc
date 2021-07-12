@@ -449,50 +449,6 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   return kTfLiteOk;
 }
 
-TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
-
-  auto& model_information = benchmark_config_.model_information;
-  for (int model_id = 0; model_id < model_information.size(); ++model_id) {
-    auto& input_layer_infos = model_information[model_id].input_layer_infos;
-    auto& input_tensor_data = model_information[model_id].input_tensor_data;
-
-    // TODO: #73 share tensors across different subgraphs from same model
-    for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
-      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-
-      // reset inputs for all subgraphs that start with op 0
-      // TODO: may need to do this for all subgraphs that require external inputs
-      for (int subgraph_index : interpreter_->GetSubgraphIdx(model_id,
-                                                             device_flag, 0)) {
-        auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-        // Set the values of the input tensors from inputs_data_.
-        for (int j = 0; j < interpreter_inputs.size(); ++j) {
-          int i = interpreter_inputs[j];
-          TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
-          if (t->type == kTfLiteString) {
-            if (input_tensor_data[j].data) {
-              static_cast<DynamicBuffer*>(input_tensor_data[j].data.get())
-                  ->WriteToTensor(t, /*new_shape=*/nullptr);
-            } else {
-              tflite::DynamicBuffer buffer;
-              FillRandomString(&buffer, t->dims, []() {
-                return "we're have some friends over saturday to hang out in the "
-                      "yard";
-              });
-              buffer.WriteToTensor(t, /*new_shape=*/nullptr);
-            }
-          } else {
-            std::memcpy(t->data.raw, input_tensor_data[j].data.get(),
-                        input_tensor_data[j].bytes);
-          }
-        }
-      }
-    }
-  }
-
-  return kTfLiteOk;
-}
-
 TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
   const int32_t num_threads = params_.Get<int32_t>("num_threads");
@@ -724,7 +680,6 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
       std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
-      std::vector<TfLiteTensor*> output_tensors = model_output_tensors_[model_id];
       std::set<int> requested_job_ids;
       while (true) {
         // measure the time it took to generate requests
@@ -733,20 +688,10 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
         int64_t end = profiling::time::NowMicros();
         int duration_ms = (end - start) / 1000;
 
-        requested_job_ids.insert(job_ids.begin(), job_ids.end());
-
         // sleep until we reach period_ms
         if (duration_ms < period_ms) {
           std::this_thread::sleep_for(
               std::chrono::milliseconds(period_ms - duration_ms));
-        }
-
-        for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
-          if (interpreter_ && (interpreter_->GetOutputTensors(*it, output_tensors) == kTfLiteOk)) {
-            requested_job_ids.erase(it++);
-          } else {
-            it++;
-          }
         }
 
         if (kill_app_) return;
@@ -775,30 +720,18 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       int num_models = interpreter_->GetModelConfig().size();
       int model_id = std::rand() % num_models;
       std::vector<Job> requests(1, Job(model_id));
-      std::set<int> requested_job_ids;
       std::vector<TfLiteTensor*> output_tensors = model_output_tensors_[model_id];
 
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
-      auto job_ids = interpreter_->InvokeModelsAsync(requests, model_input_tensors_);
+      auto job_ids = interpreter_->InvokeModelsAsync(requests, {model_input_tensors_[model_id]});
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;
-
-      requested_job_ids.insert(job_ids.begin(), job_ids.end());
 
       // sleep until we reach period_ms
       if (duration_ms < period_ms) {
         std::this_thread::sleep_for(
             std::chrono::milliseconds(period_ms - duration_ms));
-      }
-
-      for (auto it = requested_job_ids.begin(); it != requested_job_ids.end(); ) {
-        if (interpreter_ && (interpreter_->GetOutputTensors(
-                                 *it, output_tensors) == kTfLiteOk)) {
-          requested_job_ids.erase(it++);
-        } else {
-          it++;
-        }
       }
 
       if (kill_app_) return;
