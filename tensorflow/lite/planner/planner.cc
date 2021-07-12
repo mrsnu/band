@@ -183,7 +183,7 @@ void Planner::FlushFinishedJobs() {
 }
 
 bool Planner::IsJobValid(int job_id) {
-  return num_submitted_jobs_ - job_id < jobs_finished_record_.size();
+  return num_submitted_jobs_ - job_id <= jobs_finished_record_.size();
 }
 
 int Planner::GetJobRecordIndex(int job_id) const {
