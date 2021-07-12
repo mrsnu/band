@@ -77,6 +77,7 @@ enum JobStatus {
 // The request can specify a model by indication the model id
 // and the start/end indices.
 struct Job {
+  explicit Job() : model_id(-1) {}
   explicit Job(int model_id) : model_id(model_id) {}
   explicit Job(int model_id, std::vector<Job>& following_jobs)
     : model_id(model_id), following_jobs(following_jobs) {}

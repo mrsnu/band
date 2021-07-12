@@ -532,20 +532,20 @@ void Interpreter::InvokeModelsSync(std::vector<Job> requests,
 }
 
 TfLiteStatus Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
-  const Job* job = planner_->GetFinishedJob(job_id);
+  Job job = planner_->GetFinishedJob(job_id);
 
-  if (!job) {
+  if (job.job_id == -1) {
     // Not finished yet.
     return kTfLiteOk;
   }
 
-  if (model_output_buffer_.find(job->model_id) == model_output_buffer_.end()) {
-    error_reporter_->Report("Invalid model_id : %d", job->model_id);
+  if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
+    error_reporter_->Report("Invalid model_id : %d", job.model_id);
     return kTfLiteError;
   }
 
-  return model_output_buffer_.at(job->model_id)
-      ->GetTensorsFromHandle(outputs, job->output_handle);
+  return model_output_buffer_.at(job.model_id)
+      ->GetTensorsFromHandle(outputs, job.output_handle);
 }
 
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,

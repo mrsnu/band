@@ -12,7 +12,7 @@ namespace tflite {
 class ErrorReporter;
 class TensorRingBuffer {
  public:
-  TensorRingBuffer(ErrorReporter* error_reporter, Tensors tensors, int size = 64);
+  TensorRingBuffer(ErrorReporter* error_reporter, Tensors tensors, int size = 128);
   ~TensorRingBuffer();
 
   int Alloc();
