@@ -9,6 +9,7 @@
 
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
+#include "tensorflow/lite/config.h"
 
 namespace tflite {
 
@@ -21,6 +22,8 @@ class Worker {
   explicit Worker(std::shared_ptr<Planner> planner,
                   TfLiteDeviceFlags device_flag);
   virtual ~Worker();
+
+  TfLiteStatus Init(WorkerConfig& config);
 
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }

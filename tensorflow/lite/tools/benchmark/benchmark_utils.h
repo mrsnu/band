@@ -26,6 +26,7 @@ limitations under the License.
 namespace tflite {
 namespace benchmark {
 namespace util {
+
 struct InputLayerInfo {
   InputLayerInfo() : has_value_range(false) {}
 
@@ -64,35 +65,16 @@ struct ModelInformation {
   ModelConfig config;
 };
 
-// Keeps the runtime configuration from json config file.
-struct RuntimeConfig {
-  RuntimeConfig() {
-    // To avoid kTfLiteNumDevices dependent initialization
-    for (int i = 0; i < kTfLiteNumDevices; i++) {
-      worker_cpu_masks[i] = tflite::impl::kTfLiteNumCpuMasks;
-    }
-  }
-  // Required
-  std::string log_path;
-  TfLitePlannerType planner_type;
+struct BenchmarkConfig {
   std::string execution_mode;
-  // Optional
-  impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
-  impl::TfLiteCPUMaskFlags worker_cpu_masks[kTfLiteNumDevices];
-  int running_time_ms = 60000;
-  float profile_smoothing_factor = 0.1;
-  std::string model_profile;
-  bool allow_work_steal = false;
-  int schedule_window_size = INT_MAX;
-  std::vector<ModelInformation> model_information;
-  // for period_single_thread
-  int global_period_ms;
   unsigned model_id_random_seed;
+  int global_period_ms;
+  int running_time_ms = 60000;
+  std::vector<ModelInformation> model_information;
 };
 
-
-TfLiteStatus ParseJsonFile(std::string json_fname,
-                           RuntimeConfig* runtime_config);
+TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
+                                          BenchmarkConfig& benchmark_config);
 
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.

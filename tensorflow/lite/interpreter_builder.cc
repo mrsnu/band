@@ -589,7 +589,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   // the start and end indices aren't valid at this point
   // we fix this later in InvestigateModelSpec
-  tflite::impl::SubgraphKey subgraph_key(model_id, kTfLiteCPU);
+  SubgraphKey subgraph_key(model_id, kTfLiteCPU);
   int subgraph_idx = AddSubgraph(
     model, op_resolver, interpreter, subgraph_key, num_threads);
   if (subgraph_idx != -1) {
@@ -608,7 +608,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       continue;
     }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    std::vector<tflite::impl::SubgraphKey> subgraph_keys;
+    std::vector<SubgraphKey> subgraph_keys;
 
     // separate the supported ops from unsupported, fallback ops
     (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id,
@@ -631,6 +631,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   if (has_available_device) {
+    if ((*interpreter)->NeedProfile()) {
+      (*interpreter)->Profile(model_id);
+    }
     return model_id;
   } else {
     InterpreterBuilder::num_registered_model--;
@@ -641,7 +644,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
-                                    tflite::impl::SubgraphKey& subgraph_key,
+                                    SubgraphKey& subgraph_key,
                                     int num_threads) {
   return AddSubgraph(model.GetModel(), op_resolver, interpreter,
                      subgraph_key, num_threads);
@@ -650,7 +653,7 @@ int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
 int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
-                                    tflite::impl::SubgraphKey& subgraph_key,
+                                    SubgraphKey& subgraph_key,
                                     int num_threads) {
   int subgraph_exists = (*interpreter)->GetSubgraphIdx(subgraph_key);
   if (subgraph_exists >= 0) {

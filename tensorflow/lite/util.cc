@@ -20,6 +20,7 @@ limitations under the License.
 #include "tensorflow/lite/builtin_ops.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/schema/schema_generated.h"
+#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace {
@@ -32,6 +33,53 @@ TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
 }
 
 }  // namespace
+
+int GetModelId(std::string model_name,
+               const std::map<int, ModelConfig>& model_configs) {
+  auto target = std::find_if(model_configs.begin(),
+                             model_configs.end(),
+                             [model_name](auto const& x) {
+                               return x.second.model_fname == model_name;
+                             });
+  if (target == model_configs.end()) {
+    return -1;
+  }
+  return target->first;
+}
+
+std::string GetModelName(int model_id,
+                         const std::map<int, ModelConfig>& model_configs) {
+  auto target = std::find_if(model_configs.begin(),
+                             model_configs.end(),
+                             [model_id](auto const& x) {
+                               return x.first == model_id;
+                             });
+  if (target == model_configs.end()) {
+    return "";
+  }
+  return target->second.model_fname;
+}
+
+Json::Value LoadJsonObjectFromFile(std::string file_path) {
+  Json::Value json_object;
+  if (FileExists(file_path)) {
+    std::ifstream in(file_path, std::ifstream::binary);
+    in >> json_object;
+  } else {
+    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
+  }
+  return json_object;
+}
+
+void WriteJsonObjectToFile(const Json::Value& json_object,
+                           std::string file_path) {
+  std::ofstream out_file(file_path, std::ios::out);
+  if (out_file.is_open()) {
+    out_file << json_object;
+  } else {
+    TFLITE_LOG(ERROR) << "Cannot save profiled results to " << file_path;
+  }
+}
 
 bool IsFlexOp(const char* custom_name) {
   return custom_name && strncmp(custom_name, kFlexCustomCodePrefix,

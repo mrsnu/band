@@ -20,6 +20,22 @@ Worker::~Worker() {
   device_cpu_thread_.join();
 }
 
+TfLiteStatus Worker::Init(WorkerConfig& config) {
+  if (config.allow_worksteal) {
+    AllowWorkSteal();
+  }
+
+  TFLITE_LOG(INFO) << "Set affinity of "
+                   << TfLiteDeviceGetName(device_flag_)
+                   << " to "
+                   << TfLiteCPUMaskGetName(config.cpu_masks[device_flag_])
+                   << " cores";
+
+  const CpuSet worker_mask_set =
+    TfLiteCPUMaskGetSet(config.cpu_masks[device_flag_]);
+  return SetWorkerThreadAffinity(worker_mask_set);
+}
+
 TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
   if (thread_affinity_mask.NumEnabled() == 0) {
     return kTfLiteError;

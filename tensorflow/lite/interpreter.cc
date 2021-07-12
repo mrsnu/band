@@ -31,7 +31,6 @@ limitations under the License.
 #include "tensorflow/lite/graph_info.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
-#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/tflite_with_xnnpack_optional.h"
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
@@ -111,17 +110,13 @@ bool IsNNAPIDeviceUseful(std::string name) {
 }  // namespace
 
 Interpreter::Interpreter(ErrorReporter* error_reporter,
-                         TfLitePlannerType planner_type)
+                         RuntimeConfig runtime_config)
     : error_reporter_(error_reporter ? error_reporter :
                                        DefaultErrorReporter()) {
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
-#if defined(TFLITE_IS_MOBILE_PLATFORM)
-  TFLITE_LOG_PROD_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#else
-  TFLITE_LOG_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#endif
+  TFLITE_LOG(INFO) << "Initialized TensorFlow Lite runtime.";
 
   // Reserve some space for the tensors to avoid excessive resizing.
   for (int i = 0; i < kTfLiteMaxExternalContexts; ++i) {
@@ -141,12 +136,12 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create a Planner instance.
   // FixedDevicePlanner is the default planner.
-  planner_type_ = planner_type;
-  if (planner_type == kRoundRobin) {
+  planner_type_ = runtime_config.planner_config.planner_type;
+  if (planner_type_ == kRoundRobin) {
     planner_.reset(new RoundRobinPlanner(this));
-  } else if (planner_type == kShortestExpectedLatency) {
+  } else if (planner_type_ == kShortestExpectedLatency) {
     planner_.reset(new ShortestExpectedLatencyPlanner(this));
-  } else if (planner_type == kFixedDeviceGlobalQueue) {
+  } else if (planner_type_ == kFixedDeviceGlobalQueue) {
     planner_.reset(new FixedDeviceGlobalQueuePlanner(this));
   } else {
     planner_.reset(new FixedDevicePlanner(this));
@@ -235,11 +230,17 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create workers.
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    if (planner_type == kFixedDeviceGlobalQueue) {
+    if (planner_type_ == kFixedDeviceGlobalQueue) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
     } else {
       workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
     }
+  }
+
+  Init(runtime_config.interpreter_config);
+  planner_->Init(runtime_config.planner_config);
+  for (auto& worker : workers_) {
+    worker.second->Init(runtime_config.worker_config);
   }
 }
 
@@ -263,6 +264,44 @@ Interpreter::~Interpreter() {
       internal_context->ClearCaches();
     }
   }
+
+  // update the profile file to include all new profile results from this run
+  Json::Value profile_dict =
+    profiling::util::ConvertModelIdToName(profile_database_, model_configs_);
+  WriteJsonObjectToFile(profile_dict, profile_data_path_);
+}
+
+
+TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
+  profile_smoothing_factor_ = config.profile_smoothing_factor;
+
+  if (NeedProfile()) {
+    profile_data_path_ = config.profile_data_path;
+    Json::Value model_name_profile =
+      LoadJsonObjectFromFile(config.profile_data_path);
+    // convert the model name strings to integer ids for the interpreter
+    // You can set profile data from the previous runs if you have any.
+    profile_database_ =
+      profiling::util::ConvertModelNameToId(model_name_profile,
+                                            model_configs_);
+
+    // Set how many runs are required to get the profile results.
+    num_warmups_ = config.profile_config.num_warmups;
+    num_runs_ = config.profile_config.num_runs;
+
+    TFLITE_LOG(INFO) << "Set Profiling Configuration:"
+                     << " warmup=" << num_warmups_
+                     << " count=" << num_runs_;
+  }
+
+  const TfLiteCPUMaskFlags cpu_mask = 
+      static_cast<TfLiteCPUMaskFlags>(config.cpu_masks);
+  auto cpu_mask_set = TfLiteCPUMaskGetSet(cpu_mask);
+
+  TFLITE_LOG(INFO) << "Set affinity to "
+                   << TfLiteCPUMaskGetName(cpu_mask) << " cores";
+
+  return SetCPUThreadAffinity(cpu_mask_set);
 }
 
 void Interpreter::SetExternalContext(TfLiteExternalContextType type,
@@ -667,8 +706,7 @@ void Interpreter::UpdateProfileResult(
       (1 - profile_smoothing_factor_) * prev_profile;
 }
 
-void Interpreter::Profile(const int num_warm_ups, const int num_runs,
-                          ModelDeviceToLatency& profiled) {
+void Interpreter::Profile(int model_id) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler timer;
@@ -679,8 +717,12 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
 
-    auto it = profiled.find(subgraph_key);
-    if (it != profiled.end()) {
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
+
+    auto it = profile_database_.find(subgraph_key);
+    if (it != profile_database_.end()) {
       // if an entry for this SubgraphKey exists in the profiled data,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
@@ -692,14 +734,13 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
                        << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
                        << " start=" << subgraph_key.start_idx
                        << " end=" << subgraph_key.end_idx << ".";
-
     } else {
       // otherwise, proceed as normal
-      for (int i = 0; i < num_warm_ups; i++) {
+      for (int i = 0; i < num_warmups_; i++) {
         subgraph->Invoke();
       }
       timer.ClearRecords();
-      for (int i = 0; i < num_runs; i++) {
+      for (int i = 0; i < num_runs_; i++) {
         subgraph->Invoke();
       }
 
@@ -707,12 +748,10 @@ void Interpreter::Profile(const int num_warm_ups, const int num_runs,
       subgraph_profiling_results_map_[subgraph_key] = latency;
 
       // record the profiled latency for subsequent benchmark runs
-      profiled[subgraph_key] = latency;
+      profile_database_[subgraph_key] = latency;
 
       TFLITE_LOG(INFO) << "Profiling result\n"
                        << " model=" << subgraph_key.model_id
-                       << " warmup=" << num_warm_ups
-                       << " count=" << num_runs
                        << " avg=" << latency << " us"
                        << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
                        << " start=" << subgraph_key.start_idx
@@ -760,12 +799,6 @@ bool Interpreter::NeedProfile() {
     return planner_->NeedProfile();
   else
     return false;
-}
-
-TfLiteStatus Interpreter::PrepareLogging(std::string log_path) {
-  if (!planner_)
-    return kTfLiteError;
-  return planner_->PrepareLogging(log_path);
 }
 
 TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
@@ -891,21 +924,6 @@ std::set<int> Interpreter::models() const {
   return models;
 }
 
-TfLiteStatus Interpreter::SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id) {
-  if (device_id == kTfLiteNumDevices) {
-    for (auto& deviceWorker : workers_) {
-      if (deviceWorker.second->SetWorkerThreadAffinity(thread_affinity_mask) != kTfLiteOk)
-        return kTfLiteError;
-    }
-    return kTfLiteOk;
-  } else {
-    if (workers_.find(device_id) == workers_.end())
-      return kTfLiteError;
-    else
-      return workers_[device_id]->SetWorkerThreadAffinity(thread_affinity_mask);
-  }
-}
-
 int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
   auto it = subgraph_profiling_results_map_.find(key);
   if (it != subgraph_profiling_results_map_.end()) {
@@ -961,20 +979,6 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
       splitted_op_range.push_back(SubgraphKey(model_id, curr_device,
                                               subgraph_min, num_ops - 1));
     }
-  }
-}
-
-int Interpreter::GetWindowSize() const {
-  return planner_->GetWindowSize();
-}
-
-void Interpreter::SetWindowSize(int schedule_window_size) {
-  planner_->SetWindowSize(schedule_window_size);
-}
-
-void Interpreter::AllowWorkSteal() {
-  for (auto& worker : workers_) {
-    worker.second->AllowWorkSteal();
   }
 }
 

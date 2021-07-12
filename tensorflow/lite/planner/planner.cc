@@ -15,8 +15,10 @@ Planner::~Planner() {
   planner_thread_.join();
 }
 
-TfLiteStatus Planner::PrepareLogging(std::string log_path) {
-  log_path_ = log_path;
+TfLiteStatus Planner::Init(PlannerConfig& config) {
+  schedule_window_size_ = config.schedule_window_size;
+  log_path_ = config.log_path;
+
   // Open file to write per-request timestamps later
   // NOTE: Columns starting `sched_id` are added for debugging purpose
   // and the metrics are only for ShortestExpectedLatency Planner.
@@ -123,10 +125,6 @@ void Planner::EnqueueBatch(std::vector<Job> jobs) {
   lock.unlock();
 
   planner_safe_bool_.notify();
-}
-
-void Planner::SetWindowSize(int schedule_window_size) {
-  schedule_window_size_ = schedule_window_size;
 }
 
 }  // namespace impl

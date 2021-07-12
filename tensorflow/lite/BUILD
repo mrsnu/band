@@ -280,6 +280,7 @@ cc_library(
         ":tflite_with_xnnpack_optional",
         ":type_to_tflitetype",
         ":util",
+        ":config",
         ":version",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/core/api",
@@ -292,6 +293,7 @@ cc_library(
         "//tensorflow/lite/profiling:time_profiler",
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
+        "//tensorflow/lite/profiling:util",
         "//tensorflow/lite/tools:logging",
     ] + select({
         ":enable_default_profiler": [
@@ -597,6 +599,20 @@ cc_test(
 )
 
 cc_library(
+    name = "config",
+    srcs = ["config.cc"],
+    hdrs = ["config.h"],
+    copts = TFLITE_DEFAULT_COPTS,
+    deps = [
+        "//tensorflow/lite:cpu",
+        "//tensorflow/lite/c:common",
+        "//tensorflow/lite:util",
+        "//tensorflow/lite/tools:logging",
+        "@jsoncpp_git//:jsoncpp",
+    ],
+)
+
+cc_library(
     name = "util",
     srcs = ["util.cc"],
     hdrs = ["util.h"],
@@ -605,6 +621,8 @@ cc_library(
         ":kernel_api",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/schema:schema_fbs",
+        "//tensorflow/lite/tools:logging",
+        "@jsoncpp_git//:jsoncpp",
     ],
 )
 

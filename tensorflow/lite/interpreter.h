@@ -26,6 +26,7 @@ limitations under the License.
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/util.h"
+#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/core/api/profiler.h"
 #include "tensorflow/lite/core/subgraph.h"
@@ -37,6 +38,7 @@ limitations under the License.
 #include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/planner/round_robin_planner.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/model_builder.h"
 
 #if defined(__ANDROID__)
@@ -109,13 +111,15 @@ class Interpreter {
   /// Note, if error_reporter is nullptr, then a default StderrReporter is
   /// used. Ownership of 'error_reporter' remains with the caller.
   explicit Interpreter(ErrorReporter* error_reporter,
-                       TfLitePlannerType planner_type);
+                       RuntimeConfig runtime_config);
 
   ~Interpreter();
 
   // Interpreters are not copyable as they have non-trivial memory semantics.
   Interpreter(const Interpreter&) = delete;
   Interpreter& operator=(const Interpreter&) = delete;
+
+  TfLiteStatus Init(InterpreterConfig& config);
 
   // Functions to build interpreter
 #ifndef DOXYGEN_SKIP
@@ -533,10 +537,10 @@ class Interpreter {
                                TfLiteBufferHandle* buffer_handle,
                                TfLiteDelegate** delegate);
 
-  using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
-
-  void Profile(const int num_warm_ups, const int num_runs,
-               ModelDeviceToLatency& profiled);
+  // Profile the subgraphs with the given model id.
+  // NOTE: the profiling step may affects other running requests,
+  // and vice versa.
+  void Profile(int model_id);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
@@ -642,8 +646,6 @@ class Interpreter {
     return planner_;
   }
 
-  TfLiteStatus PrepareLogging(std::string log_path);
-
   Worker* GetWorker(int device_idx);
   Worker* GetWorker(TfLiteDeviceFlags device);
 
@@ -681,25 +683,12 @@ class Interpreter {
     return model_configs_;
   }
   
-  TfLiteStatus SetWorkerThreadAffinity(const CpuSet& thread_affinity_mask, TfLiteDeviceFlags device_id = kTfLiteNumDevices);
-
   int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
   void UpdateProfileResult(const SubgraphKey& key,
                            int64_t new_profile);
 
-  void SetProfileSmoothingConstant(float profile_smoothing_factor) {
-    profile_smoothing_factor_ = profile_smoothing_factor;
-  }
-
-
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
-
-  int GetWindowSize() const;
-
-  void SetWindowSize(int schedule_window_size);
-
-  void AllowWorkSteal();
 
   // fill in the ModelSpec for this model
   void InvestigateModelSpec(int model_id);
@@ -729,6 +718,8 @@ class Interpreter {
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
+
+  TfLitePlannerType planner_type_;
 
   std::shared_ptr<Planner> planner_;
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
@@ -761,6 +752,21 @@ class Interpreter {
   // Smoothing constant to update profile result.
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_ = 0.1;
+
+  // Parameters for profiling.
+  // The results during warmup period are not counted.
+  int num_warmups_ = 3;
+
+  int num_runs_ = 50;
+
+  // Path to the profile data.
+  // The data in the path will be read during initial phase, and also
+  // will be updated at the end of the run.
+  std::string profile_data_path_;
+
+  // Stores the profile results
+  // When a subgraph key is given, returns the profile results in int64_t.
+  profiling::util::ModelDeviceToLatency profile_database_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;
@@ -797,7 +803,6 @@ class Interpreter {
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
 
-  TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
 

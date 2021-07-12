@@ -7,30 +7,20 @@
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/config.h"
 
 namespace tflite {
 
 namespace impl {
 
 class Interpreter;
-
-// Contains how a Subgraph should be executed.
-// Currently, the unit of device placement is a `Subgraph`.
-// Each Subgraph contains one `ModelPlan` as a member.
-struct ModelPlan {
- public:
-  ModelPlan():device_(kTfLiteCPU) {}
-  ModelPlan(ModelPlan&&) = default;
-  ModelPlan(const ModelPlan&) = delete;
-  TfLiteDeviceFlags device_;  
-};
-
-// assigns requested model to devices according to `ModelPlan` of a `Subgraph`.
 // The interpreter manages a `Planner`.
 class Planner {
  public:
   explicit Planner(Interpreter* interpreter);
   ~Planner();
+
+  TfLiteStatus Init(PlannerConfig& config);
 
 	/*
 	Derived classes should generally follow this template when implementing `Plan()`:
@@ -90,8 +80,6 @@ class Planner {
   int GetWindowSize() {
     return schedule_window_size_;
   }
-
-  void SetWindowSize(int schedule_window_size);
 
   void InitNumSubmittedJobs() {
     num_submitted_jobs_ = 0;

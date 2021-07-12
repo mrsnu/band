@@ -71,9 +71,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   std::unique_ptr<tflite::FlatBufferModel> model_;
 
-  // A map for tracking which model name corresponds to which integer id.
-  std::map<std::string, int> model_name_to_id_;
-
   // Map structure to find FlatBufferModel pointer with a model file name.
   std::vector<std::unique_ptr<tflite::FlatBufferModel>> models_;
 
@@ -100,16 +97,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
   util::InputTensorData LoadInputTensorData(const TfLiteTensor& t,
                                       const std::string& input_file_path);
-
-  // Convert model name strings to integer ids for the given model profiles.
-  // The return val can be given to the interpreter via Interpreter::Profile().
-  Interpreter::ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile);
-
-  // Convert model integer ids back to string-type names for model profiles.
-  // This function does not erase entries in name_profile for models that were
-  // not run during this benchmark run.
-  void ConvertModelIdToName(const Interpreter::ModelDeviceToLatency id_profile,
-                            Json::Value& name_profile);
 
   // spawn threads that generate input requests periodically for all models
   void GeneratePeriodicRequests();
