@@ -70,8 +70,10 @@ class TestRunner {
   virtual void SetShapeExpectation(int id, const string& values_as_string) = 0;
 
   // Run the model.
-  virtual void Invoke() = 0;
   virtual void Invoke(int subgraph_idx) = 0;
+
+  // Run the model by enqueueing the request to the planner.
+  virtual void InvokeThroughPlanner(int subgraph_idx) = 0;
 
   // Verify that the contents of all outputs conform to the existing
   // expectations. Return true if there are no expectations or they are all

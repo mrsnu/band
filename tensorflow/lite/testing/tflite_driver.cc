@@ -325,8 +325,7 @@ TfLiteDriver::TfLiteDriver(bool reference_kernel)
     tflite::ops::custom::AddHashtableOps(buildinop_resolver_);
   }
 
-  (&interpreter_)->reset(
-      new Interpreter(nullptr, kFixedDevice));
+  (&interpreter_)->reset(new Interpreter(nullptr, kFixedDevice));
 }
 
 TfLiteDriver::~TfLiteDriver() {
@@ -508,14 +507,14 @@ void TfLiteDriver::SetShapeExpectation(int id, const string& csv_values) {
   expected_output_shape_[id].reset(new ShapeExpectation(csv_values));
 }
 
-void TfLiteDriver::Invoke() {
+void TfLiteDriver::InvokeSubgraph(int subgraph_idx) {
   if (!IsValid()) return;
-  if (interpreter_->Invoke(0) != kTfLiteOk) {
+  if (interpreter_->Invoke(subgraph_idx) != kTfLiteOk) {
     Invalidate("Failed to invoke interpreter");
   }
 }
 
-void TfLiteDriver::Invoke(int subgraph_idx) {
+void TfLiteDriver::InvokeThroughPlanner(int subgraph_idx) {
   if (!IsValid()) return;
   interpreter_->InvokeModelsSync({Job(subgraph_idx)});
 }
