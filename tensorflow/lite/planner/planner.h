@@ -7,7 +7,6 @@
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/config.h"
 
 namespace tflite {
 
@@ -22,20 +21,15 @@ class Planner {
   explicit Planner(Interpreter* interpreter);
   ~Planner();
 
-  TfLiteStatus Init(PlannerConfig& config);
-
 	/*
 	Derived classes should generally follow this template when implementing `Plan()`:
-
 	while (true) {
 		// sleep until somebody wakes me up with GetSafeBool().notify()
 		if (GetSafeBool().wait()) return;
-
 		// wake up and do something with the request queue
 		std::unique_lock<std::mutex> lock(GetRequestsMtx()); // exclusive access to the request queue
 		Job j = GetRequests().front(); // get the first job
 		GetRequests().pop_front(); // actual dequeue
-
 		// enqueue the job in the correct worker queue
 		// Worker& worker = GetInterpreter()->GetWorker(device_idx);
 		// ...
@@ -55,7 +49,8 @@ class Planner {
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
-  void Wait();
+  void Wait(std::vector<int> job_ids);
+  void WaitAll();
 
   // Enqueues a finised job to the queue.
   // A worker calls the method.
@@ -116,7 +111,6 @@ class Planner {
   int num_finished_jobs_ = 0;
 
   std::condition_variable end_invoke_;
-
   std::string log_path_;
 
   int schedule_window_size_;
