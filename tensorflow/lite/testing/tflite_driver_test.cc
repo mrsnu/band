@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <iostream>
 
 namespace tflite {
 namespace testing {
@@ -25,99 +26,104 @@ using ::testing::ElementsAre;
 
 TEST(TfliteDriverTest, SimpleTest) {
   std::unique_ptr<TestRunner> runner(new TfLiteDriver());
+  runner->ResetInterpreter();
 
   runner->SetModelBaseDir("tensorflow/lite");
-  runner->LoadModel("testdata/multi_add.bin");
+  int model_id = runner->LoadModel("testdata/multi_add.bin");
+  ASSERT_TRUE(model_id >= 0);
   ASSERT_TRUE(runner->IsValid());
 
-  ASSERT_THAT(runner->GetInputs(), ElementsAre(0, 1, 2, 3));
-  ASSERT_THAT(runner->GetOutputs(), ElementsAre(5, 6));
+  ASSERT_THAT(runner->GetInputs(model_id), ElementsAre(0, 1, 2, 3));
+  ASSERT_THAT(runner->GetOutputs(model_id), ElementsAre(5, 6));
 
   for (int i : {0, 1, 2, 3}) {
-    runner->ReshapeTensor(i, "1,2,2,1");
+    runner->ReshapeTensor(model_id, i, "1,2,2,1");
   }
   ASSERT_TRUE(runner->IsValid());
 
-  runner->AllocateTensors();
+  runner->AllocateTensors(model_id);
 
-  runner->SetInput(0, "0.1,0.2,0.3,0.4");
-  runner->SetInput(1, "0.001,0.002,0.003,0.004");
-  runner->SetInput(2, "0.001,0.002,0.003,0.004");
-  runner->SetInput(3, "0.01,0.02,0.03,0.04");
+  runner->SetInput(model_id, 0, "0.1,0.2,0.3,0.4");
+  runner->SetInput(model_id, 1, "0.001,0.002,0.003,0.004");
+  runner->SetInput(model_id, 2, "0.001,0.002,0.003,0.004");
+  runner->SetInput(model_id, 3, "0.01,0.02,0.03,0.04");
 
-  runner->ResetTensor(2);
+  runner->ResetTensor(model_id, 2);
 
-  runner->SetExpectation(5, "0.101,0.202,0.303,0.404");
-  runner->SetExpectation(6, "0.011,0.022,0.033,0.044");
+  runner->SetExpectation(model_id, 5, "0.101,0.202,0.303,0.404");
+  runner->SetExpectation(model_id, 6, "0.011,0.022,0.033,0.044");
 
-  runner->Invoke(0);
+  runner->Invoke(model_id);
   ASSERT_TRUE(runner->IsValid());
 
-  ASSERT_TRUE(runner->CheckResults());
-  EXPECT_EQ(runner->ReadOutput(5), "0.101,0.202,0.303,0.404");
-  EXPECT_EQ(runner->ReadOutput(6), "0.011,0.022,0.033,0.044");
+  ASSERT_TRUE(runner->CheckResults(model_id));
+  EXPECT_EQ(runner->ReadOutput(model_id, 5), "0.101,0.202,0.303,0.404");
+  EXPECT_EQ(runner->ReadOutput(model_id, 6), "0.011,0.022,0.033,0.044");
 }
 
-TEST(TfliteDriverTest, SingleAddOpTest) {
-  std::unique_ptr<TestRunner> runner(new TfLiteDriver(
-      /*reference_kernel=*/true));
+TEST(TfliteDriverTest, PlannerTest) {
+  std::unique_ptr<TestRunner> runner(new TfLiteDriver());
+  runner->ResetInterpreter();
 
   runner->SetModelBaseDir("tensorflow/lite");
-  runner->LoadModel("testdata/multi_add.bin");
+  int model_id = runner->LoadModel("testdata/multi_add.bin");
+  ASSERT_TRUE(model_id == 0);
   ASSERT_TRUE(runner->IsValid());
 
-  ASSERT_THAT(runner->GetInputs(), ElementsAre(0, 1, 2, 3));
-  ASSERT_THAT(runner->GetOutputs(), ElementsAre(5, 6));
+  ASSERT_THAT(runner->GetInputs(model_id), ElementsAre(0, 1, 2, 3));
+  ASSERT_THAT(runner->GetOutputs(model_id), ElementsAre(5, 6));
 
   for (int i : {0, 1, 2, 3}) {
-    runner->ReshapeTensor(i, "1,2,2,1");
+    runner->ReshapeTensor(model_id, i, "1,2,2,1");
   }
   ASSERT_TRUE(runner->IsValid());
 
-  runner->AllocateTensors();
+  runner->AllocateTensors(model_id);
 
-  runner->SetInput(0, "0.1,0.2,0.3,0.4");
-  runner->SetInput(1, "0.001,0.002,0.003,0.004");
-  runner->SetInput(2, "0.001,0.002,0.003,0.004");
-  runner->SetInput(3, "0.01,0.02,0.03,0.04");
+  runner->SetInput(model_id, 0, "0.1,0.2,0.3,0.4");
+  runner->SetInput(model_id, 1, "0.001,0.002,0.003,0.004");
+  runner->SetInput(model_id, 2, "0.001,0.002,0.003,0.004");
+  runner->SetInput(model_id, 3, "0.01,0.02,0.03,0.04");
 
-  runner->ResetTensor(2);
+  runner->ResetTensor(model_id, 2);
 
-  runner->SetExpectation(5, "0.101,0.202,0.303,0.404");
-  runner->SetExpectation(6, "0.011,0.022,0.033,0.044");
+  runner->SetExpectation(model_id, 5, "0.101,0.202,0.303,0.404");
+  runner->SetExpectation(model_id, 6, "0.011,0.022,0.033,0.044");
 
-  runner->Invoke();
+  runner->InvokeThroughPlanner(model_id);
   ASSERT_TRUE(runner->IsValid());
 
-  ASSERT_TRUE(runner->CheckResults());
-  EXPECT_EQ(runner->ReadOutput(5), "0.101,0.202,0.303,0.404");
-  EXPECT_EQ(runner->ReadOutput(6), "0.011,0.022,0.033,0.044");
+  ASSERT_TRUE(runner->CheckResults(model_id));
+  EXPECT_EQ(runner->ReadOutput(model_id, 5), "0.101,0.202,0.303,0.404");
+  EXPECT_EQ(runner->ReadOutput(model_id, 6), "0.011,0.022,0.033,0.044");
 }
 
 TEST(TfliteDriverTest, AddQuantizedInt8Test) {
   std::unique_ptr<TestRunner> runner(new TfLiteDriver());
+  runner->ResetInterpreter();
 
   runner->SetModelBaseDir("tensorflow/lite");
-  runner->LoadModel("testdata/add_quantized_int8.bin");
+  int model_id = runner->LoadModel("testdata/add_quantized_int8.bin");
+  ASSERT_TRUE(model_id >= 0);
   ASSERT_TRUE(runner->IsValid());
 
-  ASSERT_THAT(runner->GetInputs(), ElementsAre(1));
-  ASSERT_THAT(runner->GetOutputs(), ElementsAre(2));
+  ASSERT_THAT(runner->GetInputs(model_id), ElementsAre(1));
+  ASSERT_THAT(runner->GetOutputs(model_id), ElementsAre(2));
 
-  runner->ReshapeTensor(1, "1,2,2,1");
+  runner->ReshapeTensor(model_id, 1, "1,2,2,1");
   ASSERT_TRUE(runner->IsValid());
 
-  runner->AllocateTensors();
+  runner->AllocateTensors(model_id);
 
-  runner->SetInput(1, "1,1,1,1");
+  runner->SetInput(model_id, 1, "1,1,1,1");
 
-  runner->SetExpectation(2, "0.0117,0.0117,0.0117,0.0117");
+  runner->SetExpectation(model_id, 2, "0.0117,0.0117,0.0117,0.0117");
 
-  runner->Invoke();
+  runner->Invoke(model_id);
   ASSERT_TRUE(runner->IsValid());
 
-  ASSERT_TRUE(runner->CheckResults());
-  EXPECT_EQ(runner->ReadOutput(2), "3,3,3,3");
+  ASSERT_TRUE(runner->CheckResults(model_id));
+  EXPECT_EQ(runner->ReadOutput(model_id, 2), "3,3,3,3");
 }
 
 }  // namespace

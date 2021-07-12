@@ -584,7 +584,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
-  int model_id = InterpreterBuilder::num_registered_model++;
+  int model_id = (*interpreter)->GetNewModelId();
   bool has_available_device = false;
 
   // the start and end indices aren't valid at this point
@@ -636,7 +636,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
     return model_id;
   } else {
-    InterpreterBuilder::num_registered_model--;
+    (*interpreter)->InvalidateRecentModelId();
     return -1;
   }
 }
