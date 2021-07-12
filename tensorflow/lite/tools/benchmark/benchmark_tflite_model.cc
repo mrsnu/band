@@ -395,9 +395,9 @@ BenchmarkTfLiteModel::CreateRandomTensorData(const TfLiteTensor& t,
 TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
-  model_input_tensors_.resize(runtime_config_.model_information.size());
-  model_output_tensors_.resize(runtime_config_.model_information.size());
-  for (int i = 0; i < runtime_config_.model_information.size(); ++i) {
+  model_input_tensors_.resize(benchmark_config_.model_information.size());
+  model_output_tensors_.resize(benchmark_config_.model_information.size());
+  for (int i = 0; i < benchmark_config_.model_information.size(); ++i) {
     // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
     // (i.e. the specified input layer info) has been checked in
     // BenchmarkTfLiteModel::Init() before calling this function. So, we simply
@@ -408,8 +408,8 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     auto subgraph_inputs = interpreter_->inputs(subgraph_index);
     auto subgraph_outputs = interpreter_->outputs(subgraph_index);
     auto& input_layer_infos =
-        runtime_config_.model_information[i].input_layer_infos;
-    auto& input_tensor_data = runtime_config_.model_information[i].input_tensor_data;
+        benchmark_config_.model_information[i].input_layer_infos;
+    auto& input_tensor_data = benchmark_config_.model_information[i].input_tensor_data;
     model_input_tensors_[i].resize(subgraph_inputs.size());
     for (int j = 0; j < subgraph_inputs.size(); ++j) {
       int tensor_index = subgraph_inputs[j];
@@ -441,7 +441,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
       model_output_tensors_[i][j] = TfLiteTensorCopy(t);
     }
     TFLITE_LOG(INFO) << "Model "
-                     << runtime_config_.model_information[i].config.model_fname
+                     << benchmark_config_.model_information[i].config.model_fname
                      << " # of inputs " << subgraph_inputs.size()
                      << " # of outputs " << subgraph_outputs.size();
   }
