@@ -266,9 +266,9 @@ Interpreter::~Interpreter() {
   }
 
   // update the profile file to include all new profile results from this run
-  Json::Value profile_dict =
-    profiling::util::ConvertModelIdToName(profile_database_, model_configs_);
-  WriteJsonObjectToFile(profile_dict, profile_data_path_);
+  profiling::util::UpdateDatabase(profile_database_, model_configs_,
+                                  profile_database_json_);
+  WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
 }
 
 
@@ -277,13 +277,10 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
-    Json::Value model_name_profile =
-      LoadJsonObjectFromFile(config.profile_data_path);
-    // convert the model name strings to integer ids for the interpreter
-    // You can set profile data from the previous runs if you have any.
-    profile_database_ =
-      profiling::util::ConvertModelNameToId(model_name_profile,
-                                            model_configs_);
+    profile_database_json_ = LoadJsonObjectFromFile(config.profile_data_path);
+    // we cannot convert the model name strings to integer ids yet,
+    // (profile_database_json_ --> profile_database_)
+    // since we don't have anything in model_configs_ at the moment
 
     // Set how many runs are required to get the profile results.
     num_warmups_ = config.profile_config.num_warmups;
@@ -922,6 +919,18 @@ std::set<int> Interpreter::models() const {
     models.insert(key.first.model_id);
   }
   return models;
+}
+
+void Interpreter::FillProfileDatabase(int model_id) {
+  ModelConfig& model_config = model_configs_.at(model_id);
+  std::string& model_fname = model_config.model_fname;
+
+  auto model_profile =
+      profiling::util::ConvertModelNameToId(profile_database_json_,
+                                            model_fname, model_id);
+
+  // merge `profile_database_` with `model_profile`
+  profile_database_.insert(model_profile.begin(), model_profile.end());
 }
 
 int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {

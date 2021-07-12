@@ -22,17 +22,16 @@ namespace tflite {
 namespace profiling {
 namespace util {
 
-ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
-                                          std::map<int, ModelConfig>& model_configs) {
+ModelDeviceToLatency ConvertModelNameToId(const Json::Value& name_profile,
+                                          const std::string& model_fname,
+                                          const int model_id) {
   ModelDeviceToLatency id_profile;
   for (auto name_profile_it = name_profile.begin();
        name_profile_it != name_profile.end(); ++name_profile_it) {
     std::string model_name = name_profile_it.key().asString();
 
-    // check the integer id of this model name
-    int model_id = GetModelId(model_name, model_configs);
-    if (model_id == -1) {
-      // we're not interested in this model for this run
+    if (model_name != model_fname) {
+      // we're only interested in `model_fname`
       continue;
     }
 
@@ -70,8 +69,9 @@ ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
   return id_profile;
 }
 
-Json::Value ConvertModelIdToName(const ModelDeviceToLatency id_profile,
-                                 std::map<int, ModelConfig>& model_configs) {
+void UpdateDatabase(const ModelDeviceToLatency& id_profile,
+                    const std::map<int, ModelConfig>& model_configs,
+                    Json::Value& database_json) {
   Json::Value name_profile;
   for (auto& pair : id_profile) {
     SubgraphKey key = pair.first;
@@ -83,16 +83,16 @@ Json::Value ConvertModelIdToName(const ModelDeviceToLatency id_profile,
     // check the string name of this model id
     std::string model_name = GetModelName(key.model_id, model_configs);
     if (model_name.empty()) {
-      TFLITE_LOG(WARN) << "Cannot find model #" << model_id << ". Will ignore.";
+      TFLITE_LOG(WARN) << "UpdateDatabase: Cannot find model #" << model_id
+                       << " in model_configs. Will ignore.";
       continue;
     }
 
-    // copy all entries in id_profile --> name_profile
+    // copy all entries in id_profile --> database_json
     // as an ad-hoc method, we simply concat the start/end indices to form
     // the level-two key in the final json value
-    name_profile[model_name][start_idx + "/" + end_idx][key.device_flag] = profiled_latency;
+    database_json[model_name][start_idx + "/" + end_idx][key.device_flag] = profiled_latency;
   }
-  return name_profile;
 }
 
 }  // namespace util
