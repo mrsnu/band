@@ -122,11 +122,11 @@ class Interpreter {
   TfLiteStatus Init(InterpreterConfig& config);
 
   int GetNewModelId() {
-    return model_id_++;
+    return next_model_id_++;
   }
 
   void InvalidateRecentModelId() {
-    model_id_--;
+    next_model_id_--;
   }
 
   // Functions to build interpreter
