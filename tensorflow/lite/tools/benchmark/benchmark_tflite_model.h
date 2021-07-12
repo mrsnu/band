@@ -51,7 +51,6 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
 
  protected:
   TfLiteStatus PrepareInputData() override;
-  TfLiteStatus ResetInputsAndOutputs() override;
 
   int64_t MayGetModelFileSize() override;
 

@@ -680,7 +680,6 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
       std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
-      std::set<int> requested_job_ids;
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
@@ -720,7 +719,6 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       int num_models = interpreter_->GetModelConfig().size();
       int model_id = std::rand() % num_models;
       std::vector<Job> requests(1, Job(model_id));
-      std::vector<TfLiteTensor*> output_tensors = model_output_tensors_[model_id];
 
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
