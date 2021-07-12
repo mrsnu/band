@@ -383,12 +383,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
       error_reporter, kFixedDeviceGlobalQueue));
 
   // TODO : init interpreter process with our configuration
-  interpreter->SetWindowSize(4);
-  interpreter->SetProfileSmoothingConstant(4.);
-  interpreter->AllowWorkSteal();
-
-  // Set log file path and write log headers
-  interpreter->PrepareLogging("");
   const tflite::impl::TfLiteCPUMaskFlags cpu_mask =
       static_cast<tflite::impl::TfLiteCPUMaskFlags>(tflite::impl::kTfLiteAll);
   auto cpu_mask_set = tflite::impl::TfLiteCPUMaskGetSet(cpu_mask);
