@@ -81,7 +81,8 @@ TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
          TfLiteTensor* dst = dst_subgraph.tensor(input_index);
 
          if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
-           TFLITE_LOG(ERROR) << "Tensor data copy failure. src name : " << src->name
+           TFLITE_LOG(ERROR)
+               << "Tensor data copy failure. src name : " << src->name
                << ", dst name : " << dst->name;
            return kTfLiteError;
          }
