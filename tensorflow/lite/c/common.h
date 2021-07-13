@@ -499,6 +499,9 @@ typedef struct TfLiteTensor {
 // Allocate new TfLiteTensor.
 TfLiteTensor* TfLiteTensorCreate();
 
+// Allocate new TfLiteTensor like tensor `src`
+TfLiteTensor* TfLiteTensorCreateLike(TfLiteTensor* src);
+
 // Free memory of tensor `t` and tensor memory itself.
 void TfLiteTensorDelete(TfLiteTensor* t);
 

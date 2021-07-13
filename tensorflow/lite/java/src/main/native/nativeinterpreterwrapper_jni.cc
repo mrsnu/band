@@ -197,7 +197,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateInputTensor(
   if (interpreter == nullptr) return 0;
   size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
 
-  TfLiteTensor* input = TfLiteTensorCopy(
+  TfLiteTensor* input = TfLiteTensorCreateLike(
       interpreter->tensor(subgraph_index, interpreter->inputs(subgraph_index)[input_index]));
 
   return reinterpret_cast<jlong>(
@@ -218,14 +218,14 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputCount(JNIEnv* env,
 
 JNIEXPORT jlong JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateOutputTensor(
-    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint input_index) {
+    JNIEnv* env, jclass clazz, jlong handle, jint model_id, jint output_index) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
   size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
 
-  TfLiteTensor* output = TfLiteTensorCopy(
-      interpreter->tensor(subgraph_index, interpreter->outputs(subgraph_index)[input_index]));
+  TfLiteTensor* output = TfLiteTensorCreateLike(
+      interpreter->tensor(subgraph_index, interpreter->outputs(subgraph_index)[output_index]));
 
   return reinterpret_cast<jlong>(
       new tflite::jni::TensorHandle(output));
