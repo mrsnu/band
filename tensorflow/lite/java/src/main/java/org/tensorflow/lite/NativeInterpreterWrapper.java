@@ -44,7 +44,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
       options = new Interpreter.Options();
     }
     long modelHandle = createModel(modelPath, errorHandle);
-    int modelId = prepareModel(options, modelHandle);
+    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle);
     modelHandles.put(modelId, modelHandle);
     return modelId;
   }
