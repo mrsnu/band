@@ -101,6 +101,7 @@ struct Job {
   std::string model_fname;
 
   std::vector<Job> following_jobs;
+  int previous_subgraph_idx = -1;
 };
 
 // Model configuration struct.
