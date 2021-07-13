@@ -514,16 +514,22 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
   return job_ids;
 }
 
-void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs, std::vector<Tensors> outputs) {
+void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs,
+                                   std::vector<Tensors> outputs) {
   std::vector<int> job_ids = InvokeModelsAsync(inputs);
   planner_->Wait(job_ids);
-  for (size_t i = 0; i < job_ids.size(); i++) {
-    GetOutputTensors(job_ids[i], outputs[i]);
+  
+  if (outputs.size() > 0) {
+    assert(inputs.size() == outputs.size());
+    for (size_t i = 0; i < job_ids.size(); i++) {
+      GetOutputTensors(job_ids[i], outputs[i]);
+    }
   }
 }
 
-void Interpreter::InvokeModelsSync(std::vector<Job> requests, 
-                                               std::vector<Tensors> inputs, std::vector<Tensors> outputs) {
+void Interpreter::InvokeModelsSync(std::vector<Job> requests,
+                                   std::vector<Tensors> inputs,
+                                   std::vector<Tensors> outputs) {
   std::vector<int> job_ids = InvokeModelsAsync(requests, inputs);
   planner_->Wait(job_ids);
   for (size_t i = 0; i < job_ids.size(); i++) {
