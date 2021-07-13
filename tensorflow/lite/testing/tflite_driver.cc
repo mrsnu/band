@@ -356,9 +356,8 @@ int TfLiteDriver::LoadModel(const string& bin_file_path) {
     return -1;
   }
 
-  ModelConfig empty_config;
   int model_id = InterpreterBuilder::RegisterModel(
-      *model, empty_config, *resolver_, &interpreter_, 1);
+      *model, nullptr, *resolver_, &interpreter_, 1);
 
   if (!interpreter_) {
     Invalidate("Failed build interpreter");
