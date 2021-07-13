@@ -159,7 +159,6 @@ class TestBenchmark : public BenchmarkTfLiteModel {
 
   void Prepare() {
     PrepareInputData();
-    ResetInputsAndOutputs();
   }
 
   const TfLiteTensor* GetInputTensor(int index) {

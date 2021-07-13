@@ -160,6 +160,15 @@ void BenchmarkTfLiteModel::CleanUp() {
     // Free up any pre-allocated tensor data during PrepareInputData.
     model_information[i].input_tensor_data.clear();
   }
+
+  for (std::vector<TfLiteTensor*> input_tensors : model_input_tensors_) {
+    for (TfLiteTensor* t : input_tensors) {
+      TfLiteTensorFree(t);
+      free(t);
+    }
+  }
+  
+  model_input_tensors_.clear();
 }
 
 BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
@@ -386,8 +395,9 @@ BenchmarkTfLiteModel::CreateRandomTensorData(const TfLiteTensor& t,
 TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
   CleanUp();
 
-  auto& model_information = benchmark_config_.model_information;
-  for (int i = 0; i < model_information.size(); ++i) {
+  model_input_tensors_.resize(benchmark_config_.model_information.size());
+  model_output_tensors_.resize(benchmark_config_.model_information.size());
+  for (int i = 0; i < benchmark_config_.model_information.size(); ++i) {
     // Note the corresponding relation between 'interpreter_inputs' and 'inputs_'
     // (i.e. the specified input layer info) has been checked in
     // BenchmarkTfLiteModel::Init() before calling this function. So, we simply
@@ -395,11 +405,14 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
     // properly.
     auto subgraph_index = 
         interpreter_->GetSubgraphIdx(i, kTfLiteCPU);
-    auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-    auto& input_layer_infos = model_information[i].input_layer_infos;
-    auto& input_tensor_data = model_information[i].input_tensor_data;
-    for (int j = 0; j < interpreter_inputs.size(); ++j) {
-      int tensor_index = interpreter_inputs[j];
+    auto subgraph_inputs = interpreter_->inputs(subgraph_index);
+    auto subgraph_outputs = interpreter_->outputs(subgraph_index);
+    auto& input_layer_infos =
+        benchmark_config_.model_information[i].input_layer_infos;
+    auto& input_tensor_data = benchmark_config_.model_information[i].input_tensor_data;
+    model_input_tensors_[i].resize(subgraph_inputs.size());
+    for (int j = 0; j < subgraph_inputs.size(); ++j) {
+      int tensor_index = subgraph_inputs[j];
       const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
       const util::InputLayerInfo* input_layer_info = nullptr;
       // Note that when input layer parameters (i.e. --input_layer,
@@ -412,51 +425,25 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
       } else {
         t_data = CreateRandomTensorData(*t, input_layer_info);
       }
+
+      model_input_tensors_[i][j] = TfLiteTensorCopy(t);
+      std::memcpy(model_input_tensors_[i][j]->data.raw, t_data.data.get(),
+                  t_data.bytes);
+
       input_tensor_data.push_back(std::move(t_data));
     }
-  }
-  return kTfLiteOk;
-}
 
-TfLiteStatus BenchmarkTfLiteModel::ResetInputsAndOutputs() {
+    model_output_tensors_[i].resize(subgraph_outputs.size());
+    for (int j = 0; j < subgraph_outputs.size(); ++j) {
+      int tensor_index = subgraph_outputs[j];
+      const TfLiteTensor* t = interpreter_->tensor(subgraph_index, tensor_index);
 
-  auto& model_information = benchmark_config_.model_information;
-  for (int model_id = 0; model_id < model_information.size(); ++model_id) {
-    auto& input_layer_infos = model_information[model_id].input_layer_infos;
-    auto& input_tensor_data = model_information[model_id].input_tensor_data;
-
-    // TODO: #73 share tensors across different subgraphs from same model
-    for (int device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
-      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-
-      // reset inputs for all subgraphs that start with op 0
-      // TODO: may need to do this for all subgraphs that require external inputs
-      for (int subgraph_index : interpreter_->GetSubgraphIdx(model_id,
-                                                             device_flag, 0)) {
-        auto interpreter_inputs = interpreter_->inputs(subgraph_index);
-        // Set the values of the input tensors from inputs_data_.
-        for (int j = 0; j < interpreter_inputs.size(); ++j) {
-          int i = interpreter_inputs[j];
-          TfLiteTensor* t = interpreter_->tensor(subgraph_index, i);
-          if (t->type == kTfLiteString) {
-            if (input_tensor_data[j].data) {
-              static_cast<DynamicBuffer*>(input_tensor_data[j].data.get())
-                  ->WriteToTensor(t, /*new_shape=*/nullptr);
-            } else {
-              tflite::DynamicBuffer buffer;
-              FillRandomString(&buffer, t->dims, []() {
-                return "we're have some friends over saturday to hang out in the "
-                      "yard";
-              });
-              buffer.WriteToTensor(t, /*new_shape=*/nullptr);
-            }
-          } else {
-            std::memcpy(t->data.raw, input_tensor_data[j].data.get(),
-                        input_tensor_data[j].bytes);
-          }
-        }
-      }
+      model_output_tensors_[i][j] = TfLiteTensorCopy(t);
     }
+    TFLITE_LOG(INFO) << "Model "
+                     << benchmark_config_.model_information[i].config.model_fname
+                     << " # of inputs " << subgraph_inputs.size()
+                     << " # of outputs " << subgraph_outputs.size();
   }
 
   return kTfLiteOk;
@@ -613,12 +600,13 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   int num_iters = 3;
+  std::vector<int> job_ids;
   for (int i = 0; i < num_iters; ++i) {
     for (int j = 0; j < models_.size(); ++j) {
-      interpreter_->InvokeModelAsync(j);
+      job_ids.push_back(interpreter_->InvokeModelAsync(j, model_input_tensors_[j]));
     }
   }
-  interpreter_->GetPlanner()->Wait();
+  interpreter_->GetPlanner()->Wait(job_ids);
   return kTfLiteOk;
 }
 
@@ -634,7 +622,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodic() {
       std::chrono::milliseconds(benchmark_config_.running_time_ms));
   kill_app_ = true;
 
-  interpreter_->GetPlanner()->Wait();
+  interpreter_->GetPlanner()->WaitAll();
   return kTfLiteOk;
 }
 
@@ -652,7 +640,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunPeriodicSingleThread() {
       std::chrono::milliseconds(benchmark_config_.running_time_ms));
   kill_app_ = true;
 
-  interpreter_->GetPlanner()->Wait();
+  interpreter_->GetPlanner()->WaitAll();
 
   for (auto model_count : interpreter_->GetPlanner()->GetModelExecutionCounts()) {
     TFLITE_LOG(INFO) << "Model id : " << model_count.first
@@ -667,7 +655,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
-    interpreter_->InvokeModelsSync();
+    interpreter_->InvokeModelsSync(model_input_tensors_);
     int64_t current = profiling::time::NowMicros();
     num_frames++;
     if (current - start >= run_duration_us)
@@ -691,10 +679,11 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
+      std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
-        interpreter_->InvokeModelsAsync(requests);
+        auto job_ids = interpreter_->InvokeModelsAsync(requests, input_tensors);
         int64_t end = profiling::time::NowMicros();
         int duration_ms = (end - start) / 1000;
 
@@ -733,7 +722,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
 
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
-      interpreter_->InvokeModelsAsync(requests);
+      auto job_ids = interpreter_->InvokeModelsAsync(requests, {model_input_tensors_[model_id]});
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;
 
