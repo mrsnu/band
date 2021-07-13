@@ -685,6 +685,11 @@ class Interpreter {
   std::map<int, ModelConfig>& GetModelConfig() {
     return model_configs_;
   }
+
+  // Register `model_config` to `model_id`, and then
+  // extract `model_id` entries from `profile_database_json_` and put them
+  // into `profile_database_`.
+  void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
   int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
@@ -765,6 +770,12 @@ class Interpreter {
   // The data in the path will be read during initial phase, and also
   // will be updated at the end of the run.
   std::string profile_data_path_;
+
+  // The contents of the file at `profile_data_path_`.
+  // We keep this separately from `profile_database_`, since we cannot
+  // immediately put `profile_data_path_`'s contents into `profile_database_`
+  // because the model name --> int mapping is not available at init time.
+  Json::Value profile_database_json_;
 
   // Stores the profile results
   // When a subgraph key is given, returns the profile results in int64_t.

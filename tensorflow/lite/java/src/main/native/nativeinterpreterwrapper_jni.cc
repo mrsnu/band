@@ -514,7 +514,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   auto resolver = ::tflite::CreateOpResolver();
   int model_id =
       tflite_api_dispatcher::InterpreterBuilder::RegisterModel(
-          *model, *resolver.get(), &interpreter, 1);
+          *model, nullptr, *resolver.get(), &interpreter, 1);
   if (model_id == -1) {
     ThrowException(env, kIllegalArgumentException,
                    "Internal error: Cannot create interpreter: %s",

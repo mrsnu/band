@@ -71,19 +71,19 @@ class InterpreterBuilder {
                      SubgraphKey& subgraph_key,
                      int num_threads = -1);
 
-  // Adds NUM_DEVICES number of Subgraphs to the interpreter.
+  // Adds a Subgraph to the interpreter and adds the subgraph index to
+  // various internal data structures.
+  // Uses `model_fname` in `model_config` to check if the model has already
+  // been profiled in the past or not. `model_config` is ignored if null.
   // Returns the model id.
   // Returns -1 if any error occurs.
   static int RegisterModel(const FlatBufferModel& model,
+                        ModelConfig* model_config,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1);
   static int RegisterModel(const ::tflite::Model* model,
-                        const OpResolver& op_resolver,
-                        std::unique_ptr<Interpreter>* interpreter,
-                        int num_threads = -1);
-  static int RegisterModel(const FlatBufferModel& model,
-                        ModelConfig& model_config,
+                        ModelConfig* model_config,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
                         int num_threads = -1);
