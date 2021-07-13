@@ -2,4 +2,4 @@
 
 set -eu
 
-bazel test //tensorflow/lite/testing:tflite_driver_test --test_output=all
+bazel test //tensorflow/lite/testing:interpreter_test --test_output=all

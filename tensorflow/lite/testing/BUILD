@@ -234,9 +234,9 @@ cc_library(
 )
 
 tf_cc_test(
-    name = "tflite_driver_test",
+    name = "interpreter_test",
     size = "small",
-    srcs = ["tflite_driver_test.cc"],
+    srcs = ["interpreter/interpreter_test.cc"],
     data = [
         "//tensorflow/lite:testdata/add_quantized_int8.bin",
         "//tensorflow/lite:testdata/multi_add.bin",
