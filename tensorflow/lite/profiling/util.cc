@@ -22,16 +22,21 @@ namespace tflite {
 namespace profiling {
 namespace util {
 
-ModelDeviceToLatency ConvertModelNameToId(const Json::Value& name_profile,
-                                          const std::string& model_fname,
-                                          const int model_id) {
+ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
+                                         const std::string& model_fname,
+                                         const int model_id) {
   ModelDeviceToLatency id_profile;
   for (auto name_profile_it = name_profile.begin();
        name_profile_it != name_profile.end(); ++name_profile_it) {
     std::string model_name = name_profile_it.key().asString();
 
     if (model_name != model_fname) {
-      // we're only interested in `model_fname`
+      // We're only interested in `model_fname`.
+      // NOTE: In case a model is using a different string name alias for
+      // some other reason (e.g., two instances of the same model), we won't
+      // be able to detect that the model can indeed reuse this profile.
+      // An ad-hoc fix would be to add yet another "model name" field,
+      // solely for profiling purposes.
       continue;
     }
 

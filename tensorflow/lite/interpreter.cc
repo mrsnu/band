@@ -921,13 +921,14 @@ std::set<int> Interpreter::models() const {
   return models;
 }
 
-void Interpreter::FillProfileDatabase(int model_id) {
-  ModelConfig& model_config = model_configs_.at(model_id);
+void Interpreter::SetModelConfigAndFillProfile(int model_id,
+                                               ModelConfig& model_config) {
+  SetModelConfig(model_id, model_config);
   std::string& model_fname = model_config.model_fname;
 
   auto model_profile =
-      profiling::util::ConvertModelNameToId(profile_database_json_,
-                                            model_fname, model_id);
+      profiling::util::ExtractModelProfile(profile_database_json_,
+                                           model_fname, model_id);
 
   // merge `profile_database_` with `model_profile`
   profile_database_.insert(model_profile.begin(), model_profile.end());

@@ -29,9 +29,9 @@ using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
 // Convert entries in the json value to ModelDeviceToLatency format,
 // for the given model name and id.
 // The return val can be given to the interpreter.
-ModelDeviceToLatency ConvertModelNameToId(const Json::Value& name_profile,
-                                          const std::string& model_fname,
-                                          const int model_id);
+ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
+                                         const std::string& model_fname,
+                                         const int model_id);
 
 // Convert model integer ids back to string-type names for model profiles,
 // and update database_json with the newly updated profiled latency values.

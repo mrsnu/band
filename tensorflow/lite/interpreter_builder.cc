@@ -619,8 +619,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   if (has_available_device) {
     if (model_config != nullptr) {
-      (*interpreter)->SetModelConfig(model_id, *model_config);
-      (*interpreter)->FillProfileDatabase(model_id);
+      (*interpreter)->SetModelConfigAndFillProfile(model_id, *model_config);
     }
 
     if ((*interpreter)->NeedProfile()) {

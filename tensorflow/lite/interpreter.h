@@ -683,10 +683,10 @@ class Interpreter {
     return model_configs_;
   }
 
-  // Extract `model_id` entries from `profile_database_json_` and put them
-  // into `profile_database_`. This func internally accesses `model_configs_`,
-  // so this should be called after `SetModelConfig()`.
-  void FillProfileDatabase(int model_id);
+  // Register `model_config` to `model_id`, and then
+  // extract `model_id` entries from `profile_database_json_` and put them
+  // into `profile_database_`.
+  void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
   int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
