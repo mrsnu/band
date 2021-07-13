@@ -558,29 +558,16 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
 int InterpreterBuilder::num_registered_model = 0;
 
 int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
-                     ModelConfig& model_config,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads) {
-  int model_id = RegisterModel(
-      model.GetModel(), op_resolver, interpreter, num_threads);
-
-  if (model_id != -1) {
-    (*interpreter)->SetModelConfig(model_id, model_config);
-  }
-
-  return model_id;
-}
-
-int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
+                     ModelConfig* model_config,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
   return RegisterModel(
-      model.GetModel(), op_resolver, interpreter, num_threads);
+      model.GetModel(), model_config, op_resolver, interpreter, num_threads);
 }
 
 int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
+                     ModelConfig* model_config,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
                      int num_threads) {
@@ -631,6 +618,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   if (has_available_device) {
+    if (model_config != nullptr) {
+      (*interpreter)->SetModelConfigAndFillProfile(model_id, *model_config);
+    }
+
     if ((*interpreter)->NeedProfile()) {
       (*interpreter)->Profile(model_id);
     }

@@ -34,6 +34,7 @@ limitations under the License.
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
+#include "tensorflow/lite/tensor_ring_buffer.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/planner/fixed_device_planner.h"
 #include "tensorflow/lite/planner/round_robin_planner.h"
@@ -467,22 +468,28 @@ class Interpreter {
 
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
-  void InvokeModelAsync(int model_id);
-  void InvokeModelAsync(Job request);
+  int InvokeModelAsync(int model_id, Tensors inputs = {});
+  int InvokeModelAsync(Job request, Tensors inputs = {});
 
   /// Invoke models with a batch size given by the model config.
+  /// # of inputs and outputs should equal to model_configs_.size()
   /// This method is an asychronous call.
-  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
-  /// not called consecutively.
-  void InvokeModelsAsync();
-  void InvokeModelsAsync(std::vector<Job> requests);
+  std::vector<int> InvokeModelsAsync(std::vector<Tensors> inputs = {});
+
+  /// Invoke models with model requests.
+  /// This method is an asychronous call.
+  std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<Tensors> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
-  /// Returns when all the requests are done.
-  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
-  /// not called consecutively.
-  void InvokeModelsSync();
-  void InvokeModelsSync(std::vector<Job> requests);
+  /// # of inputs and outputs should equal to model_configs_.size()
+  /// Returns when all the requests are done. 
+  void InvokeModelsSync(std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+  
+  /// Invoke models with model requests.
+  /// Returns when all the requests are done. 
+  void InvokeModelsSync(std::vector<Job> requests, std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+
+  TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
   /// Set the number of threads available to the interpreter.
   ///
@@ -690,6 +697,11 @@ class Interpreter {
   std::map<int, ModelConfig>& GetModelConfig() {
     return model_configs_;
   }
+
+  // Register `model_config` to `model_id`, and then
+  // extract `model_id` entries from `profile_database_json_` and put them
+  // into `profile_database_`.
+  void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
   int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
@@ -722,13 +734,12 @@ class Interpreter {
   }
 
  private:
+  friend class Worker;
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;
   friend class tflite::delegates::InterpreterUtils;
-
-  TfLitePlannerType planner_type_;
-
+  
   std::shared_ptr<Planner> planner_;
   std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
 
@@ -774,6 +785,12 @@ class Interpreter {
   // will be updated at the end of the run.
   std::string profile_data_path_;
 
+  // The contents of the file at `profile_data_path_`.
+  // We keep this separately from `profile_database_`, since we cannot
+  // immediately put `profile_data_path_`'s contents into `profile_database_`
+  // because the model name --> int mapping is not available at init time.
+  Json::Value profile_database_json_;
+
   // Stores the profile results
   // When a subgraph key is given, returns the profile results in int64_t.
   profiling::util::ModelDeviceToLatency profile_database_;
@@ -813,6 +830,10 @@ class Interpreter {
   // Maps to model spec
   std::map<int, ModelSpec> model_specs_;
 
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffer_;
+  std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
+
+  TfLitePlannerType planner_type_;
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
 

@@ -1,5 +1,6 @@
+#include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/worker.h"
-
+#include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/tools/logging.h"
 
 
@@ -69,6 +70,54 @@ bool Worker::GiveJob(Job& job) {
 bool Worker::IsBusy() {
   TFLITE_LOG(ERROR) << "Worker::IsBusy() Not implemented.";
   return false;
+}
+
+TfLiteStatus Worker::CopyInputTensors(const Job& job) {
+  // Compute only.
+  if (job.input_handle < 0 || job.start_idx != 0) {
+    return kTfLiteOk;
+  }
+
+  Interpreter* interpreter = planner_.lock()->GetInterpreter();
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+  auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
+  
+  if (!input_buffer) {
+    TFLITE_LOG(ERROR) << "No input buffer for model id " << job.model_id;
+    return kTfLiteError;
+  }
+
+  auto input_indices = subgraph->inputs();
+  std::vector<TfLiteTensor*> input_tensors(input_indices.size());
+  for (size_t i = 0; i < input_indices.size(); i++) {
+    input_tensors[i] = subgraph->tensor(input_indices[i]);
+  }
+
+  return input_buffer->GetTensorsFromHandle(input_tensors, job.input_handle);
+}
+
+TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
+  // Compute only.
+  if (job.output_handle < 0 || !job.is_final_subgraph) {
+    return kTfLiteOk;
+  }
+
+  Interpreter* interpreter = planner_.lock()->GetInterpreter();
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+  auto output_buffer = interpreter->model_output_buffer_[job.model_id].get();
+  
+  if (!output_buffer) {
+    TFLITE_LOG(ERROR) << "No output buffer for model id " << job.model_id;
+    return kTfLiteError;
+  }
+
+  auto output_indices = subgraph->outputs();
+  std::vector<TfLiteTensor*> output_tensors(output_indices.size());
+  for (size_t i = 0; i < output_indices.size(); i++) {
+    output_tensors[i] = subgraph->tensor(output_indices[i]);
+  }
+
+  return output_buffer->PutTensorsToHandle(output_tensors, job.output_handle);
 }
 
 }  // namespace impl

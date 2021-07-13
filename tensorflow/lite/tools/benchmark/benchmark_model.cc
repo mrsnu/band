@@ -147,8 +147,6 @@ void BenchmarkModel::LogParams() {
 
 TfLiteStatus BenchmarkModel::PrepareInputData() { return kTfLiteOk; }
 
-TfLiteStatus BenchmarkModel::ResetInputsAndOutputs() { return kTfLiteOk; }
-
 Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
                                   float max_secs, RunType run_type,
                                   TfLiteStatus* invoke_status) {
@@ -164,7 +162,6 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
   for (int run = 0; (run < min_num_times || now_us < min_finish_us) &&
                     now_us <= max_finish_us;
        run++) {
-    ResetInputsAndOutputs();
     listeners_.OnSingleRunStart(run_type);
     int64_t start_us = profiling::time::NowMicros();
 

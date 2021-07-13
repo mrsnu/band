@@ -119,7 +119,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
             to_execute.enqueue_time + to_execute.slo_us) {
           // SLO violation
           // there is no hope left for this job, throw it away
-          to_execute.slo_violated = true;
+          to_execute.status = kTfLiteJobSLOViolation;
 
           // mark this as -1 to differentiate it from the default value, 0
           to_execute.invoke_time = -1;
