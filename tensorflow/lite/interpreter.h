@@ -464,17 +464,21 @@ class Interpreter {
   int InvokeModelAsync(Job request, Tensors inputs = {});
 
   /// Invoke models with a batch size given by the model config.
+  /// # of inputs and outputs should equal to model_configs_.size()
   /// This method is an asychronous call.
-  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
-  /// not called consecutively.
   std::vector<int> InvokeModelsAsync(std::vector<Tensors> inputs = {});
+
+  /// Invoke models with model requests.
+  /// This method is an asychronous call.
   std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<Tensors> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
-  /// Returns when all the requests are done.
-  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
-  /// not called consecutively.
+  /// # of inputs and outputs should equal to model_configs_.size()
+  /// Returns when all the requests are done. 
   void InvokeModelsSync(std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+  
+  /// Invoke models with model requests.
+  /// Returns when all the requests are done. 
   void InvokeModelsSync(std::vector<Job> requests, std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
 
   TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
