@@ -116,11 +116,7 @@ TfLiteInterpreter* TfLiteInterpreterCreate(
                                               ? optional_error_reporter.get()
                                               : tflite::DefaultErrorReporter();
   std::unique_ptr<tflite::Interpreter> interpreter;
-
-  if (tflite::InterpreterBuilder::RegisterModel(
-          model->impl->GetModel(), resolver, &interpreter) == -1) {
-    return nullptr;
-  }
+  // TODO: Interpreter config / register model
 
   return new TfLiteInterpreter{model->impl, std::move(optional_error_reporter),
                                std::move(interpreter)};
