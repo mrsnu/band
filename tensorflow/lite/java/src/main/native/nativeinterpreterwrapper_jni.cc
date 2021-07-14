@@ -380,12 +380,11 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   if (error_reporter == nullptr) return 0;
 
   const char* path = env->GetStringUTFChars(json_file, nullptr);
-  LOGI("CreateInterpreter path : %s", path);
 
   tflite::RuntimeConfig runtime_config;
   ParseRuntimeConfigFromJson(path, runtime_config);
 
-  LOGI("Parse done planner : %d", runtime_config.planner_config.planner_type);
+  LOGI("Parse done interpreter's planner : %d", runtime_config.planner_config.planner_type);
   auto interpreter(std::make_unique<tflite_api_dispatcher::Interpreter>(
       error_reporter, runtime_config));
   env->ReleaseStringUTFChars(json_file, path);
