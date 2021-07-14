@@ -60,12 +60,12 @@ final class NativeInterpreterWrapper implements AutoCloseable {
           "Model ByteBuffer should be either a MappedByteBuffer of the model file, or a direct "
               + "ByteBuffer using ByteOrder.nativeOrder() which contains bytes of model content.");
     }
-    if (modelId == -1) {
-      throw new IllegalArgumentException("Failed to register model. Invalid model id: ", modelId);
-    }
     ByteBuffer modelByteBuffer = buffer;
     long modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
     int modelId = registerModel(interpreterHandle, modelHandle, errorHandle);
+    if (modelId == -1) {
+      throw new IllegalArgumentException("Failed to register model. Invalid model id: " + modelId);
+    }
     modelHandles.put(modelId, modelHandle);
     modelByteBuffers.put(modelId, modelByteBuffer);
     return modelId;
