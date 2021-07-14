@@ -10,7 +10,7 @@
 namespace tflite {
 namespace impl {
 
-std::deque<Job>& DeviceQueueWorker::GetDeviceRequests() {
+JobQueue& DeviceQueueWorker::GetDeviceRequests() {
   return requests_;
 }
 
@@ -28,7 +28,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   Interpreter* interpreter = planner->GetInterpreter();
 
   int64_t total = 0;
-  for (std::deque<Job>::iterator it = requests_.begin();
+  for (JobQueue::iterator it = requests_.begin();
        it != requests_.end(); ++it) {
     int model_id = (*it).model_id;
     TfLiteDeviceFlags device_id =

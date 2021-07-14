@@ -8,13 +8,13 @@
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/planner/util.h"
 
 namespace tflite {
 
 namespace impl {
 
 class Interpreter;
-#define NUM_FINISHED_RECORDS 1000
 
 // The interpreter manages a `Planner`.
 class Planner {
@@ -72,7 +72,7 @@ class Planner {
     return requests_mtx_;
   }
 
-  std::deque<Job>& GetRequests() {
+  JobQueue& GetRequests() {
     return requests_;
   }
 
@@ -101,12 +101,12 @@ class Planner {
 
   // Jobs Finished
   std::mutex job_queue_mtx_;
-  std::deque<Job> jobs_finished_;
+  JobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
   // Request Queue
   std::mutex requests_mtx_;
-  std::deque<Job> requests_;
+  JobQueue requests_;
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
   int num_finished_jobs_ = 0;

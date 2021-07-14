@@ -53,7 +53,7 @@ TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) 
   return kTfLiteOk;
 }
 
-std::deque<Job>& Worker::GetDeviceRequests() {
+JobQueue& Worker::GetDeviceRequests() {
   TFLITE_LOG(ERROR) << "Worker::GetDeviceRequests() Not implemented.";
   return requests_;
 }

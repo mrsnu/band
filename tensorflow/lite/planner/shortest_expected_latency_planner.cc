@@ -13,9 +13,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
     if (GetSafeBool().wait())
       return;
 
-    std::deque<Job> local_jobs;
+    JobQueue local_jobs;
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
-    std::deque<Job>& requests = GetRequests();
+    JobQueue& requests = GetRequests();
     if (!requests.empty()) {
       // Gets the specific amount of jobs from requests
       // and removes those jobs from the requests.

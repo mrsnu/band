@@ -2,7 +2,6 @@
 #define TENSORFLOW_LITE_WORKER_H_
 
 #include <condition_variable>
-#include <deque>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -10,6 +9,7 @@
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/planner/util.h"
 
 namespace tflite {
 
@@ -31,7 +31,7 @@ class Worker {
   virtual int64_t GetWaitingTime() = 0;
 
   // DeviceQueueWorker methods
-  virtual std::deque<Job>& GetDeviceRequests();
+  virtual JobQueue& GetDeviceRequests();
   virtual void AllowWorkSteal();
 
   // GlobalQueueWorker methods
@@ -51,7 +51,7 @@ class Worker {
 
   // GlobalQueueWorker doesn't actually use this for scheduling, but we
   // need this for the return value of GetDeviceRequests()
-  std::deque<Job> requests_;
+  JobQueue requests_;
 
   CpuSet cpu_set_;
   bool need_cpu_set_update_ = false;
@@ -69,7 +69,7 @@ class DeviceQueueWorker : public Worker {
   }
 
   int64_t GetWaitingTime() override;
-  std::deque<Job>& GetDeviceRequests() override;
+  JobQueue& GetDeviceRequests() override;
   void AllowWorkSteal() override;
 
  protected:

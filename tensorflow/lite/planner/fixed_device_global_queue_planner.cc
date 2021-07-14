@@ -86,7 +86,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
     // which means concurrent enqueue is not available.
     // This can affect the performance.
     std::lock_guard<std::mutex> lock(GetRequestsMtx());
-    std::deque<Job>& requests = GetRequests();
+    JobQueue& requests = GetRequests();
     for (auto it = requests.begin(); it != requests.end();) {
       Job& to_execute = *it;
       int model_id = to_execute.model_id;
