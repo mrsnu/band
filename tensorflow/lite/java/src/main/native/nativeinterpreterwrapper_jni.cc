@@ -382,7 +382,11 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   const char* path = env->GetStringUTFChars(json_file, nullptr);
 
   tflite::RuntimeConfig runtime_config;
-  ParseRuntimeConfigFromJson(path, runtime_config);
+  if (!ParseRuntimeConfigFromJson(path, runtime_config)) {
+    ThrowException(env, kIllegalArgumentException,
+                   "Runtime Config json path is not valid");
+    return 0;
+  }
 
   LOGI("Parse done interpreter's planner : %d", runtime_config.planner_config.planner_type);
   auto interpreter(std::make_unique<tflite_api_dispatcher::Interpreter>(
