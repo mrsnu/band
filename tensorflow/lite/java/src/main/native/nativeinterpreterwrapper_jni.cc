@@ -382,7 +382,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   const char* path = env->GetStringUTFChars(json_file, nullptr);
 
   tflite::RuntimeConfig runtime_config;
-  if (!ParseRuntimeConfigFromJson(path, runtime_config)) {
+  if (ParseRuntimeConfigFromJson(path, runtime_config)) {
     ThrowException(env, kIllegalArgumentException,
                    "Runtime Config json path is not valid");
     return 0;
