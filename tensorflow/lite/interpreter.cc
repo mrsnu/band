@@ -266,9 +266,9 @@ Interpreter::~Interpreter() {
   }
 
   // update the profile file to include all new profile results from this run
-  Json::Value profile_dict =
-    profiling::util::ConvertModelIdToName(profile_database_, model_configs_);
-  WriteJsonObjectToFile(profile_dict, profile_data_path_);
+  profiling::util::UpdateDatabase(profile_database_, model_configs_,
+                                  profile_database_json_);
+  WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
 }
 
 
@@ -277,13 +277,10 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
-    Json::Value model_name_profile =
-      LoadJsonObjectFromFile(config.profile_data_path);
-    // convert the model name strings to integer ids for the interpreter
-    // You can set profile data from the previous runs if you have any.
-    profile_database_ =
-      profiling::util::ConvertModelNameToId(model_name_profile,
-                                            model_configs_);
+    profile_database_json_ = LoadJsonObjectFromFile(config.profile_data_path);
+    // we cannot convert the model name strings to integer ids yet,
+    // (profile_database_json_ --> profile_database_)
+    // since we don't have anything in model_configs_ at the moment
 
     // Set how many runs are required to get the profile results.
     num_warmups_ = config.profile_config.num_warmups;
@@ -450,6 +447,14 @@ int Interpreter::InvokeModelAsync(Job request, Tensors inputs) {
 
 std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Tensors> inputs) {
   std::vector<Job> requests;
+  std::vector<Tensors> duplicate_inputs;
+
+  if (inputs.size() != model_configs_.size()) {
+    error_reporter_->Report(
+        "Invalid input size input.size() %d != model_configs_.size() %d",
+        inputs.size(), model_configs_.size());
+    return {};
+  }
 
   for (auto& m : model_configs_) {
     int model_id = m.first;
@@ -457,10 +462,11 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Tensors> inputs) {
     Job request = Job(model_id);
     for (int k = 0; k < model_config.batch_size; ++k) {
       requests.push_back(request);
+      duplicate_inputs.push_back(inputs[model_id]);
     }
   }
-  
-  return InvokeModelsAsync(requests, inputs);
+
+  return InvokeModelsAsync(requests, duplicate_inputs);
 }
 
 std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests, 
@@ -514,16 +520,24 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
   return job_ids;
 }
 
-void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs, std::vector<Tensors> outputs) {
+void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs,
+                                   std::vector<Tensors> outputs) {
   std::vector<int> job_ids = InvokeModelsAsync(inputs);
   planner_->Wait(job_ids);
-  for (size_t i = 0; i < job_ids.size(); i++) {
-    GetOutputTensors(job_ids[i], outputs[i]);
+  
+  if (inputs.size() == outputs.size()) {
+    int accumulated_job_index = 0;
+    int output_index = 0;
+    for (auto& m : model_configs_) {
+      GetOutputTensors(job_ids[accumulated_job_index], outputs[output_index++]);
+      accumulated_job_index += m.second.batch_size;
+    }
   }
 }
 
-void Interpreter::InvokeModelsSync(std::vector<Job> requests, 
-                                               std::vector<Tensors> inputs, std::vector<Tensors> outputs) {
+void Interpreter::InvokeModelsSync(std::vector<Job> requests,
+                                   std::vector<Tensors> inputs,
+                                   std::vector<Tensors> outputs) {
   std::vector<int> job_ids = InvokeModelsAsync(requests, inputs);
   planner_->Wait(job_ids);
   for (size_t i = 0; i < job_ids.size(); i++) {
@@ -980,6 +994,19 @@ std::set<int> Interpreter::models() const {
     models.insert(key.first.model_id);
   }
   return models;
+}
+
+void Interpreter::SetModelConfigAndFillProfile(int model_id,
+                                               ModelConfig& model_config) {
+  SetModelConfig(model_id, model_config);
+  std::string& model_fname = model_config.model_fname;
+
+  auto model_profile =
+      profiling::util::ExtractModelProfile(profile_database_json_,
+                                           model_fname, model_id);
+
+  // merge `profile_database_` with `model_profile`
+  profile_database_.insert(model_profile.begin(), model_profile.end());
 }
 
 int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {

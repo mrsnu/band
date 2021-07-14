@@ -26,16 +26,20 @@ namespace util {
 
 using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
 
-// Convert model name strings to integer ids for the given model profiles.
+// Convert entries in the json value to ModelDeviceToLatency format,
+// for the given model name and id.
 // The return val can be given to the interpreter.
-ModelDeviceToLatency ConvertModelNameToId(const Json::Value name_profile,
-                                          std::map<int, ModelConfig>& model_configs);
+ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
+                                         const std::string& model_fname,
+                                         const int model_id);
 
-// Convert model integer ids back to string-type names for model profiles.
-// This function does not erase entries in name_profile for models that were
+// Convert model integer ids back to string-type names for model profiles,
+// and update database_json with the newly updated profiled latency values.
+// This function does not erase entries in database_json for models that were
 // not run during this benchmark run.
-Json::Value ConvertModelIdToName(const ModelDeviceToLatency id_profile,
-                                 std::map<int, ModelConfig>& model_configs);
+void UpdateDatabase(const ModelDeviceToLatency& id_profile,
+                    const std::map<int, ModelConfig>& model_configs,
+                    Json::Value& database_json);
 }  // namespace util
 }  // namespace profiling
 }  // namespace tflite

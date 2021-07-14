@@ -463,7 +463,7 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
     std::string model_name = model_information[i].config.model_fname;
     TF_LITE_ENSURE_STATUS(LoadModel(model_name));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
-        *models_[i], model_information[i].config, *resolver, &interpreter_, num_threads);
+        *models_[i], &model_information[i].config, *resolver, &interpreter_, num_threads);
 
     if (model_id == -1)
       return kTfLiteError;

@@ -464,17 +464,21 @@ class Interpreter {
   int InvokeModelAsync(Job request, Tensors inputs = {});
 
   /// Invoke models with a batch size given by the model config.
+  /// # of inputs and outputs should equal to model_configs_.size()
   /// This method is an asychronous call.
-  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
-  /// not called consecutively.
   std::vector<int> InvokeModelsAsync(std::vector<Tensors> inputs = {});
+
+  /// Invoke models with model requests.
+  /// This method is an asychronous call.
   std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<Tensors> inputs = {});
 
   /// Invoke models with a batch size given by the model config.
-  /// Returns when all the requests are done.
-  /// We assume InvokeModelsSync() and InvokeModelsAsync() are
-  /// not called consecutively.
+  /// # of inputs and outputs should equal to model_configs_.size()
+  /// Returns when all the requests are done. 
   void InvokeModelsSync(std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+  
+  /// Invoke models with model requests.
+  /// Returns when all the requests are done. 
   void InvokeModelsSync(std::vector<Job> requests, std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
 
   TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
@@ -685,6 +689,11 @@ class Interpreter {
   std::map<int, ModelConfig>& GetModelConfig() {
     return model_configs_;
   }
+
+  // Register `model_config` to `model_id`, and then
+  // extract `model_id` entries from `profile_database_json_` and put them
+  // into `profile_database_`.
+  void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
   int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
@@ -765,6 +774,12 @@ class Interpreter {
   // The data in the path will be read during initial phase, and also
   // will be updated at the end of the run.
   std::string profile_data_path_;
+
+  // The contents of the file at `profile_data_path_`.
+  // We keep this separately from `profile_database_`, since we cannot
+  // immediately put `profile_data_path_`'s contents into `profile_database_`
+  // because the model name --> int mapping is not available at init time.
+  Json::Value profile_database_json_;
 
   // Stores the profile results
   // When a subgraph key is given, returns the profile results in int64_t.
