@@ -94,17 +94,16 @@ TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
 }
 
 TfLiteStatus Worker::CopyInputTensors(const Job& job) {
+  // Compute only.
+  if (job.input_handle < 0) {
+    return kTfLiteOk;
+  }
+
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   if (job.previous_subgraph_idx != -1) {
     Subgraph* prev_subgraph = interpreter->subgraph(job.previous_subgraph_idx);
     Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-
     return CopyTensors(*prev_subgraph, *subgraph);
-  }
-
-  // Compute only.
-  if (job.input_handle < 0 || job.start_idx != 0) {
-    return kTfLiteOk;
   }
 
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
