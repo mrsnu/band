@@ -90,12 +90,18 @@ class Planner {
   Job GetFinishedJob(int job_id);
 
  protected:
+  // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
+  // Copy the Job instances from the `requests_` to the local queue.
+  JobQueue CopyToLocalQueue();
+
   std::thread planner_thread_;
+  int sched_id_ = 0;
 
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
+
 
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;

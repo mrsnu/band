@@ -47,6 +47,22 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   return kTfLiteOk;
 }
 
+JobQueue Planner::CopyToLocalQueue() {
+  JobQueue local_jobs;
+  std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
+  JobQueue& requests = GetRequests();
+  if (!requests.empty()) {
+    // Gets the specific amount of jobs from requests
+    // and removes those jobs from the requests.
+    int window_size = std::min(GetWindowSize(), (int) requests.size());
+    local_jobs.insert(local_jobs.begin(), requests.begin(), requests.begin() + window_size);
+    requests.erase(requests.begin(), requests.begin() + window_size);
+  }
+  request_lock.unlock();
+
+  return local_jobs;
+}
+
 void Planner::Wait(std::vector<int> job_ids) {
   if (job_ids.size() == 0) {
     return;

@@ -8,24 +8,11 @@ namespace tflite {
 namespace impl {
 
 void ShortestExpectedLatencyPlanner::Plan() {
-  int sched_id = 0;
   while (true) {
     if (GetSafeBool().wait())
       return;
 
-    JobQueue local_jobs;
-    std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
-    JobQueue& requests = GetRequests();
-    if (!requests.empty()) {
-      // Gets the specific amount of jobs from requests
-      // and removes those jobs from the requests.
-      int window_size = std::min(GetWindowSize(), (int) requests.size());
-      local_jobs.insert(local_jobs.begin(), requests.begin(), requests.begin() + window_size);
-      requests.erase(requests.begin(), requests.begin() + window_size);
-    } else {
-      continue;
-    }
-    request_lock.unlock();
+    JobQueue local_jobs = CopyToLocalQueue();
 
     while (!local_jobs.empty()) {
       // First, find the most urgent job -- the one with the
@@ -95,7 +82,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       if (most_urgent_job.expected_latency == 0) {
         // only set these fields if this is the first subgraph of this model
         most_urgent_job.expected_latency = largest_shortest_latency;
-        most_urgent_job.sched_id = sched_id++;
+        most_urgent_job.sched_id = sched_id_++;
       }
 
       // this job has an SLO; check if it's not too late already
