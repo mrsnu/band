@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <deque>
+#include <mutex>
 
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
@@ -20,6 +21,12 @@ namespace impl {
 
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
+
+// The job queue which can be shared by multiple threads.
+struct SharableJobQueue {
+  JobQueue queue;
+  std::mutex mtx;
+};
 
 }  // namespace impl
 }  // namespace tflite

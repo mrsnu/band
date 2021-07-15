@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
@@ -23,7 +24,7 @@ class Planner {
   ~Planner();
 
   TfLiteStatus Init(PlannerConfig& config);
-  
+
 	/*
 	Derived classes should generally follow this template when implementing `Plan()`:
 	while (true) {
@@ -69,11 +70,11 @@ class Planner {
   }
 
   std::mutex& GetRequestsMtx() {
-    return requests_mtx_;
+    return requests_.mtx;
   }
 
   JobQueue& GetRequests() {
-    return requests_;
+    return requests_.queue;
   }
 
   int GetWindowSize() {
@@ -100,13 +101,11 @@ class Planner {
   SafeBool planner_safe_bool_;
 
   // Jobs Finished
-  std::mutex job_queue_mtx_;
-  JobQueue jobs_finished_;
+  SharableJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
   // Request Queue
-  std::mutex requests_mtx_;
-  JobQueue requests_;
+  SharableJobQueue requests_;
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
   int num_finished_jobs_ = 0;
