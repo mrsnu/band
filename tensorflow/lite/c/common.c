@@ -142,6 +142,17 @@ TfLiteTensor* TfLiteTensorCreate() {
   return (TfLiteTensor*)calloc(1, sizeof(TfLiteTensor));
 }
 
+TfLiteTensor* TfLiteTensorCreateLike(TfLiteTensor* src) {
+  if (!src) return NULL;
+  TfLiteTensor* ret = TfLiteTensorCreate();
+  TfLiteIntArray* dims = TfLiteIntArrayCopy(src->dims);
+  TfLiteTensorReset(src->type, src->name, dims,
+                    src->params, NULL, NULL, kTfLiteDynamic, NULL,
+                    src->is_variable, ret);
+  TfLiteTensorRealloc(src->bytes, ret);
+  return ret;
+}
+
 void TfLiteTensorDelete(TfLiteTensor* t) {
   if (!t) return;
   TfLiteTensorFree(t);
@@ -157,12 +168,7 @@ TfLiteStatus TfLiteTensorDataCopy(const TfLiteTensor* src, TfLiteTensor* dst) {
 
 TfLiteTensor* TfLiteTensorCopy(const TfLiteTensor* src) {
   if (!src) return NULL;
-  TfLiteTensor* ret = TfLiteTensorCreate();
-  TfLiteIntArray* dims = TfLiteIntArrayCopy(src->dims);
-  TfLiteTensorReset(src->type, src->name, dims,
-                    src->params, NULL, NULL, kTfLiteDynamic, NULL,
-                    src->is_variable, ret);
-  TfLiteTensorRealloc(src->bytes, ret);
+  TfLiteTensor* ret = TfLiteTensorCreateLike(src);
   memcpy(ret->data.raw, src->data.raw, src->bytes);
   return ret;
 }
