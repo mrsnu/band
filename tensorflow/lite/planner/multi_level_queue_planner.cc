@@ -16,6 +16,8 @@ void MultiLevelQueuePlanner::Plan() {
     // at the same time. Programmer should be careful when implementing the
     // decision functions.
     // Or we can promote jobs after scheduling to avoid such cases.
+    // `decide_demote` may decide if to demote considering the indicated SLO.
+    // `decide_promote` may decide if to promote considering the remaing deadline.
     Demote(decide_demote);
     Promote(decide_promote);
 
