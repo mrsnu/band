@@ -93,7 +93,7 @@ TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
   return ret;
 }
 
-TfLiteStatus Worker::CopyInputTensors(const Job& job) {
+TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   // Compute only.
   if (job.input_handle < 0) {
     return kTfLiteOk;
@@ -129,7 +129,7 @@ TfLiteStatus Worker::CopyInputTensors(const Job& job) {
   return input_buffer->GetTensorsFromHandle(input_tensors, job.input_handle);
 }
 
-TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
+TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
   // Compute only.
   if (job.output_handle < 0) {
     return kTfLiteOk;

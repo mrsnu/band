@@ -132,7 +132,7 @@ void GlobalQueueWorker::Work() {
         }
       }
 
-      if (CopyInputTensors(current_job_) == kTfLiteOk) {
+      if (TryCopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();
         lock.unlock();
@@ -147,7 +147,7 @@ void GlobalQueueWorker::Work() {
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
           } else {
-            CopyOutputTensors(current_job_);
+            TryCopyOutputTensors(current_job_);
           }
           current_job_.status = kTfLiteJobSuccess;
         } else {
