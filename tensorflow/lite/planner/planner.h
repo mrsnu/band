@@ -102,7 +102,6 @@ class Planner {
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
-
   Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
 
