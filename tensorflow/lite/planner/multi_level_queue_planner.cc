@@ -27,7 +27,7 @@ void MultiLevelQueuePlanner::Plan() {
     // Schedule each queue starting from the queue with the highest priority.
     for (size_t i = 0; i < GetNumQueues(); ++i) {
       if (IsQueueLevelValid(i)) {
-        ScheduleQueue(i, device_waiting);
+        ScheduleQueue(i, device_waiting_);
       } else {
         TFLITE_LOG(WARN) << "The selected queue level is invalid.";
       }
