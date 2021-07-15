@@ -93,10 +93,15 @@ class Planner {
   // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
   // Copy the Job instances from the `requests_` to the local queue.
-  JobQueue CopyToLocalQueue();
+  void CopyToLocalQueue(JobQueue& local_jobs);
+  // Enqueue the request to the worker.
+  void EnqueueToWorker(Job job);
+  // Update the current device waiting time.
+  void UpdateDeviceWaitingTime();
 
   std::thread planner_thread_;
   int sched_id_ = 0;
+  DeviceWaitingTime device_waiting_;
 
  private:
   bool IsJobIdValid(int job_id);

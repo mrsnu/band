@@ -21,6 +21,12 @@ namespace impl {
 
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
+// Type definition for the device waiting time.
+using DeviceWaitingTime = std::map<TfLiteDeviceFlags, int64_t>;
+// Decision function type for demotion and promotion in the multi-level
+// queue planner.
+// The arguments are the job iterator, device status, and the queue level.
+using DecisionFn = std::function<bool(JobQueue::iter, DeviceWaitingTime&, int)>;
 
 // The job queue which can be shared by multiple threads.
 struct SharableJobQueue {

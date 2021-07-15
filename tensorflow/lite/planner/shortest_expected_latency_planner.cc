@@ -12,7 +12,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
     if (GetSafeBool().wait())
       return;
 
-    JobQueue local_jobs = CopyToLocalQueue();
+    JobQueue local_jobs;
+    CopyToLocalQueue(local_jobs);
 
     while (!local_jobs.empty()) {
       // First, find the most urgent job -- the one with the
@@ -127,12 +128,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         most_urgent_job.is_final_subgraph = false;
       }
 
-      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
-      {
-        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        worker->GetDeviceRequests().push_back(most_urgent_job);
-        worker->GetRequestCv().notify_one();
-      }
+      EnqueueToWorker(most_urgent_job);
     }
   }
 }

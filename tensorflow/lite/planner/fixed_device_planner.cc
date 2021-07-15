@@ -79,12 +79,7 @@ void FixedDevicePlanner::Plan() {
       to_execute.device_id = device_idx;
       to_execute.sched_id = sched_id_++;
 
-      Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      {
-        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        worker->GetDeviceRequests().push_back(to_execute);
-        worker->GetRequestCv().notify_one();
-      }
+      EnqueueToWorker(to_execute);
     }
     lock.unlock();
   }

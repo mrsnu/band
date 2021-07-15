@@ -47,8 +47,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   return kTfLiteOk;
 }
 
-JobQueue Planner::CopyToLocalQueue() {
-  JobQueue local_jobs;
+void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
   std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
   JobQueue& requests = GetRequests();
   if (!requests.empty()) {
@@ -59,8 +58,28 @@ JobQueue Planner::CopyToLocalQueue() {
     requests.erase(requests.begin(), requests.begin() + window_size);
   }
   request_lock.unlock();
+}
 
-  return local_jobs;
+void Planner::EnqueueToWorker(Job job) {
+  Worker* worker = GetInterpreter()->GetWorker(job.device_id);
+  if (worker == nullptr) return;
+  {
+    std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+    worker->GetDeviceRequests().push_back(job);
+    worker->GetRequestCv().notify_one();
+  }
+}
+
+void Planner::UpdateDeviceWaitingTime() {
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+    Worker* worker = GetInterpreter()->GetWorker(device_flag);
+    if (worker != nullptr) {
+      device_waiting_[device_flag] = worker->GetWaitingTime();
+    } else {
+      device_waiting_[device_flag] = -1;
+    }
+  }
 }
 
 void Planner::Wait(std::vector<int> job_ids) {
