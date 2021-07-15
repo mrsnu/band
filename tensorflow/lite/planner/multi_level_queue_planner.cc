@@ -1,4 +1,4 @@
-#include "tensorflow/lite/planner/two_level_planner.h"
+#include "tensorflow/lite/planner/multi_level_queue_planner.h"
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
