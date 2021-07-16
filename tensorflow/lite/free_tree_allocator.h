@@ -2,6 +2,7 @@
 #define TENSORFLOW_LITE_FREE_TREE_ALLOCATOR_H_
 
 #include <vector>
+#include <mutex>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/red_black_tree.h"
@@ -26,6 +27,7 @@ namespace tflite {
       std::size_t size_;
     };
     RedBlackTree tree_;
+    std::mutex tree_mtx_;
 
     void Coalescence(RedBlackTree::Node* curr);
     std::size_t size_;

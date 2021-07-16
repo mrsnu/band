@@ -5,6 +5,7 @@
 #include <cstddef>  // max_align_t
 #include <random>
 #include <string>
+#include <thread>
 #include <unordered_map>
 
 namespace tflite {
@@ -152,25 +153,78 @@ constexpr std::size_t mb = 1024 * 1024;
 
 TEST(FreeTreeAllocator, RandomAllocate) {
   FreeTreeAllocator allocator(mb);
-  RandomAllocate(&allocator, 100);
   RandomAllocate(&allocator, 1000);
+}
+
+TEST(FreeTreeAllocator, RandomAllocateMultiThreaded) {
+  FreeTreeAllocator allocator(mb);
+
+  int num_threads = 5;
+  std::vector<std::thread> threads;
+  for (int i = 0; i < num_threads; i++) {
+    threads.push_back(std::thread([&]() { RandomAllocate(&allocator, 100); }));
+  }
+
+  for (std::thread& t : threads) {
+    t.join();
+  }
 }
 
 TEST(FreeTreeAllocator, RandomAllocateDeallocate) {
   FreeTreeAllocator allocator(mb);
-  RandomAllocateDeallocate(&allocator, 100);
   RandomAllocateDeallocate(&allocator, 1000);
+}
+
+TEST(FreeTreeAllocator, RandomAllocateDeallocateMultiThreaded) {
+  FreeTreeAllocator allocator(mb);
+
+  int num_threads = 5;
+  std::vector<std::thread> threads;
+  for (int i = 0; i < num_threads; i++) {
+    threads.push_back(std::thread([&]() { RandomAllocateDeallocate(&allocator, 100); }));
+  }
+
+  for (std::thread& t : threads) {
+    t.join();
+  }
 }
 
 TEST(FreeTreeAllocator, RandomAllocateDeallocateLinearly) {
   FreeTreeAllocator allocator(mb);
-  RandomAllocateDeallocateLinearly(&allocator, 100);
   RandomAllocateDeallocateLinearly(&allocator, 1000);
+}
+
+TEST(FreeTreeAllocator, RandomAllocateDeallocateLinearlyMultiThreaded) {
+  FreeTreeAllocator allocator(mb);
+
+  int num_threads = 5;
+  std::vector<std::thread> threads;
+  for (int i = 0; i < num_threads; i++) {
+    threads.push_back(std::thread([&]() { RandomAllocateDeallocateLinearly(&allocator, 100); }));
+  }
+
+  for (std::thread& t : threads) {
+    t.join();
+  }
 }
 
 TEST(FreeTreeAllocator, FixedAllocateDeallocate) {
   FreeTreeAllocator allocator(mb);
   FixedAllocateDeallocate(&allocator, 512, 1000);
+}
+
+TEST(FreeTreeAllocator, FixedAllocateDeallocateMultiThreaded) {
+  FreeTreeAllocator allocator(mb);
+
+  int num_threads = 5;
+  std::vector<std::thread> threads;
+  for (int i = 0; i < num_threads; i++) {
+    threads.push_back(std::thread([&]() { FixedAllocateDeallocate(&allocator, 512, 100); }));
+  }
+
+  for (std::thread& t : threads) {
+    t.join();
+  }
 }
 }  // namespace tflite
 

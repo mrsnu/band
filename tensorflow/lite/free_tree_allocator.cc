@@ -38,7 +38,8 @@ void* FreeTreeAllocator::Allocate(const std::size_t size) {
   std::align(alignof(std::max_align_t), sizeof(std::max_align_t), nextAddress,
              space);
   padding += (std::size_t)nextAddress - (std::size_t)currentAddress;
-
+  
+  std::unique_lock<std::mutex> tree_lock(tree_mtx_);
   RedBlackTree::Node* node = tree_.SearchBest(size + padding);
 
   if (node == nullptr) {
@@ -62,6 +63,7 @@ void* FreeTreeAllocator::Allocate(const std::size_t size) {
   } else {
     padding += node->value_ - (size + padding);
   }
+  tree_lock.unlock();
 
   Header* header = reinterpret_cast<Header*>(node);
   header->size_ = size + padding;
@@ -81,6 +83,7 @@ void FreeTreeAllocator::Deallocate(void* ptr) {
 }
 
 void FreeTreeAllocator::Reset() {
+  std::lock_guard<std::mutex> tree_lock(tree_mtx_);
   RedBlackTree::Node* nil = reinterpret_cast<RedBlackTree::Node*>(start_address_);
   tree_.Init(nil);
   void* currentAddress =
@@ -97,6 +100,7 @@ void FreeTreeAllocator::Reset() {
 }
 
 void FreeTreeAllocator::Coalescence(RedBlackTree::Node* curr) {
+  std::lock_guard<std::mutex> tree_lock(tree_mtx_);
   RedBlackTree::Node* next = reinterpret_cast<RedBlackTree::Node*>(
       reinterpret_cast<char*>(curr) + sizeof(Header) + curr->value_);
   if (((std::size_t)next < (std::size_t)start_address_ + size_) &&
