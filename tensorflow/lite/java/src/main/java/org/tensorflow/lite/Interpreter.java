@@ -174,7 +174,7 @@ public final class Interpreter implements AutoCloseable {
   }
 
   public void runSyncMultipleRequests(
-      int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
+    @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
     checkNotClosed();
     wrapper.runSync(modelIds, inputs, outputs);
   }
@@ -182,12 +182,10 @@ public final class Interpreter implements AutoCloseable {
   public int runAsync(
     int modelId, @NonNull Tensor[] inputs) {
     checkNotClosed();
-    int[] modelIds = {modelId};
-    Tensor[][] modelInputs = {inputs};
-    return wrapper.runAsync(modelIds, modelInputs)[0];
+    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs})[0];
   }
 
-  public int[] runSyncMultipleRequests(
+  public int[] runAsyncMultipleRequests(
     int[] modelIds, @NonNull Tensor[][] inputs) {
     checkNotClosed();
     return wrapper.runAsync(modelIds, inputs);
@@ -195,13 +193,10 @@ public final class Interpreter implements AutoCloseable {
 
   public void wait(int jobId, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    int[] jobIds = {jobId};
-    Tensor[][] modelOutputs = {outputs};
-
-    wrapper.wait(jobIds, modelOutputs);
+    wrapper.wait(new int[]{jobId}, new Tensor[][]{outputs});
   }
 
-  public void waitMultipleRequests(int[] jobIds, @NonNull Tensor[][] outputs) {
+  public void waitMultipleRequests(@NonNull int[] jobIds, @NonNull Tensor[][] outputs) {
     checkNotClosed();
     wrapper.wait(jobIds, outputs);
   }

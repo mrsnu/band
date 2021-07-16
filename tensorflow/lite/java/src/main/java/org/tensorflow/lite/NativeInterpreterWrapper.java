@@ -100,6 +100,10 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   int[] runAsync(int[] modelIds, Tensor[][] modelInputs) {
+    if (modelIds == null) {
+      throw new IllegalArgumentException("Input error: modelIds should not be null.");
+    }
+
     if (modelInputs == null || modelInputs.length != modelIds.length) {
       throw new IllegalArgumentException("Input error: modelInputs should not be null or equal to model count.");
     }
