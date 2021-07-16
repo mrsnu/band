@@ -8,8 +8,8 @@
 #include "tensorflow/lite/red_black_tree.h"
 
 namespace tflite {
-  // RBTree based free tree allocator
-  // Borrowed from https://github.com/Kashio/A5
+  // Thread-safe RBTree based free tree allocator
+  // Base version from https://github.com/Kashio/A5
   class FreeTreeAllocator {
    public:
     FreeTreeAllocator(const std::size_t size);
