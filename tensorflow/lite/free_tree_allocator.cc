@@ -13,9 +13,9 @@ namespace tflite {
 FreeTreeAllocator::FreeTreeAllocator(const std::size_t size) : size_(size) {
   static std::size_t rootNodePadding = GetRootNodePadding();
   static std::string message =
-      "Total size must be atleast " +
+      "Total size must be at least " +
       std::to_string(sizeof(RedBlackTree::Node) * 2 + rootNodePadding) +
-      " bytes for an allocator with atleast " +
+      " bytes for an allocator with at least " +
       std::to_string(sizeof(RedBlackTree::Node) - sizeof(Header)) +
       " bytes of free space";
   assert(size >= sizeof(RedBlackTree::Node) * 2 + rootNodePadding && message.c_str());
