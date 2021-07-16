@@ -3,8 +3,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef> // max_align_t
 #include <memory>
 #include <string>
+
+#include <iostream>
 
 namespace tflite {
 FreeTreeAllocator::FreeTreeAllocator(const std::size_t size) : size_(size) {
@@ -17,7 +20,7 @@ FreeTreeAllocator::FreeTreeAllocator(const std::size_t size) : size_(size) {
       " bytes of free space";
   assert(size >= sizeof(RedBlackTree::Node) * 2 + rootNodePadding && message.c_str());
   start_address_ = ::operator new(size);
-  Init();
+  Reset();
 }
 
 FreeTreeAllocator::~FreeTreeAllocator() {
@@ -25,14 +28,13 @@ FreeTreeAllocator::~FreeTreeAllocator() {
   start_address_ = nullptr;
 }
 
-void* FreeTreeAllocator::Allocate(const std::size_t size,
-                                  const std::size_t alignment) {
+void* FreeTreeAllocator::Allocate(const std::size_t size) {
   std::size_t padding = size + sizeof(Header) < sizeof(RedBlackTree::Node)
                             ? sizeof(RedBlackTree::Node) - sizeof(Header) - size
                             : 0;
   void* currentAddress = (void*)(sizeof(Header) + size + padding);
   void* nextAddress = (void*)(sizeof(Header) + size + padding);
-  std::size_t space = size + padding + 100;
+  std::size_t space = size + padding + sizeof(std::max_align_t);
   std::align(alignof(std::max_align_t), sizeof(std::max_align_t), nextAddress,
              space);
   padding += (std::size_t)nextAddress - (std::size_t)currentAddress;
@@ -78,9 +80,7 @@ void FreeTreeAllocator::Deallocate(void* ptr) {
   Coalescence(node);
 }
 
-void FreeTreeAllocator::Reset() { Init(); }
-
-void FreeTreeAllocator::Init() {
+void FreeTreeAllocator::Reset() {
   RedBlackTree::Node* nil = reinterpret_cast<RedBlackTree::Node*>(start_address_);
   tree_.Init(nil);
   void* currentAddress =
