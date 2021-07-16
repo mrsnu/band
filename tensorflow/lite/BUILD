@@ -244,6 +244,34 @@ cc_library(
 )
 
 cc_library(
+    name = "free_tree_allocator",
+    srcs = [
+        "free_tree_allocator.cc",
+        "red_black_tree.cc",
+    ],
+    hdrs = [
+        "free_tree_allocator.h",
+        "red_black_tree.h",
+    ],
+    deps = [
+        ":allocation",
+    ],
+)
+
+cc_test(
+    name = "free_tree_allocator_test",
+    size = "small",
+    srcs = ["free_tree_allocator_test.cc"],
+    tags = [
+        "tflite_not_portable_ios",  # TODO(b/117786830)
+    ],
+    deps = [
+        ":free_tree_allocator",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
@@ -274,6 +302,7 @@ cc_library(
         ":arena_planner",
         ":cpu",
         ":external_cpu_backend_context",
+        ":free_tree_allocator",
         ":graph_info",
         ":memory_planner",
         ":minimal_logging",
