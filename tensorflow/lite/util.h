@@ -99,6 +99,7 @@ struct Job {
   JobStatus status = kTfLiteJobQueued;
   bool is_final_subgraph = true;
   std::string model_fname;
+  int temperature;
 
   std::vector<Job> following_jobs;
 };

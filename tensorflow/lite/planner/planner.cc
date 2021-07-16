@@ -40,7 +40,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "expected_latency\t"
            << "slo_us\t"
            << "job status\t"
-           << "is_final_subgraph\n";
+           << "is_final_subgraph\t"
+           << "temperature\n";
   log_file.close();
   
   return kTfLiteOk;
@@ -171,7 +172,8 @@ void Planner::FlushFinishedJobs() {
               << job.expected_latency << "\t"
               << job.slo_us << "\t"
               << job.status << "\t"
-              << job.is_final_subgraph << "\n";
+              << job.is_final_subgraph << "\t"
+              << job.temperature << "\n";
     }
     log_file.close();
   } else {

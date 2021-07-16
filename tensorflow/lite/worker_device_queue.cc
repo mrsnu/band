@@ -5,6 +5,7 @@
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/profiling/thermal.h"
 #include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
@@ -94,6 +95,7 @@ void DeviceQueueWorker::Work() {
 
       if (CopyInputTensors(job) == kTfLiteOk) {
         job.invoke_time = profiling::time::NowMicros();
+        job.temperature = profiling::thermal::GetCPUTemperatureMillis();
 
         if (subgraph.Invoke() == kTfLiteOk) {
           job.end_time = profiling::time::NowMicros();

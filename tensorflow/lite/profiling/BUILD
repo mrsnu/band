@@ -80,6 +80,13 @@ cc_library(
 )
 
 cc_library(
+    name = "thermal",
+    srcs = ["thermal.cc"],
+    hdrs = ["thermal.h"],
+    copts = common_copts,
+)
+
+cc_library(
     name = "time",
     srcs = ["time.cc"],
     hdrs = ["time.h"],

@@ -295,6 +295,7 @@ cc_library(
         "//tensorflow/lite/profiling:time_profiler",
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
+        "//tensorflow/lite/profiling:thermal",
         "//tensorflow/lite/profiling:util",
         "//tensorflow/lite/tools:logging",
     ] + select({
