@@ -23,7 +23,7 @@ namespace impl {
 using JobQueue = std::deque<Job>;
 
 // The job queue which can be shared by multiple threads.
-struct SharableJobQueue {
+struct ConcurrentJobQueue {
   JobQueue queue;
   std::mutex mtx;
 };
