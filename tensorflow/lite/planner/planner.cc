@@ -55,7 +55,7 @@ JobQueue Planner::CopyToLocalQueue() {
     // Gets the specific amount of jobs from requests
     // and removes those jobs from the requests.
     int window_size = std::min(GetWindowSize(), (int) requests.size());
-    local_jobs.insert(local_jobs.begin(), requests.begin(), requests.begin() + window_size);
+    local_jobs.insert(local_jobs.begin(), std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.begin() + window_size));
     requests.erase(requests.begin(), requests.begin() + window_size);
   }
   request_lock.unlock();
