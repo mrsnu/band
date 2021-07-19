@@ -122,6 +122,14 @@ class Interpreter {
 
   TfLiteStatus Init(InterpreterConfig& config);
 
+  int GetNewModelId() {
+    return next_model_id_++;
+  }
+
+  void InvalidateRecentModelId() {
+    next_model_id_--;
+  }
+
   // Functions to build interpreter
 #ifndef DOXYGEN_SKIP
   /// Provide a list of tensor indexes that are inputs to the model.
@@ -769,6 +777,8 @@ class Interpreter {
   int num_warmups_ = 3;
 
   int num_runs_ = 50;
+
+  int next_model_id_ = 0;
 
   // Path to the profile data.
   // The data in the path will be read during initial phase, and also
