@@ -14,7 +14,7 @@ TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
   for (size_t i = 0; i < size_; i++) {
     tensors_[i].resize(tensors.size());
     for (size_t j = 0; j < tensors_[i].size(); j++) {
-      tensors_[i][j] = TfLiteTensorCopy(tensors[j]);
+      tensors_[i][j] = TfLiteTensorCreateLike(tensors[j]);
     }
   }
 }

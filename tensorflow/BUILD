@@ -17,6 +17,7 @@ exports_files([
     "leakr_badwords.dic",
     "leakr_badfiles.dic",
     "leakr_file_type_recipe.ftrcp",
+    "libtensorflow_framework.so.2",
 ])
 
 # Config setting used when building for products

@@ -25,7 +25,7 @@ extern "C" {
 
 // Resets all variable tensors to zero.
 TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterResetVariableTensors(
-    TfLiteInterpreter* interpreter);
+    TfLiteInterpreter* interpreter, int32_t subgraph_idx);
 
 // Adds an op registration for a builtin operator.
 //

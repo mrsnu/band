@@ -92,12 +92,6 @@ public final class Interpreter implements AutoCloseable {
       return this;
     }
 
-    /** Sets whether to use NN API (if available) for op execution. Defaults to false (disabled). */
-    public Options setUseNNAPI(boolean useNNAPI) {
-      this.useNNAPI = useNNAPI;
-      return this;
-    }
-
     /**
      * Sets whether to allow float16 precision for FP32 calculation when possible. Defaults to false
      * (disallow).
@@ -108,16 +102,6 @@ public final class Interpreter implements AutoCloseable {
     @Deprecated
     public Options setAllowFp16PrecisionForFp32(boolean allow) {
       this.allowFp16PrecisionForFp32 = allow;
-      return this;
-    }
-
-    /**
-     * Adds a {@link Delegate} to be applied during interpreter creation.
-     *
-     * <p>WARNING: This is an experimental interface that is subject to change.
-     */
-    public Options addDelegate(Delegate delegate) {
-      delegates.add(delegate);
       return this;
     }
 
@@ -137,45 +121,16 @@ public final class Interpreter implements AutoCloseable {
       return this;
     }
 
-    /**
-     * Experimental: Enable an optimized set of floating point CPU kernels (provided by XNNPACK).
-     *
-     * <p>Enabling this flag will enable use of a new, highly optimized set of CPU kernels provided
-     * via the XNNPACK delegate. Currently, this is restricted to a subset of floating point
-     * operations. Eventually, we plan to enable this by default, as it can provide significant
-     * peformance benefits for many classes of floating point models. See
-     * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/delegates/xnnpack/README.md
-     * for more details.
-     *
-     * <p>Things to keep in mind when enabling this flag:
-     *
-     * <ul>
-     *   <li>Startup time and resize time may increase.
-     *   <li>Baseline memory consumption may increase.
-     *   <li>Compatibility with other delegates (e.g., GPU) has not been fully validated.
-     *   <li>Quantized models will not see any benefit.
-     * </ul>
-     *
-     * <p>WARNING: This is an experimental interface that is subject to change.
-     */
-    public Options setUseXNNPACK(boolean useXNNPACK) {
-      this.useXNNPACK = useXNNPACK;
-      return this;
-    }
-
     int numThreads = -1;
-    Boolean useNNAPI;
     Boolean allowFp16PrecisionForFp32;
     Boolean allowBufferHandleOutput;
-    Boolean useXNNPACK;
-    final List<Delegate> delegates = new ArrayList<>();
   }
 
   /**
    * Initializes a {@code Interpreter}
    */
-  public Interpreter() {
-    wrapper = new NativeInterpreterWrapper();
+  public Interpreter(String jsonPath) {
+    wrapper = new NativeInterpreterWrapper(jsonPath);
   }
 
   /**
@@ -208,200 +163,44 @@ public final class Interpreter implements AutoCloseable {
     return wrapper.registerModel(byteBuffer, options);
   }
 
-  /**
-   * Runs model inference if the model takes only one input, and provides only one output.
-   *
-   * <p>Warning: The API is more efficient if a {@link Buffer} (preferably direct, but not required)
-   * is used as the input/output data type. Please consider using {@link Buffer} to feed and fetch
-   * primitive data for better performance. The following concrete {@link Buffer} types are
-   * supported:
-   *
-   * <ul>
-   *   <li>{@link ByteBuffer} - compatible with any underlying primitive Tensor type.
-   *   <li>{@link FloatBuffer} - compatible with float Tensors.
-   *   <li>{@link IntBuffer} - compatible with int32 Tensors.
-   *   <li>{@link LongBuffer} - compatible with int64 Tensors.
-   * </ul>
-   *
-   * @param modelId an ID of the target model to run inference
-   * @param input an array or multidimensional array, or a {@link Buffer} of primitive types
-   *     including int, float, long, and byte. {@link Buffer} is the preferred way to pass large
-   *     input data for primitive types, whereas string types require using the (multi-dimensional)
-   *     array input path. When a {@link Buffer} is used, its content should remain unchanged until
-   *     model inference is done, and the caller must ensure that the {@link Buffer} is at the
-   *     appropriate read position. A {@code null} value is allowed only if the caller is using a
-   *     {@link Delegate} that allows buffer handle interop, and such a buffer has been bound to the
-   *     input {@link Tensor}.
-   * @param output a multidimensional array of output data, or a {@link Buffer} of primitive types
-   *     including int, float, long, and byte. When a {@link Buffer} is used, the caller must ensure
-   *     that it is set the appropriate write position. A null value is allowed only if the caller
-   *     is using a {@link Delegate} that allows buffer handle interop, and such a buffer has been
-   *     bound to the output {@link Tensor}. See {@link Options#setAllowBufferHandleOutput()}.
-   * @throws IllegalArgumentException if {@code input} or {@code output} is null or empty, or if
-   *     error occurs when running the inference.
-   */
-  public void run(int modelId, Object input, Object output) {
-    Object[] inputs = {input};
-    Map<Integer, Object> outputs = new HashMap<>();
-    outputs.put(0, output);
-    runForMultipleInputsOutputs(modelId, inputs, outputs);
+  public void run(
+      int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
+    checkNotClosed();
+    int[] modelIds = {modelId};
+    Tensor[][] modelInputs = {inputs};
+    Tensor[][] modelOutputs = {outputs};
+    
+    wrapper.run(modelIds, modelInputs, modelOutputs);
   }
 
-  /**
-   * Runs model inference if the model takes multiple inputs, or returns multiple outputs.
-   *
-   * <p>Warning: The API is more efficient if {@link Buffer}s (preferably direct, but not required)
-   * are used as the input/output data types. Please consider using {@link Buffer} to feed and fetch
-   * primitive data for better performance. The following concrete {@link Buffer} types are
-   * supported:
-   *
-   * <ul>
-   *   <li>{@link ByteBuffer} - compatible with any underlying primitive Tensor type.
-   *   <li>{@link FloatBuffer} - compatible with float Tensors.
-   *   <li>{@link IntBuffer} - compatible with int32 Tensors.
-   *   <li>{@link LongBuffer} - compatible with int64 Tensors.
-   * </ul>
-   *
-   * <p>Note: {@code null} values for invididual elements of {@code inputs} and {@code outputs} is
-   * allowed only if the caller is using a {@link Delegate} that allows buffer handle interop, and
-   * such a buffer has been bound to the corresponding input or output {@link Tensor}(s).
-   *
-   * @param modelId an ID of the target model to run inference
-   * @param inputs an array of input data. The inputs should be in the same order as inputs of the
-   *     model. Each input can be an array or multidimensional array, or a {@link Buffer} of
-   *     primitive types including int, float, long, and byte. {@link Buffer} is the preferred way
-   *     to pass large input data, whereas string types require using the (multi-dimensional) array
-   *     input path. When {@link Buffer} is used, its content should remain unchanged until model
-   *     inference is done, and the caller must ensure that the {@link Buffer} is at the appropriate
-   *     read position.
-   * @param outputs a map mapping output indices to multidimensional arrays of output data or {@link
-   *     Buffer}s of primitive types including int, float, long, and byte. It only needs to keep
-   *     entries for the outputs to be used. When a {@link Buffer} is used, the caller must ensure
-   *     that it is set the appropriate write position.
-   * @throws IllegalArgumentException if {@code inputs} or {@code outputs} is null or empty, or if
-   *     error occurs when running the inference.
-   */
-  public void runForMultipleInputsOutputs(
-      int modelId, @NonNull Object[] inputs, @NonNull Map<Integer, Object> outputs) {
+  public void runMultipleModels(
+      int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
     checkNotClosed();
-    wrapper.run(modelId, inputs, outputs);
-  }
-
-  /**
-   * Expicitly updates allocations for all tensors, if necessary.
-   *
-   * <p>This will propagate shapes and memory allocations for all dependent tensors using the input
-   * tensor shape(s) as given.
-   *
-   * <p>Note: This call is *purely optional*. Tensor allocation will occur automatically during
-   * execution if any input tensors have been resized. This call is most useful in determining the
-   * shapes for any output tensors before executing the graph, e.g.,
-   * <pre>{@code
-   * interpreter.resizeInput(0, new int[]{1, 4, 4, 3}));
-   * interpreter.allocateTensors();
-   * FloatBuffer input = FloatBuffer.allocate(interpreter.getInputTensor(0),numElements());
-   * // Populate inputs...
-   * FloatBuffer output = FloatBuffer.allocate(interpreter.getOutputTensor(0).numElements());
-   * interpreter.run(input, output)
-   * // Process outputs...
-   * }</pre>
-   *
-   * @throws IllegalStateException if the graph's tensors could not be successfully allocated.
-   */
-  public void allocateTensors() {
-    checkNotClosed();
-    wrapper.allocateTensors();
-  }
-
-  /**
-   * Resizes idx-th input of the native model to the given dims.
-   *
-   * @throws IllegalArgumentException if {@code idx} is negtive or is not smaller than the number of
-   *     model inputs; or if error occurs when resizing the idx-th input.
-   */
-  public void resizeInput(int idx, @NonNull int[] dims) {
-    checkNotClosed();
-    wrapper.resizeInput(idx, dims, false);
-  }
-
-  /**
-   * Resizes idx-th input of the native model to the given dims.
-   *
-   * <p>When `strict` is True, only unknown dimensions can be resized. Unknown dimensions are
-   * indicated as `-1` in the array returned by `Tensor.shapeSignature()`.
-   *
-   * @throws IllegalArgumentException if {@code idx} is negtive or is not smaller than the number of
-   *     model inputs; or if error occurs when resizing the idx-th input. Additionally, the error
-   *     occurs when attempting to resize a tensor with fixed dimensions when `struct` is True.
-   */
-  public void resizeInput(int idx, @NonNull int[] dims, boolean strict) {
-    checkNotClosed();
-    wrapper.resizeInput(idx, dims, strict);
+    wrapper.run(modelIds, inputs, outputs);
   }
 
   /** Gets the number of input tensors. */
-  public int getInputTensorCount() {
+  public int getInputTensorCount(int modelId) {
     checkNotClosed();
-    return wrapper.getInputTensorCount();
+    return wrapper.getInputTensorCount(modelId);
   }
 
-  /**
-   * Gets index of an input given the op name of the input.
-   *
-   * @throws IllegalArgumentException if {@code opName} does not match any input in the model used
-   *     to initialize the {@link Interpreter}.
-   */
-  public int getInputIndex(String opName) {
+  public Tensor allocateInputTensor(int modelId, int index) {
     checkNotClosed();
-    return wrapper.getInputIndex(opName);
-  }
-
-  /**
-   * Gets the Tensor associated with the provdied input index.
-   *
-   * @throws IllegalArgumentException if {@code inputIndex} is negtive or is not smaller than the
-   *     number of model inputs.
-   */
-  public Tensor getInputTensor(int inputIndex) {
-    checkNotClosed();
-    return wrapper.getInputTensor(inputIndex);
+    return wrapper.allocateInputTensor(modelId, index);
   }
 
   /** Gets the number of output Tensors. */
-  public int getOutputTensorCount() {
+  public int getOutputTensorCount(int modelId) {
     checkNotClosed();
-    return wrapper.getOutputTensorCount();
+    return wrapper.getOutputTensorCount(modelId);
   }
 
-  /**
-   * Gets index of an output given the op name of the output.
-   *
-   * @throws IllegalArgumentException if {@code opName} does not match any output in the model used
-   *     to initialize the {@link Interpreter}.
-   */
-  public int getOutputIndex(String opName) {
+  public Tensor allocateOutputTensor(int modelId, int index) {
     checkNotClosed();
-    return wrapper.getOutputIndex(opName);
+    return wrapper.allocateOutputTensor(modelId, index);
   }
-
-  /**
-   * Gets the Tensor associated with the provdied output index.
-   *
-   * <p>Note: Output tensor details (e.g., shape) may not be fully populated until after inference
-   * is executed. If you need updated details *before* running inference (e.g., after resizing an
-   * input tensor, which may invalidate output tensor shapes), use {@link #allocateTensors()} to
-   * explicitly trigger allocation and shape propagation. Note that, for graphs with output shapes
-   * that are dependent on input *values*, the output shape may not be fully determined until
-   * running inference.
-   *
-   * @throws IllegalArgumentException if {@code outputIndex} is negtive or is not smaller than the
-   *     number of model outputs.
-   */
-  public Tensor getOutputTensor(int outputIndex) {
-    checkNotClosed();
-    return wrapper.getOutputTensor(outputIndex);
-  }
-
+  
   /**
    * Returns native inference timing.
    *
@@ -410,18 +209,6 @@ public final class Interpreter implements AutoCloseable {
   public Long getLastNativeInferenceDurationNanoseconds() {
     checkNotClosed();
     return wrapper.getLastNativeInferenceDurationNanoseconds();
-  }
-
-  /**
-   * Turns on/off Android NNAPI for hardware acceleration when it is available.
-   *
-   * @deprecated Prefer using {@link Options#setUseNNAPI(boolean)} directly for enabling NN API.
-   *     This method will be removed in a future release.
-   */
-  @Deprecated
-  public void setUseNNAPI(boolean useNNAPI) {
-    checkNotClosed();
-    wrapper.setUseNNAPI(useNNAPI);
   }
 
   /**
@@ -437,36 +224,15 @@ public final class Interpreter implements AutoCloseable {
   }
 
   /**
-   * Advanced: Modifies the graph with the provided {@link Delegate}.
-   *
-   * <p>Note: The typical path for providing delegates is via {@link Options#addDelegate}, at
-   * creation time. This path should only be used when a delegate might require coordinated
-   * interaction between Interpeter creation and delegate application.
-   *
-   * <p>WARNING: This is an experimental API and subject to change.
-   *
-   * @throws IllegalArgumentException if error occurs when modifying graph with {@code delegate}.
-   */
-  public void modifyGraphWithDelegate(Delegate delegate) {
-    checkNotClosed();
-    wrapper.modifyGraphWithDelegate(delegate);
-  }
-
-  /**
    * Advanced: Resets all variable tensors to the default value.
    *
    * <p>If a variable tensor doesn't have an associated buffer, it will be reset to zero.
    *
    * <p>WARNING: This is an experimental API and subject to change.
    */
-  public void resetVariableTensors() {
+  public void resetVariableTensors(int modelId) {
     checkNotClosed();
-    wrapper.resetVariableTensors();
-  }
-
-  int getExecutionPlanLength() {
-    checkNotClosed();
-    return wrapper.getExecutionPlanLength();
+    wrapper.resetVariableTensors(modelId);
   }
 
   /** Release resources associated with the {@code Interpreter}. */
