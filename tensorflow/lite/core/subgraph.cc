@@ -526,8 +526,7 @@ TfLiteStatus Subgraph::SetOutputs(std::vector<int> outputs) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::SetTensorToNodes(std::map<int, int>& dst, 
-                                        const std::map<int, int>& src) {
+TfLiteStatus Subgraph::SetTensorToNodes(const std::multimap<int, int>& src, std::multimap<int, int>& dst) {
   std::vector<int> tensor_indices;
   for (auto& tensor_to_node : src) {
     tensor_indices.push_back(tensor_to_node.first);
@@ -543,12 +542,12 @@ TfLiteStatus Subgraph::SetTensorToNodes(std::map<int, int>& dst,
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::SetInputTensorToNodes(std::map<int, int> tensor_to_nodes) {
-  return SetTensorToNodes(input_tensor_to_nodes_, tensor_to_nodes);
+TfLiteStatus Subgraph::SetInputTensorToNodes(std::multimap<int, int> tensor_to_nodes) {
+  return SetTensorToNodes(tensor_to_nodes, input_tensor_to_nodes_);
 }
 
-TfLiteStatus Subgraph::SetOutputTensorToNodes(std::map<int, int> tensor_to_nodes) {
-  return SetTensorToNodes(output_tensor_to_nodes_, tensor_to_nodes);
+TfLiteStatus Subgraph::SetOutputTensorToNodes(std::multimap<int, int> tensor_to_nodes) {
+  return SetTensorToNodes(tensor_to_nodes, output_tensor_to_nodes_);
 }
 
 TfLiteStatus Subgraph::SetVariables(std::vector<int> variables) {
@@ -598,14 +597,19 @@ TfLiteStatus Subgraph::CheckTensorIndices(const char* label, const int* indices,
   return kTfLiteOk;
 }
 
-std::set<int> Subgraph::TensorIndicesToNodeIndices(const std::map<int, int>& tensor_to_nodes,
+std::set<int> Subgraph::TensorIndicesToNodeIndices(const std::multimap<int, int>& tensor_to_nodes,
                                                    const int* indices, int length) const {
   std::set<int> node_indices;
   for (int i = 0; i < length; i++) {
     int index = indices[i];
     // Skip nodes attached to constant tensors (e.g., weight)
     if (tensor_to_nodes.find(index) != tensor_to_nodes.end()) {
-      node_indices.insert(tensor_to_nodes.at(index));
+      auto node_interators = tensor_to_nodes.equal_range(index);
+      // Insert all nodes that inputs corresponding tensor
+      for (auto it = node_interators.first; it != node_interators.second;
+           ++it) {
+        node_indices.insert(it->second);
+      }
     }
   }
   return node_indices;

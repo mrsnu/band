@@ -68,8 +68,8 @@ class Subgraph {
   // interpreter.
   TfLiteStatus SetOutputs(std::vector<int> outputs);
 
-  TfLiteStatus SetInputTensorToNodes(std::map<int, int> tensor_to_nodes);
-  TfLiteStatus SetOutputTensorToNodes(std::map<int, int> tensor_to_nodes);
+  TfLiteStatus SetInputTensorToNodes(std::multimap<int, int> tensor_to_nodes);
+  TfLiteStatus SetOutputTensorToNodes(std::multimap<int, int> tensor_to_nodes);
 
   // Provide a list of tensor indexes that are variable tensors.
   // Each index is bound check and this modifies the consistent_ flag of the
@@ -473,9 +473,11 @@ class Subgraph {
   TfLiteStatus CheckTensorIndices(const char* label, const int* indices,
                                   int length);
 
-  std::set<int> TensorIndicesToNodeIndices(const std::map<int, int>& tensor_to_nodes,
+  // Find node indices from tensor indices
+  std::set<int> TensorIndicesToNodeIndices(const std::multimap<int, int>& tensor_to_nodes,
                                            const int* indices, int length) const;
-  TfLiteStatus SetTensorToNodes(std::map<int, int>& dst, const std::map<int, int>& src);
+  // Check whether tensor/node indices are valid and udpate dst
+  TfLiteStatus SetTensorToNodes(const std::multimap<int, int>& src, std::multimap<int, int>& dst);
 
   // Compute the number of bytes required to represent a tensor with dimensions
   // specified by the array dims (of length dims_size). Returns the status code
@@ -668,8 +670,11 @@ class Subgraph {
   // Array of indices representing the tensors that are variable tensors.
   std::vector<int> variables_;
 
-  std::map<int, int> input_tensor_to_nodes_;
-  std::map<int, int> output_tensor_to_nodes_;
+  // Multimap from tensor index to node indices
+  // input : nodes that take corresponding tensor as an input
+  std::multimap<int, int> input_tensor_to_nodes_;
+  // output : nodes that output corresponding tensor
+  std::multimap<int, int> output_tensor_to_nodes_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_;

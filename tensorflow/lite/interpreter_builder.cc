@@ -767,17 +767,17 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     // nodes in the same model, as well as parameters tensors that aren't
     // really "input" tensors
     std::set<int> node_inputs, node_outputs;
-    std::map<int, int> input_tensor_to_nodes, output_tensor_to_nodes;
+    std::multimap<int, int> input_tensor_to_nodes, output_tensor_to_nodes;
     auto nodes_and_registration = modified_subgraph->nodes_and_registration();
     for (int node_index : modified_subgraph->execution_plan()) {
       TfLiteNode node = nodes_and_registration[node_index].first;
       for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
         node_inputs.insert(input_tensor);
-        input_tensor_to_nodes[input_tensor] = node_index;
+        input_tensor_to_nodes.insert({input_tensor, node_index});
       }
       for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
         node_outputs.insert(output_tensor);
-        output_tensor_to_nodes[output_tensor] = node_index;
+        output_tensor_to_nodes.insert({output_tensor, node_index});
       }
     }
 
