@@ -79,6 +79,7 @@ FRAMEWORK_LIB_HDRS = [
     "optional_debug_tools.h",
     "stderr_reporter.h",
     "tensor_ring_buffer.h",
+    "planner/util.h",
     "planner/planner.h",
     "planner/fixed_device_planner.h",
     "planner/round_robin_planner.h",

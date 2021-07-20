@@ -5,7 +5,6 @@ namespace tflite {
 namespace impl {
 
 void FixedDeviceGlobalQueuePlanner::Plan() {
-  int sched_id = 0;
   while (true) {
     if (GetSafeBool().wait())
       return;
@@ -86,7 +85,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
     // which means concurrent enqueue is not available.
     // This can affect the performance.
     std::lock_guard<std::mutex> lock(GetRequestsMtx());
-    std::deque<Job>& requests = GetRequests();
+    JobQueue& requests = GetRequests();
     for (auto it = requests.begin(); it != requests.end();) {
       Job& to_execute = *it;
       int model_id = to_execute.model_id;
@@ -126,7 +125,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 
           // mark the time of this decision (of early-dropping this job)
           to_execute.end_time = current_time;
-          to_execute.sched_id = sched_id++;
+          to_execute.sched_id = sched_id_++;
           EnqueueFinishedJob(to_execute);
           it = requests.erase(it);
           continue;
@@ -142,7 +141,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 
       to_execute.subgraph_idx = subgraph_idx;
       to_execute.device_id = device_idx;
-      to_execute.sched_id = sched_id++;
+      to_execute.sched_id = sched_id_++;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
       if (!worker->GiveJob(to_execute)) {

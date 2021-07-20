@@ -1,8 +1,9 @@
+#include <fstream>
+
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/interpreter.h"
-#include <fstream>
 
 namespace tflite {
 namespace impl {
@@ -42,18 +43,33 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "job status\t"
            << "is_final_subgraph\n";
   log_file.close();
-  
+
   return kTfLiteOk;
+}
+
+JobQueue Planner::CopyToLocalQueue() {
+  JobQueue local_jobs;
+  std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
+  JobQueue& requests = GetRequests();
+  if (!requests.empty()) {
+    // Gets the specific amount of jobs from requests
+    // and removes those jobs from the requests.
+    int window_size = std::min(GetWindowSize(), (int) requests.size());
+    local_jobs.insert(local_jobs.begin(), std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.begin() + window_size));
+    requests.erase(requests.begin(), requests.begin() + window_size);
+  }
+  request_lock.unlock();
+
+  return local_jobs;
 }
 
 void Planner::Wait(std::vector<int> job_ids) {
   if (job_ids.size() == 0) {
     return;
   }
-  
-  std::unique_lock<std::mutex> request_lock(requests_mtx_);
-  end_invoke_.wait(request_lock, [this, job_ids] {
 
+  std::unique_lock<std::mutex> request_lock(requests_.mtx);
+  end_invoke_.wait(request_lock, [this, job_ids] {
     for (int job_id : job_ids) {
       if (!IsJobIdValid(job_id)) {
         continue;
@@ -70,7 +86,7 @@ void Planner::Wait(std::vector<int> job_ids) {
 }
 
 void Planner::WaitAll() {
-  std::unique_lock<std::mutex> request_lock(requests_mtx_);
+  std::unique_lock<std::mutex> request_lock(requests_.mtx);
   end_invoke_.wait(request_lock, [this]() {
     return num_finished_jobs_ >= num_submitted_jobs_;
   });
@@ -81,12 +97,12 @@ void Planner::WaitAll() {
 }
 
 void Planner::EnqueueFinishedJob(Job job) {
-  std::unique_lock<std::mutex> lock(job_queue_mtx_);
-  jobs_finished_.push_back(job);
+  std::unique_lock<std::mutex> lock(jobs_finished_.mtx);
+  jobs_finished_.queue.push_back(job);
   lock.unlock();
 
-  std::lock_guard<std::mutex> request_lock(requests_mtx_);
-  
+  std::lock_guard<std::mutex> request_lock(requests_.mtx);
+ 
   if (job.is_final_subgraph) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
@@ -99,7 +115,7 @@ int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
 
 std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
   std::vector<int> job_ids(jobs.size());
-  std::unique_lock<std::mutex> lock(requests_mtx_);
+  std::unique_lock<std::mutex> lock(requests_.mtx);
   auto enqueue_time = profiling::time::NowMicros();
   for (int i = 0; i < jobs.size(); i++) {
     Job& job = jobs[i];
@@ -112,7 +128,7 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
       job.job_id = num_submitted_jobs_++;
     }
     job_ids[i] = job.job_id;
-    requests_.push_back(job);
+    requests_.queue.push_back(job);
   }
   lock.unlock();
 
@@ -126,7 +142,7 @@ void Planner::SetWindowSize(int schedule_window_size) {
 }
 
 Job Planner::GetFinishedJob(int job_id) {
-  std::lock_guard<std::mutex> request_lock(requests_mtx_);
+  std::lock_guard<std::mutex> request_lock(requests_.mtx);
   if (IsJobIdValid(job_id) &&
       jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != -1) {
     return jobs_finished_record_[GetJobRecordIndex(job_id)];
@@ -136,12 +152,12 @@ Job Planner::GetFinishedJob(int job_id) {
 }
 
 void Planner::FlushFinishedJobs() {
-  std::lock_guard<std::mutex> queue_lock(job_queue_mtx_);
+  std::lock_guard<std::mutex> queue_lock(jobs_finished_.mtx);
   std::ofstream log_file(log_path_, std::ofstream::app);
   if (log_file.is_open()) {
-    while (!jobs_finished_.empty()) {
-      Job job = jobs_finished_.front();
-      jobs_finished_.pop_front();
+    while (!jobs_finished_.queue.empty()) {
+      Job job = jobs_finished_.queue.front();
+      jobs_finished_.queue.pop_front();
 
       if (job.slo_us > 0 && job.is_final_subgraph &&
           job.status == kTfLiteJobSuccess) {

@@ -4,17 +4,18 @@
 #include <memory>
 #include <vector>
 #include <string>
+
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/planner/util.h"
 
 namespace tflite {
 
 namespace impl {
 
 class Interpreter;
-#define NUM_FINISHED_RECORDS 1000
 
 // The interpreter manages a `Planner`.
 class Planner {
@@ -23,7 +24,7 @@ class Planner {
   ~Planner();
 
   TfLiteStatus Init(PlannerConfig& config);
-  
+
 	/*
 	Derived classes should generally follow this template when implementing `Plan()`:
 	while (true) {
@@ -69,11 +70,11 @@ class Planner {
   }
 
   std::mutex& GetRequestsMtx() {
-    return requests_mtx_;
+    return requests_.mtx;
   }
 
-  std::deque<Job>& GetRequests() {
-    return requests_;
+  JobQueue& GetRequests() {
+    return requests_.queue;
   }
 
   int GetWindowSize() {
@@ -89,8 +90,13 @@ class Planner {
   Job GetFinishedJob(int job_id);
 
  protected:
+  // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
+  // Copy the Job instances from the `requests_` to the local queue.
+  JobQueue CopyToLocalQueue();
+
   std::thread planner_thread_;
+  int sched_id_ = 0;
 
  private:
   bool IsJobIdValid(int job_id);
@@ -100,13 +106,11 @@ class Planner {
   SafeBool planner_safe_bool_;
 
   // Jobs Finished
-  std::mutex job_queue_mtx_;
-  std::deque<Job> jobs_finished_;
+  ConcurrentJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
   // Request Queue
-  std::mutex requests_mtx_;
-  std::deque<Job> requests_;
+  ConcurrentJobQueue requests_;
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
   int num_finished_jobs_ = 0;
