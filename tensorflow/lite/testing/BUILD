@@ -230,16 +230,13 @@ cc_library(
         "//tensorflow/lite/kernels/hashtable:hashtable_op_kernels",
         "//tensorflow/lite/kernels:reference_ops",
         "//tensorflow/lite/tools/evaluation:utils",
-    ] + select({
-        "//tensorflow:ios": [],
-        "//conditions:default": ["//tensorflow/lite/delegates/flex:delegate"],
-    }),
+    ]# NOTE: flex:delegate is removed for simple testing
 )
 
 tf_cc_test(
-    name = "tflite_driver_test",
+    name = "interpreter_test",
     size = "small",
-    srcs = ["tflite_driver_test.cc"],
+    srcs = ["interpreter/interpreter_test.cc"],
     data = [
         "//tensorflow/lite:testdata/add_quantized_int8.bin",
         "//tensorflow/lite:testdata/multi_add.bin",
