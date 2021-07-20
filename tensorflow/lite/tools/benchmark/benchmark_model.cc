@@ -68,6 +68,15 @@ void BenchmarkLoggingListener::OnBenchmarkEnd(const BenchmarkResults& results) {
 
 std::vector<Flag> BenchmarkModel::GetFlags() {
   return {
+      CreateFlag<std::string>(
+          "execution_mode", &params_,
+          "experiment execution mode"),
+      CreateFlag<int32_t>(
+          "duration_ms", &params_,
+          "experiment duration"),
+      CreateFlag<int32_t>(
+          "device", &params_,
+          "Selected device"),
       CreateFlag<int32_t>(
           "period", &params_,
           "invoke interval"),
@@ -203,6 +212,11 @@ TfLiteStatus BenchmarkModel::PrepareRun() {
                    << "ms.";
 
   TF_LITE_ENSURE_STATUS(PrepareInputData());
+
+  TFLITE_LOG(INFO) << "Device info : \n"
+                   << "use_gpu - " << params_.Get<bool>("use_gpu")
+                   << " use_nnapi - " << params_.Get<bool>("use_nnapi")
+                   << " nnapi_accelerator_name - " << params_.Get<std::string>("nnapi_accelerator_name");
 
   TfLiteStatus status = kTfLiteOk;
   uint64_t input_bytes = ComputeInputBytes();

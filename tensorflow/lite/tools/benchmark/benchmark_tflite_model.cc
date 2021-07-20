@@ -275,6 +275,10 @@ BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
   default_params.AddParam("enable_platform_tracing",
                           BenchmarkParam::Create<bool>(false));
   default_params.AddParam("period", BenchmarkParam::Create<int32_t>(10));
+  default_params.AddParam("duration_ms", BenchmarkParam::Create<int32_t>(6000));
+  default_params.AddParam("device", BenchmarkParam::Create<int32_t>(0));
+  default_params.AddParam("execution_mode",
+                          BenchmarkParam::Create<std::string>("stream"));
 
   for (const auto& delegate_provider :
        tools::GetRegisteredDelegateProviders()) {

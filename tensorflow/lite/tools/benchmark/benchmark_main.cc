@@ -29,17 +29,32 @@ namespace benchmark {
 class MultiModelBenchmark {
  public:
 	explicit MultiModelBenchmark() {
-    log_file_.open("/data/local/tmp/model_execution_log.csv", std::fstream::app);
-    log_file_ << "model_id\tdevice_id\tenqueue_time\tinvoke_time\tend_time\n";
+    log_file_.open("/data/local/tmp/model_execution_log.csv");
+    log_file_ << "sched_id\t"
+         << "model_name\t"
+         << "model_id\t"
+         << "device_id\t"
+         << "start_idx\t"
+         << "end_idx\t"
+         << "subgraph_idx\t"
+         << "enqueue_time\t"
+         << "invoke_time\t"
+         << "end_time\t"
+         << "profiled_time\t"
+         << "expected_latency\t"
+         << "slo_us\t"
+         << "job status\t"
+         << "is_final_subgraph\n";
   }
   ~MultiModelBenchmark() {
     log_file_.close();
   }
 	TfLiteStatus Worker(BenchmarkTfLiteModel benchmark, std::string graph_name);
 	void GenerateRequests(int id, int interval, std::string graph_name, int run_time);
-	TfLiteStatus Initialize(std::string graphs, int argc, char** argv);
+	TfLiteStatus Initialize(std::string graphs, int device, int argc, char** argv);
 	TfLiteStatus ParseGraphFileNames(std::string graphs);
 	TfLiteStatus RunRequests(int period);
+	void RunStream(int duration);
 
  private:
 	std::vector<std::string> graph_names_;
@@ -108,7 +123,36 @@ TfLiteStatus MultiModelBenchmark::RunRequests(int period) {
   return kTfLiteOk;
 }
 
-TfLiteStatus MultiModelBenchmark::Initialize(std::string graphs, int argc, char** argv) {
+void MultiModelBenchmark::RunStream(int duration_ms) {
+  int id = 0;
+  int sched_id = 0;
+  int64_t start_time = profiling::time::NowMicros();
+  int curr_time_ms = start_time / 1000;
+  do {
+    int64_t start_run = profiling::time::NowMicros();
+    benchmarks_[id]->RunImpl();
+    int64_t end_run = profiling::time::NowMicros();
+    curr_time_ms = (end_run - start_time) / 1000;
+
+    log_file_ << sched_id++ << "\t"
+              << benchmarks_[id]->params_.Get<std::string>("graph") << "\t"
+              << id << "\t"
+              << benchmarks_[id]->params_.Get<int32_t>("device") << "\t"
+              << -1 << "\t"
+              << -1 << "\t"
+              << -1 << "\t"
+              << start_run << "\t"
+              << start_run << "\t"
+              << end_run << "\t"
+              << -1 << "\t"
+              << -1 << "\t"
+              << -1 << "\t"
+              << -1 << "\t"
+              << -1 << "\n";
+  } while(curr_time_ms < duration_ms);
+}
+
+TfLiteStatus MultiModelBenchmark::Initialize(std::string graphs, int device, int argc, char** argv) {
   TF_LITE_ENSURE_STATUS(ParseGraphFileNames(graphs));
 
   for (auto graph_name : graph_names_) {
@@ -116,13 +160,14 @@ TfLiteStatus MultiModelBenchmark::Initialize(std::string graphs, int argc, char*
     int last_idx = benchmarks_.size() - 1;
     benchmarks_[last_idx]->ParseFlags(argc, argv);
     benchmarks_[last_idx]->params_.Set<std::string>("graph", graph_name);
+    benchmarks_[last_idx]->params_.Set<int32_t>("device", device);
 
-    if (last_idx % NUM_DEVICES == 1) {
+    if (device == 1) {
       benchmarks_[last_idx]->params_.Set<bool>("use_gpu", true);
-    } else if (last_idx % NUM_DEVICES == 2) {
+    } else if (device == 2) {
       benchmarks_[last_idx]->params_.Set<bool>("use_nnapi", true);
       benchmarks_[last_idx]->params_.Set<std::string>("nnapi_accelerator_name", "qti-dsp");
-    } else if (last_idx % NUM_DEVICES == 3) {
+    } else if (device == 3) {
       benchmarks_[last_idx]->params_.Set<bool>("use_nnapi", true);
       benchmarks_[last_idx]->params_.Set<std::string>("nnapi_accelerator_name", "google-edgetpu");
     }
@@ -137,12 +182,27 @@ int Main(int argc, char** argv) {
   TFLITE_LOG(INFO) << "STARTING!";
   BenchmarkTfLiteModel parser;
   TF_LITE_ENSURE_STATUS(parser.ParseFlags(argc, argv));
-  int period = parser.params_.Get<int>("period");
+  // Currently, multi-model execution is not fully supported.
   std::string graphs = parser.params_.Get<std::string>("graphs");
+  int device = parser.params_.Get<int>("device");
 
 	MultiModelBenchmark multimodel_benchmark;
-	multimodel_benchmark.Initialize(graphs, argc, argv);
-	multimodel_benchmark.RunRequests(period);
+	multimodel_benchmark.Initialize(graphs, device, argc, argv);
+
+
+  std::string execution_mode = parser.params_.Get<std::string>("execution_mode");
+  if (execution_mode == "stream") {
+    // Only single model execution is supported with the stream mode.
+    int duration = parser.params_.Get<int>("duration_ms");
+    multimodel_benchmark.RunStream(duration);
+  } else if (execution_mode == "periodic") {
+    int period = parser.params_.Get<int>("period");
+    multimodel_benchmark.RunRequests(period);
+  } else {
+    TFLITE_LOG(ERROR) << "Wrong execution mode.";
+    return -1;
+  }
+
 
   return EXIT_SUCCESS;
 }
