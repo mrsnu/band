@@ -100,9 +100,11 @@ void DeviceQueueWorker::Work() {
           interpreter_ptr->UpdateProfileResult(
               subgraph.GetKey(),
               (job.end_time - job.invoke_time));
-          // TODO #65: Tensor communications between subgraphs
-          planner_ptr->EnqueueBatch(job.following_jobs);
-          CopyOutputTensors(job);
+          if (job.following_jobs.size() != 0) {
+            planner_ptr->EnqueueBatch(job.following_jobs);
+          } else {
+            CopyOutputTensors(job);
+          }
           job.status = kTfLiteJobSuccess;
         } else {
           job.end_time = profiling::time::NowMicros();

@@ -1,8 +1,8 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/worker.h"
+#include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/tools/logging.h"
-
 
 namespace tflite {
 namespace impl {
@@ -72,13 +72,40 @@ bool Worker::IsBusy() {
   return false;
 }
 
+TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
+  TfLiteStatus ret = kTfLiteError;
+  for (int output_index : src_subgraph.outputs()) {
+    for (int input_index : dst_subgraph.inputs()) {
+      if (output_index == input_index) {
+         const TfLiteTensor* src = src_subgraph.tensor(output_index);
+         TfLiteTensor* dst = dst_subgraph.tensor(input_index);
+
+         if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
+           TFLITE_LOG(ERROR)
+               << "Tensor data copy failure. src name : " << src->name
+               << ", dst name : " << dst->name;
+           return kTfLiteError;
+         }
+         ret = kTfLiteOk;
+      }
+    }
+  }
+  return ret;
+}
+
 TfLiteStatus Worker::CopyInputTensors(const Job& job) {
   // Compute only.
-  if (job.input_handle < 0 || job.start_idx != 0) {
+  if (job.input_handle < 0) {
     return kTfLiteOk;
   }
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
+  if (job.previous_subgraph_idx != -1) {
+    Subgraph* prev_subgraph = interpreter->subgraph(job.previous_subgraph_idx);
+    Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+    return CopyTensors(*prev_subgraph, *subgraph);
+  }
+
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
   auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
   

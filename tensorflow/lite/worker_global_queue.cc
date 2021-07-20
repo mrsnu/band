@@ -147,9 +147,11 @@ void GlobalQueueWorker::Work() {
           interpreter_ptr->UpdateProfileResult(
               subgraph.GetKey(),
               (current_job_.end_time - current_job_.invoke_time));
-          // TODO #65: Tensor communications between subgraphs
-          planner_ptr->EnqueueBatch(current_job_.following_jobs);
-          CopyOutputTensors(current_job_);
+          if (current_job_.following_jobs.size() != 0) {
+            planner_ptr->EnqueueBatch(current_job_.following_jobs);
+          } else {
+            CopyOutputTensors(current_job_);
+          }
           current_job_.status = kTfLiteJobSuccess;
         } else {
           // end_time is never read/written by any other thread as long as
