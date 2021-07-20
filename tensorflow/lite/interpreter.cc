@@ -977,6 +977,29 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
   return indices;
 }
 
+int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id,
+                                std::set<int> op_indices) {
+  for (auto& subgraph_key_id : subgraph_idx_map_) {
+    const SubgraphKey& key = subgraph_key_id.first;
+    int subgraph_index = subgraph_key_id.second;
+
+    if (key.model_id == model_id && key.device_flag == device_id) {
+      Subgraph* potential_subgraph = subgraph(subgraph_index);
+      bool is_valid = true;
+      for (int op_index : potential_subgraph->op_indices()) {
+        if (op_indices.find(op_index) == op_indices.end()) {
+          is_valid = false;
+          break;
+        }
+      }
+      if (is_valid) {
+        return subgraph_index;
+      }
+    }
+  }
+  return -1;
+}
+
 int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {
   TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
   return GetSubgraphIdx(model_id, device_flag);
@@ -1130,11 +1153,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   return subgraph_indices;
 }
 
-void Interpreter::InvestigateModelSpec(int model_id) {
-  // get the subgraph index for this model
-  // at this point, the subgraph key for this model doesn't have valid start
-  // and end indices so we don't need to specify them
-  int subgraph_index = *GetSubgraphIdx(model_id, kTfLiteCPU, 0).begin();
+void Interpreter::InvestigateModelSpec(int subgraph_index,int model_id) {
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
@@ -1142,14 +1161,6 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
   std::vector<int>& execution_plan = primary_subgraph->execution_plan();
   model_spec.num_ops = execution_plan.size();
-
-  // delete the current key and replace it with valid start/end indices
-  SubgraphKey& key = primary_subgraph->GetKey();
-  DeleteKey(key);
-
-  key.input_ops = primary_subgraph->input_ops();
-  key.output_ops = primary_subgraph->output_ops();
-  RegisterSubgraphIdx(key, subgraph_index);
 
   // allocate circular buffer for model IO
   std::vector<TfLiteTensor*> input_tensors;

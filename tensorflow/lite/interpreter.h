@@ -679,6 +679,11 @@ class Interpreter {
   std::set<int> GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id,
                                int start_idx);
 
+  // Return subgraph index that match the given criteria of model_id,
+  // device_id, and op indexes
+  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id,
+                     std::set<int> op_indices);
+
   // Return the subgraph index for model `model_id` on device `device_idx`.
   // Op start and end indices are assumed to be 0 and num_ops-1, i.e., the
   // whole model.
@@ -714,7 +719,7 @@ class Interpreter {
 
   // fill in the ModelSpec for this model
   // TODO: Remove status dependency.
-  void InvestigateModelSpec(int model_id);
+  void InvestigateModelSpec(int subgraph_index, int model_id);
 
   // Generate explicit subgraphs for fallback ops in `model_id`.
   // Each second element of return vector represents a set of original node indexes

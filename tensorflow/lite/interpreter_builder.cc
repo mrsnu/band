@@ -566,19 +566,16 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int model_id = (*interpreter)->GetNewModelId();
   bool has_available_device = false;
 
-  // the start and end indices aren't valid at this point
-  // we fix this later in InvestigateModelSpec
-  SubgraphKey subgraph_key(model_id, kTfLiteCPU);
+  // Add entire CPU subgraph for later investigation
   int subgraph_idx = AddSubgraph(
-    model, op_resolver, interpreter, subgraph_key, {}, num_threads);
-  if (subgraph_idx != -1) {
-    // TODO(dhkim): Move RegisterSubgraphIdx inside AddSubgraph
-    (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
-    has_available_device = true;
+    model, op_resolver, interpreter, model_id, kTfLiteCPU, {}, num_threads);
+  if (subgraph_idx == -1) {
+    TFLITE_LOG(ERROR) << "Failed to add primary (entire) subgraph";
+    return -1;
   }
 
   // write the ModelSpec for this model
-  (*interpreter)->InvestigateModelSpec(model_id);
+  (*interpreter)->InvestigateModelSpec(subgraph_idx, model_id);
 
   ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
 
@@ -597,12 +594,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     Subgraph* previous_subgraph = nullptr;
 
     for (auto& device_op_indices : subgraph_indices) {
-      SubgraphKey key(model_id, device_op_indices.first);
-      int subgraph_idx = AddSubgraph(
-        model, op_resolver, interpreter, key,
-        device_op_indices.second, num_threads);
+      int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
+                                     device_op_indices.first,
+                                     device_op_indices.second, num_threads);
       if (subgraph_idx != -1) {
-        (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
         Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
         if (previous_subgraph) {
           if (subgraph->SetPrevSubgraph(
@@ -613,14 +608,16 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         }
         has_available_device = true;
         previous_subgraph = subgraph;
+
+        SubgraphKey& key = subgraph->GetKey();
+
+        TFLITE_LOG(INFO) << "ADDED Subgraph "
+                        << "Model : " << key.model_id << " "
+                        << TfLiteDeviceGetName(key.device_flag) << " "
+                        << "From " << key.GetInputOpsString() << " "
+                        << "To " << key.GetOutputOpsString() << " "
+                        << "Index " << subgraph_idx;
       }
-
-      TFLITE_LOG(INFO) << "ADDED Subgraph "
-                       << "Model : " << key.model_id << " "
-                       << TfLiteDeviceGetName(key.device_flag) << " "
-                       << "From " << key.GetInputOpsString() << " "
-                       << "To " << key.GetOutputOpsString();
-
     }
   }
 
@@ -642,21 +639,25 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
-                                    SubgraphKey& subgraph_key,
+                                    int model_id,
+                                    TfLiteDeviceFlags device_flag,
                                     std::set<int> op_indices,
                                     int num_threads) {
   return AddSubgraph(model.GetModel(), op_resolver, interpreter,
-                     subgraph_key, op_indices, num_threads);
+                     model_id, device_flag, op_indices, num_threads);
 }
 
 int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
-                                    SubgraphKey& subgraph_key,
+                                    int model_id,
+                                    TfLiteDeviceFlags device_flag,
                                     std::set<int> op_indices,
                                     int num_threads) {
-  int subgraph_exists = (*interpreter)->GetSubgraphIdx(subgraph_key);
+  int subgraph_exists = (*interpreter)->GetSubgraphIdx(model_id, device_flag, op_indices);
   if (subgraph_exists >= 0) {
+    error_reporter_->Report(
+        "subgraph_exists");
     return subgraph_exists;
   }
 
@@ -813,7 +814,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     std::set<int> subgraph_inputs =
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
     std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(subgraph_key.model_id).node_output_tensors;
+        (*interpreter)->GetModelSpec(model_id).node_output_tensors;
 
     std::set_union(model_outputs.begin(), model_outputs.end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
@@ -848,23 +849,26 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       }
     }
 
-    subgraph_key.input_ops = modified_subgraph->input_ops();
-    subgraph_key.output_ops = modified_subgraph->output_ops();
-
     modified_subgraph->SetVariables(std::move(variables));
-    modified_subgraph->SetKey(subgraph_key);
+
+    SubgraphKey key(model_id, device_flag, modified_subgraph->input_ops(),
+                    modified_subgraph->output_ops());
+
+    modified_subgraph->SetKey(key);
 
     if ((*interpreter)->
           ApplyBestDeviceDelegate(
             modified_subgraph, 
-            subgraph_key.device_flag, 
+            device_flag, 
             builder.tensor_types_) != kTfLiteOk)
       return cleanup_and_error();
     
     if (modified_subgraph->AllocateTensors() != kTfLiteOk)
       return cleanup_and_error();
+      
+    (*interpreter)->RegisterSubgraphIdx(key, modified_subgraph_index);
   }
-
+  
   return modified_subgraph_index;
 }
 

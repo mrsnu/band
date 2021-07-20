@@ -63,13 +63,15 @@ class InterpreterBuilder {
   static int AddSubgraph(const FlatBufferModel& model,
                         const OpResolver& op_resolver,
                         std::unique_ptr<Interpreter>* interpreter,
-                        SubgraphKey& subgraph_key,
+                        int model_id,
+                        TfLiteDeviceFlags device_flag,
                         std::set<int> op_indexes = {},
                         int num_threads = -1);
   static int AddSubgraph(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
                      std::unique_ptr<Interpreter>* interpreter,
-                     SubgraphKey& subgraph_key,
+                     int model_id,
+                     TfLiteDeviceFlags device_flag,
                      std::set<int> op_indexes = {},
                      int num_threads = -1);
 
