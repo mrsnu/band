@@ -74,7 +74,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       SubgraphKey& to_execute = target_subgraph->GetKey();
       most_urgent_job.subgraph_idx = target_subgraph_idx;
       most_urgent_job.device_id = to_execute.device_flag;
-      most_urgent_job.sched_id = sched_id++;
+      most_urgent_job.sched_id = sched_id_++;
       most_urgent_job.profiled_time =
           GetInterpreter()->GetSubgraphProfileResult(to_execute);
 
