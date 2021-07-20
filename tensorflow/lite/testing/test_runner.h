@@ -55,6 +55,7 @@ class TestRunner {
 
   // Set the given tensor to some initial state, usually zero. This is
   // used to reset persistent buffers in a model.
+  virtual void ResetTensor(TfLiteTensor* tensor) = 0;
   virtual void ResetTensor(int model_id, int id) = 0;
 
   // Define the contents of the given input tensor. The given 'id' is
@@ -78,6 +79,11 @@ class TestRunner {
 
   // Run the model by enqueueing the request to the planner.
   virtual void InvokeThroughPlanner(int model_id) = 0;
+  virtual void InvokeWithInput(std::vector<Job>& requests, std::vector<Tensors>& inputs, std::vector<Tensors>& outputs) = 0;
+
+  virtual void SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) = 0;
+  virtual TfLiteTensor* AllocateInputTensor(int subgraph_id, int index) = 0;
+  virtual TfLiteTensor* AllocateOutputTensor(int subgraph_id, int index) = 0;
 
   // Verify that the contents of all outputs conform to the existing
   // expectations. Return true if there are no expectations or they are all
@@ -86,6 +92,7 @@ class TestRunner {
 
   // Read contents of tensor into csv format.
   // The given 'id' is guaranteed to be one of the ids returned by GetOutputs().
+  virtual string ReadOutput(TfLiteTensor* tensor) = 0;
   virtual string ReadOutput(int model_id, int id) = 0;
 
   // Set the base path for loading models.
