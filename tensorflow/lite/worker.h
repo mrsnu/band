@@ -16,6 +16,7 @@ namespace tflite {
 namespace impl {
 
 class Planner;
+class Subgraph;
 
 class Worker {
  public:
@@ -28,14 +29,17 @@ class Worker {
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
+  void WaitUntilDeviceAvailable(Subgraph& subgraph);
+  bool IsAvailable();
+
   virtual int64_t GetWaitingTime() = 0;
+  virtual bool GiveJob(Job& job) = 0;
 
   // DeviceQueueWorker methods
   virtual JobQueue& GetDeviceRequests();
   virtual void AllowWorkSteal();
 
   // GlobalQueueWorker methods
-  virtual bool GiveJob(Job& job);
   virtual bool IsBusy();
 
  protected:
@@ -48,6 +52,8 @@ class Worker {
   std::mutex device_mtx_;
   std::condition_variable request_cv_;
   bool kill_worker_ = false;
+  bool is_available_ = true;
+  int32_t availability_check_interval_ms_;
 
   // GlobalQueueWorker doesn't actually use this for scheduling, but we
   // need this for the return value of GetDeviceRequests()
@@ -69,6 +75,7 @@ class DeviceQueueWorker : public Worker {
   }
 
   int64_t GetWaitingTime() override;
+  bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
   void AllowWorkSteal() override;
 

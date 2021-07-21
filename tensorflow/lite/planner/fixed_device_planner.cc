@@ -59,9 +59,9 @@ void FixedDevicePlanner::Plan() {
     // which means concurrent enqueue is not available.
     // This can affect the performance.
     std::unique_lock<std::mutex> lock(GetRequestsMtx());
-    while (!GetRequests().empty()) {
-      Job to_execute = GetRequests().front();
-      GetRequests().pop_front();
+    JobQueue& requests = GetRequests();
+    for (auto it = requests.begin(); it != requests.end();) {
+      Job& to_execute = *it;
 
       int model_id = to_execute.model_id;
       int device_idx;
@@ -80,11 +80,14 @@ void FixedDevicePlanner::Plan() {
       to_execute.sched_id = sched_id_++;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      {
-        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        worker->GetDeviceRequests().push_back(to_execute);
-        worker->GetRequestCv().notify_one();
+      if (!worker->GiveJob(to_execute)) {
+        ++it;
+        continue;
       }
+
+      // all is well
+      // delete this job from our request queue
+      it = requests.erase(it);
     }
     lock.unlock();
   }

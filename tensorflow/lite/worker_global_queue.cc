@@ -12,8 +12,7 @@ namespace impl {
 
 bool GlobalQueueWorker::GiveJob(Job& job) {
   std::lock_guard<std::mutex> lock(device_mtx_);
-  if (is_busy_) {
-    // I'm busy so I can't receive your request
+  if (is_busy_ || !is_available_) {
     return false;
   }
 
@@ -44,7 +43,13 @@ bool GlobalQueueWorker::IsBusy() {
 // we print an error message and this function returns -1.
 int64_t GlobalQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
+  if (!is_available_) {
+    lock.unlock();
+    return INT_MAX/2;
+  }
+
   if (!is_busy_) {
+    lock.unlock();
     return 0;
   }
 
@@ -140,7 +145,8 @@ void GlobalQueueWorker::Work() {
         current_job_.invoke_time = profiling::time::NowMicros();
         lock.unlock();
 
-        if (subgraph.Invoke() == kTfLiteOk) {
+        TfLiteStatus status = subgraph.Invoke();
+        if (status == kTfLiteOk) {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job_.end_time = profiling::time::NowMicros();
@@ -153,6 +159,23 @@ void GlobalQueueWorker::Work() {
             CopyOutputTensors(current_job_);
           }
           current_job_.status = kTfLiteJobSuccess;
+
+        } else if (status == kTfLiteDelegateError) {
+          lock.lock();
+          is_available_ = false;
+          lock.unlock();
+
+          planner_ptr->EnqueueRequest(current_job_);
+          WaitUntilDeviceAvailable(subgraph);
+
+          lock.lock();
+          is_available_ = true;
+          is_busy_ = false;
+          lock.unlock();
+
+          planner_ptr->GetSafeBool().notify();
+          continue;
+
         } else {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock

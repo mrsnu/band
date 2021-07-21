@@ -40,7 +40,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "profiled_time\t"
            << "expected_latency\t"
            << "slo_us\t"
-           << "job status\t"
+           << "job_status\t"
            << "is_final_subgraph\n";
   log_file.close();
 
@@ -111,11 +111,13 @@ void Planner::EnqueueFinishedJob(Job job) {
   end_invoke_.notify_all();
 }
 
-int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
+int Planner::EnqueueRequest(Job job, bool push_front) {
+  return EnqueueBatch({job}, push_front)[0];
+}
 
-std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
   std::vector<int> job_ids(jobs.size());
-  std::unique_lock<std::mutex> lock(requests_.mtx);
+  std::unique_lock<std::mutex> request_lock(requests_.mtx);
   auto enqueue_time = profiling::time::NowMicros();
   for (int i = 0; i < jobs.size(); i++) {
     Job& job = jobs[i];
@@ -128,9 +130,13 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
       job.job_id = num_submitted_jobs_++;
     }
     job_ids[i] = job.job_id;
-    requests_.queue.push_back(job);
+    if (push_front) {
+      requests_.queue.push_front(job);
+    } else {
+      requests_.queue.push_back(job);
+    }
   }
-  lock.unlock();
+  request_lock.unlock();
 
   planner_safe_bool_.notify();
 

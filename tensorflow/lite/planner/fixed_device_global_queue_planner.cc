@@ -62,7 +62,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
     for (int i = 0; i < kTfLiteNumDevices; ++i) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (worker != nullptr) {
+      if (worker != nullptr && worker->IsAvailable()) {
         device_waiting[device_flag] = worker->GetWaitingTime();
 
         // we could, technically, check waiting time and isBusy with a single
@@ -148,13 +148,12 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         // for some reason, the worker was busy and we couldn't assign
         // this job to it
         ++it;
-        continue;
+      } else {
+        // all is well
+        // delete this job from our request queue and
+        // delete this device from our idle_devices set
+        it = requests.erase(it);
       }
-
-      // all is well
-      // delete this job from our request queue and
-      // delete this device from our idle_devices set
-      it = requests.erase(it);
       idle_devices.erase(idle_devices_it);
 
       if (idle_devices.empty()) {

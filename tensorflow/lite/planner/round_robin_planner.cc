@@ -11,7 +11,7 @@ void RoundRobinPlanner::Plan() {
     std::vector<bool> is_device_empty;
     for (int i = 0; i < kTfLiteNumDevices; ++i) {
       Worker* worker = GetInterpreter()->GetWorker(i);
-      if (!worker) {
+      if (!worker || !worker->IsAvailable()) {
         continue;
       }
 
@@ -24,7 +24,6 @@ void RoundRobinPlanner::Plan() {
 
     std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
     while (!GetRequests().empty()) {
-      Job to_execute = Job(-1);
       int device_idx;
       for (device_idx = is_device_empty.size() - 1; device_idx >= 0; --device_idx) {
         if (is_device_empty[device_idx]) {
@@ -35,8 +34,19 @@ void RoundRobinPlanner::Plan() {
                                             job.model_id, device_idx) != -1;
               });
           if (available_job != GetRequests().end()) {
-            to_execute = *available_job;
-            GetRequests().erase(available_job);
+            Job to_execute = *available_job;
+            int subgraph_idx =
+              GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device_idx);
+            to_execute.subgraph_idx = subgraph_idx;
+            to_execute.device_id = device_idx;
+            to_execute.sched_id = sched_id_;
+
+            Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
+            if (worker->GiveJob(to_execute)) {
+              sched_id_++;
+              GetRequests().erase(available_job);
+            }
+            is_device_empty[device_idx] = false;
             break;
           }
         }
@@ -44,20 +54,6 @@ void RoundRobinPlanner::Plan() {
 
       if (device_idx < 0)
         break;
-
-      int subgraph_idx =
-        GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device_idx);
-      to_execute.subgraph_idx = subgraph_idx;
-      to_execute.device_id = device_idx;
-      to_execute.sched_id = sched_id_++;
-
-      Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
-      {
-        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        worker->GetDeviceRequests().push_back(to_execute);
-        worker->GetRequestCv().notify_one();
-      }
-      is_device_empty[device_idx] = false;
     }
     request_lock.unlock();
   }

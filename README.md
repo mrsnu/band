@@ -79,6 +79,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * curr_profile + (1 - profile_smoothing_factor) * prev_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
 * `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
+* `availability_check_interval_ms`: Availability check interval for disabled device due to thermal throttling. [default: 30000]
 * `schedule_window_size`: The number of planning unit.
 * `global_period_ms`: Request interval value used for execution mode `periodic_single_thread` only. Should be > 0.
 * `model_id_random_seed`: Random seed value used for picking model ids, in `periodic_single_thread` only. 0 is treated as the current timestamp.
@@ -120,6 +121,7 @@ An example of complete JSON config file is as follows:
     "profile_smoothing_factor": 0.1,
     "model_profile": "/data/local/tmp/profile.json",
     "allow_work_steal": true,
+    "availability_check_interval_ms": 30000,
     "schedule_window_size": 10
 }
 ```

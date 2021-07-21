@@ -71,7 +71,8 @@ enum JobStatus {
   kTfLiteJobSLOViolation,
   kTfLiteJobInputCopyFailure,
   kTfLiteJobOutputCopyFailure,
-  kTfLiteJobInvokeFailure
+  kTfLiteJobInvokeFailure,
+  kTfLiteJobDelegateFailure
 };
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
