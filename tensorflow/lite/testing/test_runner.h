@@ -84,6 +84,7 @@ class TestRunner {
   virtual void SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) = 0;
   virtual TfLiteTensor* AllocateInputTensor(int subgraph_id, int index) = 0;
   virtual TfLiteTensor* AllocateOutputTensor(int subgraph_id, int index) = 0;
+  virtual bool NeedProfile() = 0;
 
   // Verify that the contents of all outputs conform to the existing
   // expectations. Return true if there are no expectations or they are all

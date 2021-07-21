@@ -400,10 +400,10 @@ TfLiteTensor* TfLiteDriver::AllocateInputTensor(int model_id, int input_index) {
 TfLiteTensor* TfLiteDriver::AllocateOutputTensor(int model_id, int output_index) {
   size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
 
-  TfLiteTensor* input = TfLiteTensorCreateLike(
+  TfLiteTensor* output = TfLiteTensorCreateLike(
       interpreter_->tensor(subgraph_index, interpreter_->outputs(subgraph_index)[output_index]));
 
-  return input;
+  return output;
 }
 
 void TfLiteDriver::SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) {

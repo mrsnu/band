@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <json/json.h>
 #include <fstream>
+#include <iostream>
 
 #include "tensorflow/lite/tools/logging.h"
 
@@ -26,6 +27,11 @@ namespace tflite {
 TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
                                         RuntimeConfig& runtime_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
+
+  if (!config.is_open()) {
+    TFLITE_LOG(ERROR) << "Check if the config file exists.";
+    return kTfLiteError;
+  }
 
   Json::Value root;
   config >> root;

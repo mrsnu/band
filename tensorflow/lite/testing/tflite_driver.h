@@ -66,6 +66,9 @@ class TfLiteDriver : public TestRunner {
   void SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) override;
   TfLiteTensor* AllocateInputTensor(int subgraph_id, int index) override;
   TfLiteTensor* AllocateOutputTensor(int subgraph_id, int index) override;
+  bool NeedProfile() override {
+    return interpreter_->NeedProfile();
+  }
 
   void SetThreshold(double relative_threshold, double absolute_threshold);
   void SetQuantizationErrorMultiplier(int quantization_error_multiplier);

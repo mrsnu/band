@@ -14,6 +14,8 @@ limitations under the License.
 ==============================================================================*/
 #include "tensorflow/lite/testing/tflite_driver.h"
 
+#include <string>
+#include <fstream>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "tensorflow/lite/util.h"
@@ -176,6 +178,19 @@ TEST(TfliteDriverTest, RingBufferTest) {
   ASSERT_TRUE(runner->CheckResults(model_id));
   EXPECT_EQ(runner->ReadOutput(output_tensors[0]), SAMPLE_OUTPUT_0);
   EXPECT_EQ(runner->ReadOutput(output_tensors[1]), SAMPLE_OUTPUT_1);
+}
+
+TEST(TfliteDriverTest, RuntimeConfigTest) {
+  // Check parse runtime config well
+  std::unique_ptr<TestRunner> runner(new TfLiteDriver());
+
+  tflite::RuntimeConfig runtime_config;
+  std::string filepath = "tensorflow/lite/testdata/runtime_config.json";
+  EXPECT_EQ(ParseRuntimeConfigFromJson(filepath, runtime_config), kTfLiteOk);
+ 
+  runner->ResetInterpreter(runtime_config);
+  ASSERT_TRUE(runner->IsValid());
+  ASSERT_TRUE(runner->NeedProfile()); // As planner is 2(== kShortestExpectedLatency)
 }
 
 }  // namespace

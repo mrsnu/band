@@ -13,6 +13,7 @@ exports_files(glob([
     "testdata/*.pb",
     "testdata/*.tflite",
     "testdata/*.csv",
+    "testdata/*.json",
     "models/testdata/*",
 ]))
 
