@@ -113,6 +113,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["allow_work_steal"].isNull()) {
     worker_config.allow_worksteal = root["allow_work_steal"].asBool();
   }
+  // 3. availability_check_interval_ms
+  if (!root["availability_check_interval_ms"].isNull()) {
+    worker_config.availability_check_interval_ms = root["availability_check_interval_ms"].asInt();
+  }
 
   return kTfLiteOk;
 }

@@ -61,7 +61,7 @@ TfLiteStatus ReportOpError(TfLiteContext* context, const TfLiteNode& node,
           : EnumNameBuiltinOperator(
                 static_cast<BuiltinOperator>(registration.builtin_code)),
       message);
-  return kTfLiteError;
+  return node.delegate == nullptr ? kTfLiteError : kTfLiteDelegateError;
 }
 
 // Stub method which returns kTfLiteError when the function is forbidden.

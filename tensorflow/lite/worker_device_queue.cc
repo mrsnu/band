@@ -20,9 +20,14 @@ void DeviceQueueWorker::AllowWorkSteal() {
 
 int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
+  if (!is_available_) {
+    lock.unlock();
+    return INT_MAX/2;
+  }
 
   std::shared_ptr<Planner> planner = planner_.lock();
   if (!planner) {
+    lock.unlock();
     return -1;
   }
   Interpreter* interpreter = planner->GetInterpreter();
@@ -49,6 +54,17 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   lock.unlock();
 
   return total;
+}
+
+bool DeviceQueueWorker::GiveJob(Job& job) {
+  std::lock_guard<std::mutex> lock(device_mtx_);
+  if (!is_available_) {
+    return false;
+  }
+
+  requests_.push_back(job);
+  request_cv_.notify_one();
+  return true;
 }
 
 void DeviceQueueWorker::Work() {
@@ -91,7 +107,8 @@ void DeviceQueueWorker::Work() {
       if (TryCopyInputTensors(job) == kTfLiteOk) {
         job.invoke_time = profiling::time::NowMicros();
 
-        if (subgraph.Invoke() == kTfLiteOk) {
+        TfLiteStatus status = subgraph.Invoke();
+        if (status == kTfLiteOk) {
           job.end_time = profiling::time::NowMicros();
           interpreter_ptr->UpdateExpectedLatency(
               subgraph.GetKey(),
@@ -102,6 +119,23 @@ void DeviceQueueWorker::Work() {
             TryCopyOutputTensors(job);
           }
           job.status = kTfLiteJobSuccess;
+
+        } else if (status == kTfLiteDelegateError) {
+          lock.lock();
+          is_available_ = false;
+          std::vector<Job> jobs(requests_.begin(), requests_.end());
+          requests_.clear();
+          lock.unlock();
+
+          planner_ptr->EnqueueBatch(jobs, true);
+          WaitUntilDeviceAvailable(subgraph);
+
+          lock.lock();
+          is_available_ = true;
+          lock.unlock();
+          planner_ptr->GetSafeBool().notify();
+          continue;
+
         } else {
           job.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment
