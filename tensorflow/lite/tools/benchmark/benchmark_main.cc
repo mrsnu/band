@@ -28,8 +28,8 @@ namespace benchmark {
 
 class MultiModelBenchmark {
  public:
-	explicit MultiModelBenchmark() {
-    log_file_.open("/data/local/tmp/model_execution_log.csv");
+	explicit MultiModelBenchmark(std::string log_path) {
+    log_file_.open(log_path);
     log_file_ << "sched_id\t"
          << "model_name\t"
          << "model_id\t"
@@ -186,7 +186,9 @@ int Main(int argc, char** argv) {
   std::string graphs = parser.params_.Get<std::string>("graphs");
   int device = parser.params_.Get<int>("device");
 
-	MultiModelBenchmark multimodel_benchmark;
+	MultiModelBenchmark multimodel_benchmark(
+    parser.params_.Get<std::string>("log_path")
+  );
 	multimodel_benchmark.Initialize(graphs, device, argc, argv);
 
 

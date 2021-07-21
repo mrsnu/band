@@ -250,6 +250,7 @@ CreateProfileSummaryFormatter(bool format_as_csv) {
 
 BenchmarkParams BenchmarkTfLiteModel::DefaultParams() {
   BenchmarkParams default_params = BenchmarkModel::DefaultParams();
+  default_params.AddParam("log_path", BenchmarkParam::Create<std::string>("/data/local/tmp/model_execution_log.csv"));
   default_params.AddParam("graphs", BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("graph", BenchmarkParam::Create<std::string>(""));
   default_params.AddParam("input_layer",
@@ -304,6 +305,7 @@ BenchmarkTfLiteModel::~BenchmarkTfLiteModel() { CleanUp(); }
 std::vector<Flag> BenchmarkTfLiteModel::GetFlags() {
   std::vector<Flag> flags = BenchmarkModel::GetFlags();
   std::vector<Flag> specific_flags = {
+      CreateFlag<std::string>("log_path", &params_, "log file names"),
       CreateFlag<std::string>("graphs", &params_, "graph file names"),
       CreateFlag<std::string>("graph", &params_, "graph file name"),
       CreateFlag<std::string>("input_layer", &params_, "input layer names"),
