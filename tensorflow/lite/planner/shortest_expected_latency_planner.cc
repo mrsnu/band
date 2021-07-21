@@ -34,7 +34,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       for (int i = 0; i < kTfLiteNumDevices; ++i) {
         TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
         Worker* worker = GetInterpreter()->GetWorker(device_flag);
-        if (worker != nullptr && worker->IsAvailable()) {
+        if (worker != nullptr) {
           device_waiting_time[device_flag] = worker->GetWaitingTime();
         }
       }
@@ -82,7 +82,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       if (most_urgent_job.expected_latency == 0) {
         // only set these fields if this is the first subgraph of this model
         most_urgent_job.expected_latency = largest_shortest_latency;
-        most_urgent_job.sched_id = sched_id_;
+        most_urgent_job.sched_id = sched_id_++;
       }
 
       // this job has an SLO; check if it's not too late already
@@ -129,10 +129,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
       }
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
-      if (worker->GiveJob(most_urgent_job)) {
-        sched_id_++;
-      } else {
+      if (!worker->GiveJob(most_urgent_job)) {
         local_jobs.push_front(most_urgent_job);
+        sched_id_--;
       }
     }
   }

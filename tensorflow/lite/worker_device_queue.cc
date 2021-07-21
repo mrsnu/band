@@ -137,6 +137,7 @@ void DeviceQueueWorker::Work() {
           lock.lock();
           is_available_ = true;
           lock.unlock();
+
           planner_ptr->GetSafeBool().notify();
           continue;
 
