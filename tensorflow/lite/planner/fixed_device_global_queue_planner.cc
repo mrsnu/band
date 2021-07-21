@@ -137,7 +137,10 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         ++it;
         continue;
       }
-      to_execute.sched_id = sched_id_++;
+
+      to_execute.subgraph_idx = subgraph_idx;
+      to_execute.device_id = device_idx;
+      to_execute.sched_id = sched_id_;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
       if (!worker->GiveJob(to_execute)) {
@@ -149,6 +152,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         // delete this job from our request queue and
         // delete this device from our idle_devices set
         it = requests.erase(it);
+        sched_id_++;
       }
       idle_devices.erase(idle_devices_it);
 
