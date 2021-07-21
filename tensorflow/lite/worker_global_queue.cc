@@ -163,6 +163,7 @@ void GlobalQueueWorker::Work() {
         } else if (status == kTfLiteDelegateError) {
           lock.lock();
           is_available_ = false;
+          current_job_.invoke_time = 0;
           lock.unlock();
 
           planner_ptr->EnqueueRequest(current_job_);
