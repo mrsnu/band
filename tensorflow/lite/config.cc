@@ -16,7 +16,6 @@ limitations under the License.
 
 #include <json/json.h>
 #include <fstream>
-#include <iostream>
 
 #include "tensorflow/lite/tools/logging.h"
 
