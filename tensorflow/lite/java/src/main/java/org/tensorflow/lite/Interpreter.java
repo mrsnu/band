@@ -166,11 +166,7 @@ public final class Interpreter implements AutoCloseable {
   public void runSync(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    int[] modelIds = {modelId};
-    Tensor[][] modelInputs = {inputs};
-    Tensor[][] modelOutputs = {outputs};
-    
-    wrapper.runSync(modelIds, modelInputs, modelOutputs);
+    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs});
   }
 
   public void runSyncMultipleRequests(
