@@ -483,9 +483,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
   job_ids_string.pop_back();
 
   LOGI("RunAsync starts with job ids=%s", job_ids_string.c_str());
-
   LOGI("RunAsync finishes");
-  return job_ids;
+  return convertVectorToJIntArray(env, job_ids_vector);
 }
 
 JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
