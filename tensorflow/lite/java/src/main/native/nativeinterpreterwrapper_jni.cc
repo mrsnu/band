@@ -524,7 +524,7 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
       
       if (status != kTfLiteOk) {
         ThrowException(env, kIllegalArgumentException,
-                      "Internal error: Failed to copy job id %d %d-th output of job %d: %s",
+                      "Internal error: Failed to copy %d-th output of job %d: %s",
                       i, job_ids_vector[i], error_reporter->CachedErrorMessage());
         return;
       }
