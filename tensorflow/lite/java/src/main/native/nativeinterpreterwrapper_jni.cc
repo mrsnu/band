@@ -15,6 +15,7 @@ limitations under the License.
 
 // Temporal usage for debugging
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG   , "libtflite", __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
 #include <android/log.h>
 
@@ -92,6 +93,7 @@ jintArray convertVectorToJIntArray(JNIEnv* env, std::vector<int> inputs) {
   for (int i = 0; i < inputs.size(); i++) {
     ptr[i] = inputs[i];
   }
+  env->ReleaseIntArrayElements(outputs, ptr, 0);
   return outputs;
 }
 
@@ -102,6 +104,7 @@ tflite::Tensors convertJLongArrayToTensors(JNIEnv* env, jlongArray handles) {
     tensors.push_back(
         tflite::jni::GetTensorFromHandle(env, tensor_handles[i]));
   }
+  env->ReleaseLongArrayElements(handles, tensor_handles, 0);
   return tensors;
 }
 
@@ -469,8 +472,15 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
     }
   }
 
-  jintArray job_ids = convertVectorToJIntArray(
-      env, interpreter->InvokeModelsAsync(jobs, input_tensors));
+  std::vector<int> job_ids_vector =
+      interpreter->InvokeModelsAsync(jobs, input_tensors);
+  std::string job_ids_string;
+  for (int job_id : job_ids_vector) {
+    job_ids_string += std::to_string(job_id) + ",";
+  }
+  job_ids_string.pop_back();
+
+  LOGI("RunAsync starts with job ids=%s", job_ids_string.c_str());
 
   LOGI("RunAsync finishes");
   return job_ids;
@@ -512,7 +522,7 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
       
       if (status != kTfLiteOk) {
         ThrowException(env, kIllegalArgumentException,
-                      "Internal error: Failed to copy %d-th input of job %d: %s",
+                      "Internal error: Failed to copy job id %d %d-th output of job %d: %s",
                       i, job_ids_vector[i], error_reporter->CachedErrorMessage());
         return;
       }
