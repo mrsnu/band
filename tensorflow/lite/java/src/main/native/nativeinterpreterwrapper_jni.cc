@@ -471,6 +471,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
       input_tensors[i] = convertJLongArrayToTensors(env, input_handles);
     }
   }
+  
+  env->ReleaseIntArrayElements(model_ids, model_ids_elements, 0);
 
   std::vector<int> job_ids_vector =
       interpreter->InvokeModelsAsync(jobs, input_tensors);
