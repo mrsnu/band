@@ -15,6 +15,7 @@ limitations under the License.
 
 // Temporal usage for debugging
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG   , "libtflite", __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
 #include <android/log.h>
 
@@ -86,6 +87,16 @@ std::vector<int> convertJIntArrayToVector(JNIEnv* env, jintArray inputs) {
   return outputs;
 }
 
+jintArray convertVectorToJIntArray(JNIEnv* env, std::vector<int> inputs) {
+  jintArray outputs = env->NewIntArray(inputs.size());
+  jint* ptr = env->GetIntArrayElements(outputs, nullptr);
+  for (int i = 0; i < inputs.size(); i++) {
+    ptr[i] = inputs[i];
+  }
+  env->ReleaseIntArrayElements(outputs, ptr, 0);
+  return outputs;
+}
+
 tflite::Tensors convertJLongArrayToTensors(JNIEnv* env, jlongArray handles) {
   std::vector<TfLiteTensor*> tensors;
   jlong* tensor_handles = env->GetLongArrayElements(handles, NULL);
@@ -93,6 +104,7 @@ tflite::Tensors convertJLongArrayToTensors(JNIEnv* env, jlongArray handles) {
     tensors.push_back(
         tflite::jni::GetTensorFromHandle(env, tensor_handles[i]));
   }
+  env->ReleaseLongArrayElements(handles, tensor_handles, 0);
   return tensors;
 }
 
@@ -431,9 +443,52 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   return model_id;
 }
 
-JNIEXPORT void JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
+JNIEXPORT jintArray JNICALL
+Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
     JNIEnv* env, jclass clazz, jintArray model_ids, jobjectArray input_tensor_handles,
+    jlong interpreter_handle, jlong error_handle) {
+  tflite_api_dispatcher::Interpreter* interpreter =
+      convertLongToInterpreter(env, interpreter_handle);
+  if (interpreter == nullptr) return NULL;
+  BufferErrorReporter* error_reporter =
+      convertLongToErrorReporter(env, error_handle);
+  if (error_reporter == nullptr) return NULL;
+
+  jsize num_models = env->GetArrayLength(model_ids);
+  jint* model_ids_elements = env->GetIntArrayElements(model_ids, NULL);
+  jsize num_model_inputs = env->GetArrayLength(input_tensor_handles);
+
+  std::vector<tflite::Job> jobs;
+  std::vector<tflite::Tensors> input_tensors(num_model_inputs);
+
+  for (int i = 0; i < num_models; i++) {
+    jobs.push_back(tflite::Job(model_ids_elements[i]));
+    LOGI("RunAsync starts with model_id = %d", model_ids_elements[i]);
+
+    if (input_tensors.size()) {
+      jlongArray input_handles =
+          (jlongArray)(env->GetObjectArrayElement(input_tensor_handles, i));
+      input_tensors[i] = convertJLongArrayToTensors(env, input_handles);
+    }
+  }
+  
+  env->ReleaseIntArrayElements(model_ids, model_ids_elements, 0);
+
+  std::vector<int> job_ids_vector =
+      interpreter->InvokeModelsAsync(jobs, input_tensors);
+  std::string job_ids_string;
+  for (int job_id : job_ids_vector) {
+    job_ids_string += std::to_string(job_id) + ",";
+  }
+  job_ids_string.pop_back();
+
+  LOGI("RunAsync starts with job ids=%s", job_ids_string.c_str());
+  LOGI("RunAsync finishes");
+  return convertVectorToJIntArray(env, job_ids_vector);
+}
+
+JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
+    JNIEnv* env, jclass clazz, jintArray job_ids,
     jobjectArray output_tensor_handles, jlong interpreter_handle,
     jlong error_handle) {
   tflite_api_dispatcher::Interpreter* interpreter =
@@ -443,36 +498,39 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runSync(
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return;
 
-  jsize num_models = env->GetArrayLength(model_ids);
-  jint* model_ids_elements = env->GetIntArrayElements(model_ids, NULL);
+  std::vector<int> job_ids_vector = convertJIntArrayToVector(env, job_ids);
+  if (job_ids_vector.size() == 0) return;
+  std::string job_ids_string;
+  for (int job_id : job_ids_vector) {
+    job_ids_string += std::to_string(job_id) + ",";
+  }
+  job_ids_string.pop_back();
 
-  jsize num_model_inputs = env->GetArrayLength(input_tensor_handles);
+  LOGI("Wait starts with job ids=%s", job_ids_string.c_str());
+    
+  interpreter->GetPlanner()->Wait(job_ids_vector);
+
   jsize num_model_outputs = env->GetArrayLength(output_tensor_handles);
+  if (num_model_outputs > 0) {
+    std::vector<tflite::Tensors> output_tensors(num_model_outputs);
 
-  std::vector<tflite::Job> jobs;
-  std::vector<tflite::Tensors> input_tensors(num_model_inputs);
-  std::vector<tflite::Tensors> output_tensors(num_model_outputs);
-
-  for (int i = 0; i < num_models; i++) {
-    jobs.push_back(tflite::Job(model_ids_elements[i]));
-    LOGI("RunSync starts with model_id = %d", model_ids_elements[i]);
-
-    if (input_tensors.size()) {
-      jlongArray input_handles =
-          (jlongArray)(env->GetObjectArrayElement(input_tensor_handles, i));
-      input_tensors[i] = convertJLongArrayToTensors(env, input_handles);
-    }
-
-    if (output_tensors.size()) {
+    for (int i = 0; i < num_model_outputs; i++) {
       jlongArray output_handles =
           (jlongArray)(env->GetObjectArrayElement(output_tensor_handles, i));
       output_tensors[i] = convertJLongArrayToTensors(env, output_handles);
+      TfLiteStatus status = interpreter->GetOutputTensors(
+          job_ids_vector[i], output_tensors[i]);
+      
+      if (status != kTfLiteOk) {
+        ThrowException(env, kIllegalArgumentException,
+                      "Internal error: Failed to copy %d-th output of job %d: %s",
+                      i, job_ids_vector[i], error_reporter->CachedErrorMessage());
+        return;
+      }
     }
   }
 
-  interpreter->InvokeModelsSync(jobs, input_tensors, output_tensors);
-
-  LOGI("RunSync finishes");
+  LOGI("Wait finishes");
 }
 
 JNIEXPORT jint JNICALL
