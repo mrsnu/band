@@ -76,12 +76,14 @@ void ShortestExpectedLatencyPlanner::Plan() {
       most_urgent_job.end_idx = to_execute.end_idx;
       most_urgent_job.subgraph_idx = target_subgraph;
       most_urgent_job.device_id = to_execute.device_flag;
-      most_urgent_job.profiled_time =
+      most_urgent_job.profiled_latency =
+          GetInterpreter()->GetProfiledLatency(to_execute);
+      most_urgent_job.expected_latency =
           GetInterpreter()->GetExpectedLatency(to_execute);
 
-      if (most_urgent_job.expected_latency == 0) {
+      if (most_urgent_job.total_expected_latency == 0) {
         // only set these fields if this is the first subgraph of this model
-        most_urgent_job.expected_latency = largest_shortest_latency;
+        most_urgent_job.total_expected_latency = largest_shortest_latency;
         most_urgent_job.sched_id = sched_id_++;
       }
 
@@ -90,7 +92,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         int64_t current_time = profiling::time::NowMicros();
         int64_t expected_latency =
             device_waiting_time[to_execute.device_flag] +
-            most_urgent_job.profiled_time;
+            most_urgent_job.expected_latency;
 
         if (current_time + expected_latency >
             most_urgent_job.enqueue_time + most_urgent_job.slo_us) {
