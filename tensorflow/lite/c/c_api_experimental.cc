@@ -30,8 +30,8 @@ extern "C" {
 #endif  // __cplusplus
 
 TfLiteStatus TfLiteInterpreterResetVariableTensors(
-    TfLiteInterpreter* interpreter) {
-  return interpreter->impl->ResetVariableTensors();
+    TfLiteInterpreter* interpreter, int32_t subgraph_idx) {
+  return interpreter->impl->ResetVariableTensors(subgraph_idx);
 }
 
 void TfLiteInterpreterOptionsAddBuiltinOp(

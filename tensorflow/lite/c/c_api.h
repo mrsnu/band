@@ -165,12 +165,12 @@ TFL_CAPI_EXPORT extern void TfLiteInterpreterDelete(
 
 // Returns the number of input tensors associated with the model.
 TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterGetInputTensorCount(
-    const TfLiteInterpreter* interpreter);
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index);
 
 // Returns the tensor associated with the input index.
 // REQUIRES: 0 <= input_index < TfLiteInterpreterGetInputTensorCount(tensor)
 TFL_CAPI_EXPORT extern TfLiteTensor* TfLiteInterpreterGetInputTensor(
-    const TfLiteInterpreter* interpreter, int32_t input_index);
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t input_index);
 
 // Resizes the specified input tensor.
 //
@@ -178,8 +178,8 @@ TFL_CAPI_EXPORT extern TfLiteTensor* TfLiteInterpreterGetInputTensor(
 // attempting to access the resized tensor data or invoke the interpreter.
 // REQUIRES: 0 <= input_index < TfLiteInterpreterGetInputTensorCount(tensor)
 TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterResizeInputTensor(
-    TfLiteInterpreter* interpreter, int32_t input_index, const int* input_dims,
-    int32_t input_dims_size);
+    TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t input_index,
+    const int* input_dims, int32_t input_dims_size);
 
 // Updates allocations for all tensors, resizing dependent tensors using the
 // specified input tensor dimensionality.
@@ -189,17 +189,15 @@ TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterResizeInputTensor(
 TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterAllocateTensors(
     TfLiteInterpreter* interpreter);
 
-// Runs inference for the loaded graph.
-//
-// NOTE: It is possible that the interpreter is not in a ready state to
-// evaluate (e.g., if a ResizeInputTensor() has been performed without a call to
-// AllocateTensors()).
-TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterInvoke(
-    TfLiteInterpreter* interpreter);
+TFL_CAPI_EXPORT extern void TfLiteInterpreterInvokeSync(
+    TfLiteInterpreter* interpreter, int32_t* model_indices, uint32_t count);
+
+TFL_CAPI_EXPORT extern void TfLiteInterpreterInvokeAsync(
+    TfLiteInterpreter* interpreter, int32_t* model_indices, uint32_t count);
 
 // Returns the number of output tensors associated with the model.
 TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterGetOutputTensorCount(
-    const TfLiteInterpreter* interpreter);
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index);
 
 // Returns the tensor associated with the output index.
 // REQUIRES: 0 <= input_index < TfLiteInterpreterGetOutputTensorCount(tensor)
@@ -209,7 +207,7 @@ TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterGetOutputTensorCount(
 // In general, best practice is to interact with the output tensor *after*
 // calling TfLiteInterpreterInvoke().
 TFL_CAPI_EXPORT extern const TfLiteTensor* TfLiteInterpreterGetOutputTensor(
-    const TfLiteInterpreter* interpreter, int32_t output_index);
+    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t output_index);
 
 // --------------------------------------------------------------------------
 // TfLiteTensor wraps data associated with a graph tensor.

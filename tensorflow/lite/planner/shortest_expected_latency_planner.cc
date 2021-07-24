@@ -122,6 +122,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         remaining_ops.job_id = most_urgent_job.job_id;
         remaining_ops.input_handle = most_urgent_job.input_handle;
         remaining_ops.output_handle = most_urgent_job.output_handle;
+        remaining_ops.previous_subgraph_idx = most_urgent_job.subgraph_idx;
 
         most_urgent_job.following_jobs.clear();
         most_urgent_job.following_jobs.push_back(remaining_ops);

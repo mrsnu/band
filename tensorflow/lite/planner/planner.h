@@ -111,11 +111,12 @@ class Planner {
   SafeBool planner_safe_bool_;
 
   // Jobs Finished
-  SharableJobQueue jobs_finished_;
+  ConcurrentJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
   // Request Queue
-  SharableJobQueue requests_;
+  ConcurrentJobQueue requests_;
+
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
   int num_finished_jobs_ = 0;

@@ -29,7 +29,7 @@ using DeviceWaitingTime = std::map<TfLiteDeviceFlags, int64_t>;
 using DecisionFn = std::function<bool(JobQueue::iter, DeviceWaitingTime&, int)>;
 
 // The job queue which can be shared by multiple threads.
-struct SharableJobQueue {
+struct ConcurrentJobQueue {
   JobQueue queue;
   std::mutex mtx;
 };

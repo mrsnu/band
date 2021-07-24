@@ -20,6 +20,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/string_type.h"
 
 namespace tflite {
@@ -33,53 +34,59 @@ class TestRunner {
   TestRunner() {}
   virtual ~TestRunner() {}
 
+  // Reset Interpreter.
+  virtual void ResetInterpreter(RuntimeConfig runtime_config = RuntimeConfig()) = 0;
+
   // Load the given model, as a path relative to SetModelBaseDir().
-  virtual void LoadModel(const string& bin_file_path) = 0;
+  virtual int LoadModel(const string& bin_file_path) = 0;
 
-  // Return the list of input tensors in the loaded model.
-  virtual const std::vector<int>& GetInputs() = 0;
+  // Return the list of input tensors in the subgraph.
+  virtual const std::vector<int>& GetInputs(int model_id) = 0;
 
-  // Return the list of output tensors in the loaded model.
-  virtual const std::vector<int>& GetOutputs() = 0;
+  // Return the list of output tensors in the subgraph.
+  virtual const std::vector<int>& GetOutputs(int model_id) = 0;
 
   // Prepare for a run by resize the given tensor. The given 'id' is
   // guaranteed to be one of the ids returned by GetInputs().
-  virtual void ReshapeTensor(int id, const string& csv_values) = 0;
+  virtual void ReshapeTensor(int model_id, int id, const string& csv_values) = 0;
 
   // Reserve memory for all tensors.
-  virtual void AllocateTensors() = 0;
+  virtual void AllocateTensors(int model_id) = 0;
 
   // Set the given tensor to some initial state, usually zero. This is
   // used to reset persistent buffers in a model.
-  virtual void ResetTensor(int id) = 0;
+  virtual void ResetTensor(int model_id, int id) = 0;
 
   // Define the contents of the given input tensor. The given 'id' is
   // guaranteed to be one of the ids returned by GetInputs().
-  virtual void SetInput(int id, const string& values_as_string) = 0;
+  virtual void SetInput(int model_id, int id, const string& values_as_string) = 0;
 
   // Define what should be expected data for an output tensor after Invoke()
   // runs.
   // The given 'id' is guaranteed to be one of the ids returned by
   // GetOutputs().
-  virtual void SetExpectation(int id, const string& values_as_string) = 0;
+  virtual void SetExpectation(int model_id, int id, const string& values_as_string) = 0;
 
   // Define what should be expected shape for an output tensor after Invoke()
   // runs.
   // The given 'id' is guaranteed to be one of the ids returned by
   // GetOutputs().
-  virtual void SetShapeExpectation(int id, const string& values_as_string) = 0;
+  virtual void SetShapeExpectation(int model_id, int id, const string& values_as_string) = 0;
 
   // Run the model.
-  virtual void Invoke() = 0;
+  virtual void Invoke(int model_id) = 0;
+
+  // Run the model by enqueueing the request to the planner.
+  virtual void InvokeThroughPlanner(int model_id) = 0;
 
   // Verify that the contents of all outputs conform to the existing
   // expectations. Return true if there are no expectations or they are all
   // satisfied.
-  virtual bool CheckResults() = 0;
+  virtual bool CheckResults(int model_id) = 0;
 
   // Read contents of tensor into csv format.
   // The given 'id' is guaranteed to be one of the ids returned by GetOutputs().
-  virtual string ReadOutput(int id) = 0;
+  virtual string ReadOutput(int model_id, int id) = 0;
 
   // Set the base path for loading models.
   void SetModelBaseDir(const string& path) {
