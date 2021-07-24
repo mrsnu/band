@@ -102,6 +102,265 @@ int GetLittleCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteLittle).NumEnabled()
 
 int GetBigCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteBig).NumEnabled(); }
 
+int GetCPUScalingMaxFrequencyKhz(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  char path[256];
+  // first try from cpu id
+  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_max_freq", cpu);
+  FILE* fp = fopen(path, "rb");
+
+  // second try from policy
+  if (!fp) {
+    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/scaling_max_freq",
+            cpu);
+    fp = fopen(path, "rb");
+  }
+
+  if (fp) {
+    int freq_khz = 0;
+    fscanf(fp, "%d", &freq_khz);
+    fclose(fp);
+    return freq_khz;
+  } else {
+    return -1;
+  }
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUScalingMaxFrequencyKhz(const CpuSet& cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_frequency = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingMaxFrequencyKhz(i);
+  }
+
+  return accumulated_frequency / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUScalingMinFrequencyKhz(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  char path[256];
+  // first try from cpu id
+  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_min_freq", cpu);
+  FILE* fp = fopen(path, "rb");
+
+  // second try from policy
+  if (!fp) {
+    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/scaling_min_freq",
+            cpu);
+    fp = fopen(path, "rb");
+  }
+
+  if (fp) {
+    int freq_khz = 0;
+    fscanf(fp, "%d", &freq_khz);
+    fclose(fp);
+    return freq_khz;
+  } else {
+    return -1;
+  }
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUScalingMinFrequencyKhz(const CpuSet& cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_frequency = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingMinFrequencyKhz(i);
+  }
+
+  return accumulated_frequency / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUScalingFrequencyKhz(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  char path[256];
+  // first try from cpu id
+  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", cpu);
+  FILE* fp = fopen(path, "rb");
+
+  // second try from policy
+  if (!fp) {
+    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/scaling_cur_freq",
+            cpu);
+    fp = fopen(path, "rb");
+  }
+
+  if (fp) {
+    int freq_khz = 0;
+    fscanf(fp, "%d", &freq_khz);
+    fclose(fp);
+    return freq_khz;
+  } else {
+    return -1;
+  }
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUScalingFrequencyKhz(const CpuSet& cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_frequency = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingFrequencyKhz(i);
+  }
+
+  return accumulated_frequency / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUFrequencyKhz(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  char path[256];
+  // first try from cpu id
+  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_cur_freq", cpu);
+  FILE* fp = fopen(path, "rb");
+
+  // second try from policy
+  if (!fp) {
+    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/cpuinfo_cur_freq",
+            cpu);
+    fp = fopen(path, "rb");
+  }
+
+  if (fp) {
+    int freq_khz = 0;
+    fscanf(fp, "%d", &freq_khz);
+    fclose(fp);
+    return freq_khz;
+  } else {
+    return -1;
+  }
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUFrequencyKhz(const CpuSet& cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_frequency = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUFrequencyKhz(i);
+  }
+
+  return accumulated_frequency / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUUpTransitionLatencyMs(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  char path[256];
+  // first try from transition latency
+  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_transition_latency", cpu);
+  FILE* fp = fopen(path, "rb");
+  
+  if (fp) {
+    int latency_ns = 0;
+    fscanf(fp, "%d", &latency_ns);
+    fclose(fp);
+    if (latency_ns != 0) {
+      // nanoseconds to milliseconds
+      return latency_ns / 1000000;
+    }
+  }
+
+  // second try from schedutil policy
+  sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/schedutil/up_rate_limit_us",
+          cpu);
+  fp = fopen(path, "rb");
+
+  if (fp) {
+    int latency_us = 0;
+    fscanf(fp, "%d", &latency_us);
+    fclose(fp);
+    // microseconds to milliseconds
+    return latency_us / 1000;
+  }
+
+#endif
+  return -1;
+}
+int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_latency = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i)) accumulated_latency += GetCPUUpTransitionLatencyMs(i);
+  }
+
+  return accumulated_latency / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
+int GetCPUDownTransitionLatencyMs(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  char path[256];
+  // first try from transition latency
+  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_transition_latency", cpu);
+  FILE* fp = fopen(path, "rb");
+  
+  if (fp) {
+    int latency_ns = 0;
+    fscanf(fp, "%d", &latency_ns);
+    fclose(fp);
+    if (latency_ns != 0) {
+      // nanoseconds to milliseconds
+      return latency_ns / 1000000;
+    }
+  }
+
+  // second try from schedutil policy
+  sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/schedutil/down_rate_limit_us",
+          cpu);
+  fp = fopen(path, "rb");
+
+  if (fp) {
+    int latency_us = 0;
+    fscanf(fp, "%d", &latency_us);
+    fclose(fp);
+    // microseconds to milliseconds
+    return latency_us / 1000;
+  }
+
+#endif
+  return -1;
+}
+
+int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_latency = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i)) accumulated_latency += GetCPUDownTransitionLatencyMs(i);
+  }
+
+  return accumulated_latency / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
 #if defined __ANDROID__ || defined __linux__
 static int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu

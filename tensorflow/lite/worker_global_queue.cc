@@ -131,8 +131,15 @@ void GlobalQueueWorker::Work() {
               (current_job_.end_time - current_job_.invoke_time));
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
-          } 
+          }
           TryCopyOutputTensors(current_job_);
+          if (planner_ptr->GetLogProcessorFrequency()) {
+            std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
+            current_job_.end_frequency = GetCPUFrequencyKhz(cpu_set_);
+            current_job_.end_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set_);
+            current_job_.end_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set_);
+            current_job_.end_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set_);
+          }
           current_job_.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {

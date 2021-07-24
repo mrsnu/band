@@ -56,6 +56,30 @@ int GetCPUCount();
 int GetLittleCPUCount();
 int GetBigCPUCount();
 
+// Get scaling frequency (current target frequency of the governor)
+int GetCPUScalingFrequencyKhz(int cpu);
+int GetCPUScalingFrequencyKhz(const CpuSet &cpu_set);
+
+// Get scaling max frequency (current target frequency of the governor)
+int GetCPUScalingMaxFrequencyKhz(int cpu);
+int GetCPUScalingMaxFrequencyKhz(const CpuSet &cpu_set);
+
+// Get scaling min frequency (current target frequency of the governor)
+int GetCPUScalingMinFrequencyKhz(int cpu);
+int GetCPUScalingMinFrequencyKhz(const CpuSet &cpu_set);
+
+// Get current frequency (requires sudo)
+int GetCPUFrequencyKhz(int cpu);
+int GetCPUFrequencyKhz(const CpuSet &cpu_set);
+
+// Time interval limit of frequency rise
+int GetCPUUpTransitionLatencyMs(int cpu);
+int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set);
+
+// Time interval limit of frequency down
+int GetCPUDownTransitionLatencyMs(int cpu);
+int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set);
+
 // set explicit thread affinity
 TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
