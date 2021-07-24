@@ -104,7 +104,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
       SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
 
-      int64_t profiled = GetInterpreter()->GetSubgraphProfileResult(key);
+      int64_t profiled = GetInterpreter()->GetExpectedLatency(key);
       int64_t expected_latency = device_waiting[device_flag] + profiled;
 
       to_execute.profiled_time = profiled;

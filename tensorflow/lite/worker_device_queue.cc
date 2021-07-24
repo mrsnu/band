@@ -41,7 +41,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
     int start_idx = (*it).start_idx;
     int end_idx = (*it).end_idx;
     SubgraphKey key(model_id, device_id, start_idx, end_idx);
-    int64_t profiled_latency = interpreter->GetSubgraphProfileResult(key);
+    int64_t profiled_latency = interpreter->GetExpectedLatency(key);
 
     total += profiled_latency;
     if (it == requests_.begin()) {
@@ -114,7 +114,7 @@ void DeviceQueueWorker::Work() {
         TfLiteStatus status = subgraph.Invoke();
         if (status == kTfLiteOk) {
           job.end_time = profiling::time::NowMicros();
-          interpreter_ptr->UpdateProfileResult(
+          interpreter_ptr->UpdateExecutionLatency(
               subgraph.GetKey(),
               (job.end_time - job.invoke_time));
           if (job.following_jobs.size() != 0) {
@@ -202,7 +202,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     lock.unlock();
 
     SubgraphKey key(job.model_id, device_flag_, job.start_idx, job.end_idx);
-    int64_t expected_latency = interpreter_ptr->GetSubgraphProfileResult(key);
+    int64_t expected_latency = interpreter_ptr->GetExpectedLatency(key);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;

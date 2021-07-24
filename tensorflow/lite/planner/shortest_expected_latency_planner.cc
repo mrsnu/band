@@ -77,7 +77,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       most_urgent_job.subgraph_idx = target_subgraph;
       most_urgent_job.device_id = to_execute.device_flag;
       most_urgent_job.profiled_time =
-          GetInterpreter()->GetSubgraphProfileResult(to_execute);
+          GetInterpreter()->GetExpectedLatency(to_execute);
 
       if (most_urgent_job.expected_latency == 0) {
         // only set these fields if this is the first subgraph of this model
