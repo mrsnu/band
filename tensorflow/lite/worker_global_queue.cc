@@ -120,6 +120,13 @@ void GlobalQueueWorker::Work() {
       if (TryCopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();
+        {
+          std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
+          current_job.start_frequency = GetCPUFrequencyKhz(cpu_set_);
+          current_job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set_);
+          current_job.start_min_scaling_frequency = GetCPUScalingMinFrequencyKhz(cpu_set_);
+          current_job.start_max_scaling_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set_);
+        }
         lock.unlock();
 
         TfLiteStatus status = subgraph.Invoke();
@@ -134,6 +141,13 @@ void GlobalQueueWorker::Work() {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
           } 
           TryCopyOutputTensors(current_job_);
+          {
+            std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
+            current_job.end_frequency = GetCPUFrequencyKhz(cpu_set_);
+            current_job.end_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set_);
+            current_job.end_min_scaling_frequency = GetCPUScalingMinFrequencyKhz(cpu_set_);
+            current_job.end_max_scaling_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set_);
+          }
           current_job_.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {
