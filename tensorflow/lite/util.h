@@ -102,6 +102,16 @@ struct Job {
   bool is_final_subgraph = true;
   std::string model_fname;
 
+  int64_t start_scaling_frequency = 0;
+  int64_t start_frequency = 0;
+  int64_t start_scaling_min_frequency = 0;
+  int64_t start_scaling_max_frequency = 0;
+
+  int64_t end_scaling_frequency = 0;
+  int64_t end_frequency = 0;
+  int64_t end_scaling_min_frequency = 0;
+  int64_t end_scaling_max_frequency = 0;
+
   std::vector<Job> following_jobs;
   int previous_subgraph_idx = -1;
 };
