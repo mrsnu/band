@@ -21,7 +21,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // gone through all jobs.
       // There should be a more quicker way do this, but I'm leaving this as-is
       // to make it simple.
-      // E.g., we add interpreter.GetProfiledLatency() to the expected_latency map
+      // E.g., we add interpreter.GetExpectedLatency() to the expected_latency map
       // of all Jobs instead of calling GetShortestLatency() a gazillion times
       // again.
 
