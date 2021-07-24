@@ -706,7 +706,7 @@ class Interpreter {
 
   void UpdateExecutionLatency(const SubgraphKey& key, int64_t latency);
   int64_t GetExpectedLatency(const SubgraphKey& key);
-  int64_t GetSubgraphProfileResult(SubgraphKey& key);
+  int64_t GetProfiledResult(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 

@@ -787,7 +787,7 @@ int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
   }
 }
 
-int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
+int64_t Interpreter::GetProfiledResult(SubgraphKey& key) {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
     return it->second;
@@ -1238,7 +1238,7 @@ Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
 
     int64_t waiting_time = device_waiting[key.device_flag];
-    int64_t profiled = GetSubgraphProfileResult(key);
+    int64_t profiled = GetProfiledResult(key);
     int64_t expected_latency = profiled + std::max(waiting_time, start_time);
 
     if (min_latency > expected_latency) {
