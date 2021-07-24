@@ -90,8 +90,9 @@ struct Job {
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
-  int64_t profiled_time = 0;
+  int64_t profiled_latency = 0;
   int64_t expected_latency = 0;
+  int64_t total_expected_latency = 0;
   int64_t slo_us = 0;
   int input_handle = -1;
   int output_handle = -1;

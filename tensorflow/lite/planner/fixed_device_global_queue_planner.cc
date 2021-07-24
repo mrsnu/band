@@ -104,17 +104,18 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
       SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
 
-      int64_t profiled = GetInterpreter()->GetExpectedLatency(key);
-      int64_t expected_latency = device_waiting[device_flag] + profiled;
+      int64_t expected = GetInterpreter()->GetExpectedLatency(key);
+      int64_t total_expected_latency = device_waiting[device_flag] + expected;
 
-      to_execute.profiled_time = profiled;
-      to_execute.expected_latency = expected_latency;
+      to_execute.profiled_latency = GetInterpreter()->GetProfiledLatency(key);
+      to_execute.expected_latency = expected;
+      to_execute.total_expected_latency = total_expected_latency;
 
       // this job has an SLO; check if it's not too late already
       if (to_execute.slo_us > 0) {
         int64_t current_time = profiling::time::NowMicros();
 
-        if (current_time + expected_latency >
+        if (current_time + total_expected_latency >
             to_execute.enqueue_time + to_execute.slo_us) {
           // SLO violation
           // there is no hope left for this job, throw it away
