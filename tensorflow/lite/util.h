@@ -119,6 +119,16 @@ struct Job {
   JobStatus status = kTfLiteJobQueued;
   int subgraph_idx = -1;
   int device_id = -1;
+  int64_t start_scaling_frequency = 0;
+  int64_t start_frequency = 0;
+  int64_t start_scaling_min_frequency = 0;
+  int64_t start_scaling_max_frequency = 0;
+
+  int64_t end_scaling_frequency = 0;
+  int64_t end_frequency = 0;
+  int64_t end_scaling_min_frequency = 0;
+  int64_t end_scaling_max_frequency = 0;
+
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
   std::set<int> resolved_tensors;
