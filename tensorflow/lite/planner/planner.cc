@@ -195,6 +195,17 @@ void Planner::FlushFinishedJobs() {
   }
 }
 
+void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
+  job.start_idx = target.start_idx;
+  job.end_idx = target.end_idx;
+  job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
+  job.device_id = target.device_flag;
+  job.profiled_latency =
+      interpreter_->GetProfiledLatency(target);
+  job.expected_latency =
+      interpreter_->GetExpectedLatency(target);
+}
+
 bool Planner::IsJobIdValid(int job_id) {
   return num_submitted_jobs_ - job_id <= NUM_FINISHED_RECORDS;
 }
