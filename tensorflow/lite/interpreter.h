@@ -703,10 +703,10 @@ class Interpreter {
   // into `profile_database_`.
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
-  int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
-  void UpdateProfileResult(const SubgraphKey& key,
-                           int64_t new_profile);
+  void UpdateExecutionLatency(const SubgraphKey& key, int64_t latency);
+  int64_t GetExpectedLatency(const SubgraphKey& key);
+  int64_t GetSubgraphProfileResult(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
@@ -794,14 +794,14 @@ class Interpreter {
   // Stores the profile results
   // When a subgraph key is given, returns the profile results in int64_t.
   profiling::util::ModelDeviceToLatency profile_database_;
+  // Map structure to store profiling results in microseconds of (model_id, device_id)
+  profiling::util::ModelDeviceToLatency moving_averaged_latencies_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;
 
   std::map<TfLiteDelegateFlags, TfLiteDelegatePtr> delegates_;
 
-  // Map structure to store profiling results in microseconds of (model_id, device_id)
-  std::map<SubgraphKey, int64_t> subgraph_profiling_results_map_;
   // Profiler that has been installed and is owned by this interpreter instance.
   // Useful if client profiler ownership is burdensome.
   std::unique_ptr<Profiler> owned_profiler_;
