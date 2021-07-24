@@ -34,15 +34,10 @@ class MultiLevelQueuePlanner : public Planner {
   // The the index is closer to 0, the higher the priority.
   std::vector<JobQueue> multi_level_queue_;
 
-  // Move items in the queue to one-level lower queue, if certain condition
-  // matches.
-  void Demote();
-
-  // Move items in the queue to one-level higher queue, if certain condition
-  // matches.
-  void Promote();
-
   void EnqueueJob(Job job, int queue_level);
+
+  // Allocate the whole jobs in the `local_jobs` to the appropriate queues.
+  void AllocateJobsToQueue(JobQueue& local_jobs);
 
   // Schedule the queue with the index `queue_level`.
   // If you want to apply different scheduling algorithm for different queues,

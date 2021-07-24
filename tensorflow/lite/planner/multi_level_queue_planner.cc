@@ -10,16 +10,9 @@ void MultiLevelQueuePlanner::Plan() {
       return;
 
     // Move all the jobs to the queue with the highest priority.
+    // JobQueue local_jobs;
     CopyToLocalQueue(multi_level_queue_[0]);
-    // Move the jobs according to the decision function.
-    // There can be a situation where the same job is demoted and promoted
-    // at the same time. Programmer should be careful when implementing the
-    // decision functions.
-    // Or we can promote jobs after scheduling to avoid such cases.
-    // `decide_demote` may decide if to demote considering the indicated SLO.
-    // `decide_promote` may decide if to promote considering the remaing deadline.
-    Demote(decide_demote);
-    Promote(decide_promote);
+    AllocateJobsToQueue(multi_level_queue_[0]);
 
     // Update the worker status.
     UpdateDeviceWaitingTime();
@@ -35,39 +28,13 @@ void MultiLevelQueuePlanner::Plan() {
   }
 }
 
-void MultiLevelQueuePlanner::Demote(DecisionFn decide_demote) {
-  // Note that there is no more queue to demote for the last queue.
-  for (int queue_level = 0; queue_level < GetNumQueues() - 1; ++queue_level) {
-    auto& current_queue = multi_level_queue_[queue_level];
-    for (auto job_it = current_queue.begin(); job_it != current_queue.end();) {
-      if (decide_demote(job_it, device_waiting_, queue_level)) {
-        EnqueueJob(*job_it, queue_level + 1);
-        job_it = current_queue.erase(job_it);
-      } else {
-        ++job_it;
-      }
-    }
-  }
-}
-
-void MultiLevelQueuePlanner::Promote(DecisionFn decide_promote) {
-  // Note that there is no more queue to promote for the first queue.
-  for (int queue_level = GetNumQueues() - 1; queue_level > 0; --queue_level) {
-    auto& current_queue = multi_level_queue_[queue_level];
-    for (auto job_it = current_queue.begin(); job_it != current_queue.end();) {
-      if (decide_promote(job_it, device_waiting_, queue_level)) {
-        EnqueueJob(*job_it, queue_level - 1);
-        job_it = current_queue.erase(job_it);
-      } else {
-        ++job_it;
-      }
-    }
-  }
-}
-
 void MultiLevelQueuePlanner::EnqueueJob(Job job, int queue_level) {
   // There can be other ways to enqueue the job, given the priority of the job.
   multi_level_queue_[queue_level].push_back(job);
+}
+
+void MultiLevelQueuePlanner::AllocateJobsToQueue(JobQueue& local_jobs) {
+
 }
 
 void MultiLevelQueuePlanner::ScheduleQueue(size_t queue_level,

@@ -93,6 +93,7 @@ class Planner {
   // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
   // Copy the Job instances from the `requests_` to the local queue.
+  // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueue(JobQueue& local_jobs);
   // Enqueue the request to the worker.
   void EnqueueToWorker(Job job);
