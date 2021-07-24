@@ -104,11 +104,9 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
       SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
 
-      int64_t expected = GetInterpreter()->GetExpectedLatency(key);
-      int64_t total_expected_latency = device_waiting[device_flag] + expected;
+      int64_t total_expected_latency = device_waiting[device_flag] + GetInterpreter()->GetExpectedLatency(key);
 
-      to_execute.profiled_latency = GetInterpreter()->GetProfiledLatency(key);
-      to_execute.expected_latency = expected;
+      UpdateJobEnqueueStatus(to_execute, key);
       to_execute.total_expected_latency = total_expected_latency;
 
       // this job has an SLO; check if it's not too late already
@@ -140,8 +138,6 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         continue;
       }
 
-      to_execute.subgraph_idx = subgraph_idx;
-      to_execute.device_id = device_idx;
       to_execute.sched_id = sched_id_;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);

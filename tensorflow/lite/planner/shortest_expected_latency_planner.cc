@@ -72,14 +72,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       SubgraphKey& to_execute =
           GetInterpreter()->subgraph(target_subgraph)->GetKey();
-      most_urgent_job.start_idx = to_execute.start_idx;
-      most_urgent_job.end_idx = to_execute.end_idx;
-      most_urgent_job.subgraph_idx = target_subgraph;
-      most_urgent_job.device_id = to_execute.device_flag;
-      most_urgent_job.profiled_latency =
-          GetInterpreter()->GetProfiledLatency(to_execute);
-      most_urgent_job.expected_latency =
-          GetInterpreter()->GetExpectedLatency(to_execute);
+      UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
       if (most_urgent_job.total_expected_latency == 0) {
         // only set these fields if this is the first subgraph of this model

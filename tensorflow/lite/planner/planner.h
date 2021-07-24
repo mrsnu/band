@@ -94,6 +94,7 @@ class Planner {
   void FlushFinishedJobs();
   // Copy the Job instances from the `requests_` to the local queue.
   JobQueue CopyToLocalQueue();
+  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
 
   std::thread planner_thread_;
   int sched_id_ = 0;
