@@ -28,12 +28,14 @@ class Worker {
   TfLiteDeviceFlags GetDeviceFlag() const { return device_flag_; }
   int GetWorkerId() const { return worker_id_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
+  std::mutex& GetCpuSetMtx() { return cpu_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   TfLiteStatus UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads);
   void WaitUntilDeviceAvailable(Subgraph& subgraph);
   bool IsAvailable();
   const CpuSet& GetWorkerThreadAffinity() const;
   int GetNumThreads() const;
+  TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
   virtual int64_t GetWaitingTime() = 0;
   // Make sure the worker lock is acquired before calling the function.
   // Currently, `Planner::Plan()` is the only user of the method, and `Plan()` calls `GiveJob`

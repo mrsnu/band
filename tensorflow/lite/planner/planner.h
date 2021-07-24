@@ -62,6 +62,8 @@ class Planner {
 
   void SetWindowSize(int schedule_window_size);
 
+  bool GetLogProcessorFrequency() const { return log_processor_frequency_; }
+
   const std::map<int, int>& GetModelExecutionCounts() const {
     return model_execution_count_;
   }
@@ -84,6 +86,8 @@ class Planner {
   // Copy the Job instances from the `requests_` to the local queue.
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueue(JobQueue& local_jobs);
+  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
+  void UpdateJobWorkerStatus(Job& job, Worker* worker) const;
 
   // Enqueue the request to the worker.
   void EnqueueToWorkers(ScheduleAction& action);
@@ -144,6 +148,7 @@ class Planner {
 
   std::condition_variable end_invoke_;
   std::string log_path_;
+  bool log_processor_frequency_;
 
   int schedule_window_size_ = INT_MAX;
 
