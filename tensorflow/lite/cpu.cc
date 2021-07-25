@@ -134,7 +134,7 @@ int GetCPUScalingMaxFrequencyKhz(const CpuSet& cpu_set) {
   int accumulated_frequency = 0;
 
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingFrequencyKhz(i);
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingMaxFrequencyKhz(i);
   }
 
   return accumulated_frequency / cpu_set.NumEnabled();
@@ -175,7 +175,7 @@ int GetCPUScalingMinFrequencyKhz(const CpuSet& cpu_set) {
   int accumulated_frequency = 0;
 
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingFrequencyKhz(i);
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingMinFrequencyKhz(i);
   }
 
   return accumulated_frequency / cpu_set.NumEnabled();
