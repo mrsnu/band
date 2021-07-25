@@ -119,13 +119,6 @@ void GlobalQueueWorker::Work() {
       if (TryCopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();
-        {
-          std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
-          current_job_.start_frequency = GetCPUFrequencyKhz(cpu_set_);
-          current_job_.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set_);
-          current_job_.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set_);
-          current_job_.start_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set_);
-        }
         lock.unlock();
 
         TfLiteStatus status = subgraph.Invoke();
