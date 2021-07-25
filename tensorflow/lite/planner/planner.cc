@@ -228,6 +228,15 @@ void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
       interpreter_->GetExpectedLatency(target);
 }
 
+void Planner::UpdateJobWorkerStatus(Job& job, Worker* worker) const {
+  std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
+  auto cpu_set = worker->GetWorkerThreadAffinity();
+  job.start_frequency = GetCPUFrequencyKhz(cpu_set);
+  job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
+  job.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
+  job.start_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
+}
+
 bool Planner::IsJobIdValid(int job_id) {
   return num_submitted_jobs_ - job_id <= NUM_FINISHED_RECORDS;
 }

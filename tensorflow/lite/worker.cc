@@ -39,6 +39,10 @@ TfLiteStatus Worker::Init(WorkerConfig& config) {
   return SetWorkerThreadAffinity(worker_mask_set);
 }
 
+const CpuSet& Worker::GetWorkerThreadAffinity() const {
+  return cpu_set_;
+}
+
 TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
   if (thread_affinity_mask.NumEnabled() == 0) {
     return kTfLiteError;

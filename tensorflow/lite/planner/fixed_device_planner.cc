@@ -80,6 +80,7 @@ void FixedDevicePlanner::Plan() {
       to_execute.sched_id = sched_id_++;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
+      UpdateJobWorkerStatus(to_execute, worker);
       if (!worker->GiveJob(to_execute)) {
         ++it;
         continue;

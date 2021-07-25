@@ -27,7 +27,9 @@ class Worker {
   TfLiteStatus Init(WorkerConfig& config);
 
   std::mutex& GetDeviceMtx() { return device_mtx_; }
+  std::mutex& GetCpuSetMtx() { return cpu_set_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
+  const CpuSet& GetWorkerThreadAffinity() const;
   TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
   void WaitUntilDeviceAvailable(Subgraph& subgraph);
   bool IsAvailable();

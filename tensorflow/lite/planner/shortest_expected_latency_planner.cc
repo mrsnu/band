@@ -125,6 +125,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       }
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
+      UpdateJobWorkerStatus(most_urgent_job, worker);
       if (!worker->GiveJob(most_urgent_job)) {
         local_jobs.push_front(most_urgent_job);
         sched_id_--;
