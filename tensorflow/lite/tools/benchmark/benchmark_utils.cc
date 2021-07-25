@@ -180,11 +180,16 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
   if (!root["running_time_ms"].isNull()) {
     benchmark_config.running_time_ms = root["running_time_ms"].asInt();
   }
-  if (!root["global_period_ms"].isNull()) {
-    benchmark_config.global_period_ms = root["global_period_ms"].asInt();
-    if (benchmark_config.global_period_ms <= 0) {
-      TFLITE_LOG(ERROR) << "Make sure `global_period_ms` > 0.";
-      return kTfLiteError;
+  if (benchmark_config.execution_mode == "periodic_single_thread") {
+    if (root["global_period_ms"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if argument `global_period_ms` "
+                        << "is given in the model configs.";
+    } else {
+      benchmark_config.global_period_ms = root["global_period_ms"].asInt();
+      if (benchmark_config.global_period_ms <= 0) {
+        TFLITE_LOG(ERROR) << "Make sure `global_period_ms` > 0.";
+        return kTfLiteError;
+      }
     }
   }
   if (!root["model_id_random_seed"].isNull()) {
