@@ -41,7 +41,11 @@ TfLiteStatus Worker::Init(WorkerConfig& config) {
   return UpdateWorkerThread(worker_mask_set, config.num_threads[device_flag_]);
 }
 
-TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads) {
+const CpuSet& Worker::GetWorkerThreadAffinity() const {
+  return cpu_set_;
+}
+
+TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
   if (thread_affinity_mask.NumEnabled() == 0) {
     return kTfLiteError;
   }

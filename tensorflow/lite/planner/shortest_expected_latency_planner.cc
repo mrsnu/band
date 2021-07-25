@@ -124,6 +124,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
       if (worker->GiveJob(most_urgent_job)) {
+        UpdateJobWorkerStatus(most_urgent_job, worker);
         // all is well
         // delete this job from our request queue
         local_jobs.erase(local_jobs.begin() + target_job_idx);
