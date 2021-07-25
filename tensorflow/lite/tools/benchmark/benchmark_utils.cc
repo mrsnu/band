@@ -201,17 +201,29 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
     std::vector<InputLayerInfo> input_layer_info;
     ModelConfig model;
     Json::Value model_json_value = root["models"][i];
-    if (model_json_value["graph"].isNull() ||
-        model_json_value["period_ms"].isNull()) {
-      TFLITE_LOG(ERROR) << "Please check if arguments `graph` and `period_ms`"
-                           " are given in the model configs.";
+
+    // Set model filepath.
+    // Required for all cases.
+    if (model_json_value["graph"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if argument `graph` is given in "
+                        << "the model configs.";
       return kTfLiteError;
     }
     model.model_fname = model_json_value["graph"].asString();
-    model.period_ms = model_json_value["period_ms"].asInt();
-    if (model.period_ms <= 0) {
-      TFLITE_LOG(ERROR) << "Please check if `period_ms` are positive.";
-      return kTfLiteError;
+
+    // Set `period_ms`.
+    // Required for `periodic` mode.
+    if (benchmark_config.execution_mode == "periodic") {
+      if (model_json_value["period_ms"].isNull()) {
+        TFLITE_LOG(ERROR) << "Please check if argument `period_ms` is given in "
+                             "the model configs.";
+      } else {
+        model.period_ms = model_json_value["period_ms"].asInt();
+        if (model.period_ms <= 0) {
+          TFLITE_LOG(ERROR) << "Please check if `period_ms` are positive.";
+          return kTfLiteError;
+        }
+      }
     }
 
     // Set `batch_size`.
