@@ -112,6 +112,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         remaining_ops.end_idx = model_spec.num_ops - 1;
         remaining_ops.following_jobs = most_urgent_job.following_jobs;
         remaining_ops.expected_latency = most_urgent_job.expected_latency;
+        remaining_ops.total_expected_latency = largest_shortest_latency;
         remaining_ops.sched_id = most_urgent_job.sched_id;
         remaining_ops.job_id = most_urgent_job.job_id;
         remaining_ops.input_handle = most_urgent_job.input_handle;
