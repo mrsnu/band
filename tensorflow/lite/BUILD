@@ -288,6 +288,7 @@ cc_library(
         "//tensorflow/lite/profiling:time_profiler",
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/processors:cpu",
+        "//tensorflow/lite/processors:gpu",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/profiling:util",
         "//tensorflow/lite/tools:logging",
