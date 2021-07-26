@@ -52,6 +52,10 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_[i].reset(new FixedDeviceScheduler(this));
     } else if (planner_types[i] == kFixedDeviceGlobalQueue) {
       schedulers_[i].reset(new FixedDeviceGlobalQueueScheduler(this));
+    } else if (planner_types[i] == kRoundRobin) {
+      schedulers_[i].reset(new RoundRobinScheduler(this));
+    } else if (planner_types[i] == kShortestExpectedLatency) {
+      schedulers_[i].reset(new ShortestExpectedLatencyScheduler(this));
     } else {
       return kTfLiteError;
     }
@@ -94,6 +98,29 @@ void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
   request_lock.unlock();
 }
 
+void Planner::CheckSLOViolation(Job& job) {
+  // this job has an SLO; check if it's not too late already
+  if (job.slo_us > 0) {
+    int64_t current_time = profiling::time::NowMicros();
+    int64_t expected_latency =
+        device_waiting_[static_cast<TfLiteDeviceFlags>(job.device_id)] +
+        job.profiled_time;
+
+    if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
+      // SLO violation
+      // no point in running this job anymore
+      job.status = kTfLiteJobSLOViolation;
+
+      // mark this as -1 to differentiate it from the default value, 0
+      job.invoke_time = -1;
+
+      // mark the time of this decision (of early-dropping this job)
+      job.end_time = current_time;
+      EnqueueFinishedJob(job);
+    }
+  }
+}
+
 void Planner::EnqueueToWorkers(ScheduleAction& action) {
   for (auto& queue : action) {
     auto device = queue.first;
@@ -104,9 +131,9 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
       for (auto request : requests) {
+        CheckSLOViolation(request);
         worker->GetDeviceRequests().push_back(request);
       }
-      TFLITE_LOG(INFO) << "ENQUEUE TO WORKER";
       worker->GetRequestCv().notify_one();
     }
   }
@@ -170,7 +197,6 @@ void Planner::WaitAll() {
 }
 
 void Planner::EnqueueFinishedJob(Job job) {
-  TFLITE_LOG(INFO) << "FINISHED";
   std::unique_lock<std::mutex> lock(jobs_finished_.mtx);
   jobs_finished_.queue.push_back(job);
   lock.unlock();

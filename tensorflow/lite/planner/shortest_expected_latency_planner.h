@@ -7,13 +7,14 @@
 namespace tflite {
 namespace impl {
 
-class ShortestExpectedLatencyPlanner : public Planner {
+class ShortestExpectedLatencyScheduler : public Scheduler {
  public:
-  explicit ShortestExpectedLatencyPlanner(Interpreter* interpreter)
-      : Planner(interpreter) {
-    planner_thread_ = std::thread([this]{this->Plan();});
+  explicit ShortestExpectedLatencyScheduler(Planner* planner)
+      : Scheduler(planner) {
+    need_profile_ = true;
+    worker_type_ = DeviceQueue;
   }
-  void Plan() override;
+  ScheduleAction Schedule(JobQueue& requests) override;
 };
 
 }  // namespace impl

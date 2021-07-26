@@ -100,6 +100,7 @@ class Planner {
   void CopyToLocalQueue(JobQueue& local_jobs);
   // Enqueue the request to the worker.
   void EnqueueToWorkers(ScheduleAction& action);
+  void CheckSLOViolation(Job& job);
   // Update the current device waiting time.
   void UpdateDeviceWaitingTime();
   // Update `model_device_map_`.

@@ -41,7 +41,6 @@ class Worker {
  protected:
   TfLiteStatus CopyInputTensors(const Job& job);
   TfLiteStatus CopyOutputTensors(const Job& job);
-
   virtual void Work() = 0;
 
   std::weak_ptr<Planner> planner_;

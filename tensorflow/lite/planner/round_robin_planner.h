@@ -11,13 +11,14 @@ namespace impl {
 class Interpreter;
 
 // assigns requested model to devices in a Round-robin manner.
-class RoundRobinPlanner : public Planner {
+class RoundRobinScheduler : public Scheduler {
  public:
-  explicit RoundRobinPlanner(Interpreter* interpreter)
-    : Planner(interpreter) {
-      planner_thread_ = std::thread([this]{this->Plan();});
+  explicit RoundRobinScheduler(Planner* planner)
+    : Scheduler(planner) {
+    need_profile_ = false;
+    worker_type_ = DeviceQueue;
   }
-  void Plan() override;
+  ScheduleAction Schedule(JobQueue& requests) override;
 };
 
 }  // namespace impl
