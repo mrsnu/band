@@ -122,11 +122,14 @@ struct Job {
   int64_t start_scaling_frequency = 0;
   int64_t start_scaling_min_frequency = 0;
   int64_t start_scaling_max_frequency = 0;
+  int64_t start_transition_count = 0;
 
   int64_t end_frequency = 0;
   int64_t end_scaling_frequency = 0;
   int64_t end_scaling_min_frequency = 0;
   int64_t end_scaling_max_frequency = 0;
+  int64_t end_transition_count = 0;
+  int64_t expected_transition_count;
 
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
