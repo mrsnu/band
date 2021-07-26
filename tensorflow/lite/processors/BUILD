@@ -18,6 +18,20 @@ cc_library(
         "cpu.h",
     ],
     deps = [
+        ":util",
+        "//tensorflow/lite/c:common",
+    ],
+)
+
+cc_library(
+    name = "util",
+    srcs = [
+        "util.cc",
+    ],
+    hdrs = [
+        "util.h",
+    ],
+    deps = [
         "//tensorflow/lite/c:common",
     ],
 )
