@@ -184,6 +184,7 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
     if (root["global_period_ms"].isNull()) {
       TFLITE_LOG(ERROR) << "Please check if argument `global_period_ms` "
                         << "is given in the model configs.";
+      return kTfLiteError;
     } else {
       benchmark_config.global_period_ms = root["global_period_ms"].asInt();
       if (benchmark_config.global_period_ms <= 0) {
@@ -222,6 +223,7 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
       if (model_json_value["period_ms"].isNull()) {
         TFLITE_LOG(ERROR) << "Please check if argument `period_ms` is given in "
                              "the model configs.";
+        return kTfLiteError;
       } else {
         model.period_ms = model_json_value["period_ms"].asInt();
         if (model.period_ms <= 0) {
