@@ -10,7 +10,6 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/safe_bool.h"
-#include "tensorflow/lite/worker.h"
 
 namespace tflite {
 

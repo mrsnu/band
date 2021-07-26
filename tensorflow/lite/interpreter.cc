@@ -223,7 +223,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create workers.
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    if (planner_->GetWorkerType() == GlobalQueue) {
+    if (planner_->GetWorkerType() == kGlobalQueue) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
     } else {
       workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);

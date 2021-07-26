@@ -64,7 +64,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   // All schedulers must have the same worker type.
-  if (GetWorkerType() == (DeviceQueue | GlobalQueue)) {
+  if (GetWorkerType() == (kDeviceQueue | kGlobalQueue)) {
     return kTfLiteError;
   }
 

@@ -15,7 +15,7 @@ class RoundRobinScheduler : public Scheduler {
  public:
   explicit RoundRobinScheduler(Planner* planner) : Scheduler(planner) {
     need_profile_ = false;
-    worker_type_ = DeviceQueue;
+    worker_type_ = kDeviceQueue;
   }
   ScheduleAction Schedule(JobQueue& requests) override;
 };
