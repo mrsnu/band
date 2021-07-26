@@ -20,7 +20,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/processors/cpu.h"
 #include "tensorflow/lite/util.h"
 
 namespace tflite {

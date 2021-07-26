@@ -12,8 +12,8 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#ifndef TENSORFLOW_LITE_CPU_H_
-#define TENSORFLOW_LITE_CPU_H_
+#ifndef TENSORFLOW_LITE_PROCESSORS_CPU_H_
+#define TENSORFLOW_LITE_PROCESSORS_CPU_H_
 
 #include <stddef.h>
 #include <stdio.h>
@@ -92,4 +92,4 @@ const TfLiteCPUMaskFlags TfLiteCPUMaskGetMask(const char * name);
 } // namespace impl
 } // namespace tflite
 
-#endif // TENSORFLOW_LITE_CPU_H_
+#endif // TENSORFLOW_LITE_PROCESSORS_CPU_H_

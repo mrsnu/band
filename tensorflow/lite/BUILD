@@ -153,7 +153,7 @@ cc_library(
     copts = TFLITE_DEFAULT_COPTS,
     deps = [
         "//tensorflow/lite/c:common",
-        "//tensorflow/lite:cpu"
+        "//tensorflow/lite/processors:cpu",
     ],
 )
 
@@ -235,19 +235,6 @@ cc_library(
 )
 
 cc_library(
-    name = "cpu",
-    srcs = [
-        "cpu.cc",
-    ],
-    hdrs = [
-        "cpu.h",
-    ],
-    deps = [
-        "//tensorflow/lite/c:common",
-    ],
-)
-
-cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
@@ -278,7 +265,6 @@ cc_library(
     deps = [
         ":allocation",
         ":arena_planner",
-        ":cpu",
         ":external_cpu_backend_context",
         ":graph_info",
         ":memory_planner",
@@ -301,6 +287,7 @@ cc_library(
         "//tensorflow/lite/profiling:function_profiler",
         "//tensorflow/lite/profiling:time_profiler",
         "//tensorflow/lite/schema:schema_fbs",
+        "//tensorflow/lite/processors:cpu",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/profiling:util",
         "//tensorflow/lite/tools:logging",
@@ -613,7 +600,7 @@ cc_library(
     hdrs = ["config.h"],
     copts = TFLITE_DEFAULT_COPTS,
     deps = [
-        "//tensorflow/lite:cpu",
+        "//tensorflow/lite/processors:cpu",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite:util",
         "//tensorflow/lite/tools:logging",
