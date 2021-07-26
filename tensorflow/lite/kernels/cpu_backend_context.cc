@@ -20,7 +20,7 @@ limitations under the License.
 #include "public/gemmlowp.h"
 #include "ruy/context.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/processors/cpu.h"
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 #include "tensorflow/lite/tools/logging.h"
