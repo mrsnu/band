@@ -1,4 +1,4 @@
-#include "tensorflow/lite/planner/round_robin_planner.h"
+#include "tensorflow/lite/planner/round_robin_scheduler.h"
 
 namespace tflite {
 namespace impl {

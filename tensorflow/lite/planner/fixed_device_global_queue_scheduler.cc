@@ -1,4 +1,4 @@
-#include "tensorflow/lite/planner/fixed_device_planner.h"
+#include "tensorflow/lite/planner/fixed_device_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {

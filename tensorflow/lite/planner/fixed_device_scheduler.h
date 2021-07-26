@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_PLANNER_H_
-#define TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_PLANNER_H_
+#ifndef TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_SCHEDULER_H_
+#define TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_SCHEDULER_H_
 
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/planner/util.h"
@@ -34,4 +34,4 @@ class FixedDeviceGlobalQueueScheduler : public Scheduler {
 }  // namespace impl
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_PLANNER_H_
+#endif  // TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_SCHEDULER_H_

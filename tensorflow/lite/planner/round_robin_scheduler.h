@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_LITE_PLANNER_ROUND_ROBIN_PLANNER_H_
-#define TENSORFLOW_LITE_PLANNER_ROUND_ROBIN_PLANNER_H_
+#ifndef TENSORFLOW_LITE_PLANNER_ROUND_ROBIN_SCHEDULER_H_
+#define TENSORFLOW_LITE_PLANNER_ROUND_ROBIN_SCHEDULER_H_
 
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/interpreter.h"
@@ -24,4 +24,4 @@ class RoundRobinScheduler : public Scheduler {
 }  // namespace impl
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_PLANNER_ROUND_ROBIN_PLANNER_H_
+#endif  // TENSORFLOW_LITE_PLANNER_ROUND_ROBIN_SCHEDULER_H_

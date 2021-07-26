@@ -1,8 +1,5 @@
-#include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
-
-// for the std::cout commented out in Plan()
-// #include <iostream>
 
 namespace tflite {
 namespace impl {

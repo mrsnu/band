@@ -4,6 +4,9 @@
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/planner/fixed_device_scheduler.h"
+#include "tensorflow/lite/planner/round_robin_scheduler.h"
+#include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 
 namespace tflite {
 namespace impl {

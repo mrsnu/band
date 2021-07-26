@@ -81,9 +81,9 @@ FRAMEWORK_LIB_HDRS = [
     "tensor_ring_buffer.h",
     "planner/util.h",
     "planner/planner.h",
-    "planner/fixed_device_planner.h",
-    "planner/round_robin_planner.h",
-    "planner/shortest_expected_latency_planner.h",
+    "planner/fixed_device_scheduler.h",
+    "planner/round_robin_scheduler.h",
+    "planner/shortest_expected_latency_scheduler.h",
     "worker.h",
     "safe_bool.h"
 ]
@@ -257,10 +257,10 @@ cc_library(
         "stderr_reporter.cc",
         "tensor_ring_buffer.cc",
         "planner/planner.cc",
-        "planner/fixed_device_planner.cc",
-        "planner/fixed_device_global_queue_planner.cc",
-        "planner/round_robin_planner.cc",
-        "planner/shortest_expected_latency_planner.cc",
+        "planner/fixed_device_scheduler.cc",
+        "planner/fixed_device_global_queue_scheduler.cc",
+        "planner/round_robin_scheduler.cc",
+        "planner/shortest_expected_latency_scheduler.cc",
         "worker.cc",
         "worker_device_queue.cc",
         "worker_global_queue.cc"

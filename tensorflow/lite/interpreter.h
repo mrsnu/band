@@ -36,9 +36,7 @@ limitations under the License.
 #include "tensorflow/lite/stderr_reporter.h"
 #include "tensorflow/lite/tensor_ring_buffer.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
-#include "tensorflow/lite/planner/fixed_device_planner.h"
-#include "tensorflow/lite/planner/round_robin_planner.h"
-#include "tensorflow/lite/planner/shortest_expected_latency_planner.h"
+#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/model_builder.h"
 
