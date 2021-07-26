@@ -6,7 +6,7 @@
 #include <mutex>
 #include <thread>
 
-#include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/processors/cpu.h"
 #include "tensorflow/lite/util.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/planner/util.h"

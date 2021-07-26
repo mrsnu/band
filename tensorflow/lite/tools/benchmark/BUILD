@@ -233,11 +233,11 @@ cc_library(
     hdrs = ["benchmark_utils.h"],
     copts = common_copts,
     deps = [
-        "//tensorflow/lite:cpu",
         "//tensorflow/lite:util",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite:config",
         "//tensorflow/lite/profiling:time",
+        "//tensorflow/lite/processors:cpu",
         "//tensorflow/lite/tools:logging",
         "@com_google_absl//absl/strings:str_format",
         "@jsoncpp_git//:jsoncpp",
