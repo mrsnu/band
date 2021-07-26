@@ -9,70 +9,9 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
     if (GetSafeBool().wait())
       return;
 
-    std::set<int> models = GetInterpreter()->models();
-    if (models.size() != model_device_map_.size()) {
-      // (# of available devices, vector of model_id)
-      std::map<int, std::set<int>> devices_per_models_map;
-      for (auto model_id : models) {
-        int count = 0;
-        for (int device_idx = 0; device_idx < kTfLiteNumDevices; device_idx++) {
-          if (GetInterpreter()->GetSubgraphIdx(
-                model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
-            count++;
-          }
-        }
-        devices_per_models_map[count].insert(model_id);
-      }
-
-      int device_idx = 0;
-      while (devices_per_models_map.size()) {
-        // Loop through models in ascending order
-        // based on # of available devices
-        // (Assign models that has limited support first)
-        int selected_model_id = -1;
-        for (auto& devices_per_models : devices_per_models_map) {
-          for (int model_id : devices_per_models.second) {
-            if (GetInterpreter()->GetSubgraphIdx(
-                  model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
-              selected_model_id = model_id;
-              break;
-            }
-          }
-
-          if (selected_model_id != -1) {
-            devices_per_models.second.erase(selected_model_id);
-            if (devices_per_models.second.size() == 0)
-              devices_per_models_map.erase(devices_per_models.first);
-            break;
-          }
-        }
-
-        if (selected_model_id != -1) {
-          model_device_map_[selected_model_id] =
-              static_cast<TfLiteDeviceFlags>(device_idx);
-        }
-
-        device_idx = (device_idx + 1) % kTfLiteNumDevices;
-      }
-    }
-
-    std::set<TfLiteDeviceFlags> idle_devices;
-    // for early-dropping requests that will miss their SLO
-    std::map<TfLiteDeviceFlags, int64_t> device_waiting;
-    for (int i = 0; i < kTfLiteNumDevices; ++i) {
-      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-      Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (worker != nullptr) {
-        device_waiting[device_flag] = worker->GetWaitingTime();
-
-        // we could, technically, check waiting time and isBusy with a single
-        // function call if we slightly change Worker implementation
-        if (!worker->IsBusy()) {
-          idle_devices.insert(device_flag);
-        }
-      }
-    }
-
+    UpdateModelDeviceMapping();
+    UpdateDeviceWaitingTime();
+    std::set<TfLiteDeviceFlags> idle_devices = GetIdleDevices();
     if (idle_devices.empty()) {
       // no device is idle; wait for next iteration
       // technically, we can skip this segment here because we check
@@ -105,7 +44,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
 
       int64_t profiled = GetInterpreter()->GetSubgraphProfileResult(key);
-      int64_t expected_latency = device_waiting[device_flag] + profiled;
+      int64_t expected_latency = device_waiting_[device_flag] + profiled;
 
       to_execute.profiled_time = profiled;
       to_execute.expected_latency = expected_latency;

@@ -17,10 +17,6 @@ class FixedDevicePlanner : public Planner {
   }
   void Plan() override;
   bool NeedProfile() override;
-
- private:
-  // Map structure to find assigned device of model idx (model_id, device flag)
-  std::map<int, int> model_device_map_;
 };
 
 class FixedDeviceGlobalQueuePlanner : public Planner {
@@ -31,10 +27,6 @@ class FixedDeviceGlobalQueuePlanner : public Planner {
   }
   void Plan() override;
   bool NeedProfile() override;
-
- private:
-  // Map structure to find assigned device of model idx (model_id, device flag)
-  std::map<int, int> model_device_map_;
 };
 
 }  // namespace impl

@@ -8,53 +8,7 @@ void FixedDevicePlanner::Plan() {
     if (GetSafeBool().wait())
       return;
 
-    std::set<int> models = GetInterpreter()->models();
-    if (models.size() != model_device_map_.size()) {
-      // (# of available devices, vector of model_id)
-      std::map<int, std::set<int>> devices_per_models_map;
-      for (auto model_id : models) {
-        int count = 0;
-        for (int device_idx = 0; device_idx < kTfLiteNumDevices; device_idx++) {
-          if (GetInterpreter()->GetSubgraphIdx(
-                model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
-            count++;
-          }
-        }
-        devices_per_models_map[count].insert(model_id);
-      }
-
-      int device_idx = 0;
-      while (devices_per_models_map.size()) {
-        // Loop through models in ascending order 
-        // based on # of available devices
-        // (Assign models that has limited support first)
-        int selected_model_id = -1;
-        for (auto& devices_per_models : devices_per_models_map) {
-          for (int model_id : devices_per_models.second) {
-            if (GetInterpreter()->GetSubgraphIdx(
-                  model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
-              selected_model_id = model_id;
-              break;
-            }
-          }
-
-          if (selected_model_id != -1) {
-            devices_per_models.second.erase(selected_model_id);
-            if (devices_per_models.second.size() == 0)
-              devices_per_models_map.erase(devices_per_models.first);
-            break;
-          }
-        }
-
-        if (selected_model_id != -1) {
-          model_device_map_[selected_model_id] =
-              static_cast<TfLiteDeviceFlags>(device_idx);
-        }
-
-        device_idx = (device_idx + 1) % kTfLiteNumDevices;
-      };
-    }
-
+    UpdateModelDeviceMapping();
     // The lock will not be released until the request queue is empty,
     // which means concurrent enqueue is not available.
     // This can affect the performance.

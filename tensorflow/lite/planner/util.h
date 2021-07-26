@@ -19,19 +19,46 @@ namespace impl {
 // The maximum number of available job outputs at one time.
 #define NUM_FINISHED_RECORDS 1000
 
+typedef enum TfLitePlannerType {
+  kFixedDevice = 0,
+  kRoundRobin = 1,
+  kShortestExpectedLatency = 2,
+  kFixedDeviceGlobalQueue = 3,
+  kNumPlannerTypes = 4
+} TfLitePlannerType;
+
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
 // Type definition for the device waiting time.
 using DeviceWaitingTime = std::map<TfLiteDeviceFlags, int64_t>;
-// Decision function type for demotion and promotion in the multi-level
-// queue planner.
-// The arguments are the job iterator, device status, and the queue level.
-using DecisionFn = std::function<bool(JobQueue::iter, DeviceWaitingTime&, int)>;
+// Decision from a scheduler. The Jobs in the action must be passed to
+// the appropriate workers.
+using ScheduleAction = std::map<TfLiteDeviceFlags, std::vector<Job>>;
 
 // The job queue which can be shared by multiple threads.
 struct ConcurrentJobQueue {
   JobQueue queue;
   std::mutex mtx;
+};
+
+class Scheduler {
+ public:
+  bool NeedProfile() {
+    return need_profile_;
+  }
+
+  WorkerType GetWorkerType() {
+    return worker_type_;
+  }
+
+  ScheduleAction Schedule() {
+    return schedule();
+  }
+
+ protected:
+  std::function<ScheduleAction()> schedule;
+  bool need_profile_;
+  WorkerType worker_type_;
 };
 
 }  // namespace impl

@@ -10,6 +10,7 @@ namespace impl {
 
 Planner::Planner(Interpreter* interpreter) {
   interpreter_ = interpreter;
+  planner_thread_ = std::thread([this]{this->Plan();});
 }
 
 Planner::~Planner() {
@@ -81,6 +82,18 @@ void Planner::UpdateDeviceWaitingTime() {
     }
   }
 }
+
+std::set<TfLiteDeviceFlags> Planner::GetIdleDevices() {
+  std::set<TfLiteDeviceFlags> idle_devices;
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+    if (device_waiting_[device_flag] == 0) {
+      idle_devices.insert(device_flag);
+    }
+  }
+  return idle_devices;
+}
+
 
 void Planner::Wait(std::vector<int> job_ids) {
   if (job_ids.size() == 0) {
@@ -220,6 +233,70 @@ bool Planner::IsJobIdValid(int job_id) {
 
 int Planner::GetJobRecordIndex(int job_id) const {
   return job_id % NUM_FINISHED_RECORDS;
+}
+
+void Planner::UpdateModelDeviceMapping() {
+  std::set<int> models = GetInterpreter()->models();
+  if (models.size() != model_device_map_.size()) {
+    // (# of available devices, vector of model_id)
+    std::map<int, std::set<int>> devices_per_models_map;
+    for (auto model_id : models) {
+      int count = 0;
+      for (int device_idx = 0; device_idx < kTfLiteNumDevices; device_idx++) {
+        if (GetInterpreter()->GetSubgraphIdx(
+              model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
+          count++;
+        }
+      }
+      devices_per_models_map[count].insert(model_id);
+    }
+
+    int device_idx = 0;
+    while (devices_per_models_map.size()) {
+      // Loop through models in ascending order 
+      // based on # of available devices
+      // (Assign models that has limited support first)
+      int selected_model_id = -1;
+      for (auto& devices_per_models : devices_per_models_map) {
+        for (int model_id : devices_per_models.second) {
+          if (GetInterpreter()->GetSubgraphIdx(
+                model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
+            selected_model_id = model_id;
+            break;
+          }
+        }
+
+        if (selected_model_id != -1) {
+          devices_per_models.second.erase(selected_model_id);
+          if (devices_per_models.second.size() == 0)
+            devices_per_models_map.erase(devices_per_models.first);
+          break;
+        }
+      }
+
+      if (selected_model_id != -1) {
+        model_device_map_[selected_model_id] =
+            static_cast<TfLiteDeviceFlags>(device_idx);
+      }
+
+      device_idx = (device_idx + 1) % kTfLiteNumDevices;
+    };
+  }
+}
+
+
+void Planner::Plan() {
+  while (true) {
+    if (GetSafeBool().wait()) {
+       return;
+    }
+    UpdateModelDeviceMapping();
+    for (size_t i = 0; i < GetNumQueues(); ++i) {
+      UpdateDeviceWaitingTime();
+      auto action = schedulers_[i].Schedule();
+      EnqueueJobsToWorkers(action);
+    }
+  }
 }
 
 }  // namespace impl

@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <set>
 
 #include "tensorflow/lite/worker.h"
 #include "tensorflow/lite/safe_bool.h"
@@ -99,10 +100,16 @@ class Planner {
   void EnqueueToWorker(Job job);
   // Update the current device waiting time.
   void UpdateDeviceWaitingTime();
+  // Update `model_device_map_`.
+  void UpdateModelDeviceMapping();
+  // Get idle devices from `device_waiting_`.
+  std::set<TfLiteDeviceFlags> GetIdleDevices();
 
   std::thread planner_thread_;
   int sched_id_ = 0;
   DeviceWaitingTime device_waiting_;
+  // Map structure to find assigned device of model idx (model_id, device flag)
+  std::map<int, int> model_device_map_;
 
  private:
   bool IsJobIdValid(int job_id);
@@ -117,6 +124,11 @@ class Planner {
 
   // Request Queue
   ConcurrentJobQueue requests_;
+
+  // Multi-level Local Queue.
+  // The the index is closer to 0, the higher the priority.
+  std::vector<JobQueue> local_queues_;
+  std::map<int, std::function<ScheduleAction()>> schedulers_;
 
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
