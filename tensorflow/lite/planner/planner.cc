@@ -1,19 +1,19 @@
 #include <fstream>
 
-#include "tensorflow/lite/planner/planner.h"
-#include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
+#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
+#include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace impl {
 
 Planner::Planner(Interpreter* interpreter) {
   interpreter_ = interpreter;
-  planner_thread_ = std::thread([this]{this->Plan();});
+  planner_thread_ = std::thread([this] { this->Plan(); });
 }
 
 Planner::~Planner() {
@@ -29,8 +29,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   // NOTE: Columns starting `sched_id` are added for debugging purpose
   // and the metrics are only for ShortestExpectedLatency Planner.
   std::ofstream log_file(log_path_);
-  if (!log_file.is_open())
-    return kTfLiteError;
+  if (!log_file.is_open()) return kTfLiteError;
   log_file << "sched_id\t"
            << "model_name\t"
            << "model_id\t"
@@ -50,7 +49,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
 
   auto& planner_types = config.planner_types;
   local_queues_.resize(planner_types.size());
-  for(int i = 0; i < planner_types.size(); ++i) {
+  for (int i = 0; i < planner_types.size(); ++i) {
     if (planner_types[i] == kFixedDevice) {
       schedulers_[i].reset(new FixedDeviceScheduler(this));
     } else if (planner_types[i] == kFixedDeviceGlobalQueue) {
@@ -82,7 +81,7 @@ bool Planner::NeedProfile() {
 
 int Planner::GetWorkerType() {
   int worker_type = 0;
-  for(int i = 0; i < schedulers_.size(); ++i) {
+  for (int i = 0; i < schedulers_.size(); ++i) {
     worker_type |= schedulers_[i]->GetWorkerType();
   }
   return worker_type;
@@ -94,8 +93,10 @@ void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
   if (!requests.empty()) {
     // Gets the specific amount of jobs from requests
     // and removes those jobs from the requests.
-    int window_size = std::min(GetWindowSize(), (int) requests.size());
-    local_jobs.insert(local_jobs.begin(), std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.begin() + window_size));
+    int window_size = std::min(GetWindowSize(), (int)requests.size());
+    local_jobs.insert(local_jobs.begin(),
+                      std::make_move_iterator(requests.begin()),
+                      std::make_move_iterator(requests.begin() + window_size));
     requests.erase(requests.begin(), requests.begin() + window_size);
   }
   request_lock.unlock();
@@ -165,7 +166,6 @@ std::set<TfLiteDeviceFlags> Planner::GetIdleDevices() {
   return idle_devices;
 }
 
-
 void Planner::Wait(std::vector<int> job_ids) {
   if (job_ids.size() == 0) {
     return;
@@ -205,7 +205,7 @@ void Planner::EnqueueFinishedJob(Job job) {
   lock.unlock();
 
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
- 
+
   if (job.is_final_subgraph) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
@@ -276,21 +276,13 @@ void Planner::FlushFinishedJobs() {
       }
 
       // write all timestamp statistics to log file
-      log_file << job.sched_id << "\t"
-              << job.model_fname << "\t"
-              << job.model_id << "\t"
-              << job.device_id << "\t"
-              << job.start_idx << "\t"
-              << job.end_idx << "\t"
-              << job.subgraph_idx << "\t"
-              << job.enqueue_time << "\t"
-              << job.invoke_time << "\t"
-              << job.end_time << "\t"
-              << job.profiled_time << "\t"
-              << job.expected_latency << "\t"
-              << job.slo_us << "\t"
-              << job.status << "\t"
-              << job.is_final_subgraph << "\n";
+      log_file << job.sched_id << "\t" << job.model_fname << "\t"
+               << job.model_id << "\t" << job.device_id << "\t" << job.start_idx
+               << "\t" << job.end_idx << "\t" << job.subgraph_idx << "\t"
+               << job.enqueue_time << "\t" << job.invoke_time << "\t"
+               << job.end_time << "\t" << job.profiled_time << "\t"
+               << job.expected_latency << "\t" << job.slo_us << "\t"
+               << job.status << "\t" << job.is_final_subgraph << "\n";
     }
     log_file.close();
   } else {
@@ -315,7 +307,7 @@ void Planner::UpdateModelDeviceMapping() {
       int count = 0;
       for (int device_idx = 0; device_idx < kTfLiteNumDevices; device_idx++) {
         if (GetInterpreter()->GetSubgraphIdx(
-              model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
+                model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
           count++;
         }
       }
@@ -324,14 +316,14 @@ void Planner::UpdateModelDeviceMapping() {
 
     int device_idx = 0;
     while (devices_per_models_map.size()) {
-      // Loop through models in ascending order 
+      // Loop through models in ascending order
       // based on # of available devices
       // (Assign models that has limited support first)
       int selected_model_id = -1;
       for (auto& devices_per_models : devices_per_models_map) {
         for (int model_id : devices_per_models.second) {
           if (GetInterpreter()->GetSubgraphIdx(
-                model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
+                  model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
             selected_model_id = model_id;
             break;
           }
@@ -355,13 +347,10 @@ void Planner::UpdateModelDeviceMapping() {
   }
 }
 
-
-
-
 void Planner::Plan() {
   while (true) {
     if (GetSafeBool().wait()) {
-       return;
+      return;
     }
 
     CopyToLocalQueue(local_queues_[0]);

@@ -1,8 +1,8 @@
 #ifndef TENSORFLOW_LITE_PLANNER_SHORTEST_EXPECTED_LATENCY_SCHEDULER_H_
 #define TENSORFLOW_LITE_PLANNER_SHORTEST_EXPECTED_LATENCY_SCHEDULER_H_
 
-#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/planner/planner.h"
 
 namespace tflite {
 namespace impl {

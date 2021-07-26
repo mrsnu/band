@@ -2,16 +2,16 @@
 #define TENSORFLOW_LITE_PLANNER_PLANNER_H_
 
 #include <memory>
-#include <vector>
-#include <string>
 #include <set>
+#include <string>
+#include <vector>
 
-#include "tensorflow/lite/worker.h"
-#include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/planner/util.h"
+#include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/worker.h"
 
 namespace tflite {
 
@@ -28,20 +28,20 @@ class Planner {
 
   TfLiteStatus Init(PlannerConfig& config);
 
-	/*
-	Derived classes should generally follow this template when implementing `Plan()`:
-	while (true) {
-		// sleep until somebody wakes me up with GetSafeBool().notify()
-		if (GetSafeBool().wait()) return;
-		// wake up and do something with the request queue
-		std::unique_lock<std::mutex> lock(GetRequestsMtx()); // exclusive access to the request queue
-		Job j = GetRequests().front(); // get the first job
-		GetRequests().pop_front(); // actual dequeue
-		// enqueue the job in the correct worker queue
-		// Worker& worker = GetInterpreter()->GetWorker(device_idx);
-		// ...
-	}
-	*/
+  /*
+  Derived classes should generally follow this template when implementing
+  `Plan()`: while (true) {
+          // sleep until somebody wakes me up with GetSafeBool().notify()
+          if (GetSafeBool().wait()) return;
+          // wake up and do something with the request queue
+          std::unique_lock<std::mutex> lock(GetRequestsMtx()); // exclusive
+  access to the request queue Job j = GetRequests().front(); // get the first
+  job GetRequests().pop_front(); // actual dequeue
+          // enqueue the job in the correct worker queue
+          // Worker& worker = GetInterpreter()->GetWorker(device_idx);
+          // ...
+  }
+  */
   virtual void Plan();
 
   // Check whether profiling is required or not.
@@ -64,25 +64,15 @@ class Planner {
   // TODO #18: Make the planner run in a different thread
   void EnqueueFinishedJob(Job job);
 
-  Interpreter* GetInterpreter() {
-    return interpreter_;
-  }
+  Interpreter* GetInterpreter() { return interpreter_; }
 
-  SafeBool& GetSafeBool() {
-    return planner_safe_bool_;
-  }
+  SafeBool& GetSafeBool() { return planner_safe_bool_; }
 
-  std::mutex& GetRequestsMtx() {
-    return requests_.mtx;
-  }
+  std::mutex& GetRequestsMtx() { return requests_.mtx; }
 
-  JobQueue& GetRequests() {
-    return requests_.queue;
-  }
+  JobQueue& GetRequests() { return requests_.queue; }
 
-  int GetWindowSize() {
-    return schedule_window_size_;
-  }
+  int GetWindowSize() { return schedule_window_size_; }
 
   void SetWindowSize(int schedule_window_size);
 
@@ -146,13 +136,9 @@ class Planner {
 class Scheduler {
  public:
   explicit Scheduler(Planner* planner) : planner_(planner) {}
-  bool NeedProfile() {
-    return need_profile_;
-  }
+  bool NeedProfile() { return need_profile_; }
 
-  WorkerType GetWorkerType() {
-    return worker_type_;
-  }
+  WorkerType GetWorkerType() { return worker_type_; }
   virtual ScheduleAction Schedule(JobQueue& requests) = 0;
 
  protected:

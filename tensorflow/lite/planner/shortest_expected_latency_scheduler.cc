@@ -31,10 +31,8 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     for (auto it = requests.begin(); it != requests.end(); ++it) {
       Job& next_job = *it;
       std::pair<int, int64_t> best_subgraph =
-          planner_->GetInterpreter()->GetShortestLatency(next_job.model_id,
-                                               next_job.start_idx,
-                                               0,
-                                               device_waiting);
+          planner_->GetInterpreter()->GetShortestLatency(
+              next_job.model_id, next_job.start_idx, 0, device_waiting);
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
@@ -44,7 +42,8 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     }
     int64_t sched_end = profiling::time::NowMicros();
     // quick check for roughly examining the planning overhead
-    // std::cout << "Time to Find the next job(us) : " <<  sched_end - sched_start << std::endl;
+    // std::cout << "Time to Find the next job(us) : " <<  sched_end -
+    // sched_start << std::endl;
 
     // for some reason, this Job must NOT be a reference (&), otherwise
     // we get a segfault at push_back() below

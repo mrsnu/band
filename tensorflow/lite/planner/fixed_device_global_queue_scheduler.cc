@@ -26,15 +26,18 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
     } else {
       device_idx = planner_->model_device_map_[model_id];
     }
-    TfLiteDeviceFlags device_flag =
-        static_cast<TfLiteDeviceFlags>(device_idx);
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
 
     // TODO: fallback subgraphs for FixedDevicePlanner?
-    int subgraph_idx = planner_->GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
-    SubgraphKey& key = planner_->GetInterpreter()->subgraph(subgraph_idx)->GetKey();
+    int subgraph_idx =
+        planner_->GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
+    SubgraphKey& key =
+        planner_->GetInterpreter()->subgraph(subgraph_idx)->GetKey();
 
-    int64_t profiled = planner_->GetInterpreter()->GetSubgraphProfileResult(key);
-    int64_t expected_latency = planner_->device_waiting_[device_flag] + profiled;
+    int64_t profiled =
+        planner_->GetInterpreter()->GetSubgraphProfileResult(key);
+    int64_t expected_latency =
+        planner_->device_waiting_[device_flag] + profiled;
 
     to_execute.profiled_time = profiled;
     to_execute.expected_latency = expected_latency;

@@ -1,16 +1,16 @@
 #ifndef TENSORFLOW_LITE_PLANNER_UTIL_H_
 #define TENSORFLOW_LITE_PLANNER_UTIL_H_
 
-#include <memory>
-#include <vector>
-#include <string>
 #include <deque>
+#include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
-#include "tensorflow/lite/worker.h"
-#include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/safe_bool.h"
+#include "tensorflow/lite/worker.h"
 
 namespace tflite {
 
