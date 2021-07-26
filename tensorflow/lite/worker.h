@@ -17,11 +17,6 @@ namespace impl {
 
 class Planner;
 
-typedef enum WorkerType {
-  DeviceQueue = 0,
-  GlobalQueue = 1,
-} WorkerType;
-
 class Worker {
  public:
   explicit Worker(std::shared_ptr<Planner> planner,

@@ -18,7 +18,6 @@ class RoundRobinPlanner : public Planner {
       planner_thread_ = std::thread([this]{this->Plan();});
   }
   void Plan() override;
-  bool NeedProfile() override;
 };
 
 }  // namespace impl

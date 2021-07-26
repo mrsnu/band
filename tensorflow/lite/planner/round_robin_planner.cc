@@ -51,15 +51,11 @@ void RoundRobinPlanner::Plan() {
       to_execute.device_id = device_idx;
       to_execute.sched_id = sched_id_++;
 
-      EnqueueToWorker(to_execute);
+      // EnqueueToWorker(to_execute);
       is_device_empty[device_idx] = false;
     }
     request_lock.unlock();
   }
-}
-
-bool RoundRobinPlanner::NeedProfile() {
-  return false;
 }
 
 }  // namespace impl

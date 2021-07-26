@@ -37,7 +37,7 @@ struct InterpreterConfig {
 };
 
 struct PlannerConfig {
-  TfLitePlannerType planner_type = kFixedDevice;
+  std::vector<TfLitePlannerType> planner_types;
   std::string log_path;
   int schedule_window_size = INT_MAX;
 };

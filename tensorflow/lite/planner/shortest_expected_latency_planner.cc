@@ -129,13 +129,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
         most_urgent_job.is_final_subgraph = false;
       }
 
-      EnqueueToWorker(most_urgent_job);
+      // EnqueueToWorker(most_urgent_job);
     }
   }
-}
-
-bool ShortestExpectedLatencyPlanner::NeedProfile() {
-  return true;
 }
 
 }  // namespace impl

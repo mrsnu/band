@@ -135,20 +135,13 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
           std::make_unique<CpuBackendContext>());
 
   // Create a Planner instance.
-  // FixedDevicePlanner is the default planner.
-  planner_type_ = runtime_config.planner_config.planner_type;
-  if (planner_type_ == kRoundRobin) {
-    planner_.reset(new RoundRobinPlanner(this));
-  } else if (planner_type_ == kShortestExpectedLatency) {
-    planner_.reset(new ShortestExpectedLatencyPlanner(this));
-  } else if (planner_type_ == kFixedDeviceGlobalQueue) {
-    planner_.reset(new FixedDeviceGlobalQueuePlanner(this));
-  } else {
-    planner_.reset(new FixedDevicePlanner(this));
-  }
+  planner_.reset(new Planner(this));
+  auto& planner_types = runtime_config.planner_config.planner_types;
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (planner_type_ == kShortestExpectedLatency) {
+  if (std::find(planner_types.begin(),
+                planner_types.end(),
+                kShortestExpectedLatency) != planner_types.end()) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
 
@@ -230,17 +223,21 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create workers.
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    if (planner_type_ == kFixedDeviceGlobalQueue) {
+    if (planner_->GetWorkerType() == GlobalQueue) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
     } else {
       workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
     }
   }
 
-  Init(runtime_config.interpreter_config);
-  planner_->Init(runtime_config.planner_config);
+  int init_status = 0;
+  init_status |= Init(runtime_config.interpreter_config);
+  init_status |= planner_->Init(runtime_config.planner_config);
   for (auto& worker : workers_) {
-    worker.second->Init(runtime_config.worker_config);
+    init_status |= worker.second->Init(runtime_config.worker_config);
+  }
+  if (init_status != 0) {
+    exit(-1);
   }
 }
 

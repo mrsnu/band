@@ -11,12 +11,14 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/planner/util.h"
+#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 
 namespace impl {
 
 class Interpreter;
+class Scheduler;
 
 // The interpreter manages a `Planner`.
 class Planner {
@@ -40,10 +42,10 @@ class Planner {
 		// ...
 	}
 	*/
-  virtual void Plan() = 0;
+  virtual void Plan();
 
   // Check whether profiling is required or not.
-  virtual bool NeedProfile() = 0;
+  bool NeedProfile();
 
   // Enqueues a job to a worker request queue.
   int EnqueueRequest(Job job);
@@ -90,14 +92,14 @@ class Planner {
 
   Job GetFinishedJob(int job_id);
 
- protected:
+  int GetWorkerType();
   // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
   // Copy the Job instances from the `requests_` to the local queue.
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueue(JobQueue& local_jobs);
   // Enqueue the request to the worker.
-  void EnqueueToWorker(Job job);
+  void EnqueueToWorkers(ScheduleAction& action);
   // Update the current device waiting time.
   void UpdateDeviceWaitingTime();
   // Update `model_device_map_`.
@@ -128,7 +130,7 @@ class Planner {
   // Multi-level Local Queue.
   // The the index is closer to 0, the higher the priority.
   std::vector<JobQueue> local_queues_;
-  std::map<int, std::function<ScheduleAction()>> schedulers_;
+  std::map<int, std::unique_ptr<Scheduler>> schedulers_;
 
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;
@@ -138,6 +140,24 @@ class Planner {
   std::string log_path_;
 
   int schedule_window_size_ = INT_MAX;
+};
+
+class Scheduler {
+ public:
+  explicit Scheduler(Planner* planner) : planner_(planner) {}
+  bool NeedProfile() {
+    return need_profile_;
+  }
+
+  WorkerType GetWorkerType() {
+    return worker_type_;
+  }
+  virtual ScheduleAction Schedule(JobQueue& requests) = 0;
+
+ protected:
+  bool need_profile_;
+  WorkerType worker_type_;
+  Planner* planner_;
 };
 
 }  // namespace impl

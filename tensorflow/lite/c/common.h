@@ -50,6 +50,19 @@ typedef enum TfLiteStatus {
   kTfLiteDelegateError = 2
 } TfLiteStatus;
 
+typedef enum WorkerType {
+  DeviceQueue = 1,
+  GlobalQueue = 2,
+} WorkerType;
+
+typedef enum TfLitePlannerType {
+kFixedDevice = 0,
+kRoundRobin = 1,
+kShortestExpectedLatency = 2,
+kFixedDeviceGlobalQueue = 3,
+kNumPlannerTypes = 4
+} TfLitePlannerType;
+
 // The list of external context types known to TF Lite. This list exists solely
 // to avoid conflicts and to ensure ops can share the external contexts they
 // need. Access to the external contexts is controlled by one of the

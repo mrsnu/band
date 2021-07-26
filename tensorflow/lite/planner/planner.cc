@@ -45,7 +45,40 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "is_final_subgraph\n";
   log_file.close();
 
+  auto& planner_types = config.planner_types;
+  local_queues_.resize(planner_types.size());
+  for(int i = 0; i < planner_types.size(); ++i) {
+    if (planner_types[i] == kFixedDevice) {
+      schedulers_[i].reset(new FixedDeviceScheduler(this));
+    } else if (planner_types[i] == kFixedDeviceGlobalQueue) {
+      schedulers_[i].reset(new FixedDeviceGlobalQueueScheduler(this));
+    } else {
+      return kTfLiteError;
+    }
+  }
+
+  // All schedulers must have the same worker type.
+  if (GetWorkerType() == (DeviceQueue | GlobalQueue)) {
+    return kTfLiteError;
+  }
+
   return kTfLiteOk;
+}
+
+bool Planner::NeedProfile() {
+  bool need_profile = false;
+  for (int i = 0; i < schedulers_.size(); ++i) {
+    need_profile |= schedulers_[i]->NeedProfile();
+  }
+  return need_profile;
+}
+
+int Planner::GetWorkerType() {
+  int worker_type = 0;
+  for(int i = 0; i < schedulers_.size(); ++i) {
+    worker_type |= schedulers_[i]->GetWorkerType();
+  }
+  return worker_type;
 }
 
 void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
@@ -61,13 +94,21 @@ void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
   request_lock.unlock();
 }
 
-void Planner::EnqueueToWorker(Job job) {
-  Worker* worker = GetInterpreter()->GetWorker(job.device_id);
-  if (worker == nullptr) return;
-  {
-    std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-    worker->GetDeviceRequests().push_back(job);
-    worker->GetRequestCv().notify_one();
+void Planner::EnqueueToWorkers(ScheduleAction& action) {
+  for (auto& queue : action) {
+    auto device = queue.first;
+    auto& requests = queue.second;
+
+    Worker* worker = GetInterpreter()->GetWorker(device);
+    if (worker == nullptr) return;
+    {
+      std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+      for (auto request : requests) {
+        worker->GetDeviceRequests().push_back(request);
+      }
+      TFLITE_LOG(INFO) << "ENQUEUE TO WORKER";
+      worker->GetRequestCv().notify_one();
+    }
   }
 }
 
@@ -129,6 +170,7 @@ void Planner::WaitAll() {
 }
 
 void Planner::EnqueueFinishedJob(Job job) {
+  TFLITE_LOG(INFO) << "FINISHED";
   std::unique_lock<std::mutex> lock(jobs_finished_.mtx);
   jobs_finished_.queue.push_back(job);
   lock.unlock();
@@ -285,16 +327,21 @@ void Planner::UpdateModelDeviceMapping() {
 }
 
 
+
+
 void Planner::Plan() {
   while (true) {
     if (GetSafeBool().wait()) {
        return;
     }
+
+    CopyToLocalQueue(local_queues_[0]);
+
     UpdateModelDeviceMapping();
-    for (size_t i = 0; i < GetNumQueues(); ++i) {
+    for (size_t i = 0; i < local_queues_.size(); ++i) {
       UpdateDeviceWaitingTime();
-      auto action = schedulers_[i].Schedule();
-      EnqueueJobsToWorkers(action);
+      auto action = schedulers_[i]->Schedule(local_queues_[i]);
+      EnqueueToWorkers(action);
     }
   }
 }

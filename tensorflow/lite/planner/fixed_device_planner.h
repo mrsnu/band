@@ -2,6 +2,7 @@
 #define TENSORFLOW_LITE_PLANNER_FIXED_DEVICE_PLANNER_H_
 
 #include "tensorflow/lite/planner/planner.h"
+#include "tensorflow/lite/planner/util.h"
 #include "tensorflow/lite/interpreter.h"
 
 namespace tflite {
@@ -9,24 +10,25 @@ namespace tflite {
 namespace impl {
 
 // assigns requested model to devices according to model_id.
-class FixedDevicePlanner : public Planner {
+class FixedDeviceScheduler : public Scheduler {
  public:
-  explicit FixedDevicePlanner(Interpreter* interpreter)
-      : Planner(interpreter) {
-    planner_thread_ = std::thread([this]{this->Plan();});
+  explicit FixedDeviceScheduler (Planner* planner) : Scheduler(planner) {
+    need_profile_ = true;
+    worker_type_ = DeviceQueue;
   }
-  void Plan() override;
-  bool NeedProfile() override;
+  ScheduleAction Schedule(JobQueue& requests) override;
 };
 
-class FixedDeviceGlobalQueuePlanner : public Planner {
+class FixedDeviceGlobalQueueScheduler : public Scheduler {
  public:
-  explicit FixedDeviceGlobalQueuePlanner(Interpreter* interpreter)
-      : Planner(interpreter) {
-    planner_thread_ = std::thread([this]{this->Plan();});
+  explicit FixedDeviceGlobalQueueScheduler(Planner* planner) : Scheduler(planner) {
+    // Required for checking SLO violation.
+    // We could add an option to this planner for skipping the SLO check,
+    // in which case this function can return false.
+    need_profile_ = true;
+    worker_type_ = GlobalQueue;
   }
-  void Plan() override;
-  bool NeedProfile() override;
+  ScheduleAction Schedule(JobQueue& requests) override;
 };
 
 }  // namespace impl

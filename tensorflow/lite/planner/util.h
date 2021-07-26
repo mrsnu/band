@@ -19,14 +19,6 @@ namespace impl {
 // The maximum number of available job outputs at one time.
 #define NUM_FINISHED_RECORDS 1000
 
-typedef enum TfLitePlannerType {
-  kFixedDevice = 0,
-  kRoundRobin = 1,
-  kShortestExpectedLatency = 2,
-  kFixedDeviceGlobalQueue = 3,
-  kNumPlannerTypes = 4
-} TfLitePlannerType;
-
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
 // Type definition for the device waiting time.
@@ -39,26 +31,6 @@ using ScheduleAction = std::map<TfLiteDeviceFlags, std::vector<Job>>;
 struct ConcurrentJobQueue {
   JobQueue queue;
   std::mutex mtx;
-};
-
-class Scheduler {
- public:
-  bool NeedProfile() {
-    return need_profile_;
-  }
-
-  WorkerType GetWorkerType() {
-    return worker_type_;
-  }
-
-  ScheduleAction Schedule() {
-    return schedule();
-  }
-
- protected:
-  std::function<ScheduleAction()> schedule;
-  bool need_profile_;
-  WorkerType worker_type_;
 };
 
 }  // namespace impl
