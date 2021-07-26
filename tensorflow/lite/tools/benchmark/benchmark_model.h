@@ -25,7 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/core/util/stats_calculator.h"
-#include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/processors/cpu.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/profiling/memory_info.h"

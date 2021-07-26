@@ -12,7 +12,7 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-#include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/processors/cpu.h"
 
 #include <cstring>
 #if defined __ANDROID__ || defined __linux__
