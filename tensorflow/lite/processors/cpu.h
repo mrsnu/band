@@ -80,6 +80,12 @@ int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set);
 int GetCPUDownTransitionLatencyMs(int cpu);
 int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set);
 
+// Total transition count
+// Note that cores in same cluster (little/big/primary)
+// shares this value
+int GetCPUTotalTransitionCount(int cpu);
+int GetCPUTotalTransitionCount(const CpuSet& cpu_set);
+
 // set explicit thread affinity
 TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);

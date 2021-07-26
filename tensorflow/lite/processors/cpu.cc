@@ -260,8 +260,37 @@ int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set) {
 #endif
 }
 
+// Total transition count
+// Note that cores in same cluster (little/big/primary)
+// shares this value
+int GetCPUTotalTransitionCount(int cpu) {
+#if defined __ANDROID__ || defined __linux__
+  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                         "/cpufreq/stats/total_trans",
+                     "/sys/devices/system/cpu/cpufreq/policy" +
+                         std::to_string(cpu) + "/stats/total_trans"});
+#endif
+  return -1;
+}
+
+int GetCPUTotalTransitionCount(const CpuSet& cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  int accumulated_transition_count = 0;
+
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (cpu_set.IsEnabled(i))
+      accumulated_transition_count += GetCPUTotalTransitionCount(i);
+  }
+
+  return accumulated_transition_count / cpu_set.NumEnabled();
+#elif
+  return -1;
+#endif
+}
+
 #if defined __ANDROID__ || defined __linux__
 static int get_max_freq_khz(int cpuid) {
+
   // first try, for all possible cpu
   char path[256];
   sprintf(path, "/sys/devices/system/cpu/cpufreq/stats/cpu%d/time_in_state",
