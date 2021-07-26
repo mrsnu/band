@@ -24,6 +24,20 @@ cc_library(
 )
 
 cc_library(
+    name = "gpu",
+    srcs = [
+        "gpu.cc",
+    ],
+    hdrs = [
+        "gpu.h",
+    ],
+    deps = [
+        ":util",
+        "//tensorflow/lite/c:common",
+    ],
+)
+
+cc_library(
     name = "util",
     srcs = [
         "util.cc",
