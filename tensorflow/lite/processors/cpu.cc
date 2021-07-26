@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the License.
 
 #include "tensorflow/lite/processors/cpu.h"
+#include "tensorflow/lite/processors/util.h"
 
 #include <cstring>
 #if defined __ANDROID__ || defined __linux__
@@ -104,26 +105,10 @@ int GetBigCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteBig).NumEnabled(); }
 
 int GetCPUScalingMaxFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
-  char path[256];
-  // first try from cpu id
-  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_max_freq", cpu);
-  FILE* fp = fopen(path, "rb");
-
-  // second try from policy
-  if (!fp) {
-    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/scaling_max_freq",
-            cpu);
-    fp = fopen(path, "rb");
-  }
-
-  if (fp) {
-    int freq_khz = 0;
-    fscanf(fp, "%d", &freq_khz);
-    fclose(fp);
-    return freq_khz;
-  } else {
-    return -1;
-  }
+  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                         "/cpufreq/scaling_max_freq",
+                     "/sys/devices/system/cpu/cpufreq/policy" +
+                         std::to_string(cpu) + "/scaling_max_freq"});
 #elif
   return -1;
 #endif
@@ -145,26 +130,10 @@ int GetCPUScalingMaxFrequencyKhz(const CpuSet& cpu_set) {
 
 int GetCPUScalingMinFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
-  char path[256];
-  // first try from cpu id
-  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_min_freq", cpu);
-  FILE* fp = fopen(path, "rb");
-
-  // second try from policy
-  if (!fp) {
-    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/scaling_min_freq",
-            cpu);
-    fp = fopen(path, "rb");
-  }
-
-  if (fp) {
-    int freq_khz = 0;
-    fscanf(fp, "%d", &freq_khz);
-    fclose(fp);
-    return freq_khz;
-  } else {
-    return -1;
-  }
+  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                         "/cpufreq/scaling_min_freq",
+                     "/sys/devices/system/cpu/cpufreq/policy" +
+                         std::to_string(cpu) + "/scaling_min_freq"});
 #elif
   return -1;
 #endif
@@ -186,26 +155,10 @@ int GetCPUScalingMinFrequencyKhz(const CpuSet& cpu_set) {
 
 int GetCPUScalingFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
-  char path[256];
-  // first try from cpu id
-  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", cpu);
-  FILE* fp = fopen(path, "rb");
-
-  // second try from policy
-  if (!fp) {
-    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/scaling_cur_freq",
-            cpu);
-    fp = fopen(path, "rb");
-  }
-
-  if (fp) {
-    int freq_khz = 0;
-    fscanf(fp, "%d", &freq_khz);
-    fclose(fp);
-    return freq_khz;
-  } else {
-    return -1;
-  }
+  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                         "/cpufreq/scaling_cur_freq",
+                     "/sys/devices/system/cpu/cpufreq/policy" +
+                         std::to_string(cpu) + "/scaling_cur_freq"});
 #elif
   return -1;
 #endif
@@ -227,26 +180,10 @@ int GetCPUScalingFrequencyKhz(const CpuSet& cpu_set) {
 
 int GetCPUFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
-  char path[256];
-  // first try from cpu id
-  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_cur_freq", cpu);
-  FILE* fp = fopen(path, "rb");
-
-  // second try from policy
-  if (!fp) {
-    sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/cpuinfo_cur_freq",
-            cpu);
-    fp = fopen(path, "rb");
-  }
-
-  if (fp) {
-    int freq_khz = 0;
-    fscanf(fp, "%d", &freq_khz);
-    fclose(fp);
-    return freq_khz;
-  } else {
-    return -1;
-  }
+  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                         "/cpufreq/cpuinfo_cur_freq",
+                     "/sys/devices/system/cpu/cpufreq/policy" +
+                         std::to_string(cpu) + "/cpuinfo_cur_freq"});
 #elif
   return -1;
 #endif
@@ -268,34 +205,10 @@ int GetCPUFrequencyKhz(const CpuSet& cpu_set) {
 
 int GetCPUUpTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
-  char path[256];
-  // first try from transition latency
-  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_transition_latency", cpu);
-  FILE* fp = fopen(path, "rb");
-  
-  if (fp) {
-    int latency_ns = 0;
-    fscanf(fp, "%d", &latency_ns);
-    fclose(fp);
-    if (latency_ns != 0) {
-      // nanoseconds to milliseconds
-      return latency_ns * 1000000;
-    }
-  }
-
-  // second try from schedutil policy
-  sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/schedutil/up_rate_limit_us",
-          cpu);
-  fp = fopen(path, "rb");
-
-  if (fp) {
-    int latency_us = 0;
-    fscanf(fp, "%d", &latency_us);
-    fclose(fp);
-    // microseconds to milliseconds
-    return latency_us * 1000;
-  }
-
+  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                         "/cpufreq/cpuinfo_transition_latency",
+                     "/sys/devices/system/cpu/cpufreq/policy" +
+                         std::to_string(cpu) + "/schedutil/up_rate_limit_us"});
 #endif
   return -1;
 }
@@ -315,34 +228,10 @@ int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set) {
 
 int GetCPUDownTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
-  char path[256];
-  // first try from transition latency
-  sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_transition_latency", cpu);
-  FILE* fp = fopen(path, "rb");
-  
-  if (fp) {
-    int latency_ns = 0;
-    fscanf(fp, "%d", &latency_ns);
-    fclose(fp);
-    if (latency_ns != 0) {
-      // nanoseconds to milliseconds
-      return latency_ns * 1000000;
-    }
-  }
-
-  // second try from schedutil policy
-  sprintf(path, "/sys/devices/system/cpu/cpufreq/policy%d/schedutil/down_rate_limit_us",
-          cpu);
-  fp = fopen(path, "rb");
-
-  if (fp) {
-    int latency_us = 0;
-    fscanf(fp, "%d", &latency_us);
-    fclose(fp);
-    // microseconds to milliseconds
-    return latency_us * 1000;
-  }
-
+  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                         "/cpufreq/cpuinfo_transition_latency",
+                     "/sys/devices/system/cpu/cpufreq/policy" +
+                         std::to_string(cpu) + "/schedutil/down_rate_limit_us"});
 #endif
   return -1;
 }
