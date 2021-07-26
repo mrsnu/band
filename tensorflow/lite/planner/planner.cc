@@ -7,6 +7,7 @@
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/processors/gpu.h"
 #include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
@@ -398,14 +399,33 @@ void Planner::PrepareReenqueue(Job& job) {
       GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
 }
 
-void Planner::UpdateJobWorkerStatus(Job& job, Worker* worker) const {
+void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
   if (log_processor_frequency_) {
-    std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
-    auto cpu_set = worker->GetWorkerThreadAffinity();
-    job.start_frequency = GetCPUFrequencyKhz(cpu_set);
-    job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
-    job.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
-    job.start_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
+    if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
+      std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
+      auto cpu_set = worker->GetWorkerThreadAffinity();
+      job.start_frequency = GetCPUFrequencyKhz(cpu_set);
+      job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
+      job.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
+      job.start_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
+    } else if (job.device_id == kTfLiteGPU) {
+      job.start_frequency = GetGPUFrequencyKhz();
+    }
+  }
+}
+
+void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
+  if (log_processor_frequency_) {
+    if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
+      std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
+      auto cpu_set = worker->GetWorkerThreadAffinity();
+      job.end_frequency = GetCPUFrequencyKhz(cpu_set);
+      job.end_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
+      job.end_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
+      job.end_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
+    } else if (job.device_id == kTfLiteGPU) {
+      job.end_frequency = GetGPUFrequencyKhz();
+    }
   }
 }
 

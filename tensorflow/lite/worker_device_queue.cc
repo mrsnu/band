@@ -109,13 +109,7 @@ void DeviceQueueWorker::Work() {
             planner_ptr->EnqueueBatch(job.following_jobs);
           }
           TryCopyOutputTensors(job);
-          if (planner_ptr->GetLogProcessorFrequency()) {
-            std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
-            job.end_frequency = GetCPUFrequencyKhz(cpu_set_);
-            job.end_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set_);
-            job.end_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set_);
-            job.end_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set_);
-          }
+          planner_ptr->UpdateJobEndStatus(job, this);
           job.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {

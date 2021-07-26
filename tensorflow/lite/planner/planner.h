@@ -61,14 +61,16 @@ class Planner {
 
   void SetWindowSize(int schedule_window_size);
 
-  bool GetLogProcessorFrequency() const { return log_processor_frequency_; }
-
   const std::map<int, int>& GetModelExecutionCounts() const {
     return model_execution_count_;
   }
 
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
+  
+  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
+  void UpdateJobStartStatus(Job& job, Worker* worker) const;
+  void UpdateJobEndStatus(Job& job, Worker* worker) const;
 
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
