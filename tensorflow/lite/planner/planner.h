@@ -83,21 +83,21 @@ class Planner {
 
   void SetWindowSize(int schedule_window_size);
 
-  bool GetLogProcessorFrequency() const { return log_processor_frequency_; }
-
   const std::map<int, int>& GetModelExecutionCounts() const {
     return model_execution_count_;
   }
 
   Job GetFinishedJob(int job_id);
+  
+  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
+  void UpdateJobStartStatus(Job& job, Worker* worker) const;
+  void UpdateJobEndStatus(Job& job, Worker* worker) const;
 
  protected:
   // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
   // Copy the Job instances from the `requests_` to the local queue.
   JobQueue CopyToLocalQueue();
-  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
-  void UpdateJobWorkerStatus(Job& job, Worker* worker) const;
 
   std::thread planner_thread_;
   int sched_id_ = 0;
