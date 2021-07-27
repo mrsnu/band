@@ -6,7 +6,7 @@ namespace impl {
 
 ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
   ScheduleAction action;
-  DeviceWaitingTime device_waiting = planner_->device_waiting_;
+  DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
   while (!requests.empty()) {
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
@@ -31,7 +31,7 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     for (auto it = requests.begin(); it != requests.end(); ++it) {
       Job& next_job = *it;
       std::pair<int, int64_t> best_subgraph =
-          planner_->GetInterpreter()->GetShortestLatency(
+          GetInterpreter()->GetShortestLatency(
               next_job.model_id, next_job.start_idx, 0, device_waiting);
 
       if (largest_shortest_latency < best_subgraph.second) {
@@ -53,22 +53,22 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     requests.erase(requests.begin() + target_job_idx);
 
     SubgraphKey& to_execute =
-        planner_->GetInterpreter()->subgraph(target_subgraph)->GetKey();
+        GetInterpreter()->subgraph(target_subgraph)->GetKey();
     most_urgent_job.start_idx = to_execute.start_idx;
     most_urgent_job.end_idx = to_execute.end_idx;
     most_urgent_job.subgraph_idx = target_subgraph;
     most_urgent_job.device_id = to_execute.device_flag;
     most_urgent_job.profiled_time =
-        planner_->GetInterpreter()->GetSubgraphProfileResult(to_execute);
+        GetInterpreter()->GetSubgraphProfileResult(to_execute);
 
     if (most_urgent_job.expected_latency == 0) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
-      most_urgent_job.sched_id = planner_->sched_id_++;
+      most_urgent_job.sched_id = IssueSchedId();
     }
 
     ModelSpec& model_spec =
-        planner_->GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
+        GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
     if (most_urgent_job.end_idx < model_spec.num_ops - 1) {
       Job remaining_ops(most_urgent_job.model_id);
       remaining_ops.enqueue_time = most_urgent_job.enqueue_time;

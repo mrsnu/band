@@ -90,6 +90,7 @@ class Planner {
   void CopyToLocalQueue(JobQueue& local_jobs);
   // Enqueue the request to the worker.
   void EnqueueToWorkers(ScheduleAction& action);
+  // Check if the job violated the specified SLO.
   void CheckSLOViolation(Job& job);
   // Update the current device waiting time.
   void UpdateDeviceWaitingTime();
@@ -98,11 +99,11 @@ class Planner {
   // Get idle devices from `device_waiting_`.
   std::set<TfLiteDeviceFlags> GetIdleDevices();
 
-  std::thread planner_thread_;
-  int sched_id_ = 0;
-  DeviceWaitingTime device_waiting_;
-  // Map structure to find assigned device of model idx (model_id, device flag)
-  std::map<int, int> model_device_map_;
+  DeviceWaitintTime& GetDeviceWaitingTime() { return device_waiting_; }
+
+  int IssueSchedId() { return sched_id_++; }
+
+  std::map<int, int>& GetModelDeviceMap() { return model_device_map_; }
 
  private:
   bool IsJobIdValid(int job_id);
@@ -131,15 +132,25 @@ class Planner {
   std::string log_path_;
 
   int schedule_window_size_ = INT_MAX;
+
+  std::thread planner_thread_;
+  int sched_id_ = 0;
+  DeviceWaitingTime device_waiting_;
+  // Map structure to find assigned device of model idx (model_id, device flag)
+  std::map<int, int> model_device_map_;
 };
 
 class Scheduler {
  public:
   explicit Scheduler(Planner* planner) : planner_(planner) {}
-  bool NeedProfile() { return need_profile_; }
-
-  WorkerType GetWorkerType() { return worker_type_; }
   virtual ScheduleAction Schedule(JobQueue& requests) = 0;
+  Interpreter* GetInterpreter() { return planner_->interpreter_; }
+  int IssueSchedId() { return planner_->IssueSchedId(); }
+  DeviceWaitingTime& GetDeviceWaitingTime() {
+    return planner_->GetDeviceWaitingTime();
+  }
+  bool NeedProfile() { return need_profile_; }
+  WorkerType GetWorkerType() { return worker_type_; }
 
  protected:
   bool need_profile_;

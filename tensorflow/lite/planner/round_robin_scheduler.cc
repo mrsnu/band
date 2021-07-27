@@ -10,16 +10,15 @@ ScheduleAction RoundRobinScheduler::Schedule(JobQueue& requests) {
     while (!requests.empty()) {
       auto available_job = std::find_if(
           requests.begin(), requests.end(), [this, device](const Job& job) {
-            return planner_->GetInterpreter()->GetSubgraphIdx(job.model_id,
-                                                              device) != -1;
+            return GetInterpreter()->GetSubgraphIdx(job.model_id, device) != -1;
           });
       if (available_job != requests.end()) {
         Job to_execute = *available_job;
-        int subgraph_idx = planner_->GetInterpreter()->GetSubgraphIdx(
-            to_execute.model_id, device);
+        int subgraph_idx =
+            GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device);
         to_execute.subgraph_idx = subgraph_idx;
         to_execute.device_id = device;
-        to_execute.sched_id = planner_->sched_id_++;
+        to_execute.sched_id = IssueSchedId();
 
         action[device].push_back(to_execute);
         requests.erase(available_job);
