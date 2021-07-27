@@ -360,9 +360,7 @@ void Planner::Plan() {
     if (GetSafeBool().wait()) {
       return;
     }
-
     CopyToLocalQueue(local_queues_[0]);
-
     UpdateModelDeviceMapping();
     for (size_t i = 0; i < local_queues_.size(); ++i) {
       UpdateDeviceWaitingTime();

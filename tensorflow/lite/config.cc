@@ -37,7 +37,7 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
 
   TFLITE_LOG(INFO) << root;
 
-  if (ValidateJsonConfig(root, {"log_path", "planner_types"}) != kTfLiteOk) {
+  if (ValidateJsonConfig(root, {"log_path", "schedulers"}) != kTfLiteOk) {
     return kTfLiteError;
   }
 

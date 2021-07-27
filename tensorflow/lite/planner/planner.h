@@ -88,6 +88,8 @@ class Planner {
 
   // Checks if the schedulers can handle fallback subgraphs.
   // Returns true if any of the scheduler can handle fallback subgraphs.
+  // But, note that having both types of scheduler (w/ fallback, w/o fallback),
+  // may lead to unexpected results.
   bool RequireFallbackSubgraphs();
 
   // Write job logs and delete the job from the finished queue.
