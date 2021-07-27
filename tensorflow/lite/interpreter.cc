@@ -20,7 +20,6 @@ limitations under the License.
 #include <cstdarg>
 #include <cstdint>
 #include <cstring>
-#include <future>
 #include <utility>
 #include <list>
 
@@ -833,10 +832,7 @@ void Interpreter::Profile(int model_id) {
                        << subgraph_key.GetOutputOpsString() << ".";
 
     } else {
-      std::promise<int64_t> latency_promise;
-      auto latency_future = latency_promise.get_future();
-
-      std::thread t([&](std::promise<int64_t> &&latency_promise) {
+      std::thread t([&]() {
         auto cpu_set = workers_[subgraph_key.device_flag]->GetWorkerThreadAffinity();
         SetCPUThreadAffinity(cpu_set);
         if (subgraph_key.device_flag == kTfLiteCPU ||
@@ -854,26 +850,22 @@ void Interpreter::Profile(int model_id) {
           subgraph->Invoke();
         }
 
-        latency_promise.set_value(timer.GetAverageElapsedTime<std::chrono::microseconds>());
+        int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
 
-      }, std::move(latency_promise));
+        moving_averaged_latencies_[subgraph_key] = latency;
+        // record the profiled latency for subsequent benchmark runs
+        profile_database_[subgraph_key] = latency;
+
+        TFLITE_LOG(INFO) << "Profiling result\n"
+                         << " model=" << subgraph_key.model_id
+                         << " avg=" << latency << " us"
+                         << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
+                         << " start="
+                         << subgraph_key.GetInputOpsString()
+                         << " end=" 
+                         << subgraph_key.GetOutputOpsString() << ".";
+      });
       t.join();
-
-      int64_t latency = latency_future.get();
-
-      moving_averaged_latencies_[subgraph_key] = latency;
-      // record the profiled latency for subsequent benchmark runs
-      profile_database_[subgraph_key] = latency;
-
-      TFLITE_LOG(INFO) << "Profiling result\n"
-                       << " model=" << subgraph_key.model_id
-                       << " avg=" << latency << " us"
-                       << " device="
-                       << TfLiteDeviceGetName(subgraph_key.device_flag)
-                       << " start="
-                       << subgraph_key.GetInputOpsString()
-                       << " end=" 
-                       << subgraph_key.GetOutputOpsString() << ".";
     }
   }
 
