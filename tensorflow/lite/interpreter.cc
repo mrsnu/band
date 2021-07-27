@@ -819,6 +819,7 @@ void Interpreter::Profile(int model_id) {
       // if an entry for this SubgraphKey exists in the profiled data,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
+      // TODO: Consider affinity of worker thread
       moving_averaged_latencies_[subgraph_key] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
