@@ -284,13 +284,21 @@ void Planner::FlushFinishedJobs() {
       }
 
       // write all timestamp statistics to log file
-      log_file << job.sched_id << "\t" << job.model_fname << "\t"
-               << job.model_id << "\t" << job.device_id << "\t" << job.start_idx
-               << "\t" << job.end_idx << "\t" << job.subgraph_idx << "\t"
-               << job.enqueue_time << "\t" << job.invoke_time << "\t"
-               << job.end_time << "\t" << job.profiled_time << "\t"
-               << job.expected_latency << "\t" << job.slo_us << "\t"
-               << job.status << "\t" << job.is_final_subgraph << "\n";
+      log_file << job.sched_id << "\t"
+               << job.model_fname << "\t"
+               << job.model_id << "\t"
+               << job.device_id << "\t"
+               << job.start_idx << "\t"
+               << job.end_idx << "\t"
+               << job.subgraph_idx << "\t"
+               << job.enqueue_time << "\t"
+               << job.invoke_time << "\t"
+               << job.end_time << "\t"
+               << job.profiled_time << "\t"
+               << job.expected_latency << "\t"
+               << job.slo_us << "\t"
+               << job.status << "\t"
+               << job.is_final_subgraph << "\n";
     }
     log_file.close();
   } else {

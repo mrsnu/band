@@ -238,6 +238,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     init_status |= worker.second->Init(runtime_config.worker_config);
   }
   if (init_status != 0) {
+    TFLITE_LOG(ERROR) << "Failed to initialize configurations.";
     exit(-1);
   }
 }
