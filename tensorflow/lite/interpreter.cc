@@ -136,12 +136,12 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create a Planner instance.
   planner_.reset(new Planner(this));
-  auto& planner_types = runtime_config.planner_config.planner_types;
+  auto& schedulers = runtime_config.planner_config.schedulers;
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (std::find(planner_types.begin(),
-                planner_types.end(),
-                kShortestExpectedLatency) != planner_types.end()) {
+  if (std::find(schedulers.begin(),
+                schedulers.end(),
+                kShortestExpectedLatency) != schedulers.end()) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
 
@@ -222,6 +222,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 #endif  // defined(__ANDROID__)
 
   // Create workers.
+  // If the schedulers 
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
     if (planner_->GetWorkerType() == kGlobalQueue) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
@@ -1026,9 +1027,7 @@ void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   TfLiteDeviceFlags prev_device;
   int subgraph_min = 0;
 
-  if (planner_type_ == kFixedDevice ||
-      planner_type_ == kRoundRobin ||
-      planner_type_ == kFixedDeviceGlobalQueue) {
+  if (!planner_->RequireFallbackSubgraphs()) {
     splitted_op_range.push_back(SubgraphKey(model_id, device_flag, 0, num_ops - 1));
     return;
   }

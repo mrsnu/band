@@ -47,16 +47,16 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "is_final_subgraph\n";
   log_file.close();
 
-  auto& planner_types = config.planner_types;
-  local_queues_.resize(planner_types.size());
-  for (int i = 0; i < planner_types.size(); ++i) {
-    if (planner_types[i] == kFixedDevice) {
+  auto& schedulers = config.schedulers;
+  local_queues_.resize(schedulers.size());
+  for (int i = 0; i < schedulers.size(); ++i) {
+    if (schedulers[i] == kFixedDevice) {
       schedulers_[i].reset(new FixedDeviceScheduler(this));
-    } else if (planner_types[i] == kFixedDeviceGlobalQueue) {
+    } else if (schedulers[i] == kFixedDeviceGlobalQueue) {
       schedulers_[i].reset(new FixedDeviceGlobalQueueScheduler(this));
-    } else if (planner_types[i] == kRoundRobin) {
+    } else if (schedulers[i] == kRoundRobin) {
       schedulers_[i].reset(new RoundRobinScheduler(this));
-    } else if (planner_types[i] == kShortestExpectedLatency) {
+    } else if (schedulers[i] == kShortestExpectedLatency) {
       schedulers_[i].reset(new ShortestExpectedLatencyScheduler(this));
     } else {
       return kTfLiteError;
@@ -85,6 +85,14 @@ int Planner::GetWorkerType() {
     worker_type |= schedulers_[i]->GetWorkerType();
   }
   return worker_type;
+}
+
+bool Planner::RequireFallbackSubgraphs() {
+  bool require_fallback = false;
+  for (int i = 0; i < schedulers_.size(); ++i) {
+    require_fallback |= schedulers_[i]->NeedFallbackSubgraphs();
+  }
+  return require_fallback;
 }
 
 void Planner::CopyToLocalQueue(JobQueue& local_jobs) {

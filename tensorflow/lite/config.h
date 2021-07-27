@@ -37,7 +37,7 @@ struct InterpreterConfig {
 };
 
 struct PlannerConfig {
-  std::vector<TfLitePlannerType> planner_types;
+  std::vector<TfLiteSchedulerType> schedulers;
   std::string log_path;
   int schedule_window_size = INT_MAX;
 };

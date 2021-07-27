@@ -67,13 +67,13 @@ typedef enum WorkerType {
   kGlobalQueue = 2,
 } WorkerType;
 
-typedef enum TfLitePlannerType {
+typedef enum TfLiteSchedulerType {
   kFixedDevice = 0,
   kRoundRobin = 1,
   kShortestExpectedLatency = 2,
   kFixedDeviceGlobalQueue = 3,
-  kNumPlannerTypes = 4
-} TfLitePlannerType;
+  kNumSchedulerTypes = 4
+} TfLiteSchedulerType;
 
 // Forward declare so dependent structs and methods can reference these types
 // prior to the struct definitions.

@@ -12,6 +12,7 @@ class ShortestExpectedLatencyScheduler : public Scheduler {
   explicit ShortestExpectedLatencyScheduler(Planner* planner)
       : Scheduler(planner) {
     need_profile_ = true;
+    need_fallback_subgraphs_ = true;
     worker_type_ = kDeviceQueue;
   }
   ScheduleAction Schedule(JobQueue& requests) override;

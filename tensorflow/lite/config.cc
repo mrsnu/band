@@ -73,13 +73,13 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     }
   }
   // 3. Planner type
-  for (int i = 0; i < root["planner_types"].size(); ++i) {
-    int planner_id = root["planner_types"][i].asInt();
-    if (planner_id < kFixedDevice || planner_id >= kNumPlannerTypes) {
-      TFLITE_LOG(ERROR) << "Wrong `planner` argument is given.";
+  for (int i = 0; i < root["schedulers"].size(); ++i) {
+    int scheduler_id = root["schedulers"][i].asInt();
+    if (scheduler_id < kFixedDevice || scheduler_id >= kNumSchedulerTypes) {
+      TFLITE_LOG(ERROR) << "Wrong `schedulers` argument is given.";
       return kTfLiteError;
     }
-    planner_config.planner_types.push_back(static_cast<TfLitePlannerType>(planner_id));
+    planner_config.schedulers.push_back(static_cast<TfLiteSchedulerType>(scheduler_id));
   }
 
   // Set Worker configs

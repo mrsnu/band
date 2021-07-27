@@ -80,26 +80,39 @@ class Planner {
     return model_execution_count_;
   }
 
+  // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
 
+  // Get which worker types the scheduers require.
   int GetWorkerType();
+
+  // Checks if the schedulers can handle fallback subgraphs.
+  // Returns true if any of the scheduler can handle fallback subgraphs.
+  bool RequireFallbackSubgraphs();
+
   // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
+
   // Copy the Job instances from the `requests_` to the local queue.
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueue(JobQueue& local_jobs);
+
   // Enqueue the request to the worker.
   void EnqueueToWorkers(ScheduleAction& action);
+
   // Check if the job violated the specified SLO.
   void CheckSLOViolation(Job& job);
+
   // Update the current device waiting time.
   void UpdateDeviceWaitingTime();
+
   // Update `model_device_map_`.
   void UpdateModelDeviceMapping();
+
   // Get idle devices from `device_waiting_`.
   std::set<TfLiteDeviceFlags> GetIdleDevices();
 
-  DeviceWaitintTime& GetDeviceWaitingTime() { return device_waiting_; }
+  DeviceWaitingTime& GetDeviceWaitingTime() { return device_waiting_; }
 
   int IssueSchedId() { return sched_id_++; }
 
@@ -144,16 +157,18 @@ class Scheduler {
  public:
   explicit Scheduler(Planner* planner) : planner_(planner) {}
   virtual ScheduleAction Schedule(JobQueue& requests) = 0;
-  Interpreter* GetInterpreter() { return planner_->interpreter_; }
+  Interpreter* GetInterpreter() { return planner_->GetInterpreter(); }
   int IssueSchedId() { return planner_->IssueSchedId(); }
   DeviceWaitingTime& GetDeviceWaitingTime() {
     return planner_->GetDeviceWaitingTime();
   }
   bool NeedProfile() { return need_profile_; }
+  bool NeedFallbackSubgraphs() { return need_fallback_subgraphs_; }
   WorkerType GetWorkerType() { return worker_type_; }
 
  protected:
   bool need_profile_;
+  bool need_fallback_subgraphs_;
   WorkerType worker_type_;
   Planner* planner_;
 };
