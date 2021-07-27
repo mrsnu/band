@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstdarg>
 #include <cstdint>
 #include <cstring>
+#include <future>
 #include <utility>
 #include <list>
 
@@ -831,18 +832,35 @@ void Interpreter::Profile(int model_id) {
                        << subgraph_key.GetOutputOpsString() << ".";
 
     } else {
-      // otherwise, proceed as normal
-      for (int i = 0; i < num_warmups_; i++) {
-        subgraph->Invoke();
-      }
-      timer.ClearRecords();
-      for (int i = 0; i < num_runs_; i++) {
-        subgraph->Invoke();
-      }
+      std::promise<int64_t> latency_promise;
+      auto latency_future = latency_promise.get_future();
 
-      int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
+      std::thread t([&](std::promise<int64_t> &&latency_promise) {
+        auto cpu_set = workers_[subgraph_key.device_flag]->GetWorkerThreadAffinity();
+        SetCPUThreadAffinity(cpu_set);
+        if (subgraph_key.device_flag == kTfLiteCPU ||
+            subgraph_key.device_flag == kTfLiteCPUFallback) {
+          // Update internal cpu backend (ruy)
+          GetCpuBackendContext()->internal_backend_context()->SetCpuSet(
+              std::this_thread::get_id(), cpu_set);
+        }
+        
+        for (int i = 0; i < num_warmups_; i++) {
+          subgraph->Invoke();
+        }
+        timer.ClearRecords();
+        for (int i = 0; i < num_runs_; i++) {
+          subgraph->Invoke();
+        }
+
+        latency_promise.set_value(timer.GetAverageElapsedTime<std::chrono::microseconds>());
+
+      }, std::move(latency_promise));
+      t.join();
+
+      int64_t latency = latency_future.get();
+
       moving_averaged_latencies_[subgraph_key] = latency;
-
       // record the profiled latency for subsequent benchmark runs
       profile_database_[subgraph_key] = latency;
 

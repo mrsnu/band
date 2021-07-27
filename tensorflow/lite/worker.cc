@@ -76,6 +76,11 @@ bool Worker::IsAvailable() {
   return is_available_;
 }
 
+const CpuSet& Worker::GetWorkerThreadAffinity() const {
+  std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
+  return cpu_set_;
+}
+
 JobQueue& Worker::GetDeviceRequests() {
   TFLITE_LOG(ERROR) << "Worker::GetDeviceRequests() Not implemented.";
   return requests_;

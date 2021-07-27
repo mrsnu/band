@@ -31,7 +31,7 @@ class Worker {
   TfLiteStatus UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads);
   void WaitUntilDeviceAvailable(Subgraph& subgraph);
   bool IsAvailable();
-
+  const CpuSet& GetWorkerThreadAffinity() const;
   virtual int64_t GetWaitingTime() = 0;
   virtual bool GiveJob(Job& job) = 0;
 
@@ -63,9 +63,14 @@ class Worker {
   JobQueue requests_;
 
   CpuSet cpu_set_;
+<<<<<<< HEAD
   int num_threads_;
   bool need_cpu_update_ = false;
   std::mutex cpu_mtx_;
+=======
+  bool need_cpu_set_update_ = false;
+  mutable std::mutex cpu_set_mtx_;
+>>>>>>> ed16ccc... affinity aware profile
 
   TfLiteDeviceFlags device_flag_;
 
