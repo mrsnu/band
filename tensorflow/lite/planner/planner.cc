@@ -98,11 +98,10 @@ int Planner::GetWorkerType() {
 }
 
 bool Planner::RequireFallbackSubgraphs() {
-  bool require_fallback = false;
   for (int i = 0; i < schedulers_.size(); ++i) {
-    require_fallback |= schedulers_[i]->NeedFallbackSubgraphs();
+    if (schedulers_[i]->NeedFallbackSubgraphs()) return true;
   }
-  return require_fallback;
+  return false;
 }
 
 void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
