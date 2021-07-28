@@ -72,11 +72,10 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
 }
 
 bool Planner::NeedProfile() {
-  bool need_profile = false;
   for (int i = 0; i < schedulers_.size(); ++i) {
-    need_profile |= schedulers_[i]->NeedProfile();
+    if (schedulers_[i]->NeedProfile()) return true;
   }
-  return need_profile;
+  return false;
 }
 
 int Planner::GetWorkerType() {

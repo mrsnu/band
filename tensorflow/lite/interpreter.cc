@@ -222,7 +222,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 #endif  // defined(__ANDROID__)
 
   // Create workers.
-  // If the schedulers 
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
     if (planner_->GetWorkerType() == kGlobalQueue) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);

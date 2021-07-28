@@ -62,6 +62,8 @@ typedef enum TfLiteExternalContextType {
   kTfLiteMaxExternalContexts = 4
 } TfLiteExternalContextType;
 
+// this is being used in bit-wise ops,
+// so new types should be in power of 2s (4, 8, ...)
 typedef enum WorkerType {
   kDeviceQueue = 1,
   kGlobalQueue = 2,

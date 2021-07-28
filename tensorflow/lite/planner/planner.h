@@ -28,21 +28,7 @@ class Planner {
 
   TfLiteStatus Init(PlannerConfig& config);
 
-  /*
-  Derived classes should generally follow this template when implementing
-  `Plan()`: while (true) {
-          // sleep until somebody wakes me up with GetSafeBool().notify()
-          if (GetSafeBool().wait()) return;
-          // wake up and do something with the request queue
-          std::unique_lock<std::mutex> lock(GetRequestsMtx()); // exclusive
-  access to the request queue Job j = GetRequests().front(); // get the first
-  job GetRequests().pop_front(); // actual dequeue
-          // enqueue the job in the correct worker queue
-          // Worker& worker = GetInterpreter()->GetWorker(device_idx);
-          // ...
-  }
-  */
-  virtual void Plan();
+  void Plan();
 
   // Check whether profiling is required or not.
   bool NeedProfile();
@@ -83,7 +69,7 @@ class Planner {
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
 
-  // Get which worker types the scheduers require.
+  // Get which worker types the schedulers require.
   int GetWorkerType();
 
   // Checks if the schedulers can handle fallback subgraphs.
@@ -103,6 +89,8 @@ class Planner {
   void EnqueueToWorkers(ScheduleAction& action);
 
   // Check if the job violated the specified SLO.
+  // This func assumes that device_waiting_, job.profiled_time,
+  // job.device_id, and job.enqueue_time are all up to date.
   void CheckSLOViolation(Job& job);
 
   // Update the current device waiting time.
@@ -135,7 +123,7 @@ class Planner {
   ConcurrentJobQueue requests_;
 
   // Multi-level Local Queue.
-  // The the index is closer to 0, the higher the priority.
+  // The closer the index is to 0, the higher the priority.
   std::vector<JobQueue> local_queues_;
   std::map<int, std::unique_ptr<Scheduler>> schedulers_;
 
