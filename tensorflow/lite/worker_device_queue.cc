@@ -76,20 +76,9 @@ void DeviceQueueWorker::Work() {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
 
-      {
-        std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
-        if (need_cpu_set_update_) {
-          need_cpu_set_update_ = false;
-
-          auto internal_backend = interpreter_ptr->GetCpuBackendContext()
-                                      ->internal_backend_context();
-          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
-
-          if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
-            // TODO #21: Handle errors in multi-thread environment
-            break;
-          }
-        }
+      if (TryUpdateWorkerThread() != kTfLiteOk) {
+        // TODO #21: Handle errors in multi-thread environment
+        break;
       }
 
       if (CopyInputTensors(job) == kTfLiteOk) {

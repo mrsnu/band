@@ -60,6 +60,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["model_profile"].isNull()) {
     interpreter_config.profile_data_path = root["model_profile"].asString();
   }
+  // 4. Number of threads
+  if (!root["num_threads"].isNull()) {
+    interpreter_config.num_threads = root["num_threads"].asInt();
+  }
 
   // Set Planner configs
   // 1. Log path
@@ -81,23 +85,42 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   planner_config.planner_type = static_cast<TfLitePlannerType>(planner_id);
 
   // Set Worker configs
-  // 1. worker CPU masks
-  if (!root["worker_cpu_masks"].isNull()) {
-    for (auto const& key : root["worker_cpu_masks"].getMemberNames()) {
+  if (!root["workers"].isNull()) {
+    for (auto const& key : root["workers"].getMemberNames()) {
       size_t device_id = TfLiteDeviceGetFlag(key.c_str());
-      impl::TfLiteCPUMaskFlags flag =
-          impl::TfLiteCPUMaskGetMask(root["worker_cpu_masks"][key].asCString());
-      if (device_id < kTfLiteNumDevices) {
-        worker_config.cpu_masks[device_id] = flag;
+      if (device_id == kTfLiteNumDevices) {
+        TFLITE_LOG(ERROR) << "Wrong `device` argument is given. " << key;
+        return kTfLiteError;
+      }
+
+      auto worker_config_json = root["workers"][key];
+      // 1. worker CPU masks
+      if (!worker_config_json["cpu_masks"].isNull()) {
+        impl::TfLiteCPUMaskFlags flag = impl::TfLiteCPUMaskGetMask(
+            worker_config_json["cpu_masks"].asCString());
+        if (device_id < kTfLiteNumDevices) {
+          worker_config.cpu_masks[device_id] = flag;
+        }
+      }
+
+      // 2. worker num threads
+      if (!worker_config_json["num_threads"].isNull()) {
+        worker_config.num_threads[device_id] = worker_config_json["num_threads"].asInt();
       }
     }
   }
+
+  // Update default values from interpreter
   for (auto device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
     if (worker_config.cpu_masks[device_id] == impl::kTfLiteNumCpuMasks) {
       worker_config.cpu_masks[device_id] = interpreter_config.cpu_masks;
     }
+    if (worker_config.num_threads[device_id] == 0) {
+      worker_config.num_threads[device_id] = interpreter_config.num_threads;
+    }
   }
-  // 2. Allow worksteal
+
+  // 3. Allow worksteal
   if (!root["allow_work_steal"].isNull()) {
     worker_config.allow_worksteal = root["allow_work_steal"].asBool();
   }

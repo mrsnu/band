@@ -27,7 +27,7 @@ class Worker {
 
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
-  TfLiteStatus SetWorkerThreadAffinity(const CpuSet thread_affinity_mask);
+  TfLiteStatus UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads);
   virtual int64_t GetWaitingTime() = 0;
 
   // DeviceQueueWorker methods
@@ -41,6 +41,7 @@ class Worker {
  protected:
   TfLiteStatus CopyInputTensors(const Job& job);
   TfLiteStatus CopyOutputTensors(const Job& job);
+  TfLiteStatus TryUpdateWorkerThread();
   virtual void Work() = 0;
 
   std::weak_ptr<Planner> planner_;
@@ -54,8 +55,9 @@ class Worker {
   JobQueue requests_;
 
   CpuSet cpu_set_;
-  bool need_cpu_set_update_ = false;
-  std::mutex cpu_set_mtx_;
+  int num_threads_;
+  bool need_cpu_update_ = false;
+  std::mutex cpu_mtx_;
 
   TfLiteDeviceFlags device_flag_;
 };

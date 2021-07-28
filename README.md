@@ -69,12 +69,18 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `LITTLE`: LITTLE Cluster only
   * `BIG`: Big Cluster only
   * `PRIMARY`: Primary Core only
+* `num_threads`: Number of computing threads for CPU delegates. [default: 1]
+* `workers`: A map-like config for per-processor worker. For each worker, specify the following fields
+  * Available list of workers (key)
+    * `CPU`
+    * `CPUFallback`
+    * `GPU`
+    * `DSP`
+    * `NPU`
+  * Available list of fields
+    * `cpu_masks`: CPU cluster mask to set CPU affinity of specific worker. [default: `cpu_masks`]
+    * `num_threads`: Number of threads. [default: `num_threads`]
 * `worker_cpu_masks`: CPU cluster mask to set CPU affinity of specific worker. For each worker, specify the mask. [default: `cpu_masks`]
-  * `CPU`
-  * `CPUFallback`
-  * `GPU`
-  * `DSP`
-  * `NPU`
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * curr_profile + (1 - profile_smoothing_factor) * prev_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
@@ -108,6 +114,17 @@ An example of complete JSON config file is as follows:
             "slo_us": 30000
         }
     ],
+    "workers": {
+      "CPU": {
+        "cpu_masks": "BIG",
+        "num_threads": 3
+      },
+      "CPUFallback": {
+        "cpu_masks": "LITTLE",
+        "num_threads": 4
+      }
+    },
+    "num_threads": 1,
     "log_path": "/data/local/tmp/log.csv",
     "planner": 2,
     "execution_mode": "periodic",
