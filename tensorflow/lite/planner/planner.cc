@@ -51,13 +51,13 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
     if (schedulers[i] == kFixedDevice) {
-      schedulers_[i].reset(new FixedDeviceScheduler(this));
+      schedulers_.emplace_back(new FixedDeviceScheduler(this));
     } else if (schedulers[i] == kFixedDeviceGlobalQueue) {
-      schedulers_[i].reset(new FixedDeviceGlobalQueueScheduler(this));
+      schedulers_.emplace_back(new FixedDeviceGlobalQueueScheduler(this));
     } else if (schedulers[i] == kRoundRobin) {
-      schedulers_[i].reset(new RoundRobinScheduler(this));
+      schedulers_.emplace_back(new RoundRobinScheduler(this));
     } else if (schedulers[i] == kShortestExpectedLatency) {
-      schedulers_[i].reset(new ShortestExpectedLatencyScheduler(this));
+      schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(this));
     } else {
       return kTfLiteError;
     }

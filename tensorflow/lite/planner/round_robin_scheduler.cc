@@ -7,7 +7,7 @@ ScheduleAction RoundRobinScheduler::Schedule(JobQueue& requests) {
   ScheduleAction action;
   std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
   for (auto device : idle_devices) {
-    while (!requests.empty()) {
+    if (!requests.empty()) {
       auto available_job = std::find_if(
           requests.begin(), requests.end(), [this, device](const Job& job) {
             return GetInterpreter()->GetSubgraphIdx(job.model_id, device) != -1;
@@ -22,7 +22,6 @@ ScheduleAction RoundRobinScheduler::Schedule(JobQueue& requests) {
 
         action[device].push_back(to_execute);
         requests.erase(available_job);
-        break;
       }
     }
   }
