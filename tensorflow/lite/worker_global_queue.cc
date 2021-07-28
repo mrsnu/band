@@ -158,7 +158,7 @@ void GlobalQueueWorker::Work() {
           PrepareReenqueue(current_job_);
           lock.unlock();
 
-          planner_ptr->EnqueueRequest(current_job_);
+          planner_ptr->EnqueueRequest(current_job_, true);
           WaitUntilDeviceAvailable(subgraph);
 
           lock.lock();
