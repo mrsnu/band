@@ -125,7 +125,7 @@ class Planner {
   // Multi-level Local Queue.
   // The closer the index is to 0, the higher the priority.
   std::vector<JobQueue> local_queues_;
-  std::map<int, std::unique_ptr<Scheduler>> schedulers_;
+  std::vector<std::unique_ptr<Scheduler>> schedulers_;
 
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   int num_submitted_jobs_ = 0;

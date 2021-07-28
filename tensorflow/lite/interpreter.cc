@@ -230,15 +230,20 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     }
   }
 
-  int init_status = 0;
-  init_status |= Init(runtime_config.interpreter_config);
-  init_status |= planner_->Init(runtime_config.planner_config);
-  for (auto& worker : workers_) {
-    init_status |= worker.second->Init(runtime_config.worker_config);
-  }
-  if (init_status != 0) {
-    TFLITE_LOG(ERROR) << "Failed to initialize configurations.";
+  // Initialize configurations.
+  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
+    TFLITE_LOG(ERROR) << "Interpreter::Init() failed.";
     exit(-1);
+  }
+  if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
+    TFLITE_LOG(ERROR) << "Planner::Init() failed.";
+    exit(-1);
+  }
+  for (auto& worker : workers_) {
+    if (worker.second->Init(runtime_config.worker_config) != kTfLiteOk) {
+      TFLITE_LOG(ERROR) << "Worker::Init() failed for worker " << worker.first;
+      exit(-1);
+    }
   }
 }
 

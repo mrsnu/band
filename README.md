@@ -109,7 +109,7 @@ An example of complete JSON config file is as follows:
         }
     ],
     "log_path": "/data/local/tmp/log.csv",
-    "planner": 2,
+    "schedulers": [0, 2],
     "execution_mode": "periodic",
     "cpu_masks": "ALL",
     "worker_cpu_masks": {
