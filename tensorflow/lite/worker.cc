@@ -84,7 +84,7 @@ bool Worker::IsBusy() {
   return false;
 }
 
-bool IsValid(Job& job) {
+bool Worker::IsValid(Job& job) {
   return job.model_id >= 0
       && job.subgraph_idx >= 0
       && job.device_id >= 0
@@ -93,7 +93,7 @@ bool IsValid(Job& job) {
       && job.end_time == 0;
 }
 
-void PrepareReenqueue(Job& job) {
+void Worker::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
 }
