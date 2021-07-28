@@ -43,6 +43,8 @@ class Worker {
   virtual bool IsBusy();
 
  protected:
+  bool IsValid(Job& job);
+  void PrepareReenqueue(Job& job);
   TfLiteStatus TryCopyInputTensors(const Job& job);
   TfLiteStatus TryCopyOutputTensors(const Job& job);
   virtual void Work() = 0;

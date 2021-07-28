@@ -102,12 +102,7 @@ void GlobalQueueWorker::Work() {
 
     lock.unlock();
 
-    if (current_job_.model_id < 0 ||
-        current_job_.subgraph_idx < 0 ||
-        current_job_.device_id < 0 ||
-        current_job_.enqueue_time <= 0 ||
-        current_job_.invoke_time != 0 ||
-        current_job_.end_time != 0) {
+    if (!IsValid(current_job_)) {
       TFLITE_LOG(ERROR) << "Worker " << device_flag_
                         << " spotted an invalid job";
       break;
@@ -160,7 +155,7 @@ void GlobalQueueWorker::Work() {
         } else if (status == kTfLiteDelegateError) {
           lock.lock();
           is_available_ = false;
-          current_job_.invoke_time = 0;
+          PrepareReenqueue(current_job_);
           lock.unlock();
 
           planner_ptr->EnqueueRequest(current_job_);

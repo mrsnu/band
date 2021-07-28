@@ -82,6 +82,12 @@ void DeviceQueueWorker::Work() {
     Job& job = requests_.front();
     lock.unlock();
 
+    if (!IsValid(job)) {
+      TFLITE_LOG(ERROR) << "Worker " << device_flag_
+                        << " spotted an invalid job";
+      break;
+    }
+
     int subgraph_idx = job.subgraph_idx;
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
@@ -123,6 +129,7 @@ void DeviceQueueWorker::Work() {
         } else if (status == kTfLiteDelegateError) {
           lock.lock();
           is_available_ = false;
+          PrepareReenqueue(job);
           std::vector<Job> jobs(requests_.begin(), requests_.end());
           requests_.clear();
           lock.unlock();
