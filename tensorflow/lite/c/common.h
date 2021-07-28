@@ -65,8 +65,8 @@ typedef enum TfLiteExternalContextType {
 // this is being used in bit-wise ops,
 // so new types should be in power of 2s (4, 8, ...)
 typedef enum WorkerType {
-  kDeviceQueue = 1,
-  kGlobalQueue = 2,
+  kDeviceQueue = 1 << 0,
+  kGlobalQueue = 1 << 1,
 } WorkerType;
 
 typedef enum TfLiteSchedulerType {
