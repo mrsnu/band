@@ -1042,9 +1042,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   // TODO: Context-independent code / move to interpreter builder
   std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> subgraph_indices;
-  int subgraph_index =
-      GetSubgraphIdx(model_id, kTfLiteCPU);
-  Subgraph* primary_subgraph = subgraph(subgraph_index);
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
 
   std::set<int> resolved_tensors;
   std::set<int> remaining_ops;
@@ -1082,21 +1080,14 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
       for (auto current_op = remaining_ops.begin();
            current_op != remaining_ops.end();) {
         int current_index = *current_op;
-        // Searching for fallback op
-        if (current_device != device_flag) {
-          if (unsupported_ops.find(current_index) ==
-              unsupported_ops.end()) {
-            current_op++;
-            continue;
-          }
-        // Searching for non-fallback op
-        } else {
-          if (unsupported_ops.find(current_index) !=
-              unsupported_ops.end()) {
-            current_op++;
-            continue;
-          }
+        bool is_target_device = current_device == device_flag;
+        bool is_op_supported =
+            unsupported_ops.find(current_index) != unsupported_ops.end();
+        if (is_target_device == is_op_supported) {
+          current_op++;
+          continue;
         }
+
         // Dependency check
         if (!is_resolved(current_index)) {
           current_op++;
