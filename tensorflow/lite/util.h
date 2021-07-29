@@ -37,7 +37,6 @@ limitations under the License.
 namespace tflite {
 // data structure for identifying subgraphs within whole models
 struct SubgraphKey {
- public:
   SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
               int start = -1, int end = -1)
       : model_id(model_id),
