@@ -185,9 +185,7 @@ TEST(TfliteDriverTest, RingBufferTest) {
   }
   // output tensor free
   for (auto t : output_tensors) {
-    TfLiteTensorDataFree(t);
-    TfLiteIntArrayFree(t->dims);
-    delete t;
+    TfLiteTensorDelete(t);
   }
 
   // TODO : Invalidation check (access with invalid handle)
