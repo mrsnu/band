@@ -7,7 +7,12 @@ namespace impl {
 ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
   ScheduleAction action;
   DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
-  while (!requests.empty()) {
+  JobQueue local_jobs;
+  int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
+  local_jobs.insert(local_jobs.begin(), requests.begin(),
+                    requests.begin() + window_size);
+  requests.erase(requests.begin(), requests.begin() + window_size);
+  while (!local_jobs.empty()) {
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
     // Put that job into some worker, and repeat this whole loop until we've
@@ -28,7 +33,7 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     int target_subgraph;
 
     int64_t sched_start = profiling::time::NowMicros();
-    for (auto it = requests.begin(); it != requests.end(); ++it) {
+    for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatency(
@@ -36,7 +41,7 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
-        target_job_idx = it - requests.begin();
+        target_job_idx = it - local_jobs.begin();
         target_subgraph = best_subgraph.first;
       }
     }
@@ -47,10 +52,10 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
 
     // for some reason, this Job must NOT be a reference (&), otherwise
     // we get a segfault at push_back() below
-    Job most_urgent_job = requests[target_job_idx];
+    Job most_urgent_job = local_jobs[target_job_idx];
 
     // remove the job from the queue so that we don't meet it in the next loop
-    requests.erase(requests.begin() + target_job_idx);
+    local_jobs.erase(local_jobs.begin() + target_job_idx);
 
     SubgraphKey& to_execute =
         GetInterpreter()->subgraph(target_subgraph)->GetKey();

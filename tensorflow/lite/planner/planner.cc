@@ -108,18 +108,16 @@ void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
   std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
   JobQueue& requests = GetRequests();
   if (!requests.empty()) {
-    // Gets the specific amount of jobs from requests
-    // and removes those jobs from the requests.
-    int window_size = std::min(GetWindowSize(), (int)requests.size());
-    local_jobs.insert(local_jobs.begin(),
+    // Gets jobs from requests and removes those jobs from the requests.
+    local_jobs.insert(local_jobs.end(),
                       std::make_move_iterator(requests.begin()),
-                      std::make_move_iterator(requests.begin() + window_size));
-    requests.erase(requests.begin(), requests.begin() + window_size);
+                      std::make_move_iterator(requests.end()));
+    requests.clear();
   }
   request_lock.unlock();
 }
 
-void Planner::CheckSLOViolation(Job& job) {
+bool Planner::IsSLOViolated(Job& job) {
   // this job has an SLO; check if it's not too late already
   if (job.slo_us > 0) {
     int64_t current_time = profiling::time::NowMicros();
@@ -138,8 +136,10 @@ void Planner::CheckSLOViolation(Job& job) {
       // mark the time of this decision (of early-dropping this job)
       job.end_time = current_time;
       EnqueueFinishedJob(job);
+      return true;
     }
   }
+  return false;
 }
 
 void Planner::EnqueueToWorkers(ScheduleAction& action) {
@@ -152,8 +152,9 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
       for (auto request : requests) {
-        CheckSLOViolation(request);
-        worker->GetDeviceRequests().push_back(request);
+        if (!IsSLOViolated(request)) {
+          worker->GetDeviceRequests().push_back(request);
+        }
       }
       worker->GetRequestCv().notify_one();
     }

@@ -91,7 +91,7 @@ class Planner {
   // Check if the job violated the specified SLO.
   // This func assumes that device_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.
-  void CheckSLOViolation(Job& job);
+  bool IsSLOViolated(Job& job);
 
   // Update the current device waiting time.
   void UpdateDeviceWaitingTime();
