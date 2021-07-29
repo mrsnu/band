@@ -176,6 +176,9 @@ TEST(TfliteDriverTest, RingBufferTest) {
   ASSERT_TRUE(runner->CheckResults(model_id));
   EXPECT_EQ(runner->ReadOutput(output_tensors[0]), SAMPLE_OUTPUT_0);
   EXPECT_EQ(runner->ReadOutput(output_tensors[1]), SAMPLE_OUTPUT_1);
+
+  // TODO : Invalidation check (access with invalid handle)
+  // TODO : Thread safety check
 }
 
 TEST(TfliteDriverTest, RuntimeConfigTest) {
