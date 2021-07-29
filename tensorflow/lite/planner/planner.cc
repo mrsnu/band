@@ -132,12 +132,12 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
           interpreter_->GetModelSpec(job.model_id).input_tensors;
     }
     job_ids[i] = job.job_id;
-    if (push_front) {
-      requests_.queue.push_front(job);
-    } else {
-      requests_.queue.push_back(job);
-    }
   }
+
+  auto insert_position =
+      push_front ? requests_.queue.begin() : requests_.queue.end();
+  requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
+
   request_lock.unlock();
 
   planner_safe_bool_.notify();
