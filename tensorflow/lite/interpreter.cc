@@ -770,7 +770,7 @@ TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
   return kTfLiteOk;
 }
 
-void Interpreter::UpdateExecutionLatency(
+void Interpreter::UpdateExpectedLatency(
     const SubgraphKey& key, int64_t latency) {
   int64_t prev_latency = moving_averaged_latencies_[key];
   moving_averaged_latencies_[key] =

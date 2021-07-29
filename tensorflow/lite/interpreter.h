@@ -704,7 +704,7 @@ class Interpreter {
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
 
-  void UpdateExecutionLatency(const SubgraphKey& key, int64_t latency);
+  void UpdateExpectedLatency(const SubgraphKey& key, int64_t latency);
   int64_t GetExpectedLatency(const SubgraphKey& key);
   int64_t GetProfiledLatency(SubgraphKey& key);
 

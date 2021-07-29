@@ -97,7 +97,7 @@ void DeviceQueueWorker::Work() {
 
         if (subgraph.Invoke() == kTfLiteOk) {
           job.end_time = profiling::time::NowMicros();
-          interpreter_ptr->UpdateExecutionLatency(
+          interpreter_ptr->UpdateExpectedLatency(
               subgraph.GetKey(),
               (job.end_time - job.invoke_time));
           if (job.following_jobs.size() != 0) {
