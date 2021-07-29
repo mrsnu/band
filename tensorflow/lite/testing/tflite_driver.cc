@@ -388,22 +388,41 @@ void TfLiteDriver::ReshapeTensor(int model_id, int id, const string& csv_values)
   must_allocate_tensors_ = true;
 }
 
-TfLiteTensor* TfLiteDriver::AllocateInputTensor(int model_id, int input_index) {
-  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
-
-  TfLiteTensor* input = TfLiteTensorCreateLike(
-      interpreter_->tensor(subgraph_index, interpreter_->inputs(subgraph_index)[input_index]));
-
-  return input;
+void TfLiteTensorCreateLike(TfLiteTensor* src, TfLiteTensor* dst) {
+  if (!src) return;
+  TfLiteIntArray* dims = TfLiteIntArrayCopy(src->dims);
+  TfLiteTensorReset(src->type, src->name, dims,
+                    src->params, NULL, NULL, kTfLiteDynamic, NULL,
+                    src->is_variable, dst);
+  TfLiteTensorRealloc(src->bytes, dst);
 }
 
-TfLiteTensor* TfLiteDriver::AllocateOutputTensor(int model_id, int output_index) {
+UniqueTfLiteTensor TfLiteDriver::AllocateInputTensor(int model_id, int input_index) {
+  auto tensor = UniqueTfLiteTensor(*input, [](TfLiteTensor* t) {
+      TfLiteTensorDataFree(t);
+      TfLiteIntArrayFree(t->dims);
+      delete t;
+    });
+
   size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
+  TfLiteTensorCreateLike(
+      interpreter_->tensor(subgraph_index, interpreter_->inputs(subgraph_index)[input_index]),
+      tensor.get());
+  return tensor;
+}
 
-  TfLiteTensor* output = TfLiteTensorCreateLike(
-      interpreter_->tensor(subgraph_index, interpreter_->outputs(subgraph_index)[output_index]));
+UniqueTfLiteTensor TfLiteDriver::AllocateOutputTensor(int model_id, int output_index) {
+  auto tensor = UniqueTfLiteTensor(new TfLiteTensor(), [](TfLiteTensor* t) {
+      TfLiteTensorDataFree(t);
+      TfLiteIntArrayFree(t->dims);
+      delete t;
+    });
 
-  return output;
+  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
+  TfLiteTensorCreateLike(
+      interpreter_->tensor(subgraph_index, interpreter_->outputs(subgraph_index)[output_index]),
+      tensor.get());
+  return tensor;
 }
 
 void TfLiteDriver::SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) {

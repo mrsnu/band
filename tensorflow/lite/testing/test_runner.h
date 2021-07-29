@@ -23,6 +23,9 @@ limitations under the License.
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/string_type.h"
 
+using UniqueTfLiteTensor =
+    std::unique_ptr<TfLiteTensor, std::function<void(TfLiteTensor*)>>;
+
 namespace tflite {
 namespace testing {
 
@@ -82,8 +85,8 @@ class TestRunner {
   virtual void InvokeWithInput(std::vector<Job>& requests, std::vector<Tensors>& inputs, std::vector<Tensors>& outputs) = 0;
 
   virtual void SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) = 0;
-  virtual TfLiteTensor* AllocateInputTensor(int subgraph_id, int index) = 0;
-  virtual TfLiteTensor* AllocateOutputTensor(int subgraph_id, int index) = 0;
+  virtual UniqueTfLiteTensor AllocateInputTensor(int subgraph_id, int index) = 0;
+  virtual UniqueTfLiteTensor AllocateOutputTensor(int subgraph_id, int index) = 0;
   virtual bool NeedProfile() = 0;
 
   // Verify that the contents of all outputs conform to the existing
