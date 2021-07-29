@@ -153,12 +153,12 @@ class Scheduler {
   }
   bool NeedProfile() { return need_profile_; }
   bool NeedFallbackSubgraphs() { return need_fallback_subgraphs_; }
-  WorkerType GetWorkerType() { return worker_type_; }
+  TfLiteWorkerType GetWorkerType() { return worker_type_; }
 
  protected:
   bool need_profile_;
   bool need_fallback_subgraphs_;
-  WorkerType worker_type_;
+  TfLiteWorkerType worker_type_;
   Planner* planner_;
 };
 
