@@ -67,7 +67,7 @@ typedef enum TfLiteExternalContextType {
 typedef enum WorkerType {
   kDeviceQueue = 1 << 0,
   kGlobalQueue = 1 << 1,
-} WorkerType;
+} TfLiteWorkerType;
 
 typedef enum TfLiteSchedulerType {
   kFixedDevice = 0,

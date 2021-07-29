@@ -25,7 +25,7 @@ class Planner {
  public:
   explicit Planner(Interpreter* interpreter);
   ~Planner();
-
+virtual ~Planner();
   TfLiteStatus Init(PlannerConfig& config);
 
   void Plan();

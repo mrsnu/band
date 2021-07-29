@@ -5,9 +5,7 @@
 #include "tensorflow/lite/planner/planner.h"
 
 namespace tflite {
-
 namespace impl {
-
 class Interpreter;
 
 // assigns requested model to devices in a Round-robin manner.
