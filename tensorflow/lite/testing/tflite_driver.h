@@ -64,8 +64,8 @@ class TfLiteDriver : public TestRunner {
   string ReadOutput(int model_id, int id) override;
   void InvokeWithInput(std::vector<Job>& requests, std::vector<Tensors>& inputs, std::vector<Tensors>& outputs) override;
   void SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) override;
-  UniqueTfLiteTensor AllocateInputTensor(int subgraph_id, int index) override;
-  UniqueTfLiteTensor AllocateOutputTensor(int subgraph_id, int index) override;
+  TfLiteTensor* AllocateInputTensor(int subgraph_id, int index) override;
+  TfLiteTensor* AllocateOutputTensor(int subgraph_id, int index) override;
   bool NeedProfile() override {
     return interpreter_->NeedProfile();
   }

@@ -177,6 +177,19 @@ TEST(TfliteDriverTest, RingBufferTest) {
   EXPECT_EQ(runner->ReadOutput(output_tensors[0]), SAMPLE_OUTPUT_0);
   EXPECT_EQ(runner->ReadOutput(output_tensors[1]), SAMPLE_OUTPUT_1);
 
+  // input tensor free
+  for (auto t : input_tensors) {
+    TfLiteTensorDataFree(t);
+    TfLiteIntArrayFree(t->dims);
+    delete t;
+  }
+  // output tensor free
+  for (auto t : output_tensors) {
+    TfLiteTensorDataFree(t);
+    TfLiteIntArrayFree(t->dims);
+    delete t;
+  }
+
   // TODO : Invalidation check (access with invalid handle)
   // TODO : Thread safety check
 }
