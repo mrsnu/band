@@ -12,6 +12,7 @@ namespace tflite {
 namespace impl {
 
 std::vector<std::string> GetPaths(std::string suffix) {
+  // TODO: Add more device-specific GPU path
   std::vector<std::string> device_paths = {
     "/sys/class/kgsl/kgsl-3d0/" // Pixel4
   };
@@ -31,6 +32,10 @@ int GetGPUMaxFrequencyKhz() {
 
 int GetGPUFrequencyKhz() {
   return TryReadInt(GetPaths("clock_mhz")) * 1000;
+}
+
+int GetGPUPollingIntervalMs() {
+  return TryReadInt(GetPaths("devfreq/polling_interval")) * 1000;
 }
 
 std::vector<int> GetGPUAvailableFrequenciesKhz() {
