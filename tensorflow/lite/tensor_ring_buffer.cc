@@ -72,7 +72,7 @@ TfLiteStatus TensorRingBuffer::GetTensorFromHandle(TfLiteTensor* dst,
 TfLiteStatus TensorRingBuffer::PutTensorToHandle(const TfLiteTensor* src,
                                                  int tensor_index, int handle) {
   if (!IsTensorIndexValid(tensor_index)) {
-    TF_LITE_REPORT_ERROR(error_reporter_, "GetTensorFromHandle: Invalid tensor index: %d.", tensor_index);
+    TF_LITE_REPORT_ERROR(error_reporter_, "PutTensorToHandle: Invalid tensor index: %d.", tensor_index);
     return kTfLiteError;
   }
 
@@ -109,8 +109,8 @@ TfLiteStatus TensorRingBuffer::PutTensorsToHandle(const Tensors& src_tensors,
 TfLiteStatus TensorRingBuffer::CopyTensors(const Tensors& src_tensors,
                                            Tensors& dst_tensors) const {
   const int tensors_length = GetTensorsLength();
-  if ((src_tensors.size() != tensors_length) ||
-      (dst_tensors.size() != tensors_length)) {
+  if (src_tensors.size() != tensors_length ||
+      dst_tensors.size() != tensors_length) {
     TF_LITE_REPORT_ERROR(
         error_reporter_,
         "Invalid tensor length. src tensors: %d dst tensors: %d expected: %d",

@@ -126,12 +126,13 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
     return kTfLiteError;
   }
 
-  for (int subgraph_input: subgraph->inputs()) {
+  for (int subgraph_input : subgraph->inputs()) {
     if (input_buffer->IsTensorIndexValid(subgraph_input)) {
       if (input_buffer->GetTensorFromHandle(subgraph->tensor(subgraph_input),
-                                        subgraph_input, job.input_handle) != kTfLiteOk) {
+                                            subgraph_input,
+                                            job.input_handle) != kTfLiteOk) {
         return kTfLiteError;
-      } 
+      }
     }
   }
 
@@ -153,13 +154,14 @@ TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
   }
 
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-  
-  for (int subgraph_output: subgraph->outputs()) {
+
+  for (int subgraph_output : subgraph->outputs()) {
     if (output_buffer->IsTensorIndexValid(subgraph_output)) {
       if (output_buffer->PutTensorToHandle(subgraph->tensor(subgraph_output),
-                                        subgraph_output, job.output_handle) != kTfLiteOk) {
+                                           subgraph_output,
+                                           job.output_handle) != kTfLiteOk) {
         return kTfLiteError;
-      } 
+      }
     }
   }
 
