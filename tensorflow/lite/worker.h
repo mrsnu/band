@@ -66,6 +66,8 @@ class Worker {
   std::mutex cpu_set_mtx_;
 
   TfLiteDeviceFlags device_flag_;
+
+  static const int64_t LARGE_WAITING_TIME = INT_MAX/2;
 };
 
 class DeviceQueueWorker : public Worker {

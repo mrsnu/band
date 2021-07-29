@@ -45,7 +45,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!is_available_) {
     lock.unlock();
-    return INT_MAX/2;
+    return LARGE_WAITING_TIME;
   }
 
   if (!is_busy_) {

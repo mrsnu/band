@@ -22,7 +22,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!is_available_) {
     lock.unlock();
-    return INT_MAX/2;
+    return LARGE_WAITING_TIME;
   }
 
   std::shared_ptr<Planner> planner = planner_.lock();
