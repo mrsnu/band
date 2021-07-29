@@ -770,12 +770,30 @@ TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
   return kTfLiteOk;
 }
 
-void Interpreter::UpdateProfileResult(
-    const SubgraphKey& key, int64_t new_profile) {
-  int64_t prev_profile = subgraph_profiling_results_map_[key];
-  subgraph_profiling_results_map_[key] =
-      profile_smoothing_factor_ * new_profile +
-      (1 - profile_smoothing_factor_) * prev_profile;
+void Interpreter::UpdateExpectedLatency(
+    const SubgraphKey& key, int64_t latency) {
+  int64_t prev_latency = moving_averaged_latencies_[key];
+  moving_averaged_latencies_[key] =
+      profile_smoothing_factor_ * latency +
+      (1 - profile_smoothing_factor_) * prev_latency;
+}
+
+int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
+  auto it = moving_averaged_latencies_.find(key);
+  if (it != moving_averaged_latencies_.end()) {
+    return it->second;
+  } else {
+    return -1;
+  }
+}
+
+int64_t Interpreter::GetProfiledLatency(SubgraphKey& key) {
+  auto it = profile_database_.find(key);
+  if (it != profile_database_.end()) {
+    return it->second;
+  } else {
+    return -1;
+  }
 }
 
 void Interpreter::Profile(int model_id) {
@@ -798,7 +816,7 @@ void Interpreter::Profile(int model_id) {
       // if an entry for this SubgraphKey exists in the profiled data,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
-      subgraph_profiling_results_map_[subgraph_key] = profiled_latency;
+      moving_averaged_latencies_[subgraph_key] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
                        << " model=" << subgraph_key.model_id
@@ -817,7 +835,7 @@ void Interpreter::Profile(int model_id) {
       }
 
       int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
-      subgraph_profiling_results_map_[subgraph_key] = latency;
+      moving_averaged_latencies_[subgraph_key] = latency;
 
       // record the profiled latency for subsequent benchmark runs
       profile_database_[subgraph_key] = latency;
@@ -1007,15 +1025,6 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
 
   // merge `profile_database_` with `model_profile`
   profile_database_.insert(model_profile.begin(), model_profile.end());
-}
-
-int64_t Interpreter::GetSubgraphProfileResult(SubgraphKey& key) {
-  auto it = subgraph_profiling_results_map_.find(key);
-  if (it != subgraph_profiling_results_map_.end()) {
-    return it->second;
-  } else {
-    return -1;
-  }
 }
 
 void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
@@ -1229,7 +1238,7 @@ Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
 
     int64_t waiting_time = device_waiting[key.device_flag];
-    int64_t profiled = GetSubgraphProfileResult(key);
+    int64_t profiled = GetExpectedLatency(key);
     int64_t expected_latency = profiled + std::max(waiting_time, start_time);
 
     if (min_latency > expected_latency) {
@@ -1268,8 +1277,8 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
       continue;
     }
 
-    auto it = subgraph_profiling_results_map_.find(subgraph_key);
-    if (it != subgraph_profiling_results_map_.end()) {
+    auto it = moving_averaged_latencies_.find(subgraph_key);
+    if (it != moving_averaged_latencies_.end()) {
       int64_t latency = it->second;
       if (worst_latency < latency) {
         worst_latency = latency;

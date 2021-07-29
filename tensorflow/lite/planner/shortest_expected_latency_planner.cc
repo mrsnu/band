@@ -21,7 +21,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // gone through all jobs.
       // There should be a more quicker way do this, but I'm leaving this as-is
       // to make it simple.
-      // E.g., we add interpreter.GetProfiledLatency() to the expected_latency map
+      // E.g., we add interpreter.GetExpectedLatency() to the expected_latency map
       // of all Jobs instead of calling GetShortestLatency() a gazillion times
       // again.
 
@@ -77,7 +77,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       most_urgent_job.subgraph_idx = target_subgraph;
       most_urgent_job.device_id = to_execute.device_flag;
       most_urgent_job.profiled_time =
-          GetInterpreter()->GetSubgraphProfileResult(to_execute);
+          GetInterpreter()->GetExpectedLatency(to_execute);
 
       if (most_urgent_job.expected_latency == 0) {
         // only set these fields if this is the first subgraph of this model
