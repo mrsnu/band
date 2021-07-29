@@ -21,6 +21,7 @@ namespace impl {
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
 // Type definition for the device waiting time.
+// The unit of time is ms.
 using DeviceWaitingTime = std::map<TfLiteDeviceFlags, int64_t>;
 // Decision from a scheduler. The Jobs in the action must be passed to
 // the appropriate workers.
