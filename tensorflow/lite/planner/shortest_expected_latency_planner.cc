@@ -74,20 +74,20 @@ void ShortestExpectedLatencyPlanner::Plan() {
           GetInterpreter()->subgraph(target_subgraph)->GetKey();
       UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
-      if (most_urgent_job.total_expected_latency == 0) {
+      if (most_urgent_job.expected_execution_time == 0) {
         // only set these fields if this is the first subgraph of this model
-        most_urgent_job.total_expected_latency = largest_shortest_latency;
+        most_urgent_job.expected_execution_time = largest_shortest_latency;
         most_urgent_job.sched_id = sched_id_++;
       }
 
       // this job has an SLO; check if it's not too late already
       if (most_urgent_job.slo_us > 0) {
         int64_t current_time = profiling::time::NowMicros();
-        int64_t expected_latency =
+        int64_t expected_execution_time =
             device_waiting_time[to_execute.device_flag] +
             most_urgent_job.expected_latency;
 
-        if (current_time + expected_latency >
+        if (current_time + expected_execution_time >
             most_urgent_job.enqueue_time + most_urgent_job.slo_us) {
           // SLO violation
           // no point in running this job anymore
@@ -112,7 +112,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         remaining_ops.end_idx = model_spec.num_ops - 1;
         remaining_ops.following_jobs = most_urgent_job.following_jobs;
         remaining_ops.expected_latency = most_urgent_job.expected_latency;
-        remaining_ops.total_expected_latency = largest_shortest_latency;
+        remaining_ops.expected_execution_time = largest_shortest_latency;
         remaining_ops.sched_id = most_urgent_job.sched_id;
         remaining_ops.job_id = most_urgent_job.job_id;
         remaining_ops.input_handle = most_urgent_job.input_handle;
