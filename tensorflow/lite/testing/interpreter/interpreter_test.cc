@@ -179,9 +179,7 @@ TEST(TfliteDriverTest, RingBufferTest) {
 
   // input tensor free
   for (auto t : input_tensors) {
-    TfLiteTensorDataFree(t);
-    TfLiteIntArrayFree(t->dims);
-    delete t;
+    TfLiteTensorDelete(t);
   }
   // output tensor free
   for (auto t : output_tensors) {
