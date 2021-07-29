@@ -232,16 +232,17 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Initialize configurations.
   if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
-    TFLITE_LOG(ERROR) << "Interpreter::Init() failed.";
+    error_reporter_->Report("Interpreter::Init() failed.");
     exit(-1);
   }
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
-    TFLITE_LOG(ERROR) << "Planner::Init() failed.";
+    error_reporter_->Report("Planner::Init() failed.");
     exit(-1);
   }
   for (auto& worker : workers_) {
     if (worker.second->Init(runtime_config.worker_config) != kTfLiteOk) {
-      TFLITE_LOG(ERROR) << "Worker::Init() failed for worker " << worker.first;
+      error_reporter_->Report("Worker::Init() failed for worker : %s",
+                               TfLiteDeviceGetName(worker.first));
       exit(-1);
     }
   }
