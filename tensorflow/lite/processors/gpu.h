@@ -13,6 +13,7 @@ namespace impl {
 int GetGPUMinFrequencyKhz();
 int GetGPUMaxFrequencyKhz();
 int GetGPUFrequencyKhz();
+int GetGPUPollingIntervalMs();
 std::vector<int> GetGPUAvailableFrequenciesKhz();
 std::vector<std::pair<int, int>> GetGPUClockStats();
 
