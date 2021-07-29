@@ -27,6 +27,11 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
                                         RuntimeConfig& runtime_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
+  if (!config.is_open()) {
+    TFLITE_LOG(ERROR) << "Check if the config file exists.";
+    return kTfLiteError;
+  }
+
   Json::Value root;
   config >> root;
 
