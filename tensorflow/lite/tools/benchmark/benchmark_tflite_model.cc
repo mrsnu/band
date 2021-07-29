@@ -676,6 +676,11 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
     ModelConfig& model_config = m.second;
     int batch_size = model_config.batch_size,
         period_ms = model_config.period_ms;
+    if (period_ms <= 0) {
+      TFLITE_LOG(ERROR) << "period_ms is <= 0. "
+                        << "Will do nothing and return immediately.";
+      return;
+    }
 
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
