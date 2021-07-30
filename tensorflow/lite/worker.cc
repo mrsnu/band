@@ -46,11 +46,12 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
     return kTfLiteError;
   }
 
-  std::unique_lock<std::mutex> cpu_lock(cpu_mtx_);
+  std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
   if (num_threads_ != num_threads) {
     num_threads_ = num_threads;
     need_cpu_update_ = true;
   }
+  
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
