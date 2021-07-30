@@ -1055,7 +1055,34 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
   std::set<int> resolved_tensors;
   std::set<int> remaining_ops;
+  // The basic idea is to partition this model into several disjoint subgraphs. 
+  // Each subgraph is not necessarily a connected graph, and no two graphs
+  // have any common ops. A subgraph is either a fallback subgraph or a
+  // non-fallback one, but (obviously) never both.
+  //
+  //   Subgraph1  Sbg2     Sbg3
+  // |--Non-fb--|--fb--|--Non-fb-|
+  //
+  //       Op2 --- Op3 -- Op4
+  //     /                   \
+  // Op1 - Op5 --- Op6 -- Op7 - Op8
+  //
+  // We start from the foremost op(s) and gradually "expand" our territory of
+  // ops until we have the largest subgraph possible, without going over the
+  // boundary of fallback/non-fallback. After that, we remove the ops of that
+  // largest subgraph and start over with the remaining ops. This process is
+  // repeated until all ops have been removed.
 
+  // To make this work, we first need to keep track of the "front line" of ops.
+  // This front line, together with the fallback/non-fb status of the op,
+  // is used to determine whether or not we include an op in the current
+  // subgraph.
+  // The front line is denoted with the set of "resolved" tensors -- a tensor
+  // is considered resolved if that tensor can be computed using external
+  // inputs + previously resolved tensors. In case all input tensors of an 
+  // op are resolved ones, that op is regarded to be at the front line of ops
+  // and thus can be put into the current subgraph (+ the fb/non-fb status
+  // must match too).
   for (int input_index : primary_subgraph->inputs()) {
     resolved_tensors.insert(input_index);
   }
@@ -1081,10 +1108,14 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     return true;
   };
 
-  TfLiteDeviceFlags current_device = device_flag;
+  bool is_fallback = false;
   while (remaining_ops.size() > 0) {
     std::set<int> operator_set;
     bool found = true;
+    // Switch between device and fallback 
+    TfLiteDeviceFlags current_device = 
+        is_fallback ?
+        kTfLiteCPUFallback : device_flag;
 
     // Get all op that has resolvable dependency to specific device
     while (found) {
@@ -1092,10 +1123,9 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
       for (auto current_op = remaining_ops.begin();
            current_op != remaining_ops.end();) {
         int current_index = *current_op;
-        bool is_target_device = current_device == device_flag;
-        bool is_op_supported =
+        bool is_op_unsupported =
             unsupported_ops.find(current_index) != unsupported_ops.end();
-        if (is_target_device == is_op_supported) {
+        if (!is_fallback == is_op_unsupported) {
           // either 1) this is a fallback op but we're making a non-fb subgraph,
           // or 2) this is a non-fb op but we're making a fb subgraph,
           // so we skip it
@@ -1128,10 +1158,8 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     if (operator_set.size()) {
       subgraph_indices.push_back({current_device, operator_set});
     }
-    // Switch between device and fallback 
-    current_device = 
-        current_device == device_flag ?
-        kTfLiteCPUFallback : device_flag;
+
+    is_fallback = !is_fallback;
   }
 
   return subgraph_indices;
