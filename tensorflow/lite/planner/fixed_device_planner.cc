@@ -77,17 +77,18 @@ void FixedDevicePlanner::Plan() {
       // TODO: fallback subgraphs for FixedDevicePlanner?
       to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
       to_execute.device_id = device_idx;
-      to_execute.sched_id = sched_id_++;
+      to_execute.sched_id = sched_id_;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (!worker->GiveJob(to_execute)) {
+      if (worker->GiveJob(to_execute)) {
+        // all is well
+        // delete this job from our request queue
+        it = requests.erase(it);
+        sched_id_++;
+      } else {
+        // we couldn't assign this job to worker
         ++it;
-        continue;
       }
-
-      // all is well
-      // delete this job from our request queue
-      it = requests.erase(it);
     }
     lock.unlock();
   }

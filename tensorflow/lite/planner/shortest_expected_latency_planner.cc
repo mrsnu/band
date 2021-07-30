@@ -66,19 +66,16 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // we get a segfault at push_back() below
       Job most_urgent_job = local_jobs[target_job_idx];
 
-      // remove the job from the queue so that we don't meet it in the next loop
-      local_jobs.erase(local_jobs.begin() + target_job_idx);
-
       Subgraph* target_subgraph =
           GetInterpreter()->subgraph(target_subgraph_idx);
       SubgraphKey& to_execute = target_subgraph->GetKey();
-      UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
-      bool is_first_subgraph = most_urgent_job.expected_latency == 0;
-      if (is_first_subgraph) {
+      UpdateJobEnqueueStatus(most_urgent_job, to_execute);
+      most_urgent_job.sched_id = sched_id_;
+
+      if (target_subgraph->GetPrevSubgraph() == nullptr) {
         // only set these fields if this is the first subgraph of this model
         most_urgent_job.expected_latency = largest_shortest_latency;
-        most_urgent_job.sched_id = sched_id_++;
       }
 
       // this job has an SLO; check if it's not too late already
@@ -127,12 +124,11 @@ void ShortestExpectedLatencyPlanner::Plan() {
       }
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
-      if (!worker->GiveJob(most_urgent_job)) {
-        if (is_first_subgraph) {
-          most_urgent_job.expected_latency = 0;
-          sched_id_--;
-        }
-        local_jobs.push_front(most_urgent_job);
+      if (worker->GiveJob(most_urgent_job)) {
+        // all is well
+        // delete this job from our request queue
+        local_jobs.erase(local_jobs.begin() + target_job_idx);
+        sched_id_++;
       }
     }
   }

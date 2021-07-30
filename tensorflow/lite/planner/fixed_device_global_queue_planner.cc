@@ -143,16 +143,14 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
       to_execute.sched_id = sched_id_;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (!worker->GiveJob(to_execute)) {
-        // for some reason, the worker was busy and we couldn't assign
-        // this job to it
-        ++it;
-      } else {
+      if (worker->GiveJob(to_execute)) {
         // all is well
-        // delete this job from our request queue and
-        // delete this device from our idle_devices set
+        // delete this job from our request queue
         it = requests.erase(it);
         sched_id_++;
+      } else {
+        // we couldn't assign this job to worker
+        ++it;
       }
       idle_devices.erase(idle_devices_it);
 

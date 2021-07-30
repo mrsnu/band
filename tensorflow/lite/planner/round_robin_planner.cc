@@ -43,8 +43,10 @@ void RoundRobinPlanner::Plan() {
 
             Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
             if (worker->GiveJob(to_execute)) {
-              sched_id_++;
+              // all is well
+              // delete this job from our request queue
               GetRequests().erase(available_job);
+              sched_id_++;
             }
             is_device_empty[device_idx] = false;
             break;
