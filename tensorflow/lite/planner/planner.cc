@@ -37,8 +37,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "enqueue_time\t"
            << "invoke_time\t"
            << "end_time\t"
-           << "profiled_latency\t"
-           << "expected_latency\t"
+           << "profiled_execution_time\t"
+           << "expected_execution_time\t"
            << "slo_us\t"
            << "job status\t"
            << "is_final_subgraph\n";
@@ -183,8 +183,8 @@ void Planner::FlushFinishedJobs() {
               << job.enqueue_time << "\t"
               << job.invoke_time << "\t"
               << job.end_time << "\t"
-              << job.profiled_latency << "\t"
-              << job.expected_latency << "\t"
+              << job.profiled_execution_time << "\t"
+              << job.expected_execution_time << "\t"
               << job.slo_us << "\t"
               << job.status << "\t"
               << job.is_final_subgraph << "\n";
@@ -200,9 +200,9 @@ void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
   job.end_idx = target.end_idx;
   job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
   job.device_id = target.device_flag;
-  job.profiled_latency =
+  job.profiled_execution_time=
       interpreter_->GetProfiledLatency(target);
-  job.expected_latency =
+  job.expected_execution_time =
       interpreter_->GetExpectedLatency(target);
 }
 
