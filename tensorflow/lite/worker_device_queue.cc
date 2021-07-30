@@ -108,9 +108,9 @@ void DeviceQueueWorker::Work() {
               (job.end_time - job.invoke_time));
           if (job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(job.following_jobs);
-          } 
-          TryCopyOutputTensors(job);
-          {
+          }
+          TryCopyOutputTensors(current_job_);
+          if (planner_ptr->GetLogProcessorFrequency()) {
             std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
             job.end_frequency = GetCPUFrequencyKhz(cpu_set_);
             job.end_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set_);

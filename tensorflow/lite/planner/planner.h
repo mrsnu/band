@@ -83,6 +83,8 @@ class Planner {
 
   void SetWindowSize(int schedule_window_size);
 
+  bool GetLogProcessorFrequency() const { return log_processor_frequency_; }
+
   const std::map<int, int>& GetModelExecutionCounts() const {
     return model_execution_count_;
   }
@@ -119,6 +121,7 @@ class Planner {
 
   std::condition_variable end_invoke_;
   std::string log_path_;
+  bool log_processor_frequency_;
 
   int schedule_window_size_ = INT_MAX;
 };

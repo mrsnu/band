@@ -40,6 +40,7 @@ struct InterpreterConfig {
 struct PlannerConfig {
   TfLitePlannerType planner_type = kFixedDevice;
   std::string log_path;
+  bool log_processor_frequency = true;
   int schedule_window_size = INT_MAX;
 };
 
