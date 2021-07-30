@@ -247,11 +247,11 @@ ShortestExpectedLatencyPlanner::GetShortestSubgraphIndex(
     SubgraphKey& key = interpreter_->subgraph(subgraph_index)->GetKey();
 
     int64_t waiting_time = device_waiting[key.device_flag];
-    int64_t profiled = interpreter_->GetSubgraphProfileResult(key);
-    int64_t expected_latency = profiled + std::max(waiting_time, start_time);
+    int64_t expected_latency = interpreter_->GetExpectedLatency(key);
+    int64_t total = expected_latency + std::max(waiting_time, start_time);
 
-    if (min_latency > expected_latency) {
-      min_latency = expected_latency;
+    if (min_latency > total) {
+      min_latency = total;
       min_idx = subgraph_index;
     }
   }
