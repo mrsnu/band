@@ -142,6 +142,7 @@ void DeviceQueueWorker::TryWorkSteal() {
   Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
   int64_t max_latency_gain = -1;
   int max_latency_gain_device = -1;
+  int max_latency_gain_subgraph_idx = -1;
   for (auto& device_and_worker : interpreter_ptr->GetWorkers()) {
     TfLiteDeviceFlags target_device = device_and_worker.first;
     Worker* target_worker = device_and_worker.second.get();
@@ -162,9 +163,11 @@ void DeviceQueueWorker::TryWorkSteal() {
     Job& job = target_worker->GetDeviceRequests().back();
     lock.unlock();
 
-    Subgraph* subgraph = interpreter_ptr->subgraph(job.subgraph_idx);
-    int64_t expected_latency =
-        interpreter_ptr->GetExpectedLatency(subgraph->GetKey());
+    Subgraph* orig_subgraph = interpreter_ptr->subgraph(job.subgraph_idx);
+    SubgraphKey& orig_key = orig_subgraph->GetKey();
+    SubgraphKey new_key(job.model_id, device_flag_, orig_key.input_ops,
+                        orig_key.output_ops);
+    int64_t expected_latency = interpreter_ptr->GetExpectedLatency(new_key);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;
@@ -174,6 +177,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     if (latency_gain > max_latency_gain) {
       max_latency_gain = latency_gain;
       max_latency_gain_device = target_device;
+      max_latency_gain_subgraph_idx = interpreter_ptr->GetSubgraphIdx(new_key);
     }
   }
 
@@ -206,7 +210,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     return;
   }
 
-  job.subgraph_idx = job.subgraph_idx;
+  job.subgraph_idx = max_latency_gain_subgraph_idx;
   job.device_id = device_flag_;
 
   // finally, we perform the swap
