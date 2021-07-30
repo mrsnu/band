@@ -100,7 +100,10 @@ namespace impl {
 struct ModelSpec {
   int num_ops;
   std::set<int> input_tensors;
+  // only includes "true" outputs
   std::set<int> output_tensors;
+  // includes intermediate tensors that are consumed by
+  // other nodes in the same model
   std::set<int> node_output_tensors;
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;

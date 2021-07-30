@@ -1064,11 +1064,14 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
     remaining_ops.insert(i);
   }
 
+  // convenience function for determining if a tensor has been resolved
   auto is_resolved = [&](int op_index) {
     auto op_inputs =
         primary_subgraph->node_and_registration(op_index)->first.inputs;
     for (int i = 0; i < op_inputs->size; i++) {
       if (primary_subgraph->tensor(op_inputs->data[i])->allocation_type == kTfLiteMmapRo) {
+        // parameter tensors are always available,
+        // so they always count as "resolved" tensors
         continue;
       }
       if (resolved_tensors.find(op_inputs->data[i]) == resolved_tensors.end()) {
@@ -1093,6 +1096,9 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
         bool is_op_supported =
             unsupported_ops.find(current_index) != unsupported_ops.end();
         if (is_target_device == is_op_supported) {
+          // either 1) this is a fallback op but we're making a non-fb subgraph,
+          // or 2) this is a non-fb op but we're making a fb subgraph,
+          // so we skip it
           current_op++;
           continue;
         }
@@ -1109,7 +1115,8 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
         auto op_outputs =
             primary_subgraph->node_and_registration(current_index)->first.outputs;
         
-        // Resolve dependency of newly added op's output tensors
+        // Update dependency to include output tensors of this new op.
+        // This has the effect of expanding the "front line" of ops.
         for (int i = 0; i < op_outputs->size; i++) {
           resolved_tensors.insert(op_outputs->data[i]);
         }
@@ -1215,6 +1222,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       const TfLiteNode& node =
           primary_subgraph->node_and_registration(node_index)->first;
       if (node.delegate == nullptr) {
+        // this subgraph is always a 0~num_ops-1 CPU subgraph so
+        // the node-->op mapping is basically the identity mapping
         model_spec.unsupported_ops[device_flag].insert(
           primary_subgraph->op_indices()[node_index]
         );

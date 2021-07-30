@@ -605,6 +605,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
         Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
         if (previous_subgraph) {
+          // we rely on `MakeSubgraphsForFallbackOps()` returning the indices
+          // in topological order
           if (subgraph->SetPrevSubgraph(
                   previous_subgraph) != kTfLiteOk) {
             TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
