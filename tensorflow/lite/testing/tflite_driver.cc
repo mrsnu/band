@@ -369,10 +369,13 @@ int TfLiteDriver::LoadModel(const string& bin_file_path) {
   return model_id;
 }
 
-void TfLiteDriver::ResetTensor(int model_id, int id) {
+void TfLiteDriver::ResetTensor(TfLiteTensor* tensor) {
   if (!IsValid()) return;
-  auto* tensor = interpreter_->tensor(model_id, id);
   memset(tensor->data.raw, 0, tensor->bytes);
+}
+
+void TfLiteDriver::ResetTensor(int model_id, int id) {
+  ResetTensor(interpreter_->tensor(model_id, id));
 }
 
 void TfLiteDriver::ReshapeTensor(int model_id, int id, const string& csv_values) {
@@ -383,6 +386,71 @@ void TfLiteDriver::ReshapeTensor(int model_id, int id, const string& csv_values)
     return;
   }
   must_allocate_tensors_ = true;
+}
+
+TfLiteTensor* TfLiteDriver::AllocateInputTensor(int model_id, int input_index) {
+  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
+
+  TfLiteTensor* input = TfLiteTensorCreateLike(
+      interpreter_->tensor(subgraph_index, interpreter_->inputs(subgraph_index)[input_index]));
+
+  return input;
+}
+
+TfLiteTensor* TfLiteDriver::AllocateOutputTensor(int model_id, int output_index) {
+  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
+
+  TfLiteTensor* output = TfLiteTensorCreateLike(
+      interpreter_->tensor(subgraph_index, interpreter_->outputs(subgraph_index)[output_index]));
+
+  return output;
+}
+
+void TfLiteDriver::SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) {
+  if (!IsValid()) return;
+  switch (tensor->type) {
+    case kTfLiteFloat32: {
+      const auto& values = testing::Split<float>(csv_values, ",");
+      if (!CheckSizes<float>(tensor->bytes, values.size())) return;
+      SetTensorData(values, tensor->data.raw);
+      break;
+    }
+    case kTfLiteInt32: {
+      const auto& values = testing::Split<int32_t>(csv_values, ",");
+      if (!CheckSizes<int32_t>(tensor->bytes, values.size())) return;
+      SetTensorData(values, tensor->data.raw);
+      break;
+    }
+    case kTfLiteInt64: {
+      const auto& values = testing::Split<int64_t>(csv_values, ",");
+      if (!CheckSizes<int64_t>(tensor->bytes, values.size())) return;
+      SetTensorData(values, tensor->data.raw);
+      break;
+    }
+    case kTfLiteUInt8: {
+      const auto& values = testing::Split<uint8_t>(csv_values, ",");
+      if (!CheckSizes<uint8_t>(tensor->bytes, values.size())) return;
+      SetTensorData(values, tensor->data.raw);
+      break;
+    }
+    case kTfLiteInt8: {
+      const auto& values = testing::Split<int8_t>(csv_values, ",");
+      if (!CheckSizes<int8_t>(tensor->bytes, values.size())) return;
+      SetTensorData(values, tensor->data.raw);
+      break;
+    }
+    case kTfLiteBool: {
+      const auto& values = testing::Split<bool>(csv_values, ",");
+      if (!CheckSizes<bool>(tensor->bytes, values.size())) return;
+      SetTensorData(values, tensor->data.raw);
+      break;
+    }
+    default:
+      Invalidate(absl::StrCat("Unsupported tensor type ",
+                              TfLiteTypeGetName(tensor->type),
+                              " in TfLiteDriver::SetInput"));
+      return;
+  }
 }
 
 void TfLiteDriver::SetInput(int model_id, int id, const string& csv_values) {
@@ -519,6 +587,12 @@ void TfLiteDriver::Invoke(int model_id) {
   }
 }
 
+void TfLiteDriver::InvokeWithInput(std::vector<Job>& requests, std::vector<Tensors>& inputs,
+                                        std::vector<Tensors>& outputs)  {
+  if (!IsValid()) return;
+  interpreter_->InvokeModelsSync(requests, inputs, outputs);
+}
+
 void TfLiteDriver::InvokeThroughPlanner(int model_id) {
   if (!IsValid()) return;
   interpreter_->InvokeModelsSync({Job(model_id)});
@@ -563,10 +637,8 @@ void TfLiteDriver::ResetLSTMStateTensors() {
   interpreter_->ResetVariableTensors(0);
 }
 
-string TfLiteDriver::ReadOutput(int model_id, int id) {
-  auto* tensor = interpreter_->tensor(model_id, id);
+string TfLiteDriver::ReadOutput(TfLiteTensor* tensor) {
   int num_elements = 1;
-
   for (int i = 0; i < tensor->dims->size; ++i) {
     num_elements *= tensor->dims->data[i];
   }
@@ -590,6 +662,10 @@ string TfLiteDriver::ReadOutput(int model_id, int id) {
                               " in TfLiteDriver::ReadOutput"));
       return "";
   }
+}
+
+string TfLiteDriver::ReadOutput(int model_id, int id) {
+  return ReadOutput(interpreter_->tensor(model_id, id));
 }
 
 }  // namespace testing

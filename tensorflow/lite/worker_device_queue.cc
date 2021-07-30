@@ -30,18 +30,17 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin();
        it != requests_.end(); ++it) {
-
     Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
-    int64_t profiled_latency =
-      interpreter->GetSubgraphProfileResult(current_subgraph->GetKey());
+    int64_t expected_latency =
+      interpreter->GetExpectedLatency(current_subgraph->GetKey());
 
-    total += profiled_latency;
+    total += expected_latency;
     if (it == requests_.begin()) {
       int64_t current_time = profiling::time::NowMicros();
       int64_t invoke_time = (*it).invoke_time;
       if (invoke_time > 0 && current_time > invoke_time) {
         int64_t progress =
-          (current_time - invoke_time) > profiled_latency ? profiled_latency
+          (current_time - invoke_time) > expected_latency ? expected_latency
                                               : (current_time - invoke_time);
         total -= progress;
       }
@@ -94,7 +93,7 @@ void DeviceQueueWorker::Work() {
 
         if (subgraph.Invoke() == kTfLiteOk) {
           job.end_time = profiling::time::NowMicros();
-          interpreter_ptr->UpdateProfileResult(
+          interpreter_ptr->UpdateExpectedLatency(
               subgraph.GetKey(),
               (job.end_time - job.invoke_time));
           if (job.following_jobs.size() != 0) {
@@ -165,7 +164,7 @@ void DeviceQueueWorker::TryWorkSteal() {
 
     Subgraph* subgraph = interpreter_ptr->subgraph(job.subgraph_idx);
     int64_t expected_latency =
-        interpreter_ptr->GetSubgraphProfileResult(subgraph->GetKey());
+        interpreter_ptr->GetExpectedLatency(subgraph->GetKey());
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;

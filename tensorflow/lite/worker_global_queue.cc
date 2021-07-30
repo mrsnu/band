@@ -72,7 +72,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // TODO #80: Get profiled_latency from current_job_
   Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
   int64_t profiled_latency =
-      interpreter->GetSubgraphProfileResult(current_subgraph->GetKey());
+      interpreter->GetExpectedLatency(current_subgraph->GetKey());
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet
@@ -141,7 +141,7 @@ void GlobalQueueWorker::Work() {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job_.end_time = profiling::time::NowMicros();
-          interpreter_ptr->UpdateProfileResult(
+          interpreter_ptr->UpdateExpectedLatency(
               subgraph.GetKey(),
               (current_job_.end_time - current_job_.invoke_time));
           if (current_job_.following_jobs.size() != 0) {

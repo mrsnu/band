@@ -240,6 +240,7 @@ tf_cc_test(
     data = [
         "//tensorflow/lite:testdata/add_quantized_int8.bin",
         "//tensorflow/lite:testdata/multi_add.bin",
+        "//tensorflow/lite:testdata/runtime_config.json",
     ],
     tags = [
         "tflite_not_portable_android",
