@@ -25,6 +25,7 @@ Planner::~Planner() {
 
 TfLiteStatus Planner::Init(PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
+  log_processor_frequency_ = config.log_processor_frequency;
   log_path_ = config.log_path;
   if (log_path_.size()) {
     // Open file to write per-request timestamps later
@@ -398,12 +399,14 @@ void Planner::PrepareReenqueue(Job& job) {
 }
 
 void Planner::UpdateJobWorkerStatus(Job& job, Worker* worker) const {
-  std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
-  auto cpu_set = worker->GetWorkerThreadAffinity();
-  job.start_frequency = GetCPUFrequencyKhz(cpu_set);
-  job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
-  job.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
-  job.start_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
+  if (log_processor_frequency_) {
+    std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
+    auto cpu_set = worker->GetWorkerThreadAffinity();
+    job.start_frequency = GetCPUFrequencyKhz(cpu_set);
+    job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
+    job.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
+    job.start_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
+  }
 }
 
 bool Planner::IsJobIdValid(int job_id) {

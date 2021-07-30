@@ -105,6 +105,12 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     planner_config.cpu_masks = interpreter_config.cpu_masks;
   }
 
+  // 4. Log processor frequency
+  if (!root["log_processor_frequency"].isNull()) {
+    planner_config.log_processor_frequency =
+        root["log_processor_frequency"].asBool();
+  }
+
   // Set Worker configs
   if (!root["workers"].isNull()) {
     for (auto const& key : root["workers"].getMemberNames()) {
