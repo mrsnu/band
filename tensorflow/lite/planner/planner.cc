@@ -102,8 +102,9 @@ void Planner::EnqueueFinishedJob(Job job) {
   lock.unlock();
 
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
- 
-  if (job.is_final_subgraph) {
+  
+  // record finished / failed job
+  if (job.is_final_subgraph || job.status != kTfLiteJobSuccess) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
   }
