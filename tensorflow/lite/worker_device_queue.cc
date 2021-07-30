@@ -119,9 +119,8 @@ void DeviceQueueWorker::Work() {
               (job.end_time - job.invoke_time));
           if (job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(job.following_jobs);
-          } else {
-            TryCopyOutputTensors(job);
-          }
+          } 
+          TryCopyOutputTensors(job);
           job.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {
