@@ -1089,6 +1089,13 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   std::vector<int>& execution_plan = primary_subgraph->execution_plan();
   model_spec.num_ops = execution_plan.size();
 
+  for (int i = 0; i < execution_plan.size(); ++i) {
+    int node_index = primary_subgraph->execution_plan()[i];
+    const TfLiteRegistration& registration =
+        primary_subgraph->node_and_registration(node_index)->second;
+    model_spec.op_names[i] = GetTFLiteOpName(registration);
+  }
+
   // delete the current key and replace it with valid start/end indices
   SubgraphKey& key = primary_subgraph->GetKey();
   DeleteKey(key);
@@ -1292,6 +1299,39 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
   }
 
   return worst_latency;
+}
+
+TfLiteStatus Interpreter::DumpOpCoverage(std::string file_path) {
+  for (auto& id_config : model_configs_) {
+    int id = id_config.first;
+    std::string fname = file_path + "/" + GetModelName(id, model_configs_) + ".csv";
+    std::ofstream log_file(fname);
+    if (!log_file.is_open()) {
+      return kTfLiteError;
+    }
+    log_file << "op_id,"
+             << "op_name,";
+    for (auto& worker: workers_) {
+      if (worker.first != kTfLiteCPUFallback) {
+        log_file << TfLiteDeviceGetName(worker.first) << ",";
+      }
+    }
+    log_file << "\n";
+
+    auto& model_spec = GetModelSpec(id);
+    for (int i = 0; i < model_spec.num_ops; ++i) {
+      log_file << i << ","
+               << model_spec.op_names[i] << ",";
+      for (auto& worker: workers_) {
+        if (worker.first != kTfLiteCPUFallback) {
+          log_file << model_spec.IsOpSupported(worker.first, i) << ",";
+        }
+      }
+      log_file << "\n";
+    }
+    log_file.close();
+  }
+  return kTfLiteOk;
 }
 
 }  // namespace impl

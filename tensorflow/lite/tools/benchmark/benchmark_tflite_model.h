@@ -47,6 +47,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunPeriodic() override;
   TfLiteStatus RunPeriodicSingleThread() override;
   TfLiteStatus RunStream() override;
+  TfLiteStatus DumpOpCoverage(std::string file_path) override;
   static BenchmarkParams DefaultParams();
 
  protected:

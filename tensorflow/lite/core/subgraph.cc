@@ -128,6 +128,8 @@ TfLiteQuantizationParams GetLegacyQuantization(
 }
 
 static constexpr const char kUnknownCustomOpName[] = "UnknownCustomOp";
+}  // namespace
+
 const char* GetTFLiteOpName(const TfLiteRegistration& op_reg) {
   if (op_reg.builtin_code == tflite::BuiltinOperator_CUSTOM) {
     const char* const custom_name = op_reg.custom_name;
@@ -139,8 +141,6 @@ const char* GetTFLiteOpName(const TfLiteRegistration& op_reg) {
   }
   return tflite::EnumNamesBuiltinOperator()[op_reg.builtin_code];
 }
-
-}  // namespace
 
 // A trivial implementation of GraphInfo around the Interpreter.
 // NOTE: this interpreter info represents the subset of the

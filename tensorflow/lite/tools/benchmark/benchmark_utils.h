@@ -71,6 +71,7 @@ struct BenchmarkConfig {
   int global_period_ms;
   int running_time_ms = 60000;
   std::vector<ModelInformation> model_information;
+  std::string op_coverage_file_path;
 };
 
 TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
@@ -79,23 +80,6 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.
 void SleepForSeconds(double sleep_seconds);
-
-// Split the 'str' according to 'delim', and store each splitted element into
-// 'values'.
-template <typename T>
-bool SplitAndParse(const std::string& str, char delim, std::vector<T>* values) {
-  std::istringstream input(str);
-  for (std::string line; std::getline(input, line, delim);) {
-    std::istringstream to_parse(line);
-    T val;
-    to_parse >> val;
-    if (!to_parse.eof() && !to_parse.good()) {
-      return false;
-    }
-    values->emplace_back(val);
-  }
-  return true;
-}
 
 }  // namespace util
 }  // namespace benchmark

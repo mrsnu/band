@@ -21,6 +21,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/util.h"
 
 namespace tflite {
 namespace benchmark {
@@ -35,14 +36,6 @@ void SleepForSeconds(double sleep_seconds) {
   // scaling and thermal throttling.
   tflite::profiling::time::SleepForMicros(
       static_cast<uint64_t>(sleep_seconds * 1e6));
-}
-
-std::vector<std::string> Split(const std::string& str, const char delim) {
-  std::vector<std::string> results;
-  if (!util::SplitAndParse(str, delim, &results)) {
-    results.clear();
-  }
-  return results;
 }
 
 int FindLayerInfoIndex(std::vector<InputLayerInfo>* info,
@@ -202,6 +195,12 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
                        << "current timestamp as seed instead.";
     }
   }
+
+
+  if (benchmark_config.execution_mode == "op_coverage") {
+    benchmark_config.op_coverage_file_path = root["op_coverage_file_path"].asString();
+  }
+
   // Set Model Configurations
   for (int i = 0; i < root["models"].size(); ++i) {
     std::vector<InputLayerInfo> input_layer_info;
@@ -232,6 +231,7 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
         }
       }
     }
+
 
     // Set `batch_size`.
     // If no `batch_size` is given, the default batch size will be set to 1.

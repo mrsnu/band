@@ -218,6 +218,7 @@ class BenchmarkModel {
   virtual TfLiteStatus RunPeriodic() = 0;
   virtual TfLiteStatus RunPeriodicSingleThread() = 0;
   virtual TfLiteStatus RunStream() = 0;
+  virtual TfLiteStatus DumpOpCoverage(std::string file_path) = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
   RuntimeConfig runtime_config_;

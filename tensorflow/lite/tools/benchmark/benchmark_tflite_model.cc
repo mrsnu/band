@@ -598,6 +598,9 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
+TfLiteStatus BenchmarkTfLiteModel::DumpOpCoverage(std::string file_path) {
+  return interpreter_->DumpOpCoverage(file_path);
+}
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
   int num_iters = 3;
   std::vector<int> job_ids;

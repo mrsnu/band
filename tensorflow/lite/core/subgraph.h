@@ -43,6 +43,9 @@ namespace impl {
 class NNAPIDelegate;
 
 
+// Get the op name.
+const char* GetTFLiteOpName(const TfLiteRegistration& op_reg);
+
 
 class Subgraph {
  public:

@@ -102,6 +102,18 @@ struct ModelSpec {
   std::set<int> output_tensors;
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
+  std::map<int, std::string> op_names;
+
+  bool IsOpSupported(TfLiteDeviceFlags device, int op_idx) {
+    auto it = std::find(unsupported_ops[device].begin(),
+                        unsupported_ops[device].end(),
+                        op_idx);
+    if (it == unsupported_ops[device].end()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 };
 
 class Interpreter {
@@ -129,6 +141,8 @@ class Interpreter {
   void InvalidateRecentModelId() {
     next_model_id_--;
   }
+
+  TfLiteStatus DumpOpCoverage(std::string file_path);
 
   // Functions to build interpreter
 #ifndef DOXYGEN_SKIP

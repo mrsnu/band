@@ -34,6 +34,14 @@ TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
 
 }  // namespace
 
+std::vector<std::string> Split(const std::string& str, const char delim) {
+  std::vector<std::string> results;
+  if (!SplitAndParse(str, delim, &results)) {
+    results.clear();
+  }
+  return results;
+}
+
 int GetModelId(std::string model_name,
                const std::map<int, ModelConfig>& model_configs) {
   auto target = std::find_if(model_configs.begin(),
@@ -57,7 +65,8 @@ std::string GetModelName(int model_id,
   if (target == model_configs.end()) {
     return "";
   }
-  return target->second.model_fname;
+  std::vector<std::string> model_path = Split(target->second.model_fname, '/');
+  return model_path[model_path.size() - 1];
 }
 
 Json::Value LoadJsonObjectFromFile(std::string file_path) {
