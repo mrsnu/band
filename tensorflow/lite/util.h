@@ -48,7 +48,6 @@ struct SubgraphKey {
               std::set<int> input_ops, std::set<int> output_ops)
       : model_id(model_id),
         device_flag(device_flag),
-        is_fallback(is_fallback),
         input_ops(input_ops),
         output_ops(output_ops) {}
 
@@ -73,7 +72,6 @@ struct SubgraphKey {
 
   int model_id;
   TfLiteDeviceFlags device_flag;
-  bool is_fallback;
   std::set<int> input_ops;
   std::set<int> output_ops;
 };

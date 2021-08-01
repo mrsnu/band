@@ -541,14 +541,6 @@ TfLiteStatus Subgraph::SetTensorToNodes(const std::multimap<int, int>& src, std:
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::SetInputTensorToNodes(std::multimap<int, int> tensor_to_nodes) {
-  return SetTensorToNodes(tensor_to_nodes, input_tensor_to_nodes_);
-}
-
-TfLiteStatus Subgraph::SetOutputTensorToNodes(std::multimap<int, int> tensor_to_nodes) {
-  return SetTensorToNodes(tensor_to_nodes, output_tensor_to_nodes_);
-}
-
 TfLiteStatus Subgraph::SetVariables(std::vector<int> variables) {
   TF_LITE_ENSURE_OK(&context_, CheckTensorIndices("variables", variables.data(),
                                                   variables.size()));

@@ -68,9 +68,6 @@ class Subgraph {
   // interpreter.
   TfLiteStatus SetOutputs(std::vector<int> outputs);
 
-  TfLiteStatus SetInputTensorToNodes(std::multimap<int, int> tensor_to_nodes);
-  TfLiteStatus SetOutputTensorToNodes(std::multimap<int, int> tensor_to_nodes);
-
   // Provide a list of tensor indexes that are variable tensors.
   // Each index is bound check and this modifies the consistent_ flag of the
   // interpreter.
@@ -173,30 +170,15 @@ class Subgraph {
   // Read only access to list of outputs.
   const std::vector<int>& outputs() const { return outputs_; }
 
-  std::set<int> input_nodes() const {
-    return TensorIndicesToNodeIndices(
-        input_tensor_to_nodes_, inputs().data(), inputs().size());
-  }
-  
-  std::set<int> output_nodes() const  {
-    return TensorIndicesToNodeIndices(
-        output_tensor_to_nodes_, outputs().data(), outputs().size());
-  }
+  void SetInputOps(std::set<int> input_ops) { input_ops_ = input_ops; }
+  void SetOutputOps(std::set<int> output_ops) { output_ops_ = output_ops; }
 
   std::set<int> input_ops() const {
-    std::set<int> input_ops;
-    for(const int& i : input_nodes()) {
-      input_ops.insert(op_indices_[i]);
-    }
-    return input_ops;
+    return input_ops_;
   }
 
   std::set<int> output_ops() const {
-    std::set<int> output_ops;
-    for(const int& i : output_nodes()) {
-      output_ops.insert(op_indices_[i]);
-    }
-    return output_ops;
+    return output_ops_;
   }
 
   // Read only access to list of variable tensors.
@@ -219,9 +201,6 @@ class Subgraph {
 
   // Return read-only vector of node indices in the order of execution.
   const std::vector<int>& execution_plan() const { return execution_plan_; }
-
-  void SetOperatorIndices(std::vector<int> op_indices) { op_indices_ = op_indices; }
-  const std::vector<int>& op_indices() const { return op_indices_; }
 
   // Mutable form of tensors (TEMPORARY for refactor).
   // TODO(b/119495520): remove when refactoring complete.
@@ -645,8 +624,6 @@ class Subgraph {
   // sits inside the associated TFLite interpreter instance.
   TfLiteExternalContext** external_contexts_;
 
-  // Array of indices representing the original op index of node.
-  std::vector<int> op_indices_;
   // Node inputs/outputs are stored in TfLiteNode and TfLiteRegistration stores
   // function pointers to actual implementation.
   // Nodes should appear in the order in which they are instantiated at runtime.
@@ -659,6 +636,9 @@ class Subgraph {
   // the tensor array.
   bool consistent_ = true;
 
+  std::set<int> input_ops_;
+  std::set<int> output_ops_;
+
   // Array of indices representing the tensors that are inputs to the
   // interpreter.
   std::vector<int> inputs_;
@@ -669,12 +649,6 @@ class Subgraph {
 
   // Array of indices representing the tensors that are variable tensors.
   std::vector<int> variables_;
-
-  // Multimap from tensor index to node indices
-  // input : nodes that take corresponding tensor as an input
-  std::multimap<int, int> input_tensor_to_nodes_;
-  // output : nodes that output corresponding tensor
-  std::multimap<int, int> output_tensor_to_nodes_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_;

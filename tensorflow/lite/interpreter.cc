@@ -1008,7 +1008,7 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
     Subgraph* current_subgraph = subgraph(i);
     if (current_subgraph->key_.model_id == model_id &&
         current_subgraph->key_.device_flag == device_id &&
-        current_subgraph->nodes_size() == spec.num_ops) {
+        current_subgraph->next_ == nullptr) {
       return i;
     }
   }
@@ -1252,9 +1252,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       if (node.delegate == nullptr) {
         // this subgraph is always a 0~num_ops-1 CPU subgraph so
         // the node-->op mapping is basically the identity mapping
-        model_spec.unsupported_ops[device_flag].insert(
-          primary_subgraph->op_indices()[node_index]
-        );
+        model_spec.unsupported_ops[device_flag].insert(node_index);
       }
     }
 

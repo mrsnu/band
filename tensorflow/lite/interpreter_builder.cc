@@ -232,9 +232,6 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
   // Reduce the number of redundant allocations
   subgraph->ReserveNodes(num_ops);
 
-  // Operator indices (node index -> op index)
-  std::vector<int> node_to_operator_indices;
-
   for (int i : op_indices) {
     const auto* op = operators->Get(i);
     int index = op->opcode_index();
@@ -288,11 +285,7 @@ TfLiteStatus InterpreterBuilder::ParseNodes(
           FlatBufferIntArrayToVector(op->intermediates()), nullptr, 0,
           builtin_data, registration);
     }
-
-    node_to_operator_indices.push_back(i);
   }
-
-  subgraph->SetOperatorIndices(node_to_operator_indices);
 
   return status;
 }
@@ -589,26 +582,23 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       continue;
     }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    
-    std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
-        subgraph_indices =
+
+    std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices =
         (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
     Subgraph* previous_subgraph = nullptr;
 
     for (auto& device_op_indices : subgraph_indices) {
       SubgraphKey key(model_id, device_op_indices.first);
-      int subgraph_idx = AddSubgraph(
-        model, op_resolver, interpreter, key,
-        device_op_indices.second, num_threads);
+      int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, key,
+                                     device_op_indices.second, num_threads);
       if (subgraph_idx != -1) {
         (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
         Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
         if (previous_subgraph) {
           // we rely on `MakeSubgraphsForFallbackOps()` returning the indices
           // in topological order
-          if (subgraph->SetPrevSubgraph(
-                  previous_subgraph) != kTfLiteOk) {
+          if (subgraph->SetPrevSubgraph(previous_subgraph) != kTfLiteOk) {
             TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
             return -1;
           }
@@ -616,13 +606,12 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         has_available_device = true;
         previous_subgraph = subgraph;
       }
-
       TFLITE_LOG(INFO) << "ADDED Subgraph "
                        << "Model : " << key.model_id << " "
                        << TfLiteDeviceGetName(key.device_flag) << " "
                        << "From " << key.GetInputOpsString() << " "
-                       << "To " << key.GetOutputOpsString();
-
+                       << "To " << key.GetOutputOpsString() << " "
+                       << "Index " << subgraph_idx;
     }
   }
 
@@ -769,17 +758,14 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     // nodes in the same model, as well as parameters tensors that aren't
     // really "input" tensors
     std::set<int> node_inputs, node_outputs;
-    std::multimap<int, int> input_tensor_to_nodes, output_tensor_to_nodes;
     auto nodes_and_registration = modified_subgraph->nodes_and_registration();
     for (int node_index : modified_subgraph->execution_plan()) {
       TfLiteNode node = nodes_and_registration[node_index].first;
       for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
         node_inputs.insert(input_tensor);
-        input_tensor_to_nodes.insert({input_tensor, node_index});
       }
       for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
         node_outputs.insert(output_tensor);
-        output_tensor_to_nodes.insert({output_tensor, node_index});
       }
     }
 
@@ -839,9 +825,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     modified_subgraph->SetOutputs(
         std::vector<int>(real_outputs.begin(), real_outputs.end()));
 
-    modified_subgraph->SetInputTensorToNodes(input_tensor_to_nodes);
-    modified_subgraph->SetOutputTensorToNodes(output_tensor_to_nodes);
-
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
       auto* tensor = modified_subgraph->tensor(i);
@@ -850,8 +833,34 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       }
     }
 
-    subgraph_key.input_ops = modified_subgraph->input_ops();
-    subgraph_key.output_ops = modified_subgraph->output_ops();
+    // Find input / output ops
+    std::set<int> input_ops;
+    std::set<int> output_ops;
+
+    for (int op_index : op_indices) {
+      const auto* op = operators->Get(op_index);
+
+      auto input_tensors = FlatBufferIntArrayToVector(op->inputs());
+      auto output_tensors = FlatBufferIntArrayToVector(op->outputs());
+
+      for (int input_tensor_index : input_tensors) {
+        if (real_inputs.find(input_tensor_index) != real_inputs.end()) {
+          input_ops.insert(op_index);
+        }
+      }
+
+      for (int output_tensor_index : output_tensors) {
+        if (real_outputs.find(output_tensor_index) != real_outputs.end()) {
+          output_ops.insert(op_index);
+        }
+      }
+    }
+
+    modified_subgraph->SetInputOps(input_ops);
+    modified_subgraph->SetOutputOps(output_ops);
+
+    subgraph_key.input_ops = input_ops;
+    subgraph_key.output_ops = output_ops;
 
     modified_subgraph->SetVariables(std::move(variables));
     modified_subgraph->SetKey(subgraph_key);
