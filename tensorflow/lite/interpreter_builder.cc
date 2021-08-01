@@ -569,14 +569,13 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
     has_available_device = true;
   }
-
   // write the ModelSpec for this model
   (*interpreter)->InvestigateModelSpec(model_id);
 
   ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
 
-  // register subgraphs for all devices
-  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+  // register subgraphs for all devices (skip CPU)
+  for (int i = 1; i < kTfLiteNumDevices; ++i) {
     if (i == kTfLiteCPUFallback) {
       // Skip for Fallback worker
       continue;
