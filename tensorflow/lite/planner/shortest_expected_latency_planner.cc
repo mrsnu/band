@@ -69,8 +69,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // remove the job from the queue so that we don't meet it in the next loop
       local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-      SubgraphKey& to_execute =
-          GetInterpreter()->subgraph(target_subgraph)->GetKey();
+      Subgraph* target_subgraph =
+          GetInterpreter()->subgraph(target_subgraph_idx);
+      SubgraphKey& to_execute = target_subgraph->GetKey();
       UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
       if (most_urgent_job.expected_latency == 0) {

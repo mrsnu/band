@@ -100,10 +100,10 @@ void Planner::EnqueueFinishedJob(Job job) {
   lock.unlock();
 
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
-  
+
   // record finished / failed job
-  if (!interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph()
-      || job.status != kTfLiteJobSuccess) {
+  if (!interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph() ||
+      job.status != kTfLiteJobSuccess) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
 
@@ -198,8 +198,6 @@ void Planner::FlushFinishedJobs() {
 }
 
 void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
-  job.start_idx = target.start_idx;
-  job.end_idx = target.end_idx;
   job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
   job.device_id = target.device_flag;
   job.profiled_execution_time=
