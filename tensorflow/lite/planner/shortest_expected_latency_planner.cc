@@ -69,13 +69,9 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // remove the job from the queue so that we don't meet it in the next loop
       local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-      Subgraph* target_subgraph =
-          GetInterpreter()->subgraph(target_subgraph_idx);
-      SubgraphKey& to_execute = target_subgraph->GetKey();
-      most_urgent_job.subgraph_idx = target_subgraph_idx;
-      most_urgent_job.device_id = to_execute.device_flag;
-      most_urgent_job.profiled_time =
-          GetInterpreter()->GetExpectedLatency(to_execute);
+      SubgraphKey& to_execute =
+          GetInterpreter()->subgraph(target_subgraph)->GetKey();
+      UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
       if (most_urgent_job.expected_latency == 0) {
         // only set these fields if this is the first subgraph of this model
@@ -88,7 +84,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
         int64_t current_time = profiling::time::NowMicros();
         int64_t expected_latency =
             device_waiting_time[to_execute.device_flag] +
-            most_urgent_job.profiled_time;
+            most_urgent_job.expected_execution_time;
 
         if (current_time + expected_latency >
             most_urgent_job.enqueue_time + most_urgent_job.slo_us) {

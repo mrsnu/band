@@ -35,8 +35,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "enqueue_time\t"
            << "invoke_time\t"
            << "end_time\t"
-           << "profiled_time\t"
-           << "expected_latency\t"
+           << "profiled_execution_time\t"
+           << "expected_execution_time\t"
            << "slo_us\t"
            << "job status\t"
            << "is_final_subgraph\n";
@@ -101,7 +101,9 @@ void Planner::EnqueueFinishedJob(Job job) {
 
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
   
-  if (!interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph()) {
+  // record finished / failed job
+  if (!interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph()
+      || job.status != kTfLiteJobSuccess) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
 
@@ -183,8 +185,8 @@ void Planner::FlushFinishedJobs() {
               << job.enqueue_time << "\t"
               << job.invoke_time << "\t"
               << job.end_time << "\t"
-              << job.profiled_time << "\t"
-              << job.expected_latency << "\t"
+              << job.profiled_execution_time << "\t"
+              << job.expected_execution_time << "\t"
               << job.slo_us << "\t"
               << job.status << "\t"
               << is_final_subgraph << "\n";
@@ -193,6 +195,17 @@ void Planner::FlushFinishedJobs() {
   } else {
     TFLITE_LOG(ERROR) << "Invalid log file path :" << log_path_;
   }
+}
+
+void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
+  job.start_idx = target.start_idx;
+  job.end_idx = target.end_idx;
+  job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
+  job.device_id = target.device_flag;
+  job.profiled_execution_time=
+      interpreter_->GetProfiledLatency(target);
+  job.expected_execution_time =
+      interpreter_->GetExpectedLatency(target);
 }
 
 bool Planner::IsJobIdValid(int job_id) {
