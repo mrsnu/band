@@ -65,6 +65,13 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["model_profile"].isNull()) {
     interpreter_config.profile_data_path = root["model_profile"].asString();
   }
+  // 4. Profile config
+  if (!root["profile_warmup_runs"].isNull()) {
+    interpreter_config.profile_config.num_warmups = root["profile_warmup_runs"].asInt();
+  }
+  if (!root["profile_num_runs"].isNull()) {
+    interpreter_config.profile_config.num_runs = root["profile_num_runs"].asInt();
+  }
 
   // Set Planner configs
   // 1. Log path

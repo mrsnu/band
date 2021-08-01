@@ -78,6 +78,8 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * curr_profile + (1 - profile_smoothing_factor) * prev_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
+* `profile_warmup_runs`: Number of warmup runs before profile. [default: 3]
+* `profile_num_runs`: Number of runs for profile. [default: 50]
 * `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
 * `schedule_window_size`: The number of planning unit.
 * `global_period_ms`: Request interval value used for execution mode `periodic_single_thread` only. Should be > 0.
@@ -119,6 +121,8 @@ An example of complete JSON config file is as follows:
     "running_time_ms": 60000,
     "profile_smoothing_factor": 0.1,
     "model_profile": "/data/local/tmp/profile.json",
+    "profile_warmup_runs": 10,
+    "profile_num_runs": 20,
     "allow_work_steal": true,
     "schedule_window_size": 10
 }
@@ -126,7 +130,3 @@ An example of complete JSON config file is as follows:
 
 ### OPTIONS
 Refer to [Benchmark Tool](tensorflow/lite/tools/benchmark) for details.
-
-The following options are added in our version:
-* `profile_warmup_runs`: The number of warmup runs during profile stage.
-* `profile_num_runs`: The number of iterations during profile stage.
