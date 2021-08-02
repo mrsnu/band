@@ -44,12 +44,10 @@ bool GlobalQueueWorker::IsBusy() {
 int64_t GlobalQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!is_available_) {
-    lock.unlock();
     return LARGE_WAITING_TIME;
   }
 
   if (!is_busy_) {
-    lock.unlock();
     return 0;
   }
 
