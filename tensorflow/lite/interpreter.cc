@@ -1329,7 +1329,7 @@ Interpreter::GroupByStartEndIdx(
 }
 
 std::vector<int> Interpreter::GetSubgraphCandidates(
-    int model_id, std::set<int> resolved_output, TfLiteDeviceFlags preceded_device) {
+    int model_id, std::set<int> resolved_tensors, TfLiteDeviceFlags preceded_device) {
   std::vector<int> candidate_indices;
 
   // iterate thru all subgraphs and only pick the ones that match the criteria
@@ -1342,14 +1342,14 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
 
       // check whether all input tensor is resolved or not
       for (const int& input_tensor : subgraph_ptr->inputs()) {
-        if (resolved_output.find(input_tensor) == resolved_output.end()) {
+        if (resolved_tensors.find(input_tensor) == resolved_tensors.end()) {
           is_executable = false;
           break;
         }
       }
 
       // check whether all output tensors are already resolved or not
-      if (is_executable && std::includes(resolved_output.begin(), resolved_output.end(),
+      if (is_executable && std::includes(resolved_tensors.begin(), resolved_tensors.end(),
                         subgraph_ptr->outputs().begin(), subgraph_ptr->outputs().end())) {
         is_executable = false;
       }

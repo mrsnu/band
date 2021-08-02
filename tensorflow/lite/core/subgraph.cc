@@ -525,22 +525,6 @@ TfLiteStatus Subgraph::SetOutputs(std::vector<int> outputs) {
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::SetTensorToNodes(const std::multimap<int, int>& src, std::multimap<int, int>& dst) {
-  std::vector<int> tensor_indices;
-  for (auto& tensor_to_node : src) {
-    tensor_indices.push_back(tensor_to_node.first);
-    // Check whether node index is valid
-    if (tensor_to_node.second >= nodes_and_registration_.size() ||
-        tensor_to_node.second < 0) {
-      return kTfLiteError;
-    }
-  }
-  TF_LITE_ENSURE_OK(
-      &context_, CheckTensorIndices("tensors", tensor_indices.data(), tensor_indices.size()));
-  dst = std::move(src);
-  return kTfLiteOk;
-}
-
 TfLiteStatus Subgraph::SetVariables(std::vector<int> variables) {
   TF_LITE_ENSURE_OK(&context_, CheckTensorIndices("variables", variables.data(),
                                                   variables.size()));
@@ -586,24 +570,6 @@ TfLiteStatus Subgraph::CheckTensorIndices(const char* label, const int* indices,
     }
   }
   return kTfLiteOk;
-}
-
-std::set<int> Subgraph::TensorIndicesToNodeIndices(const std::multimap<int, int>& tensor_to_nodes,
-                                                   const int* indices, int length) const {
-  std::set<int> node_indices;
-  for (int i = 0; i < length; i++) {
-    int index = indices[i];
-    // Skip nodes attached to constant tensors (e.g., weight)
-    if (tensor_to_nodes.find(index) != tensor_to_nodes.end()) {
-      auto node_interators = tensor_to_nodes.equal_range(index);
-      // Insert all nodes that inputs corresponding tensor
-      for (auto it = node_interators.first; it != node_interators.second;
-           ++it) {
-        node_indices.insert(it->second);
-      }
-    }
-  }
-  return node_indices;
 }
 
 namespace {

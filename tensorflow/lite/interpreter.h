@@ -725,7 +725,7 @@ class Interpreter {
   // ops, but the latency value is calculated with all subgraphs leading to
   // the final op (of the model) in mind.
   std::pair<int, int64_t> GetShortestLatency(
-      int model_id, std::set<int> resolved_output, int64_t start_time,
+      int model_id, std::set<int> resolved_tensors, int64_t start_time,
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
       TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
 
@@ -850,7 +850,7 @@ class Interpreter {
 
   // return subgraph indices for model_id and start_idx,
   // excluding subgraphs on preceded_device
-  std::vector<int> GetSubgraphCandidates(int model_id, std::set<int> resolved_output,
+  std::vector<int> GetSubgraphCandidates(int model_id, std::set<int> resolved_tensors,
                                          TfLiteDeviceFlags preceded_device);
 
   // return the shortest subgraph out of given subgraphs, when the start time

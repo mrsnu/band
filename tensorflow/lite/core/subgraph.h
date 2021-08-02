@@ -452,12 +452,6 @@ class Subgraph {
   TfLiteStatus CheckTensorIndices(const char* label, const int* indices,
                                   int length);
 
-  // Find node indices from tensor indices
-  std::set<int> TensorIndicesToNodeIndices(const std::multimap<int, int>& tensor_to_nodes,
-                                           const int* indices, int length) const;
-  // Check whether tensor/node indices are valid and udpate dst
-  TfLiteStatus SetTensorToNodes(const std::multimap<int, int>& src, std::multimap<int, int>& dst);
-
   // Compute the number of bytes required to represent a tensor with dimensions
   // specified by the array dims (of length dims_size). Returns the status code
   // and bytes.
