@@ -75,9 +75,9 @@ void FixedDevicePlanner::Plan() {
       TfLiteDeviceFlags device_flag =
           static_cast<TfLiteDeviceFlags>(device_idx);
       // TODO: fallback subgraphs for FixedDevicePlanner?
-      to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
-      to_execute.device_id = device_idx;
-      to_execute.sched_id = sched_id_;
+      int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
+      SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
+      UpdateJobEnqueueStatus(to_execute, key);
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
       if (worker->GiveJob(to_execute)) {

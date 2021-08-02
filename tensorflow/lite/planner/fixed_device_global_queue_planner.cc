@@ -124,9 +124,9 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 
           // mark the time of this decision (of early-dropping this job)
           to_execute.end_time = current_time;
-          to_execute.sched_id = sched_id_++;
           EnqueueFinishedJob(to_execute);
           it = requests.erase(it);
+          sched_id_++;
           continue;
         }
       }
@@ -137,10 +137,6 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         ++it;
         continue;
       }
-
-      to_execute.subgraph_idx = subgraph_idx;
-      to_execute.device_id = device_idx;
-      to_execute.sched_id = sched_id_;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
       if (worker->GiveJob(to_execute)) {

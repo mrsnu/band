@@ -69,9 +69,7 @@ void ShortestExpectedLatencyPlanner::Plan() {
       Subgraph* target_subgraph =
           GetInterpreter()->subgraph(target_subgraph_idx);
       SubgraphKey& to_execute = target_subgraph->GetKey();
-
       UpdateJobEnqueueStatus(most_urgent_job, to_execute);
-      most_urgent_job.sched_id = sched_id_;
 
       if (target_subgraph->GetPrevSubgraph() == nullptr) {
         // only set these fields if this is the first subgraph of this model

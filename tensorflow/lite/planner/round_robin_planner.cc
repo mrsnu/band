@@ -35,11 +35,9 @@ void RoundRobinPlanner::Plan() {
               });
           if (available_job != GetRequests().end()) {
             Job to_execute = *available_job;
-            int subgraph_idx =
-              GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device_idx);
-            to_execute.subgraph_idx = subgraph_idx;
-            to_execute.device_id = device_idx;
-            to_execute.sched_id = sched_id_;
+            int subgraph_idx = GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device_idx);
+            SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
+            UpdateJobEnqueueStatus(to_execute, key);
 
             Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
             if (worker->GiveJob(to_execute)) {

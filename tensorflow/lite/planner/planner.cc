@@ -206,6 +206,7 @@ void Planner::FlushFinishedJobs() {
 void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
   job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
   job.device_id = target.device_flag;
+  job.sched_id = sched_id_;
   job.profiled_execution_time=
       interpreter_->GetProfiledLatency(target);
   job.expected_execution_time =
