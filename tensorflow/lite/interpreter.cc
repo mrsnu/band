@@ -1008,6 +1008,7 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
     Subgraph* current_subgraph = subgraph(i);
     if (current_subgraph->key_.model_id == model_id &&
         current_subgraph->key_.device_flag == device_id &&
+        current_subgraph->prev_ == nullptr &&
         current_subgraph->next_ == nullptr) {
       return i;
     }
@@ -1167,9 +1168,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 
 void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
-  // at this point, the subgraph key for this model doesn't have valid start
-  // and end indices so we don't need to specify them
-  int subgraph_index = *GetSubgraphIdx(model_id, kTfLiteCPU, 0).begin();
+  int subgraph_index = GetSubgraphIdx(model_id, kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
