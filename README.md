@@ -69,7 +69,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `LITTLE`: LITTLE Cluster only
   * `BIG`: Big Cluster only
   * `PRIMARY`: Primary Core only
-* `num_threads`: Number of computing threads for CPU delegates. [default: 1]
+* `num_threads`: Number of computing threads for CPU delegates. [default: -1]
 * `workers`: A map-like config for per-processor worker. For each worker, specify the following fields
   * Available list of workers (key)
     * `CPU`

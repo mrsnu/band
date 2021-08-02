@@ -34,7 +34,7 @@ struct InterpreterConfig {
   ProfileConfig profile_config;
   float profile_smoothing_factor = 0.1;
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
-  int num_threads = 1;
+  int num_threads = -1;
 };
 
 struct PlannerConfig {
