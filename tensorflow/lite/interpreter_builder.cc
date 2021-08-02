@@ -219,35 +219,20 @@ class MallocDataAllocator : public BuiltinDataAllocator {
 };
 
 }  // namespace
-
-TfLiteStatus InterpreterBuilder::ParseNodes(
-    const ::tflite::Model* model,
-    const OpResolver& op_resolver,
-    const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
-    Subgraph* subgraph) {
-  return ParseNodes(model, op_resolver, operators, subgraph, -1, -1);
-}
  
 TfLiteStatus InterpreterBuilder::ParseNodes(
     const ::tflite::Model* model,
     const OpResolver& op_resolver,
     const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
     Subgraph* subgraph,
-    int start_op_idx, int end_op_idx) {
+    std::set<int> op_indices) {
   TfLiteStatus status = kTfLiteOk;
-
-  end_op_idx = end_op_idx == -1 ? operators->size() - 1
-                                : end_op_idx;
-  start_op_idx = start_op_idx == -1 ? 0
-                                    : start_op_idx;
-
-  // TODO(dhkim): assert(end_op_idx >= start_op_idx)
-  int num_ops = end_op_idx - start_op_idx + 1;
+  int num_ops = op_indices.size();
 
   // Reduce the number of redundant allocations
   subgraph->ReserveNodes(num_ops);
 
-  for (int i = start_op_idx; i <= end_op_idx; ++i) {
+  for (int i : op_indices) {
     const auto* op = operators->Get(i);
     int index = op->opcode_index();
     if (index < 0 || index >= flatbuffer_op_index_to_registration_.size()) {
@@ -578,42 +563,54 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // we fix this later in InvestigateModelSpec
   SubgraphKey subgraph_key(model_id, kTfLiteCPU);
   int subgraph_idx = AddSubgraph(
-    model, op_resolver, interpreter, subgraph_key, num_threads);
+    model, op_resolver, interpreter, subgraph_key, {}, num_threads);
   if (subgraph_idx != -1) {
     // TODO(dhkim): Move RegisterSubgraphIdx inside AddSubgraph
     (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
     has_available_device = true;
   }
-
   // write the ModelSpec for this model
   (*interpreter)->InvestigateModelSpec(model_id);
 
-  // register subgraphs for all devices
-  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+  ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
+
+  // register subgraphs for all devices (skip CPU)
+  for (int i = 1; i < kTfLiteNumDevices; ++i) {
     if (i == kTfLiteCPUFallback) {
       // Skip for Fallback worker
       continue;
     }
     TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-    std::vector<SubgraphKey> subgraph_keys;
 
-    // separate the supported ops from unsupported, fallback ops
-    (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id,
-                                                subgraph_keys);
+    std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices =
+        (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
-    for (auto& subgraph_key : subgraph_keys) {
-      int subgraph_idx = AddSubgraph(
-        model, op_resolver, interpreter, subgraph_key, num_threads);
+    Subgraph* previous_subgraph = nullptr;
+
+    for (auto& device_op_indices : subgraph_indices) {
+      SubgraphKey key(model_id, device_op_indices.first);
+      int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, key,
+                                     device_op_indices.second, num_threads);
       if (subgraph_idx != -1) {
-        (*interpreter)->RegisterSubgraphIdx(subgraph_key, subgraph_idx);
+        (*interpreter)->RegisterSubgraphIdx(key, subgraph_idx);
+        Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
+        if (previous_subgraph) {
+          // we rely on `MakeSubgraphsForFallbackOps()` returning the indices
+          // in topological order
+          if (subgraph->SetPrevSubgraph(previous_subgraph) != kTfLiteOk) {
+            TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
+            return -1;
+          }
+        }
         has_available_device = true;
+        previous_subgraph = subgraph;
       }
-
-      TFLITE_LOG(INFO) << "ADDED Subgraph: "
-                       << subgraph_key.model_id << " "
-                       << subgraph_key.device_flag << " "
-                       << subgraph_key.start_idx << " "
-                       << subgraph_key.end_idx;
+      TFLITE_LOG(INFO) << "ADDED Subgraph "
+                       << "Model : " << key.model_id << " "
+                       << TfLiteDeviceGetName(key.device_flag) << " "
+                       << "From " << key.GetInputOpsString() << " "
+                       << "To " << key.GetOutputOpsString() << " "
+                       << "Index " << subgraph_idx;
     }
   }
 
@@ -636,15 +633,17 @@ int InterpreterBuilder::AddSubgraph(const FlatBufferModel& model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
                                     SubgraphKey& subgraph_key,
+                                    std::set<int> op_indices,
                                     int num_threads) {
   return AddSubgraph(model.GetModel(), op_resolver, interpreter,
-                     subgraph_key, num_threads);
+                     subgraph_key, op_indices, num_threads);
 }
 
 int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                                     const OpResolver& op_resolver,
                                     std::unique_ptr<Interpreter>* interpreter,
                                     SubgraphKey& subgraph_key,
+                                    std::set<int> op_indices,
                                     int num_threads) {
   int subgraph_exists = (*interpreter)->GetSubgraphIdx(subgraph_key);
   if (subgraph_exists >= 0) {
@@ -725,7 +724,6 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     modified_subgraph_index = old_size + subgraph_index;
     tflite::Subgraph* modified_subgraph =
         (*interpreter)->subgraph(modified_subgraph_index);
-    modified_subgraph->SetKey(subgraph_key);
     auto operators = subgraph->operators();
     auto tensors = subgraph->tensors();
     if (!operators || !tensors || !buffers) {
@@ -738,6 +736,11 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       return cleanup_and_error();
     }
 
+    if (op_indices.empty()) {
+      for (int op_index = 0; op_index <= operators->size() - 1; op_index++) {
+        op_indices.insert(op_index);
+      }
+    }
     // we now parse nodes and tensors, and setup input and
     // output tensors for this particular subgraph
 
@@ -745,8 +748,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     if (builder.ParseNodes(model, op_resolver,
                            operators,
                            modified_subgraph,
-                           subgraph_key.start_idx,
-                           subgraph_key.end_idx) != kTfLiteOk) {
+                           op_indices) != kTfLiteOk) {
       return cleanup_and_error();
     }
 
@@ -798,7 +800,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
     std::set<int> subgraph_inputs =
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
     std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(subgraph_key.model_id).output_tensors;
+        (*interpreter)->GetModelSpec(subgraph_key.model_id).node_output_tensors;
 
     std::set_union(model_outputs.begin(), model_outputs.end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
@@ -829,7 +831,38 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
         variables.push_back(i);
       }
     }
+
+    // Find input / output ops
+    std::set<int> input_ops;
+    std::set<int> output_ops;
+
+    for (int op_index : op_indices) {
+      const auto* op = operators->Get(op_index);
+
+      auto input_tensors = FlatBufferIntArrayToVector(op->inputs());
+      auto output_tensors = FlatBufferIntArrayToVector(op->outputs());
+
+      for (int input_tensor_index : input_tensors) {
+        if (real_inputs.find(input_tensor_index) != real_inputs.end()) {
+          input_ops.insert(op_index);
+        }
+      }
+
+      for (int output_tensor_index : output_tensors) {
+        if (real_outputs.find(output_tensor_index) != real_outputs.end()) {
+          output_ops.insert(op_index);
+        }
+      }
+    }
+
+    modified_subgraph->SetInputOps(input_ops);
+    modified_subgraph->SetOutputOps(output_ops);
+
+    subgraph_key.input_ops = input_ops;
+    subgraph_key.output_ops = output_ops;
+
     modified_subgraph->SetVariables(std::move(variables));
+    modified_subgraph->SetKey(subgraph_key);
 
     if ((*interpreter)->
           ApplyBestDeviceDelegate(

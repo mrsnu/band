@@ -98,12 +98,12 @@ class Planner {
 
   std::thread planner_thread_;
   int sched_id_ = 0;
+  Interpreter* interpreter_;
 
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
-  Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
 
   // Jobs Finished

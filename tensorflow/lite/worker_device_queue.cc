@@ -30,21 +30,17 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin();
        it != requests_.end(); ++it) {
-    int model_id = (*it).model_id;
-    TfLiteDeviceFlags device_id =
-        static_cast<TfLiteDeviceFlags>((*it).device_id);
-    int start_idx = (*it).start_idx;
-    int end_idx = (*it).end_idx;
-    SubgraphKey key(model_id, device_id, start_idx, end_idx);
-    int64_t profiled_latency = interpreter->GetExpectedLatency(key);
+    Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
+    int64_t expected_latency =
+      interpreter->GetExpectedLatency(current_subgraph->GetKey());
 
-    total += profiled_latency;
+    total += expected_latency;
     if (it == requests_.begin()) {
       int64_t current_time = profiling::time::NowMicros();
       int64_t invoke_time = (*it).invoke_time;
       if (invoke_time > 0 && current_time > invoke_time) {
         int64_t progress =
-          (current_time - invoke_time) > profiled_latency ? profiled_latency
+          (current_time - invoke_time) > expected_latency ? expected_latency
                                               : (current_time - invoke_time);
         total -= progress;
       }
@@ -92,7 +88,7 @@ void DeviceQueueWorker::Work() {
         }
       }
 
-      if (CopyInputTensors(job) == kTfLiteOk) {
+      if (TryCopyInputTensors(job) == kTfLiteOk) {
         job.invoke_time = profiling::time::NowMicros();
 
         if (subgraph.Invoke() == kTfLiteOk) {
@@ -103,7 +99,7 @@ void DeviceQueueWorker::Work() {
           if (job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(job.following_jobs);
           } else {
-            CopyOutputTensors(job);
+            TryCopyOutputTensors(job);
           }
           job.status = kTfLiteJobSuccess;
         } else {
@@ -146,6 +142,7 @@ void DeviceQueueWorker::TryWorkSteal() {
   Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
   int64_t max_latency_gain = -1;
   int max_latency_gain_device = -1;
+  int max_latency_gain_subgraph_idx = -1;
   for (auto& device_and_worker : interpreter_ptr->GetWorkers()) {
     TfLiteDeviceFlags target_device = device_and_worker.first;
     Worker* target_worker = device_and_worker.second.get();
@@ -166,8 +163,11 @@ void DeviceQueueWorker::TryWorkSteal() {
     Job& job = target_worker->GetDeviceRequests().back();
     lock.unlock();
 
-    SubgraphKey key(job.model_id, device_flag_, job.start_idx, job.end_idx);
-    int64_t expected_latency = interpreter_ptr->GetExpectedLatency(key);
+    Subgraph* orig_subgraph = interpreter_ptr->subgraph(job.subgraph_idx);
+    SubgraphKey& orig_key = orig_subgraph->GetKey();
+    SubgraphKey new_key(job.model_id, device_flag_, orig_key.input_ops,
+                        orig_key.output_ops);
+    int64_t expected_latency = interpreter_ptr->GetExpectedLatency(new_key);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer
       continue;
@@ -177,6 +177,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     if (latency_gain > max_latency_gain) {
       max_latency_gain = latency_gain;
       max_latency_gain_device = target_device;
+      max_latency_gain_subgraph_idx = interpreter_ptr->GetSubgraphIdx(new_key);
     }
   }
 
@@ -209,10 +210,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     return;
   }
 
-  int subgraph_idx =
-    interpreter_ptr->GetSubgraphIdx(SubgraphKey(
-        job.model_id, device_flag_, job.start_idx, job.end_idx));
-  job.subgraph_idx = subgraph_idx;
+  job.subgraph_idx = max_latency_gain_subgraph_idx;
   job.device_id = device_flag_;
 
   // finally, we perform the swap

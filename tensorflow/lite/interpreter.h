@@ -99,9 +99,14 @@ namespace impl {
 // a convenient data structure for holding various model information
 struct ModelSpec {
   int num_ops;
+  std::set<int> input_tensors;
+  // only includes "true" outputs
   std::set<int> output_tensors;
+  // includes intermediate tensors that are consumed by
+  // other nodes in the same model
+  std::set<int> node_output_tensors;
   std::set<TfLiteType> tensor_types;
-  std::map<TfLiteDeviceFlags, std::vector<int>> unsupported_ops;
+  std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
 };
 
 class Interpreter {
@@ -711,6 +716,7 @@ class Interpreter {
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
   // fill in the ModelSpec for this model
+  // TODO: Remove status dependency.
   void InvestigateModelSpec(int model_id);
 
   // Return a pair of the subgraph idx that leads to the shortest final
@@ -718,16 +724,15 @@ class Interpreter {
   // Note that the returned subgraph may only cover a subset of the remaining
   // ops, but the latency value is calculated with all subgraphs leading to
   // the final op (of the model) in mind.
-  std::pair<int, int64_t>
-  GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-                     TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
+  std::pair<int, int64_t> GetShortestLatency(
+      int model_id, std::set<int> resolved_tensors, int64_t start_time,
+      std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+      TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
 
   // Generate explicit subgraphs for fallback ops in `model_id`.
-  // Consecutive fallback ops are grouped as one fallback subgraph.
-  void MakeSubgraphsForFallbackOps(const int model_id,
-                                   const TfLiteDeviceFlags device_flag,
-                                   std::vector<SubgraphKey>& splitted_op_range);
+  // Each second element of return vector represents a set of original node indexes
+  // for corresponding subgraph if it requires re-indexing.
+  std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> MakeSubgraphsForFallbackOps(const int model_id, const TfLiteDeviceFlags device_flag);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
     return own_external_cpu_backend_context_.get();
@@ -840,20 +845,19 @@ class Interpreter {
   /* private methods related to subgraph scheduling */
   // divide the given subgraphs into groups that share the same start/end idxs
   // e.g., {(0,10): [1,3], (0,20): [2,4]}
-  std::map<std::pair<int, int>, std::vector<int>>
+  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
   GroupByStartEndIdx(std::vector<int> subgraph_indices);
 
   // return subgraph indices for model_id and start_idx,
   // excluding subgraphs on preceded_device
-  std::vector<int> GetSubgraphCandidates(int model_id, int start_idx,
+  std::vector<int> GetSubgraphCandidates(int model_id, std::set<int> resolved_tensors,
                                          TfLiteDeviceFlags preceded_device);
 
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account
-  std::pair<int, int64_t>
-  GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
-                           int64_t start_time,
-                           std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
+  std::pair<int, int64_t> GetShortestSubgraphIndex(
+      std::vector<int> subgraph_indices, int64_t start_time,
+      std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
 
   // Update slo values in model_configs_ according to the worst profiled
   // latency of that model x slo_scale.
