@@ -95,6 +95,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
           // mark the time of this decision (of early-dropping this job)
           most_urgent_job.end_time = current_time;
           EnqueueFinishedJob(most_urgent_job);
+          local_jobs.erase(local_jobs.begin() + target_job_idx);
+          sched_id_++;
           continue;
         }
       }
