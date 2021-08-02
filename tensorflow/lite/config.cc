@@ -27,6 +27,11 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
                                         RuntimeConfig& runtime_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
+  if (!config.is_open()) {
+    TFLITE_LOG(ERROR) << "Check if the config file exists.";
+    return kTfLiteError;
+  }
+
   Json::Value root;
   config >> root;
 
@@ -63,6 +68,13 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   // 4. Number of threads
   if (!root["num_threads"].isNull()) {
     interpreter_config.num_threads = root["num_threads"].asInt();
+  }
+  // 5. Profile config
+  if (!root["profile_warmup_runs"].isNull()) {
+    interpreter_config.profile_config.num_warmups = root["profile_warmup_runs"].asInt();
+  }
+  if (!root["profile_num_runs"].isNull()) {
+    interpreter_config.profile_config.num_runs = root["profile_num_runs"].asInt();
   }
 
   // Set Planner configs

@@ -1,0 +1,11 @@
+{
+  "cpu_masks": "ALL",
+  "running_time_ms": 2000,
+  "log_path": "/data/data/com.salar.de.uyuni/model_execution_log.csv",
+  "planner": 2,
+  "execution_mode": "stream",
+  "schedule_window_size": 1000,
+  "model_profile": "/data/data/com.salar.de.uyuni/model_profile.json",
+  "allow_work_steal": true
+}
+
