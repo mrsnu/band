@@ -78,7 +78,6 @@ bool Worker::IsAvailable() {
 }
 
 const CpuSet& Worker::GetWorkerThreadAffinity() const {
-  std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
   return cpu_set_;
 }
 
