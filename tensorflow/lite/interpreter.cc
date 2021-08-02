@@ -183,9 +183,10 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // qualcomm hexagon : qti-default, qti-dsp, qti-gpu, qti-hta
   // google tpu: google-edgetpu
   // arm npu (DaVinci) : armnn
-  // mediatek APU : neuron-ann
+  // mediatek APU : neuron-ann, mtk-neuron, mtk-mdla
   for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
+      TFLITE_LOG(INFO) << "Available NNAPI device name: " << device_name;
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       // Unlimited partition : 0
       nnapi_options.max_number_delegated_partitions = 0;
