@@ -30,19 +30,19 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // find the most urgent job and save its index within the queue
     int64_t largest_shortest_latency = -1;
     int target_job_idx;
-    int target_subgraph;
+    int target_subgraph_idx;
 
     int64_t sched_start = profiling::time::NowMicros();
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatency(
-              next_job.model_id, next_job.start_idx, 0, device_waiting);
+              next_job.model_id, next_job.resolved_tensors, 0, device_waiting);
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
         target_job_idx = it - local_jobs.begin();
-        target_subgraph = best_subgraph.first;
+        target_subgraph_idx = best_subgraph.first;
       }
     }
     int64_t sched_end = profiling::time::NowMicros();
@@ -57,17 +57,15 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // remove the job from the queue so that we don't meet it in the next loop
     local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-    SubgraphKey& to_execute =
-        GetInterpreter()->subgraph(target_subgraph)->GetKey();
+    Subgraph* target_subgraph =
+        GetInterpreter()->subgraph(target_subgraph_idx);
+    SubgraphKey& to_execute = target_subgraph->GetKey();
     planner_->UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
     if (target_subgraph->GetPrevSubgraph() == nullptr) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
     }
-
-    most_urgent_job.start_idx = to_execute.start_idx;
-    most_urgent_job.end_idx = to_execute.end_idx;
 
     ModelSpec& model_spec =
         GetInterpreter()->GetModelSpec(most_urgent_job.model_id);

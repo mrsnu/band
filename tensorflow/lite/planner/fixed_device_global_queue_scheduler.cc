@@ -38,7 +38,6 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
     SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
     int64_t profiled = GetInterpreter()->GetExpectedLatency(key);
     int64_t expected_latency = GetDeviceWaitingTime()[device_flag] + profiled;
-    to_execute.profiled_time = profiled;
     to_execute.expected_latency = expected_latency;
     planner_->UpdateJobEnqueueStatus(to_execute, key);
 

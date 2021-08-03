@@ -103,11 +103,11 @@ class Planner {
 
   DeviceWaitingTime& GetDeviceWaitingTime() { return device_waiting_; }
 
-  int IssueSchedId() { return sched_id_++; }
+  int IssueSchedId();
 
   std::map<int, int>& GetModelDeviceMap() { return model_device_map_; }
 
-  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
+  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target);
 
  private:
   bool IsJobIdValid(int job_id);

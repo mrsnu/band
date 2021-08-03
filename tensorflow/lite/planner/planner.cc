@@ -121,7 +121,7 @@ bool Planner::IsSLOViolated(Job& job) {
     int64_t current_time = profiling::time::NowMicros();
     int64_t expected_latency =
         device_waiting_[static_cast<TfLiteDeviceFlags>(job.device_id)] +
-        job.profiled_time;
+        job.profiled_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
       // SLO violation
@@ -323,7 +323,11 @@ void Planner::FlushFinishedJobs() {
   }
 }
 
-void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
+int Planner::IssueSchedId() {
+  return sched_id_++;
+}
+
+void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) {
   job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
   job.device_id = target.device_flag;
   job.sched_id = IssueSchedId();
