@@ -34,7 +34,7 @@ class TensorRingBuffer {
   int head_ = 0;
   const int size_;
   std::vector<TfLiteTensor*>* tensors_;
-  // Tensor's model index to ring buffer's index
+  // Model's tensor index to ring buffer's index
   std::map<int, int> model_to_buffer_;
   ErrorReporter* error_reporter_;
 };
