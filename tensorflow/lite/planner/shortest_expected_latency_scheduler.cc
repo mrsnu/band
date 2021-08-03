@@ -57,8 +57,7 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // remove the job from the queue so that we don't meet it in the next loop
     local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-    Subgraph* target_subgraph =
-        GetInterpreter()->subgraph(target_subgraph_idx);
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     SubgraphKey& to_execute = target_subgraph->GetKey();
     planner_->UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 

@@ -288,9 +288,11 @@ void Planner::FlushFinishedJobs() {
       jobs_finished_.queue.pop_front();
 
       bool is_final_subgraph =
-          interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph() == nullptr;
+          interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph() ==
+          nullptr;
 
-      if (job.slo_us > 0 && is_final_subgraph && job.status == kTfLiteJobSuccess) {
+      if (job.slo_us > 0 && is_final_subgraph &&
+          job.status == kTfLiteJobSuccess) {
         // check if slo has been violated or not
         auto latency = job.end_time - job.enqueue_time;
         job.status =
@@ -303,19 +305,13 @@ void Planner::FlushFinishedJobs() {
       }
 
       // write all timestamp statistics to log file
-      log_file << job.sched_id << "\t"
-               << job.model_fname << "\t"
-               << job.model_id << "\t"
-               << job.device_id << "\t"
-               << job.subgraph_idx << "\t"
-               << job.enqueue_time << "\t"
-               << job.invoke_time << "\t"
-               << job.end_time << "\t"
+      log_file << job.sched_id << "\t" << job.model_fname << "\t"
+               << job.model_id << "\t" << job.device_id << "\t"
+               << job.subgraph_idx << "\t" << job.enqueue_time << "\t"
+               << job.invoke_time << "\t" << job.end_time << "\t"
                << job.profiled_execution_time << "\t"
-               << job.expected_execution_time << "\t"
-               << job.slo_us << "\t"
-               << job.status << "\t"
-               << is_final_subgraph << "\n";
+               << job.expected_execution_time << "\t" << job.slo_us << "\t"
+               << job.status << "\t" << is_final_subgraph << "\n";
     }
     log_file.close();
   } else {
@@ -323,18 +319,14 @@ void Planner::FlushFinishedJobs() {
   }
 }
 
-int Planner::IssueSchedId() {
-  return sched_id_++;
-}
+int Planner::IssueSchedId() { return sched_id_++; }
 
 void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) {
   job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
   job.device_id = target.device_flag;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time =
-      interpreter_->GetProfiledLatency(target);
-  job.expected_execution_time =
-      interpreter_->GetExpectedLatency(target);
+  job.profiled_execution_time = interpreter_->GetProfiledLatency(target);
+  job.expected_execution_time = interpreter_->GetExpectedLatency(target);
 }
 
 bool Planner::IsJobIdValid(int job_id) {

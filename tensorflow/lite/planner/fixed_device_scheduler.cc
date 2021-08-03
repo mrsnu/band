@@ -20,8 +20,7 @@ ScheduleAction FixedDeviceScheduler::Schedule(JobQueue& requests) {
 
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
     // TODO: fallback subgraphs for FixedDevicePlanner?
-    int subgraph_idx =
-        GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
+    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
     SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
     planner_->UpdateJobEnqueueStatus(to_execute, key);
 
