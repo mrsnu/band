@@ -125,6 +125,7 @@ void DeviceQueueWorker::Work() {
           job.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {
+          // TODO #142: Test handling unavailable device with fallback subgraphs.
           lock.lock();
           is_available_ = false;
           PrepareReenqueue(job, planner_ptr.get());
