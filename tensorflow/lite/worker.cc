@@ -106,23 +106,24 @@ TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
 }
 
 TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
-  // Compute only.
+  // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {
     return kTfLiteOk;
   }
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
-  if (job.previous_subgraph_idx != -1) {
-    Subgraph* prev_subgraph = interpreter->subgraph(job.previous_subgraph_idx);
-    Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-    return CopyTensors(*prev_subgraph, *subgraph);
-  }
-
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
 
-  // TODO: Consider model inputs across multiple subgraphs
-  if (subgraph->GetPrevSubgraph() != nullptr) {
-    return kTfLiteOk;
+  // Intermediate tensor communication
+  if (subgraph->GetPrevSubgraph()) {
+    auto status = CopyTensors(*subgraph->GetPrevSubgraph(), *subgraph);
+    if (status != kTfLiteOk) {
+      // TODO: See if there is a case where we need to 
+      // consider communication btwn multiple subgraphs
+      TFLITE_LOG(ERROR)
+          << "No tensor communication between adjacent subgraphs.";
+    }
+    return status;
   }
 
   auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
@@ -132,13 +133,17 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
     return kTfLiteError;
   }
 
-  auto input_indices = subgraph->inputs();
-  std::vector<TfLiteTensor*> input_tensors(input_indices.size());
-  for (size_t i = 0; i < input_indices.size(); i++) {
-    input_tensors[i] = subgraph->tensor(input_indices[i]);
+  for (int subgraph_input : subgraph->inputs()) {
+    if (input_buffer->IsTensorIndexValid(subgraph_input)) {
+      if (input_buffer->GetTensorFromHandle(subgraph->tensor(subgraph_input),
+                                            subgraph_input,
+                                            job.input_handle) != kTfLiteOk) {
+        return kTfLiteError;
+      }
+    }
   }
 
-  return input_buffer->GetTensorsFromHandle(input_tensors, job.input_handle);
+  return kTfLiteOk;
 }
 
 TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
@@ -148,26 +153,26 @@ TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
   }
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
-  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
   auto output_buffer = interpreter->model_output_buffer_[job.model_id].get();
 
-  // TODO: Consider model outputs across multiple subgraphs
-  if (subgraph->GetNextSubgraph() != nullptr) {
-    return kTfLiteOk;
-  }
-  
   if (!output_buffer) {
     TFLITE_LOG(ERROR) << "No output buffer for model id " << job.model_id;
     return kTfLiteError;
   }
 
-  auto output_indices = subgraph->outputs();
-  std::vector<TfLiteTensor*> output_tensors(output_indices.size());
-  for (size_t i = 0; i < output_indices.size(); i++) {
-    output_tensors[i] = subgraph->tensor(output_indices[i]);
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+
+  for (int subgraph_output : subgraph->outputs()) {
+    if (output_buffer->IsTensorIndexValid(subgraph_output)) {
+      if (output_buffer->PutTensorToHandle(subgraph->tensor(subgraph_output),
+                                           subgraph_output,
+                                           job.output_handle) != kTfLiteOk) {
+        return kTfLiteError;
+      }
+    }
   }
 
-  return output_buffer->PutTensorsToHandle(output_tensors, job.output_handle);
+  return kTfLiteOk;
 }
 
 bool Worker::IsValid(Job& job) {
