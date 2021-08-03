@@ -127,7 +127,7 @@ void DeviceQueueWorker::Work() {
         } else if (status == kTfLiteDelegateError) {
           lock.lock();
           is_available_ = false;
-          PrepareReenqueue(job);
+          PrepareReenqueue(job, planner_ptr.get());
           std::vector<Job> jobs(requests_.begin(), requests_.end());
           requests_.clear();
           lock.unlock();

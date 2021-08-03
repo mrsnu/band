@@ -111,11 +111,11 @@ void Planner::EnqueueFinishedJob(Job job) {
   }
 }
 
-int Planner::EnqueueRequest(Job job, bool reenqueue) {
-  return EnqueueBatch({job}, reenqueue)[0];
+int Planner::EnqueueRequest(Job job, bool push_front) {
+  return EnqueueBatch({job}, push_front)[0];
 }
 
-std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool reenqueue) {
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
   std::vector<int> job_ids(jobs.size());
   auto enqueue_time = profiling::time::NowMicros();
   for (int i = 0; i < jobs.size(); i++) {
@@ -125,19 +125,17 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool reenqueue) {
       // op, in which case we do not overwrite the set value
       job.enqueue_time = enqueue_time;
     }
-    if (job.job_id == -1 || reenqueue) {
-      job.resolved_tensors =
-          interpreter_->GetModelSpec(job.model_id).input_tensors;
-    }
     if (job.job_id == -1) {
       job.job_id = num_submitted_jobs_++;
+      job.resolved_tensors =
+          interpreter_->GetModelSpec(job.model_id).input_tensors;
     }
     job_ids[i] = job.job_id;
   }
 
   std::unique_lock<std::mutex> request_lock(requests_.mtx);
   auto insert_position =
-      reenqueue ? requests_.queue.begin() : requests_.queue.end();
+      push_front ? requests_.queue.begin() : requests_.queue.end();
   requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
   request_lock.unlock();
 

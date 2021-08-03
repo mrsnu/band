@@ -179,9 +179,11 @@ bool Worker::IsValid(Job& job) {
       && job.end_time == 0;
 }
 
-void Worker::PrepareReenqueue(Job& job) {
+void Worker::PrepareReenqueue(Job& job, Planner* planner) {
   job.invoke_time = 0;
   job.end_time = 0;
+  job.resolved_tensors =
+      planner->GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
 }
 
 }  // namespace impl
