@@ -41,10 +41,11 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
 
     // Record expected latency to check if the SLO has been violated.
     SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
-    int64_t profiled = GetInterpreter()->GetSubgraphProfileResult(key);
+    int64_t profiled = GetInterpreter()->GetExpectedLatency(key);
     int64_t expected_latency = GetDeviceWaitingTime()[device_flag] + profiled;
     to_execute.profiled_time = profiled;
     to_execute.expected_latency = expected_latency;
+    UpdateJobEnqueueStatus(to_execute, key);
 
     action[device_flag].push_back(to_execute);
 

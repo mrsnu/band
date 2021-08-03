@@ -81,7 +81,6 @@ class Planner {
   void FlushFinishedJobs();
 
   // Copy the Job instances from the `requests_` to the local queue.
-<<<<<<< HEAD
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueue(JobQueue& local_jobs);
 
@@ -107,14 +106,8 @@ class Planner {
   int IssueSchedId() { return sched_id_++; }
 
   std::map<int, int>& GetModelDeviceMap() { return model_device_map_; }
-=======
-  JobQueue CopyToLocalQueue();
-  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
 
-  std::thread planner_thread_;
-  int sched_id_ = 0;
-  Interpreter* interpreter_;
->>>>>>> master
+  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
 
  private:
   bool IsJobIdValid(int job_id);
@@ -148,6 +141,7 @@ class Planner {
   DeviceWaitingTime device_waiting_;
   // Map structure to find assigned device of model idx (model_id, device flag)
   std::map<int, int> model_device_map_;
+  Interpreter* interpreter_;
 };
 
 class Scheduler {
