@@ -52,7 +52,7 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
     num_threads_ = num_threads;
     need_cpu_update_ = true;
   }
-  
+
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
@@ -80,6 +80,10 @@ bool Worker::IsAvailable() {
 
 const CpuSet& Worker::GetWorkerThreadAffinity() const {
   return cpu_set_;
+}
+
+int Worker::GetNumThreads() const {
+  return num_threads_;
 }
 
 JobQueue& Worker::GetDeviceRequests() {

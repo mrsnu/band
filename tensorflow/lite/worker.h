@@ -32,6 +32,7 @@ class Worker {
   void WaitUntilDeviceAvailable(Subgraph& subgraph);
   bool IsAvailable();
   const CpuSet& GetWorkerThreadAffinity() const;
+  int GetNumThreads() const;
   virtual int64_t GetWaitingTime() = 0;
   virtual bool GiveJob(Job& job) = 0;
 

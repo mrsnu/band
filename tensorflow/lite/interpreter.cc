@@ -833,15 +833,19 @@ void Interpreter::Profile(int model_id) {
 
     } else {
       std::thread t([&]() {
-        auto cpu_set = workers_[subgraph_key.device_flag]->GetWorkerThreadAffinity();
+        auto cpu_set =
+            workers_[subgraph_key.device_flag]->GetWorkerThreadAffinity();
         SetCPUThreadAffinity(cpu_set);
         if (subgraph_key.device_flag == kTfLiteCPU ||
             subgraph_key.device_flag == kTfLiteCPUFallback) {
+          auto internal_backend =
+              GetCpuBackendContext()->internal_backend_context();
           // Update internal cpu backend (ruy)
-          GetCpuBackendContext()->internal_backend_context()->SetCpuSet(
-              std::this_thread::get_id(), cpu_set);
+          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
+          internal_backend->SetMaxNumThreads(
+              workers_[subgraph_key.device_flag]->GetNumThreads());
         }
-        
+
         for (int i = 0; i < num_warmups_; i++) {
           subgraph->Invoke();
         }
