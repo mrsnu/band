@@ -59,38 +59,37 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
 
     SubgraphKey& to_execute =
         GetInterpreter()->subgraph(target_subgraph)->GetKey();
-    most_urgent_job.start_idx = to_execute.start_idx;
-    most_urgent_job.end_idx = to_execute.end_idx;
-    most_urgent_job.subgraph_idx = target_subgraph;
-    most_urgent_job.device_id = to_execute.device_flag;
-    most_urgent_job.profiled_time =
-        GetInterpreter()->GetSubgraphProfileResult(to_execute);
+    planner_->UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
-    if (most_urgent_job.expected_latency == 0) {
+    if (target_subgraph->GetPrevSubgraph() == nullptr) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
-      most_urgent_job.sched_id = IssueSchedId();
     }
+
+    most_urgent_job.start_idx = to_execute.start_idx;
+    most_urgent_job.end_idx = to_execute.end_idx;
 
     ModelSpec& model_spec =
         GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
-    if (most_urgent_job.end_idx < model_spec.num_ops - 1) {
+    if (target_subgraph->GetNextSubgraph() != nullptr) {
       Job remaining_ops(most_urgent_job.model_id);
       remaining_ops.enqueue_time = most_urgent_job.enqueue_time;
-      remaining_ops.start_idx = most_urgent_job.end_idx + 1;
-      remaining_ops.end_idx = model_spec.num_ops - 1;
       remaining_ops.following_jobs = most_urgent_job.following_jobs;
       remaining_ops.expected_latency = most_urgent_job.expected_latency;
       remaining_ops.sched_id = most_urgent_job.sched_id;
       remaining_ops.job_id = most_urgent_job.job_id;
       remaining_ops.input_handle = most_urgent_job.input_handle;
       remaining_ops.output_handle = most_urgent_job.output_handle;
-      remaining_ops.previous_subgraph_idx = most_urgent_job.subgraph_idx;
+      remaining_ops.resolved_tensors = most_urgent_job.resolved_tensors;
+
+      for (int output_index : target_subgraph->outputs()) {
+        remaining_ops.resolved_tensors.insert(output_index);
+      }
 
       most_urgent_job.following_jobs.clear();
       most_urgent_job.following_jobs.push_back(remaining_ops);
-      most_urgent_job.is_final_subgraph = false;
     }
+
     action[to_execute.device_flag].push_back(most_urgent_job);
     device_waiting[to_execute.device_flag] += largest_shortest_latency;
   }

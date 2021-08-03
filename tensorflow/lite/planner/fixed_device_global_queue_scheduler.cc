@@ -34,18 +34,13 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
 
     // TODO: fallback subgraphs for FixedDevicePlanner?
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
-
-    to_execute.subgraph_idx = subgraph_idx;
-    to_execute.device_id = device_idx;
-    to_execute.sched_id = IssueSchedId();
-
     // Record expected latency to check if the SLO has been violated.
     SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
     int64_t profiled = GetInterpreter()->GetExpectedLatency(key);
     int64_t expected_latency = GetDeviceWaitingTime()[device_flag] + profiled;
     to_execute.profiled_time = profiled;
     to_execute.expected_latency = expected_latency;
-    UpdateJobEnqueueStatus(to_execute, key);
+    planner_->UpdateJobEnqueueStatus(to_execute, key);
 
     action[device_flag].push_back(to_execute);
 
