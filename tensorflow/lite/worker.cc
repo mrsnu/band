@@ -47,6 +47,7 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
   }
 
   std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
+  
   if (num_threads_ != num_threads) {
     num_threads_ = num_threads;
     need_cpu_update_ = true;

@@ -63,14 +63,9 @@ class Worker {
   JobQueue requests_;
 
   CpuSet cpu_set_;
-<<<<<<< HEAD
   int num_threads_;
   bool need_cpu_update_ = false;
   std::mutex cpu_mtx_;
-=======
-  bool need_cpu_set_update_ = false;
-  mutable std::mutex cpu_set_mtx_;
->>>>>>> ed16ccc... affinity aware profile
 
   TfLiteDeviceFlags device_flag_;
 
