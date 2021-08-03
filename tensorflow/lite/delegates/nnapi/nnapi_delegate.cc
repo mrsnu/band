@@ -4196,8 +4196,8 @@ TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
     return kTfLiteDelegateFlagsNNAPIDSP;
   }
 
-  if (contains_keywords({ 
-    "google-edgetpu", 
+  if (contains_keywords({
+    "google-edgetpu",
     "armnn", // Huawei (DaVinci NPU)
     "neuron-ann", // Mediatek APU
     "qti-hta", // Hetagon tensor accelerator

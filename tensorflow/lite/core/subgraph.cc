@@ -61,6 +61,16 @@ TfLiteStatus ReportOpError(TfLiteContext* context, const TfLiteNode& node,
           : EnumNameBuiltinOperator(
                 static_cast<BuiltinOperator>(registration.builtin_code)),
       message);
+  static const int NNAPI_flag_mask = kTfLiteDelegateFlagsNNAPIGPU |
+                                     kTfLiteDelegateFlagsNNAPIDSP |
+                                     kTfLiteDelegateFlagsNNAPINPU;
+  if (node.delegate->flags & NNAPI_flag_mask) {
+    int nnapi_errno = static_cast<tflite::StatefulNnApiDelegate*>(node.delegate)
+                          ->GetNnApiErrno();
+    if (nnapi_errno == ANEURALNETWORKS_UNAVAILABLE_DEVICE) {
+      return kTfLiteDelegateError;
+    }
+  }
   return kTfLiteError;
 }
 

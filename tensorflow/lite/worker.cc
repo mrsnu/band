@@ -3,6 +3,7 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
 namespace impl {
@@ -25,6 +26,7 @@ TfLiteStatus Worker::Init(WorkerConfig& config) {
   if (config.allow_worksteal) {
     AllowWorkSteal();
   }
+  availability_check_interval_ms_ = config.availability_check_interval_ms;
 
   TFLITE_LOG(INFO) << "Set affinity of "
                    << TfLiteDeviceGetName(device_flag_)
@@ -53,6 +55,21 @@ TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) 
   return kTfLiteOk;
 }
 
+void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
+  while (true) {
+    tflite::profiling::time::SleepForMicros(1000 * availability_check_interval_ms_);
+    TFLITE_LOG(INFO) << "Availability check at " << tflite::profiling::time::NowMicros();
+    if (subgraph.Invoke() == kTfLiteOk) {
+      return;
+    }
+  }
+}
+
+bool Worker::IsAvailable() {
+  std::lock_guard<std::mutex> lock(device_mtx_);
+  return is_available_;
+}
+
 JobQueue& Worker::GetDeviceRequests() {
   TFLITE_LOG(ERROR) << "Worker::GetDeviceRequests() Not implemented.";
   return requests_;
@@ -60,11 +77,6 @@ JobQueue& Worker::GetDeviceRequests() {
 
 void Worker::AllowWorkSteal() {
   TFLITE_LOG(ERROR) << "Worker::AllowWorkSteal() Not implemented.";
-}
-
-bool Worker::GiveJob(Job& job) {
-  TFLITE_LOG(ERROR) << "Worker::GiveJob() Not implemented.";
-  return false;
 }
 
 bool Worker::IsBusy() {
@@ -156,6 +168,22 @@ TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
   }
 
   return output_buffer->PutTensorsToHandle(output_tensors, job.output_handle);
+}
+
+bool Worker::IsValid(Job& job) {
+  return job.model_id >= 0
+      && job.subgraph_idx >= 0
+      && job.device_id >= 0
+      && job.enqueue_time > 0
+      && job.invoke_time == 0
+      && job.end_time == 0;
+}
+
+void Worker::PrepareReenqueue(Job& job, Planner* planner) {
+  job.invoke_time = 0;
+  job.end_time = 0;
+  job.resolved_tensors =
+      planner->GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
 }
 
 }  // namespace impl

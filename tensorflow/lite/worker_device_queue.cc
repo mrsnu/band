@@ -20,6 +20,9 @@ void DeviceQueueWorker::AllowWorkSteal() {
 
 int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
+  if (!is_available_) {
+    return LARGE_WAITING_TIME;
+  }
 
   std::shared_ptr<Planner> planner = planner_.lock();
   if (!planner) {
@@ -51,6 +54,17 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   return total;
 }
 
+bool DeviceQueueWorker::GiveJob(Job& job) {
+  std::lock_guard<std::mutex> lock(device_mtx_);
+  if (!is_available_) {
+    return false;
+  }
+
+  requests_.push_back(job);
+  request_cv_.notify_one();
+  return true;
+}
+
 void DeviceQueueWorker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
@@ -65,6 +79,12 @@ void DeviceQueueWorker::Work() {
 
     Job& job = requests_.front();
     lock.unlock();
+
+    if (!IsValid(job)) {
+      TFLITE_LOG(ERROR) << "Worker " << device_flag_
+                        << " spotted an invalid job";
+      break;
+    }
 
     int subgraph_idx = job.subgraph_idx;
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
@@ -91,7 +111,8 @@ void DeviceQueueWorker::Work() {
       if (TryCopyInputTensors(job) == kTfLiteOk) {
         job.invoke_time = profiling::time::NowMicros();
 
-        if (subgraph.Invoke() == kTfLiteOk) {
+        TfLiteStatus status = subgraph.Invoke();
+        if (status == kTfLiteOk) {
           job.end_time = profiling::time::NowMicros();
           interpreter_ptr->UpdateExpectedLatency(
               subgraph.GetKey(),
@@ -102,6 +123,26 @@ void DeviceQueueWorker::Work() {
             TryCopyOutputTensors(job);
           }
           job.status = kTfLiteJobSuccess;
+
+        } else if (status == kTfLiteDelegateError) {
+          // TODO #142: Test handling unavailable device with fallback subgraphs.
+          lock.lock();
+          is_available_ = false;
+          PrepareReenqueue(job, planner_ptr.get());
+          std::vector<Job> jobs(requests_.begin(), requests_.end());
+          requests_.clear();
+          lock.unlock();
+
+          planner_ptr->EnqueueBatch(jobs, true);
+          WaitUntilDeviceAvailable(subgraph);
+
+          lock.lock();
+          is_available_ = true;
+          lock.unlock();
+
+          planner_ptr->GetSafeBool().notify();
+          continue;
+
         } else {
           job.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment

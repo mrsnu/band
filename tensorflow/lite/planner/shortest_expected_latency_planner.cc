@@ -66,18 +66,14 @@ void ShortestExpectedLatencyPlanner::Plan() {
       // we get a segfault at push_back() below
       Job most_urgent_job = local_jobs[target_job_idx];
 
-      // remove the job from the queue so that we don't meet it in the next loop
-      local_jobs.erase(local_jobs.begin() + target_job_idx);
-
       Subgraph* target_subgraph =
           GetInterpreter()->subgraph(target_subgraph_idx);
       SubgraphKey& to_execute = target_subgraph->GetKey();
       UpdateJobEnqueueStatus(most_urgent_job, to_execute);
 
-      if (most_urgent_job.expected_latency == 0) {
+      if (target_subgraph->GetPrevSubgraph() == nullptr) {
         // only set these fields if this is the first subgraph of this model
         most_urgent_job.expected_latency = largest_shortest_latency;
-        most_urgent_job.sched_id = sched_id_++;
       }
 
       // this job has an SLO; check if it's not too late already
@@ -99,6 +95,8 @@ void ShortestExpectedLatencyPlanner::Plan() {
           // mark the time of this decision (of early-dropping this job)
           most_urgent_job.end_time = current_time;
           EnqueueFinishedJob(most_urgent_job);
+          local_jobs.erase(local_jobs.begin() + target_job_idx);
+          sched_id_++;
           continue;
         }
       }
@@ -126,10 +124,11 @@ void ShortestExpectedLatencyPlanner::Plan() {
       }
 
       Worker* worker = GetInterpreter()->GetWorker(to_execute.device_flag);
-      {
-        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        worker->GetDeviceRequests().push_back(most_urgent_job);
-        worker->GetRequestCv().notify_one();
+      if (worker->GiveJob(most_urgent_job)) {
+        // all is well
+        // delete this job from our request queue
+        local_jobs.erase(local_jobs.begin() + target_job_idx);
+        sched_id_++;
       }
     }
   }

@@ -59,9 +59,9 @@ void FixedDevicePlanner::Plan() {
     // which means concurrent enqueue is not available.
     // This can affect the performance.
     std::unique_lock<std::mutex> lock(GetRequestsMtx());
-    while (!GetRequests().empty()) {
-      Job to_execute = GetRequests().front();
-      GetRequests().pop_front();
+    JobQueue& requests = GetRequests();
+    for (auto it = requests.begin(); it != requests.end();) {
+      Job& to_execute = *it;
 
       int model_id = to_execute.model_id;
       int device_idx;
@@ -75,15 +75,19 @@ void FixedDevicePlanner::Plan() {
       TfLiteDeviceFlags device_flag =
           static_cast<TfLiteDeviceFlags>(device_idx);
       // TODO: fallback subgraphs for FixedDevicePlanner?
-      to_execute.subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
-      to_execute.device_id = device_idx;
-      to_execute.sched_id = sched_id_++;
+      int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
+      SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
+      UpdateJobEnqueueStatus(to_execute, key);
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      {
-        std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-        worker->GetDeviceRequests().push_back(to_execute);
-        worker->GetRequestCv().notify_one();
+      if (worker->GiveJob(to_execute)) {
+        // all is well
+        // delete this job from our request queue
+        it = requests.erase(it);
+        sched_id_++;
+      } else {
+        // we couldn't assign this job to worker
+        ++it;
       }
     }
     lock.unlock();
