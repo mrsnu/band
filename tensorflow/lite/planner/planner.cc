@@ -31,8 +31,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "model_name\t"
            << "model_id\t"
            << "device_id\t"
-           << "start_idx\t"
-           << "end_idx\t"
            << "subgraph_idx\t"
            << "enqueue_time\t"
            << "invoke_time\t"
@@ -40,7 +38,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "profiled_execution_time\t"
            << "expected_execution_time\t"
            << "slo_us\t"
-           << "job status\t"
+           << "job_status\t"
            << "is_final_subgraph\n";
   log_file.close();
 
@@ -102,21 +100,23 @@ void Planner::EnqueueFinishedJob(Job job) {
   lock.unlock();
 
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
-  
+
   // record finished / failed job
-  if (job.is_final_subgraph || job.status != kTfLiteJobSuccess) {
+  if (!interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph() ||
+      job.status != kTfLiteJobSuccess) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
-  }
 
-  end_invoke_.notify_all();
+    end_invoke_.notify_all();
+  }
 }
 
-int Planner::EnqueueRequest(Job job) { return EnqueueBatch({job})[0]; }
+int Planner::EnqueueRequest(Job job, bool push_front) {
+  return EnqueueBatch({job}, push_front)[0];
+}
 
-std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
+std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
   std::vector<int> job_ids(jobs.size());
-  std::unique_lock<std::mutex> lock(requests_.mtx);
   auto enqueue_time = profiling::time::NowMicros();
   for (int i = 0; i < jobs.size(); i++) {
     Job& job = jobs[i];
@@ -127,11 +127,17 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs) {
     }
     if (job.job_id == -1) {
       job.job_id = num_submitted_jobs_++;
+      job.resolved_tensors =
+          interpreter_->GetModelSpec(job.model_id).input_tensors;
     }
     job_ids[i] = job.job_id;
-    requests_.queue.push_back(job);
   }
-  lock.unlock();
+
+  std::unique_lock<std::mutex> request_lock(requests_.mtx);
+  auto insert_position =
+      push_front ? requests_.queue.begin() : requests_.queue.end();
+  requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
+  request_lock.unlock();
 
   planner_safe_bool_.notify();
 
@@ -160,15 +166,17 @@ void Planner::FlushFinishedJobs() {
       Job job = jobs_finished_.queue.front();
       jobs_finished_.queue.pop_front();
 
-      if (job.slo_us > 0 && job.is_final_subgraph &&
-          job.status == kTfLiteJobSuccess) {
+      bool is_final_subgraph =
+          interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph() == nullptr;
+
+      if (job.slo_us > 0 && is_final_subgraph && job.status == kTfLiteJobSuccess) {
         // check if slo has been violated or not
         auto latency = job.end_time - job.enqueue_time;
         job.status =
             latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
       }
 
-      if (job.end_idx == interpreter_->GetModelSpec(job.model_id).num_ops - 1) {
+      if (is_final_subgraph) {
         // update internal map to keep track of the # of inferences per model
         model_execution_count_[job.model_id]++;
       }
@@ -178,8 +186,6 @@ void Planner::FlushFinishedJobs() {
               << job.model_fname << "\t"
               << job.model_id << "\t"
               << job.device_id << "\t"
-              << job.start_idx << "\t"
-              << job.end_idx << "\t"
               << job.subgraph_idx << "\t"
               << job.enqueue_time << "\t"
               << job.invoke_time << "\t"
@@ -188,7 +194,7 @@ void Planner::FlushFinishedJobs() {
               << job.expected_execution_time << "\t"
               << job.slo_us << "\t"
               << job.status << "\t"
-              << job.is_final_subgraph << "\n";
+              << is_final_subgraph << "\n";
     }
     log_file.close();
   } else {
@@ -197,10 +203,9 @@ void Planner::FlushFinishedJobs() {
 }
 
 void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
-  job.start_idx = target.start_idx;
-  job.end_idx = target.end_idx;
   job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
   job.device_id = target.device_flag;
+  job.sched_id = sched_id_;
   job.profiled_execution_time=
       interpreter_->GetProfiledLatency(target);
   job.expected_execution_time =

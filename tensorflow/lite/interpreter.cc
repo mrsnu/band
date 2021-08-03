@@ -180,12 +180,14 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // TODO #23 : Add more nnapi names
   // Possible device runtime names 
   // nnapi : nnapi-default, nnapi-reference
-  // qualcomm hexagon : qti-default, qti-dsp, qti-gpu, qti-hta
-  // google tpu: google-edgetpu
-  // arm npu (DaVinci) : armnn
-  // mediatek APU : neuron-ann
+  // armnn : armnn
+  // qualcomm : qti-default, qti-gpu, qti-dsp, qti-hta
+  // mediatek : neuron-ann, mtk-gpu, mtk-dsp, mtk-neuron, mtk-mdla
+  // google tpu : google-edgetpu
+  // huawei npu : liteadaptor
   for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
+      TFLITE_LOG(INFO) << "Available NNAPI device name: " << device_name;
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       // Unlimited partition : 0
       nnapi_options.max_number_delegated_partitions = 0;
@@ -821,9 +823,13 @@ void Interpreter::Profile(int model_id) {
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
                        << " model=" << subgraph_key.model_id
                        << " avg=" << profiled_latency << " us"
-                       << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
-                       << " start=" << subgraph_key.start_idx
-                       << " end=" << subgraph_key.end_idx << ".";
+                       << " device="
+                       << TfLiteDeviceGetName(subgraph_key.device_flag)
+                       << " start="
+                       << subgraph_key.GetInputOpsString()
+                       << " end=" 
+                       << subgraph_key.GetOutputOpsString() << ".";
+
     } else {
       // otherwise, proceed as normal
       for (int i = 0; i < num_warmups_; i++) {
@@ -843,9 +849,12 @@ void Interpreter::Profile(int model_id) {
       TFLITE_LOG(INFO) << "Profiling result\n"
                        << " model=" << subgraph_key.model_id
                        << " avg=" << latency << " us"
-                       << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
-                       << " start=" << subgraph_key.start_idx
-                       << " end=" << subgraph_key.end_idx << ".";
+                       << " device="
+                       << TfLiteDeviceGetName(subgraph_key.device_flag)
+                       << " start="
+                       << subgraph_key.GetInputOpsString()
+                       << " end=" 
+                       << subgraph_key.GetOutputOpsString() << ".";
     }
   }
 
@@ -980,7 +989,7 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
     int subgraph_index = subgraph_key_id.second;
 
     if (key.model_id == model_id && key.device_flag == device_id
-        && key.start_idx == start_idx) {
+        && key.input_ops.find(start_idx) != key.input_ops.end()) {
       indices.insert(subgraph_index);
     }
   }
@@ -997,13 +1006,16 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
   // start_idx and end_idx weren't specified, so we assume that the caller
   // intended to retrieve the whole model
   ModelSpec& spec = model_specs_[model_id];
-  SubgraphKey key(model_id, device_id, 0, spec.num_ops - 1);
-  auto it = subgraph_idx_map_.find(key);
-  if (it != subgraph_idx_map_.end()) {
-    return it->second;
-  } else {
-    return -1;
+  for (int i = 0; i < subgraphs_size(); i++) {
+    Subgraph* current_subgraph = subgraph(i);
+    if (current_subgraph->key_.model_id == model_id &&
+        current_subgraph->key_.device_flag == device_id &&
+        current_subgraph->prev_ == nullptr &&
+        current_subgraph->next_ == nullptr) {
+      return i;
+    }
   }
+  return -1;
 }
 
 std::set<int> Interpreter::models() const {
@@ -1027,60 +1039,138 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
   profile_database_.insert(model_profile.begin(), model_profile.end());
 }
 
-void Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
-                                              const TfLiteDeviceFlags device_flag,
-                                              std::vector<SubgraphKey>& splitted_op_range) {
+std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
+Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
+                                         const TfLiteDeviceFlags device_flag) {
   const int num_ops = model_specs_[model_id].num_ops;
-  const std::vector<int>& unsupported_ops =
+  const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
-
-  TfLiteDeviceFlags curr_device = device_flag;
-  TfLiteDeviceFlags prev_device;
-  int subgraph_min = 0;
 
   if (planner_type_ == kFixedDevice ||
       planner_type_ == kRoundRobin ||
       planner_type_ == kFixedDeviceGlobalQueue) {
-    splitted_op_range.push_back(SubgraphKey(model_id, device_flag, 0, num_ops - 1));
-    return;
+    return {{device_flag, {}}};
   }
 
-  // do a pass through all ops and create a subgraph every time the supported
-  // device changes, using `subgraph_min` to keep track of the current
-  // subgraph's starting op
-  for (int k = 0; k < num_ops; ++k) {
-    prev_device = curr_device;
+  // TODO: Context-independent code / move to interpreter builder
+  std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> subgraph_indices;
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
 
-    // check if this ops is supported by `device_flag` or not
-    if (std::find(unsupported_ops.begin(), unsupported_ops.end(), k)
-        != unsupported_ops.end()) {
-      curr_device = kTfLiteCPUFallback;
-    } else {
-      curr_device = device_flag;
-    }
+  std::set<int> resolved_tensors;
+  std::set<int> remaining_ops;
+  // The basic idea is to partition this model into several disjoint subgraphs. 
+  // Each subgraph is not necessarily a connected graph, and no two graphs
+  // have any common ops. A subgraph is either a fallback subgraph or a
+  // non-fallback one, but (obviously) never both.
+  //
+  //   Subgraph1  Sbg2     Sbg3
+  // |--Non-fb--|--fb--|--Non-fb-|
+  //
+  //       Op2 --- Op3 -- Op4
+  //     /                   \
+  // Op1 - Op5 --- Op6 -- Op7 - Op8
+  //
+  // We start from the foremost op(s) and gradually "expand" our territory of
+  // ops until we have the largest subgraph possible, without going over the
+  // boundary of fallback/non-fallback. After that, we remove the ops of that
+  // largest subgraph and start over with the remaining ops. This process is
+  // repeated until all ops have been removed.
 
-    // if the current op is supported while the prev op is unsupported
-    // (or vice versa), then make a subgraph up until the prev op
-    if (k > 0 && curr_device != prev_device) {
-      splitted_op_range.push_back(SubgraphKey(model_id, prev_device,
-                                              subgraph_min, k - 1));
-      subgraph_min = k;
-    }
-
-    // if this is the last op, then there are no more ops to check so
-    // register the final subgraph
-    if (k == num_ops - 1) {
-      splitted_op_range.push_back(SubgraphKey(model_id, curr_device,
-                                              subgraph_min, num_ops - 1));
-    }
+  // To make this work, we first need to keep track of the "front line" of ops.
+  // This front line, together with the fallback/non-fb status of the op,
+  // is used to determine whether or not we include an op in the current
+  // subgraph.
+  // The front line is denoted with the set of "resolved" tensors -- a tensor
+  // is considered resolved if that tensor can be computed using external
+  // inputs + previously resolved tensors. In case all input tensors of an 
+  // op are resolved ones, that op is regarded to be at the front line of ops
+  // and thus can be put into the current subgraph (+ the fb/non-fb status
+  // must match too).
+  for (int input_index : primary_subgraph->inputs()) {
+    resolved_tensors.insert(input_index);
   }
+
+  for (int i = 0; i < num_ops; i++) {
+    remaining_ops.insert(i);
+  }
+
+  // convenience function for determining if a tensor has been resolved
+  auto is_resolved = [&](int op_index) {
+    auto op_inputs =
+        primary_subgraph->node_and_registration(op_index)->first.inputs;
+    for (int i = 0; i < op_inputs->size; i++) {
+      if (primary_subgraph->tensor(op_inputs->data[i])->allocation_type == kTfLiteMmapRo) {
+        // parameter tensors are always available,
+        // so they always count as "resolved" tensors
+        continue;
+      }
+      if (resolved_tensors.find(op_inputs->data[i]) == resolved_tensors.end()) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  bool is_fallback = false;
+  while (remaining_ops.size() > 0) {
+    std::set<int> operator_set;
+    bool found = true;
+    // Switch between device and fallback 
+    TfLiteDeviceFlags current_device = 
+        is_fallback ?
+        kTfLiteCPUFallback : device_flag;
+
+    // Get all op that has resolvable dependency to specific device
+    while (found) {
+      found = false;
+      for (auto current_op = remaining_ops.begin();
+           current_op != remaining_ops.end();) {
+        int current_index = *current_op;
+        bool is_op_unsupported =
+            unsupported_ops.find(current_index) != unsupported_ops.end();
+        if (!is_fallback == is_op_unsupported) {
+          // either 1) this is a fallback op but we're making a non-fb subgraph,
+          // or 2) this is a non-fb op but we're making a fb subgraph,
+          // so we skip it
+          current_op++;
+          continue;
+        }
+
+        // Dependency check
+        if (!is_resolved(current_index)) {
+          current_op++;
+          continue;
+        }
+
+        found = true;
+        operator_set.insert(current_index);
+
+        auto op_outputs =
+            primary_subgraph->node_and_registration(current_index)->first.outputs;
+        
+        // Update dependency to include output tensors of this new op.
+        // This has the effect of expanding the "front line" of ops.
+        for (int i = 0; i < op_outputs->size; i++) {
+          resolved_tensors.insert(op_outputs->data[i]);
+        }
+
+        current_op = remaining_ops.erase(current_op);
+      }
+    }  
+
+    if (operator_set.size()) {
+      subgraph_indices.push_back({current_device, operator_set});
+    }
+
+    is_fallback = !is_fallback;
+  }
+
+  return subgraph_indices;
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
-  // at this point, the subgraph key for this model doesn't have valid start
-  // and end indices so we don't need to specify them
-  int subgraph_index = GetSubgraphIdx(SubgraphKey(model_id, kTfLiteCPU));
+  int subgraph_index = GetSubgraphIdx(model_id, kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
@@ -1092,8 +1182,9 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   // delete the current key and replace it with valid start/end indices
   SubgraphKey& key = primary_subgraph->GetKey();
   DeleteKey(key);
-  key.start_idx = 0;
-  key.end_idx = model_spec.num_ops - 1;
+
+  key.input_ops = primary_subgraph->input_ops();
+  key.output_ops = primary_subgraph->output_ops();
   RegisterSubgraphIdx(key, subgraph_index);
 
   // allocate circular buffer for model IO
@@ -1108,8 +1199,12 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     output_tensors.push_back(primary_subgraph->tensor(output_tensor));
   }
 
-  model_input_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, input_tensors));
-  model_output_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(error_reporter_, output_tensors));
+  model_input_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(
+                                            error_reporter_, input_tensors,
+                                            primary_subgraph->inputs()));
+  model_output_buffer_.emplace(model_id, std::make_unique<TensorRingBuffer>(
+                                             error_reporter_, output_tensors,
+                                             primary_subgraph->outputs()));
 
   // check input/output/intermediate tensors to fill in
   // model_spec.output_tensors and model_spec.tensor_types
@@ -1124,7 +1219,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
     for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
       tensor_indices.insert(output_tensor);
-      model_spec.output_tensors.insert(output_tensor);
+      model_spec.node_output_tensors.insert(output_tensor);
     }
 
     for (auto i : tensor_indices) {
@@ -1132,6 +1227,16 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       model_spec.tensor_types.insert(tensor->type);
     }
   }
+
+  std::copy(primary_subgraph->inputs().begin(),
+            primary_subgraph->inputs().end(),
+            std::inserter(model_spec.input_tensors,
+                          model_spec.input_tensors.begin()));
+
+  std::copy(primary_subgraph->outputs().begin(),
+            primary_subgraph->outputs().end(),
+            std::inserter(model_spec.output_tensors,
+                          model_spec.output_tensors.begin()));
 
   // also check unsupported ops to fill in model_spec.unsupported_ops
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
@@ -1150,7 +1255,9 @@ void Interpreter::InvestigateModelSpec(int model_id) {
       const TfLiteNode& node =
           primary_subgraph->node_and_registration(node_index)->first;
       if (node.delegate == nullptr) {
-        model_spec.unsupported_ops[device_flag].push_back(node_index);
+        // this subgraph is always a 0~num_ops-1 CPU subgraph so
+        // the node-->op mapping is basically the identity mapping
+        model_spec.unsupported_ops[device_flag].insert(node_index);
       }
     }
 
@@ -1161,33 +1268,44 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   primary_subgraph->AllocateTensors();
 }
 
-std::pair<int, int64_t>
-Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
-                                std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-                                TfLiteDeviceFlags preceded_device) {
-  std::vector<int> subgraph_indices = GetSubgraphCandidates(model_id, start_idx,
-                                                            preceded_device);
-  std::map<std::pair<int, int>, std::vector<int>> subgraph_map =
-      GroupByStartEndIdx(subgraph_indices);
+std::pair<int, int64_t> Interpreter::GetShortestLatency(
+    int model_id, std::set<int> resolved_tensors, int64_t start_time,
+    std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+    TfLiteDeviceFlags preceded_device) {
+  std::vector<int> subgraph_indices =
+      GetSubgraphCandidates(model_id, resolved_tensors, preceded_device);
+  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
+      subgraph_map = GroupByStartEndIdx(subgraph_indices);
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
-  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end() ; iter++) {
+  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
     // first, filter out the subgraphs that take longer than others with the
     // same start/end indices, since there's no reason to pick them
     std::pair<int, int64_t> target_subgraph =
         GetShortestSubgraphIndex(iter->second, start_time, device_waiting);
-    SubgraphKey& key = subgraph(target_subgraph.first)->GetKey();
+    Subgraph* subgraph_ptr = subgraph(target_subgraph.first);
+    SubgraphKey& key = subgraph_ptr->GetKey();
+
+    std::set<int> next_resolved_tensors = resolved_tensors;
+
+    // add current subgraph's output tensors to resolved_tensors 
+    std::copy(
+        subgraph_ptr->outputs().begin(), subgraph_ptr->outputs().end(),
+        std::inserter(next_resolved_tensors, next_resolved_tensors.begin()));
 
     std::pair<int, int64_t> local_min;
-    if (key.end_idx != model_specs_[model_id].num_ops - 1) {
+    // all output tensors of the model is resolved
+    if (std::includes(
+            next_resolved_tensors.begin(), next_resolved_tensors.end(),
+            GetModelSpec(model_id).output_tensors.begin(),
+            GetModelSpec(model_id).output_tensors.end())) {
+      local_min = target_subgraph;
+    } else {
       // there's more ops left for this model, so we need to look further to
       // get the final latency
-      local_min = GetShortestLatency(model_id, key.end_idx + 1,
-                                     target_subgraph.second, device_waiting,
-                                     key.device_flag);
-    } else {
-      // nothing else after this
-      local_min = target_subgraph;
+      local_min =
+          GetShortestLatency(model_id, next_resolved_tensors, target_subgraph.second,
+                             device_waiting, key.device_flag);
     }
 
     // check if this subgraph is better than the best one
@@ -1199,38 +1317,60 @@ Interpreter::GetShortestLatency(int model_id, int start_idx, int64_t start_time,
       min_subgraph.second = local_min.second;
     }
   }
+
   return min_subgraph;
 }
 
-std::map<std::pair<int, int>, std::vector<int>>
-Interpreter::GroupByStartEndIdx(std::vector<int> subgraph_indices) {
-  std::map<std::pair<int, int>, std::vector<int>> ret;
+std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
+Interpreter::GroupByStartEndIdx(
+    std::vector<int> subgraph_indices) {
+  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>> ret;
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
-    ret[{key.start_idx, key.end_idx}].push_back(subgraph_index);
+    ret[{key.input_ops, key.output_ops}].push_back(
+        subgraph_index);
   }
   return ret;
 }
 
-std::vector<int> Interpreter::GetSubgraphCandidates(int model_id, int start_idx,
-                                                    TfLiteDeviceFlags preceded_device) {
-  std::vector<int> candidatesIds;
+std::vector<int> Interpreter::GetSubgraphCandidates(
+    int model_id, std::set<int> resolved_tensors, TfLiteDeviceFlags preceded_device) {
+  std::vector<int> candidate_indices;
+
   // iterate thru all subgraphs and only pick the ones that match the criteria
   for (int i = 0; i < subgraphs_size(); ++i) {
-    SubgraphKey& key = subgraph(i)->GetKey();
+    Subgraph* subgraph_ptr = subgraph(i);
+    SubgraphKey& key = subgraph_ptr->GetKey();
     if (key.model_id == model_id &&
-        key.start_idx == start_idx &&
         key.device_flag != preceded_device) {
-      candidatesIds.push_back(i);
+      bool is_executable = true;
+
+      // check whether all input tensor is resolved or not
+      for (const int& input_tensor : subgraph_ptr->inputs()) {
+        if (resolved_tensors.find(input_tensor) == resolved_tensors.end()) {
+          is_executable = false;
+          break;
+        }
+      }
+
+      // check whether all output tensors are already resolved or not
+      if (is_executable && std::includes(resolved_tensors.begin(), resolved_tensors.end(),
+                        subgraph_ptr->outputs().begin(), subgraph_ptr->outputs().end())) {
+        is_executable = false;
+      }
+
+      if (is_executable) {
+        candidate_indices.push_back(i);
+      }
     }
   }
-  return candidatesIds;
+  return candidate_indices;
 }
 
 std::pair<int, int64_t>
-Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
-                                      int64_t start_time,
-                                      std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
+Interpreter::GetShortestSubgraphIndex(
+    std::vector<int> subgraph_indices, int64_t start_time,
+    std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
   int64_t min_latency = INT_MAX;
   int min_idx = 0;
 
@@ -1238,15 +1378,15 @@ Interpreter::GetShortestSubgraphIndex(std::vector<int> subgraph_indices,
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
 
     int64_t waiting_time = device_waiting[key.device_flag];
-    int64_t profiled = GetExpectedLatency(key);
-    int64_t expected_latency = profiled + std::max(waiting_time, start_time);
+    int64_t expected_latency = GetExpectedLatency(key);
+    int64_t total = expected_latency + std::max(waiting_time, start_time);
 
-    if (min_latency > expected_latency) {
-      min_latency = expected_latency;
+    if (min_latency > total) {
+      min_latency = total;
       min_idx = subgraph_index;
     }
   }
-  return { min_idx, min_latency };
+  return {min_idx, min_latency};
 }
 
 void Interpreter::SetSLOBasedOnProfile() {
@@ -1293,7 +1433,6 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
 
   return worst_latency;
 }
-
 }  // namespace impl
 
 }  // namespace tflite

@@ -15,6 +15,7 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 #define TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 
+#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <map>
@@ -41,9 +42,6 @@ namespace impl {
 
 // Forward declare since NNAPIDelegate uses Interpreter.
 class NNAPIDelegate;
-
-
-
 class Subgraph {
  public:
   friend class Interpreter;
@@ -171,6 +169,17 @@ class Subgraph {
 
   // Read only access to list of outputs.
   const std::vector<int>& outputs() const { return outputs_; }
+
+  void SetInputOps(std::set<int> input_ops) { input_ops_ = input_ops; }
+  void SetOutputOps(std::set<int> output_ops) { output_ops_ = output_ops; }
+
+  std::set<int> input_ops() const {
+    return input_ops_;
+  }
+
+  std::set<int> output_ops() const {
+    return output_ops_;
+  }
 
   // Read only access to list of variable tensors.
   std::vector<int>& variables() { return variables_; }
@@ -337,6 +346,10 @@ class Subgraph {
 
   void SetKey(SubgraphKey key) { key_ = key; }
   SubgraphKey& GetKey() { return key_; }
+
+  TfLiteStatus SetPrevSubgraph(Subgraph* prev);
+  Subgraph* GetNextSubgraph() const;
+  Subgraph* GetPrevSubgraph() const;
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
@@ -617,6 +630,9 @@ class Subgraph {
   // the tensor array.
   bool consistent_ = true;
 
+  std::set<int> input_ops_;
+  std::set<int> output_ops_;
+
   // Array of indices representing the tensors that are inputs to the
   // interpreter.
   std::vector<int> inputs_;
@@ -708,8 +724,10 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
-
   SubgraphKey key_;
+
+  Subgraph* next_ = nullptr;
+  Subgraph* prev_ = nullptr;
 };
 
 }  // namespace impl

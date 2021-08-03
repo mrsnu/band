@@ -4196,7 +4196,14 @@ TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
     return kTfLiteDelegateFlagsNNAPIDSP;
   }
 
-  if (contains_keywords({ "google-edgetpu", "armnn", "neuron-ann", "qti-hta" })) {
+  if (contains_keywords({
+    "google-edgetpu",
+    "liteadaptor", // Huawei (DaVinci NPU)
+    "neuron-ann", // Mediatek APU
+    "qti-hta", // Hexagon tensor accelerator
+    "mtk-neuron" // Mediatek APU
+    // "mtk-mdla" #TODO(#139) - Mediatek APU for half float
+    })) {
     return kTfLiteDelegateFlagsNNAPINPU;
   }
 

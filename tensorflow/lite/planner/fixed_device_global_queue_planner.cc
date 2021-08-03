@@ -62,7 +62,7 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
     for (int i = 0; i < kTfLiteNumDevices; ++i) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (worker != nullptr) {
+      if (worker != nullptr && worker->IsAvailable()) {
         device_waiting[device_flag] = worker->GetWaitingTime();
 
         // we could, technically, check waiting time and isBusy with a single
@@ -124,9 +124,9 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
 
           // mark the time of this decision (of early-dropping this job)
           to_execute.end_time = current_time;
-          to_execute.sched_id = sched_id_++;
           EnqueueFinishedJob(to_execute);
           it = requests.erase(it);
+          sched_id_++;
           continue;
         }
       }
@@ -137,20 +137,17 @@ void FixedDeviceGlobalQueuePlanner::Plan() {
         ++it;
         continue;
       }
-      to_execute.sched_id = sched_id_++;
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
-      if (!worker->GiveJob(to_execute)) {
-        // for some reason, the worker was busy and we couldn't assign
-        // this job to it
+      if (worker->GiveJob(to_execute)) {
+        // all is well
+        // delete this job from our request queue
+        it = requests.erase(it);
+        sched_id_++;
+      } else {
+        // we couldn't assign this job to worker
         ++it;
-        continue;
       }
-
-      // all is well
-      // delete this job from our request queue and
-      // delete this device from our idle_devices set
-      it = requests.erase(it);
       idle_devices.erase(idle_devices_it);
 
       if (idle_devices.empty()) {
