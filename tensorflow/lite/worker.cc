@@ -40,7 +40,7 @@ TfLiteStatus Worker::Init(WorkerConfig& config) {
 }
 
 TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads) {
-  if (thread_affinity_mask.NumEnabled() == 0 || num_threads < 1) {
+  if (thread_affinity_mask.NumEnabled() == 0) {
     return kTfLiteError;
   }
 
