@@ -253,12 +253,19 @@ int SetupThreadAffinityMasks() {
   for (int i = 0; i < g_cpucount; i++) {
     if (cpu_max_freq_khz[i] < max_freq_khz_medium) {
       g_thread_affinity_mask_little.Enable(i);
+    } else if (cpu_max_freq_khz[i] == max_freq_khz_max) {
+      g_thread_affinity_mask_primary.Enable(i);
     } else {
       g_thread_affinity_mask_big.Enable(i);
     }
-    if (cpu_max_freq_khz[i] == max_freq_khz_max)
-      g_thread_affinity_mask_primary.Enable(i);
   }
+
+  // Categorize into LITTLE and big if there is no primary core.
+  if (g_thread_affinity_mask_big.NumEnabled() == 0) {
+    g_thread_affinity_mask_big = g_thread_affinity_mask_primary;
+    g_thread_affinity_mask_primary.DisableAll();
+  }
+
 #else
   // TODO implement me for other platforms
   g_thread_affinity_mask_little.DisableAll();

@@ -46,11 +46,13 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
     return kTfLiteError;
   }
 
-  std::unique_lock<std::mutex> cpu_lock(cpu_mtx_);
+  std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
+  
   if (num_threads_ != num_threads) {
     num_threads_ = num_threads;
     need_cpu_update_ = true;
   }
+
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
@@ -74,6 +76,14 @@ void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
 bool Worker::IsAvailable() {
   std::lock_guard<std::mutex> lock(device_mtx_);
   return is_available_;
+}
+
+const CpuSet& Worker::GetWorkerThreadAffinity() const {
+  return cpu_set_;
+}
+
+int Worker::GetNumThreads() const {
+  return num_threads_;
 }
 
 JobQueue& Worker::GetDeviceRequests() {

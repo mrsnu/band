@@ -818,6 +818,7 @@ void Interpreter::Profile(int model_id) {
       // if an entry for this SubgraphKey exists in the profiled data,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
+      // TODO: Consider affinity of worker thread
       moving_averaged_latencies_[subgraph_key] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
@@ -831,30 +832,44 @@ void Interpreter::Profile(int model_id) {
                        << subgraph_key.GetOutputOpsString() << ".";
 
     } else {
-      // otherwise, proceed as normal
-      for (int i = 0; i < num_warmups_; i++) {
-        subgraph->Invoke();
-      }
-      timer.ClearRecords();
-      for (int i = 0; i < num_runs_; i++) {
-        subgraph->Invoke();
-      }
+      std::thread t([&]() {
+        auto cpu_set =
+            workers_[subgraph_key.device_flag]->GetWorkerThreadAffinity();
+        SetCPUThreadAffinity(cpu_set);
+        if (subgraph_key.device_flag == kTfLiteCPU ||
+            subgraph_key.device_flag == kTfLiteCPUFallback) {
+          auto internal_backend =
+              GetCpuBackendContext()->internal_backend_context();
+          // Update internal cpu backend (ruy)
+          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
+          internal_backend->SetMaxNumThreads(
+              workers_[subgraph_key.device_flag]->GetNumThreads());
+        }
 
-      int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
-      moving_averaged_latencies_[subgraph_key] = latency;
+        for (int i = 0; i < num_warmups_; i++) {
+          subgraph->Invoke();
+        }
+        timer.ClearRecords();
+        for (int i = 0; i < num_runs_; i++) {
+          subgraph->Invoke();
+        }
 
-      // record the profiled latency for subsequent benchmark runs
-      profile_database_[subgraph_key] = latency;
+        int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
 
-      TFLITE_LOG(INFO) << "Profiling result\n"
-                       << " model=" << subgraph_key.model_id
-                       << " avg=" << latency << " us"
-                       << " device="
-                       << TfLiteDeviceGetName(subgraph_key.device_flag)
-                       << " start="
-                       << subgraph_key.GetInputOpsString()
-                       << " end=" 
-                       << subgraph_key.GetOutputOpsString() << ".";
+        moving_averaged_latencies_[subgraph_key] = latency;
+        // record the profiled latency for subsequent benchmark runs
+        profile_database_[subgraph_key] = latency;
+
+        TFLITE_LOG(INFO) << "Profiling result\n"
+                         << " model=" << subgraph_key.model_id
+                         << " avg=" << latency << " us"
+                         << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
+                         << " start="
+                         << subgraph_key.GetInputOpsString()
+                         << " end=" 
+                         << subgraph_key.GetOutputOpsString() << ".";
+      });
+      t.join();
     }
   }
 
