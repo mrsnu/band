@@ -259,6 +259,13 @@ int SetupThreadAffinityMasks() {
       g_thread_affinity_mask_big.Enable(i);
     }
   }
+
+  // Categorize into LITTLE and big if there is no primary core.
+  if (g_thread_affinity_mask_big.NumEnabled() == 0) {
+    g_thread_affinity_mask_big = g_thread_affinity_mask_primary;
+    g_thread_affinity_mask_primary.DisableAll();
+  }
+
 #else
   // TODO implement me for other platforms
   g_thread_affinity_mask_little.DisableAll();
