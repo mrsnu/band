@@ -22,7 +22,7 @@ TensorRingBuffer::TensorRingBuffer(ErrorReporter* error_reporter,
   }
 
   for (int i = 0; i < tensor_indices.size(); i++) {
-    model_to_buffer_[tensor_indices[i]] = i;
+    tensor_to_buffer_[tensor_indices[i]] = i;
   }
 }
 
@@ -44,7 +44,7 @@ int TensorRingBuffer::Alloc() {
 }
 
 bool TensorRingBuffer::IsTensorIndexValid(int tensor_index) const {
-  return model_to_buffer_.find(tensor_index) != model_to_buffer_.end();
+  return tensor_to_buffer_.find(tensor_index) != tensor_to_buffer_.end();
 }
 
 bool TensorRingBuffer::IsHandleValid(int handle) const {
@@ -65,7 +65,7 @@ TfLiteStatus TensorRingBuffer::GetTensorFromHandle(TfLiteTensor* dst,
     return kTfLiteError;
   }
 
-  return CopyTensor(tensors_[GetIndex(handle)][model_to_buffer_.at(tensor_index)],
+  return CopyTensor(tensors_[GetIndex(handle)][tensor_to_buffer_.at(tensor_index)],
                     dst);
 }
 
@@ -83,7 +83,7 @@ TfLiteStatus TensorRingBuffer::PutTensorToHandle(const TfLiteTensor* src,
   }
 
   return CopyTensor(
-      src, tensors_[GetIndex(handle)][model_to_buffer_.at(tensor_index)]);
+      src, tensors_[GetIndex(handle)][tensor_to_buffer_.at(tensor_index)]);
 }
 
 TfLiteStatus TensorRingBuffer::GetTensorsFromHandle(Tensors& dst_tensors, int handle) const {

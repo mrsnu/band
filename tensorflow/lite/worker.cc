@@ -116,7 +116,14 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
 
   // Intermediate tensor communication
   if (subgraph->GetPrevSubgraph()) {
-    return CopyTensors(*subgraph->GetPrevSubgraph(), *subgraph);
+    auto status = CopyTensors(*subgraph->GetPrevSubgraph(), *subgraph);
+    if (status != kTfLiteOk) {
+      // TODO: See if there is a case where we need to 
+      // consider communication btwn multiple subgraphs
+      TFLITE_LOG(ERROR)
+          << "No tensor communication between adjacent subgraphs.";
+    }
+    return status;
   }
 
   auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
