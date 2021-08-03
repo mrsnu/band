@@ -20,6 +20,9 @@ ScheduleAction RoundRobinScheduler::Schedule(JobQueue& requests) {
         to_execute.device_id = device;
         to_execute.sched_id = IssueSchedId();
 
+        SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
+        UpdateJobEnqueueStatus(to_execute, key);
+
         action[device].push_back(to_execute);
         requests.erase(available_job);
       }
