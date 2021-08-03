@@ -3,6 +3,7 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
 namespace impl {
@@ -25,32 +26,54 @@ TfLiteStatus Worker::Init(WorkerConfig& config) {
   if (config.allow_worksteal) {
     AllowWorkSteal();
   }
+  availability_check_interval_ms_ = config.availability_check_interval_ms;
 
   TFLITE_LOG(INFO) << "Set affinity of "
                    << TfLiteDeviceGetName(device_flag_)
                    << " to "
                    << TfLiteCPUMaskGetName(config.cpu_masks[device_flag_])
-                   << " cores";
+                   << " cores for " 
+                   << config.num_threads[device_flag_]
+                   << " threads";
 
   const CpuSet worker_mask_set =
     TfLiteCPUMaskGetSet(config.cpu_masks[device_flag_]);
-  return SetWorkerThreadAffinity(worker_mask_set);
+  return UpdateWorkerThread(worker_mask_set, config.num_threads[device_flag_]);
 }
 
-TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
+TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads) {
   if (thread_affinity_mask.NumEnabled() == 0) {
     return kTfLiteError;
   }
 
-  std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
+  std::unique_lock<std::mutex> cpu_lock(cpu_mtx_);
+  if (num_threads_ != num_threads) {
+    num_threads_ = num_threads;
+    need_cpu_update_ = true;
+  }
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
-      need_cpu_set_update_ = true;
+      need_cpu_update_ = true;
       return kTfLiteOk;
     }
   }
   return kTfLiteOk;
+}
+
+void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
+  while (true) {
+    tflite::profiling::time::SleepForMicros(1000 * availability_check_interval_ms_);
+    TFLITE_LOG(INFO) << "Availability check at " << tflite::profiling::time::NowMicros();
+    if (subgraph.Invoke() == kTfLiteOk) {
+      return;
+    }
+  }
+}
+
+bool Worker::IsAvailable() {
+  std::lock_guard<std::mutex> lock(device_mtx_);
+  return is_available_;
 }
 
 JobQueue& Worker::GetDeviceRequests() {
@@ -60,11 +83,6 @@ JobQueue& Worker::GetDeviceRequests() {
 
 void Worker::AllowWorkSteal() {
   TFLITE_LOG(ERROR) << "Worker::AllowWorkSteal() Not implemented.";
-}
-
-bool Worker::GiveJob(Job& job) {
-  TFLITE_LOG(ERROR) << "Worker::GiveJob() Not implemented.";
-  return false;
 }
 
 bool Worker::IsBusy() {
@@ -93,20 +111,27 @@ TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
   return ret;
 }
 
-TfLiteStatus Worker::CopyInputTensors(const Job& job) {
-  // Compute only.
+TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
+  // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {
     return kTfLiteOk;
   }
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
-  if (job.previous_subgraph_idx != -1) {
-    Subgraph* prev_subgraph = interpreter->subgraph(job.previous_subgraph_idx);
-    Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-    return CopyTensors(*prev_subgraph, *subgraph);
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+
+  // Intermediate tensor communication
+  if (subgraph->GetPrevSubgraph()) {
+    auto status = CopyTensors(*subgraph->GetPrevSubgraph(), *subgraph);
+    if (status != kTfLiteOk) {
+      // TODO: See if there is a case where we need to 
+      // consider communication btwn multiple subgraphs
+      TFLITE_LOG(ERROR)
+          << "No tensor communication between adjacent subgraphs.";
+    }
+    return status;
   }
 
-  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
   auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
   
   if (!input_buffer) {
@@ -114,37 +139,83 @@ TfLiteStatus Worker::CopyInputTensors(const Job& job) {
     return kTfLiteError;
   }
 
-  auto input_indices = subgraph->inputs();
-  std::vector<TfLiteTensor*> input_tensors(input_indices.size());
-  for (size_t i = 0; i < input_indices.size(); i++) {
-    input_tensors[i] = subgraph->tensor(input_indices[i]);
+  for (int subgraph_input : subgraph->inputs()) {
+    if (input_buffer->IsTensorIndexValid(subgraph_input)) {
+      if (input_buffer->GetTensorFromHandle(subgraph->tensor(subgraph_input),
+                                            subgraph_input,
+                                            job.input_handle) != kTfLiteOk) {
+        return kTfLiteError;
+      }
+    }
   }
 
-  return input_buffer->GetTensorsFromHandle(input_tensors, job.input_handle);
+  return kTfLiteOk;
 }
 
-TfLiteStatus Worker::CopyOutputTensors(const Job& job) {
+TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
   // Compute only.
-  if (job.output_handle < 0 || !job.is_final_subgraph) {
+  if (job.output_handle < 0) {
     return kTfLiteOk;
   }
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
-  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
   auto output_buffer = interpreter->model_output_buffer_[job.model_id].get();
-  
+
   if (!output_buffer) {
     TFLITE_LOG(ERROR) << "No output buffer for model id " << job.model_id;
     return kTfLiteError;
   }
 
-  auto output_indices = subgraph->outputs();
-  std::vector<TfLiteTensor*> output_tensors(output_indices.size());
-  for (size_t i = 0; i < output_indices.size(); i++) {
-    output_tensors[i] = subgraph->tensor(output_indices[i]);
+  Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
+
+  for (int subgraph_output : subgraph->outputs()) {
+    if (output_buffer->IsTensorIndexValid(subgraph_output)) {
+      if (output_buffer->PutTensorToHandle(subgraph->tensor(subgraph_output),
+                                           subgraph_output,
+                                           job.output_handle) != kTfLiteOk) {
+        return kTfLiteError;
+      }
+    }
   }
 
-  return output_buffer->PutTensorsToHandle(output_tensors, job.output_handle);
+  return kTfLiteOk;
+}
+
+bool Worker::IsValid(Job& job) {
+  return job.model_id >= 0
+      && job.subgraph_idx >= 0
+      && job.device_id >= 0
+      && job.enqueue_time > 0
+      && job.invoke_time == 0
+      && job.end_time == 0;
+}
+
+void Worker::PrepareReenqueue(Job& job, Planner* planner) {
+  job.invoke_time = 0;
+  job.end_time = 0;
+  job.resolved_tensors =
+      planner->GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
+}
+
+TfLiteStatus Worker::TryUpdateWorkerThread() {
+  std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
+  if (need_cpu_update_) {
+    need_cpu_update_ = false;
+
+    std::shared_ptr<Planner> planner_ptr = planner_.lock();
+    Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
+    auto internal_backend =
+        interpreter_ptr->GetCpuBackendContext()->internal_backend_context();
+    internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
+    internal_backend->SetMaxNumThreads(num_threads_);
+
+    if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+      TFLITE_LOG(ERROR) << "Worker " << device_flag_
+                        << " failed to set cpu thread affinity";
+      return kTfLiteError;
+    }
+  }
+  return kTfLiteOk;
 }
 
 }  // namespace impl

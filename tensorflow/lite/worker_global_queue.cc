@@ -12,8 +12,7 @@ namespace impl {
 
 bool GlobalQueueWorker::GiveJob(Job& job) {
   std::lock_guard<std::mutex> lock(device_mtx_);
-  if (is_busy_) {
-    // I'm busy so I can't receive your request
+  if (is_busy_ || !is_available_) {
     return false;
   }
 
@@ -44,6 +43,10 @@ bool GlobalQueueWorker::IsBusy() {
 // we print an error message and this function returns -1.
 int64_t GlobalQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
+  if (!is_available_) {
+    return LARGE_WAITING_TIME;
+  }
+
   if (!is_busy_) {
     return 0;
   }
@@ -56,10 +59,6 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // update the other fields of current_job_
   // consider unlocking here if we need that teensy little extra perf boost
   // lock.unlock();
-
-  int model_id = current_job_.model_id;
-  int start_idx = current_job_.start_idx;
-  int end_idx = current_job_.end_idx;
 
   // we no longer read from this worker's member variables, so there is
   // no need to hold on to the lock anymore
@@ -74,8 +73,9 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   Interpreter* interpreter = planner->GetInterpreter();
 
   // TODO #80: Get profiled_latency from current_job_
-  SubgraphKey key(model_id, device_flag_, start_idx, end_idx);
-  int64_t profiled_latency = interpreter->GetSubgraphProfileResult(key);
+  Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
+  int64_t profiled_latency =
+      interpreter->GetExpectedLatency(current_subgraph->GetKey());
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet
@@ -100,12 +100,7 @@ void GlobalQueueWorker::Work() {
 
     lock.unlock();
 
-    if (current_job_.model_id < 0 ||
-        current_job_.subgraph_idx < 0 ||
-        current_job_.device_id < 0 ||
-        current_job_.enqueue_time <= 0 ||
-        current_job_.invoke_time != 0 ||
-        current_job_.end_time != 0) {
+    if (!IsValid(current_job_)) {
       TFLITE_LOG(ERROR) << "Worker " << device_flag_
                         << " spotted an invalid job";
       break;
@@ -117,42 +112,47 @@ void GlobalQueueWorker::Work() {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
 
-      {
-        std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
-        if (need_cpu_set_update_) {
-          need_cpu_set_update_ = false;
-
-          auto internal_backend = interpreter_ptr->GetCpuBackendContext()
-                                      ->internal_backend_context();
-          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
-
-          if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
-            // TODO #21: Handle errors in multi-thread environment
-            TFLITE_LOG(ERROR) << "Worker " << device_flag_
-                              << " failed to set cpu thread affinity";
-            break;
-          }
-        }
+      if (TryUpdateWorkerThread() != kTfLiteOk) {
+        // TODO #21: Handle errors in multi-thread environment
+        break;
       }
 
-      if (CopyInputTensors(current_job_) == kTfLiteOk) {
+      if (TryCopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();
         lock.unlock();
 
-        if (subgraph.Invoke() == kTfLiteOk) {
+        TfLiteStatus status = subgraph.Invoke();
+        if (status == kTfLiteOk) {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job_.end_time = profiling::time::NowMicros();
-          interpreter_ptr->UpdateProfileResult(
+          interpreter_ptr->UpdateExpectedLatency(
               subgraph.GetKey(),
               (current_job_.end_time - current_job_.invoke_time));
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
-          } else {
-            CopyOutputTensors(current_job_);
-          }
+          } 
+          TryCopyOutputTensors(current_job_);
           current_job_.status = kTfLiteJobSuccess;
+
+        } else if (status == kTfLiteDelegateError) {
+          lock.lock();
+          is_available_ = false;
+          PrepareReenqueue(current_job_, planner_ptr.get());
+          lock.unlock();
+
+          planner_ptr->EnqueueRequest(current_job_, true);
+          WaitUntilDeviceAvailable(subgraph);
+
+          lock.lock();
+          is_available_ = true;
+          is_busy_ = false;
+          lock.unlock();
+
+          planner_ptr->GetSafeBool().notify();
+          continue;
+
         } else {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock

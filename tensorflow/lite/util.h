@@ -28,6 +28,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
 #include <map>
 #include <fstream>
 
@@ -38,10 +39,19 @@ namespace tflite {
 struct SubgraphKey {
   SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
               int start = -1, int end = -1)
-      : model_id(model_id), device_flag(device_flag),
-        start_idx(start), end_idx(end) {}
+      : model_id(model_id),
+        device_flag(device_flag),
+        input_ops(start != -1 ? std::set<int>({start}) : std::set<int>()),
+        output_ops(end != -1 ? std::set<int>({end}) : std::set<int>()) {}
 
-  bool operator<(const SubgraphKey &key) const {
+  SubgraphKey(int model_id, TfLiteDeviceFlags device_flag,
+              std::set<int> input_ops, std::set<int> output_ops)
+      : model_id(model_id),
+        device_flag(device_flag),
+        input_ops(input_ops),
+        output_ops(output_ops) {}
+
+  bool operator<(const SubgraphKey& key) const {
     if (model_id != key.model_id) {
       return model_id < key.model_id;
     }
@@ -50,17 +60,20 @@ struct SubgraphKey {
       return device_flag < key.device_flag;
     }
 
-    if (start_idx != key.start_idx) {
-      return start_idx < key.start_idx;
+    if (input_ops != key.input_ops) {
+      return input_ops < key.input_ops;
     }
 
-    return end_idx < key.end_idx;
+    return output_ops < key.output_ops;
   }
+
+  std::string GetInputOpsString() const;
+  std::string GetOutputOpsString() const;
 
   int model_id;
   TfLiteDeviceFlags device_flag;
-  int start_idx;
-  int end_idx;
+  std::set<int> input_ops;
+  std::set<int> output_ops;
 };
 
 using Tensors = std::vector<TfLiteTensor*>;
@@ -75,33 +88,40 @@ enum JobStatus {
 };
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
-// and the start/end indices.
 struct Job {
   explicit Job() : model_id(-1) {}
   explicit Job(int model_id) : model_id(model_id) {}
   explicit Job(int model_id, std::vector<Job>& following_jobs)
     : model_id(model_id), following_jobs(following_jobs) {}
-  int model_id;
-  int subgraph_idx = -1;
-  int device_id = -1;
-  int start_idx = 0;
-  int end_idx = -1;
+
+  // For record (Valid after execution)
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
-  int64_t profiled_time = 0;
+  // Profiled invoke execution time
+  int64_t profiled_execution_time = 0;
+  // Expected invoke execution time
+  int64_t expected_execution_time = 0;
+  // Expected total latency
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
+
+  // Constant variables (Valid after invoke)
+  // TODO: better job life-cycle to change these to `const`
+  int model_id;
   int input_handle = -1;
   int output_handle = -1;
   int job_id = -1;
   int sched_id = -1;
-  JobStatus status = kTfLiteJobQueued;
-  bool is_final_subgraph = true;
   std::string model_fname;
 
+  // Current status for execution (Valid after planning)
+  JobStatus status = kTfLiteJobQueued;
+  int subgraph_idx = -1;
+  int device_id = -1;
   std::vector<Job> following_jobs;
-  int previous_subgraph_idx = -1;
+  // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
+  std::set<int> resolved_tensors;
 };
 
 // Model configuration struct.

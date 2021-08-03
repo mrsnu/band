@@ -35,7 +35,6 @@ BenchmarkParams BenchmarkModel::DefaultParams() {
   params.AddParam("min_secs", BenchmarkParam::Create<float>(0.0f));
   params.AddParam("max_secs", BenchmarkParam::Create<float>(150.0f));
   params.AddParam("run_delay", BenchmarkParam::Create<float>(-1.0f));
-  params.AddParam("num_threads", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("use_caching", BenchmarkParam::Create<bool>(false));
   params.AddParam("benchmark_name", BenchmarkParam::Create<std::string>(""));
   params.AddParam("output_prefix", BenchmarkParam::Create<std::string>(""));
@@ -43,8 +42,6 @@ BenchmarkParams BenchmarkModel::DefaultParams() {
   // setting this to zero because the periodic benchmark takes long
   params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(0));
   params.AddParam("warmup_min_secs", BenchmarkParam::Create<float>(0.0f));
-  params.AddParam("profile_num_runs", BenchmarkParam::Create<int32_t>(50));
-  params.AddParam("profile_warmup_runs", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("json_path", BenchmarkParam::Create<std::string>(""));
   return params;
 }
@@ -89,7 +86,6 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
           "is exceeded in the middle of a run, the benchmark will continue to "
           "the end of the run but will not start the next run."),
       CreateFlag<float>("run_delay", &params_, "delay between runs in seconds"),
-      CreateFlag<int32_t>("num_threads", &params_, "number of threads"),
       CreateFlag<bool>(
           "use_caching", &params_,
           "Enable caching of prepacked weights matrices in matrix "
@@ -107,12 +103,6 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
           "warmup_min_secs", &params_,
           "minimum number of seconds to rerun for, potentially making the "
           "actual number of warm-up runs to be greater than warmup_runs"),
-      CreateFlag<int32_t>(
-          "profile_num_runs", &params_,
-          "expected number of runs for profiling"),
-      CreateFlag<int32_t>(
-          "profile_warmup_runs", &params_,
-          "minimum number of runs performed on profiling"),
       CreateFlag<std::string>("json_path", &params_, "path to json file with "
           "model configurations"),
   };
@@ -127,8 +117,6 @@ void BenchmarkModel::LogParams() {
                    << params_.Get<float>("max_secs") << "]";
   TFLITE_LOG(INFO) << "Inter-run delay (seconds): ["
                    << params_.Get<float>("run_delay") << "]";
-  TFLITE_LOG(INFO) << "Num threads: [" << params_.Get<int32_t>("num_threads")
-                   << "]";
   TFLITE_LOG(INFO) << "Use caching: [" << params_.Get<bool>("use_caching")
                    << "]";
   TFLITE_LOG(INFO) << "Benchmark name: ["
@@ -139,10 +127,6 @@ void BenchmarkModel::LogParams() {
                    << params_.Get<int32_t>("warmup_runs") << "]";
   TFLITE_LOG(INFO) << "Min warmup runs duration (seconds): ["
                    << params_.Get<float>("warmup_min_secs") << "]";
-  TFLITE_LOG(INFO) << "Profile num runs: ["
-                   << params_.Get<int32_t>("profile_num_runs") << "]";
-  TFLITE_LOG(INFO) << "Profile warmup runs: ["
-                   << params_.Get<int32_t>("profile_warmup_runs") << "]";
 }
 
 TfLiteStatus BenchmarkModel::PrepareInputData() { return kTfLiteOk; }

@@ -23,7 +23,23 @@ limitations under the License.
 #include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
-namespace {
+
+std::string IndexSetToString(const std::set<int>& indices) {
+    std::string result;
+    for (const int& index : indices) {
+      result += std::to_string(index) + ",";
+    }
+    result.pop_back();
+    return result;
+}
+
+std::string SubgraphKey::GetInputOpsString() const {
+  return IndexSetToString(input_ops);
+}
+
+std::string SubgraphKey::GetOutputOpsString() const {
+  return IndexSetToString(output_ops);
+}
 
 TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
   context->ReportError(context,
@@ -31,8 +47,6 @@ TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {
                        "a custom op or delegate?");
   return kTfLiteError;
 }
-
-}  // namespace
 
 int GetModelId(std::string model_name,
                const std::map<int, ModelConfig>& model_configs) {

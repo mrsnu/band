@@ -33,11 +33,11 @@ class Planner {
   bool NeedProfile();
 
   // Enqueues a job to a worker request queue.
-  int EnqueueRequest(Job job);
+  int EnqueueRequest(Job job, bool push_front = false);
 
   // Enqueues a batch of jobs to a worker request queue.
   // Assigns new job id for non-continuous job.
-  std::vector<int> EnqueueBatch(std::vector<Job> jobs);
+  std::vector<int> EnqueueBatch(std::vector<Job> jobs, bool push_front = false);
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
@@ -81,6 +81,7 @@ class Planner {
   void FlushFinishedJobs();
 
   // Copy the Job instances from the `requests_` to the local queue.
+<<<<<<< HEAD
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueue(JobQueue& local_jobs);
 
@@ -106,12 +107,19 @@ class Planner {
   int IssueSchedId() { return sched_id_++; }
 
   std::map<int, int>& GetModelDeviceMap() { return model_device_map_; }
+=======
+  JobQueue CopyToLocalQueue();
+  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
+
+  std::thread planner_thread_;
+  int sched_id_ = 0;
+  Interpreter* interpreter_;
+>>>>>>> master
 
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
-  Interpreter* interpreter_;
   SafeBool planner_safe_bool_;
 
   // Jobs Finished
