@@ -180,10 +180,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // TODO #23 : Add more nnapi names
   // Possible device runtime names 
   // nnapi : nnapi-default, nnapi-reference
-  // qualcomm hexagon : qti-default, qti-dsp, qti-gpu, qti-hta
-  // google tpu: google-edgetpu
-  // arm npu (DaVinci) : armnn
-  // mediatek APU : neuron-ann, mtk-neuron, mtk-mdla
+  // armnn : armnn
+  // qualcomm : qti-default, qti-gpu, qti-dsp, qti-hta
+  // mediatek : neuron-ann, mtk-gpu, mtk-dsp, mtk-neuron, mtk-mdla
+  // google tpu : google-edgetpu
+  // huawei npu : liteadaptor
   for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
       TFLITE_LOG(INFO) << "Available NNAPI device name: " << device_name;
