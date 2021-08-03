@@ -120,7 +120,6 @@ struct Job {
   int subgraph_idx = -1;
   int device_id = -1;
   std::vector<Job> following_jobs;
-  int previous_subgraph_idx = -1;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
   std::set<int> resolved_tensors;
 };

@@ -106,7 +106,7 @@ TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
 }
 
 TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
-  // Compute only.
+  // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {
     return kTfLiteOk;
   }
@@ -114,9 +114,9 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
 
-  if (job.previous_subgraph_idx != -1) {
-    Subgraph* prev_subgraph = interpreter->subgraph(job.previous_subgraph_idx);
-    return CopyTensors(*prev_subgraph, *subgraph);
+  // Intermediate tensor communication
+  if (subgraph->GetPrevSubgraph()) {
+    return CopyTensors(*subgraph->GetPrevSubgraph(), *subgraph);
   }
 
   auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
