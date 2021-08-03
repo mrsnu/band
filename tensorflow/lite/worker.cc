@@ -32,23 +32,29 @@ TfLiteStatus Worker::Init(WorkerConfig& config) {
                    << TfLiteDeviceGetName(device_flag_)
                    << " to "
                    << TfLiteCPUMaskGetName(config.cpu_masks[device_flag_])
-                   << " cores";
+                   << " cores for " 
+                   << config.num_threads[device_flag_]
+                   << " threads";
 
   const CpuSet worker_mask_set =
     TfLiteCPUMaskGetSet(config.cpu_masks[device_flag_]);
-  return SetWorkerThreadAffinity(worker_mask_set);
+  return UpdateWorkerThread(worker_mask_set, config.num_threads[device_flag_]);
 }
 
-TfLiteStatus Worker::SetWorkerThreadAffinity(const CpuSet thread_affinity_mask) {
+TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads) {
   if (thread_affinity_mask.NumEnabled() == 0) {
     return kTfLiteError;
   }
 
-  std::unique_lock<std::mutex> cpu_lock(cpu_set_mtx_);
+  std::unique_lock<std::mutex> cpu_lock(cpu_mtx_);
+  if (num_threads_ != num_threads) {
+    num_threads_ = num_threads;
+    need_cpu_update_ = true;
+  }
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
-      need_cpu_set_update_ = true;
+      need_cpu_update_ = true;
       return kTfLiteOk;
     }
   }
@@ -189,6 +195,27 @@ void Worker::PrepareReenqueue(Job& job, Planner* planner) {
   job.end_time = 0;
   job.resolved_tensors =
       planner->GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
+}
+
+TfLiteStatus Worker::TryUpdateWorkerThread() {
+  std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
+  if (need_cpu_update_) {
+    need_cpu_update_ = false;
+
+    std::shared_ptr<Planner> planner_ptr = planner_.lock();
+    Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
+    auto internal_backend =
+        interpreter_ptr->GetCpuBackendContext()->internal_backend_context();
+    internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
+    internal_backend->SetMaxNumThreads(num_threads_);
+
+    if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+      TFLITE_LOG(ERROR) << "Worker " << device_flag_
+                        << " failed to set cpu thread affinity";
+      return kTfLiteError;
+    }
+  }
+  return kTfLiteOk;
 }
 
 }  // namespace impl

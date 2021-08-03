@@ -451,7 +451,7 @@ TfLiteStatus BenchmarkTfLiteModel::PrepareInputData() {
 
 TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
   auto resolver = GetOpResolver();
-  const int32_t num_threads = params_.Get<int32_t>("num_threads");
+  const int32_t num_threads = runtime_config_.interpreter_config.num_threads;
   const bool use_caching = params_.Get<bool>("use_caching");
 
   (&interpreter_)->reset(

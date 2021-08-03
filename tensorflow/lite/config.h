@@ -34,6 +34,7 @@ struct InterpreterConfig {
   ProfileConfig profile_config;
   float profile_smoothing_factor = 0.1;
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
+  int num_threads = -1;
 };
 
 struct PlannerConfig {
@@ -49,6 +50,7 @@ struct WorkerConfig {
     }
   }
   impl::TfLiteCPUMaskFlags cpu_masks[kTfLiteNumDevices];
+  int num_threads[kTfLiteNumDevices];
   bool allow_worksteal = false;
   int32_t availability_check_interval_ms = 30000;
 };
