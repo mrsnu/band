@@ -80,8 +80,8 @@ void FixedDevicePlanner::Plan() {
       UpdateJobEnqueueStatus(to_execute, key);
 
       Worker* worker = GetInterpreter()->GetWorker(device_flag);
+      UpdateJobStartStatus(to_execute, worker);
       if (worker->GiveJob(to_execute)) {
-        UpdateJobStartStatus(to_execute, worker);
         // all is well
         // delete this job from our request queue
         it = requests.erase(it);

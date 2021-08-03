@@ -40,8 +40,8 @@ void RoundRobinPlanner::Plan() {
             UpdateJobEnqueueStatus(to_execute, key);
 
             Worker* worker = GetInterpreter()->GetWorker(to_execute.device_id);
+            UpdateJobStartStatus(to_execute, worker);
             if (worker->GiveJob(to_execute)) {
-              UpdateJobStartStatus(to_execute, worker);
               // all is well
               // delete this job from our request queue
               GetRequests().erase(available_job);
