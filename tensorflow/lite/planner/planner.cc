@@ -26,25 +26,27 @@ Planner::~Planner() {
 TfLiteStatus Planner::Init(PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
-  // Open file to write per-request timestamps later
-  // NOTE: Columns starting `sched_id` are added for debugging purpose
-  // and the metrics are only for ShortestExpectedLatency Planner.
-  std::ofstream log_file(log_path_);
-  if (!log_file.is_open()) return kTfLiteError;
-  log_file << "sched_id\t"
-           << "model_name\t"
-           << "model_id\t"
-           << "device_id\t"
-           << "subgraph_idx\t"
-           << "enqueue_time\t"
-           << "invoke_time\t"
-           << "end_time\t"
-           << "profiled_execution_time\t"
-           << "expected_execution_time\t"
-           << "slo_us\t"
-           << "job_status\t"
-           << "is_final_subgraph\n";
-  log_file.close();
+  if (log_path_.size()) {
+    // Open file to write per-request timestamps later
+    // NOTE: Columns starting `sched_id` are added for debugging purpose
+    // and the metrics are only for ShortestExpectedLatency Planner.
+    std::ofstream log_file(log_path_);
+    if (!log_file.is_open()) return kTfLiteError;
+    log_file << "sched_id\t"
+             << "model_name\t"
+             << "model_id\t"
+             << "device_id\t"
+             << "subgraph_idx\t"
+             << "enqueue_time\t"
+             << "invoke_time\t"
+             << "end_time\t"
+             << "profiled_execution_time\t"
+             << "expected_execution_time\t"
+             << "slo_us\t"
+             << "job_status\t"
+             << "is_final_subgraph\n";
+    log_file.close();
+  }
 
   auto& schedulers = config.schedulers;
   local_queues_.resize(schedulers.size());

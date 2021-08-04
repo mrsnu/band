@@ -64,9 +64,54 @@ TEST(TfliteDriverTest, SimpleTest) {
   EXPECT_EQ(runner->ReadOutput(model_id, 6), SAMPLE_OUTPUT_1);
 }
 
-TEST(TfliteDriverTest, PlannerTest) {
+TEST(TfliteDriverTest, AddQuantizedInt8Test) {
   std::unique_ptr<TestRunner> runner(new TfLiteDriver());
   runner->ResetInterpreter();
+
+  runner->SetModelBaseDir("tensorflow/lite");
+  int model_id = runner->LoadModel("testdata/add_quantized_int8.bin");
+  ASSERT_TRUE(model_id >= 0);
+  ASSERT_TRUE(runner->IsValid());
+
+  ASSERT_THAT(runner->GetInputs(model_id), ElementsAre(1));
+  ASSERT_THAT(runner->GetOutputs(model_id), ElementsAre(2));
+
+  runner->ReshapeTensor(model_id, 1, "1,2,2,1");
+  ASSERT_TRUE(runner->IsValid());
+
+  runner->AllocateTensors(model_id);
+
+  runner->SetInput(model_id, 1, "1,1,1,1");
+
+  runner->SetExpectation(model_id, 2, "0.0117,0.0117,0.0117,0.0117");
+
+  runner->Invoke(model_id);
+  ASSERT_TRUE(runner->IsValid());
+
+  ASSERT_TRUE(runner->CheckResults(model_id));
+  EXPECT_EQ(runner->ReadOutput(model_id, 2), "3,3,3,3");
+}
+
+TEST(TfliteDriverTest, RuntimeConfigTest) {
+  // Check parse runtime config well
+  std::unique_ptr<TestRunner> runner(new TfLiteDriver());
+
+  tflite::RuntimeConfig runtime_config;
+  std::string filepath = "tensorflow/lite/testdata/runtime_config.json";
+  EXPECT_EQ(ParseRuntimeConfigFromJson(filepath, runtime_config), kTfLiteOk);
+ 
+  runner->ResetInterpreter(runtime_config);
+  ASSERT_TRUE(runner->IsValid());
+  ASSERT_FALSE(runner->NeedProfile()); // As planner is 0(== kFixedDevice)
+}
+
+TEST(TfliteDriverTest, PlannerTest) {
+  std::unique_ptr<TestRunner> runner(new TfLiteDriver());
+
+  tflite::RuntimeConfig runtime_config;
+  std::string filepath = "tensorflow/lite/testdata/runtime_config.json";
+  EXPECT_EQ(ParseRuntimeConfigFromJson(filepath, runtime_config), kTfLiteOk);
+  runner->ResetInterpreter(runtime_config);
 
   runner->SetModelBaseDir("tensorflow/lite");
   int model_id = runner->LoadModel("testdata/multi_add.bin");
@@ -98,38 +143,14 @@ TEST(TfliteDriverTest, PlannerTest) {
   EXPECT_EQ(runner->ReadOutput(model_id, 6), SAMPLE_OUTPUT_1);
 }
 
-TEST(TfliteDriverTest, AddQuantizedInt8Test) {
-  std::unique_ptr<TestRunner> runner(new TfLiteDriver());
-  runner->ResetInterpreter();
-
-  runner->SetModelBaseDir("tensorflow/lite");
-  int model_id = runner->LoadModel("testdata/add_quantized_int8.bin");
-  ASSERT_TRUE(model_id >= 0);
-  ASSERT_TRUE(runner->IsValid());
-
-  ASSERT_THAT(runner->GetInputs(model_id), ElementsAre(1));
-  ASSERT_THAT(runner->GetOutputs(model_id), ElementsAre(2));
-
-  runner->ReshapeTensor(model_id, 1, "1,2,2,1");
-  ASSERT_TRUE(runner->IsValid());
-
-  runner->AllocateTensors(model_id);
-
-  runner->SetInput(model_id, 1, "1,1,1,1");
-
-  runner->SetExpectation(model_id, 2, "0.0117,0.0117,0.0117,0.0117");
-
-  runner->Invoke(model_id);
-  ASSERT_TRUE(runner->IsValid());
-
-  ASSERT_TRUE(runner->CheckResults(model_id));
-  EXPECT_EQ(runner->ReadOutput(model_id, 2), "3,3,3,3");
-}
-
 TEST(TfliteDriverTest, RingBufferTest) {
   // Checks if copying to the input ring buffer and output ring buffer works correctly
   std::unique_ptr<TestRunner> runner(new TfLiteDriver());
-  runner->ResetInterpreter();
+
+  tflite::RuntimeConfig runtime_config;
+  std::string filepath = "tensorflow/lite/testdata/runtime_config.json";
+  EXPECT_EQ(ParseRuntimeConfigFromJson(filepath, runtime_config), kTfLiteOk);
+  runner->ResetInterpreter(runtime_config);
 
   runner->SetModelBaseDir("tensorflow/lite");
   int model_id = runner->LoadModel("testdata/multi_add.bin");
@@ -188,19 +209,6 @@ TEST(TfliteDriverTest, RingBufferTest) {
 
   // TODO : Invalidation check (access with invalid handle)
   // TODO : Thread safety check
-}
-
-TEST(TfliteDriverTest, RuntimeConfigTest) {
-  // Check parse runtime config well
-  std::unique_ptr<TestRunner> runner(new TfLiteDriver());
-
-  tflite::RuntimeConfig runtime_config;
-  std::string filepath = "tensorflow/lite/testdata/runtime_config.json";
-  EXPECT_EQ(ParseRuntimeConfigFromJson(filepath, runtime_config), kTfLiteOk);
- 
-  runner->ResetInterpreter(runtime_config);
-  ASSERT_TRUE(runner->IsValid());
-  ASSERT_TRUE(runner->NeedProfile()); // As planner is 2(== kShortestExpectedLatency)
 }
 
 }  // namespace
