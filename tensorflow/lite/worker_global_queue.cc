@@ -11,7 +11,6 @@ namespace tflite {
 namespace impl {
 
 bool GlobalQueueWorker::GiveJob(Job& job) {
-  std::lock_guard<std::mutex> lock(device_mtx_);
   if (is_busy_ || !is_available_) {
     return false;
   }

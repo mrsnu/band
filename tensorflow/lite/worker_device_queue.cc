@@ -55,7 +55,6 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 }
 
 bool DeviceQueueWorker::GiveJob(Job& job) {
-  std::lock_guard<std::mutex> lock(device_mtx_);
   if (!is_available_) {
     return false;
   }
