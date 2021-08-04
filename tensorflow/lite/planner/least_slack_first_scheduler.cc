@@ -6,19 +6,16 @@ namespace tflite {
 namespace impl {
 
 void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
+  std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
+  if (idle_devices.empty()) {
+    // no device is idle; wait for next iteration
+    return;
+  }
   DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
-  JobQueue local_jobs;
-  int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
-  local_jobs.insert(local_jobs.begin(), requests.begin(),
-                    requests.begin() + window_size);
-  requests.erase(requests.begin(), requests.begin() + window_size);
-  while (!local_jobs.empty()) {
-    // ...
-    Job most_urgent_job = local_jobs[target_job_idx];
-
-    // remove the job from the queue so that we don't meet it in the next loop
-    local_jobs.erase(local_jobs.begin() + target_job_idx);
-
+  SortByDeadline(requests);
+  for (auto it = requests.begin(); it != requests.end();) {
+    
+    // if selected device is empty,
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     if (target_subgraph->GetPrevSubgraph() == nullptr) {
       // only set these fields if this is the first subgraph of this model
@@ -28,7 +25,12 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
     device_waiting[target_subgraph->GetKey().device_flag] +=
         largest_shortest_latency;
+    // else, increase the interator
   }
+}
+
+void LeastSlackFirstScheduler::SortByDeadline(JobQueue& requests) {
+
 }
 
 }  // namespace impl
