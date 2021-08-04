@@ -18,7 +18,8 @@ void FixedDeviceScheduler::Schedule(JobQueue& requests) {
       device_idx = planner_->GetModelDeviceMap()[model_id];
     }
 
-    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, static_cast<TfLiteDeviceFlags>(device_idx));
+    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(
+        model_id, static_cast<TfLiteDeviceFlags>(device_idx));
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
     EnqueueAction(to_execute, subgraph);
   }

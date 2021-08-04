@@ -1,8 +1,9 @@
+#include "tensorflow/lite/planner/planner.h"
+
 #include <fstream>
 
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
-#include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"

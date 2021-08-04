@@ -1,4 +1,5 @@
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
+
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
@@ -65,7 +66,8 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     }
     EnqueueAction(most_urgent_job, target_subgraph);
 
-    device_waiting[target_subgraph->GetKey().device_flag] += largest_shortest_latency;
+    device_waiting[target_subgraph->GetKey().device_flag] +=
+        largest_shortest_latency;
   }
 }
 
