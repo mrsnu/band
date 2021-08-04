@@ -44,7 +44,6 @@ class Worker {
 
  protected:
   bool IsValid(Job& job);
-  void PrepareReenqueue(Job& job, Planner* planner);
   TfLiteStatus TryCopyInputTensors(const Job& job);
   TfLiteStatus TryCopyOutputTensors(const Job& job);
   TfLiteStatus TryUpdateWorkerThread();

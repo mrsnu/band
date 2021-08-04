@@ -151,7 +151,10 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
       for (auto request : requests) {
         if (!IsSLOViolated(request)) {
-          worker->GiveJob(request);
+          if (!worker->GiveJob(request)) {
+            PrepareReenqueue(request);
+            EnqueueBatch({request}, true);
+          }
         }
       }
       worker->GetRequestCv().notify_one();
@@ -354,6 +357,13 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
     job.following_jobs.clear();
     job.following_jobs.push_back(remaining_ops);
   }
+}
+
+void Planner::PrepareReenqueue(Job& job) {
+  job.invoke_time = 0;
+  job.end_time = 0;
+  job.resolved_tensors =
+      GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
 }
 
 bool Planner::IsJobIdValid(int job_id) {

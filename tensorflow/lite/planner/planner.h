@@ -109,6 +109,8 @@ class Planner {
 
   void UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph);
 
+  void PrepareReenqueue(Job& job);
+
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
@@ -147,9 +149,10 @@ class Planner {
 class Scheduler {
  public:
   explicit Scheduler(Planner* planner) : planner_(planner) {}
-  // All Schedule() functions should follow the implementation below:
-  //
-  //
+  // A Schedule() function is expected to do the followings:
+  // For the given requests, selected requests to schedule and
+  // find the appropriate devices. The selected requests should be
+  // enqueued in the `action_`.
   virtual void Schedule(JobQueue& requests) = 0;
   Interpreter* GetInterpreter() { return planner_->GetInterpreter(); }
   int IssueSchedId() { return planner_->IssueSchedId(); }

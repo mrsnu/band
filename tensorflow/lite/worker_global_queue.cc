@@ -138,7 +138,7 @@ void GlobalQueueWorker::Work() {
         } else if (status == kTfLiteDelegateError) {
           lock.lock();
           is_available_ = false;
-          PrepareReenqueue(current_job_, planner_ptr.get());
+          planner_ptr->PrepareReenqueue(current_job_);
           lock.unlock();
 
           planner_ptr->EnqueueRequest(current_job_, true);
