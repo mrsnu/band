@@ -31,7 +31,7 @@ BenchmarkParams BenchmarkModel::DefaultParams() {
   BenchmarkParams params;
   params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(50));
   params.AddParam("min_secs", BenchmarkParam::Create<float>(1.0f));
-  params.AddParam("max_secs", BenchmarkParam::Create<float>(150.0f));
+  params.AddParam("max_secs", BenchmarkParam::Create<float>(0.01f));
   params.AddParam("run_delay", BenchmarkParam::Create<float>(-1.0f));
   params.AddParam("num_threads", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("use_caching", BenchmarkParam::Create<bool>(false));
@@ -71,6 +71,9 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
       CreateFlag<std::string>(
           "execution_mode", &params_,
           "experiment execution mode"),
+      CreateFlag<int32_t>(
+          "start_at", &params_,
+          "experiment start_time in sec"),
       CreateFlag<int32_t>(
           "duration_ms", &params_,
           "experiment duration"),

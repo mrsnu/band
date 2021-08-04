@@ -17,6 +17,9 @@ limitations under the License.
 #include <string>
 #include <vector>
 #include <fstream>
+#include <condition_variable>
+#include <mutex>
+#include <deque>
 
 #include "tensorflow/lite/tools/benchmark/benchmark_tflite_model.h"
 #include "tensorflow/lite/tools/logging.h"
@@ -25,6 +28,27 @@ limitations under the License.
 #define NUM_DEVICES 4
 namespace tflite {
 namespace benchmark {
+
+
+struct Job {
+  int model_id;
+  int64_t enqueue_time;
+  int64_t invoke_time;
+  int64_t end_time;
+  int device;
+
+  explicit Job(int model_id, int device) : model_id(model_id), device(device) {
+    enqueue_time = profiling::time::NowMicros();
+  }
+};
+
+// The job queue which can be shared by multiple threads.
+struct ConcurrentJobQueue {
+  std::deque<Job> queue;
+  std::mutex mtx;
+  std::condition_variable cv;
+  bool kill = false;
+};
 
 class MultiModelBenchmark {
  public:
@@ -50,16 +74,17 @@ class MultiModelBenchmark {
     log_file_.close();
   }
 	TfLiteStatus Worker(BenchmarkTfLiteModel benchmark, std::string graph_name);
-	void GenerateRequests(int id, int interval, std::string graph_name, int run_time);
+	void GenerateRequests(int id, std::string graph_name);
 	TfLiteStatus Initialize(std::string graphs, int device, int argc, char** argv);
 	TfLiteStatus ParseGraphFileNames(std::string graphs);
-	TfLiteStatus RunRequests(int period);
+	TfLiteStatus RunRequests(int period, int duration_ms, int start_at);
 	void RunStream(int duration);
 
  private:
 	std::vector<std::string> graph_names_;
   std::vector<std::unique_ptr<BenchmarkTfLiteModel>> benchmarks_;
   std::vector<std::thread> threads_;
+  std::vector<std::unique_ptr<ConcurrentJobQueue>> queues_;
   std::ofstream log_file_;
 };
 
@@ -87,35 +112,85 @@ TfLiteStatus MultiModelBenchmark::Worker(BenchmarkTfLiteModel benchmark, std::st
   TF_LITE_ENSURE_STATUS(benchmark.PrepareRun());
 }
 
-void MultiModelBenchmark::GenerateRequests(int id, int interval, std::string graph_name, int run_time) {
-  std::thread t([this, id, interval, graph_name, run_time]() {
-    int iterations = run_time / interval;
-    int64_t start_time = profiling::time::NowMicros();
-    for (int i = 0; i < iterations; ++i) {
-      int64_t start_run = profiling::time::NowMicros();
-      benchmarks_[id]->RunImpl();
-      int64_t end_run = profiling::time::NowMicros();
-      int64_t exe_time = end_run - start_run;
-      int duration = exe_time / 1000;
-      log_file_ << id << "\t" << id << "\t" << start_time + (i * interval * 1000) << "\t" << start_run << "\t" << end_run << "\n";
-
-      if (duration < interval) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(interval - duration));
+void MultiModelBenchmark::GenerateRequests(int id, std::string graph_name) {
+  std::thread t([this, id, graph_name]() {
+    int sched_id = 0;
+    while (true) {
+      std::unique_lock<std::mutex> lock(queues_[id]->mtx);
+      queues_[id]->cv.wait(lock, [this, id] {
+        return !queues_[id]->queue.empty() || queues_[id]->kill;
+      });
+      if (queues_[id]->queue.empty()) {
+        return;
       }
-    }
+
+      Job job = queues_[id]->queue.front();
+      queues_[id]->queue.pop_front();
+      lock.unlock();
+
+      job.invoke_time = profiling::time::NowMicros();
+      benchmarks_[id]->RunImpl();
+      job.end_time = profiling::time::NowMicros();
+ 
+      // Logging
+      lock.lock();
+      log_file_ << sched_id++ << "\t"
+                << graph_name << "\t"
+                << id << "\t"
+                << job.device << "\t"
+                << -1 << "\t"
+                << -1 << "\t"
+                << -1 << "\t"
+                << job.enqueue_time << "\t"
+                << job.invoke_time << "\t"
+                << job.end_time << "\t"
+                << -1 << "\t"
+                << -1 << "\t"
+                << -1 << "\t"
+                << -1 << "\t"
+                << -1 << "\n";     
+      lock.unlock();
+    };
   });
   threads_.push_back(std::move(t));
 }
 
-TfLiteStatus MultiModelBenchmark::RunRequests(int period) {
-  int run_time = 60000;
-
-	for (int i = 0; i < benchmarks_.size(); ++i){
+TfLiteStatus MultiModelBenchmark::RunRequests(int period, int duration_ms, int start_at) {
+	for (int i = 0; i < benchmarks_.size(); ++i) {
+    queues_.emplace_back(std::make_unique<ConcurrentJobQueue>());
 		std::string graph_name = benchmarks_[i]->params_.Get<std::string>("graph");
-    GenerateRequests(i, period, graph_name, run_time);
+    GenerateRequests(i, graph_name);
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(run_time));
+  if (start_at > 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(start_at * 1000));
+  }
+  int64_t start_time = profiling::time::NowMicros();
+  int curr_time_ms = start_time / 1000;
+  do {
+    int64_t start_run = profiling::time::NowMicros();
+    // Invoke Async
+    for (int id = 0; id < benchmarks_.size(); ++id) {
+      int device = benchmarks_[id]->params_.Get<int32_t>("device");
+      std::unique_lock<std::mutex> lock(queues_[id]->mtx);
+      queues_[id]->queue.push_back(Job(id, device));
+      queues_[id]->cv.notify_all();
+      lock.unlock();
+    }
+
+    int real_period = std::rand() % period + (period / 2);
+    std::this_thread::sleep_for(std::chrono::milliseconds(real_period));
+    int64_t end_run = profiling::time::NowMicros();
+    curr_time_ms = (end_run - start_time) / 1000;
+  } while(curr_time_ms < duration_ms);
+
+  for (int id = 0; id < benchmarks_.size(); ++id) {
+    std::unique_lock<std::mutex> lock(queues_[id]->mtx);
+    queues_[id]->kill = true;
+    queues_[id]->cv.notify_all();
+    lock.unlock();
+  }
+
   for (std::thread& t : threads_) {
     t.join();
   }
@@ -193,13 +268,14 @@ int Main(int argc, char** argv) {
 
 
   std::string execution_mode = parser.params_.Get<std::string>("execution_mode");
+  int duration = parser.params_.Get<int>("duration_ms");
+  int start_at = parser.params_.Get<int>("start_at");
   if (execution_mode == "stream") {
     // Only single model execution is supported with the stream mode.
-    int duration = parser.params_.Get<int>("duration_ms");
     multimodel_benchmark.RunStream(duration);
   } else if (execution_mode == "periodic") {
     int period = parser.params_.Get<int>("period");
-    multimodel_benchmark.RunRequests(period);
+    multimodel_benchmark.RunRequests(period, duration, start_at);
   } else {
     TFLITE_LOG(ERROR) << "Wrong execution mode.";
     return -1;
