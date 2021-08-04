@@ -33,6 +33,9 @@ class Worker {
   bool IsAvailable();
 
   virtual int64_t GetWaitingTime() = 0;
+  // Make sure the worker lock is acquired before calling the function.
+  // Currently, `Planner::Plan()` is the only user of the method, and `Plan()` calls `GiveJob`
+  // with the lock.
   virtual bool GiveJob(Job& job) = 0;
 
   // DeviceQueueWorker methods
