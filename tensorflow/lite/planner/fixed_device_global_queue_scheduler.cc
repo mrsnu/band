@@ -32,6 +32,7 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
       continue;
     }
 
+    /*
     // TODO: fallback subgraphs for FixedDevicePlanner?
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
     // Record expected latency to check if the SLO has been violated.
@@ -40,6 +41,7 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
     int64_t expected_latency = GetDeviceWaitingTime()[device_flag] + profiled;
     to_execute.expected_latency = expected_latency;
     planner_->UpdateJobEnqueueStatus(to_execute, key);
+    */
 
     action[device_flag].push_back(to_execute);
 
