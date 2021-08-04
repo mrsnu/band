@@ -9,13 +9,13 @@ namespace impl {
 
 class LeastSlackFirstScheduler : public Scheduler {
  public:
-  explicit LeastSlackFirstScheduler(Planner* planner)
-      : Scheduler(planner) {
+  explicit LeastSlackFirstScheduler(Planner* planner) : Scheduler(planner) {
     need_profile_ = true;
     need_fallback_subgraphs_ = true;
     worker_type_ = kGlobalQueue;
   }
   void Schedule(JobQueue& requests) override;
+  Job SortByDeadline(JobQueue& requests);
 };
 
 }  // namespace impl
