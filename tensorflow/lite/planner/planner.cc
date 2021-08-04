@@ -156,6 +156,7 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
       }
       worker->GetRequestCv().notify_one();
     }
+    requests.clear();
   }
 }
 
@@ -321,12 +322,32 @@ void Planner::FlushFinishedJobs() {
 
 int Planner::IssueSchedId() { return sched_id_++; }
 
-void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) {
-  job.subgraph_idx = interpreter_->GetSubgraphIdx(target);
-  job.device_id = target.device_flag;
+void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
+  SubgraphKey& target_key = target_subgraph->GetKey();
+  job.subgraph_idx = interpreter_->GetSubgraphIdx(target_key);
+  job.device_id = target_key.device_flag;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = interpreter_->GetProfiledLatency(target);
-  job.expected_execution_time = interpreter_->GetExpectedLatency(target);
+  job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
+  job.expected_execution_time = interpreter_->GetExpectedLatency(target_key);
+
+  if (target_subgraph->GetNextSubgraph() != nullptr) {
+    Job remaining_ops(job.model_id);
+    remaining_ops.enqueue_time = job.enqueue_time;
+    remaining_ops.following_jobs = job.following_jobs;
+    remaining_ops.expected_latency = job.expected_latency;
+    remaining_ops.sched_id = job.sched_id;
+    remaining_ops.job_id = job.job_id;
+    remaining_ops.input_handle = job.input_handle;
+    remaining_ops.output_handle = job.output_handle;
+    remaining_ops.resolved_tensors = job.resolved_tensors;
+
+    for (int output_index : target_subgraph->outputs()) {
+      remaining_ops.resolved_tensors.insert(output_index);
+    }
+
+    job.following_jobs.clear();
+    job.following_jobs.push_back(remaining_ops);
+  }
 }
 
 bool Planner::IsJobIdValid(int job_id) {
@@ -395,10 +416,15 @@ void Planner::Plan() {
     UpdateModelDeviceMapping();
     for (size_t i = 0; i < local_queues_.size(); ++i) {
       UpdateDeviceWaitingTime();
-      auto action = schedulers_[i]->Schedule(local_queues_[i]);
-      EnqueueToWorkers(action);
+      schedulers_[i]->Schedule(local_queues_[i]);
+      EnqueueToWorkers(schedulers_[i]->GetAction());
     }
   }
+}
+
+void Scheduler::EnqueueAction(Job job, Subgraph* subgraph) {
+  planner_->UpdateJobScheduleStatus(job, subgraph);
+  action_[subgraph->GetKey().device_flag].push_back(job);
 }
 
 }  // namespace impl

@@ -3,8 +3,7 @@
 namespace tflite {
 namespace impl {
 
-ScheduleAction RoundRobinScheduler::Schedule(JobQueue& requests) {
-  ScheduleAction action;
+void RoundRobinScheduler::Schedule(JobQueue& requests) {
   std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
   for (auto device : idle_devices) {
     if (!requests.empty()) {
@@ -14,19 +13,15 @@ ScheduleAction RoundRobinScheduler::Schedule(JobQueue& requests) {
           });
       if (available_job != requests.end()) {
         Job to_execute = *available_job;
-        /*
         int subgraph_idx =
             GetInterpreter()->GetSubgraphIdx(to_execute.model_id, device);
-        SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
-        planner_->UpdateJobEnqueueStatus(to_execute, key);
-        */
+        Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
+        EnqueueAction(to_execute, subgraph);
 
-        action[device].push_back(to_execute);
         requests.erase(available_job);
       }
     }
   }
-  return action;
 }
 
 }  // namespace impl

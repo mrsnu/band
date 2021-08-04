@@ -3,8 +3,8 @@
 namespace tflite {
 namespace impl {
 
-ScheduleAction FixedDeviceScheduler::Schedule(JobQueue& requests) {
-  ScheduleAction action;
+void FixedDeviceScheduler::Schedule(JobQueue& requests) {
+  // TODO: fallback subgraphs for FixedDevicePlanner?
   while (!requests.empty()) {
     Job to_execute = requests.front();
     requests.pop_front();
@@ -18,17 +18,10 @@ ScheduleAction FixedDeviceScheduler::Schedule(JobQueue& requests) {
       device_idx = planner_->GetModelDeviceMap()[model_id];
     }
 
-    /*
-    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
-    // TODO: fallback subgraphs for FixedDevicePlanner?
-    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
-    SubgraphKey& key = GetInterpreter()->subgraph(subgraph_idx)->GetKey();
-    planner_->UpdateJobEnqueueStatus(to_execute, key);
-    */
-
-    action[device_flag].push_back(to_execute);
+    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, static_cast<TfLiteDeviceFlags>(device_idx));
+    Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
+    EnqueueAction(to_execute, subgraph);
   }
-  return action;
 }
 
 }  // namespace impl

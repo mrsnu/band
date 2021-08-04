@@ -107,7 +107,7 @@ class Planner {
 
   std::map<int, int>& GetModelDeviceMap() { return model_device_map_; }
 
-  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target);
+  void UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph);
 
  private:
   bool IsJobIdValid(int job_id);
@@ -147,7 +147,10 @@ class Planner {
 class Scheduler {
  public:
   explicit Scheduler(Planner* planner) : planner_(planner) {}
-  virtual ScheduleAction Schedule(JobQueue& requests) = 0;
+  // All Schedule() functions should follow the implementation below:
+  //
+  //
+  virtual void Schedule(JobQueue& requests) = 0;
   Interpreter* GetInterpreter() { return planner_->GetInterpreter(); }
   int IssueSchedId() { return planner_->IssueSchedId(); }
   DeviceWaitingTime& GetDeviceWaitingTime() {
@@ -156,12 +159,15 @@ class Scheduler {
   bool NeedProfile() { return need_profile_; }
   bool NeedFallbackSubgraphs() { return need_fallback_subgraphs_; }
   TfLiteWorkerType GetWorkerType() { return worker_type_; }
+  ScheduleAction& GetAction() { return action_; }
+  void EnqueueAction(Job job, Subgraph* subgraph);
 
  protected:
   bool need_profile_;
   bool need_fallback_subgraphs_;
   TfLiteWorkerType worker_type_;
   Planner* planner_;
+  ScheduleAction action_;
 };
 
 }  // namespace impl

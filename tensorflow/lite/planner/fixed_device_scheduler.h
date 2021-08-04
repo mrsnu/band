@@ -17,7 +17,7 @@ class FixedDeviceScheduler : public Scheduler {
     need_fallback_subgraphs_ = false;
     worker_type_ = kDeviceQueue;
   }
-  ScheduleAction Schedule(JobQueue& requests) override;
+  void Schedule(JobQueue& requests) override;
 };
 
 class FixedDeviceGlobalQueueScheduler : public Scheduler {
@@ -31,7 +31,7 @@ class FixedDeviceGlobalQueueScheduler : public Scheduler {
     need_fallback_subgraphs_ = false;
     worker_type_ = kGlobalQueue;
   }
-  ScheduleAction Schedule(JobQueue& requests) override;
+  void Schedule(JobQueue& requests) override;
 };
 
 }  // namespace impl

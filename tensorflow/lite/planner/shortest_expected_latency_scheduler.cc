@@ -4,8 +4,7 @@
 namespace tflite {
 namespace impl {
 
-ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
-  ScheduleAction action;
+void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
   DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
   JobQueue local_jobs;
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
@@ -57,44 +56,17 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // remove the job from the queue so that we don't meet it in the next loop
     local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-    most_urgent_job.subgraph_idx = target_subgraph_idx;
-
-    /*
+    // Update Job status specific to this planner.
+    // Common status will be updated by `EnqueueAction`.
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    SubgraphKey& to_execute = target_subgraph->GetKey();
-    planner_->UpdateJobEnqueueStatus(most_urgent_job, to_execute);
-
     if (target_subgraph->GetPrevSubgraph() == nullptr) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
     }
+    EnqueueAction(most_urgent_job, target_subgraph);
 
-    ModelSpec& model_spec =
-        GetInterpreter()->GetModelSpec(most_urgent_job.model_id);
-    if (target_subgraph->GetNextSubgraph() != nullptr) {
-      Job remaining_ops(most_urgent_job.model_id);
-      remaining_ops.enqueue_time = most_urgent_job.enqueue_time;
-      remaining_ops.following_jobs = most_urgent_job.following_jobs;
-      remaining_ops.expected_latency = most_urgent_job.expected_latency;
-      remaining_ops.sched_id = most_urgent_job.sched_id;
-      remaining_ops.job_id = most_urgent_job.job_id;
-      remaining_ops.input_handle = most_urgent_job.input_handle;
-      remaining_ops.output_handle = most_urgent_job.output_handle;
-      remaining_ops.resolved_tensors = most_urgent_job.resolved_tensors;
-
-      for (int output_index : target_subgraph->outputs()) {
-        remaining_ops.resolved_tensors.insert(output_index);
-      }
-
-      most_urgent_job.following_jobs.clear();
-      most_urgent_job.following_jobs.push_back(remaining_ops);
-    }
-    */
-
-    action[to_execute.device_flag].push_back(most_urgent_job);
-    device_waiting[to_execute.device_flag] += largest_shortest_latency;
+    device_waiting[target_subgraph->GetKey().device_flag] += largest_shortest_latency;
   }
-  return action;
 }
 
 }  // namespace impl

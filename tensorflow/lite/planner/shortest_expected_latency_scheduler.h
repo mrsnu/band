@@ -15,7 +15,7 @@ class ShortestExpectedLatencyScheduler : public Scheduler {
     need_fallback_subgraphs_ = true;
     worker_type_ = kDeviceQueue;
   }
-  ScheduleAction Schedule(JobQueue& requests) override;
+  void Schedule(JobQueue& requests) override;
 };
 
 }  // namespace impl
