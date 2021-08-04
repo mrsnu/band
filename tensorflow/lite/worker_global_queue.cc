@@ -134,7 +134,7 @@ void GlobalQueueWorker::Work() {
           }
           TryCopyOutputTensors(current_job_);
           if (planner_ptr->GetLogProcessorFrequency()) {
-            std::lock_guard<std::mutex> cpu_lock(cpu_set_mtx_);
+            std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
             current_job_.end_frequency = GetCPUFrequencyKhz(cpu_set_);
             current_job_.end_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set_);
             current_job_.end_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set_);
