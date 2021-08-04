@@ -341,6 +341,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
 
   if (target_subgraph->GetNextSubgraph() != nullptr) {
     Job remaining_ops(job.model_id);
+    remaining_ops.model_fname = job.model_fname;
     remaining_ops.enqueue_time = job.enqueue_time;
     remaining_ops.following_jobs = job.following_jobs;
     remaining_ops.expected_latency = job.expected_latency;
