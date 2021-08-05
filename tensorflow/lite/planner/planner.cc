@@ -96,7 +96,7 @@ int Planner::GetWorkerType() {
   return worker_type;
 }
 
-bool Planner::RequireFallbackSubgraphs() {
+bool Planner::NeedFallbackSubgraphs() {
   for (int i = 0; i < schedulers_.size(); ++i) {
     if (schedulers_[i]->NeedFallbackSubgraphs()) return true;
   }
@@ -125,20 +125,22 @@ bool Planner::IsSLOViolated(Job& job) {
         job.profiled_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
-      // SLO violation
-      // no point in running this job anymore
-      job.status = kTfLiteJobSLOViolation;
-
-      // mark this as -1 to differentiate it from the default value, 0
-      job.invoke_time = -1;
-
-      // mark the time of this decision (of early-dropping this job)
-      job.end_time = current_time;
-      EnqueueFinishedJob(job);
       return true;
     }
   }
   return false;
+}
+
+void Planner::HandleSLOViolatedJob(Job& job) {
+  // no point in running this job anymore
+  job.status = kTfLiteJobSLOViolation;
+
+  // mark this as -1 to differentiate it from the default value, 0
+  job.invoke_time = -1;
+
+  // mark the time of this decision (of early-dropping this job)
+  job.end_time = profiling::time::NowMicros();
+  EnqueueFinishedJob(job);
 }
 
 void Planner::EnqueueToWorkers(ScheduleAction& action) {
@@ -151,11 +153,13 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
       for (auto request : requests) {
-        if (!IsSLOViolated(request)) {
-          if (!worker->GiveJob(request)) {
-            PrepareReenqueue(request);
-            EnqueueRequest(request, true);
-          }
+        if (IsSLOViolated(request)) {
+          HandleSLOViolatedJob(request);
+          continue;
+        }
+        if (!worker->GiveJob(request)) {
+          PrepareReenqueue(request);
+          EnqueueRequest(request, true);
         }
       }
       worker->GetRequestCv().notify_one();
@@ -376,7 +380,7 @@ int Planner::GetJobRecordIndex(int job_id) const {
   return job_id % NUM_FINISHED_RECORDS;
 }
 
-void Planner::UpdateModelDeviceMapping() {
+void Planner::TryUpdateModelDeviceMapping() {
   std::set<int> models = GetInterpreter()->models();
   if (models.size() != model_device_map_.size()) {
     // (# of available devices, vector of model_id)
@@ -431,7 +435,7 @@ void Planner::Plan() {
       return;
     }
     CopyToLocalQueue(local_queues_[0]);
-    UpdateModelDeviceMapping();
+    TryUpdateModelDeviceMapping();
     for (size_t i = 0; i < local_queues_.size(); ++i) {
       UpdateDeviceWaitingTime();
       schedulers_[i]->Schedule(local_queues_[i]);

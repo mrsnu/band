@@ -75,7 +75,7 @@ class Planner {
   // Returns true if any of the scheduler can handle fallback subgraphs.
   // But, note that having both types of scheduler (w/ fallback, w/o fallback),
   // may lead to unexpected results.
-  bool RequireFallbackSubgraphs();
+  bool NeedFallbackSubgraphs();
 
   // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
@@ -91,6 +91,9 @@ class Planner {
   // This func assumes that device_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.
   bool IsSLOViolated(Job& job);
+
+  // Set the job status and enqueue to the finished queue.
+  void HandleSLOViolatedJob(Job& job);
 
   // Update the current device waiting time.
   void UpdateDeviceWaitingTime();

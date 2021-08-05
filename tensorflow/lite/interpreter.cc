@@ -1050,7 +1050,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
 
-  if (!planner_->RequireFallbackSubgraphs()) {
+  if (!planner_->NeedFallbackSubgraphs()) {
     return {{device_flag, {}}};
   }
 
