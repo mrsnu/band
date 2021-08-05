@@ -85,6 +85,7 @@ FRAMEWORK_LIB_HDRS = [
     "planner/fixed_device_scheduler.h",
     "planner/round_robin_scheduler.h",
     "planner/shortest_expected_latency_scheduler.h",
+    "planner/least_slack_first_scheduler.h",
     "worker.h",
     "safe_bool.h"
 ]
@@ -262,6 +263,7 @@ cc_library(
         "planner/fixed_device_global_queue_scheduler.cc",
         "planner/round_robin_scheduler.cc",
         "planner/shortest_expected_latency_scheduler.cc",
+        "planner/least_slack_first_scheduler.cc",
         "worker.cc",
         "worker_device_queue.cc",
         "worker_global_queue.cc"
