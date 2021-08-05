@@ -32,4 +32,4 @@ size_t TimeProfiler::GetNumInvokeTimelines() const {
 }
 
 } // namespace profiling
-} // namespace tflite 
+} // namespace tflite

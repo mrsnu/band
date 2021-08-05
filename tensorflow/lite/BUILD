@@ -295,6 +295,7 @@ cc_library(
         "//tensorflow/lite/kernels:cpu_backend_context", 
         "//tensorflow/lite/nnapi:nnapi_implementation",
         "//tensorflow/lite/profiling:time_profiler",
+        "//tensorflow/lite/profiling:function_profiler",
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/profiling:util",
