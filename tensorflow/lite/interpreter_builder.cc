@@ -630,18 +630,23 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           continue;
         }
 
-        Subgraph* potential_prev_subgraph = (*interpreter)->subgraph(potential_prev_subgraph_index);
+        Subgraph* potential_prev_subgraph =
+            (*interpreter)->subgraph(potential_prev_subgraph_index);
 
         bool is_previous = false;
-        for (int tensor_index: potential_prev_subgraph->outputs()) {
+        for (int tensor_index : potential_prev_subgraph->outputs()) {
           if (input_tensors.find(tensor_index) != input_tensors.end()) {
             is_previous = true;
             break;
           }
         }
 
+        // Extensively create a connection between subgraphs when
+        // there are common tensors. Note that This logic cannot guarantees
+        // the execution capability as we don't consider resolved tensors here.
         if (is_previous) {
-          TFLITE_LOG(INFO) << "Subgraph " << subgraph_idx << " is " << potential_prev_subgraph_index << "'s next";
+          TFLITE_LOG(INFO) << "Subgraph " << subgraph_idx << " is "
+                           << potential_prev_subgraph_index << "'s next";
           if (subgraph->SetPrevSubgraph(potential_prev_subgraph) != kTfLiteOk) {
             TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
           }
@@ -820,6 +825,7 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
 
     std::set<int> real_outputs;
     if (op_indices.size() == operators->size()) {
+      // Entire model case doesn't need to consider externel nodes
       std::set_difference(node_outputs.begin(), node_outputs.end(),
                     node_inputs.begin(), node_inputs.end(),
                     std::inserter(real_outputs, real_outputs.begin()));

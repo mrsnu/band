@@ -1306,6 +1306,7 @@ Interpreter::GroupByStartEndIdx(
 std::vector<int> Interpreter::GetSubgraphCandidates(
     int model_id, std::set<int> resolved_tensors, int preceded_subgraph_index) {
   std::vector<int> candidate_indices;
+  // Start of the model execution
   if (preceded_subgraph_index == -1) {
     for (int i = 0; i < subgraphs_size(); ++i) {
       Subgraph* subgraph_ptr = subgraph(i);
