@@ -2,7 +2,6 @@
 
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/profiling/function_profiler.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/interpreter.h"
 
@@ -63,7 +62,6 @@ JobQueue Planner::CopyToLocalQueue() {
 }
 
 void Planner::Wait(std::vector<int> job_ids) {
-  TFLITE_MEASURE_FUNCTION_DURATION();
   if (job_ids.size() == 0) {
     return;
   }
