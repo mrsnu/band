@@ -118,6 +118,10 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
     return result;
   };
 
+  for (auto i: job.previous_subgraph_indices) {
+    TFLITE_LOG(INFO) << "preceded subgraph of " << job.subgraph_idx << " : " << i;
+  }
+
   std::set<int> unresolved_tensors(subgraph->inputs().begin(), subgraph->inputs().end());
   // Intermediate tensor communication
   for (auto subgraph_it = job.previous_subgraph_indices.cbegin(); subgraph_it != job.previous_subgraph_indices.cend(); ++subgraph_it) {

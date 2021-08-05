@@ -1243,7 +1243,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
     int preceded_subgraph_index) {
   std::vector<int> subgraph_indices =
-      GetSubgraphCandidates(model_id, preceded_subgraph_index);
+      GetSubgraphCandidates(model_id, resolved_tensors, preceded_subgraph_index);
   std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
       subgraph_map = GroupByStartEndIdx(subgraph_indices);
 
@@ -1304,7 +1304,7 @@ Interpreter::GroupByStartEndIdx(
 }
 
 std::vector<int> Interpreter::GetSubgraphCandidates(
-    int model_id, int preceded_subgraph_index) {
+    int model_id, std::set<int> resolved_tensors, int preceded_subgraph_index) {
   std::vector<int> candidate_indices;
   if (preceded_subgraph_index == -1) {
     for (int i = 0; i < subgraphs_size(); ++i) {
@@ -1318,7 +1318,19 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
   } else {
     Subgraph* subgraph_ptr = subgraph(preceded_subgraph_index);
     for (Subgraph* next_subgraph : subgraph_ptr->GetNextSubgraphs()) {
-      candidate_indices.push_back(GetSubgraphIdx(next_subgraph->GetKey()));
+      bool is_executable = true;
+
+      // check whether all input tensor is resolved or not
+      for (const int& input_tensor : subgraph_ptr->inputs()) {
+        if (resolved_tensors.find(input_tensor) == resolved_tensors.end()) {
+          is_executable = false;
+          break;
+        }
+      }
+      
+      if (is_executable) {
+        candidate_indices.push_back(GetSubgraphIdx(next_subgraph->GetKey()));
+      }
     }
   }
   return candidate_indices;

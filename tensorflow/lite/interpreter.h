@@ -829,7 +829,7 @@ class Interpreter {
   GroupByStartEndIdx(std::vector<int> subgraph_indices);
 
   // return next subgraph indices of preceded subgraph 
-  std::vector<int> GetSubgraphCandidates(int model_id, int preceded_subgraph_index);
+  std::vector<int> GetSubgraphCandidates(int model_id, std::set<int> resolved_tensors, int preceded_subgraph_index);
 
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account
