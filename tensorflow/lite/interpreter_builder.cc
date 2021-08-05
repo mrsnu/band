@@ -552,15 +552,17 @@ int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
 }
 
 int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
-                     ModelConfig* model_config,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads) {
+                                      ModelConfig* model_config,
+                                      const OpResolver& op_resolver,
+                                      std::unique_ptr<Interpreter>* interpreter,
+                                      int num_threads) {
   int model_id = (*interpreter)->GetNewModelId();
   bool has_available_device = false;
 
   // Add entire model on CPU
-  if ((*interpreter)->AddSubgraph(CreateSubgraph(model, op_resolver, interpreter, model_id, kTfLiteCPU)) == -1) {
+  if ((*interpreter)
+          ->AddSubgraph(CreateSubgraph(model, op_resolver, interpreter,
+                                       model_id, kTfLiteCPU)) == -1) {
     TFLITE_LOG(ERROR) << "Failed to create subgraph on CPU delegate";
     (*interpreter)->InvalidateRecentModelId();
     return -1;
@@ -613,11 +615,13 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         continue;
       }
 
-      std::set<int> input_tensors(subgraph->inputs().begin(), subgraph->inputs().end());
+      std::set<int> input_tensors(subgraph->inputs().begin(),
+                                  subgraph->inputs().end());
 
-      for (auto device_op_to_subgraph_index: device_ops_to_subgraph_index) {
+      for (auto device_op_to_subgraph_index : device_ops_to_subgraph_index) {
         int potential_prev_subgraph_index = device_op_to_subgraph_index.second;
-        auto& potential_prev_subgraph_opset = device_op_to_subgraph_index.first.second;
+        auto& potential_prev_subgraph_opset =
+            device_op_to_subgraph_index.first.second;
         std::set<int> common_ops;
         // Find common op btwn current subgraph and potential prev subgraph
         std::set_intersection(potential_prev_subgraph_opset.begin(),
@@ -808,9 +812,9 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
     std::vector<int> subgraph_input_vec =
         FlatBufferIntArrayToVector(subgraph->inputs());
     std::set<int> subgraph_inputs =
-        std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());    
+        std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
     std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(subgraph_key.model_id).node_output_tensors;
+        (*interpreter)->GetModelSpec(model_id).node_output_tensors;
 
     std::set_union(model_outputs.begin(), model_outputs.end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
@@ -821,7 +825,6 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
                           external_inputs_params.begin(),
                           external_inputs_params.end(),
                           std::inserter(real_inputs, real_inputs.begin()));
-
     // we do a similar processing for output tensors, except
     // this time we don't have to worry about param tensors
     std::set<int> real_outputs;
