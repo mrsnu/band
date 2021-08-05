@@ -29,10 +29,6 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
       continue;
     }
 
-    if (target_subgraph->GetPrevSubgraph() == nullptr) {
-      // only set these fields if this is the first subgraph of this model
-      next_job.expected_latency = best_subgraph.second;
-    }
     EnqueueAction(next_job, target_subgraph);
 
     it = requests.erase(it);
@@ -43,14 +39,28 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 }
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(const Job& job) {
-  return job.enqueue_time + job.slo_us - profiling::time::NowMicros();
+  int64_t deadline = job.enqueue_time + job.slo_us;
+  int64_t current_time = profiling::time::NowMicros();
+  int64_t remaining_execution_time = job.expected_latency;
+  return deadline - current_time - remaining_execution_time;
 }
 
 void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests) {
+  UpdateExpectedLatency(requests);
   std::sort(requests.begin(), requests.end(),
             [&](const Job& first, const Job& second) -> bool {
               return GetSlackTime(first) < GetSlackTime(second);
             });
+}
+
+void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests) {
+  for (auto& request : requests) {
+    if (request.expected_latency == 0) {
+      DeviceWaitingTime idle_devices;
+      request.expected_latency =
+        GetInterpreter()->GetShortestLatency(request.model_id, request.resolved_tensors, 0, idle_devices).second;
+    }
+  }
 }
 
 }  // namespace impl

@@ -17,6 +17,7 @@ class LeastSlackFirstScheduler : public Scheduler {
   void Schedule(JobQueue& requests) override;
   int64_t GetSlackTime(const Job& job);
   void SortBySlackTime(JobQueue& requests);
+  void UpdateExpectedLatency(JobQueue& requests);
 };
 
 }  // namespace impl
