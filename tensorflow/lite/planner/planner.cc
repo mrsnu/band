@@ -154,7 +154,7 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
         if (!IsSLOViolated(request)) {
           if (!worker->GiveJob(request)) {
             PrepareReenqueue(request);
-            EnqueueBatch({request}, true);
+            EnqueueRequest(request, true);
           }
         }
       }

@@ -96,7 +96,7 @@ class Planner {
   void UpdateDeviceWaitingTime();
 
   // Update `model_device_map_`.
-  void UpdateModelDeviceMapping();
+  void TryUpdateModelDeviceMapping();
 
   // Get idle devices from `device_waiting_`.
   std::set<TfLiteDeviceFlags> GetIdleDevices();
