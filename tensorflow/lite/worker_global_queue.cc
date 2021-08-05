@@ -116,10 +116,6 @@ void GlobalQueueWorker::Work() {
         break;
       }
 
-      
-      TFLITE_LOG(INFO) << "Try copy tensor of " << TfLiteDeviceGetName(device_flag_)
-                        << " subgraph " << subgraph_idx;
-
       if (TryCopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();
@@ -163,7 +159,8 @@ void GlobalQueueWorker::Work() {
           // TODO #21: Handle errors in multi-thread environment
           current_job_.status = kTfLiteJobInvokeFailure;
         }
-      } else {
+      } else {        
+        TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
         current_job_.status = kTfLiteJobInputCopyFailure;
       }

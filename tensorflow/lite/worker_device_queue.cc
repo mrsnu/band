@@ -136,18 +136,7 @@ void DeviceQueueWorker::Work() {
           job.status = kTfLiteJobInvokeFailure;
         }
       } else {
-        std::string tensors, subgraphs;
-        for (int i : job.resolved_tensors) {
-          tensors += std::to_string(i) + " ";
-        }
-
-        for (int i : job.previous_subgraph_indices) {
-          subgraphs += std::to_string(i) + " ";
-        }
-
         TFLITE_LOG(ERROR) << "Worker failed to copy input.";
-        TFLITE_LOG(ERROR) << "Resolved ops: " << tensors;
-        TFLITE_LOG(ERROR) << "Executed subgraphs: " << subgraphs;
         // TODO #21: Handle errors in multi-thread environment
         job.status = kTfLiteJobInputCopyFailure;
       }
