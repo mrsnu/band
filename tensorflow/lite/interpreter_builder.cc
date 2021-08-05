@@ -662,9 +662,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     if (model_config != nullptr) {
       (*interpreter)->SetModelConfigAndFillProfile(model_id, *model_config);
     }
-
     if ((*interpreter)->NeedProfile()) {
       (*interpreter)->Profile(model_id);
+    } 
     return model_id;
   } else {
     (*interpreter)->InvalidateRecentModelId();

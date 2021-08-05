@@ -1317,9 +1317,10 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
     }
   } else {
     Subgraph* subgraph_ptr = subgraph(preceded_subgraph_index);
+    auto key = subgraph_ptr->GetKey();
     for (Subgraph* next_subgraph : subgraph_ptr->GetNextSubgraphs()) {
       bool is_executable = true;
-
+      
       // check whether all input tensor is resolved or not
       for (const int& input_tensor : subgraph_ptr->inputs()) {
         if (resolved_tensors.find(input_tensor) == resolved_tensors.end()) {
