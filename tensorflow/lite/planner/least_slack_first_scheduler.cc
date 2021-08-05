@@ -19,7 +19,6 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     std::pair<int, int64_t> best_subgraph =
         GetInterpreter()->GetShortestLatency(
             next_job.model_id, next_job.resolved_tensors, 0, device_waiting);
-    // if selected device is empty,
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
 
     // If the target device is not idle, give opportunity to the next job.

@@ -6,6 +6,7 @@
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
+#include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
@@ -62,6 +63,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new RoundRobinScheduler(this));
     } else if (schedulers[i] == kShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(this));
+    } else if (schedulers[i] == kLSF) {
+      schedulers_.emplace_back(new LeastSlackFirstScheduler(this));
     } else {
       return kTfLiteError;
     }
@@ -363,6 +366,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
+    remaining_ops.slo_us = job.slo_us;
     remaining_ops.enqueue_time = job.enqueue_time;
     remaining_ops.following_jobs = job.following_jobs;
     remaining_ops.expected_latency = job.expected_latency;

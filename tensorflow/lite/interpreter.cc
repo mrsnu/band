@@ -134,14 +134,20 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       set_internal_backend_context(
           std::make_unique<CpuBackendContext>());
 
+  // Initialize configurations.
+  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
+    error_reporter_->Report("Interpreter::Init() failed.");
+    exit(-1);
+  }
   // Create a Planner instance.
   planner_.reset(new Planner(this));
-  auto& schedulers = runtime_config.planner_config.schedulers;
+  if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
+    error_reporter_->Report("Planner::Init() failed.");
+    exit(-1);
+  }
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (std::find(schedulers.begin(),
-                schedulers.end(),
-                kShortestExpectedLatency) != schedulers.end()) {
+  if (planner_->RequireFallbackSubgraphs()) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
 
@@ -231,16 +237,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
     }
   }
-
-  // Initialize configurations.
-  if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
-    error_reporter_->Report("Planner::Init() failed.");
-    exit(-1);
-  }
-  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
-    error_reporter_->Report("Interpreter::Init() failed.");
-    exit(-1);
-  }
+  // Initialize workers.
   for (auto& worker : workers_) {
     if (worker.second->Init(runtime_config.worker_config) != kTfLiteOk) {
       error_reporter_->Report("Worker::Init() failed for worker : %s",
