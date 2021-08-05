@@ -7,30 +7,49 @@ namespace impl {
 
 void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
   std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
-  if (idle_devices.empty()) {
-    // no device is idle; wait for next iteration
-    return;
-  }
   DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
-  SortByDeadline(requests);
+
+  SortBySlackTime(requests);
   for (auto it = requests.begin(); it != requests.end();) {
-    
+    if (idle_devices.empty()) {
+      // no device is idle; wait for next iteration
+      return;
+    }
+    Job next_job = *it;
+    std::pair<int, int64_t> best_subgraph =
+        GetInterpreter()->GetShortestLatency(
+            next_job.model_id, next_job.resolved_tensors, 0, device_waiting);
     // if selected device is empty,
-    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
+
+    // If the target device is not idle, give opportunity to the next job.
+    TfLiteDeviceFlags device = target_subgraph->GetKey().device_flag;
+    auto device_it = idle_devices.find(device);
+    if (device_it == idle_devices.end()) {
+      ++it;
+      continue;
+    }
+
     if (target_subgraph->GetPrevSubgraph() == nullptr) {
       // only set these fields if this is the first subgraph of this model
-      most_urgent_job.expected_latency = largest_shortest_latency;
+      next_job.expected_latency = best_subgraph.second;
     }
-    EnqueueAction(most_urgent_job, target_subgraph);
+    EnqueueAction(next_job, target_subgraph);
 
-    device_waiting[target_subgraph->GetKey().device_flag] +=
-        largest_shortest_latency;
-    // else, increase the interator
+    it = requests.erase(it);
+    idle_devices.erase(device_it);
+    device_waiting[device] += GetInterpreter()->GetExpectedLatency(target_subgraph->GetKey());
   }
 }
 
-void LeastSlackFirstScheduler::SortByDeadline(JobQueue& requests) {
+int64_t LeastSlackFirstScheduler::GetSlackTime(const Job& job) {
+    return job.enqueue_time + job.slo_us - profiling::time::NowMicros();
+}
 
+void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests) {
+  std::sort(requests.begin(), requests.end(), [&] (const Job& first, const Job& second) -> bool {
+    return GetSlackTime(first) < GetSlackTime(second);
+  });
 }
 
 }  // namespace impl

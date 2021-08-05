@@ -15,7 +15,8 @@ class LeastSlackFirstScheduler : public Scheduler {
     worker_type_ = kGlobalQueue;
   }
   void Schedule(JobQueue& requests) override;
-  Job SortByDeadline(JobQueue& requests);
+  int64_t GetSlackTime(const Job& job);
+  void SortBySlackTime(JobQueue& requests);
 };
 
 }  // namespace impl
