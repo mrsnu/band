@@ -44,14 +44,13 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 }
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(const Job& job) {
-  return job.enqueue_time + job.slo_us - profiling::time::NowMicros();
+    return job.enqueue_time + job.slo_us - profiling::time::NowMicros();
 }
 
 void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests) {
-  std::sort(requests.begin(), requests.end(),
-            [&](const Job& first, const Job& second) -> bool {
-              return GetSlackTime(first) < GetSlackTime(second);
-            });
+  std::sort(requests.begin(), requests.end(), [&] (const Job& first, const Job& second) -> bool {
+    return GetSlackTime(first) < GetSlackTime(second);
+  });
 }
 
 }  // namespace impl
