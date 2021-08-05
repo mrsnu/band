@@ -17,9 +17,8 @@ class FunctionProfiler {
   std::string function_name_;
 };
 
-#define TFLITE_MEASURE_FUNCTION_DURATION()          \
-  tflite::profiling::FunctionProfiler(__PRETTY_FUNCTION__)
 }  // namespace profiling
 }  // namespace tflite
-
+#define TFLITE_MEASURE_FUNCTION_DURATION()          \
+  tflite::profiling::FunctionProfiler(__PRETTY_FUNCTION__)
 #endif  // TENSORFLOW_LITE_PROFILING_FUNCTION_PROFILER_H_
