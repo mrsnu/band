@@ -159,7 +159,7 @@ void GlobalQueueWorker::Work() {
           // TODO #21: Handle errors in multi-thread environment
           current_job_.status = kTfLiteJobInvokeFailure;
         }
-      } else {        
+      } else {
         TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
         current_job_.status = kTfLiteJobInputCopyFailure;
