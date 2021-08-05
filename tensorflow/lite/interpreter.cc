@@ -140,6 +140,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     error_reporter_->Report("Planner::Init() failed.");
     exit(-1);
   }
+
   // Initialize configurations.
   if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
     error_reporter_->Report("Interpreter::Init() failed.");
