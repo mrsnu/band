@@ -1,7 +1,6 @@
 #ifndef TENSORFLOW_LITE_PROFILING_FUNCTION_PROFILER_H_
 #define TENSORFLOW_LITE_PROFILING_FUNCTION_PROFILER_H_
 
-#include <chrono>
 #include <string>
 
 namespace tflite {
