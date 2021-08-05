@@ -799,10 +799,11 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
         FlatBufferIntArrayToVector(subgraph->inputs());
     std::set<int> subgraph_inputs =
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
-    std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(subgraph_key.model_id).node_output_tensors;
-
-    std::set_union(model_outputs.begin(), model_outputs.end(),
+    const std::set<int>& model_all_outputs =
+        (*interpreter)->GetModelSpec(model_id).node_output_tensors;
+    const std::set<int>& model_outputs =
+        (*interpreter)->GetModelSpec(model_id).output_tensors;
+    std::set_union(model_all_outputs.begin(), model_all_outputs.end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
                    std::inserter(non_param_tensors, non_param_tensors.end()));
 
@@ -812,13 +813,36 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
                           external_inputs_params.end(),
                           std::inserter(real_inputs, real_inputs.begin()));
 
-    // we do a similar processing for output tensors, except
-    // this time we don't have to worry about param tensors
     std::set<int> real_outputs;
-    std::set_difference(node_outputs.begin(), node_outputs.end(),
-                        node_inputs.begin(), node_inputs.end(),
-                        std::inserter(real_outputs, real_outputs.begin()));
+    if (op_indices.size() == operators->size()) {
+      // Entire model case doesn't need to consider externel nodes
+      std::set_difference(node_outputs.begin(), node_outputs.end(),
+                    node_inputs.begin(), node_inputs.end(),
+                    std::inserter(real_outputs, real_outputs.begin()));
+    } else {
+      // See if current subgraph outputs model's output tensor
+      std::set_intersection(model_outputs.begin(), model_outputs.end(),
+                            node_outputs.begin(), node_outputs.end(),
+                            std::inserter(real_outputs, real_outputs.begin()));
+      
+      // Find reference from external nodes to internal nodes to find real
+      // output of current subgraph.
+      for (size_t i = 0; i < operators->size(); ++i) {
+        // Skip internal nodes
+        if (op_indices.find(i) != op_indices.end()) {
+          continue;
+        }
 
+        const auto* op = operators->Get(i);
+        auto op_inputs = FlatBufferIntArrayToVector(op->inputs());
+
+        for (auto external_op_input: op_inputs) {
+          if (node_outputs.find(external_op_input) != node_outputs.end()) {
+            real_outputs.insert(external_op_input);
+          }
+        }
+      }
+    }
     modified_subgraph->SetInputs(
         std::vector<int>(real_inputs.begin(), real_inputs.end()));
     modified_subgraph->SetOutputs(
