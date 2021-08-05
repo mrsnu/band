@@ -348,8 +348,16 @@ class Subgraph {
   SubgraphKey& GetKey() { return key_; }
 
   TfLiteStatus SetPrevSubgraph(Subgraph* prev);
-  Subgraph* GetNextSubgraph() const;
-  Subgraph* GetPrevSubgraph() const;
+  const std::vector<Subgraph*>& GetNextSubgraphs() const;
+  const std::vector<Subgraph*>& GetPrevSubgraphs() const;
+
+  inline bool IsStart() const {
+    return prev_subgraphs_.empty();
+  }
+  
+  inline bool IsEnd() const {
+    return next_subgraphs_.empty();
+  }
 
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
@@ -726,8 +734,8 @@ class Subgraph {
   resource::ResourceMap* resources_ = nullptr;
   SubgraphKey key_;
 
-  Subgraph* next_ = nullptr;
-  Subgraph* prev_ = nullptr;
+  std::vector<Subgraph*> next_subgraphs_;
+  std::vector<Subgraph*> prev_subgraphs_;
 };
 
 }  // namespace impl

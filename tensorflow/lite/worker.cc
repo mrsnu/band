@@ -100,27 +100,6 @@ bool Worker::IsBusy() {
   return false;
 }
 
-TfLiteStatus CopyTensors(Subgraph& src_subgraph, Subgraph& dst_subgraph) {
-  TfLiteStatus ret = kTfLiteError;
-  for (int output_index : src_subgraph.outputs()) {
-    for (int input_index : dst_subgraph.inputs()) {
-      if (output_index == input_index) {
-         const TfLiteTensor* src = src_subgraph.tensor(output_index);
-         TfLiteTensor* dst = dst_subgraph.tensor(input_index);
-
-         if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
-           TFLITE_LOG(ERROR)
-               << "Tensor data copy failure. src name : " << src->name
-               << ", dst name : " << dst->name;
-           return kTfLiteError;
-         }
-         ret = kTfLiteOk;
-      }
-    }
-  }
-  return ret;
-}
-
 TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {
@@ -130,36 +109,67 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
 
-  // Intermediate tensor communication
-  if (subgraph->GetPrevSubgraph()) {
-    auto status = CopyTensors(*subgraph->GetPrevSubgraph(), *subgraph);
-    if (status != kTfLiteOk) {
-      // TODO: See if there is a case where we need to 
-      // consider communication btwn multiple subgraphs
-      TFLITE_LOG(ERROR)
-          << "No tensor communication between adjacent subgraphs.";
+  auto index_to_string = [](std::vector<int> tensors) {
+    std::string result;
+    for (const int& index : tensors) {
+      result += std::to_string(index) + ",";
     }
-    return status;
+    result.pop_back();
+    return result;
+  };
+
+  std::set<int> unresolved_tensors(subgraph->inputs().begin(), subgraph->inputs().end());
+  // Intermediate tensor communication
+  for (auto subgraph_it = job.previous_subgraph_indices.cbegin(); subgraph_it != job.previous_subgraph_indices.cend(); ++subgraph_it) {
+    int preceded_subgraph_index = *subgraph_it;
+    Subgraph* preceded_subgraph = interpreter->subgraph(preceded_subgraph_index);
+
+    for(int tensor_index: preceded_subgraph->outputs()) {
+      if (unresolved_tensors.find(tensor_index) != unresolved_tensors.end()) {
+        const TfLiteTensor* src = preceded_subgraph->tensor(tensor_index);
+        TfLiteTensor* dst = subgraph->tensor(tensor_index);
+
+        if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
+           TFLITE_LOG(ERROR)
+               << "Tensor data copy failure. src name : " << src->name
+               << ", dst name : " << dst->name;
+           return kTfLiteError;
+        }
+
+        unresolved_tensors.erase(tensor_index);
+      }
+    }
   }
 
   auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
-  
+
   if (!input_buffer) {
     TFLITE_LOG(ERROR) << "No input buffer for model id " << job.model_id;
     return kTfLiteError;
   }
 
-  for (int subgraph_input : subgraph->inputs()) {
-    if (input_buffer->IsTensorIndexValid(subgraph_input)) {
-      if (input_buffer->GetTensorFromHandle(subgraph->tensor(subgraph_input),
-                                            subgraph_input,
+  // Copy model input
+  for (auto tensor_it = unresolved_tensors.begin(); tensor_it != unresolved_tensors.end();) {
+    int tensor_index = *tensor_it;
+    if (input_buffer->IsTensorIndexValid(tensor_index)) {
+      if (input_buffer->GetTensorFromHandle(subgraph->tensor(tensor_index),
+                                            tensor_index,
                                             job.input_handle) != kTfLiteOk) {
         return kTfLiteError;
       }
+      tensor_it = unresolved_tensors.erase(tensor_it);
+    } else {
+      TFLITE_LOG(ERROR) << "Unresolved input tensor " << tensor_index
+                        << " of subgraph " << job.subgraph_idx;
+      ++tensor_it;
     }
   }
 
-  return kTfLiteOk;
+  if (unresolved_tensors.empty()) {
+    return kTfLiteOk;
+  } else {
+    return kTfLiteError;
+  }
 }
 
 TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {

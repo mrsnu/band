@@ -685,17 +685,28 @@ TfLiteStatus Subgraph::ResetVariableTensors() {
 }
 
 TfLiteStatus Subgraph::SetPrevSubgraph(Subgraph* prev) {
-  prev->next_ = this;
-  prev_ = prev;
+  std::set<int> input_tensors(inputs_.begin(), inputs_.end());
+  bool has_common_tensor = false;
+  for (int output_tensor_index: prev->outputs()) {
+    if (input_tensors.find(output_tensor_index) != input_tensors.end()) {
+      has_common_tensor = true;
+      break;
+    }
+  }
+  if (!has_common_tensor) {
+    return kTfLiteError;
+  }
+  prev_subgraphs_.push_back(prev);
+  prev->next_subgraphs_.push_back(this);
   return kTfLiteOk;
 }
 
-Subgraph* Subgraph::GetNextSubgraph() const {
-  return next_;
+const std::vector<Subgraph*>& Subgraph::GetNextSubgraphs() const {
+  return next_subgraphs_;
 }
 
-Subgraph* Subgraph::GetPrevSubgraph() const {
-  return prev_;
+const std::vector<Subgraph*>& Subgraph::GetPrevSubgraphs() const {
+  return prev_subgraphs_;
 }
 
 TfLiteStatus Subgraph::AddNodeWithParameters(

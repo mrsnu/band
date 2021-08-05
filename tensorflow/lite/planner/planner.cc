@@ -44,7 +44,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "expected_execution_time\t"
              << "slo_us\t"
              << "job_status\t"
-             << "is_final_subgraph\n";
+             << "is_final_subgraph\t"
+             << "prev_subgraphs\n";
     log_file.close();
   }
 
@@ -79,7 +80,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   if (GetWorkerType() == (kDeviceQueue | kGlobalQueue)) {
     return kTfLiteError;
   }
-
   return kTfLiteOk;
 }
 
@@ -234,7 +234,7 @@ void Planner::EnqueueFinishedJob(Job job) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
 
   // record finished / failed job
-  if (!interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph() ||
+  if (interpreter_->subgraph(job.subgraph_idx)->IsEnd() ||
       job.status != kTfLiteJobSuccess) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
@@ -299,8 +299,7 @@ void Planner::FlushFinishedJobs() {
       jobs_finished_.queue.pop_front();
 
       bool is_final_subgraph =
-          interpreter_->subgraph(job.subgraph_idx)->GetNextSubgraph() ==
-          nullptr;
+          interpreter_->subgraph(job.subgraph_idx)->IsEnd();
 
       if (job.slo_us > 0 && is_final_subgraph &&
           job.status == kTfLiteJobSuccess) {
@@ -313,6 +312,12 @@ void Planner::FlushFinishedJobs() {
       if (is_final_subgraph) {
         // update internal map to keep track of the # of inferences per model
         model_execution_count_[job.model_id]++;
+      }
+
+      std::string prev_subgraphs;
+
+      for (int i : job.previous_subgraph_indices) {
+        prev_subgraphs += std::to_string(i) + " ";
       }
 
       // write all timestamp statistics to log file
@@ -328,7 +333,8 @@ void Planner::FlushFinishedJobs() {
                << job.expected_execution_time << "\t"
                << job.slo_us << "\t"
                << job.status << "\t"
-               << is_final_subgraph << "\n";
+               << is_final_subgraph << "\t"
+               << prev_subgraphs << "\n";
     }
     log_file.close();
   } else {
@@ -346,7 +352,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
   job.expected_execution_time = interpreter_->GetExpectedLatency(target_key);
 
-  if (target_subgraph->GetNextSubgraph() != nullptr) {
+  if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
     remaining_ops.enqueue_time = job.enqueue_time;
@@ -357,6 +363,8 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
     remaining_ops.input_handle = job.input_handle;
     remaining_ops.output_handle = job.output_handle;
     remaining_ops.resolved_tensors = job.resolved_tensors;
+    remaining_ops.previous_subgraph_indices = job.previous_subgraph_indices;
+    remaining_ops.previous_subgraph_indices.emplace_back(most_urgent_job.subgraph_idx);
 
     for (int output_index : target_subgraph->outputs()) {
       remaining_ops.resolved_tensors.insert(output_index);

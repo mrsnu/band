@@ -57,21 +57,23 @@ class InterpreterBuilder {
  public:
   static void SetErrorReporter(ErrorReporter* error_reporter);
 
-  // Adds a Subgraph to the interpreter.
-  // Returns the Subgraph index.
-  // Returns -1 if any error occurs.
-  static int AddSubgraph(const FlatBufferModel& model,
-                        const OpResolver& op_resolver,
-                        std::unique_ptr<Interpreter>* interpreter,
-                        SubgraphKey& subgraph_key,
-                        std::set<int> op_indexes = {},
-                        int num_threads = -1);
-  static int AddSubgraph(const ::tflite::Model* model,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     SubgraphKey& subgraph_key,
-                     std::set<int> op_indexes = {},
-                     int num_threads = -1);
+  static std::unique_ptr<Subgraph> CreateSubgraph(
+      const FlatBufferModel& model, 
+      const OpResolver& op_resolver,
+      std::unique_ptr<Interpreter>* interpreter,
+      int model_id,
+      TfLiteDeviceFlags device_flag,
+      std::set<int> op_indices = {},
+      int num_threads = -1);
+
+  static std::unique_ptr<Subgraph> CreateSubgraph(
+      const ::tflite::Model* model, 
+      const OpResolver& op_resolver,
+      std::unique_ptr<Interpreter>* interpreter,
+      int model_id,
+      TfLiteDeviceFlags device_flag,
+      std::set<int> op_indices = {},
+      int num_threads = -1);
 
   // Adds a Subgraph to the interpreter and adds the subgraph index to
   // various internal data structures.

@@ -116,6 +116,10 @@ void GlobalQueueWorker::Work() {
         break;
       }
 
+      
+      TFLITE_LOG(INFO) << "Try copy tensor of " << TfLiteDeviceGetName(device_flag_)
+                        << " subgraph " << subgraph_idx;
+
       if (TryCopyInputTensors(current_job_) == kTfLiteOk) {
         lock.lock();
         current_job_.invoke_time = profiling::time::NowMicros();

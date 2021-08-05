@@ -25,6 +25,7 @@ limitations under the License.
 #include <json/json.h>
 
 #include <algorithm>
+#include <list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -122,6 +123,7 @@ struct Job {
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
   std::set<int> resolved_tensors;
+  std::list<int> previous_subgraph_indices;
 };
 
 // Model configuration struct.

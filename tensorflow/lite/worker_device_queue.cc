@@ -95,7 +95,7 @@ void DeviceQueueWorker::Work() {
         // TODO #21: Handle errors in multi-thread environment
         break;
       }
-
+      
       if (TryCopyInputTensors(job) == kTfLiteOk) {
         job.invoke_time = profiling::time::NowMicros();
 

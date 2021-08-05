@@ -494,16 +494,6 @@ class Interpreter {
 
   TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
-  /// Set the number of threads available to the interpreter.
-  ///
-  /// NOTE: num_threads should be >= -1.
-  /// User may pass -1 to let the TFLite interpreter set the no of threads
-  /// available to itself.
-  // TODO #7: Change how the interpreter manages context of each subgraph
-  void SetNumThreads(int num_threads,
-                     size_t first_subgraph_index = 0,
-                     int last_subgraph_index = -1);
-
   void SetXNNPACKNumThreads(int num_threads);
 
   /// Allow float16 precision for FP32 calculation when possible.
@@ -616,13 +606,8 @@ class Interpreter {
                           TfLiteExternalContext* ctx);
 
 #ifndef DOXYGEN_SKIP
-  /// Adds `subgraphs_to_add` subgraphs, preserving pre-existing Subgraph
-  /// entries. The value pointed to by `first_new_subgraph_index` will be set to
-  /// the index of the first new subgraph if `first_new_subgraph_index` is
-  /// non-null.
-  /// WARNING: This is an experimental API and subject to change.
-  void AddSubgraphs(int subgraphs_to_add,
-                    int* first_new_subgraph_index = nullptr);
+  int AddSubgraph(std::unique_ptr<Subgraph> subgraph);
+  std::unique_ptr<Subgraph> CreateSubgraph();
 
   void DeleteSubgraphs(size_t starting_index_to_delete,
                        int subgraphs_to_delete = -1);
@@ -725,7 +710,7 @@ class Interpreter {
   std::pair<int, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-      TfLiteDeviceFlags preceded_device = kTfLiteNumDevices);
+      int preceded_subgraph_index = -1);
 
   // Generate explicit subgraphs for fallback ops in `model_id`.
   // Each second element of return vector represents a set of original node indexes
@@ -748,9 +733,7 @@ class Interpreter {
 
   // Map structure to find subgraph idx with SubgraphKeys
   std::map<SubgraphKey, int> subgraph_idx_map_;
-
-  void RegisterSubgraphIdx(SubgraphKey subgraph_key, size_t subgraph_index);
-
+  
   // Applies best delegate from the given device to the subgraph.
   TfLiteStatus ApplyBestDeviceDelegate(Subgraph* subgraph, TfLiteDeviceFlags device, const std::set<TfLiteType>& tensor_types);
 
@@ -845,10 +828,8 @@ class Interpreter {
   std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
   GroupByStartEndIdx(std::vector<int> subgraph_indices);
 
-  // return subgraph indices for model_id and start_idx,
-  // excluding subgraphs on preceded_device
-  std::vector<int> GetSubgraphCandidates(int model_id, std::set<int> resolved_tensors,
-                                         TfLiteDeviceFlags preceded_device);
+  // return next subgraph indices of preceded subgraph 
+  std::vector<int> GetSubgraphCandidates(int model_id, int preceded_subgraph_index);
 
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account
