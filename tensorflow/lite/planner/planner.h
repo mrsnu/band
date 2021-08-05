@@ -153,6 +153,7 @@ class Planner {
   // Map structure to find assigned device of model idx (model_id, device flag)
   std::map<int, int> model_device_map_;
   Interpreter* interpreter_;
+  bool need_reschedule_ = false;
 };
 
 class Scheduler {

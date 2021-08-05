@@ -153,6 +153,9 @@ void Planner::HandleSLOViolatedJob(Job& job) {
   // mark the time of this decision (of early-dropping this job)
   job.end_time = profiling::time::NowMicros();
   EnqueueFinishedJob(job);
+
+  // Set reschedule flag.
+  need_reschedule_ = true;
 }
 
 void Planner::EnqueueToWorkers(ScheduleAction& action) {
@@ -467,11 +470,14 @@ void Planner::Plan() {
 
     CopyToLocalQueue(local_queues_[0]);
     TryUpdateModelDeviceMapping();
-    for (size_t i = 0; i < local_queues_.size(); ++i) {
-      UpdateDeviceWaitingTime();
-      schedulers_[i]->Schedule(local_queues_[i]);
-      EnqueueToWorkers(schedulers_[i]->GetAction());
-    }
+    do {
+      need_reschedule_ = false;
+      for (size_t i = 0; i < local_queues_.size(); ++i) {
+        UpdateDeviceWaitingTime();
+        schedulers_[i]->Schedule(local_queues_[i]);
+        EnqueueToWorkers(schedulers_[i]->GetAction());
+      }
+    } while(need_reschedule_);
   }
 }
 
