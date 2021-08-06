@@ -90,7 +90,7 @@ bool Planner::NeedProfile() {
   return false;
 }
 
-int Planner::GetWorkerType() {
+int Planner::GetWorkerType() const {
   int worker_type = 0;
   for (int i = 0; i < schedulers_.size(); ++i) {
     worker_type |= schedulers_[i]->GetWorkerType();
@@ -98,7 +98,7 @@ int Planner::GetWorkerType() {
   return worker_type;
 }
 
-bool Planner::NeedFallbackSubgraphs() {
+bool Planner::NeedFallbackSubgraphs() const {
   for (int i = 0; i < schedulers_.size(); ++i) {
     if (schedulers_[i]->NeedFallbackSubgraphs()) return true;
   }
