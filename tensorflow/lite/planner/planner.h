@@ -102,6 +102,8 @@ class Planner {
   void TryUpdateModelDeviceMapping();
 
   // Get idle devices from `device_waiting_`.
+  // NOTE: Another option to implement the function is to be pass
+  // the current DeviceWaitingTime as a parameter.
   std::set<TfLiteDeviceFlags> GetIdleDevices();
 
   DeviceWaitingTime& GetDeviceWaitingTime() { return device_waiting_; }
