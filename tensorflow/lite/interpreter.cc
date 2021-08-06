@@ -14,6 +14,10 @@ limitations under the License.
 ==============================================================================*/
 
 #include "tensorflow/lite/interpreter.h"
+#include <android/log.h>
+
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
 
 #include <algorithm>
 #include <cassert>
@@ -859,7 +863,12 @@ void Interpreter::Profile(int model_id) {
         moving_averaged_latencies_[subgraph_key] = latency;
         // record the profiled latency for subsequent benchmark runs
         profile_database_[subgraph_key] = latency;
-
+        LOGI("Profiling result\n model=%d avg=%d us device=%s start=%s end=%s."
+                         , subgraph_key.model_id
+                         , latency
+                         , TfLiteDeviceGetName(subgraph_key.device_flag)
+                         , subgraph_key.GetInputOpsString().c_str()
+                         , subgraph_key.GetOutputOpsString().c_str());
         TFLITE_LOG(INFO) << "Profiling result\n"
                          << " model=" << subgraph_key.model_id
                          << " avg=" << latency << " us"
