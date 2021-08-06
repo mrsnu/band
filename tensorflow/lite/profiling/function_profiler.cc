@@ -12,7 +12,7 @@ FunctionProfiler::FunctionProfiler(std::string function_name)
 
 FunctionProfiler::~FunctionProfiler() {
   int64_t current_time = time::NowMicros();
-  TFLITE_LOG(INFO) << function_name_ << " took " << current_time - function_start_time_ << "(us)";
+  TFLITE_LOG(INFO) << function_name_ << " took " << current_time - function_start_time_ << " (us)";
 }
 
 
