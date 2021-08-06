@@ -28,6 +28,12 @@ namespace impl {
 #if defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() { DisableAll(); }
 
+CpuSet CpuSet::GetCurrent() {
+  CpuSet set;
+  GetCPUThreadAffinity(set);
+  return set;
+}
+
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
 
 void CpuSet::Disable(int cpu) { CPU_CLR(cpu, &cpu_set_); }
@@ -46,6 +52,8 @@ int CpuSet::NumEnabled() const {
 }
 #else   // defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() {}
+
+CpuSet CpuSet::GetCurrent() { return {}; }
 
 void CpuSet::Enable(int /* cpu */) {}
 
@@ -203,6 +211,26 @@ int GetCPUFrequencyKhz(const CpuSet& cpu_set) {
 #endif
 }
 
+std::vector<int> GetCPUAvailableFrequenciesKhz(const CpuSet &cpu_set) {
+#if defined __ANDROID__ || defined __linux__
+  for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
+    // Assuming that there is one cluster group
+    if (cpu_set.IsEnabled(cpu)) {
+      std::vector<int> frequencies = TryReadInts(
+          {"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+               "/cpufreq/scaling_available_frequencies",
+           "/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
+               "/scaling_available_frequencies"});
+      if (frequencies.size()) {
+        return frequencies;
+      }
+    }
+  }
+
+#endif
+  return {};
+}
+
 int GetCPUUpTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   int cpu_transition =
@@ -210,25 +238,27 @@ int GetCPUUpTransitionLatencyMs(int cpu) {
                   "/cpufreq/cpuinfo_transition_latency"});
   if (cpu_transition == 0) {
     return TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
-         "/schedutil/up_rate_limit_us"}) * 1000;
+         "/schedutil/up_rate_limit_us"}) / 1000;
   } else {
     return cpu_transition;
   }
 #endif
   return -1;
 }
+
+// Assuming that there is one cluster group
 int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  int accumulated_latency = 0;
-
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_latency += GetCPUUpTransitionLatencyMs(i);
+    if (cpu_set.IsEnabled(i)) {
+      int transition_latency = GetCPUUpTransitionLatencyMs(i);
+      if (transition_latency > 0) {
+        return transition_latency;
+      }
+    }
   }
-
-  return accumulated_latency / cpu_set.NumEnabled();
-#elif
-  return -1;
 #endif
+  return -1;
 }
 
 int GetCPUDownTransitionLatencyMs(int cpu) {
@@ -238,7 +268,7 @@ int GetCPUDownTransitionLatencyMs(int cpu) {
                   "/cpufreq/cpuinfo_transition_latency"});
   if (cpu_transition == 0) {
     return TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
-         "/schedutil/down_rate_limit_us"}) * 1000;
+         "/schedutil/down_rate_limit_us"}) / 1000;
   } else {
     return cpu_transition;
   }
@@ -246,18 +276,19 @@ int GetCPUDownTransitionLatencyMs(int cpu) {
   return -1;
 }
 
+// Assuming that there is one cluster group
 int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  int accumulated_latency = 0;
-
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_latency += GetCPUDownTransitionLatencyMs(i);
+    if (cpu_set.IsEnabled(i)) {
+      int transition_latency = GetCPUDownTransitionLatencyMs(i);
+      if (transition_latency > 0) {
+        return transition_latency;
+      }
+    }
   }
-
-  return accumulated_latency / cpu_set.NumEnabled();
-#elif
-  return -1;
 #endif
+  return -1;
 }
 
 // Total transition count
