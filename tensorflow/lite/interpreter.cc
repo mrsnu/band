@@ -776,7 +776,7 @@ TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
   return kTfLiteOk;
 }
 
-void Interpreter::UpdateExpectedLatency(
+void Interpreter::UpdateInvokedLatency(
     const SubgraphKey& key, int64_t latency) {
   int64_t prev_latency = moving_averaged_latencies_[key];
   moving_averaged_latencies_[key] =
@@ -793,7 +793,7 @@ int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
   }
 }
 
-int64_t Interpreter::GetFrequencyBasedLatency(const SubgraphKey& key, int64_t frequency) {
+int64_t Interpreter::GetFrequencyBasedExpectedLatency(const SubgraphKey& key, int64_t frequency) {
   auto it = profile_frequency_to_latencies_.find(key);
   if (it != profile_frequency_to_latencies_.end()) {
     auto frequency_table = it->second;
@@ -894,7 +894,8 @@ void Interpreter::StaticProfile(int model_id) {
   SetSLOBasedOnProfile();
 }
 
-void Interpreter::FrequencyProfile(int model_id, int num_profile) {
+void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample) {
+  std::mt19937_64 eng{std::random_device{}()};
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
@@ -916,16 +917,17 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile) {
       continue;
     }
 
+    std::sort(available_frequencies.begin(), available_frequencies.end());
+
     for (int freq: available_frequencies) {
       frequency_to_latencies[freq] = {};
     }
 
     // Add randomness for well-distributed start frequencies
-    std::mt19937_64 eng{std::random_device{}()};
     int interval_ms =
         processor::GetUpdateIntervalMs(device, cpu_set);
     TFLITE_LOG(INFO) << "Frequency update interval=" << interval_ms << "ms";
-    std::vector<int> max_intervals = {interval_ms / 4, interval_ms / 2,
+    std::vector<int> max_intervals = {0, interval_ms / 2,
                                       interval_ms, 2 * interval_ms};
 
     std::thread t([&]() {
@@ -938,9 +940,26 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile) {
         internal_backend->SetMaxNumThreads(
             workers_[device]->GetNumThreads());
       }
+      
+      // Warm-up
+      for (int i = 0; i < num_warmups_; i++) {
+        subgraph->Invoke();
+      }
 
+      auto start = std::chrono::high_resolution_clock::now();
+      while (processor::GetScalingFrequencyKhz(device, cpu_set) != available_frequencies[0]) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+      }
+
+      TFLITE_LOG(INFO)
+          << "Time to reach lowest freq: " << available_frequencies[0]
+          << " " << std::chrono::duration_cast<std::chrono::microseconds>(
+                 std::chrono::high_resolution_clock::now() - start)
+                 .count();
+
+      // First, random trials
       for (int interval : max_intervals) {
-        std::uniform_int_distribution<> dist{0, interval};
+        std::uniform_int_distribution<> dist_us{0, interval * 1000};
         for (int i = 0; i < num_profile; i++) {
           int start_frequency = processor::GetScalingFrequencyKhz(device, cpu_set);
           auto start = std::chrono::high_resolution_clock::now();
@@ -951,9 +970,11 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile) {
                   std::chrono::high_resolution_clock::now() - start)
                   .count());
 
-          std::this_thread::sleep_for(std::chrono::milliseconds{dist(eng)});
+          std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
         }
       }
+
+      // 
 
       std::vector<std::pair<int64_t, int64_t>> frequency_to_latencies_table;
 

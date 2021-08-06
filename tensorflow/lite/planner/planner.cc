@@ -253,7 +253,7 @@ void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
     job.start_frequency = GetGPUFrequencyKhz();
   }
   job.frequency_expected_execution_time =
-      interpreter_->GetFrequencyBasedLatency(
+      interpreter_->GetFrequencyBasedExpectedLatency(
           interpreter_->subgraph(job.subgraph_idx)->GetKey(),
           processor::GetScalingFrequencyKhz(
               static_cast<TfLiteDeviceFlags>(job.device_id), cpu_set));

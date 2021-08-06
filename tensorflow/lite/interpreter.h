@@ -561,7 +561,7 @@ class Interpreter {
   // NOTE: the profiling step may affects other running requests,
   // and vice versa.
   void StaticProfile(int model_id);
-  void FrequencyProfile(int model_id, int num_profile = 1000);
+  void FrequencyProfile(int model_id, int num_profile = 100, int min_sample = 5);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
@@ -709,10 +709,9 @@ class Interpreter {
   // into `profile_database_`.
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
-
-  void UpdateExpectedLatency(const SubgraphKey& key, int64_t latency);
+  void UpdateInvokedLatency(const SubgraphKey& key, int64_t latency);
   int64_t GetExpectedLatency(const SubgraphKey& key);
-  int64_t GetFrequencyBasedLatency(const SubgraphKey& key, int64_t frequency);
+  int64_t GetFrequencyBasedExpectedLatency(const SubgraphKey& key, int64_t frequency);
   int64_t GetProfiledLatency(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
