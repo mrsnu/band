@@ -57,7 +57,7 @@ class Planner {
 
   JobQueue& GetRequests() { return requests_.queue; }
 
-  int GetWindowSize() { return schedule_window_size_; } const
+  int GetWindowSize() const { return schedule_window_size_; }
 
   void SetWindowSize(int schedule_window_size);
 

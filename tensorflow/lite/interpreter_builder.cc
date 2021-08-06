@@ -605,12 +605,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         has_available_device = true;
         previous_subgraph = subgraph;
       }
-      TFLITE_LOG(INFO) << "ADDED Subgraph "
-                       << "Model : " << key.model_id << " "
-                       << TfLiteDeviceGetName(key.device_flag) << " "
-                       << "From " << key.GetInputOpsString() << " "
-                       << "To " << key.GetOutputOpsString() << " "
-                       << "Index " << subgraph_idx;
     }
   }
 
@@ -875,6 +869,12 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
       return cleanup_and_error();
   }
 
+  TFLITE_LOG(INFO) << "ADDED Subgraph "
+                   << "Model : " << subgraph_key.model_id << " "
+                   << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
+                   << "From " << subgraph_key.GetInputOpsString() << " "
+                   << "To " << subgraph_key.GetOutputOpsString() << " "
+                   << "Index " << modified_subgraph_index;
   return modified_subgraph_index;
 }
 
