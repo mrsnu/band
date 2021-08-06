@@ -27,7 +27,6 @@
 
 namespace tflite {
 namespace impl {
-
 typedef enum {
     kTfLiteAll,
     kTfLiteLittle,
@@ -39,6 +38,7 @@ typedef enum {
 class CpuSet {
 public:
     CpuSet();
+    static CpuSet GetCurrent();
     void Enable(int cpu);
     void Disable(int cpu);
     void DisableAll();
@@ -71,6 +71,8 @@ int GetCPUScalingMinFrequencyKhz(const CpuSet &cpu_set);
 // Get current frequency (requires sudo)
 int GetCPUFrequencyKhz(int cpu);
 int GetCPUFrequencyKhz(const CpuSet &cpu_set);
+
+std::vector<int> GetCPUAvailableFrequenciesKhz(const CpuSet &cpu_set);
 
 // Time interval limit of frequency rise
 int GetCPUUpTransitionLatencyMs(int cpu);
