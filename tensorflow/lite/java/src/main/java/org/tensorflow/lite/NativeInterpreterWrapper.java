@@ -56,7 +56,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     }
     ByteBuffer modelByteBuffer = buffer;
     long modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
-    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle);
+    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle, modelName);
     if (modelId == -1) {
       throw new IllegalArgumentException("Failed to register model. Invalid model id: " + modelId);
     }
@@ -122,7 +122,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     return runAsync(modelIds, inputHandles, interpreterHandle, errorHandle, slo);
   }
 
-  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle, long slo);
+  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle, long slo62G);
 
   void wait(int[] jobIds, Tensor[][] modelOutputs) {
     if (jobIds == null) {
