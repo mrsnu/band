@@ -135,20 +135,13 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
           std::make_unique<CpuBackendContext>());
 
   // Create a Planner instance.
-  // FixedDevicePlanner is the default planner.
-  planner_type_ = runtime_config.planner_config.planner_type;
-  if (planner_type_ == kRoundRobin) {
-    planner_.reset(new RoundRobinPlanner(this));
-  } else if (planner_type_ == kShortestExpectedLatency) {
-    planner_.reset(new ShortestExpectedLatencyPlanner(this));
-  } else if (planner_type_ == kFixedDeviceGlobalQueue) {
-    planner_.reset(new FixedDeviceGlobalQueuePlanner(this));
-  } else {
-    planner_.reset(new FixedDevicePlanner(this));
-  }
+  planner_.reset(new Planner(this));
+  auto& schedulers = runtime_config.planner_config.schedulers;
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (planner_type_ == kShortestExpectedLatency) {
+  if (std::find(schedulers.begin(),
+                schedulers.end(),
+                kShortestExpectedLatency) != schedulers.end()) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
 
@@ -232,17 +225,28 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 
   // Create workers.
   for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    if (planner_type_ == kFixedDeviceGlobalQueue) {
+    if (planner_->GetWorkerType() == kGlobalQueue) {
       workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
     } else {
       workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
     }
   }
 
-  Init(runtime_config.interpreter_config);
-  planner_->Init(runtime_config.planner_config);
+  // Initialize configurations.
+  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
+    error_reporter_->Report("Interpreter::Init() failed.");
+    exit(-1);
+  }
+  if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
+    error_reporter_->Report("Planner::Init() failed.");
+    exit(-1);
+  }
   for (auto& worker : workers_) {
-    worker.second->Init(runtime_config.worker_config);
+    if (worker.second->Init(runtime_config.worker_config) != kTfLiteOk) {
+      error_reporter_->Report("Worker::Init() failed for worker : %s",
+                               TfLiteDeviceGetName(worker.first));
+      exit(-1);
+    }
   }
 }
 
@@ -1061,9 +1065,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
 
-  if (planner_type_ == kFixedDevice ||
-      planner_type_ == kRoundRobin ||
-      planner_type_ == kFixedDeviceGlobalQueue) {
+  if (!planner_->NeedFallbackSubgraphs()) {
     return {{device_flag, {}}};
   }
 

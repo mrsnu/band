@@ -62,13 +62,20 @@ typedef enum TfLiteExternalContextType {
   kTfLiteMaxExternalContexts = 4
 } TfLiteExternalContextType;
 
-typedef enum TfLitePlannerType {
+// this is being used in bit-wise ops,
+// so new types should be in power of 2s (4, 8, ...)
+typedef enum TfLiteWorkerType {
+  kDeviceQueue = 1 << 0,
+  kGlobalQueue = 1 << 1,
+} TfLiteWorkerType;
+
+typedef enum TfLiteSchedulerType {
   kFixedDevice = 0,
   kRoundRobin = 1,
   kShortestExpectedLatency = 2,
   kFixedDeviceGlobalQueue = 3,
-  kNumPlannerTypes = 4
-} TfLitePlannerType;
+  kNumSchedulerTypes = 4
+} TfLiteSchedulerType;
 
 // Forward declare so dependent structs and methods can reference these types
 // prior to the struct definitions.

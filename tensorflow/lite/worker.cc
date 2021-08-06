@@ -200,13 +200,6 @@ bool Worker::IsValid(Job& job) {
       && job.end_time == 0;
 }
 
-void Worker::PrepareReenqueue(Job& job, Planner* planner) {
-  job.invoke_time = 0;
-  job.end_time = 0;
-  job.resolved_tensors =
-      planner->GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
-}
-
 TfLiteStatus Worker::TryUpdateWorkerThread() {
   std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
   if (need_cpu_update_) {

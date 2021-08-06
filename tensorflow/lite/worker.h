@@ -34,6 +34,9 @@ class Worker {
   const CpuSet& GetWorkerThreadAffinity() const;
   int GetNumThreads() const;
   virtual int64_t GetWaitingTime() = 0;
+  // Make sure the worker lock is acquired before calling the function.
+  // Currently, `Planner::Plan()` is the only user of the method, and `Plan()` calls `GiveJob`
+  // with the lock.
   virtual bool GiveJob(Job& job) = 0;
 
   // DeviceQueueWorker methods
@@ -45,7 +48,6 @@ class Worker {
 
  protected:
   bool IsValid(Job& job);
-  void PrepareReenqueue(Job& job, Planner* planner);
   TfLiteStatus TryCopyInputTensors(const Job& job);
   TfLiteStatus TryCopyOutputTensors(const Job& job);
   TfLiteStatus TryUpdateWorkerThread();

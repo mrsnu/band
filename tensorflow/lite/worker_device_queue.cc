@@ -55,7 +55,6 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 }
 
 bool DeviceQueueWorker::GiveJob(Job& job) {
-  std::lock_guard<std::mutex> lock(device_mtx_);
   if (!is_available_) {
     return false;
   }
@@ -116,7 +115,7 @@ void DeviceQueueWorker::Work() {
           // TODO #142: Test handling unavailable device with fallback subgraphs.
           lock.lock();
           is_available_ = false;
-          PrepareReenqueue(job, planner_ptr.get());
+          planner_ptr->PrepareReenqueue(job);
           std::vector<Job> jobs(requests_.begin(), requests_.end());
           requests_.clear();
           lock.unlock();
