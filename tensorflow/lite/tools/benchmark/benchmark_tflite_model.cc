@@ -689,6 +689,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
         auto job_ids = interpreter_->InvokeModelsAsync(requests, input_tensors);
+        interpreter_->GetPlanner()->Wait(job_ids);
         int64_t end = profiling::time::NowMicros();
         int duration_ms = (end - start) / 1000;
 
@@ -728,6 +729,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
       auto job_ids = interpreter_->InvokeModelsAsync(requests, {model_input_tensors_[model_id]});
+      interpreter_->GetPlanner()->Wait(job_ids);
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;
 

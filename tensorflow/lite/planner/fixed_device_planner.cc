@@ -96,7 +96,7 @@ void FixedDevicePlanner::Plan() {
 }
 
 bool FixedDevicePlanner::NeedProfile() {
-  return false;
+  return true;
 }
 
 }  // namespace impl

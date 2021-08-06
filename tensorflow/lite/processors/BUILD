@@ -10,40 +10,18 @@ common_copts = [
 ] + tflite_copts()
 
 cc_library(
-    name = "cpu",
+    name = "processor",
     srcs = [
         "cpu.cc",
+        "gpu.cc",
+        "util.cc",
+        "processor.cc",
     ],
     hdrs = [
         "cpu.h",
-    ],
-    deps = [
-        ":util",
-        "//tensorflow/lite/c:common",
-    ],
-)
-
-cc_library(
-    name = "gpu",
-    srcs = [
-        "gpu.cc",
-    ],
-    hdrs = [
         "gpu.h",
-    ],
-    deps = [
-        ":util",
-        "//tensorflow/lite/c:common",
-    ],
-)
-
-cc_library(
-    name = "util",
-    srcs = [
-        "util.cc",
-    ],
-    hdrs = [
         "util.h",
+        "processor.h",
     ],
     deps = [
         "//tensorflow/lite/c:common",

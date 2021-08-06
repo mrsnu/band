@@ -2,6 +2,7 @@
 
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/processors/processor.h"
 #include "tensorflow/lite/processors/gpu.h"
 #include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/interpreter.h"
@@ -40,6 +41,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
            << "execution_time\t"
            << "profiled_execution_time\t"
            << "expected_execution_time\t"
+           << "frequency_expected_execution_time\t"
            << "start_frequency\t"
            << "start_scaling_frequency\t"
            << "start_scaling_min_frequency\t"
@@ -196,29 +198,30 @@ void Planner::FlushFinishedJobs() {
 
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
-              << job.model_fname << "\t"
-              << job.model_id << "\t"
-              << job.device_id << "\t"
-              << job.subgraph_idx << "\t"
-              << job.enqueue_time << "\t"
-              << job.invoke_time << "\t"
-              << job.end_time << "\t"
-              << job.end_time - job.invoke_time << "\t"
-              << job.profiled_execution_time << "\t"
-              << job.expected_execution_time << "\t"
-              << job.start_frequency << "\t"
-              << job.start_scaling_frequency << "\t"
-              << job.start_scaling_min_frequency << "\t"
-              << job.start_scaling_max_frequency << "\t"
-              << job.end_frequency << "\t"
-              << job.end_scaling_frequency << "\t"
-              << job.end_scaling_min_frequency << "\t"
-              << job.end_scaling_max_frequency << "\t"
-              << job.end_transition_count - job.start_transition_count << "\t"
-              << job.expected_transition_count << "\t"
-              << job.slo_us << "\t"
-              << job.status << "\t"
-              << is_final_subgraph << "\n";
+               << job.model_fname << "\t"
+               << job.model_id << "\t"
+               << job.device_id << "\t"
+               << job.subgraph_idx << "\t"
+               << job.enqueue_time << "\t"
+               << job.invoke_time << "\t"
+               << job.end_time << "\t"
+               << job.end_time - job.invoke_time << "\t"
+               << job.profiled_execution_time << "\t"
+               << job.expected_execution_time << "\t"
+               << job.frequency_expected_execution_time << "\t"
+               << job.start_frequency << "\t"
+               << job.start_scaling_frequency << "\t"
+               << job.start_scaling_min_frequency << "\t"
+               << job.start_scaling_max_frequency << "\t"
+               << job.end_frequency << "\t"
+               << job.end_scaling_frequency << "\t"
+               << job.end_scaling_min_frequency << "\t"
+               << job.end_scaling_max_frequency << "\t"
+               << job.end_transition_count - job.start_transition_count << "\t"
+               << job.expected_transition_count << "\t"
+               << job.slo_us << "\t"
+               << job.status << "\t"
+               << is_final_subgraph << "\n";
     }
     log_file.close();
   } else {
@@ -238,9 +241,9 @@ void Planner::UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const {
 
 void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
   if (!log_processor_frequency_) return;
+  auto cpu_set = worker->GetWorkerThreadAffinity();
   if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
     std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
-    auto cpu_set = worker->GetWorkerThreadAffinity();
     job.start_frequency = GetCPUFrequencyKhz(cpu_set);
     job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
     job.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
@@ -249,6 +252,11 @@ void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
   } else if (job.device_id == kTfLiteGPU) {
     job.start_frequency = GetGPUFrequencyKhz();
   }
+  job.frequency_expected_execution_time =
+      interpreter_->GetFrequencyBasedLatency(
+          interpreter_->subgraph(job.subgraph_idx)->GetKey(),
+          processor::GetScalingFrequencyKhz(
+              static_cast<TfLiteDeviceFlags>(job.device_id), cpu_set));
 }
 
 void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
