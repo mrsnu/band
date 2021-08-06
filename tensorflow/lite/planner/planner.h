@@ -57,7 +57,7 @@ class Planner {
 
   JobQueue& GetRequests() { return requests_.queue; }
 
-  int GetWindowSize() { return schedule_window_size_; }
+  int GetWindowSize() { return schedule_window_size_; } const
 
   void SetWindowSize(int schedule_window_size);
 
@@ -69,13 +69,13 @@ class Planner {
   Job GetFinishedJob(int job_id);
 
   // Get which worker types the schedulers require.
-  int GetWorkerType();
+  int GetWorkerType() const;
 
   // Checks if the schedulers can handle fallback subgraphs.
   // Returns true if any of the scheduler can handle fallback subgraphs.
   // But, note that having both types of scheduler (w/ fallback, w/o fallback),
   // may lead to unexpected results.
-  bool NeedFallbackSubgraphs();
+  bool NeedFallbackSubgraphs() const;
 
   // Write job logs and delete the job from the finished queue.
   void FlushFinishedJobs();
