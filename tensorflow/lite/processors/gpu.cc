@@ -51,7 +51,7 @@ int GetGPUFrequencyKhz() {
 
 int GetGPUPollingIntervalMs() {
 #if defined __ANDROID__ || defined __linux__
-  return TryReadInt(GetPaths("devfreq/polling_interval")) * 1000;
+  return TryReadInt(GetPaths("devfreq/polling_interval"));
 #elif
   return -1;
 #endif
