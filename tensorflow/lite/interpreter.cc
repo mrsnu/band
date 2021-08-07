@@ -927,8 +927,6 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
     int interval_ms =
         processor::GetUpdateIntervalMs(device, cpu_set);
     TFLITE_LOG(INFO) << "Frequency update interval=" << interval_ms << "ms";
-    std::vector<int> max_intervals = {0, interval_ms / 2,
-                                      interval_ms, 2 * interval_ms};
 
     std::thread t([&]() {
       if (device == kTfLiteCPU ||
@@ -942,37 +940,60 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
       }
       
       // Warm-up
-      for (int i = 0; i < num_warmups_; i++) {
-        subgraph->Invoke();
-      }
+      // for (int i = 0; i < num_warmups_; i++) {
+      //   subgraph->Invoke();
+      // }
 
-      auto start = std::chrono::high_resolution_clock::now();
-      while (processor::GetScalingFrequencyKhz(device, cpu_set) != available_frequencies[0]) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
-      }
+      // auto start = std::chrono::high_resolution_clock::now();
+      // while (processor::GetScalingFrequencyKhz(device, cpu_set) != available_frequencies[0]) {
+      //   std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+      // }
 
-      TFLITE_LOG(INFO)
-          << "Time to reach lowest freq: " << available_frequencies[0]
-          << " " << std::chrono::duration_cast<std::chrono::microseconds>(
-                 std::chrono::high_resolution_clock::now() - start)
-                 .count();
+      // auto max_interval = (std::chrono::high_resolution_clock::now() - start);
+      // TFLITE_LOG(INFO)
+      //     << "Time to reach lowest freq: " << available_frequencies[0]
+      //     << " " << std::chrono::duration_cast<std::chrono::microseconds>(max_interval)
+      //            .count();
+
+      std::vector<int64_t> max_intervals = {0, interval_ms, interval_ms * 2};
+
 
       // First, random trials
       for (int interval : max_intervals) {
+        TFLITE_LOG(INFO) << "Interval: " << interval;
         std::uniform_int_distribution<> dist_us{0, interval * 1000};
         for (int i = 0; i < num_profile; i++) {
           int start_frequency = processor::GetScalingFrequencyKhz(device, cpu_set);
           auto start = std::chrono::high_resolution_clock::now();
           subgraph->Invoke();
 
-          frequency_to_latencies[start_frequency].push_back(
-              std::chrono::duration_cast<std::chrono::microseconds>(
+          int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
                   std::chrono::high_resolution_clock::now() - start)
-                  .count());
+                  .count();
+          frequency_to_latencies[start_frequency].push_back(time_us);
+
+          TFLITE_LOG(INFO) << time_us <<"," << start_frequency;
 
           std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
         }
+
+        TFLITE_LOG(INFO) << "Fixed Interval: " << interval;
+        for (int i = 0; i < num_profile; i++) {
+          int start_frequency = processor::GetScalingFrequencyKhz(device, cpu_set);
+          auto start = std::chrono::high_resolution_clock::now();
+          subgraph->Invoke();
+
+          int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::high_resolution_clock::now() - start)
+                  .count();
+          frequency_to_latencies[start_frequency].push_back(time_us);
+
+          TFLITE_LOG(INFO) << time_us <<"," << start_frequency;
+
+          std::this_thread::sleep_for(std::chrono::microseconds(interval * 1000));
+        }
       }
+      
 
       // 
 

@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstdarg>
 #include <cstdint>
 #include <cstdlib>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -685,6 +686,10 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
       std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
+
+      std::mt19937_64 eng{std::random_device{}()};
+      std::uniform_int_distribution<> dist_us{0, period_ms * 1000};
+      
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
@@ -694,11 +699,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
         int duration_ms = (end - start) / 1000;
 
         // sleep until we reach period_ms
-        if (duration_ms < period_ms) {
-          std::this_thread::sleep_for(
-              std::chrono::milliseconds(period_ms - duration_ms));
-        }
-
+        std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
         if (kill_app_) return;
       }
     });
