@@ -17,7 +17,8 @@ std::vector<std::string> GetPaths(std::string suffix) {
 #if defined __ANDROID__ || defined __linux__
   // TODO: Add more device-specific GPU path
   device_paths = {
-      "/sys/class/kgsl/kgsl-3d0/"  // Pixel4
+      "/sys/class/kgsl/kgsl-3d0/",  // Pixel4
+      "/sys/class/misc/mali0/device/" // Galaxy S21 (Mali)
   };
 #endif
   for (size_t i = 0; i < device_paths.size(); i++) {
@@ -62,6 +63,9 @@ std::vector<int> GetAvailableFrequenciesKhz() {
   std::vector<int> frequenciesMhz;
 #if defined __ANDROID__ || defined __linux__
   frequenciesMhz = TryReadInts(GetPaths("freq_table_mhz"));
+  if (frequenciesMhz.empty()) {
+    frequenciesMhz = TryReadInts(GetPaths("dvfs_table"));
+  }
   for (size_t i = 0; i < frequenciesMhz.size(); i++) {
     frequenciesMhz[i] *= 1000;
   }

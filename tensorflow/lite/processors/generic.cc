@@ -18,7 +18,11 @@ std::vector<std::string> GetPaths(TfLiteDeviceFlags device_flag, std::string suf
   // TODO: Add more device-specific path
   if (device_flag == kTfLiteNPU) {
 	device_paths = {
-		"/sys/devices/platform/17000060.devfreq_npu/devfreq/17000060.devfreq_npu"  // Galaxy S21
+		"/sys/devices/platform/17000060.devfreq_npu/devfreq/17000060.devfreq_npu/"  // Galaxy S21
+	};
+  } else if (device_flag == kTfLiteDSP) {
+	device_paths = {
+	  "/sys/devices/platform/soc/soc:qcom,cdsp-cdsp-l3-lat/devfreq/soc:qcom,cdsp-cdsp-l3-lat/" // Pixel 4 Hexagon DSP
 	};
   }
 #endif

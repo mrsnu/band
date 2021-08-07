@@ -10,6 +10,8 @@ namespace impl {
 namespace processor {
 int GetUpdateIntervalMs(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
 int GetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
+int GetMinFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
+int GetMaxFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
 int GetTargetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
 std::vector<int> GetAvailableFrequenciesKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
 }

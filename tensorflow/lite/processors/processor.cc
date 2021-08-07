@@ -29,6 +29,26 @@ int GetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
   }
 }
 
+int GetMinFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
+  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+    return cpu::GetTargetMinFrequencyKhz(cpu_set);
+  } else if (flag == kTfLiteGPU) {
+    return gpu::GetMinFrequencyKhz();
+  } else {
+    return generic::GetMinFrequencyKhz(flag);
+  }
+}
+
+int GetMaxFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
+  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+    return cpu::GetTargetMaxFrequencyKhz(cpu_set);
+  } else if (flag == kTfLiteGPU) {
+    return gpu::GetMaxFrequencyKhz();
+  } else {
+    return generic::GetMaxFrequencyKhz(flag);
+  }
+}
+
 int GetTargetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
   if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
     return cpu::GetTargetFrequencyKhz(cpu_set);

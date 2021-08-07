@@ -894,7 +894,7 @@ void Interpreter::StaticProfile(int model_id) {
   SetSLOBasedOnProfile();
 }
 
-void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample) {
+void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_samples) {
   std::mt19937_64 eng{std::random_device{}()};
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
@@ -912,21 +912,21 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
         processor::GetAvailableFrequenciesKhz(device, cpu_set);
     std::map<int, std::vector<int64_t>> frequency_to_latencies;
 
-    // Skip static frequency based processor
     if (available_frequencies.size() == 0) {
       continue;
     }
 
     std::sort(available_frequencies.begin(), available_frequencies.end());
-
+    int min_freq = processor::GetMinFrequencyKhz(device, cpu_set);
     for (int freq: available_frequencies) {
-      frequency_to_latencies[freq] = {};
+      // Discard invalid frequency
+      if (freq < min_freq) {
+        frequency_to_latencies[freq] = {};
+      }
     }
 
-    // Add randomness for well-distributed start frequencies
     int interval_ms =
         processor::GetUpdateIntervalMs(device, cpu_set);
-    TFLITE_LOG(INFO) << "Frequency update interval=" << interval_ms << "ms";
 
     std::thread t([&]() {
       if (device == kTfLiteCPU ||
@@ -939,51 +939,20 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
             workers_[device]->GetNumThreads());
       }
 
-      if (device != kTfLiteGPU) return;
+      auto update_interval = processor::GetUpdateIntervalMs(device, cpu_set);
+      std::vector<int> max_intervals = {0, update_interval, update_interval * 2,
+                                        update_interval * 4};
 
-      // Warm-up
-      for (int i = 0; i < num_warmups_; i++) {
-        subgraph->Invoke();
+      if (kTfLiteGPU) {
+        max_intervals.push_back(update_interval * 8);
       }
 
-      auto start = std::chrono::high_resolution_clock::now();
-      while (processor::GetTargetFrequencyKhz(device, cpu_set) != available_frequencies[0]) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
-      }
-
-      auto max_interval = std::chrono::duration_cast<std::chrono::microseconds>(
-                              std::chrono::high_resolution_clock::now() - start)
-                              .count();
-      TFLITE_LOG(INFO)
-          << "Time to reach lowest freq: " << available_frequencies[0]
-          << " " << max_interval;
-
-      std::vector<int64_t> max_intervals = {0, max_interval, max_interval * 2};
-
-
-      // First, random trials
       for (int interval : max_intervals) {
-        TFLITE_LOG(INFO) << "Interval: " << interval;
-        std::uniform_int_distribution<> dist_us{0, interval};
+        // Random-interval for well-distributed start frequencies
+        std::uniform_int_distribution<> dist_us{0, interval * 1000};
         for (int i = 0; i < num_profile; i++) {
           int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
-          auto start = std::chrono::high_resolution_clock::now();
-          subgraph->Invoke();
-
-          int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
-                  std::chrono::high_resolution_clock::now() - start)
-                  .count();
-          frequency_to_latencies[start_frequency].push_back(time_us);
-
-          TFLITE_LOG(INFO) << time_us <<"," << start_frequency;
-
-          std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
-        }
-
-        if (interval > 0) {
-          TFLITE_LOG(INFO) << "Fixed Interval: " << interval;
-          for (int i = 0; i < num_profile; i++) {
-            int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
+          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
             auto start = std::chrono::high_resolution_clock::now();
             subgraph->Invoke();
 
@@ -991,31 +960,38 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
                     std::chrono::high_resolution_clock::now() - start)
                     .count();
             frequency_to_latencies[start_frequency].push_back(time_us);
+            std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
+          }
+        }
 
-            TFLITE_LOG(INFO) << time_us <<"," << start_frequency;
+        // Static-interval for few-step based processors
+        for (int i = 0; i < num_profile; i++) {
+          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
+          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
+            auto start = std::chrono::high_resolution_clock::now();
+            subgraph->Invoke();
 
-            std::this_thread::sleep_for(std::chrono::microseconds(interval));
+            int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now() - start)
+                    .count();
+            frequency_to_latencies[start_frequency].push_back(time_us);
+            std::this_thread::sleep_for(std::chrono::microseconds{interval * 1000});
           }
         }
       }
 
-      std::vector<std::pair<int64_t, int64_t>> frequency_to_latencies_table;
+      // For easier lerp
+      std::map<int64_t, int64_t> frequency_to_latency;
 
       for (int freq : available_frequencies) {
         std::vector<int64_t> latencies = frequency_to_latencies[freq];
 
-        TFLITE_LOG(INFO) << "Frequency=" << freq << " "
-                         << "Count=" << latencies.size();
-
-        frequency_to_latencies_table.push_back(
-            {freq, latencies.size() == 0 ? 0
-                                         : std::accumulate(latencies.begin(),
-                                                           latencies.end(), 0) /
-                                               latencies.size()});
+        if (latencies.size()) {
+          frequency_to_latency[freq] =
+              std::accumulate(latencies.begin(), latencies.end(), 0) /
+              latencies.size();
+        }
       }
-
-      profile_frequency_to_latencies_[subgraph_key] =
-          frequency_to_latencies_table;
 
       TFLITE_LOG(INFO) << "Profiling frequency table result\n"
                        << " model=" << subgraph_key.model_id 
@@ -1024,10 +1000,40 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
                        << " start=" << subgraph_key.GetInputOpsString()
                        << " end=" << subgraph_key.GetOutputOpsString() << ".";
 
-      for (auto freq_to_latency : frequency_to_latencies_table) {
-        TFLITE_LOG(INFO) << "Frequency=" << freq_to_latency.first << " "
-                         << "Latency=" << freq_to_latency.second;
+      std::vector<std::pair<int64_t, int64_t>> frequency_to_latencies_table;
+      for (int freq : available_frequencies) {
+        // We already have a valid freq to latency mapping
+        if (frequency_to_latency.find(freq) != frequency_to_latency.end()) {
+          frequency_to_latencies_table.push_back(
+              {freq, frequency_to_latency[freq]});
+        } else {
+          // Get next, prev valid frequencies
+          auto upper_it = frequency_to_latency.upper_bound(freq);
+          // Cannot lerp if freq is lower than a lowest valid frequency
+          // We could wait until the complete cooldown of the processor, 
+          // but certain logic might cause infinite spin when there is a single 
+          // valid frequency bigger than the minimum value (most of DSP, NPU). 
+          // Therefore, we just discard a frequency here.
+          if (upper_it != frequency_to_latency.begin() && upper_it != frequency_to_latency.end()) {
+            auto lower_it = std::prev(upper_it);
+            double fraction = (double)(freq - lower_it->first) /
+                              (upper_it->first - lower_it->first);
+
+            frequency_to_latencies_table.push_back(
+                {freq, lower_it->second +
+                           (upper_it->second - lower_it->second) * fraction});
+          } else {
+            continue;
+          }
+        }
+        
+        TFLITE_LOG(INFO) << "Frequency=" << freq << " "
+                         << "Count=" << frequency_to_latencies[freq].size() << " "
+                         << "Latency=" << frequency_to_latencies_table.back().second;
       }
+
+      profile_frequency_to_latencies_[subgraph_key] =
+          frequency_to_latencies_table;
     });
     t.join();
   }

@@ -235,11 +235,12 @@ std::vector<int> GetAvailableFrequenciesKhz(const CpuSet &cpu_set) {
 int GetUpTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   int cpu_transition =
-      TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                  "/cpufreq/cpuinfo_transition_latency"});
+      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
+            "/schedutil/up_rate_limit_us"}) / 1000;
   if (cpu_transition == 0) {
-    return TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
-         "/schedutil/up_rate_limit_us"}) / 1000;
+    return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                       "/cpufreq/cpuinfo_transition_latency"}) /
+           1000000;
   } else {
     return cpu_transition;
   }
@@ -265,11 +266,11 @@ int GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
 int GetDownTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   int cpu_transition =
-      TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                  "/cpufreq/cpuinfo_transition_latency"});
+      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
+            "/schedutil/down_rate_limit_us"}) / 1000;
   if (cpu_transition == 0) {
-    return TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
-         "/schedutil/down_rate_limit_us"}) / 1000;
+    return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                  "/cpufreq/cpuinfo_transition_latency"}) / 1000000;
   } else {
     return cpu_transition;
   }
