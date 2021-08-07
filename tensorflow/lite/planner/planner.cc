@@ -9,6 +9,7 @@
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
 #include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/processors/processor.h"
 #include "tensorflow/lite/processors/gpu.h"
 #include "tensorflow/lite/tools/logging.h"
 
@@ -50,13 +51,13 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "profiled_execution_time\t"
              << "expected_execution_time\t"
              << "start_frequency\t"
-             << "start_scaling_frequency\t"
-             << "start_scaling_min_frequency\t"
-             << "start_scaling_max_frequency\t"
+             << "start_target_frequency\t"
+             << "start_target_min_frequency\t"
+             << "start_target_max_frequency\t"
              << "end_frequency\t"
-             << "end_scaling_frequency\t"
-             << "end_scaling_min_frequency\t"
-             << "end_scaling_max_frequency\t"
+             << "end_target_frequency\t"
+             << "end_target_min_frequency\t"
+             << "end_target_max_frequency\t"
              << "transition_count\t"
              << "expected_transition_count\t"
              << "slo_us\t"
@@ -384,13 +385,13 @@ void Planner::FlushFinishedJobs() {
                << job.profiled_execution_time << "\t"
                << job.expected_execution_time << "\t"
                << job.start_frequency << "\t"
-               << job.start_scaling_frequency << "\t"
-               << job.start_scaling_min_frequency << "\t"
-               << job.start_scaling_max_frequency << "\t"
+               << job.start_target_frequency << "\t"
+               << job.start_target_min_frequency << "\t"
+               << job.start_target_max_frequency << "\t"
                << job.end_frequency << "\t"
-               << job.end_scaling_frequency << "\t"
-               << job.end_scaling_min_frequency << "\t"
-               << job.end_scaling_max_frequency << "\t"
+               << job.end_target_frequency << "\t"
+               << job.end_target_min_frequency << "\t"
+               << job.end_target_max_frequency << "\t"
                << job.end_transition_count - job.start_transition_count << "\t"
                << job.expected_transition_count << "\t"
                << job.slo_us << "\t"
@@ -449,35 +450,33 @@ void Planner::PrepareReenqueue(Job& job) {
 
 void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
   if (!log_processor_frequency_) return;
+  auto cpu_set = worker->GetWorkerThreadAffinity();
+  auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
   if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
     std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
-    auto cpu_set = worker->GetWorkerThreadAffinity();
-    job.start_frequency = GetCPUFrequencyKhz(cpu_set);
-    job.start_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
-    job.start_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
-    job.start_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
-    job.start_transition_count = GetCPUTotalTransitionCount(cpu_set);
-  } else if (job.device_id == kTfLiteGPU) {
-    job.start_frequency = GetGPUFrequencyKhz();
-  }
+    job.start_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
+    job.start_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
+    job.start_transition_count = cpu::GetTotalTransitionCount(cpu_set);
+  } 
+  job.start_frequency = processor::GetFrequencyKhz(device_flag, cpu_set);
+  job.start_target_frequency = processor::GetTargetFrequencyKhz(device_flag, cpu_set);
 }
 
 void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
   if (!log_processor_frequency_) return;
+  auto cpu_set = worker->GetWorkerThreadAffinity();
+  auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
   if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
     std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
-    auto cpu_set = worker->GetWorkerThreadAffinity();
-    job.end_frequency = GetCPUFrequencyKhz(cpu_set);
-    job.end_scaling_frequency = GetCPUScalingFrequencyKhz(cpu_set);
-    job.end_scaling_min_frequency = GetCPUScalingMinFrequencyKhz(cpu_set);
-    job.end_scaling_max_frequency = GetCPUScalingMaxFrequencyKhz(cpu_set);
-    job.end_transition_count = GetCPUTotalTransitionCount(cpu_set);
+    job.end_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
+    job.end_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
+    job.end_transition_count = cpu::GetTotalTransitionCount(cpu_set);
     job.expected_transition_count =
         (job.end_time - job.enqueue_time)                 // execution time
-        / (GetCPUUpTransitionLatencyMs(cpu_set) / 1000);  // transition limit
-  } else if (job.device_id == kTfLiteGPU) {
-    job.end_frequency = GetGPUFrequencyKhz();
-  }
+        / (cpu::GetUpTransitionLatencyMs(cpu_set) / 1000);  // transition limit
+  } 
+  job.end_frequency = processor::GetFrequencyKhz(device_flag, cpu_set);
+  job.end_target_frequency = processor::GetTargetFrequencyKhz(device_flag, cpu_set);
 }
 
 bool Planner::IsJobIdValid(int job_id) {
