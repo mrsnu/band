@@ -56,38 +56,6 @@ int GetCPUCount();
 int GetLittleCPUCount();
 int GetBigCPUCount();
 
-// Get scaling frequency (current target frequency of the governor)
-int GetCPUScalingFrequencyKhz(int cpu);
-int GetCPUScalingFrequencyKhz(const CpuSet &cpu_set);
-
-// Get scaling max frequency (current target frequency of the governor)
-int GetCPUScalingMaxFrequencyKhz(int cpu);
-int GetCPUScalingMaxFrequencyKhz(const CpuSet &cpu_set);
-
-// Get scaling min frequency (current target frequency of the governor)
-int GetCPUScalingMinFrequencyKhz(int cpu);
-int GetCPUScalingMinFrequencyKhz(const CpuSet &cpu_set);
-
-// Get current frequency (requires sudo)
-int GetCPUFrequencyKhz(int cpu);
-int GetCPUFrequencyKhz(const CpuSet &cpu_set);
-
-std::vector<int> GetCPUAvailableFrequenciesKhz(const CpuSet &cpu_set);
-
-// Time interval limit of frequency rise
-int GetCPUUpTransitionLatencyMs(int cpu);
-int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set);
-
-// Time interval limit of frequency down
-int GetCPUDownTransitionLatencyMs(int cpu);
-int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set);
-
-// Total transition count
-// Note that cores in same cluster (little/big/primary)
-// shares this value
-int GetCPUTotalTransitionCount(int cpu);
-int GetCPUTotalTransitionCount(const CpuSet& cpu_set);
-
 // set explicit thread affinity
 TfLiteStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 TfLiteStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
@@ -97,6 +65,41 @@ const CpuSet& TfLiteCPUMaskGetSet(TfLiteCPUMaskFlags flag);
 const char* TfLiteCPUMaskGetName(TfLiteCPUMaskFlags flag);
 const TfLiteCPUMaskFlags TfLiteCPUMaskGetMask(const char * name);
 
+// Wrap frequency-related helper functions for consistency with *pu
+namespace cpu {
+
+// Get scaling frequency (current target frequency of the governor)
+int GetTargetFrequencyKhz(int cpu);
+int GetTargetFrequencyKhz(const CpuSet &cpu_set);
+
+// Get scaling max frequency (current target frequency of the governor)
+int GetTargetMaxFrequencyKhz(int cpu);
+int GetTargetMaxFrequencyKhz(const CpuSet &cpu_set);
+
+// Get scaling min frequency (current target frequency of the governor)
+int GetTargetMinFrequencyKhz(int cpu);
+int GetTargetMinFrequencyKhz(const CpuSet &cpu_set);
+
+// Get current frequency (requires sudo)
+int GetFrequencyKhz(int cpu);
+int GetFrequencyKhz(const CpuSet &cpu_set);
+
+std::vector<int> GetAvailableFrequenciesKhz(const CpuSet &cpu_set);
+
+// Time interval limit of frequency rise
+int GetUpTransitionLatencyMs(int cpu);
+int GetUpTransitionLatencyMs(const CpuSet& cpu_set);
+
+// Time interval limit of frequency down
+int GetDownTransitionLatencyMs(int cpu);
+int GetDownTransitionLatencyMs(const CpuSet& cpu_set);
+
+// Total transition count
+// Note that cores in same cluster (little/big/primary)
+// shares this value
+int GetTotalTransitionCount(int cpu);
+int GetTotalTransitionCount(const CpuSet& cpu_set);
+} // namespace cpu
 } // namespace impl
 } // namespace tflite
 

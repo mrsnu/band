@@ -151,7 +151,7 @@ cc_library(
     copts = TFLITE_DEFAULT_COPTS,
     deps = [
         "//tensorflow/lite/c:common",
-        "//tensorflow/lite/processors:cpu",
+        "//tensorflow/lite/processors:processor",
     ],
 )
 
@@ -282,8 +282,7 @@ cc_library(
         "//tensorflow/lite/nnapi:nnapi_implementation",
         "//tensorflow/lite/profiling:time_profiler",
         "//tensorflow/lite/schema:schema_fbs",
-        "//tensorflow/lite/processors:cpu",
-        "//tensorflow/lite/processors:gpu",
+        "//tensorflow/lite/processors:processor",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/profiling:util",
         "//tensorflow/lite/tools:logging",
@@ -596,7 +595,7 @@ cc_library(
     hdrs = ["config.h"],
     copts = TFLITE_DEFAULT_COPTS,
     deps = [
-        "//tensorflow/lite/processors:cpu",
+        "//tensorflow/lite/processors:processor",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite:util",
         "//tensorflow/lite/tools:logging",
