@@ -23,6 +23,10 @@ limitations under the License.
 #include <utility>
 #include <list>
 
+#include <thread>
+#include <random>
+#include <chrono>
+
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/processors/processor.h"
 #include "tensorflow/lite/context_util.h"
@@ -776,12 +780,23 @@ TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
   return kTfLiteOk;
 }
 
-void Interpreter::UpdateExpectedLatency(
-    const SubgraphKey& key, int64_t latency) {
+void Interpreter::UpdateInvokedLatency(
+    const SubgraphKey& key, int64_t latency, int64_t frequency) {
   int64_t prev_latency = moving_averaged_latencies_[key];
   moving_averaged_latencies_[key] =
       profile_smoothing_factor_ * latency +
       (1 - profile_smoothing_factor_) * prev_latency;
+
+  int64_t prev_freq_latency = GetFrequencyBasedExpectedLatency(key, frequency);
+  if (prev_freq_latency > 0) {
+    auto& frequency_table = profile_frequency_to_latencies_[key];
+    auto frequency_table_it = frequency_table.find(frequency);
+    if (frequency_table_it != frequency_table.end()) {
+      frequency_table_it->second = 
+        profile_smoothing_factor_ * latency +
+        (1 - profile_smoothing_factor_) * prev_freq_latency;
+    }
+  }
 }
 
 int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
@@ -793,6 +808,18 @@ int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
   }
 }
 
+int64_t Interpreter::GetFrequencyBasedExpectedLatency(const SubgraphKey& key, int64_t frequency) {
+  auto it = profile_frequency_to_latencies_.find(key);
+  if (it != profile_frequency_to_latencies_.end()) {
+    auto frequency_table = it->second;
+    auto frequency_table_it = frequency_table.find(frequency);
+    if (frequency_table_it != frequency_table.end()) {
+      return frequency_table_it->second;
+    }
+  }
+  return GetExpectedLatency(key);
+}
+
 int64_t Interpreter::GetProfiledLatency(SubgraphKey& key) {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
@@ -802,7 +829,7 @@ int64_t Interpreter::GetProfiledLatency(SubgraphKey& key) {
   }
 }
 
-void Interpreter::Profile(int model_id) {
+void Interpreter::StaticProfile(int model_id) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler timer;
@@ -879,6 +906,149 @@ void Interpreter::Profile(int model_id) {
 
   SetSubgraphProfiler(previous_profiler);
   SetSLOBasedOnProfile();
+}
+
+void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_samples) {
+  std::mt19937_64 eng{std::random_device{}()};
+  for (int i = 0; i < subgraphs_size(); ++i) {
+    Subgraph* subgraph = subgraphs_[i].get();
+    SubgraphKey& subgraph_key = subgraph->GetKey();
+    TfLiteDeviceFlags device = subgraph_key.device_flag;
+
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
+
+    auto cpu_set =
+        workers_[device]->GetWorkerThreadAffinity();
+    SetCPUThreadAffinity(cpu_set);
+    auto available_frequencies =
+        processor::GetAvailableFrequenciesKhz(device, cpu_set);
+    std::map<int, std::vector<int64_t>> frequency_to_latencies;
+
+    if (available_frequencies.size() == 0) {
+      continue;
+    }
+
+    std::sort(available_frequencies.begin(), available_frequencies.end());
+    int min_freq = processor::GetMinFrequencyKhz(device, cpu_set);
+    for (int freq: available_frequencies) {
+      // Discard invalid frequency
+      if (freq < min_freq) {
+        frequency_to_latencies[freq] = {};
+      }
+    }
+
+    int interval_ms =
+        processor::GetUpdateIntervalMs(device, cpu_set);
+
+    std::thread t([&]() {
+      if (device == kTfLiteCPU ||
+          device == kTfLiteCPUFallback) {
+        auto internal_backend =
+            GetCpuBackendContext()->internal_backend_context();
+        // Update internal cpu backend (ruy)
+        internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
+        internal_backend->SetMaxNumThreads(
+            workers_[device]->GetNumThreads());
+      }
+
+      auto update_interval = processor::GetUpdateIntervalMs(device, cpu_set);
+      std::vector<int> max_intervals = {0, update_interval, update_interval * 2,
+                                        update_interval * 4};
+
+      if (kTfLiteGPU) {
+        max_intervals.push_back(update_interval * 8);
+      }
+
+      for (int interval : max_intervals) {
+        // Random-interval for well-distributed start frequencies
+        std::uniform_int_distribution<> dist_us{0, interval * 1000};
+        for (int i = 0; i < num_profile; i++) {
+          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
+          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
+            auto start = std::chrono::high_resolution_clock::now();
+            subgraph->Invoke();
+
+            int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now() - start)
+                    .count();
+            frequency_to_latencies[start_frequency].push_back(time_us);
+            std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
+          }
+        }
+
+        // Static-interval for few-step based processors
+        for (int i = 0; i < num_profile; i++) {
+          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
+          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
+            auto start = std::chrono::high_resolution_clock::now();
+            subgraph->Invoke();
+
+            int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now() - start)
+                    .count();
+            frequency_to_latencies[start_frequency].push_back(time_us);
+            std::this_thread::sleep_for(std::chrono::microseconds{interval * 1000});
+          }
+        }
+      }
+
+      // For easier lerp
+      std::map<int64_t, int64_t> valid_frequency_to_latency;
+
+      for (int freq : available_frequencies) {
+        std::vector<int64_t> latencies = frequency_to_latencies[freq];
+
+        if (latencies.size()) {
+          valid_frequency_to_latency[freq] =
+              std::accumulate(latencies.begin(), latencies.end(), 0) /
+              latencies.size();
+        }
+      }
+
+      TFLITE_LOG(INFO) << "Profiling frequency table result\n"
+                       << " model=" << subgraph_key.model_id 
+                       << " device="
+                       << TfLiteDeviceGetName(subgraph_key.device_flag)
+                       << " start=" << subgraph_key.GetInputOpsString()
+                       << " end=" << subgraph_key.GetOutputOpsString() << ".";
+
+      std::map<int64_t, int64_t> frequency_to_latency =
+          valid_frequency_to_latency;
+      for (int freq : available_frequencies) {
+        // We already have a valid freq to latency mapping
+        if (valid_frequency_to_latency.find(freq) == valid_frequency_to_latency.end()) {
+          // Get next, prev valid frequencies
+          auto upper_it = frequency_to_latency.upper_bound(freq);
+          // Cannot lerp if freq is lower than a lowest valid frequency
+          // We could wait until the complete cooldown of the processor, 
+          // but certain logic might cause infinite spin when there is a single 
+          // valid frequency bigger than the minimum value (most of DSP, NPU). 
+          // Therefore, we just discard a frequency here.
+          if (upper_it != frequency_to_latency.begin() && upper_it != frequency_to_latency.end()) {
+            auto lower_it = std::prev(upper_it);
+            double fraction = (double)(freq - lower_it->first) /
+                              (upper_it->first - lower_it->first);
+
+            frequency_to_latency[freq] =
+                lower_it->second +
+                (upper_it->second - lower_it->second) * fraction;
+          } else {
+            continue;
+          }
+        }
+        
+        TFLITE_LOG(INFO) << "Frequency=" << freq << " "
+                         << "Count=" << frequency_to_latencies[freq].size() << " "
+                         << "Latency=" << frequency_to_latency[freq];
+      }
+
+      profile_frequency_to_latencies_[subgraph_key] =
+          frequency_to_latency;
+    });
+    t.join();
+  }
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {

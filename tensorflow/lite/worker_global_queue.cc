@@ -126,9 +126,10 @@ void GlobalQueueWorker::Work() {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job_.end_time = profiling::time::NowMicros();
-          interpreter_ptr->UpdateExpectedLatency(
+          interpreter_ptr->UpdateInvokedLatency(
               subgraph.GetKey(),
-              (current_job_.end_time - current_job_.invoke_time));
+              (current_job_.end_time - current_job_.invoke_time),
+              current_job_.start_target_frequency);
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
           }

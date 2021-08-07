@@ -46,6 +46,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "execution_time\t"
              << "profiled_execution_time\t"
              << "expected_execution_time\t"
+             << "frequency_expected_execution_time\t"
              << "start_frequency\t"
              << "start_target_frequency\t"
              << "start_target_min_frequency\t"
@@ -348,6 +349,7 @@ void Planner::FlushFinishedJobs() {
                << job.end_time - job.invoke_time << "\t"
                << job.profiled_execution_time << "\t"
                << job.expected_execution_time << "\t"
+               << job.frequency_expected_execution_time << "\t"
                << job.start_frequency << "\t"
                << job.start_target_frequency << "\t"
                << job.start_target_min_frequency << "\t"
@@ -418,6 +420,10 @@ void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
   } 
   job.start_frequency = processor::GetFrequencyKhz(device_flag, cpu_set);
   job.start_target_frequency = processor::GetTargetFrequencyKhz(device_flag, cpu_set);
+  job.frequency_expected_execution_time =
+      interpreter_->GetFrequencyBasedExpectedLatency(
+          interpreter_->subgraph(job.subgraph_idx)->GetKey(),
+          job.start_target_frequency);
 }
 
 void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
