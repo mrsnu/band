@@ -105,7 +105,8 @@ void DeviceQueueWorker::Work() {
           job.end_time = profiling::time::NowMicros();
           interpreter_ptr->UpdateInvokedLatency(
               subgraph.GetKey(),
-              (job.end_time - job.invoke_time));
+              (job.end_time - job.invoke_time),
+              job.start_target_frequency);
           if (job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(job.following_jobs);
           }

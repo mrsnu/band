@@ -129,7 +129,8 @@ void GlobalQueueWorker::Work() {
           current_job_.end_time = profiling::time::NowMicros();
           interpreter_ptr->UpdateInvokedLatency(
               subgraph.GetKey(),
-              (current_job_.end_time - current_job_.invoke_time));
+              (current_job_.end_time - current_job_.invoke_time),
+              current_job_.start_target_frequency);
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
           }

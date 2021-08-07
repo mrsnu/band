@@ -777,11 +777,22 @@ TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
 }
 
 void Interpreter::UpdateInvokedLatency(
-    const SubgraphKey& key, int64_t latency) {
+    const SubgraphKey& key, int64_t latency, int64_t frequency) {
   int64_t prev_latency = moving_averaged_latencies_[key];
   moving_averaged_latencies_[key] =
       profile_smoothing_factor_ * latency +
       (1 - profile_smoothing_factor_) * prev_latency;
+
+  int64_t prev_freq_latency = GetFrequencyBasedExpectedLatency(key, frequency);
+  if (prev_freq_latency > 0) {
+    auto& frequency_table = profile_frequency_to_latencies_[key];
+    auto frequency_table_it = frequency_table.find(frequency);
+    if (frequency_table_it != frequency_table.end()) {
+      frequency_table_it->second = 
+        profile_smoothing_factor_ * latency +
+        (1 - profile_smoothing_factor_) * prev_freq_latency;
+    }
+  }
 }
 
 int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
@@ -797,13 +808,12 @@ int64_t Interpreter::GetFrequencyBasedExpectedLatency(const SubgraphKey& key, in
   auto it = profile_frequency_to_latencies_.find(key);
   if (it != profile_frequency_to_latencies_.end()) {
     auto frequency_table = it->second;
-    for (auto frequency_latency: frequency_table) {
-      if (frequency == frequency_latency.first) {
-        return frequency_latency.second;
-      }
+    auto frequency_table_it = frequency_table.find(frequency);
+    if (frequency_table_it != frequency_table.end()) {
+      return frequency_table_it->second;
     }
-  } 
-  return -1;
+  }
+  return GetExpectedLatency(key);
 }
 
 int64_t Interpreter::GetProfiledLatency(SubgraphKey& key) {
@@ -981,13 +991,13 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
       }
 
       // For easier lerp
-      std::map<int64_t, int64_t> frequency_to_latency;
+      std::map<int64_t, int64_t> valid_frequency_to_latency;
 
       for (int freq : available_frequencies) {
         std::vector<int64_t> latencies = frequency_to_latencies[freq];
 
         if (latencies.size()) {
-          frequency_to_latency[freq] =
+          valid_frequency_to_latency[freq] =
               std::accumulate(latencies.begin(), latencies.end(), 0) /
               latencies.size();
         }
@@ -1000,13 +1010,11 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
                        << " start=" << subgraph_key.GetInputOpsString()
                        << " end=" << subgraph_key.GetOutputOpsString() << ".";
 
-      std::vector<std::pair<int64_t, int64_t>> frequency_to_latencies_table;
+      std::map<int64_t, int64_t> frequency_to_latency =
+          valid_frequency_to_latency;
       for (int freq : available_frequencies) {
         // We already have a valid freq to latency mapping
-        if (frequency_to_latency.find(freq) != frequency_to_latency.end()) {
-          frequency_to_latencies_table.push_back(
-              {freq, frequency_to_latency[freq]});
-        } else {
+        if (valid_frequency_to_latency.find(freq) == valid_frequency_to_latency.end()) {
           // Get next, prev valid frequencies
           auto upper_it = frequency_to_latency.upper_bound(freq);
           // Cannot lerp if freq is lower than a lowest valid frequency
@@ -1019,9 +1027,9 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
             double fraction = (double)(freq - lower_it->first) /
                               (upper_it->first - lower_it->first);
 
-            frequency_to_latencies_table.push_back(
-                {freq, lower_it->second +
-                           (upper_it->second - lower_it->second) * fraction});
+            frequency_to_latency[freq] =
+                lower_it->second +
+                (upper_it->second - lower_it->second) * fraction;
           } else {
             continue;
           }
@@ -1029,11 +1037,11 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
         
         TFLITE_LOG(INFO) << "Frequency=" << freq << " "
                          << "Count=" << frequency_to_latencies[freq].size() << " "
-                         << "Latency=" << frequency_to_latencies_table.back().second;
+                         << "Latency=" << frequency_to_latency[freq];
       }
 
       profile_frequency_to_latencies_[subgraph_key] =
-          frequency_to_latencies_table;
+          frequency_to_latency;
     });
     t.join();
   }
