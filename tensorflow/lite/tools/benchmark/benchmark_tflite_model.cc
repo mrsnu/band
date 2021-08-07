@@ -710,6 +710,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
 void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
   std::thread t([this]() {
+    std::mt19937_64 eng{std::random_device{}()};
     int period_ms = benchmark_config_.global_period_ms;
     if (period_ms <= 0) {
       TFLITE_LOG(ERROR) << "global_period_ms is <= 0. "
@@ -717,6 +718,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       return;
     }
 
+    std::uniform_int_distribution<> dist_us{0, period_ms * 1000};
     unsigned seed = benchmark_config_.model_id_random_seed;
     // only use seed if it's != 0, otherwise use current time so that
     // the seed changes for every run
@@ -735,10 +737,7 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
       int duration_ms = (end - start) / 1000;
 
       // sleep until we reach period_ms
-      if (duration_ms < period_ms) {
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(period_ms - duration_ms));
-      }
+      std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
 
       if (kill_app_) return;
     }
