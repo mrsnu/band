@@ -80,6 +80,12 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   if (GetWorkerType() == (kDeviceQueue | kGlobalQueue)) {
     return kTfLiteError;
   }
+
+  if (config.cpu_masks != impl::kTfLiteAll) {
+    cpu_set_ = impl::TfLiteCPUMaskGetSet(config.cpu_masks);
+    need_cpu_update_ = true;
+  }
+
   return kTfLiteOk;
 }
 
@@ -444,6 +450,15 @@ void Planner::Plan() {
     if (GetSafeBool().wait()) {
       return;
     }
+
+    if (need_cpu_update_) {
+      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+        TFLITE_LOG(ERROR) << "Planner failed to set cpu thread affinity";
+        // TODO #21: Handle errors in multi-thread environment
+      } 
+      need_cpu_update_ = false;
+    }
+
     CopyToLocalQueue(local_queues_[0]);
     TryUpdateModelDeviceMapping();
     for (size_t i = 0; i < local_queues_.size(); ++i) {

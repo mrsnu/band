@@ -60,6 +60,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `0`: Fixed Device Planner
   * `1`: Round-Robin Planner
   * `2`: Shortest Expected Latency Planner
+* `planner_cpu_masks`: CPU cluster mask to set CPU affinity of planner. [default: same value as global `cpu_masks`]
 * `execution_mode`: Specify a exeucution mode. Available execution modes are as follows:
   * `stream`: consecutively run batches.
   * `periodic`: invoke requests periodically.
@@ -118,6 +119,7 @@ An example of complete JSON config file is as follows:
     ],
     "log_path": "/data/local/tmp/log.csv",
     "schedulers": [0, 2],
+    "planner_cpu_masks": "PRIMARY",
     "execution_mode": "periodic",
     "cpu_masks": "ALL",
     "num_threads": 1,
