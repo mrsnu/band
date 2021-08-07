@@ -9,14 +9,16 @@
 
 namespace tflite {
 namespace impl {
+namespace gpu {
 
-int GetGPUMinFrequencyKhz();
-int GetGPUMaxFrequencyKhz();
-int GetGPUFrequencyKhz();
-int GetGPUPollingIntervalMs();
-std::vector<int> GetGPUAvailableFrequenciesKhz();
-std::vector<std::pair<int, int>> GetGPUClockStats();
+int GetMinFrequencyKhz();
+int GetMaxFrequencyKhz();
+int GetFrequencyKhz();
+int GetPollingIntervalMs();
+std::vector<int> GetAvailableFrequenciesKhz();
+std::vector<std::pair<int, int>> GetClockStats();
 
+} // namespace gpu
 } // namespace impl
 } // namespace tflite
 

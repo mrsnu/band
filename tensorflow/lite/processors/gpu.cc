@@ -10,13 +10,15 @@
 
 namespace tflite {
 namespace impl {
+namespace gpu {
 
 std::vector<std::string> GetPaths(std::string suffix) {
   std::vector<std::string> device_paths;
 #if defined __ANDROID__ || defined __linux__
   // TODO: Add more device-specific GPU path
   device_paths = {
-      "/sys/class/kgsl/kgsl-3d0/"  // Pixel4
+      "/sys/class/kgsl/kgsl-3d0/",  // Pixel4
+      "/sys/class/misc/mali0/device/" // Galaxy S21 (Mali)
   };
 #endif
   for (size_t i = 0; i < device_paths.size(); i++) {
@@ -25,7 +27,7 @@ std::vector<std::string> GetPaths(std::string suffix) {
   return device_paths;
 }
 
-int GetGPUMinFrequencyKhz() {
+int GetMinFrequencyKhz() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("min_clock_mhz")) * 1000;
 #elif
@@ -33,7 +35,7 @@ int GetGPUMinFrequencyKhz() {
 #endif
 }
 
-int GetGPUMaxFrequencyKhz() {
+int GetMaxFrequencyKhz() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("max_clock_mhz")) * 1000;
 #elif
@@ -41,7 +43,7 @@ int GetGPUMaxFrequencyKhz() {
 #endif
 }
 
-int GetGPUFrequencyKhz() {
+int GetFrequencyKhz() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("clock_mhz")) * 1000;
 #elif
@@ -49,7 +51,7 @@ int GetGPUFrequencyKhz() {
 #endif
 }
 
-int GetGPUPollingIntervalMs() {
+int GetPollingIntervalMs() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("devfreq/polling_interval"));
 #elif
@@ -57,10 +59,13 @@ int GetGPUPollingIntervalMs() {
 #endif
 }
 
-std::vector<int> GetGPUAvailableFrequenciesKhz() {
+std::vector<int> GetAvailableFrequenciesKhz() {
   std::vector<int> frequenciesMhz;
 #if defined __ANDROID__ || defined __linux__
   frequenciesMhz = TryReadInts(GetPaths("freq_table_mhz"));
+  if (frequenciesMhz.empty()) {
+    frequenciesMhz = TryReadInts(GetPaths("dvfs_table"));
+  }
   for (size_t i = 0; i < frequenciesMhz.size(); i++) {
     frequenciesMhz[i] *= 1000;
   }
@@ -68,11 +73,11 @@ std::vector<int> GetGPUAvailableFrequenciesKhz() {
   return frequenciesMhz;
 }
 
-std::vector<std::pair<int, int>> GetGPUClockStats() {
+std::vector<std::pair<int, int>> GetClockStats() {
   std::vector<std::pair<int, int>> frequency_stats;
 
 #if defined __ANDROID__ || defined __linux__
-  std::vector<int> frequencies = GetGPUAvailableFrequenciesKhz();
+  std::vector<int> frequencies = GetAvailableFrequenciesKhz();
   std::vector<int> clock_stats = TryReadInts(GetPaths("gpu_clock_stats"));
 
   frequency_stats.resize(frequencies.size());
@@ -82,5 +87,7 @@ std::vector<std::pair<int, int>> GetGPUClockStats() {
 #endif
   return frequency_stats;
 }
+
+}  // namespace gpu
 }  // namespace impl
 }  // namespace tflite
