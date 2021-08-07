@@ -13,12 +13,14 @@ cc_library(
     name = "processor",
     srcs = [
         "cpu.cc",
+        "generic.cc",
         "gpu.cc",
         "util.cc",
         "processor.cc",
     ],
     hdrs = [
         "cpu.h",
+        "generic.h",
         "gpu.h",
         "util.h",
         "processor.h",

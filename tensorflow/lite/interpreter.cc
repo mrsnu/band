@@ -947,7 +947,7 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
       }
 
       auto start = std::chrono::high_resolution_clock::now();
-      while (processor::GetScalingFrequencyKhz(device, cpu_set) != available_frequencies[0]) {
+      while (processor::GetTargetFrequencyKhz(device, cpu_set) != available_frequencies[0]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
       }
 
@@ -966,7 +966,7 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
         TFLITE_LOG(INFO) << "Interval: " << interval;
         std::uniform_int_distribution<> dist_us{0, interval};
         for (int i = 0; i < num_profile; i++) {
-          int start_frequency = processor::GetScalingFrequencyKhz(device, cpu_set);
+          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
           auto start = std::chrono::high_resolution_clock::now();
           subgraph->Invoke();
 
@@ -983,7 +983,7 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int min_sample
         if (interval > 0) {
           TFLITE_LOG(INFO) << "Fixed Interval: " << interval;
           for (int i = 0; i < num_profile; i++) {
-            int start_frequency = processor::GetScalingFrequencyKhz(device, cpu_set);
+            int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
             auto start = std::chrono::high_resolution_clock::now();
             subgraph->Invoke();
 

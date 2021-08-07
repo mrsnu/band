@@ -111,7 +111,8 @@ int GetLittleCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteLittle).NumEnabled()
 
 int GetBigCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteBig).NumEnabled(); }
 
-int GetCPUScalingMaxFrequencyKhz(int cpu) {
+namespace cpu {
+int GetTargetMaxFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/scaling_max_freq",
@@ -122,12 +123,12 @@ int GetCPUScalingMaxFrequencyKhz(int cpu) {
 #endif
 }
 
-int GetCPUScalingMaxFrequencyKhz(const CpuSet& cpu_set) {
+int GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   int accumulated_frequency = 0;
 
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingMaxFrequencyKhz(i);
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetTargetMaxFrequencyKhz(i);
   }
 
   return accumulated_frequency / cpu_set.NumEnabled();
@@ -136,7 +137,7 @@ int GetCPUScalingMaxFrequencyKhz(const CpuSet& cpu_set) {
 #endif
 }
 
-int GetCPUScalingMinFrequencyKhz(int cpu) {
+int GetTargetMinFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/scaling_min_freq",
@@ -147,12 +148,12 @@ int GetCPUScalingMinFrequencyKhz(int cpu) {
 #endif
 }
 
-int GetCPUScalingMinFrequencyKhz(const CpuSet& cpu_set) {
+int GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   int accumulated_frequency = 0;
 
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingMinFrequencyKhz(i);
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetTargetMinFrequencyKhz(i);
   }
 
   return accumulated_frequency / cpu_set.NumEnabled();
@@ -161,7 +162,7 @@ int GetCPUScalingMinFrequencyKhz(const CpuSet& cpu_set) {
 #endif
 }
 
-int GetCPUScalingFrequencyKhz(int cpu) {
+int GetTargetFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/scaling_cur_freq",
@@ -172,12 +173,12 @@ int GetCPUScalingFrequencyKhz(int cpu) {
 #endif
 }
 
-int GetCPUScalingFrequencyKhz(const CpuSet& cpu_set) {
+int GetTargetFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   int accumulated_frequency = 0;
 
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUScalingFrequencyKhz(i);
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetTargetFrequencyKhz(i);
   }
 
   return accumulated_frequency / cpu_set.NumEnabled();
@@ -186,7 +187,7 @@ int GetCPUScalingFrequencyKhz(const CpuSet& cpu_set) {
 #endif
 }
 
-int GetCPUFrequencyKhz(int cpu) {
+int GetFrequencyKhz(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/cpuinfo_cur_freq",
@@ -197,12 +198,12 @@ int GetCPUFrequencyKhz(int cpu) {
 #endif
 }
 
-int GetCPUFrequencyKhz(const CpuSet& cpu_set) {
+int GetFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   int accumulated_frequency = 0;
 
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetCPUFrequencyKhz(i);
+    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetFrequencyKhz(i);
   }
 
   return accumulated_frequency / cpu_set.NumEnabled();
@@ -211,7 +212,7 @@ int GetCPUFrequencyKhz(const CpuSet& cpu_set) {
 #endif
 }
 
-std::vector<int> GetCPUAvailableFrequenciesKhz(const CpuSet &cpu_set) {
+std::vector<int> GetAvailableFrequenciesKhz(const CpuSet &cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     // Assuming that there is one cluster group
@@ -231,7 +232,7 @@ std::vector<int> GetCPUAvailableFrequenciesKhz(const CpuSet &cpu_set) {
   return {};
 }
 
-int GetCPUUpTransitionLatencyMs(int cpu) {
+int GetUpTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   int cpu_transition =
       TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
@@ -247,11 +248,11 @@ int GetCPUUpTransitionLatencyMs(int cpu) {
 }
 
 // Assuming that there is one cluster group
-int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set) {
+int GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   for (int i = 0; i < GetCPUCount(); i++) {
     if (cpu_set.IsEnabled(i)) {
-      int transition_latency = GetCPUUpTransitionLatencyMs(i);
+      int transition_latency = GetUpTransitionLatencyMs(i);
       if (transition_latency > 0) {
         return transition_latency;
       }
@@ -261,7 +262,7 @@ int GetCPUUpTransitionLatencyMs(const CpuSet& cpu_set) {
   return -1;
 }
 
-int GetCPUDownTransitionLatencyMs(int cpu) {
+int GetDownTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   int cpu_transition =
       TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
@@ -277,11 +278,11 @@ int GetCPUDownTransitionLatencyMs(int cpu) {
 }
 
 // Assuming that there is one cluster group
-int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set) {
+int GetDownTransitionLatencyMs(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   for (int i = 0; i < GetCPUCount(); i++) {
     if (cpu_set.IsEnabled(i)) {
-      int transition_latency = GetCPUDownTransitionLatencyMs(i);
+      int transition_latency = GetDownTransitionLatencyMs(i);
       if (transition_latency > 0) {
         return transition_latency;
       }
@@ -294,7 +295,7 @@ int GetCPUDownTransitionLatencyMs(const CpuSet& cpu_set) {
 // Total transition count
 // Note that cores in same cluster (little/big/primary)
 // shares this value
-int GetCPUTotalTransitionCount(int cpu) {
+int GetTotalTransitionCount(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/stats/total_trans",
@@ -304,13 +305,13 @@ int GetCPUTotalTransitionCount(int cpu) {
   return -1;
 }
 
-int GetCPUTotalTransitionCount(const CpuSet& cpu_set) {
+int GetTotalTransitionCount(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   int accumulated_transition_count = 0;
 
   for (int i = 0; i < GetCPUCount(); i++) {
     if (cpu_set.IsEnabled(i))
-      accumulated_transition_count += GetCPUTotalTransitionCount(i);
+      accumulated_transition_count += GetTotalTransitionCount(i);
   }
 
   return accumulated_transition_count / cpu_set.NumEnabled();
@@ -380,6 +381,7 @@ static int get_max_freq_khz(int cpuid) {
   fclose(fp);
 
   return max_freq_khz;
+}
 }
 
 int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
@@ -453,7 +455,7 @@ int SetupThreadAffinityMasks() {
   std::vector<int> cpu_max_freq_khz(g_cpucount);
   for (int i = 0; i < g_cpucount; i++) {
     g_thread_affinity_mask_all.Enable(i);
-    int max_freq_khz = get_max_freq_khz(i);
+    int max_freq_khz = cpu::get_max_freq_khz(i);
 
     cpu_max_freq_khz[i] = max_freq_khz;
 

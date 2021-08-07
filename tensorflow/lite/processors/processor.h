@@ -9,7 +9,8 @@ namespace tflite {
 namespace impl {
 namespace processor {
 int GetUpdateIntervalMs(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
-int GetScalingFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
+int GetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
+int GetTargetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
 std::vector<int> GetAvailableFrequenciesKhz(TfLiteDeviceFlags flag, CpuSet cpu_set = {});
 }
 }  // namespace impl
