@@ -300,7 +300,7 @@ cc_library(
         "@gemmlowp",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/tools:logging",
-        "//tensorflow/lite/processors:cpu",
+        "//tensorflow/lite/processors:processor",
         "//tensorflow/lite:external_cpu_backend_context",
     ],
 )
