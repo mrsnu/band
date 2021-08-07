@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <mutex>
 
 namespace tflite {
 namespace impl {
@@ -38,5 +39,22 @@ std::vector<int> TryReadInts(std::vector<std::string> paths) {
 std::string TryReadString(std::vector<std::string> paths) {
   return TryRead<std::string>(paths);
 }
+
+bool IsRooted() {
+  static std::once_flag flag;
+  static bool is_rooted = false;
+
+#if defined __ANDROID__ || defined __linux__
+  std::call_once(
+      flag,
+      [](bool& is_rooted) {
+        is_rooted = system("ps | grep root > /dev/null 2> /dev/null") == 0;
+      },
+      is_rooted);
+#endif
+
+  return is_rooted;
+}
+
 }  // namespace impl
 }  // namespace tflite

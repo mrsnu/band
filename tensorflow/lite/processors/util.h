@@ -10,6 +10,7 @@ namespace impl {
 int TryReadInt(std::vector<std::string> paths);
 std::vector<int> TryReadInts(std::vector<std::string> paths);
 std::string TryReadString(std::vector<std::string> paths);
+bool IsRooted();
 
 }  // namespace impl
 }  // namespace tflite
