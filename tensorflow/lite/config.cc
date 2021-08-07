@@ -97,6 +97,13 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     }
     planner_config.schedulers.push_back(static_cast<TfLiteSchedulerType>(scheduler_id));
   }
+  // 4. Planner CPU masks
+  if (!root["planner_cpu_masks"].isNull()) {
+    planner_config.cpu_masks =
+        impl::TfLiteCPUMaskGetMask(root["planner_cpu_masks"].asCString());
+  } else {
+    planner_config.cpu_masks = interpreter_config.cpu_masks;
+  }
 
   // Set Worker configs
   if (!root["workers"].isNull()) {

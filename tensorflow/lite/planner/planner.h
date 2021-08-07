@@ -120,6 +120,9 @@ class Planner {
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
+  CpuSet cpu_set_;
+  bool need_cpu_update_ = false;
+
   SafeBool planner_safe_bool_;
 
   // Jobs Finished
