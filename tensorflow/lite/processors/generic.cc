@@ -35,7 +35,7 @@ std::vector<std::string> GetPaths(TfLiteDeviceFlags device_flag, std::string suf
 
 int GetMinFrequencyKhz(TfLiteDeviceFlags device_flag) {
 #if defined __ANDROID__ || defined __linux__
-  return TryReadInt(GetPaths(device_flag, "min_freq")) * 1000;
+  return TryReadInt(GetPaths(device_flag, "min_freq")) / 1000;
 #elif
   return -1;
 #endif
@@ -43,7 +43,7 @@ int GetMinFrequencyKhz(TfLiteDeviceFlags device_flag) {
 
 int GetMaxFrequencyKhz(TfLiteDeviceFlags device_flag) {
 #if defined __ANDROID__ || defined __linux__
-  return TryReadInt(GetPaths(device_flag, "max_freq")) * 1000;
+  return TryReadInt(GetPaths(device_flag, "max_freq")) / 1000;
 #elif
   return -1;
 #endif
@@ -51,7 +51,7 @@ int GetMaxFrequencyKhz(TfLiteDeviceFlags device_flag) {
 
 int GetFrequencyKhz(TfLiteDeviceFlags device_flag) {
 #if defined __ANDROID__ || defined __linux__
-  return TryReadInt(GetPaths(device_flag, "cur_freq")) * 1000;
+  return TryReadInt(GetPaths(device_flag, "cur_freq")) / 1000;
 #elif
   return -1;
 #endif
@@ -59,7 +59,7 @@ int GetFrequencyKhz(TfLiteDeviceFlags device_flag) {
 
 int GetTargetFrequencyKhz(TfLiteDeviceFlags device_flag) {
 #if defined __ANDROID__ || defined __linux__
-  return TryReadInt(GetPaths(device_flag, "target_freq")) * 1000;
+  return TryReadInt(GetPaths(device_flag, "target_freq")) / 1000;
 #elif
   return -1;
 #endif
@@ -78,7 +78,7 @@ std::vector<int> GetAvailableFrequenciesKhz(TfLiteDeviceFlags device_flag) {
 #if defined __ANDROID__ || defined __linux__
   frequenciesMhz = TryReadInts(GetPaths(device_flag, "available_frequencies"));
   for (size_t i = 0; i < frequenciesMhz.size(); i++) {
-    frequenciesMhz[i] *= 1000;
+    frequenciesMhz[i] /= 1000;
   }
 #endif
   return frequenciesMhz;
