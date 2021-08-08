@@ -815,7 +815,7 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
 
     std::set<int> real_outputs;
     if (op_indices.size() == operators->size()) {
-      // Entire model case doesn't need to consider externel nodes
+      // Entire model case doesn't need to consider external nodes
       std::set_difference(node_outputs.begin(), node_outputs.end(),
                     node_inputs.begin(), node_inputs.end(),
                     std::inserter(real_outputs, real_outputs.begin()));
