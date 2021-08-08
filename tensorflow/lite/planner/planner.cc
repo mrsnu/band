@@ -450,10 +450,10 @@ void Planner::PrepareReenqueue(Job& job) {
 
 void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
   if (!log_processor_frequency_) return;
+  std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
   auto cpu_set = worker->GetWorkerThreadAffinity();
   auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
   if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
-    std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
     job.start_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
     job.start_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
     job.start_transition_count = cpu::GetTotalTransitionCount(cpu_set);
@@ -464,10 +464,10 @@ void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
 
 void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
   if (!log_processor_frequency_) return;
+  std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
   auto cpu_set = worker->GetWorkerThreadAffinity();
   auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
   if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
-    std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
     job.end_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
     job.end_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
     job.end_transition_count = cpu::GetTotalTransitionCount(cpu_set);
