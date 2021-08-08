@@ -279,7 +279,7 @@ int GetCPUUpTransitionLatencyMs(int cpu) {
     fclose(fp);
     if (latency_ns != 0) {
       // nanoseconds to milliseconds
-      return latency_ns * 1000000;
+      return latency_ns / 1000000;
     }
   }
 
@@ -293,7 +293,7 @@ int GetCPUUpTransitionLatencyMs(int cpu) {
     fscanf(fp, "%d", &latency_us);
     fclose(fp);
     // microseconds to milliseconds
-    return latency_us * 1000;
+    return latency_us / 1000;
   }
 
 #endif
@@ -326,7 +326,7 @@ int GetCPUDownTransitionLatencyMs(int cpu) {
     fclose(fp);
     if (latency_ns != 0) {
       // nanoseconds to milliseconds
-      return latency_ns * 1000000;
+      return latency_ns / 1000000;
     }
   }
 
@@ -340,7 +340,7 @@ int GetCPUDownTransitionLatencyMs(int cpu) {
     fscanf(fp, "%d", &latency_us);
     fclose(fp);
     // microseconds to milliseconds
-    return latency_us * 1000;
+    return latency_us / 1000;
   }
 
 #endif
