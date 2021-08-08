@@ -14,6 +14,8 @@ class LeastSlackFirstScheduler : public Scheduler {
     need_fallback_subgraphs_ = true;
     worker_type_ = kGlobalQueue;
   }
+
+ private:
   void Schedule(JobQueue& requests) override;
   int64_t GetSlackTime(const Job& job);
   void SortBySlackTime(JobQueue& requests);
