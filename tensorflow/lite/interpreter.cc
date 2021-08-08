@@ -147,7 +147,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   }
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (planner_->RequireFallbackSubgraphs()) {
+  if (planner_->NeedFallbackSubgraphs()) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
 
