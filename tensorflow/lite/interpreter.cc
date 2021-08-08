@@ -933,7 +933,9 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
       std::vector<int> max_intervals = {0, update_interval, update_interval * 2,
                                         update_interval * 4};
 
-      if (kTfLiteGPU) {
+      // Give more time to GPU, as it requires more time to completely 
+      // cool down to reach lowest frequency.
+      if (device == kTfLiteGPU) {
         max_intervals.push_back(update_interval * 8);
       }
 

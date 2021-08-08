@@ -701,6 +701,7 @@ class Interpreter {
   
   void UpdateInvokedLatency(const int subgraph_idx, int64_t latency, int64_t frequency);
   int64_t GetExpectedLatency(const int subgraph_idx);
+  // Start frequency based estimation. Fall back to GetExpectedLatency if fails
   int64_t GetFrequencyBasedExpectedLatency(const int subgraph_idx, int64_t frequency);
   int64_t GetProfiledLatency(SubgraphKey& key);
 
