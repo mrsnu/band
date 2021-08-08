@@ -67,10 +67,6 @@ class Planner {
 
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
-  
-  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
-  void UpdateJobStartStatus(Job& job, Worker* worker) const;
-  void UpdateJobEndStatus(Job& job, Worker* worker) const;
 
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
@@ -88,7 +84,8 @@ class Planner {
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueue(JobQueue& local_jobs);
   void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
-  void UpdateJobWorkerStatus(Job& job, Worker* worker) const;
+  void UpdateJobStartStatus(Job& job, Worker* worker) const;
+  void UpdateJobEndStatus(Job& job, Worker* worker) const;
 
   // Enqueue the request to the worker.
   void EnqueueToWorkers(ScheduleAction& action);
