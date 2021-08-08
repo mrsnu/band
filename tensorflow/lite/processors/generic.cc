@@ -74,14 +74,14 @@ int GetPollingIntervalMs(TfLiteDeviceFlags device_flag) {
 }
 
 std::vector<int> GetAvailableFrequenciesKhz(TfLiteDeviceFlags device_flag) {
-  std::vector<int> frequenciesMhz;
+  std::vector<int> frequencies; // hz
 #if defined __ANDROID__ || defined __linux__
-  frequenciesMhz = TryReadInts(GetPaths(device_flag, "available_frequencies"));
-  for (size_t i = 0; i < frequenciesMhz.size(); i++) {
-    frequenciesMhz[i] /= 1000;
+  frequencies = TryReadInts(GetPaths(device_flag, "available_frequencies"));
+  for (size_t i = 0; i < frequencies.size(); i++) {
+    frequencies[i] /= 1000;
   }
 #endif
-  return frequenciesMhz;
+  return frequencies;
 }
 
 std::vector<std::pair<int, int>> GetClockStats(TfLiteDeviceFlags device_flag) {
