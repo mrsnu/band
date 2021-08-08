@@ -2,20 +2,23 @@
 //
 // Copyright (C) 2017 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the BSD 3-Clause License (the "License"); you may not use this file except
-// in compliance with the License. You may obtain a copy of the License at
+// Licensed under the BSD 3-Clause License (the "License"); you may not use this
+// file except in compliance with the License. You may obtain a copy of the
+// License at
 //
 // https://opensource.org/licenses/BSD-3-Clause
 //
-// Unless required by applicable law or agreed to in writing, software distributed
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the
-// specific language governing permissions and limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations under
+// the License.
 
 #include "tensorflow/lite/processors/cpu.h"
-#include "tensorflow/lite/processors/util.h"
 
 #include <cstring>
+
+#include "tensorflow/lite/processors/util.h"
 #if defined __ANDROID__ || defined __linux__
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -107,7 +110,9 @@ int GetCPUCount() {
   return count;
 }
 
-int GetLittleCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteLittle).NumEnabled(); }
+int GetLittleCPUCount() {
+  return TfLiteCPUMaskGetSet(kTfLiteLittle).NumEnabled();
+}
 
 int GetBigCPUCount() { return TfLiteCPUMaskGetSet(kTfLiteBig).NumEnabled(); }
 
@@ -125,16 +130,18 @@ int GetTargetMaxFrequencyKhz(int cpu) {
 
 int GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  int accumulated_frequency = 0;
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_frequency = 0;
 
-  for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetTargetMaxFrequencyKhz(i);
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i))
+        accumulated_frequency += GetTargetMaxFrequencyKhz(i);
+    }
+
+    return accumulated_frequency / cpu_set.NumEnabled();
   }
-
-  return accumulated_frequency / cpu_set.NumEnabled();
-#elif
-  return -1;
 #endif
+  return -1;
 }
 
 int GetTargetMinFrequencyKhz(int cpu) {
@@ -150,16 +157,18 @@ int GetTargetMinFrequencyKhz(int cpu) {
 
 int GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  int accumulated_frequency = 0;
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_frequency = 0;
 
-  for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetTargetMinFrequencyKhz(i);
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i))
+        accumulated_frequency += GetTargetMinFrequencyKhz(i);
+    }
+
+    return accumulated_frequency / cpu_set.NumEnabled();
   }
-
-  return accumulated_frequency / cpu_set.NumEnabled();
-#elif
-  return -1;
 #endif
+  return -1;
 }
 
 int GetTargetFrequencyKhz(int cpu) {
@@ -168,23 +177,24 @@ int GetTargetFrequencyKhz(int cpu) {
                          "/cpufreq/scaling_cur_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
                          std::to_string(cpu) + "/scaling_cur_freq"});
-#elif
-  return -1;
 #endif
+  return -1;
 }
 
 int GetTargetFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  int accumulated_frequency = 0;
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_frequency = 0;
 
-  for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetTargetFrequencyKhz(i);
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i))
+        accumulated_frequency += GetTargetFrequencyKhz(i);
+    }
+
+    return accumulated_frequency / cpu_set.NumEnabled();
   }
-
-  return accumulated_frequency / cpu_set.NumEnabled();
-#elif
-  return -1;
 #endif
+  return -1;
 }
 
 int GetFrequencyKhz(int cpu) {
@@ -200,19 +210,21 @@ int GetFrequencyKhz(int cpu) {
 
 int GetFrequencyKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  int accumulated_frequency = 0;
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_frequency = 0;
 
-  for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) accumulated_frequency += GetFrequencyKhz(i);
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i)) accumulated_frequency += GetFrequencyKhz(i);
+    }
+
+    return accumulated_frequency / cpu_set.NumEnabled();
   }
-
-  return accumulated_frequency / cpu_set.NumEnabled();
 #elif
   return -1;
 #endif
 }
 
-std::vector<int> GetAvailableFrequenciesKhz(const CpuSet &cpu_set) {
+std::vector<int> GetAvailableFrequenciesKhz(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     // Assuming that there is one cluster group
@@ -235,8 +247,9 @@ std::vector<int> GetAvailableFrequenciesKhz(const CpuSet &cpu_set) {
 int GetUpTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   int cpu_transition =
-      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
-            "/schedutil/up_rate_limit_us"}) / 1000;
+      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" +
+                  std::to_string(cpu) + "/schedutil/up_rate_limit_us"}) /
+      1000;
   if (cpu_transition == 0) {
     return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                        "/cpufreq/cpuinfo_transition_latency"}) /
@@ -251,11 +264,13 @@ int GetUpTransitionLatencyMs(int cpu) {
 // Assuming that there is one cluster group
 int GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i)) {
-      int transition_latency = GetUpTransitionLatencyMs(i);
-      if (transition_latency > 0) {
-        return transition_latency;
+  if (cpu_set.NumEnabled() > 0) {
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i)) {
+        int transition_latency = GetUpTransitionLatencyMs(i);
+        if (transition_latency > 0) {
+          return transition_latency;
+        }
       }
     }
   }
@@ -266,11 +281,13 @@ int GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
 int GetDownTransitionLatencyMs(int cpu) {
 #if defined __ANDROID__ || defined __linux__
   int cpu_transition =
-      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
-            "/schedutil/down_rate_limit_us"}) / 1000;
+      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" +
+                  std::to_string(cpu) + "/schedutil/down_rate_limit_us"}) /
+      1000;
   if (cpu_transition == 0) {
     return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                  "/cpufreq/cpuinfo_transition_latency"}) / 1000000;
+                       "/cpufreq/cpuinfo_transition_latency"}) /
+           1000000;
   } else {
     return cpu_transition;
   }
@@ -308,14 +325,16 @@ int GetTotalTransitionCount(int cpu) {
 
 int GetTotalTransitionCount(const CpuSet& cpu_set) {
 #if defined __ANDROID__ || defined __linux__
-  int accumulated_transition_count = 0;
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_transition_count = 0;
 
-  for (int i = 0; i < GetCPUCount(); i++) {
-    if (cpu_set.IsEnabled(i))
-      accumulated_transition_count += GetTotalTransitionCount(i);
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i))
+        accumulated_transition_count += GetTotalTransitionCount(i);
+    }
+
+    return accumulated_transition_count / cpu_set.NumEnabled();
   }
-
-  return accumulated_transition_count / cpu_set.NumEnabled();
 #elif
   return -1;
 #endif
@@ -323,7 +342,6 @@ int GetTotalTransitionCount(const CpuSet& cpu_set) {
 
 #if defined __ANDROID__ || defined __linux__
 static int get_max_freq_khz(int cpuid) {
-
   // first try, for all possible cpu
   char path[256];
   sprintf(path, "/sys/devices/system/cpu/cpufreq/stats/cpu%d/time_in_state",
