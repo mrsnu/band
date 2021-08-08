@@ -190,11 +190,11 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
           HandleSLOViolatedJob(request);
           continue;
         }
+        // update job status before we copy
+        UpdateJobStartStatus(request, worker);
         if (!worker->GiveJob(request)) {
           PrepareReenqueue(request);
           EnqueueRequest(request, true);
-        } else {
-          UpdateJobWorkerStatus(request, worker);
         }
       }
       worker->GetRequestCv().notify_one();
