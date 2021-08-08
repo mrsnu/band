@@ -17,7 +17,7 @@ class LeastSlackFirstScheduler : public Scheduler {
 
  private:
   void Schedule(JobQueue& requests) override;
-  int64_t GetSlackTime(const Job& job);
+  int64_t GetSlackTime(int64_t current_time, const Job& job);
   void SortBySlackTime(JobQueue& requests);
   void UpdateExpectedLatency(JobQueue& requests);
 };
