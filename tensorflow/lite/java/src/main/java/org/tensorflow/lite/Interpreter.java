@@ -137,13 +137,13 @@ public final class Interpreter implements AutoCloseable {
    * Registers a model to run inference and a set of custom {@link #Options}.
    *
    * @param modelFile: a file of a pre-trained TF Lite model
-   * @param options: a set of options for customizing interpreter behavior
+   * @param modelName: a name of model to be used for profiling
    * @return an ID of the model to use the {@link #run(int, Object, Object)} method.
    * @throws IllegalArgumentException if {@code modelFile} does not encode a valid TensorFlow Lite
    *     model.
    */
-  public int registerModel(@NonNull File modelFile, Options options) {
-    return wrapper.registerModel(modelFile.getAbsolutePath(), options);
+  public int registerModel(@NonNull File modelFile, String fileName) {
+    return wrapper.registerModel(modelFile.getAbsolutePath(), fileName);
   }
 
   /**
@@ -154,37 +154,61 @@ public final class Interpreter implements AutoCloseable {
    * direct {@link ByteBuffer} of nativeOrder() that contains the bytes content of a model.
    *
    * @param byteBuffer: a byte buffer of a pre-trained TF Lite model
-   * @param options: a set of options for customizing interpreter behavior
+   * @param modelName: a name of model to be used for profiling
    * @return an ID of the model to use the {@link #run(int, Object, Object)} method.
    * @throws IllegalArgumentException if {@code byteBuffer} is not a {@link MappedByteBuffer} nor a
    *     direct {@link Bytebuffer} of nativeOrder.
    */
-  public int registerModel(@NonNull ByteBuffer byteBuffer, Options options) {
-    return wrapper.registerModel(byteBuffer, options);
+  public int registerModel(@NonNull ByteBuffer byteBuffer, String fileName) {
+    return wrapper.registerModel(byteBuffer, fileName);
   }
 
   public void runSync(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs});
+    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, 0);
+  }
+
+  public void runSync(
+      int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs, long slo) {
+    checkNotClosed();
+    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, slo);
   }
 
   public void runSyncMultipleRequests(
     @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
     checkNotClosed();
-    wrapper.runSync(modelIds, inputs, outputs);
+    wrapper.runSync(modelIds, inputs, outputs, 0);
+  }
+
+  public void runSyncMultipleRequests(
+      @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs, long slo) {
+    checkNotClosed();
+    wrapper.runSync(modelIds, inputs, outputs, slo);
   }
 
   public int runAsync(
     int modelId, @NonNull Tensor[] inputs) {
     checkNotClosed();
-    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs})[0];
+    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs}, 0)[0];
+  }
+
+  public int runAsync(
+      int modelId, @NonNull Tensor[] inputs, long slo) {
+    checkNotClosed();
+    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs}, slo)[0];
   }
 
   public int[] runAsyncMultipleRequests(
     int[] modelIds, @NonNull Tensor[][] inputs) {
     checkNotClosed();
-    return wrapper.runAsync(modelIds, inputs);
+    return wrapper.runAsync(modelIds, inputs, 0);
+  }
+
+  public int[] runAsyncMultipleRequests(
+      int[] modelIds, @NonNull Tensor[][] inputs, long slo) {
+    checkNotClosed();
+    return wrapper.runAsync(modelIds, inputs, slo);
   }
 
   public void wait(int jobId, @NonNull Tensor[] outputs) {

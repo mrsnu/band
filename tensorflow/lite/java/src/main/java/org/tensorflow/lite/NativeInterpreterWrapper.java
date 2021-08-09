@@ -39,20 +39,14 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     interpreterHandle = createInterpreter(errorHandle, jsonPath);
   }
 
-  int registerModel(String modelPath, Interpreter.Options options) {
-    if (options == null) {
-      options = new Interpreter.Options();
-    }
+  int registerModel(String modelPath, String modelName) {
     long modelHandle = createModel(modelPath, errorHandle);
-    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle);
+    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle, modelName);
     modelHandles.put(modelId, modelHandle);
     return modelId;
   }
 
-  int registerModel(ByteBuffer buffer, Interpreter.Options options) {
-    if (options == null) {
-      options = new Interpreter.Options();
-    }
+  int registerModel(ByteBuffer buffer, String modelName) {
     if (buffer == null
         || (!(buffer instanceof MappedByteBuffer)
         && (!buffer.isDirect() || buffer.order() != ByteOrder.nativeOrder()))) {
@@ -62,7 +56,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     }
     ByteBuffer modelByteBuffer = buffer;
     long modelHandle = createModelWithBuffer(modelByteBuffer, errorHandle);
-    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle);
+    int modelId = registerModel(interpreterHandle, modelHandle, errorHandle, modelName);
     if (modelId == -1) {
       throw new IllegalArgumentException("Failed to register model. Invalid model id: " + modelId);
     }
@@ -87,11 +81,11 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   /** Sets inputs, runs model inference and returns outputs. */
-  void runSync(int[] modelIds, Tensor[][] modelInputs, Tensor[][] modelOutputs) {
+  void runSync(int[] modelIds, Tensor[][] modelInputs, Tensor[][] modelOutputs, long slo) {
     inferenceDurationNanoseconds = -1;
 
     long inferenceStartNanos = System.nanoTime();
-    int[] jobIds = runAsync(modelIds, modelInputs);
+    int[] jobIds = runAsync(modelIds, modelInputs, slo);
     wait(jobIds, modelOutputs);
     long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
 
@@ -99,7 +93,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     this.inferenceDurationNanoseconds = inferenceDurationNanoseconds;
   }
 
-  int[] runAsync(int[] modelIds, Tensor[][] modelInputs) {
+  int[] runAsync(int[] modelIds, Tensor[][] modelInputs, long slo) {
     if (modelIds == null) {
       throw new IllegalArgumentException("Input error: modelIds should not be null.");
     }
@@ -125,10 +119,10 @@ final class NativeInterpreterWrapper implements AutoCloseable {
       }
     }
 
-    return runAsync(modelIds, inputHandles, interpreterHandle, errorHandle);
+    return runAsync(modelIds, inputHandles, interpreterHandle, errorHandle, slo);
   }
 
-  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle);
+  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle, long slo);
 
   void wait(int[] jobIds, Tensor[][] modelOutputs) {
     if (jobIds == null) {
@@ -251,7 +245,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
   private static native long createInterpreter(long errorHandle, String jsonPath);
 
-  private static native int registerModel(long interpreterHandle, long modelHandle, long errorHandle);
+  private static native int registerModel(long interpreterHandle, long modelHandle, long errorHandle, String modelName);
 
   private static native void resetVariableTensors(long interpreterHandle, long errorHandle, int modelId);
 
