@@ -38,17 +38,16 @@ limitations under the License.
 namespace tflite {
 // data structure for identifying subgraphs within whole models
 struct SubgraphKey {
-  SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
+  SubgraphKey(int model_id = -1, int worker_id = -1,
               int start = -1, int end = -1)
       : model_id(model_id),
-        device_flag(device_flag),
+        worker_id(worker_id),
         input_ops(start != -1 ? std::set<int>({start}) : std::set<int>()),
         output_ops(end != -1 ? std::set<int>({end}) : std::set<int>()) {}
-
-  SubgraphKey(int model_id, TfLiteDeviceFlags device_flag,
+  SubgraphKey(int model_id, int worker_id,
               std::set<int> input_ops, std::set<int> output_ops)
       : model_id(model_id),
-        device_flag(device_flag),
+        worker_id(worker_id),
         input_ops(input_ops),
         output_ops(output_ops) {}
 
@@ -57,8 +56,8 @@ struct SubgraphKey {
       return model_id < key.model_id;
     }
 
-    if (device_flag != key.device_flag) {
-      return device_flag < key.device_flag;
+    if (worker_id != key.worker_id) {
+      return worker_id < key.worker_id;
     }
 
     if (input_ops != key.input_ops) {
@@ -72,7 +71,7 @@ struct SubgraphKey {
   std::string GetOutputOpsString() const;
 
   int model_id;
-  TfLiteDeviceFlags device_flag;
+  int worker_id;
   std::set<int> input_ops;
   std::set<int> output_ops;
 };
@@ -119,6 +118,7 @@ struct Job {
   // Current status for execution (Valid after planning)
   JobStatus status = kTfLiteJobQueued;
   int subgraph_idx = -1;
+  int worker_id = -1;
   int device_id = -1;
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field

@@ -162,19 +162,18 @@ void DeviceQueueWorker::Work() {
 void DeviceQueueWorker::TryWorkSteal() {
   std::shared_ptr<Planner> planner_ptr = planner_.lock();
   if (!planner_ptr) {
-    TFLITE_LOG(ERROR) << "Worker " << device_flag_
+    TFLITE_LOG(ERROR) << "Worker " << worker_id_
                       << " TryWorkSteal() Failed to acquire pointer to Planner";
     return;
   }
 
   Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
   int64_t max_latency_gain = -1;
-  int max_latency_gain_device = -1;
+  int max_latency_gain_worker = -1;
   int max_latency_gain_subgraph_idx = -1;
-  for (auto& device_and_worker : interpreter_ptr->GetWorkers()) {
-    TfLiteDeviceFlags target_device = device_and_worker.first;
-    Worker* target_worker = device_and_worker.second.get();
-    if (target_device == device_flag_) {
+  for (auto& worker : interpreter_ptr->GetWorkers()) {
+    Worker* target_worker = worker.get();
+    if (target_worker->GetWorkerId() == worker_id_) {
       continue;
     }
 
@@ -204,7 +203,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     int64_t latency_gain = waiting_time - expected_latency;
     if (latency_gain > max_latency_gain) {
       max_latency_gain = latency_gain;
-      max_latency_gain_device = target_device;
+      max_latency_gain_worker = target_worker->GetWorkerId();
       max_latency_gain_subgraph_idx = interpreter_ptr->GetSubgraphIdx(new_key);
     }
   }
@@ -214,7 +213,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     return;
   }
 
-  Worker* target_worker = interpreter_ptr->GetWorker(max_latency_gain_device);
+  Worker* target_worker = interpreter_ptr->GetWorker(max_latency_gain_worker);
   std::unique_lock<std::mutex> lock(target_worker->GetDeviceMtx(), std::defer_lock);
   std::unique_lock<std::mutex> my_lock(device_mtx_, std::defer_lock);
   std::lock(lock, my_lock);

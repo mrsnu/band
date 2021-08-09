@@ -36,6 +36,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "model_name\t"
              << "model_id\t"
              << "device_id\t"
+             << "worker_id\t"
              << "subgraph_idx\t"
              << "enqueue_time\t"
              << "invoke_time\t"
@@ -129,7 +130,7 @@ bool Planner::IsSLOViolated(Job& job) {
   if (job.slo_us > 0) {
     int64_t current_time = profiling::time::NowMicros();
     int64_t expected_latency =
-        device_waiting_[static_cast<TfLiteDeviceFlags>(job.device_id)] +
+        workers_waiting_[static_cast<TfLiteDeviceFlags>(job.device_id)] +
         job.profiled_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
@@ -176,27 +177,20 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
   }
 }
 
-void Planner::UpdateDeviceWaitingTime() {
-  for (int i = 0; i < kTfLiteNumDevices; ++i) {
-    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-    Worker* worker = GetInterpreter()->GetWorker(device_flag);
-    if (worker != nullptr) {
-      device_waiting_[device_flag] = worker->GetWaitingTime();
-    } else {
-      device_waiting_[device_flag] = -1;
-    }
+void Planner::UpdateWorkerWaitingTime() {
+  for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    workers_waiting_[i] = GetInterpreter()->GetWorker(i)->GetWaitingTime();
   }
 }
 
-std::set<TfLiteDeviceFlags> Planner::GetIdleDevices() {
-  std::set<TfLiteDeviceFlags> idle_devices;
-  for (int i = 0; i < kTfLiteNumDevices; ++i) {
-    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-    if (device_waiting_[device_flag] == 0) {
-      idle_devices.insert(device_flag);
+std::set<int> Planner::GetIdleWorkers() {
+  std::set<int> idle_workers;
+  for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    if (workers_waiting_[i] == 0) {
+      idle_workers.insert(i);
     }
   }
-  return idle_devices;
+  return idle_workers;
 }
 
 void Planner::Wait(std::vector<int> job_ids) {
@@ -331,6 +325,7 @@ void Planner::FlushFinishedJobs() {
                << job.model_fname << "\t"
                << job.model_id << "\t"
                << job.device_id << "\t"
+               << job.worker_id << "\t"
                << job.subgraph_idx << "\t"
                << job.enqueue_time << "\t"
                << job.invoke_time << "\t"
@@ -353,7 +348,8 @@ int Planner::IssueSchedId() { return sched_id_++; }
 void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   SubgraphKey& target_key = target_subgraph->GetKey();
   job.subgraph_idx = interpreter_->GetSubgraphIdx(target_key);
-  job.device_id = target_key.device_flag;
+  job.worker_id = target_key.worker_id;
+  job.device_id = interpreter_->GetWorkerDeviceFlag(target_key.worker_id);
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
   job.expected_execution_time = interpreter_->GetExpectedLatency(target_key);
@@ -396,51 +392,51 @@ int Planner::GetJobRecordIndex(int job_id) const {
   return job_id % NUM_FINISHED_RECORDS;
 }
 
-void Planner::TryUpdateModelDeviceMapping() {
+void Planner::TryUpdateModelWorkerMapping() {
   std::set<int> models = GetInterpreter()->models();
-  if (models.size() != model_device_map_.size()) {
-    // (# of available devices, vector of model_id)
-    std::map<int, std::set<int>> devices_per_models_map;
+  const int num_workers = GetInterpreter()->GetNumWorkers();
+  if (models.size() != model_worker_map_.size()) {
+    // (# of available workers, vector of model_id)
+    std::map<int, std::set<int>> workers_per_models_map;
     for (auto model_id : models) {
       int count = 0;
-      for (int device_idx = 0; device_idx < kTfLiteNumDevices; device_idx++) {
+      for (int worker_id = 0; worker_id < num_workers; ++worker_id) {
         if (GetInterpreter()->GetSubgraphIdx(
-                model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
+                model_id, worker_id) != -1) {
           count++;
         }
       }
-      devices_per_models_map[count].insert(model_id);
+      workers_per_models_map[count].insert(model_id);
     }
 
-    int device_idx = 0;
-    while (devices_per_models_map.size()) {
+    int worker_id = 0;
+    while (workers_per_models_map.size()) {
       // Loop through models in ascending order
       // based on # of available devices
       // (Assign models that has limited support first)
       int selected_model_id = -1;
-      for (auto& devices_per_models : devices_per_models_map) {
-        for (int model_id : devices_per_models.second) {
+      for (auto& workers_per_models : workers_per_models_map) {
+        for (int model_id : workers_per_models.second) {
           if (GetInterpreter()->GetSubgraphIdx(
-                  model_id, static_cast<TfLiteDeviceFlags>(device_idx)) != -1) {
+                  model_id, worker_id) != -1) {
             selected_model_id = model_id;
             break;
           }
         }
 
         if (selected_model_id != -1) {
-          devices_per_models.second.erase(selected_model_id);
-          if (devices_per_models.second.size() == 0)
-            devices_per_models_map.erase(devices_per_models.first);
+          workers_per_models.second.erase(selected_model_id);
+          if (workers_per_models.second.size() == 0)
+            workers_per_models_map.erase(workers_per_models.first);
           break;
         }
       }
 
       if (selected_model_id != -1) {
-        model_device_map_[selected_model_id] =
-            static_cast<TfLiteDeviceFlags>(device_idx);
+        model_worker_map_[selected_model_id] = worker_id;
       }
 
-      device_idx = (device_idx + 1) % kTfLiteNumDevices;
+      worker_id = (worker_id + 1) % num_workers;
     };
   }
 }
@@ -460,9 +456,9 @@ void Planner::Plan() {
     }
 
     CopyToLocalQueue(local_queues_[0]);
-    TryUpdateModelDeviceMapping();
+    TryUpdateModelWorkerMapping();
     for (size_t i = 0; i < local_queues_.size(); ++i) {
-      UpdateDeviceWaitingTime();
+      UpdateWorkerWaitingTime();
       schedulers_[i]->Schedule(local_queues_[i]);
       EnqueueToWorkers(schedulers_[i]->GetAction());
     }
@@ -471,7 +467,7 @@ void Planner::Plan() {
 
 void Scheduler::EnqueueAction(Job job, Subgraph* subgraph) {
   planner_->UpdateJobScheduleStatus(job, subgraph);
-  action_[subgraph->GetKey().device_flag].push_back(job);
+  action_[subgraph->GetKey().worker_id].push_back(job);
 }
 
 }  // namespace impl

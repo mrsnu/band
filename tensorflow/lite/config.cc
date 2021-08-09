@@ -109,34 +109,59 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     planner_config.cpu_masks = interpreter_config.cpu_masks;
   }
 
+  std::vector<bool> found_default_worker(kTfLiteNumDevices, false);
   // Set Worker configs
   if (!root["workers"].isNull()) {
-    for (auto const& key : root["workers"].getMemberNames()) {
-      size_t device_id = TfLiteDeviceGetFlag(key.c_str());
-      if (device_id == kTfLiteNumDevices) {
-        TFLITE_LOG(ERROR) << "Wrong `device` argument is given. " << key;
+    for (int i = 0; i < root["workers"].size(); ++i) {
+      auto worker_config_json = root["workers"][i];
+      
+      if (worker_config_json["device"].isNull()) {
+        TFLITE_LOG(ERROR) << "Please check if argument `device` is given in "
+                          << "the worker configs.";
         return kTfLiteError;
       }
 
-      auto worker_config_json = root["workers"][key];
+      TfLiteDeviceFlags device_flag =
+          TfLiteDeviceGetFlag(worker_config_json["device"].asCString());
+      if (device_flag == kTfLiteNumDevices) {
+        TFLITE_LOG(ERROR) << "Wrong `device` argument is given. "
+                          << worker_config_json["device"].asCString();
+        return kTfLiteError;
+      }
+
+      int device_idx = device_flag;
+      // Add additional device worker
+      if (found_default_worker[device_flag]) {
+        if (device_flag != kTfLiteCPU) {
+          // TODO: Support multiple accelerators (#139)
+          TFLITE_LOG(ERROR) << "Non-CPU processors are not allowed to have "
+                              "multiple workers for now.";
+          return kTfLiteError;
+        }
+        device_idx = worker_config.workers.size();
+        worker_config.workers.push_back(device_flag);
+        worker_config.cpu_masks.push_back(impl::kTfLiteNumCpuMasks);
+        worker_config.num_threads.push_back(0);
+      } else {
+        found_default_worker[device_flag] = true;
+      }
+
       // 1. worker CPU masks
       if (!worker_config_json["cpu_masks"].isNull()) {
         impl::TfLiteCPUMaskFlags flag = impl::TfLiteCPUMaskGetMask(
             worker_config_json["cpu_masks"].asCString());
-        if (device_id < kTfLiteNumDevices) {
-          worker_config.cpu_masks[device_id] = flag;
-        }
+        worker_config.cpu_masks[device_idx] = flag;
       }
 
       // 2. worker num threads
       if (!worker_config_json["num_threads"].isNull()) {
-        worker_config.num_threads[device_id] = worker_config_json["num_threads"].asInt();
+        worker_config.num_threads[device_idx] = worker_config_json["num_threads"].asInt();
       }
     }
   }
 
   // Update default values from interpreter
-  for (auto device_id = 0; device_id < kTfLiteNumDevices; ++device_id) {
+  for (auto device_id = 0; device_id < worker_config.workers.size(); ++device_id) {
     if (worker_config.cpu_masks[device_id] == impl::kTfLiteNumCpuMasks) {
       worker_config.cpu_masks[device_id] = interpreter_config.cpu_masks;
     }

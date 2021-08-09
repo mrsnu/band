@@ -62,7 +62,7 @@ class InterpreterBuilder {
       const OpResolver& op_resolver,
       std::unique_ptr<Interpreter>* interpreter,
       int model_id,
-      TfLiteDeviceFlags device_flag,
+      int worker_id,
       std::set<int> op_indices = {},
       int num_threads = -1);
 
@@ -71,7 +71,7 @@ class InterpreterBuilder {
       const OpResolver& op_resolver,
       std::unique_ptr<Interpreter>* interpreter,
       int model_id,
-      TfLiteDeviceFlags device_flag,
+      int worker_id,
       std::set<int> op_indices = {},
       int num_threads = -1);
 

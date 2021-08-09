@@ -6,7 +6,7 @@ namespace tflite {
 namespace impl {
 
 void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
-  DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
+  WorkerWaitingTime worker_waiting = GetWorkerWaitingTime();
   JobQueue local_jobs;
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
   local_jobs.insert(local_jobs.begin(), requests.begin(),
@@ -41,7 +41,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
               : next_job.previous_subgraph_indices.back();
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatency(
-              next_job.model_id, next_job.resolved_tensors, 0, device_waiting,
+              next_job.model_id, next_job.resolved_tensors, 0, worker_waiting,
               preceded_subgraph_index);
 
       if (largest_shortest_latency < best_subgraph.second) {
@@ -71,7 +71,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     }
     EnqueueAction(most_urgent_job, target_subgraph);
 
-    device_waiting[target_subgraph->GetKey().device_flag] +=
+    worker_waiting[target_subgraph->GetKey().worker_id] +=
         largest_shortest_latency;
   }
 }

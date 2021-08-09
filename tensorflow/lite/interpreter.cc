@@ -139,11 +139,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   auto& schedulers = runtime_config.planner_config.schedulers;
 
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
-  if (std::find(schedulers.begin(),
-                schedulers.end(),
-                kShortestExpectedLatency) != schedulers.end()) {
-    valid_devices.insert(kTfLiteCPUFallback);
-  }
 
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
@@ -223,15 +218,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   
 #endif  // defined(__ANDROID__)
 
-  // Create workers.
-  for (const TfLiteDeviceFlags device_flag : valid_devices) {
-    if (planner_->GetWorkerType() == kGlobalQueue) {
-      workers_[device_flag] = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
-    } else {
-      workers_[device_flag] = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
-    }
-  }
-
   // Initialize configurations.
   if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
     error_reporter_->Report("Interpreter::Init() failed.");
@@ -241,11 +227,26 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     error_reporter_->Report("Planner::Init() failed.");
     exit(-1);
   }
-  for (auto& worker : workers_) {
-    if (worker.second->Init(runtime_config.worker_config) != kTfLiteOk) {
-      error_reporter_->Report("Worker::Init() failed for worker : %s",
-                               TfLiteDeviceGetName(worker.first));
-      exit(-1);
+  
+  // Create workers.
+  auto& potential_workers = runtime_config.worker_config.workers;
+  for (int i = 0; i < potential_workers.size(); i++) {
+    TfLiteDeviceFlags device_flag = potential_workers[i];
+    if (valid_devices.find(device_flag) != valid_devices.end()) {
+      std::unique_ptr<Worker> worker;
+      if (planner_->GetWorkerType() == kGlobalQueue) {
+        worker = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
+      } else {
+        worker = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
+      }
+
+      if (worker->Init(runtime_config.worker_config, i) != kTfLiteOk) {
+        error_reporter_->Report("Worker::Init() failed for worker : %s",
+                                TfLiteDeviceGetName(device_flag));
+        exit(-1);
+      }
+
+      workers_.emplace_back(std::move(worker));
     }
   }
 }
@@ -783,6 +784,7 @@ void Interpreter::Profile(int model_id) {
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
+    TfLiteDeviceFlags device_flag = GetWorkerDeviceFlag(subgraph_key.worker_id);
 
     if (subgraph_key.model_id != model_id) {
       continue;
@@ -795,12 +797,15 @@ void Interpreter::Profile(int model_id) {
       int64_t profiled_latency = it->second;
       // TODO: Consider affinity of worker thread
       moving_averaged_latencies_[subgraph_key] = profiled_latency;
+      
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
                        << " model=" << subgraph_key.model_id
                        << " avg=" << profiled_latency << " us"
+                       << " worker="
+                       << subgraph_key.worker_id
                        << " device="
-                       << TfLiteDeviceGetName(subgraph_key.device_flag)
+                       << TfLiteDeviceGetName(device_flag)
                        << " start="
                        << subgraph_key.GetInputOpsString()
                        << " end=" 
@@ -809,16 +814,15 @@ void Interpreter::Profile(int model_id) {
     } else {
       std::thread t([&]() {
         auto cpu_set =
-            workers_[subgraph_key.device_flag]->GetWorkerThreadAffinity();
+            workers_[subgraph_key.worker_id]->GetWorkerThreadAffinity();
         SetCPUThreadAffinity(cpu_set);
-        if (subgraph_key.device_flag == kTfLiteCPU ||
-            subgraph_key.device_flag == kTfLiteCPUFallback) {
+        if (device_flag == kTfLiteCPU) {
           auto internal_backend =
               GetCpuBackendContext()->internal_backend_context();
           // Update internal cpu backend (ruy)
           internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
           internal_backend->SetMaxNumThreads(
-              workers_[subgraph_key.device_flag]->GetNumThreads());
+              workers_[subgraph_key.worker_id]->GetNumThreads());
         }
 
         for (int i = 0; i < num_warmups_; i++) {
@@ -838,7 +842,10 @@ void Interpreter::Profile(int model_id) {
         TFLITE_LOG(INFO) << "Profiling result\n"
                          << " model=" << subgraph_key.model_id
                          << " avg=" << latency << " us"
-                         << " device=" << TfLiteDeviceGetName(subgraph_key.device_flag)
+                         << " worker="
+                         << subgraph_key.worker_id
+                         << " device="
+                         << TfLiteDeviceGetName(device_flag)
                          << " start="
                          << subgraph_key.GetInputOpsString()
                          << " end=" 
@@ -897,7 +904,6 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
 
   switch (device) {
     case kTfLiteCPU:
-    case kTfLiteCPUFallback:
       // TODO #23: XNNPACK seems inefficient than default CPU
       if (targetDelegate == nullptr)
         // Only valid case to return Ok with nullptr
@@ -947,29 +953,41 @@ int Interpreter::GetSubgraphIdx(SubgraphKey subgraph_key) {
   }
 }
 
-Worker* Interpreter::GetWorker(int device_idx) {
-  TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
-  return GetWorker(device_flag);
+TfLiteDeviceFlags Interpreter::GetWorkerDeviceFlag(int worker_id) {
+  const Worker* worker = GetWorker(worker_id);
+  if (worker) {
+    return worker->GetDeviceFlag();
+  } else {
+    return kTfLiteNumDevices;
+  }
 }
 
-Worker* Interpreter::GetWorker(TfLiteDeviceFlags device_flag) {
-  auto it = workers_.find(device_flag);
-  if (it != workers_.end()) {
-    return it->second.get();
+int Interpreter::GetRepresentativeWorkerId(TfLiteDeviceFlags device_flag) {
+  for(auto it = workers_.begin(); it != workers_.end(); it++) {
+    if (it->get()->GetDeviceFlag() == device_flag) {
+      return it->get()->GetWorkerId();
+    }
+  }
+  return -1;
+}
+
+Worker* Interpreter::GetWorker(int worker_id) {
+  if (worker_id >= 0 && worker_id < workers_.size()) {
+    return workers_[worker_id].get();
   } else {
     return nullptr;
   }
 }
 
 std::set<int> Interpreter::GetSubgraphIdx(int model_id,
-                                          TfLiteDeviceFlags device_id,
+                                          int worker_id,
                                           int start_idx) {
   std::set<int> indices;
   for (auto& subgraph_key_id : subgraph_idx_map_) {
     const SubgraphKey& key = subgraph_key_id.first;
     int subgraph_index = subgraph_key_id.second;
 
-    if (key.model_id == model_id && key.device_flag == device_id
+    if (key.model_id == model_id && key.worker_id == worker_id
         && key.input_ops.find(start_idx) != key.input_ops.end()) {
       indices.insert(subgraph_index);
     }
@@ -978,19 +996,14 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
   return indices;
 }
 
-int Interpreter::GetSubgraphIdx(int model_id, int device_idx) {
-  TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
-  return GetSubgraphIdx(model_id, device_flag);
-}
-
-int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
+int Interpreter::GetSubgraphIdx(int model_id, int worker_id) {
   // start_idx and end_idx weren't specified, so we assume that the caller
   // intended to retrieve the whole model
   ModelSpec& spec = model_specs_[model_id];
   for (int i = 0; i < subgraphs_size(); i++) {
     Subgraph* current_subgraph = subgraph(i);
     if (current_subgraph->key_.model_id == model_id &&
-        current_subgraph->key_.device_flag == device_id &&
+        current_subgraph->key_.worker_id == worker_id &&
         current_subgraph->prev_subgraphs_.size() == 0 &&
         current_subgraph->next_subgraphs_.size() == 0) {
       return i;
@@ -1097,7 +1110,7 @@ TfLiteStatus Interpreter::AddFallbackSubgraphsPerDevice(
     // Switch between device and fallback 
     TfLiteDeviceFlags current_device = 
         is_fallback ?
-        kTfLiteCPUFallback : device_flag;
+        kTfLiteCPU : device_flag;
 
     // Get all op that has resolvable dependency to specific device
     while (found) {
@@ -1152,7 +1165,6 @@ TfLiteStatus Interpreter::AddUnitSubgraphs(
   if (!planner_->NeedFallbackSubgraphs()) {
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      if (device_flag == kTfLiteCPUFallback) continue;
       subgraph_indices.insert({device_flag, {}});
     }
     return kTfLiteOk;
@@ -1176,7 +1188,7 @@ TfLiteStatus Interpreter::AddUnitSubgraphs(
   for (int op_index = 0; op_index < num_ops; op_index++) {
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      if (device_flag == kTfLiteCPU || device_flag == kTfLiteCPUFallback) {
+      if (device_flag == kTfLiteCPU) {
         op_support_table[op_index] |= 1 << device_id;
         continue;
       }
@@ -1277,7 +1289,8 @@ TfLiteStatus Interpreter::AddUnitSubgraphs(
 
 void Interpreter::InvestigateModelSpec(int model_id) {
   // get the subgraph index for this model
-  int subgraph_index = GetSubgraphIdx(model_id, kTfLiteCPU);
+  int worker_id = GetRepresentativeWorkerId(kTfLiteCPU);
+  int subgraph_index = GetSubgraphIdx(model_id, worker_id);
   Subgraph* primary_subgraph = subgraph(subgraph_index);
 
   // this creates an empty ModelSpec
@@ -1341,7 +1354,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
 
-    if (device_flag == kTfLiteCPU || device_flag == kTfLiteCPUFallback) {
+    if (device_flag == kTfLiteCPU) {
       // no need to check supportability for CPU
       continue;
     }
@@ -1369,7 +1382,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
 std::pair<int, int64_t> Interpreter::GetShortestLatency(
     int model_id, std::set<int> resolved_tensors, int64_t start_time,
-    std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+    std::map<int, int64_t>& worker_waiting,
     int preceded_subgraph_index) {
   std::vector<int> subgraph_indices =
       GetSubgraphCandidates(model_id, resolved_tensors, preceded_subgraph_index);
@@ -1381,7 +1394,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
     // first, filter out the subgraphs that take longer than others with the
     // same start/end indices, since there's no reason to pick them
     std::pair<int, int64_t> target_subgraph =
-        GetShortestSubgraphIndex(iter->second, start_time, device_waiting);
+        GetShortestSubgraphIndex(iter->second, start_time, worker_waiting);
     Subgraph* subgraph_ptr = subgraph(target_subgraph.first);
     SubgraphKey& key = subgraph_ptr->GetKey();
 
@@ -1404,7 +1417,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
       // get the final latency
       local_min =
           GetShortestLatency(model_id, next_resolved_tensors, target_subgraph.second,
-                             device_waiting, target_subgraph.first);
+                             worker_waiting, target_subgraph.first);
     }
 
     // check if this subgraph is better than the best one
@@ -1469,14 +1482,14 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
 std::pair<int, int64_t>
 Interpreter::GetShortestSubgraphIndex(
     std::vector<int> subgraph_indices, int64_t start_time,
-    std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
+    std::map<int, int64_t>& worker_waiting) {
   int64_t min_latency = INT_MAX;
   int min_idx = 0;
 
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
 
-    int64_t waiting_time = device_waiting[key.device_flag];
+    int64_t waiting_time = worker_waiting[key.worker_id];
     int64_t expected_latency = GetExpectedLatency(key);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 

@@ -10,16 +10,15 @@ void FixedDeviceScheduler::Schedule(JobQueue& requests) {
     requests.pop_front();
 
     int model_id = to_execute.model_id;
-    int device_idx;
-    if (kTfLiteCPU <= to_execute.device_id &&
-        to_execute.device_id < kTfLiteNumDevices) {
-      device_idx = to_execute.device_id;
+    int worker_id;
+    if (worker_id >= 0 && GetInterpreter()->GetNumWorkers()) {
+      worker_id = to_execute.worker_id;
     } else {
-      device_idx = planner_->GetModelDeviceMap()[model_id];
+      worker_id = planner_->GetModelWorkerMap()[model_id];
     }
 
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(
-        model_id, static_cast<TfLiteDeviceFlags>(device_idx));
+        model_id, worker_id);
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
     EnqueueAction(to_execute, subgraph);
   }
