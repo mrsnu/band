@@ -712,10 +712,14 @@ class Interpreter {
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
       int preceded_subgraph_index = -1);
 
-  // Generate explicit subgraphs for fallback ops in `model_id`.
-  // Each second element of return vector represents a set of original node indexes
-  // for corresponding subgraph if it requires re-indexing.
-  std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> MakeSubgraphsForFallbackOps(const int model_id, const TfLiteDeviceFlags device_flag);
+  // Generate subgraphs for fallback ops in `model_id`.
+  // DeviceOpIndices contains device flag and op_indices of single subgraph.
+  using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
+  TfLiteStatus AddFallbackSubgraphsPerDevice(
+      const int model_id, const TfLiteDeviceFlags device_flag,
+      std::set<DeviceOpIndices>& subgraph_indices);
+  TfLiteStatus AddUnitSubgraphs(const int model_id,
+                                std::set<DeviceOpIndices>& subgraph_indices);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
     return own_external_cpu_backend_context_.get();
@@ -756,7 +760,11 @@ class Interpreter {
 
   // Smoothing constant to update profile result.
   // The smaller profile_smoothing_factor_, the smoother the profile results.
-  float profile_smoothing_factor_ = 0.1;
+  float profile_smoothing_factor_;
+
+  // Subgraph preparation type
+  // "fallback_per_device", "unit_subgraph"
+  std::string subgraph_preparation_type_;
 
   // Parameters for profiling.
   // The results during warmup period are not counted.
