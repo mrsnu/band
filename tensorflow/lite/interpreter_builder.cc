@@ -572,98 +572,78 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
 
-  // Device,ops to subgraph index map to avoid duplicate
-  // subgraph construction without input/output ops
-  std::map<std::pair<TfLiteDeviceFlags, std::set<int>>, int>
-      device_ops_to_subgraph_index;
-
-  // register subgraphs for all devices (skip CPU)
-  for (int i = 1; i < kTfLiteNumDevices; ++i) {
-    if (i == kTfLiteCPUFallback) {
-      // Skip for Fallback worker
-      continue;
-    }
-    TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-
-    std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices =
-        (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
-
-    for (auto& device_op_indices : subgraph_indices) {
-      std::string prefix;
-      int subgraph_idx = -1;
-      // Duplicate subgraph search without key
-      if (device_ops_to_subgraph_index.find(device_op_indices) !=
-          device_ops_to_subgraph_index.end()) {
-        prefix = "REUSE";
-        subgraph_idx = device_ops_to_subgraph_index[device_op_indices];
-      } else {
-        prefix = "ADDED";
-        auto new_subgraph =
-            CreateSubgraph(model, op_resolver, interpreter, model_id,
-                           device_op_indices.first, device_op_indices.second);
-        if (new_subgraph) {
-          subgraph_idx = (*interpreter)->AddSubgraph(std::move(new_subgraph));
-          device_ops_to_subgraph_index[device_op_indices] = subgraph_idx;
-        }
-      }
-
-      Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
-
-      if (subgraph == nullptr) {
-        TFLITE_LOG(ERROR) << "Failed to create subgraph";
+  // Prepare subgraphs candidates
+  std::set<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices;
+  const std::string& subgraph_preparation_type =
+      (*interpreter)->subgraph_preparation_type_;
+  if (subgraph_preparation_type == "fallback_per_device") {
+    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+      if (device_id == kTfLiteCPU || device_id == kTfLiteCPUFallback) {
         continue;
       }
-
-      auto subgraph_key = subgraph->GetKey();
-      std::set<int> input_tensors(subgraph->inputs().begin(),
-                                  subgraph->inputs().end());
-
-      for (auto device_op_to_subgraph_index : device_ops_to_subgraph_index) {
-        int potential_prev_subgraph_index = device_op_to_subgraph_index.second;
-        auto& potential_prev_subgraph_opset =
-            device_op_to_subgraph_index.first.second;
-        std::set<int> common_ops;
-        // Find common op btwn current subgraph and potential prev subgraph
-        std::set_intersection(potential_prev_subgraph_opset.begin(),
-                              potential_prev_subgraph_opset.end(),
-                              device_op_indices.second.begin(),
-                              device_op_indices.second.end(),
-                              std::inserter(common_ops, common_ops.begin()));
-        // Skip if there is one
-        if (!common_ops.empty()) {
-          continue;
-        }
-
-        Subgraph* potential_prev_subgraph =
-            (*interpreter)->subgraph(potential_prev_subgraph_index);
-
-        bool is_previous = false;
-        for (int tensor_index : potential_prev_subgraph->outputs()) {
-          if (input_tensors.find(tensor_index) != input_tensors.end()) {
-            is_previous = true;
-            break;
-          }
-        }
-
-        // Extensively create a connection between subgraphs when
-        // there are common tensors. Note that This logic cannot guarantees
-        // the execution capability as we don't consider resolved tensors here.
-        if (is_previous) {
-          TFLITE_LOG(INFO) << "Subgraph " << subgraph_idx << " is "
-                           << potential_prev_subgraph_index << "'s next";
-          if (subgraph->SetPrevSubgraph(potential_prev_subgraph) != kTfLiteOk) {
-            TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
-          }
-        }
+      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+      if ((*interpreter)
+              ->AddFallbackSubgraphsPerDevice(model_id, device_flag,
+                                              subgraph_indices) != kTfLiteOk) {
+        TFLITE_LOG(ERROR) << "AddFallbackSubgraphsPerDevice failed";
+        return -1;
       }
+    }
+  } else if (subgraph_preparation_type == "unit_subgraph") {
+    if ((*interpreter)->AddUnitSubgraphs(model_id, subgraph_indices) !=
+        kTfLiteOk) {
+      TFLITE_LOG(ERROR) << "AddUnitSubgraphs failed";
+      return -1;
+    }
+  } else {
+    TFLITE_LOG(ERROR) << "Wrong subgraph_preparation_type: "
+                      << subgraph_preparation_type;
+    return -1;
+  }
 
-      has_available_device = true;
-      TFLITE_LOG(INFO) << prefix << " Subgraph "
-                       << "Model : " << subgraph_key.model_id << " "
-                       << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
-                       << "From " << subgraph_key.GetInputOpsString() << " "
-                       << "To " << subgraph_key.GetOutputOpsString() << " "
-                       << "Index " << subgraph_idx;
+  // Create subgraphs
+  for (auto& device_op_indices : subgraph_indices) {
+    int subgraph_idx =
+        (*interpreter)
+            ->AddSubgraph(CreateSubgraph(model, op_resolver, interpreter,
+                                         model_id, device_op_indices.first,
+                                         device_op_indices.second));
+    Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
+    if (subgraph == nullptr) {
+      TFLITE_LOG(ERROR) << "Subgraph creation failure";
+      return -1;
+    }
+
+    has_available_device = true;
+
+    const SubgraphKey& subgraph_key = subgraph->GetKey();
+    TFLITE_LOG(INFO) << "ADDED Subgraph "
+                     << "Model : " << subgraph_key.model_id << " "
+                     << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
+                     << "From " << subgraph_key.GetInputOpsString() << " "
+                     << "To " << subgraph_key.GetOutputOpsString() << " "
+                     << "Index " << subgraph_idx;
+  }
+
+  TFLITE_LOG(INFO) << "# Subgraphs after adding atomic subgraphs: "
+                   << (*interpreter)->subgraphs_size();
+
+  // Set Prev - Next relation between subgraphs
+  std::set<int> model_subgraph_indices;
+  for (int i = 0; i < (*interpreter)->subgraphs_size(); i++) {
+    Subgraph* subgraph = (*interpreter)->subgraph(i);
+    if (subgraph != nullptr && subgraph->GetKey().model_id == model_id) {
+      model_subgraph_indices.insert(i);
+    }
+  }
+
+  for (auto& prev_subgraph_idx : model_subgraph_indices) {
+    for (auto& next_subgraph_idx : model_subgraph_indices) {
+      Subgraph* prev_subgraph = (*interpreter)->subgraph(prev_subgraph_idx);
+      Subgraph* next_subgraph = (*interpreter)->subgraph(next_subgraph_idx);
+      if (prev_subgraph_idx != next_subgraph_idx) {
+        next_subgraph->SetPrevSubgraph(prev_subgraph);
+      }
     }
   }
 
