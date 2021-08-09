@@ -561,7 +561,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   int cpu_worker_id = (*interpreter)->GetRepresentativeWorkerId(kTfLiteCPU);
   auto cpu_subgraph = CreateSubgraph(
-              model, op_resolver, interpreter, model_id,cpu_worker_id);
+              model, op_resolver, interpreter, model_id, cpu_worker_id);
   
   // Add entire model on CPU
   if ((*interpreter)

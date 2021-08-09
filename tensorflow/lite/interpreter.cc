@@ -1046,7 +1046,8 @@ TfLiteStatus Interpreter::AddFallbackSubgraphsPerDevice(
   }
 
   // TODO: Context-independent code / move to interpreter builder
-  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
+  int worker_id = GetRepresentativeWorkerId(kTfLiteCPU);
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, worker_id));
 
   std::set<int> resolved_tensors;
   std::set<int> remaining_ops;
@@ -1172,7 +1173,8 @@ TfLiteStatus Interpreter::AddUnitSubgraphs(
 
   // Prepare variables to use
   const int num_ops = model_specs_[model_id].num_ops;
-  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
+  const worker_id = GetRepresentativeWorkerId(kTfLiteCPU);
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, worker_id));
 
   // BitMask to check device support or not
   using BitMask = uint32_t;

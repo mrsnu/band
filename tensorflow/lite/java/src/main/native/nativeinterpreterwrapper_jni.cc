@@ -191,7 +191,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputNames(JNIEnv* env,
                    "input names.");
     return nullptr;
   }
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
   size_t size = interpreter->inputs(subgraph_index).size();
   jobjectArray names = static_cast<jobjectArray>(
       env->NewObjectArray(size, string_class, env->NewStringUTF("")));
@@ -208,7 +209,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateInputTensor(
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
 
   TfLiteTensor* input = TfLiteTensorCreateLike(
       interpreter->tensor(subgraph_index, interpreter->inputs(subgraph_index)[input_index]));
@@ -225,7 +227,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputCount(JNIEnv* env,
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
   return static_cast<jint>(interpreter->inputs(subgraph_index).size());
 }
 
@@ -235,7 +238,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateOutputTensor(
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
 
   TfLiteTensor* output = TfLiteTensorCreateLike(
       interpreter->tensor(subgraph_index, interpreter->outputs(subgraph_index)[output_index]));
@@ -252,7 +256,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputCount(JNIEnv* env,
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
   return static_cast<jint>(interpreter->outputs(subgraph_index).size());
 }
 
@@ -271,7 +276,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputNames(JNIEnv* env,
                    "output names.");
     return nullptr;
   }
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
   size_t size = interpreter->outputs(subgraph_index).size();
   jobjectArray names = static_cast<jobjectArray>(
       env->NewObjectArray(size, string_class, env->NewStringUTF("")));
@@ -539,7 +545,8 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputDataType(
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return -1;
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
   const int idx = static_cast<int>(output_idx);
   if (output_idx < 0 || output_idx >= interpreter->outputs(subgraph_index).size()) {
     ThrowException(env, kIllegalArgumentException,
