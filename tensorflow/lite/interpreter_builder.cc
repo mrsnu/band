@@ -799,11 +799,11 @@ int InterpreterBuilder::AddSubgraph(const ::tflite::Model* model,
         FlatBufferIntArrayToVector(subgraph->inputs());
     std::set<int> subgraph_inputs =
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
-    const std::set<int>& model_all_outputs =
+    const std::set<int>& all_node_outputs  =
         (*interpreter)->GetModelSpec(subgraph_key.model_id).node_output_tensors;
     const std::set<int>& model_outputs =
         (*interpreter)->GetModelSpec(subgraph_key.model_id).output_tensors;
-    std::set_union(model_all_outputs.begin(), model_all_outputs.end(),
+    std::set_union(all_node_outputs .begin(), all_node_outputs .end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
                    std::inserter(non_param_tensors, non_param_tensors.end()));
 
