@@ -122,7 +122,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     return runAsync(modelIds, inputHandles, interpreterHandle, errorHandle, slo);
   }
 
-  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle, long slo62G);
+  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle, long slo);
 
   void wait(int[] jobIds, Tensor[][] modelOutputs) {
     if (jobIds == null) {
