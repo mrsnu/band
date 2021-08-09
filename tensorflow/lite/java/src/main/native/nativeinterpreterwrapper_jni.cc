@@ -427,8 +427,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   if (error_reporter == nullptr) return 0;
 
   tflite::ModelConfig modelConfig;
-  const char* name = env->GetStringUTFChars(model_name, nullptr);
-  modelConfig.model_fname = name;
+  modelConfig.model_fname = env->GetStringUTFChars(model_name, nullptr);
   auto resolver = ::tflite::CreateOpResolver();
   int model_id =
       tflite_api_dispatcher::InterpreterBuilder::RegisterModel(
