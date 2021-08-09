@@ -1322,7 +1322,7 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
     for (Subgraph* next_subgraph : subgraph_ptr->GetNextSubgraphs()) {
       bool is_executable = true;
       // check whether all input tensor is resolved or not
-      for (const int& input_tensor : subgraph_ptr->inputs()) {
+      for (const int& input_tensor : next_subgraph->inputs()) {
         if (resolved_tensors.find(input_tensor) == resolved_tensors.end()) {
           is_executable = false;
           break;

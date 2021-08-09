@@ -696,16 +696,16 @@ TfLiteStatus Subgraph::SetPrevSubgraph(Subgraph* prev) {
   if (!has_common_tensor) {
     return kTfLiteError;
   }
-  prev_subgraphs_.push_back(prev);
-  prev->next_subgraphs_.push_back(this);
+  prev_subgraphs_.insert(prev);
+  prev->next_subgraphs_.insert(this);
   return kTfLiteOk;
 }
 
-const std::vector<Subgraph*>& Subgraph::GetNextSubgraphs() const {
+const std::set<Subgraph*>& Subgraph::GetNextSubgraphs() const {
   return next_subgraphs_;
 }
 
-const std::vector<Subgraph*>& Subgraph::GetPrevSubgraphs() const {
+const std::set<Subgraph*>& Subgraph::GetPrevSubgraphs() const {
   return prev_subgraphs_;
 }
 

@@ -348,8 +348,8 @@ class Subgraph {
   SubgraphKey& GetKey() { return key_; }
 
   TfLiteStatus SetPrevSubgraph(Subgraph* prev);
-  const std::vector<Subgraph*>& GetNextSubgraphs() const;
-  const std::vector<Subgraph*>& GetPrevSubgraphs() const;
+  const std::set<Subgraph*>& GetNextSubgraphs() const;
+  const std::set<Subgraph*>& GetPrevSubgraphs() const;
 
   inline bool IsStart() const {
     return prev_subgraphs_.empty();
@@ -734,8 +734,8 @@ class Subgraph {
   resource::ResourceMap* resources_ = nullptr;
   SubgraphKey key_;
 
-  std::vector<Subgraph*> next_subgraphs_;
-  std::vector<Subgraph*> prev_subgraphs_;
+  std::set<Subgraph*> next_subgraphs_;
+  std::set<Subgraph*> prev_subgraphs_;
 };
 
 }  // namespace impl
