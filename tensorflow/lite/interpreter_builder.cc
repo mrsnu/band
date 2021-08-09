@@ -558,11 +558,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                                       int num_threads) {
   int model_id = (*interpreter)->GetNewModelId();
   bool has_available_device = false;
-
+  auto cpu_subgraph = CreateSubgraph(model, op_resolver, interpreter,
+                                       model_id, kTfLiteCPU);
   // Add entire model on CPU
-  if ((*interpreter)
-          ->AddSubgraph(CreateSubgraph(model, op_resolver, interpreter,
-                                       model_id, kTfLiteCPU)) == -1) {
+  if (cpu_subgraph == nullptr || (*interpreter)->AddSubgraph(std::move(cpu_subgraph)) == -1) {
     TFLITE_LOG(ERROR) << "Failed to create subgraph on CPU delegate";
     (*interpreter)->InvalidateRecentModelId();
     return -1;
@@ -591,7 +590,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
     for (auto& device_op_indices : subgraph_indices) {
       std::string prefix;
-      int subgraph_idx;
+      int subgraph_idx = -1;
       // Duplicate subgraph search without key
       if (device_ops_to_subgraph_index.find(device_op_indices) !=
           device_ops_to_subgraph_index.end()) {
@@ -599,22 +598,23 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         subgraph_idx = device_ops_to_subgraph_index[device_op_indices];
       } else {
         prefix = "ADDED";
-        subgraph_idx =
-            (*interpreter)
-                ->AddSubgraph(CreateSubgraph(model, op_resolver, interpreter,
-                                             model_id, device_op_indices.first,
-                                             device_op_indices.second));
-        device_ops_to_subgraph_index[device_op_indices] = subgraph_idx;
+        auto new_subgraph =
+            CreateSubgraph(model, op_resolver, interpreter, model_id,
+                           device_op_indices.first, device_op_indices.second);
+        if (new_subgraph) {
+          subgraph_idx = (*interpreter)->AddSubgraph(std::move(new_subgraph));
+          device_ops_to_subgraph_index[device_op_indices] = subgraph_idx;
+        }
       }
 
       Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
-      auto subgraph_key = subgraph->GetKey();
 
       if (subgraph == nullptr) {
         TFLITE_LOG(ERROR) << "Failed to create subgraph";
         continue;
       }
 
+      auto subgraph_key = subgraph->GetKey();
       std::set<int> input_tensors(subgraph->inputs().begin(),
                                   subgraph->inputs().end());
 
