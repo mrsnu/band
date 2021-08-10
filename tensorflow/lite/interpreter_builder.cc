@@ -562,10 +562,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int cpu_worker_id = (*interpreter)->GetRepresentativeWorkerId(kTfLiteCPU);
   auto cpu_subgraph = CreateSubgraph(
               model, op_resolver, interpreter, model_id, cpu_worker_id);
-  
   // Add entire model on CPU
-  if ((*interpreter)
-          ->AddSubgraph(std::move(cpu_subgraph)) == -1) {
+  if (cpu_subgraph == nullptr || (*interpreter)->AddSubgraph(std::move(cpu_subgraph)) == -1) {
     TFLITE_LOG(ERROR) << "Failed to create subgraph on CPU delegate";
     (*interpreter)->InvalidateRecentModelId();
     return -1;
@@ -590,7 +588,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       }
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
       if ((*interpreter)
-              ->AddFallbackSubgraphsPerDevice(model_id, device_flag,
+              ->GetFallbackSubgraphsPerDevice(model_id, device_flag,
                                               subgraph_indices) != kTfLiteOk) {
         TFLITE_LOG(ERROR) << "AddFallbackSubgraphsPerDevice failed";
         return -1;
@@ -598,7 +596,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   } else if (subgraph_preparation_type == "unit_subgraph" ||
              subgraph_preparation_type == "merge_unit_subgraph") {
-    if ((*interpreter)->AddUnitSubgraphs(model_id, subgraph_indices) !=
+    if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
         kTfLiteOk) {
       TFLITE_LOG(ERROR) << "AddUnitSubgraphs failed";
       return -1;
@@ -613,11 +611,12 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // Save subgraph_idx - op_indices map for merging
   std::map<int, std::set<int>> subgraph_idx_op_indices;
   auto add_subgraph = [&](const std::pair<TfLiteDeviceFlags, std::set<int>>& device_op_indices, int worker_id) {
+    auto new_subgraph = CreateSubgraph(model, op_resolver, interpreter,
+                                        model_id, worker_id,
+                                        device_op_indices.second);
     int subgraph_idx =
         (*interpreter)
-            ->AddSubgraph(CreateSubgraph(model, op_resolver, interpreter,
-                                        model_id, worker_id,
-                                        device_op_indices.second));
+            ->AddSubgraph(std::move(new_subgraph));
     Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
     if (subgraph == nullptr) {
       TFLITE_LOG(ERROR) << "Subgraph creation failure";
@@ -736,6 +735,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
       (*interpreter)
           ->subgraph((*interpreter)->GetSubgraphIdx(model_id, worker_id));
 
+
   // Merging subgraph A and B is possible when
   auto is_mergeable = [&](Subgraph* prev_subgraph, Subgraph* next_subgraph) {
     if (prev_subgraph == next_subgraph) return false;
@@ -807,11 +807,20 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
         TFLITE_LOG(ERROR) << "Merged subgraph creation failure";
         return kTfLiteError;
       }
+
+      subgraph_idx_op_indices[subgraph_idx] = device_op_indices.second;
+      model_subgraph_indices.insert(subgraph_idx);
+      const SubgraphKey& subgraph_key = subgraph->GetKey();
+      TFLITE_LOG(INFO) << "ADDED Subgraph "
+                       << "Model : " << subgraph_key.model_id << " "
+                       << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
+                       << "From " << subgraph_key.GetInputOpsString() << " "
+                       << "To " << subgraph_key.GetOutputOpsString() << " "
+                       << "Index " << subgraph_idx;
     }
   }
 
-  TFLITE_LOG(INFO) << "# Subgraphs after Merge: "
-                   << model_subgraph_indices.size();
+  TFLITE_LOG(INFO) << model_subgraph_indices.size() << " Merged Subgraphs created";
   return kTfLiteOk;
 }
 

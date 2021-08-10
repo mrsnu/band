@@ -1033,7 +1033,7 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
   profile_database_.insert(model_profile.begin(), model_profile.end());
 }
 
-TfLiteStatus Interpreter::AddFallbackSubgraphsPerDevice(
+TfLiteStatus Interpreter::GetFallbackSubgraphsPerDevice(
     const int model_id, const TfLiteDeviceFlags device_flag,
     std::set<DeviceOpIndices>& subgraph_indices) {
   const int num_ops = model_specs_[model_id].num_ops;
@@ -1161,7 +1161,7 @@ TfLiteStatus Interpreter::AddFallbackSubgraphsPerDevice(
   return kTfLiteOk;
 }
 
-TfLiteStatus Interpreter::AddUnitSubgraphs(
+TfLiteStatus Interpreter::GetUnitSubgraphs(
     const int model_id, std::set<DeviceOpIndices>& subgraph_indices) {
   if (!planner_->NeedFallbackSubgraphs()) {
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
