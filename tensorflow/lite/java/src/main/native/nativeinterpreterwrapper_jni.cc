@@ -400,7 +400,10 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
     return 0;
   }
 
-  LOGI("Parse done interpreter's planner : %d", runtime_config.planner_config.planner_type);
+  for (int i = 0; i < runtime_config.planner_config.schedulers.size() ; i++) {
+    LOGI("Parse done interpreter's planner : %d",
+         runtime_config.planner_config.schedulers[i]);
+  }
   auto interpreter(std::make_unique<tflite_api_dispatcher::Interpreter>(
       error_reporter, runtime_config));
   env->ReleaseStringUTFChars(json_file, path);
