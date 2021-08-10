@@ -715,9 +715,8 @@ class Interpreter {
   // Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.
   using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
-  TfLiteStatus GetFallbackSubgraphsPerDevice(
-      const int model_id, const TfLiteDeviceFlags device_flag,
-      std::set<DeviceOpIndices>& subgraph_indices);
+  std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(
+      const int model_id, const TfLiteDeviceFlags device_flag);
   TfLiteStatus GetUnitSubgraphs(const int model_id,
                                 std::set<DeviceOpIndices>& subgraph_indices);
 
