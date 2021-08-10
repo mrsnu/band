@@ -783,8 +783,8 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
       (*interpreter)
           ->subgraph((*interpreter)->GetSubgraphIdx(model_id, kTfLiteCPU));
 
-  // Check all previous output tensors are resolved by next input tensors
-  auto is_all_output_resolved =
+  // Check all next input tensors are resolved by previous output tensors
+  auto is_all_input_prepared =
       [&primary_subgraph](const std::vector<int>& prev_output_tensors,
                           const std::vector<int>& next_input_tensors) {
         for (int input_tensor : next_input_tensors) {
@@ -804,8 +804,8 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
 
   // Check given device - op_indices pair is already created or not
   auto is_already_created = [&subgraph_idx_to_device_ops](
-                                TfLiteDeviceFlags device,
-                                std::set<int> op_indices) {
+                                const TfLiteDeviceFlags& device,
+                                const std::set<int>& op_indices) {
     for (const auto& idx_device_ops : subgraph_idx_to_device_ops) {
       const std::pair<TfLiteDeviceFlags, std::set<int>>& device_ops =
           idx_device_ops.second;
@@ -816,8 +816,9 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     return false;
   };
 
-  bool added = false;
+  bool added = true;
   while (added) {
+    added = false;
     std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> to_add;
     for (const auto& prev_idx_device_ops : subgraph_idx_to_device_ops) {
       for (const auto& next_idx_device_ops : subgraph_idx_to_device_ops) {
@@ -832,8 +833,8 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
             (*interpreter)->subgraph(prev_idx_device_ops.first);
         Subgraph* next_subgraph =
             (*interpreter)->subgraph(next_idx_device_ops.first);
-        if (!is_all_output_resolved(prev_subgraph->outputs(),
-                                    next_subgraph->inputs()))
+        if (!is_all_input_prepared(prev_subgraph->outputs(),
+                                   next_subgraph->inputs()))
           continue;
         // Prepare merged device - op_indices
         const TfLiteDeviceFlags& device = prev_idx_device_ops.second.first;
