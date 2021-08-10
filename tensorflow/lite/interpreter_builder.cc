@@ -595,6 +595,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         std::string prefix;
         int subgraph_idx = -1;
         // Duplicate subgraph search without key
+        // There can be duplicated subgraphs if different devices make same
+        // fallback subgraphs.
         if (device_ops_to_subgraph_index.find(device_op_indices) !=
             device_ops_to_subgraph_index.end()) {
           prefix = "REUSE";
@@ -700,6 +702,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
       has_available_device = true;
 
+      // Using GetUnitSubgraphs, different from "fallback_per_device",
+      // there is no duplicated subgraphs.
       const SubgraphKey& subgraph_key = subgraph->GetKey();
       TFLITE_LOG(INFO) << "ADDED Subgraph "
                        << "Model : " << subgraph_key.model_id << " "
