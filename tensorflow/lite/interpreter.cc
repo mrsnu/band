@@ -134,15 +134,15 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       set_internal_backend_context(
           std::make_unique<CpuBackendContext>());
 
-  // Initialize configurations.
-  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
-    error_reporter_->Report("Interpreter::Init() failed.");
-    exit(-1);
-  }
   // Create a Planner instance.
   planner_.reset(new Planner(this));
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
+    exit(-1);
+  }
+  // Initialize configurations.
+  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
+    error_reporter_->Report("Interpreter::Init() failed.");
     exit(-1);
   }
 
