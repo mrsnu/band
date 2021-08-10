@@ -715,10 +715,10 @@ class Interpreter {
   // Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.
   using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
-  TfLiteStatus AddFallbackSubgraphsPerDevice(
+  TfLiteStatus GetFallbackSubgraphsPerDevice(
       const int model_id, const TfLiteDeviceFlags device_flag,
       std::set<DeviceOpIndices>& subgraph_indices);
-  TfLiteStatus AddUnitSubgraphs(const int model_id,
+  TfLiteStatus GetUnitSubgraphs(const int model_id,
                                 std::set<DeviceOpIndices>& subgraph_indices);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {

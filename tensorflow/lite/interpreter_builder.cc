@@ -583,16 +583,16 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       }
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
       if ((*interpreter)
-              ->AddFallbackSubgraphsPerDevice(model_id, device_flag,
+              ->GetFallbackSubgraphsPerDevice(model_id, device_flag,
                                               subgraph_indices) != kTfLiteOk) {
-        TFLITE_LOG(ERROR) << "AddFallbackSubgraphsPerDevice failed";
+        TFLITE_LOG(ERROR) << "GetFallbackSubgraphsPerDevice failed";
         return -1;
       }
     }
   } else if (subgraph_preparation_type == "unit_subgraph") {
-    if ((*interpreter)->AddUnitSubgraphs(model_id, subgraph_indices) !=
+    if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
         kTfLiteOk) {
-      TFLITE_LOG(ERROR) << "AddUnitSubgraphs failed";
+      TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
       return -1;
     }
   } else {
@@ -625,8 +625,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      << "Index " << subgraph_idx;
   }
 
-  TFLITE_LOG(INFO) << "# Subgraphs after adding atomic subgraphs: "
-                   << (*interpreter)->subgraphs_size();
+  TFLITE_LOG(INFO) << (*interpreter)->subgraphs_size() << " Subgraphs created";
 
   // Set Prev - Next relation between subgraphs
   std::set<int> model_subgraph_indices;
