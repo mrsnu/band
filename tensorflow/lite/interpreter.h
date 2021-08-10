@@ -833,11 +833,11 @@ class Interpreter {
   resource::ResourceMap resources_;
 
   /* private methods related to subgraph scheduling */
-  // divide the given subgraphs into groups that share the same op indices
-  // e.g., {(1, 2, 3): [1,3], (6, 7): [2,4]}
-  void GroupByOpIndices(
-      const std::vector<int>& subgraph_indices,
-      std::map<std::set<int>, std::vector<int>>& subgraph_map);
+  // divide the given subgraphs into groups that share the same start/end idxs
+  // e.g., {((0, 1), (10, 12)): [1, 3], ((0, 2), (19, 20)): [2, 4]}
+  void GroupByStartEndOps(const std::vector<int>& subgraph_indices,
+                          std::map<std::pair<std::set<int>, std::set<int>>,
+                                   std::vector<int>>& subgraph_map);
 
   // return next subgraph indices of preceded subgraph
   void GetSubgraphCandidates(

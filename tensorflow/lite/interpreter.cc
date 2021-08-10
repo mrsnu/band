@@ -1387,8 +1387,8 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   GetSubgraphCandidates(model_id, resolved_mask, preceded_subgraph_index,
                         subgraph_indices);
 
-  std::map<std::set<int>, std::vector<int>> subgraph_map;
-  GroupByOpIndices(subgraph_indices, subgraph_map);
+  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>> subgraph_map;
+  GroupByStartEndOps(subgraph_indices, subgraph_map);
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
   for (auto it = subgraph_map.begin(); it != subgraph_map.end(); it++) {
@@ -1431,12 +1431,13 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   return min_subgraph;
 }
 
-void Interpreter::GroupByOpIndices(
+void Interpreter::GroupByStartEndOps(
     const std::vector<int>& subgraph_indices,
-    std::map<std::set<int>, std::vector<int>>& subgraph_map) {
+    std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>&
+        subgraph_map) {
   for (int subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
-    subgraph_map[key.op_indices].push_back(subgraph_index);
+    subgraph_map[{key.input_ops, key.output_ops}].push_back(subgraph_index);
   }
 }
 
@@ -1455,7 +1456,6 @@ void Interpreter::GetSubgraphCandidates(
     }
   } else {
     Subgraph* subgraph_ptr = subgraph(preceded_subgraph_index);
-    auto key = subgraph_ptr->GetKey();
     for (Subgraph* next_subgraph : subgraph_ptr->GetNextSubgraphs()) {
       // check whether all input tensor is resolved or not
       const std::bitset<TensorSize>& inputs_mask = next_subgraph->inputs_mask();
