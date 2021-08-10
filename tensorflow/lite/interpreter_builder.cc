@@ -717,8 +717,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
     // Add merged atomic subgraphs
     if (subgraph_preparation_type == "merge_unit_subgraph") {
-      CreateMergedUnitSubgraphs(model_id, subgraph_idx_to_device_ops, model,
-                                op_resolver, interpreter);
+      if (CreateMergedUnitSubgraphs(model_id, subgraph_idx_to_device_ops, model,
+                                    op_resolver, interpreter) != kTfLiteOk) {
+        TFLITE_LOG(ERROR) << "CreateMergedUnitSubgraphs failure";
+        return -1;
+      }
     }
 
     // Set Prev - Next relation between subgraphs
