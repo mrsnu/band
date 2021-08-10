@@ -602,6 +602,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   // Create subgraphs
+  // Save subgraph_idx - device_op_indices map for prev/next setting
+  std::map<int, std::pair<TfLiteDeviceFlags, std::set<int>>>
+      subgraph_idx_to_device_ops;
   for (auto& device_op_indices : subgraph_indices) {
     int subgraph_idx =
         (*interpreter)
@@ -615,6 +618,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
 
     has_available_device = true;
+    subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
 
     const SubgraphKey& subgraph_key = subgraph->GetKey();
     TFLITE_LOG(INFO) << "ADDED Subgraph "
@@ -638,6 +642,24 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   for (auto& prev_subgraph_idx : model_subgraph_indices) {
     for (auto& next_subgraph_idx : model_subgraph_indices) {
+      // Skip same subgraphs
+      if (prev_subgraph_idx == next_subgraph_idx) continue;
+
+      const auto& prev_subgraph_op_indices =
+          subgraph_idx_to_device_ops[prev_subgraph_idx];
+      const auto& next_subgraph_op_indices =
+          subgraph_idx_to_device_ops[next_subgraph_idx];
+
+      // Prev / next subgraphs should not contains common ops
+      std::set<int> common_ops;
+      std::set_intersection(prev_subgraph_op_indices.second.begin(),
+                            prev_subgraph_op_indices.second.end(),
+                            next_subgraph_op_indices.second.begin(),
+                            next_subgraph_op_indices.second.end(),
+                            std::inserter(common_ops, common_ops.begin()));
+      if (!common_ops.empty()) continue;
+
+      // Else try to set prev / next subgraphs
       Subgraph* prev_subgraph = (*interpreter)->subgraph(prev_subgraph_idx);
       Subgraph* next_subgraph = (*interpreter)->subgraph(next_subgraph_idx);
       if (prev_subgraph_idx != next_subgraph_idx) {
