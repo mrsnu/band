@@ -1172,8 +1172,9 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
   const std::map<TfLiteDeviceFlags, std::set<int>>& unsupported_ops =
       model_specs_[model_id].unsupported_ops;
   for (int op_index = 0; op_index < num_ops; op_index++) {
-    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
-      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+    for (auto& worker : workers_) {
+      TfLiteDeviceFlags device_flag = worker.first;
+      int device_id = device_flag;
       if (device_flag == kTfLiteCPU || device_flag == kTfLiteCPUFallback) {
         op_support_table[op_index] |= 1 << device_id;
         continue;
