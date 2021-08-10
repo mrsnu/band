@@ -35,9 +35,14 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     int64_t sched_start = profiling::time::NowMicros();
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
+      int preceded_subgraph_index =
+          next_job.previous_subgraph_indices.empty()
+              ? -1
+              : next_job.previous_subgraph_indices.back();
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatency(
-              next_job.model_id, next_job.resolved_tensors, 0, device_waiting);
+              next_job.model_id, next_job.resolved_tensors, 0, device_waiting,
+              preceded_subgraph_index);
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
@@ -60,7 +65,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    if (target_subgraph->GetPrevSubgraph() == nullptr) {
+    if (target_subgraph->IsStart()) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
     }

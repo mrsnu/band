@@ -371,18 +371,20 @@ void Interpreter::ReserveNodes(size_t subgraph_index, int count) {
     subgraph(subgraph_index)->ReserveNodes(count);
 }
 
-void Interpreter::AddSubgraphs(int subgraphs_to_add,
-                               int* first_new_subgraph_index) {
-  const size_t base_index = subgraphs_.size();
-  if (first_new_subgraph_index) *first_new_subgraph_index = base_index;
-
-  subgraphs_.reserve(base_index + subgraphs_to_add);
-  for (int i = 0; i < subgraphs_to_add; ++i) {
-    Subgraph* subgraph = new Subgraph(error_reporter_, external_contexts_,
-                                      &subgraphs_, &resources_);
-    subgraph->SetProfiler(installed_profiler_, base_index + i);
-    subgraphs_.emplace_back(subgraph);
+int Interpreter::AddSubgraph(std::unique_ptr<Subgraph> subgraph) {
+  int index = GetSubgraphIdx(subgraph->GetKey());
+  if (index == -1) {
+    index = subgraphs_.size();
+    subgraph_idx_map_[subgraph->GetKey()] = index;
+    subgraph->SetProfiler(installed_profiler_, index);
+    subgraphs_.emplace_back(std::move(subgraph));
   }
+  return index;
+}
+
+std::unique_ptr<Subgraph> Interpreter::CreateSubgraph() {
+  return std::make_unique<Subgraph>(error_reporter_, external_contexts_,
+                                      &subgraphs_, &resources_);
 }
 
 void Interpreter::DeleteSubgraphs(size_t starting_index_to_delete,
@@ -633,38 +635,6 @@ TfLiteStatus Interpreter::SetTensorParametersReadWrite(
 TfLiteStatus Interpreter::SetExecutionPlan(size_t subgraph_index, const std::vector<int>& new_plan) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);
   return subgraph(subgraph_index)->SetExecutionPlan(new_plan);
-}
-
-void Interpreter::SetNumThreads(int num_threads,
-                                size_t first_subgraph_index,
-                                int last_subgraph_index) {
-  if (num_threads < -1) {
-    if (error_reporter_) {
-      error_reporter_->Report(
-          "num_threads should be >=0 or just -1 to let TFLite "
-          "runtime set the value.");
-    }
-    return;
-  }
-
-  if (last_subgraph_index < 0)
-    last_subgraph_index = subgraphs_size();
-
-  for (int i = first_subgraph_index; i < last_subgraph_index; i++) {
-    subgraphs_[i]->context()->recommended_num_threads = num_threads;
-  }
-
-  // TODO: #77
-  // Use first subgraph's context to pass recommended num thread
-  if (subgraphs_size()) {
-    auto primary_subgraph = subgraph(0);
-    for (int i = 0; i < kTfLiteMaxExternalContexts; ++i) {
-      auto* c = external_contexts_[i];
-      if (c && c->Refresh) {
-        c->Refresh(primary_subgraph->context());
-      }
-    }
-  }
 }
 
 void Interpreter::SetXNNPACKNumThreads(int num_threads) {
@@ -967,15 +937,6 @@ void Interpreter::DeleteKey(SubgraphKey subgraph_key) {
   }
 }
 
-void Interpreter::RegisterSubgraphIdx(SubgraphKey subgraph_key,
-                                      size_t subgraph_index) {
-  // Skip if exists.
-  if (subgraph_idx_map_.find(subgraph_key) != subgraph_idx_map_.end()) {
-    return;
-  }
-  subgraph_idx_map_[subgraph_key] = subgraph_index;
-}
-
 int Interpreter::GetSubgraphIdx(SubgraphKey subgraph_key) {
   auto it = subgraph_idx_map_.find(subgraph_key);
   if (it != subgraph_idx_map_.end()) {
@@ -1029,8 +990,8 @@ int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id) {
     Subgraph* current_subgraph = subgraph(i);
     if (current_subgraph->key_.model_id == model_id &&
         current_subgraph->key_.device_flag == device_id &&
-        current_subgraph->prev_ == nullptr &&
-        current_subgraph->next_ == nullptr) {
+        current_subgraph->prev_subgraphs_.size() == 0 &&
+        current_subgraph->next_subgraphs_.size() == 0) {
       return i;
     }
   }
@@ -1196,14 +1157,6 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   std::vector<int>& execution_plan = primary_subgraph->execution_plan();
   model_spec.num_ops = execution_plan.size();
 
-  // delete the current key and replace it with valid start/end indices
-  SubgraphKey& key = primary_subgraph->GetKey();
-  DeleteKey(key);
-
-  key.input_ops = primary_subgraph->input_ops();
-  key.output_ops = primary_subgraph->output_ops();
-  RegisterSubgraphIdx(key, subgraph_index);
-
   // allocate circular buffer for model IO
   std::vector<TfLiteTensor*> input_tensors;
   std::vector<TfLiteTensor*> output_tensors;
@@ -1288,9 +1241,9 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 std::pair<int, int64_t> Interpreter::GetShortestLatency(
     int model_id, std::set<int> resolved_tensors, int64_t start_time,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-    TfLiteDeviceFlags preceded_device) {
+    int preceded_subgraph_index) {
   std::vector<int> subgraph_indices =
-      GetSubgraphCandidates(model_id, resolved_tensors, preceded_device);
+      GetSubgraphCandidates(model_id, resolved_tensors, preceded_subgraph_index);
   std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
       subgraph_map = GroupByStartEndIdx(subgraph_indices);
 
@@ -1322,7 +1275,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
       // get the final latency
       local_min =
           GetShortestLatency(model_id, next_resolved_tensors, target_subgraph.second,
-                             device_waiting, key.device_flag);
+                             device_waiting, target_subgraph.first);
     }
 
     // check if this subgraph is better than the best one
@@ -1351,33 +1304,33 @@ Interpreter::GroupByStartEndIdx(
 }
 
 std::vector<int> Interpreter::GetSubgraphCandidates(
-    int model_id, std::set<int> resolved_tensors, TfLiteDeviceFlags preceded_device) {
+    int model_id, std::set<int> resolved_tensors, int preceded_subgraph_index) {
   std::vector<int> candidate_indices;
+  // Start of the model execution
+  if (preceded_subgraph_index == -1) {
+    for (int i = 0; i < subgraphs_size(); ++i) {
+      Subgraph* subgraph_ptr = subgraph(i);
+      SubgraphKey& key = subgraph_ptr->GetKey();
 
-  // iterate thru all subgraphs and only pick the ones that match the criteria
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    Subgraph* subgraph_ptr = subgraph(i);
-    SubgraphKey& key = subgraph_ptr->GetKey();
-    if (key.model_id == model_id &&
-        key.device_flag != preceded_device) {
+      if (key.model_id == model_id && subgraph_ptr->IsStart()) {
+        candidate_indices.push_back(i);
+      }
+    }
+  } else {
+    Subgraph* subgraph_ptr = subgraph(preceded_subgraph_index);
+    auto key = subgraph_ptr->GetKey();
+    for (Subgraph* next_subgraph : subgraph_ptr->GetNextSubgraphs()) {
       bool is_executable = true;
-
       // check whether all input tensor is resolved or not
-      for (const int& input_tensor : subgraph_ptr->inputs()) {
+      for (const int& input_tensor : next_subgraph->inputs()) {
         if (resolved_tensors.find(input_tensor) == resolved_tensors.end()) {
           is_executable = false;
           break;
         }
       }
-
-      // check whether all output tensors are already resolved or not
-      if (is_executable && std::includes(resolved_tensors.begin(), resolved_tensors.end(),
-                        subgraph_ptr->outputs().begin(), subgraph_ptr->outputs().end())) {
-        is_executable = false;
-      }
-
+      
       if (is_executable) {
-        candidate_indices.push_back(i);
+        candidate_indices.push_back(GetSubgraphIdx(next_subgraph->GetKey()));
       }
     }
   }
