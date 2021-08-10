@@ -1173,7 +1173,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
 
   // Prepare variables to use
   const int num_ops = model_specs_[model_id].num_ops;
-  const worker_id = GetRepresentativeWorkerId(kTfLiteCPU);
+  const int worker_id = GetRepresentativeWorkerId(kTfLiteCPU);
   Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, worker_id));
 
   // BitMask to check device support or not

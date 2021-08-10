@@ -96,6 +96,10 @@ class InterpreterBuilder {
   InterpreterBuilder() = default;
   ~InterpreterBuilder() = default;
 
+  static int AddSubgraph(
+      const ::tflite::Model* model, const OpResolver& op_resolver,
+      std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
+      const std::pair<TfLiteDeviceFlags, std::set<int>>& device_op_indices);
   static TfLiteStatus CreateMergedUnitSubgraphs(
       const int model_id,
       std::set<std::pair<TfLiteDeviceFlags, std::set<int>>>& subgraph_indices,
