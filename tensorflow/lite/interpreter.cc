@@ -1456,7 +1456,15 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
           break;
         }
       }
-      
+
+      // check whether any output tensor is resolved or not
+      for (const int& output_tensor: next_subgraph->outputs()) {
+        if (resolved_tensors.find(output_tensor) != resolved_tensors.end()) {
+          is_executable = false;
+          break;
+        }
+      }
+
       if (is_executable) {
         candidate_indices.push_back(GetSubgraphIdx(next_subgraph->GetKey()));
       }
