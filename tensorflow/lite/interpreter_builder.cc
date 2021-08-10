@@ -682,8 +682,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
     // Create subgraphs
     // Save subgraph_idx - device_op_indices map for prev/next setting
-    std::map<int, DeviceOpIndices>
-        subgraph_idx_to_device_ops;
+    std::map<int, DeviceOpIndices> subgraph_idx_to_device_ops;
     for (auto& device_op_indices : subgraph_indices) {
       int subgraph_idx = -1;
       auto new_subgraph =
@@ -779,8 +778,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
 TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     const int model_id,
-    std::map<int, std::pair<TfLiteDeviceFlags, std::set<int>>>&
-        subgraph_idx_to_device_ops,
+    std::map<int, DeviceOpIndices>& subgraph_idx_to_device_ops,
     const ::tflite::Model*& model, const OpResolver& op_resolver,
     std::unique_ptr<Interpreter>* interpreter) {
   Subgraph* primary_subgraph =
@@ -807,23 +805,21 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
       };
 
   // Check given device - op_indices pair is already created or not
-  auto is_already_created = [&subgraph_idx_to_device_ops](
-                                const TfLiteDeviceFlags& device,
-                                const std::set<int>& op_indices) {
-    for (const auto& idx_device_ops : subgraph_idx_to_device_ops) {
-      const std::pair<TfLiteDeviceFlags, std::set<int>>& device_ops =
-          idx_device_ops.second;
-      if (device_ops.first == device && device_ops.second == op_indices) {
-        return true;
-      }
-    }
-    return false;
-  };
+  auto is_already_created =
+      [&subgraph_idx_to_device_ops](const DeviceOpIndices& new_device_ops) {
+        for (const auto& idx_device_ops : subgraph_idx_to_device_ops) {
+          const DeviceOpIndices& device_ops = idx_device_ops.second;
+          if (device_ops == new_device_ops) {
+            return true;
+          }
+        }
+        return false;
+      };
 
   bool added = true;
   while (added) {
     added = false;
-    std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> to_add;
+    std::vector<DeviceOpIndices> to_add;
     for (const auto& prev_idx_device_ops : subgraph_idx_to_device_ops) {
       for (const auto& next_idx_device_ops : subgraph_idx_to_device_ops) {
         // Skip same subgraph
@@ -851,28 +847,30 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
                        next_op_indices.begin(), next_op_indices.end(),
                        std::inserter(op_indices, op_indices.end()));
         // Add if not already created
-        if (!is_already_created(device, op_indices)) {
+        if (!is_already_created({device, op_indices})) {
           to_add.push_back({device, op_indices});
         }
       }
     }
-    for (auto& device_op_indices : to_add) {
-      const TfLiteDeviceFlags& device = device_op_indices.first;
-      const std::set<int>& op_indices = device_op_indices.second;
-      if (!is_already_created(device, op_indices)) continue;
+    for (const DeviceOpIndices& device_op_indices : to_add) {
+      if (is_already_created(device_op_indices)) continue;
 
-      int subgraph_idx =
-          (*interpreter)
-              ->AddSubgraph(CreateSubgraph(model, op_resolver, interpreter,
-                                           model_id, device, op_indices));
+      int subgraph_idx = -1;
+      auto new_subgraph =
+          CreateSubgraph(model, op_resolver, interpreter, model_id,
+                         device_op_indices.first, device_op_indices.second);
+      if (new_subgraph) {
+        subgraph_idx = (*interpreter)->AddSubgraph(std::move(new_subgraph));
+        subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
+        added = true;
+      }
+
       Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
       if (subgraph == nullptr) {
         TFLITE_LOG(ERROR) << "Merged subgraph creation failure";
         return kTfLiteError;
       }
 
-      added = true;
-      subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
       const SubgraphKey& subgraph_key = subgraph->GetKey();
       TFLITE_LOG(INFO) << "ADDED Subgraph "
                        << "Model : " << subgraph_key.model_id << " "
