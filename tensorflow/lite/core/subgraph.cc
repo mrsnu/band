@@ -525,6 +525,10 @@ TfLiteStatus Subgraph::SetInputs(std::vector<int> inputs) {
   TF_LITE_ENSURE_OK(&context_,
                     CheckTensorIndices("inputs", inputs.data(), inputs.size()));
   inputs_ = std::move(inputs);
+  inputs_mask_ = std::bitset<TensorSize>();
+  for (int input_index : inputs) {
+    inputs_mask_.set(input_index, 1);
+  }
   return kTfLiteOk;
 }
 
@@ -532,6 +536,10 @@ TfLiteStatus Subgraph::SetOutputs(std::vector<int> outputs) {
   TF_LITE_ENSURE_OK(
       &context_, CheckTensorIndices("outputs", outputs.data(), outputs.size()));
   outputs_ = std::move(outputs);
+  outputs_mask_ = std::bitset<TensorSize>();
+  for (int output_index : outputs_) {
+    outputs_mask_.set(output_index, 1);
+  }
   return kTfLiteOk;
 }
 

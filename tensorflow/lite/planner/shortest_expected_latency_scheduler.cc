@@ -41,7 +41,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
               : next_job.previous_subgraph_indices.back();
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatency(
-              next_job.model_id, next_job.resolved_tensors, 0, device_waiting,
+              next_job.model_id, next_job.resolved_mask, 0, device_waiting,
               preceded_subgraph_index);
 
       if (largest_shortest_latency < best_subgraph.second) {

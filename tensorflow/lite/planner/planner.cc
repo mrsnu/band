@@ -265,8 +265,8 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
     }
     if (job.job_id == -1) {
       job.job_id = num_submitted_jobs_++;
-      job.resolved_tensors =
-          interpreter_->GetModelSpec(job.model_id).input_tensors;
+      job.resolved_mask =
+          interpreter_->GetModelSpec(job.model_id).input_mask;
     }
     job_ids[i] = job.job_id;
   }
@@ -368,13 +368,11 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
     remaining_ops.job_id = job.job_id;
     remaining_ops.input_handle = job.input_handle;
     remaining_ops.output_handle = job.output_handle;
-    remaining_ops.resolved_tensors = job.resolved_tensors;
+    remaining_ops.resolved_mask = job.resolved_mask;
     remaining_ops.previous_subgraph_indices = job.previous_subgraph_indices;
     remaining_ops.previous_subgraph_indices.emplace_back(job.subgraph_idx);
 
-    for (int output_index : target_subgraph->outputs()) {
-      remaining_ops.resolved_tensors.insert(output_index);
-    }
+    remaining_ops.resolved_mask |= target_subgraph->outputs_mask();
 
     job.following_jobs.clear();
     job.following_jobs.push_back(remaining_ops);
@@ -384,8 +382,8 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
 void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
-  job.resolved_tensors =
-      GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
+  job.resolved_mask =
+      GetInterpreter()->GetModelSpec(job.model_id).input_mask;
 }
 
 bool Planner::IsJobIdValid(int job_id) {

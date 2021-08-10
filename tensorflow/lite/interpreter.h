@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_INTERPRETER_H_
 #define TENSORFLOW_LITE_INTERPRETER_H_
 
+#include <bitset>
 #include <complex>
 #include <cstdio>
 #include <cstdlib>
@@ -98,8 +99,10 @@ namespace impl {
 struct ModelSpec {
   int num_ops;
   std::set<int> input_tensors;
+  std::bitset<TensorSize> input_mask;
   // only includes "true" outputs
   std::set<int> output_tensors;
+  std::bitset<TensorSize> output_mask;
   // includes intermediate tensors that are consumed by
   // other nodes in the same model
   std::set<int> node_output_tensors;
@@ -708,9 +711,10 @@ class Interpreter {
   // ops, but the latency value is calculated with all subgraphs leading to
   // the final op (of the model) in mind.
   std::pair<int, int64_t> GetShortestLatency(
-      int model_id, std::set<int> resolved_tensors, int64_t start_time,
-      std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
-      int preceded_subgraph_index = -1);
+      int model_id, const std::bitset<TensorSize>& resolved_mask,
+      int64_t start_time,
+      const std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+      int preceded_subgraph_index);
 
   // Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.
@@ -829,19 +833,22 @@ class Interpreter {
   resource::ResourceMap resources_;
 
   /* private methods related to subgraph scheduling */
-  // divide the given subgraphs into groups that share the same start/end idxs
-  // e.g., {(0,10): [1,3], (0,20): [2,4]}
-  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
-  GroupByStartEndIdx(std::vector<int> subgraph_indices);
+  // divide the given subgraphs into groups that share the same op indices
+  // e.g., {(1, 2, 3): [1,3], (6, 7): [2,4]}
+  void GroupByOpIndices(
+      const std::vector<int>& subgraph_indices,
+      std::map<std::set<int>, std::vector<int>>& subgraph_map);
 
-  // return next subgraph indices of preceded subgraph 
-  std::vector<int> GetSubgraphCandidates(int model_id, std::set<int> resolved_tensors, int preceded_subgraph_index);
+  // return next subgraph indices of preceded subgraph
+  void GetSubgraphCandidates(
+      int model_id, const std::bitset<TensorSize>& resolved_mask,
+      int preceded_subgraph_index, std::vector<int>& candidate_indices);
 
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account
   std::pair<int, int64_t> GetShortestSubgraphIndex(
-      std::vector<int> subgraph_indices, int64_t start_time,
-      std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
+      const std::vector<int>& subgraph_indices, int64_t start_time,
+      const std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
 
   // Update slo values in model_configs_ according to the worst profiled
   // latency of that model x slo_scale.

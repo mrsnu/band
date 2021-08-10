@@ -25,6 +25,7 @@ limitations under the License.
 #include <json/json.h>
 
 #include <algorithm>
+#include <bitset>
 #include <list>
 #include <memory>
 #include <string>
@@ -38,19 +39,16 @@ limitations under the License.
 namespace tflite {
 // data structure for identifying subgraphs within whole models
 struct SubgraphKey {
-  SubgraphKey(int model_id = -1, TfLiteDeviceFlags device_flag = kTfLiteCPU,
-              int start = -1, int end = -1)
-      : model_id(model_id),
-        device_flag(device_flag),
-        input_ops(start != -1 ? std::set<int>({start}) : std::set<int>()),
-        output_ops(end != -1 ? std::set<int>({end}) : std::set<int>()) {}
+  SubgraphKey() : model_id(-1), device_flag(kTfLiteNumDevices) {}
 
   SubgraphKey(int model_id, TfLiteDeviceFlags device_flag,
-              std::set<int> input_ops, std::set<int> output_ops)
+              const std::set<int>& input_ops, const std::set<int>& output_ops,
+              const std::set<int>& op_indices)
       : model_id(model_id),
         device_flag(device_flag),
         input_ops(input_ops),
-        output_ops(output_ops) {}
+        output_ops(output_ops),
+        op_indices(op_indices) {}
 
   bool operator<(const SubgraphKey& key) const {
     if (model_id != key.model_id) {
@@ -75,8 +73,10 @@ struct SubgraphKey {
   TfLiteDeviceFlags device_flag;
   std::set<int> input_ops;
   std::set<int> output_ops;
+  std::set<int> op_indices;
 };
 
+const int TensorSize = 4096;
 using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
 using Tensors = std::vector<TfLiteTensor*>;
 
@@ -124,7 +124,7 @@ struct Job {
   int device_id = -1;
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
-  std::set<int> resolved_tensors;
+  std::bitset<TensorSize> resolved_mask;
   std::list<int> previous_subgraph_indices;
 };
 

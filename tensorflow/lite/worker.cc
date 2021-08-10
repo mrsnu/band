@@ -108,25 +108,29 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
 
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-  std::set<int> unresolved_tensors(subgraph->inputs().begin(), subgraph->inputs().end());
+  std::bitset<TensorSize> unresolved_tensors = subgraph->inputs_mask();
+
   // Intermediate tensor communication
-  for (auto subgraph_it = job.previous_subgraph_indices.cbegin(); subgraph_it != job.previous_subgraph_indices.cend(); ++subgraph_it) {
-    int preceded_subgraph_index = *subgraph_it;
+  for (int preceded_subgraph_index : job.previous_subgraph_indices) {
     Subgraph* preceded_subgraph = interpreter->subgraph(preceded_subgraph_index);
+    const std::bitset<TensorSize>& output_mask = preceded_subgraph->outputs_mask();
+    std::bitset<TensorSize> resolvable_tensors = unresolved_tensors & output_mask;
+    if (resolvable_tensors.any()) {
+      for (int tensor_index = 0; tensor_index < subgraph->tensors_size();
+           tensor_index++) {
+        if (resolvable_tensors.test(tensor_index)) {
+          const TfLiteTensor* src = preceded_subgraph->tensor(tensor_index);
+          TfLiteTensor* dst = subgraph->tensor(tensor_index);
 
-    for(int tensor_index: preceded_subgraph->outputs()) {
-      if (unresolved_tensors.find(tensor_index) != unresolved_tensors.end()) {
-        const TfLiteTensor* src = preceded_subgraph->tensor(tensor_index);
-        TfLiteTensor* dst = subgraph->tensor(tensor_index);
+          if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
+            TFLITE_LOG(ERROR)
+                << "Tensor data copy failure. src name : " << src->name
+                << ", dst name : " << dst->name;
+            return kTfLiteError;
+          }
 
-        if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
-           TFLITE_LOG(ERROR)
-               << "Tensor data copy failure. src name : " << src->name
-               << ", dst name : " << dst->name;
-           return kTfLiteError;
+          unresolved_tensors.set(tensor_index, 0);
         }
-
-        unresolved_tensors.erase(tensor_index);
       }
     }
   }
@@ -139,23 +143,23 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   }
 
   // Copy model input
-  for (auto tensor_it = unresolved_tensors.begin(); tensor_it != unresolved_tensors.end();) {
-    int tensor_index = *tensor_it;
-    if (input_buffer->IsTensorIndexValid(tensor_index)) {
-      if (input_buffer->GetTensorFromHandle(subgraph->tensor(tensor_index),
-                                            tensor_index,
-                                            job.input_handle) != kTfLiteOk) {
-        return kTfLiteError;
+  for (int tensor_index = 0; tensor_index < subgraph->tensors_size(); tensor_index++) {
+    if (unresolved_tensors.test(tensor_index)) {
+      if (input_buffer->IsTensorIndexValid(tensor_index)) {
+        if (input_buffer->GetTensorFromHandle(subgraph->tensor(tensor_index),
+                                              tensor_index,
+                                              job.input_handle) != kTfLiteOk) {
+          return kTfLiteError;
+        }
+        unresolved_tensors.set(tensor_index, 0);
+      } else {
+        TFLITE_LOG(ERROR) << "Unresolved input tensor " << tensor_index
+                          << " of subgraph " << job.subgraph_idx;
       }
-      tensor_it = unresolved_tensors.erase(tensor_it);
-    } else {
-      TFLITE_LOG(ERROR) << "Unresolved input tensor " << tensor_index
-                        << " of subgraph " << job.subgraph_idx;
-      ++tensor_it;
     }
   }
 
-  if (unresolved_tensors.empty()) {
+  if (!unresolved_tensors.any()) {
     return kTfLiteOk;
   } else {
     return kTfLiteError;

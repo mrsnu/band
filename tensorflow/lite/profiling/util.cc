@@ -61,12 +61,15 @@ ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
 
       // parse the key to retrieve start/end indices
       // e.g., "25/50" --> delim_pos = 2
-      auto delim_pos = idx.find("/");
+      auto delim_pos1 = idx.find("/");
+      auto delim_pos2 = idx.find("/", delim_pos1);
       std::set<int> root_indices =
-          string_to_node_indices(idx.substr(0, delim_pos));
-      std::set<int> leaf_indices =
-          string_to_node_indices(idx.substr(delim_pos + 1, idx.length() - delim_pos - 1));
-      
+          string_to_node_indices(idx.substr(0, delim_pos1));
+      std::set<int> leaf_indices = string_to_node_indices(
+          idx.substr(delim_pos1 + 1, delim_pos2 - delim_pos1 - 1));
+      std::set<int> op_indices = string_to_node_indices(
+          idx.substr(delim_pos2 + 1, idx.length() - delim_pos2 - 1));
+
       const Json::Value device_profile = *idx_profile_it;
       for (auto device_profile_it = device_profile.begin();
            device_profile_it != device_profile.end();
@@ -81,8 +84,8 @@ ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
           continue;
         }
 
-        SubgraphKey key(model_id, device_flag,
-                        root_indices, leaf_indices);
+        SubgraphKey key(model_id, device_flag, root_indices, leaf_indices,
+                        op_indices);
         id_profile[key] = profiled_latency;
       }
     }

@@ -15,6 +15,7 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 #define TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 
+#include <bitset>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -164,8 +165,14 @@ class Subgraph {
   // Read only access to list of inputs.
   const std::vector<int>& inputs() const { return inputs_; }
 
+  std::bitset<TensorSize>& inputs_mask() { return inputs_mask_; }
+  const std::bitset<TensorSize>& inputs_mask() const { return inputs_mask_; }
+
   // Read only access to list of outputs.
   std::vector<int>& outputs() { return outputs_; }
+
+  std::bitset<TensorSize>& outputs_mask() { return outputs_mask_; }
+  const std::bitset<TensorSize>& outputs_mask() const { return outputs_mask_; }
 
   // Read only access to list of outputs.
   const std::vector<int>& outputs() const { return outputs_; }
@@ -644,10 +651,12 @@ class Subgraph {
   // Array of indices representing the tensors that are inputs to the
   // interpreter.
   std::vector<int> inputs_;
+  std::bitset<TensorSize> inputs_mask_;
 
   // Array of indices representing the tensors that are outputs to the
   // interpreter.
   std::vector<int> outputs_;
+  std::bitset<TensorSize> outputs_mask_;
 
   // Array of indices representing the tensors that are variable tensors.
   std::vector<int> variables_;

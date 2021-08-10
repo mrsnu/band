@@ -194,7 +194,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     Subgraph* orig_subgraph = interpreter_ptr->subgraph(job.subgraph_idx);
     SubgraphKey& orig_key = orig_subgraph->GetKey();
     SubgraphKey new_key(job.model_id, device_flag_, orig_key.input_ops,
-                        orig_key.output_ops);
+                        orig_key.output_ops, orig_key.op_indices);
     int64_t expected_latency = interpreter_ptr->GetExpectedLatency(new_key);
     if (expected_latency == -1 || expected_latency > waiting_time) {
       // no point in stealing this job, it's just going to take longer

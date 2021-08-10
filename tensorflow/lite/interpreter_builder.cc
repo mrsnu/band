@@ -1109,7 +1109,7 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
 
     modified_subgraph->SetVariables(std::move(variables));
     modified_subgraph->SetKey(
-        SubgraphKey(model_id, device_flag, input_ops, output_ops));
+        SubgraphKey(model_id, device_flag, input_ops, output_ops, op_indices));
 
     modified_subgraph->context()->recommended_num_threads = num_threads;
 

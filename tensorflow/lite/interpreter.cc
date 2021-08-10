@@ -37,6 +37,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
+#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
 // TODO(b/139446230): Move to portable platform header.
@@ -1336,6 +1337,16 @@ void Interpreter::InvestigateModelSpec(int model_id) {
             std::inserter(model_spec.output_tensors,
                           model_spec.output_tensors.begin()));
 
+  model_spec.input_mask = std::bitset<TensorSize>();
+  for (int input_index : primary_subgraph->inputs()) {
+    model_spec.input_mask.set(input_index, 1);
+  }
+
+  model_spec.output_mask = std::bitset<TensorSize>();
+  for (int output_index : primary_subgraph->outputs()) {
+    model_spec.output_mask.set(output_index, 1);
+  }
+
   // also check unsupported ops to fill in model_spec.unsupported_ops
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
@@ -1367,43 +1378,44 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatency(
-    int model_id, std::set<int> resolved_tensors, int64_t start_time,
-    std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+    int model_id, const std::bitset<TensorSize>& resolved_mask,
+    int64_t start_time,
+    const std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
     int preceded_subgraph_index) {
-  std::vector<int> subgraph_indices =
-      GetSubgraphCandidates(model_id, resolved_tensors, preceded_subgraph_index);
-  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
-      subgraph_map = GroupByStartEndIdx(subgraph_indices);
+
+  std::vector<int> subgraph_indices;
+  GetSubgraphCandidates(model_id, resolved_mask, preceded_subgraph_index,
+                        subgraph_indices);
+
+  std::map<std::set<int>, std::vector<int>> subgraph_map;
+  GroupByOpIndices(subgraph_indices, subgraph_map);
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
-  for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
+  for (auto it = subgraph_map.begin(); it != subgraph_map.end(); it++) {
     // first, filter out the subgraphs that take longer than others with the
     // same start/end indices, since there's no reason to pick them
     std::pair<int, int64_t> target_subgraph =
-        GetShortestSubgraphIndex(iter->second, start_time, device_waiting);
+        GetShortestSubgraphIndex(it->second, start_time, device_waiting);
+
     Subgraph* subgraph_ptr = subgraph(target_subgraph.first);
     SubgraphKey& key = subgraph_ptr->GetKey();
 
-    std::set<int> next_resolved_tensors = resolved_tensors;
-
-    // add current subgraph's output tensors to resolved_tensors 
-    std::copy(
-        subgraph_ptr->outputs().begin(), subgraph_ptr->outputs().end(),
-        std::inserter(next_resolved_tensors, next_resolved_tensors.begin()));
+    // add current subgraph's output tensors to resolved_tensors
+    std::bitset<TensorSize> next_resolved_mask =
+        resolved_mask | subgraph_ptr->outputs_mask();
 
     std::pair<int, int64_t> local_min;
     // all output tensors of the model is resolved
-    if (std::includes(
-            next_resolved_tensors.begin(), next_resolved_tensors.end(),
-            GetModelSpec(model_id).output_tensors.begin(),
-            GetModelSpec(model_id).output_tensors.end())) {
+    const std::bitset<TensorSize>& output_mask =
+        model_specs_[model_id].output_mask;
+    if ((next_resolved_mask | output_mask) == next_resolved_mask) {
       local_min = target_subgraph;
     } else {
       // there's more ops left for this model, so we need to look further to
       // get the final latency
-      local_min =
-          GetShortestLatency(model_id, next_resolved_tensors, target_subgraph.second,
-                             device_waiting, target_subgraph.first);
+      local_min = GetShortestLatency(model_id, next_resolved_mask,
+                                     target_subgraph.second, device_waiting,
+                                     target_subgraph.first);
     }
 
     // check if this subgraph is better than the best one
@@ -1419,21 +1431,18 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   return min_subgraph;
 }
 
-std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
-Interpreter::GroupByStartEndIdx(
-    std::vector<int> subgraph_indices) {
-  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>> ret;
-  for (auto subgraph_index : subgraph_indices) {
+void Interpreter::GroupByOpIndices(
+    const std::vector<int>& subgraph_indices,
+    std::map<std::set<int>, std::vector<int>>& subgraph_map) {
+  for (int subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
-    ret[{key.input_ops, key.output_ops}].push_back(
-        subgraph_index);
+    subgraph_map[key.op_indices].push_back(subgraph_index);
   }
-  return ret;
 }
 
-std::vector<int> Interpreter::GetSubgraphCandidates(
-    int model_id, std::set<int> resolved_tensors, int preceded_subgraph_index) {
-  std::vector<int> candidate_indices;
+void Interpreter::GetSubgraphCandidates(
+    int model_id, const std::bitset<TensorSize>& resolved_mask,
+    int preceded_subgraph_index, std::vector<int>& candidate_indices) {
   // Start of the model execution
   if (preceded_subgraph_index == -1) {
     for (int i = 0; i < subgraphs_size(); ++i) {
@@ -1448,34 +1457,25 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
     Subgraph* subgraph_ptr = subgraph(preceded_subgraph_index);
     auto key = subgraph_ptr->GetKey();
     for (Subgraph* next_subgraph : subgraph_ptr->GetNextSubgraphs()) {
-      bool is_executable = true;
       // check whether all input tensor is resolved or not
-      for (const int& input_tensor : next_subgraph->inputs()) {
-        if (resolved_tensors.find(input_tensor) == resolved_tensors.end()) {
-          is_executable = false;
-          break;
-        }
-      }
-      
-      if (is_executable) {
+      const std::bitset<TensorSize>& inputs_mask = next_subgraph->inputs_mask();
+      if ((resolved_mask | inputs_mask) == resolved_mask) {
         candidate_indices.push_back(GetSubgraphIdx(next_subgraph->GetKey()));
       }
     }
   }
-  return candidate_indices;
 }
 
-std::pair<int, int64_t>
-Interpreter::GetShortestSubgraphIndex(
-    std::vector<int> subgraph_indices, int64_t start_time,
-    std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
+std::pair<int, int64_t> Interpreter::GetShortestSubgraphIndex(
+    const std::vector<int>& subgraph_indices, int64_t start_time,
+    const std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
   int64_t min_latency = INT_MAX;
   int min_idx = 0;
 
-  for (auto subgraph_index : subgraph_indices) {
+  for (int subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
 
-    int64_t waiting_time = device_waiting[key.device_flag];
+    int64_t waiting_time = device_waiting.at(key.device_flag);
     int64_t expected_latency = GetExpectedLatency(key);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 
