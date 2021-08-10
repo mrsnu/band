@@ -77,6 +77,7 @@ struct SubgraphKey {
   std::set<int> output_ops;
 };
 
+using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
 using Tensors = std::vector<TfLiteTensor*>;
 
 enum JobStatus {

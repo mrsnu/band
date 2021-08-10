@@ -1020,9 +1020,8 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
   profile_database_.insert(model_profile.begin(), model_profile.end());
 }
 
-std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
-Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
-                                         const TfLiteDeviceFlags device_flag) {
+std::vector<DeviceOpIndices> Interpreter::MakeSubgraphsForFallbackOps(
+    const int model_id, const TfLiteDeviceFlags device_flag) {
   const int num_ops = model_specs_[model_id].num_ops;
   const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
@@ -1032,7 +1031,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   }
 
   // TODO: Context-independent code / move to interpreter builder
-  std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> subgraph_indices;
+  std::vector<DeviceOpIndices> subgraph_indices;
   Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
 
   std::set<int> resolved_tensors;
@@ -1150,9 +1149,8 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 TfLiteStatus Interpreter::GetUnitSubgraphs(
     const int model_id, std::set<DeviceOpIndices>& subgraph_indices) {
   if (!planner_->NeedFallbackSubgraphs()) {
-    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
-      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      if (device_flag == kTfLiteCPUFallback) continue;
+    for (auto& worker : workers_) {
+      TfLiteDeviceFlags device_flag = worker.first;
       subgraph_indices.insert({device_flag, {}});
     }
     return kTfLiteOk;
