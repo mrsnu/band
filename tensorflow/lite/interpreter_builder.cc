@@ -592,79 +592,99 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   int cpu_worker_id = (*interpreter)->GetRepresentativeWorkerId(kTfLiteCPU);
   auto cpu_subgraph = CreateSubgraph(
               model, op_resolver, interpreter, model_id, cpu_worker_id);
+              
   // Add entire model on CPU
   if (cpu_subgraph == nullptr || (*interpreter)->AddSubgraph(std::move(cpu_subgraph)) == -1) {
     TFLITE_LOG(ERROR) << "Failed to create subgraph on CPU delegate";
     (*interpreter)->InvalidateRecentModelId();
     return -1;
   }
+  
+
+  // Create subgraphs
+  // Save subgraph_idx - device_op_indices map for prev/next setting
+  std::map<int, std::pair<TfLiteDeviceFlags, std::set<int>>>
+      subgraph_idx_to_device_ops;
 
   // Write the ModelSpec for this model
   (*interpreter)->InvestigateModelSpec(model_id);
 
   ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
-
-  // Prepare subgraphs candidates
+  
   // TODO(#139): We might generate subgraph indices per `worker_id`
   // to support different op availablity btwn same device types
   // e.g., 2 different NPUs
-  std::set<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices;
+
+  // Prepare subgraphs candidates
   const std::string& subgraph_preparation_type =
       (*interpreter)->subgraph_preparation_type_;
   if (subgraph_preparation_type == "fallback_per_device") {
-    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
-      if (device_id == kTfLiteCPU) {
-        continue;
-      }
-      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      if ((*interpreter)
-              ->GetFallbackSubgraphsPerDevice(model_id, device_flag,
-                                              subgraph_indices) != kTfLiteOk) {
-        TFLITE_LOG(ERROR) << "AddFallbackSubgraphsPerDevice failed";
-        return -1;
+    // Device,ops to subgraph index map to avoid duplicate
+    // subgraph construction without input/output ops
+    std::map<std::pair<TfLiteDeviceFlags, std::set<int>>, int>
+        device_ops_to_subgraph_index;
+
+    // register subgraphs for all devices (skip CPU)
+    for (int i = 1; i < kTfLiteNumDevices; ++i) {
+      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+      const int worker_id = (*interpreter)->GetRepresentativeWorkerId(device_flag);
+
+      std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> device_subgraph_indices =
+          (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_flag);
+
+      for (auto& device_op_indices : device_subgraph_indices) {
+        std::string prefix;
+        int subgraph_idx = -1;
+        // Duplicate subgraph search without key
+        if (device_ops_to_subgraph_index.find(device_op_indices) !=
+            device_ops_to_subgraph_index.end()) {
+          TFLITE_LOG(INFO) << "REUSE Subgraph " << subgraph_idx;
+          subgraph_idx = device_ops_to_subgraph_index[device_op_indices];
+        } else {
+          subgraph_idx =
+              AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
+                          device_op_indices);
+          if (subgraph_idx == -1) {
+            return -1;
+          } else {
+            subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
+            device_ops_to_subgraph_index[device_op_indices] = subgraph_idx;
+          }
+        }
       }
     }
   } else if (subgraph_preparation_type == "unit_subgraph" ||
              subgraph_preparation_type == "merge_unit_subgraph") {
+    std::set<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices;
     if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
         kTfLiteOk) {
       TFLITE_LOG(ERROR) << "AddUnitSubgraphs failed";
       return -1;
     }
+
+    for (auto& device_op_indices : subgraph_indices) {
+      const int worker_id = (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
+      const int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
+                          device_op_indices);
+      if (subgraph_idx == -1) {
+        return -1;
+      }
+      has_available_device = true;
+      subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
+    }
+
+    TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
+                     << " unit subgraphs created";
+
+    // Add merged atomic subgraphs
+    if (subgraph_preparation_type == "merge_unit_subgraph") {
+      CreateMergedUnitSubgraphs(model_id, subgraph_idx_to_device_ops, model,
+                                op_resolver, interpreter);
+    }
   } else {
     TFLITE_LOG(ERROR) << "Wrong subgraph_preparation_type: "
                       << subgraph_preparation_type;
     return -1;
-  }
-
-  // Create subgraphs
-  // Save subgraph_idx - op_indices map for merging
-  std::map<int, std::set<int>> subgraph_idx_op_indices;
-
-  // Add Atomic Subgraphs
-  // Only add subgraph to representative worker for efficient merging
-  for (auto& device_op_indices : subgraph_indices) {
-    int worker_id = (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
-    if (worker_id != -1) {
-      int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
-                                     worker_id, device_op_indices);
-      if (subgraph_idx != -1) {
-        subgraph_idx_op_indices[subgraph_idx] = device_op_indices.second;
-        has_available_device = true;
-      } else {
-        return -1;
-      }
-    }
-  }
-
-  TFLITE_LOG(INFO) << "# Subgraphs after adding atomic subgraphs: "
-                   << (*interpreter)->subgraphs_size();
-
-  // Add merged atomic subgraphs
-  if (subgraph_preparation_type == "merge_unit_subgraph") {
-    CreateMergedUnitSubgraphs(model_id, subgraph_indices,
-                              subgraph_idx_op_indices, model, op_resolver,
-                              interpreter);
   }
 
   int num_workers = (*interpreter)->GetNumWorkers();
@@ -678,12 +698,13 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   // Duplicate subgraphs to extra workers
-  for (auto& device_op_indices : subgraph_indices) {
-    auto extra_workers_it = device_to_extra_workers.find(device_op_indices.first);
+  for (auto& device_op_indices : subgraph_idx_to_device_ops) {
+    auto extra_workers_it =
+        device_to_extra_workers.find(device_op_indices.second.first);
     if (extra_workers_it != device_to_extra_workers.end()) {
       for (int extra_worker_id : extra_workers_it->second) {
         if (AddSubgraph(model, op_resolver, interpreter, model_id,
-                        extra_worker_id, device_op_indices) == -1) {
+                        extra_worker_id, device_op_indices.second) == -1) {
           return -1;
         }
       }
@@ -691,7 +712,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   TFLITE_LOG(INFO) << "# Subgraphs after Duplication for extra workers: "
-                   << (*interpreter)->subgraphs_size();
+                  << (*interpreter)->subgraphs_size();
 
   // Set Prev - Next relation between subgraphs
   std::set<int> model_subgraph_indices;
@@ -704,6 +725,24 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   for (auto& prev_subgraph_idx : model_subgraph_indices) {
     for (auto& next_subgraph_idx : model_subgraph_indices) {
+      // Skip same subgraphs
+      if (prev_subgraph_idx == next_subgraph_idx) continue;
+
+      const auto& prev_subgraph_op_indices =
+          subgraph_idx_to_device_ops[prev_subgraph_idx];
+      const auto& next_subgraph_op_indices =
+          subgraph_idx_to_device_ops[next_subgraph_idx];
+
+      // Prev / next subgraphs should not contains common ops
+      std::set<int> common_ops;
+      std::set_intersection(prev_subgraph_op_indices.second.begin(),
+                            prev_subgraph_op_indices.second.end(),
+                            next_subgraph_op_indices.second.begin(),
+                            next_subgraph_op_indices.second.end(),
+                            std::inserter(common_ops, common_ops.begin()));
+      if (!common_ops.empty()) continue;
+
+      // Else try to set prev / next subgraphs
       Subgraph* prev_subgraph = (*interpreter)->subgraph(prev_subgraph_idx);
       Subgraph* next_subgraph = (*interpreter)->subgraph(next_subgraph_idx);
       if (prev_subgraph_idx != next_subgraph_idx) {
@@ -729,89 +768,101 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
 TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     const int model_id,
-    std::set<std::pair<TfLiteDeviceFlags, std::set<int>>>& subgraph_indices,
-    std::map<int, std::set<int>>& subgraph_idx_op_indices,
+    std::map<int, std::pair<TfLiteDeviceFlags, std::set<int>>>&
+        subgraph_idx_to_device_ops,
     const ::tflite::Model*& model, const OpResolver& op_resolver,
     std::unique_ptr<Interpreter>* interpreter) {
-  int worker_id = (*interpreter)->GetRepresentativeWorkerId(kTfLiteCPU);
   Subgraph* primary_subgraph =
       (*interpreter)
-          ->subgraph((*interpreter)->GetSubgraphIdx(model_id, worker_id));
+          ->subgraph((*interpreter)->GetSubgraphIdx(model_id, kTfLiteCPU));
 
+  // Check all previous output tensors are resolved by next input tensors
+  auto is_all_output_resolved =
+      [&primary_subgraph](const std::vector<int>& prev_output_tensors,
+                          const std::vector<int>& next_input_tensors) {
+        for (int input_tensor : next_input_tensors) {
+          if (primary_subgraph->tensor(input_tensor)->allocation_type ==
+              kTfLiteMmapRo) {
+            // parameter tensors are always available,
+            // so they always count as "resolved" tensors
+            continue;
+          }
+          if (std::find(prev_output_tensors.begin(), prev_output_tensors.end(),
+                        input_tensor) == prev_output_tensors.end()) {
+            return false;
+          }
+        }
+        return true;
+      };
 
-  // Merging subgraph A and B is possible when
-  auto is_mergeable = [&](Subgraph* prev_subgraph, Subgraph* next_subgraph) {
-    if (prev_subgraph == next_subgraph) return false;
-    // 1. A and B have same device flag 
-    if (prev_subgraph->GetKey().worker_id !=
-        next_subgraph->GetKey().worker_id) {
-      return false;
-    }
-    // 2. All of B inputs are resolved by A outputs.
-    auto& prev_output_tensors = prev_subgraph->outputs();
-    for (int input_tensor : next_subgraph->inputs()) {
-      if (primary_subgraph->tensor(input_tensor)->allocation_type ==
-          kTfLiteMmapRo) {
-        // parameter tensors are always available,
-        // so they always count as "resolved" tensors
-        continue;
-      }
-      if (std::find(prev_output_tensors.begin(), prev_output_tensors.end(),
-                    input_tensor) == prev_output_tensors.end()) {
-        return false;
+  // Check given device - op_indices pair is already created or not
+  auto is_already_created = [&subgraph_idx_to_device_ops](
+                                TfLiteDeviceFlags device,
+                                std::set<int> op_indices) {
+    for (const auto& idx_device_ops : subgraph_idx_to_device_ops) {
+      const std::pair<TfLiteDeviceFlags, std::set<int>>& device_ops =
+          idx_device_ops.second;
+      if (device_ops.first == device && device_ops.second == op_indices) {
+        return true;
       }
     }
-    return true;
+    return false;
   };
 
-  std::set<int> model_subgraph_indices;
-  for (int i = 0; i < (*interpreter)->subgraphs_size(); i++) {
-    Subgraph* subgraph = (*interpreter)->subgraph(i);
-    if (subgraph != nullptr && subgraph->GetKey().model_id == model_id) {
-      model_subgraph_indices.insert(i);
-    }
-  }
-
-  while (true) {
+  bool added = false;
+  while (added) {
     std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> to_add;
-    for (auto& prev_idx : model_subgraph_indices) {
-      for (auto& next_idx : model_subgraph_indices) {
-        Subgraph* prev_subgraph = (*interpreter)->subgraph(prev_idx);
-        Subgraph* next_subgraph = (*interpreter)->subgraph(next_idx);
-        if (is_mergeable(prev_subgraph, next_subgraph)) {
-          std::set<int> op_indices;
-          const std::set<int>& prev_op_indices =
-              subgraph_idx_op_indices.at(prev_idx);
-          const std::set<int>& next_op_indices =
-              subgraph_idx_op_indices.at(next_idx);
-          std::set_union(prev_op_indices.begin(), prev_op_indices.end(),
-                         next_op_indices.begin(), next_op_indices.end(),
-                         std::inserter(op_indices, op_indices.end()));
-          TfLiteDeviceFlags device =
-              (*interpreter)
-                  ->GetWorkerDeviceFlag(prev_subgraph->GetKey().worker_id);
-          if (subgraph_indices.find({device, op_indices}) ==
-              subgraph_indices.end()) {
-            subgraph_indices.insert({device, op_indices});
-            to_add.push_back({device, op_indices});
-          }
+    for (const auto& prev_idx_device_ops : subgraph_idx_to_device_ops) {
+      for (const auto& next_idx_device_ops : subgraph_idx_to_device_ops) {
+        // Skip same subgraph
+        if (prev_idx_device_ops.first == next_idx_device_ops.first) continue;
+        // Skip different device
+        if (prev_idx_device_ops.second.first !=
+            next_idx_device_ops.second.first)
+          continue;
+        // Skip if there is not resolved output tensor
+        Subgraph* prev_subgraph =
+            (*interpreter)->subgraph(prev_idx_device_ops.first);
+        Subgraph* next_subgraph =
+            (*interpreter)->subgraph(next_idx_device_ops.first);
+        if (!is_all_output_resolved(prev_subgraph->outputs(),
+                                    next_subgraph->inputs()))
+          continue;
+        // Prepare merged device - op_indices
+        const TfLiteDeviceFlags& device = prev_idx_device_ops.second.first;
+        std::set<int> op_indices;
+        const std::set<int>& prev_op_indices =
+            prev_idx_device_ops.second.second;
+        const std::set<int>& next_op_indices =
+            next_idx_device_ops.second.second;
+        std::set_union(prev_op_indices.begin(), prev_op_indices.end(),
+                       next_op_indices.begin(), next_op_indices.end(),
+                       std::inserter(op_indices, op_indices.end()));
+        // Add if not already created
+        if (!is_already_created(device, op_indices)) {
+          to_add.push_back({device, op_indices});
         }
       }
     }
-    if (to_add.empty()) break;
     for (auto& device_op_indices : to_add) {
+      const TfLiteDeviceFlags& device_flag = device_op_indices.first;
+      const std::set<int>& op_indices = device_op_indices.second;
+      if (!is_already_created(device_flag, op_indices)) continue;
+
+      int worker_id = (*interpreter)->GetRepresentativeWorkerId(device_flag);
       int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
                                      worker_id, device_op_indices);
       if (subgraph_idx == -1) {
         return kTfLiteError;
       }
 
-      subgraph_idx_op_indices[subgraph_idx] = device_op_indices.second;
-      model_subgraph_indices.insert(subgraph_idx);
+      added = true;
+      subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
     }
   }
 
-  TFLITE_LOG(INFO) << model_subgraph_indices.size() << " Merged Subgraphs created";
+  TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
+                   << " subgraphs created (after merge)";
   return kTfLiteOk;
 }
 
@@ -947,10 +998,11 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
         FlatBufferIntArrayToVector(subgraph->inputs());
     std::set<int> subgraph_inputs =
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
-    std::set<int>& model_outputs =
+    const std::set<int>& all_node_outputs  =
         (*interpreter)->GetModelSpec(model_id).node_output_tensors;
-
-    std::set_union(model_outputs.begin(), model_outputs.end(),
+    const std::set<int>& model_outputs =
+        (*interpreter)->GetModelSpec(model_id).output_tensors;
+    std::set_union(all_node_outputs .begin(), all_node_outputs .end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
                    std::inserter(non_param_tensors, non_param_tensors.end()));
 
@@ -959,13 +1011,38 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
                           external_inputs_params.begin(),
                           external_inputs_params.end(),
                           std::inserter(real_inputs, real_inputs.begin()));
-    // we do a similar processing for output tensors, except
-    // this time we don't have to worry about param tensors
+  
     std::set<int> real_outputs;
-    std::set_difference(node_outputs.begin(), node_outputs.end(),
-                        node_inputs.begin(), node_inputs.end(),
-                        std::inserter(real_outputs, real_outputs.begin()));
-    
+    if (op_indices.size() == operators->size()) {
+      // Entire model case doesn't need to consider external nodes
+      std::set_difference(node_outputs.begin(), node_outputs.end(),
+                    node_inputs.begin(), node_inputs.end(),
+                    std::inserter(real_outputs, real_outputs.begin()));
+    } else {
+      // See if current subgraph outputs model's output tensor
+      std::set_intersection(model_outputs.begin(), model_outputs.end(),
+                            node_outputs.begin(), node_outputs.end(),
+                            std::inserter(real_outputs, real_outputs.begin()));
+      
+      // Find reference from external nodes to internal nodes to find real
+      // output of current subgraph.
+      for (size_t i = 0; i < operators->size(); ++i) {
+        // Skip internal nodes
+        if (op_indices.find(i) != op_indices.end()) {
+          continue;
+        }
+
+        const auto* op = operators->Get(i);
+        auto op_inputs = FlatBufferIntArrayToVector(op->inputs());
+
+        for (auto external_op_input: op_inputs) {
+          if (node_outputs.find(external_op_input) != node_outputs.end()) {
+            real_outputs.insert(external_op_input);
+          }
+        }
+      }
+    }
+  
     modified_subgraph->SetInputs(
         std::vector<int>(real_inputs.begin(), real_inputs.end()));
     modified_subgraph->SetOutputs(

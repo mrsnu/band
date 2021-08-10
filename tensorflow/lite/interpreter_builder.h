@@ -102,8 +102,8 @@ class InterpreterBuilder {
       const std::pair<TfLiteDeviceFlags, std::set<int>>& device_op_indices);
   static TfLiteStatus CreateMergedUnitSubgraphs(
       const int model_id,
-      std::set<std::pair<TfLiteDeviceFlags, std::set<int>>>& subgraph_indices,
-      std::map<int, std::set<int>>& subgraph_idx_op_indices,
+      std::map<int, std::pair<TfLiteDeviceFlags, std::set<int>>>&
+          subgraph_idx_to_device_ops,
       const ::tflite::Model*& model, const OpResolver& op_resolver,
       std::unique_ptr<Interpreter>* interpreter);
   TfLiteStatus BuildLocalIndexToRegistrationMapping(

@@ -219,10 +219,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
 #endif  // defined(__ANDROID__)
 
   // Initialize configurations.
-  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
-    error_reporter_->Report("Interpreter::Init() failed.");
-    exit(-1);
-  }
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
     exit(-1);
@@ -1033,16 +1029,16 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
   profile_database_.insert(model_profile.begin(), model_profile.end());
 }
 
-TfLiteStatus Interpreter::GetFallbackSubgraphsPerDevice(
-    const int model_id, const TfLiteDeviceFlags device_flag,
-    std::set<DeviceOpIndices>& subgraph_indices) {
+std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
+Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
+                                         const TfLiteDeviceFlags device_flag) {
+  std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> subgraph_indices;
   const int num_ops = model_specs_[model_id].num_ops;
   const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
 
   if (!planner_->NeedFallbackSubgraphs()) {
-    subgraph_indices.insert({device_flag, {}});
-    return kTfLiteOk;
+    return {{device_flag, {}}};
   }
 
   // TODO: Context-independent code / move to interpreter builder
@@ -1152,13 +1148,13 @@ TfLiteStatus Interpreter::GetFallbackSubgraphsPerDevice(
     }  
 
     if (operator_set.size()) {
-      subgraph_indices.insert({current_device, operator_set});
+      subgraph_indices.push_back({current_device, operator_set});
     }
 
     is_fallback = !is_fallback;
   }
 
-  return kTfLiteOk;
+  return subgraph_indices;
 }
 
 TfLiteStatus Interpreter::GetUnitSubgraphs(
