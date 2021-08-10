@@ -280,6 +280,7 @@ Interpreter::~Interpreter() {
 
 TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
+  subgraph_preparation_type_ = config.subgraph_preparation_type;
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
@@ -1019,9 +1020,8 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
   profile_database_.insert(model_profile.begin(), model_profile.end());
 }
 
-std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>
-Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
-                                         const TfLiteDeviceFlags device_flag) {
+std::vector<DeviceOpIndices> Interpreter::MakeSubgraphsForFallbackOps(
+    const int model_id, const TfLiteDeviceFlags device_flag) {
   const int num_ops = model_specs_[model_id].num_ops;
   const std::set<int>& unsupported_ops =
       model_specs_[model_id].unsupported_ops[device_flag];
@@ -1031,7 +1031,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   }
 
   // TODO: Context-independent code / move to interpreter builder
-  std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>> subgraph_indices;
+  std::vector<DeviceOpIndices> subgraph_indices;
   Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
 
   std::set<int> resolved_tensors;
@@ -1144,6 +1144,134 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   }
 
   return subgraph_indices;
+}
+
+TfLiteStatus Interpreter::GetUnitSubgraphs(
+    const int model_id, std::set<DeviceOpIndices>& subgraph_indices) {
+  if (!planner_->NeedFallbackSubgraphs()) {
+    for (auto& worker : workers_) {
+      TfLiteDeviceFlags device_flag = worker.first;
+      subgraph_indices.insert({device_flag, {}});
+    }
+    return kTfLiteOk;
+  }
+
+  // Prepare variables to use
+  const int num_ops = model_specs_[model_id].num_ops;
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
+
+  // BitMask to check device support or not
+  using BitMask = uint32_t;
+  if (kTfLiteNumDevices > 8 * sizeof(BitMask)) {
+    TFLITE_LOG(ERROR) << "kTfLiteNumDevices is larger than BitMask: "
+                      << kTfLiteNumDevices;
+  }
+
+  // Build op_support_table
+  std::vector<BitMask> op_support_table(num_ops, 0U);
+  const std::map<TfLiteDeviceFlags, std::set<int>>& unsupported_ops =
+      model_specs_[model_id].unsupported_ops;
+  for (int op_index = 0; op_index < num_ops; op_index++) {
+    for (auto& worker : workers_) {
+      TfLiteDeviceFlags device_flag = worker.first;
+      int device_id = device_flag;
+      if (device_flag == kTfLiteCPU || device_flag == kTfLiteCPUFallback) {
+        op_support_table[op_index] |= 1 << device_id;
+        continue;
+      }
+      if (unsupported_ops.find(device_flag) == unsupported_ops.end() ||
+          unsupported_ops.at(device_flag).find(op_index) == unsupported_ops.at(device_flag).end()) {
+        op_support_table[op_index] |= 1 << device_id;
+      }
+    }
+  }
+
+  // TODO: Add description
+  // Add unit Subgraphs.
+  // Op indices in single unit subgraph have same support devices.
+  std::vector<bool> is_resolved_tensor(primary_subgraph->tensors_size(), false);
+  std::set<int> remaining_ops;
+
+  for (int input_index : primary_subgraph->inputs()) {
+    is_resolved_tensor[input_index] = true;
+  }
+
+  for (int i = 0; i < num_ops; i++) {
+    remaining_ops.insert(i);
+  }
+
+  // convenience function for determining if op inputs are resolved
+  auto is_resolved_op = [&primary_subgraph, &is_resolved_tensor](int op_index) {
+    auto op_inputs =
+        primary_subgraph->node_and_registration(op_index)->first.inputs;
+    for (int i = 0; i < op_inputs->size; i++) {
+      if (primary_subgraph->tensor(op_inputs->data[i])->allocation_type == kTfLiteMmapRo) {
+        // parameter tensors are always available,
+        // so they always count as "resolved" tensors
+        continue;
+      }
+      if (!is_resolved_tensor[op_inputs->data[i]]) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  while (true) {
+    std::set<int> unit_subgraph_ops;
+    BitMask support_devices = 0;
+
+    // Find single unit subgraph ops
+    while (true) {
+      // Find addable ops
+      // 1. resolved
+      // 2. same support devices
+      std::vector<int> to_add;
+      for (int op_index : remaining_ops) {
+        // Check the op is resolved
+        if (!is_resolved_op(op_index)) {
+          continue;
+        }
+        // Check the op have same support devices
+        if (support_devices != 0 &&
+            support_devices != op_support_table[op_index]) {
+          continue;
+        }
+        // Set support devices using first op
+        if (support_devices == 0) {
+          support_devices = op_support_table[op_index];
+        }
+        to_add.push_back(op_index);
+      }
+      // If there is no more ops to add, stop
+      if (to_add.empty()) break;
+
+      // Add ops which are resolved and have same support devices
+      unit_subgraph_ops.insert(to_add.begin(), to_add.end());
+
+      // Delete resolved ops and add resolved tensors
+      for (int op_index : to_add) {
+        remaining_ops.erase(remaining_ops.find(op_index));
+        auto op_outputs =
+            primary_subgraph->node_and_registration(op_index)->first.outputs;
+        for (int i = 0; i < op_outputs->size; i++) {
+          is_resolved_tensor[op_outputs->data[i]] = true;
+        }
+      }
+    }
+    if (unit_subgraph_ops.empty()) break;
+    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+      if (support_devices & (1 << device_id)) {
+        TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+        subgraph_indices.insert({device_flag, unit_subgraph_ops});
+      }
+    }
+  }
+  if (!remaining_ops.empty()) {
+    TFLITE_LOG(ERROR) << "Not empty remaining ops";
+    return kTfLiteError;
+  }
+  return kTfLiteOk;
 }
 
 void Interpreter::InvestigateModelSpec(int model_id) {

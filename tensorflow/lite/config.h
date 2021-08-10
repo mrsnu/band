@@ -33,6 +33,7 @@ struct InterpreterConfig {
   std::string profile_data_path;
   ProfileConfig profile_config;
   float profile_smoothing_factor = 0.1;
+  std::string subgraph_preparation_type = "unit_subgraph";
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
   int num_threads = -1;
 };
