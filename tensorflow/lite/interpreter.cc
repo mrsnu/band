@@ -1150,9 +1150,8 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 TfLiteStatus Interpreter::GetUnitSubgraphs(
     const int model_id, std::set<DeviceOpIndices>& subgraph_indices) {
   if (!planner_->NeedFallbackSubgraphs()) {
-    for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
-      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      if (device_flag == kTfLiteCPUFallback) continue;
+    for (auto& worker : workers_) {
+      TfLiteDeviceFlags device_flag = worker.first;
       subgraph_indices.insert({device_flag, {}});
     }
     return kTfLiteOk;
