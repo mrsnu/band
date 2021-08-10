@@ -764,8 +764,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     }
   }
 
-  TFLITE_LOG(INFO) << "# Subgraphs after Merge: "
-                   << model_subgraph_indices.size();
+  TFLITE_LOG(INFO) << model_subgraph_indices.size() << " Merged Subgraphs created";
   return kTfLiteOk;
 }
 
