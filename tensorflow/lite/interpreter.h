@@ -98,10 +98,7 @@ namespace impl {
 // a convenient data structure for holding various model information
 struct ModelSpec {
   int num_ops;
-  std::set<int> input_tensors;
   std::bitset<TensorSize> input_mask;
-  // only includes "true" outputs
-  std::set<int> output_tensors;
   std::bitset<TensorSize> output_mask;
   // includes intermediate tensors that are consumed by
   // other nodes in the same model

@@ -1327,16 +1327,6 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     }
   }
 
-  std::copy(primary_subgraph->inputs().begin(),
-            primary_subgraph->inputs().end(),
-            std::inserter(model_spec.input_tensors,
-                          model_spec.input_tensors.begin()));
-
-  std::copy(primary_subgraph->outputs().begin(),
-            primary_subgraph->outputs().end(),
-            std::inserter(model_spec.output_tensors,
-                          model_spec.output_tensors.begin()));
-
   model_spec.input_mask = std::bitset<TensorSize>();
   for (int input_index : primary_subgraph->inputs()) {
     model_spec.input_mask.set(input_index, 1);

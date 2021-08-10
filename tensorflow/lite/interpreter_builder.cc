@@ -1025,8 +1025,12 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
         std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
     const std::set<int>& all_node_outputs  =
         (*interpreter)->GetModelSpec(model_id).node_output_tensors;
-    const std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(model_id).output_tensors;
+    std::set<int> model_outputs;
+    for (int i = 0; i < modified_subgraph->tensors_size(); i++) {
+      if ((*interpreter)->GetModelSpec(model_id).output_mask.test(i)) {
+        model_outputs.insert(i);
+      }
+    }
     std::set_union(all_node_outputs .begin(), all_node_outputs .end(),
                    subgraph_inputs.begin(), subgraph_inputs.end(),
                    std::inserter(non_param_tensors, non_param_tensors.end()));
