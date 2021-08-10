@@ -826,8 +826,9 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
         if (prev_idx_device_ops.first == next_idx_device_ops.first) continue;
         // Skip different device
         if (prev_idx_device_ops.second.first !=
-            next_idx_device_ops.second.first)
+            next_idx_device_ops.second.first) {
           continue;
+        }
         // Skip if there is not resolved output tensor
         Subgraph* prev_subgraph =
             (*interpreter)->subgraph(prev_idx_device_ops.first);
