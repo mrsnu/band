@@ -233,12 +233,12 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   }
 
   // Initialize configurations.
-  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
-    error_reporter_->Report("Interpreter::Init() failed.");
-    exit(-1);
-  }
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
+    exit(-1);
+  }
+  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
+    error_reporter_->Report("Interpreter::Init() failed.");
     exit(-1);
   }
   for (auto& worker : workers_) {

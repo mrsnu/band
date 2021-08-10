@@ -396,11 +396,14 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   tflite::RuntimeConfig runtime_config;
   if (ParseRuntimeConfigFromJson(path, runtime_config) != kTfLiteOk) {
     ThrowException(env, kIllegalArgumentException,
-                   "Runtime Config json path is not valid");
+                   "Parsing runtime_config json file failed");
     return 0;
   }
 
-  LOGI("Parse done interpreter's planner : %d", runtime_config.planner_config.planner_type);
+  for (int i = 0; i < runtime_config.planner_config.schedulers.size() ; i++) {
+    LOGI("Parse done interpreter's planner : %d",
+         runtime_config.planner_config.schedulers[i]);
+  }
   auto interpreter(std::make_unique<tflite_api_dispatcher::Interpreter>(
       error_reporter, runtime_config));
   env->ReleaseStringUTFChars(json_file, path);
@@ -412,7 +415,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
 JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong model_handle, 
-    jlong error_handle) {
+    jlong error_handle, jstring model_name) {
   LOGI("RegisterModel starts");
   std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
       convertLongToInterpreter(env, interpreter_handle));
@@ -426,10 +429,12 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return 0;
 
+  tflite::ModelConfig modelConfig;
+  modelConfig.model_fname = env->GetStringUTFChars(model_name, nullptr);
   auto resolver = ::tflite::CreateOpResolver();
   int model_id =
       tflite_api_dispatcher::InterpreterBuilder::RegisterModel(
-          *model, nullptr, *resolver.get(), &interpreter, 1);
+          *model, &modelConfig, *resolver.get(), &interpreter, 1);
   if (model_id == -1) {
     ThrowException(env, kIllegalArgumentException,
                    "Internal error: Cannot create interpreter: %s",
@@ -446,7 +451,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
 JNIEXPORT jintArray JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
     JNIEnv* env, jclass clazz, jintArray model_ids, jobjectArray input_tensor_handles,
-    jlong interpreter_handle, jlong error_handle) {
+    jlong interpreter_handle, jlong error_handle, jlong slo) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
   if (interpreter == nullptr) return NULL;
@@ -462,7 +467,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
   std::vector<tflite::Tensors> input_tensors(num_model_inputs);
 
   for (int i = 0; i < num_models; i++) {
-    jobs.push_back(tflite::Job(model_ids_elements[i]));
+    jobs.push_back(tflite::Job(model_ids_elements[i], slo));
     LOGI("RunAsync starts with model_id = %d", model_ids_elements[i]);
 
     if (input_tensors.size()) {
