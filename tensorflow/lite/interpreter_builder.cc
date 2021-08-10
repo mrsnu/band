@@ -835,8 +835,9 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
         Subgraph* next_subgraph =
             (*interpreter)->subgraph(next_idx_device_ops.first);
         if (!is_all_input_prepared(prev_subgraph->outputs(),
-                                   next_subgraph->inputs()))
+                                   next_subgraph->inputs())) {
           continue;
+        }
         // Prepare merged device - op_indices
         const TfLiteDeviceFlags& device = prev_idx_device_ops.second.first;
         std::set<int> op_indices;
