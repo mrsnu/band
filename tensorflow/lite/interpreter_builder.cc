@@ -138,8 +138,8 @@ TFLITE_ATTRIBUTE_WEAK Interpreter::TfLiteDelegatePtr AcquireFlexDelegate() {
 namespace impl {
 ErrorReporter* InterpreterBuilder::error_reporter_ = DefaultErrorReporter();
 
-TfLiteStatus InterpreterBuilder::BuildLocalIndexToRegistrationMapping(const ::tflite::Model* model,
-                                                                      const OpResolver& op_resolver) {
+TfLiteStatus InterpreterBuilder::BuildLocalIndexToRegistrationMapping(
+    const ::tflite::Model* model, const OpResolver& op_resolver) {
   TfLiteStatus status = kTfLiteOk;
   // Reset state.
   flatbuffer_op_index_to_registration_.clear();
@@ -219,13 +219,11 @@ class MallocDataAllocator : public BuiltinDataAllocator {
 };
 
 }  // namespace
- 
+
 TfLiteStatus InterpreterBuilder::ParseNodes(
-    const ::tflite::Model* model,
-    const OpResolver& op_resolver,
+    const ::tflite::Model* model, const OpResolver& op_resolver,
     const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
-    Subgraph* subgraph,
-    std::set<int> op_indices) {
+    Subgraph* subgraph, std::set<int> op_indices) {
   TfLiteStatus status = kTfLiteOk;
   int num_ops = op_indices.size();
 
@@ -427,8 +425,7 @@ TfLiteStatus InterpreterBuilder::ParseSparsity(
 TfLiteStatus InterpreterBuilder::ParseTensors(
     const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
     const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-    Subgraph* subgraph,
-    std::set<int> tensor_indices) {
+    Subgraph* subgraph, std::set<int> tensor_indices) {
   TfLiteStatus status = kTfLiteOk;
 
   // A little helper to get the names of inputs and outputs. Note that they
@@ -541,20 +538,18 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
 }
 
 int InterpreterBuilder::AddSubgraph(
-    const ::tflite::Model* model,
-    const OpResolver& op_resolver,
-    std::unique_ptr<Interpreter>* interpreter,
-    int model_id, int worker_id,
+    const ::tflite::Model* model, const OpResolver& op_resolver,
+    std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
     const std::pair<TfLiteDeviceFlags, std::set<int>>& device_op_indices) {
-  auto new_subgraph = CreateSubgraph(model, op_resolver, interpreter,
-                                          model_id, worker_id,
-                                          device_op_indices.second);
-  int subgraph_idx = (*interpreter)->AddSubgraph(std::move(new_subgraph));
-  Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
-  if (subgraph == nullptr) {
+  auto new_subgraph = CreateSubgraph(model, op_resolver, interpreter, model_id,
+                                     worker_id, device_op_indices.second);
+  if (new_subgraph == nullptr) {
     TFLITE_LOG(ERROR) << "Subgraph creation failure";
     return -1;
   }
+
+  int subgraph_idx = (*interpreter)->AddSubgraph(std::move(new_subgraph));
+  Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
 
   const SubgraphKey& subgraph_key = subgraph->GetKey();
 
@@ -573,12 +568,12 @@ int InterpreterBuilder::AddSubgraph(
 int InterpreterBuilder::num_registered_model = 0;
 
 int InterpreterBuilder::RegisterModel(const FlatBufferModel& model,
-                     ModelConfig* model_config,
-                     const OpResolver& op_resolver,
-                     std::unique_ptr<Interpreter>* interpreter,
-                     int num_threads) {
-  return RegisterModel(
-      model.GetModel(), model_config, op_resolver, interpreter, num_threads);
+                                      ModelConfig* model_config,
+                                      const OpResolver& op_resolver,
+                                      std::unique_ptr<Interpreter>* interpreter,
+                                      int num_threads) {
+  return RegisterModel(model.GetModel(), model_config, op_resolver, interpreter,
+                       num_threads);
 }
 
 int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
@@ -587,19 +582,18 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                                       std::unique_ptr<Interpreter>* interpreter,
                                       int num_threads) {
   int model_id = (*interpreter)->GetNewModelId();
-  bool has_available_device = false;
 
   int cpu_worker_id = (*interpreter)->GetRepresentativeWorkerId(kTfLiteCPU);
-  auto cpu_subgraph = CreateSubgraph(
-              model, op_resolver, interpreter, model_id, cpu_worker_id);
-              
+  auto cpu_subgraph =
+      CreateSubgraph(model, op_resolver, interpreter, model_id, cpu_worker_id);
+
   // Add entire model on CPU
-  if (cpu_subgraph == nullptr || (*interpreter)->AddSubgraph(std::move(cpu_subgraph)) == -1) {
+  if (cpu_subgraph == nullptr ||
+      (*interpreter)->AddSubgraph(std::move(cpu_subgraph)) == -1) {
     TFLITE_LOG(ERROR) << "Failed to create subgraph on CPU delegate";
     (*interpreter)->InvalidateRecentModelId();
     return -1;
   }
-  
 
   // Create subgraphs
   // Save subgraph_idx - device_op_indices map for prev/next setting
@@ -610,7 +604,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   (*interpreter)->InvestigateModelSpec(model_id);
 
   ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
-  
+
   // TODO(#139): We might generate subgraph indices per `worker_id`
   // to support different op availablity btwn same device types
   // e.g., 2 different NPUs
@@ -627,28 +621,30 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     // register subgraphs for all devices (skip CPU)
     for (int i = 1; i < kTfLiteNumDevices; ++i) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-      const int worker_id = (*interpreter)->GetRepresentativeWorkerId(device_flag);
 
-      std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> device_subgraph_indices =
-          (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_flag);
+      std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>>
+          device_subgraph_indices =
+              (*interpreter)
+                  ->MakeSubgraphsForFallbackOps(model_id, device_flag);
 
       for (auto& device_op_indices : device_subgraph_indices) {
+        const int worker_id =
+            (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
         std::string prefix;
         int subgraph_idx = -1;
         // Duplicate subgraph search without key
         if (device_ops_to_subgraph_index.find(device_op_indices) !=
             device_ops_to_subgraph_index.end()) {
-          TFLITE_LOG(INFO) << "REUSE Subgraph " << subgraph_idx;
           subgraph_idx = device_ops_to_subgraph_index[device_op_indices];
+          TFLITE_LOG(INFO) << "REUSE Subgraph " << subgraph_idx;
         } else {
-          subgraph_idx =
-              AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
-                          device_op_indices);
-          if (subgraph_idx == -1) {
-            return -1;
-          } else {
+          subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
+                                     worker_id, device_op_indices);
+          if (subgraph_idx != -1) {
             subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
             device_ops_to_subgraph_index[device_op_indices] = subgraph_idx;
+          } else {
+            return -1;
           }
         }
       }
@@ -663,13 +659,14 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
 
     for (auto& device_op_indices : subgraph_indices) {
-      const int worker_id = (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
-      const int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
-                          device_op_indices);
+      const int worker_id =
+          (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
+      const int subgraph_idx =
+          AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
+                      device_op_indices);
       if (subgraph_idx == -1) {
         return -1;
       }
-      has_available_device = true;
       subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
     }
 
@@ -691,7 +688,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   std::map<TfLiteDeviceFlags, std::vector<int>> device_to_extra_workers;
 
   for (int worker_id = 0; worker_id < num_workers; worker_id++) {
-    TfLiteDeviceFlags device_flag = (*interpreter)->GetWorkerDeviceFlag(worker_id);
+    TfLiteDeviceFlags device_flag =
+        (*interpreter)->GetWorkerDeviceFlag(worker_id);
     if (worker_id != (*interpreter)->GetRepresentativeWorkerId(device_flag)) {
       device_to_extra_workers[device_flag].push_back(worker_id);
     }
@@ -712,7 +710,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   TFLITE_LOG(INFO) << "# Subgraphs after Duplication for extra workers: "
-                  << (*interpreter)->subgraphs_size();
+                   << (*interpreter)->subgraphs_size();
 
   // Set Prev - Next relation between subgraphs
   std::set<int> model_subgraph_indices;
@@ -745,13 +743,27 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       // Else try to set prev / next subgraphs
       Subgraph* prev_subgraph = (*interpreter)->subgraph(prev_subgraph_idx);
       Subgraph* next_subgraph = (*interpreter)->subgraph(next_subgraph_idx);
-      if (prev_subgraph_idx != next_subgraph_idx) {
+
+      bool is_previous = false;
+      
+      std::set<int> input_tensors(next_subgraph->inputs().begin(),
+                                  next_subgraph->inputs().end());
+      for (int tensor_index : prev_subgraph->outputs()) {
+        if (input_tensors.find(tensor_index) != input_tensors.end()) {
+          is_previous = true;
+          break;
+        }
+      }
+
+      if (is_previous) {
         next_subgraph->SetPrevSubgraph(prev_subgraph);
+        TFLITE_LOG(INFO) << next_subgraph_idx << " is "
+                         << prev_subgraph_idx << "'s next";
       }
     }
   }
 
-  if (has_available_device) {
+  if ((*interpreter)->subgraphs_size() > 0) {
     if (model_config != nullptr) {
       (*interpreter)->SetModelConfigAndFillProfile(model_id, *model_config);
     }
@@ -868,16 +880,16 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
 
 std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
     const FlatBufferModel& model, const OpResolver& op_resolver,
-    std::unique_ptr<Interpreter>* interpreter, int model_id,
-    int worker_id, std::set<int> op_indices, int num_threads){
-    return CreateSubgraph(model.GetModel(), op_resolver, interpreter, model_id,
-                          worker_id, op_indices, num_threads);
+    std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
+    std::set<int> op_indices, int num_threads) {
+  return CreateSubgraph(model.GetModel(), op_resolver, interpreter, model_id,
+                        worker_id, op_indices, num_threads);
 }
 
 std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
     const ::tflite::Model* model, const OpResolver& op_resolver,
-    std::unique_ptr<Interpreter>* interpreter, int model_id,
-    int worker_id, std::set<int> op_indices, int num_threads) {
+    std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
+    std::set<int> op_indices, int num_threads) {
   if (!interpreter || !interpreter->get()) {
     error_reporter_->Report("Interpreter is invalid");
     return {};
@@ -898,7 +910,8 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
 
   InterpreterBuilder builder;
 
-  if (builder.BuildLocalIndexToRegistrationMapping(model, op_resolver) != kTfLiteOk) {
+  if (builder.BuildLocalIndexToRegistrationMapping(model, op_resolver) !=
+      kTfLiteOk) {
     error_reporter_->Report("Registration failed.\n");
     return {};
   }
@@ -926,178 +939,180 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
   const tflite::SubGraph* subgraph = (*subgraphs)[0];
   std::unique_ptr<Subgraph> modified_subgraph =
       (*interpreter)->CreateSubgraph();
-    auto operators = subgraph->operators();
-    auto tensors = subgraph->tensors();
-    if (!operators || !tensors || !buffers) {
-      error_reporter_->Report(
-          "Did not get operators, tensors, or buffers in subgraph.\n");
-      return {};
+  auto operators = subgraph->operators();
+  auto tensors = subgraph->tensors();
+  if (!operators || !tensors || !buffers) {
+    error_reporter_->Report(
+        "Did not get operators, tensors, or buffers in subgraph.\n");
+    return {};
+  }
+  if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
+    return {};
+  }
+
+  if (op_indices.empty()) {
+    for (int op_index = 0; op_index <= operators->size() - 1; op_index++) {
+      op_indices.insert(op_index);
     }
-    if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
-      return {};
+  }
+  // we now parse nodes and tensors, and setup input and
+  // output tensors for this particular subgraph
+
+  // first, parse nodes to access `TfLiteNode` info below
+  if (builder.ParseNodes(model, op_resolver, operators, modified_subgraph.get(),
+                         op_indices) != kTfLiteOk) {
+    return {};
+  }
+
+  // Collect all input/output tensors for individual nodes.
+  // these include intermediate tensors that may be consumed by other
+  // nodes in the same model, as well as parameters tensors that aren't
+  // really "input" tensors
+  std::set<int> node_inputs, node_outputs;
+  auto nodes_and_registration = modified_subgraph->nodes_and_registration();
+  for (int node_index : modified_subgraph->execution_plan()) {
+    TfLiteNode node = nodes_and_registration[node_index].first;
+    for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
+      node_inputs.insert(input_tensor);
     }
-
-    if (op_indices.empty()) {
-      for (int op_index = 0; op_index <= operators->size() - 1; op_index++) {
-        op_indices.insert(op_index);
-      }
+    for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+      node_outputs.insert(output_tensor);
     }
-    // we now parse nodes and tensors, and setup input and
-    // output tensors for this particular subgraph
+  }
 
-    // first, parse nodes to access `TfLiteNode` info below
-    if (builder.ParseNodes(model, op_resolver, operators,
-                           modified_subgraph.get(), op_indices) != kTfLiteOk) {
-      return {};
-    }
+  // merge inputs and outputs to call ParseTensors()
+  std::set<int> subgraph_tensors;
+  std::set_union(node_inputs.begin(), node_inputs.end(), node_outputs.begin(),
+                 node_outputs.end(),
+                 std::inserter(subgraph_tensors, subgraph_tensors.end()));
 
-    // Collect all input/output tensors for individual nodes.
-    // these include intermediate tensors that may be consumed by other
-    // nodes in the same model, as well as parameters tensors that aren't
-    // really "input" tensors
-    std::set<int> node_inputs, node_outputs;
-    auto nodes_and_registration = modified_subgraph->nodes_and_registration();
-    for (int node_index : modified_subgraph->execution_plan()) {
-      TfLiteNode node = nodes_and_registration[node_index].first;
-      for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
-        node_inputs.insert(input_tensor);
-      }
-      for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
-        node_outputs.insert(output_tensor);
-      }
-    }
+  if (builder.ParseTensors(buffers, tensors, modified_subgraph.get(),
+                           subgraph_tensors) != kTfLiteOk) {
+    return {};
+  }
 
-    // merge inputs and outputs to call ParseTensors()
-    std::set<int> subgraph_tensors;
-    std::set_union(node_inputs.begin(), node_inputs.end(),
-                   node_outputs.begin(), node_outputs.end(),
-                   std::inserter(subgraph_tensors, subgraph_tensors.end()));
+  // now filter out the intermediate tensors from node_input_tensors so we
+  // only have external inputs that are required from outside,
+  // as well as parameter tensors
+  std::set<int> external_inputs_params;
+  std::set_difference(
+      node_inputs.begin(), node_inputs.end(), node_outputs.begin(),
+      node_outputs.end(),
+      std::inserter(external_inputs_params, external_inputs_params.begin()));
 
-    if (builder.ParseTensors(buffers, tensors, modified_subgraph.get(),
-                             subgraph_tensors) != kTfLiteOk) {
-      return {};
-    }
+  // Next, we need to filter out param tensors from external_inputs_params.
+  // there is no way of directly checking if a tensor is a parameter or not,
+  // so instead we collect all non-parameter tensors and exclude the param
+  // tensors in external_inputs_params that are not in the non-param list
+  // NOTE: need to check #65 (Tensor communications between subgraphs)
+  std::set<int> non_param_tensors;
 
-    // now filter out the intermediate tensors from node_input_tensors so we
-    // only have external inputs that are required from outside,
-    // as well as parameter tensors
-    std::set<int> external_inputs_params;
-    std::set_difference(node_inputs.begin(), node_inputs.end(),
-                        node_outputs.begin(), node_outputs.end(),
-                        std::inserter(external_inputs_params,
-                                      external_inputs_params.begin()));
+  std::vector<int> subgraph_input_vec =
+      FlatBufferIntArrayToVector(subgraph->inputs());
+  std::set<int> subgraph_inputs =
+      std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
+  const std::set<int>& all_node_outputs =
+      (*interpreter)->GetModelSpec(model_id).node_output_tensors;
+  const std::set<int>& model_outputs =
+      (*interpreter)->GetModelSpec(model_id).output_tensors;
+  std::set_union(all_node_outputs.begin(), all_node_outputs.end(),
+                 subgraph_inputs.begin(), subgraph_inputs.end(),
+                 std::inserter(non_param_tensors, non_param_tensors.end()));
 
-    // Next, we need to filter out param tensors from external_inputs_params.
-    // there is no way of directly checking if a tensor is a parameter or not,
-    // so instead we collect all non-parameter tensors and exclude the param
-    // tensors in external_inputs_params that are not in the non-param list
-    // NOTE: need to check #65 (Tensor communications between subgraphs)
-    std::set<int> non_param_tensors;
+  std::set<int> real_inputs;
+  std::set_intersection(non_param_tensors.begin(), non_param_tensors.end(),
+                        external_inputs_params.begin(),
+                        external_inputs_params.end(),
+                        std::inserter(real_inputs, real_inputs.begin()));
 
-    std::vector<int> subgraph_input_vec =
-        FlatBufferIntArrayToVector(subgraph->inputs());
-    std::set<int> subgraph_inputs =
-        std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
-    const std::set<int>& all_node_outputs  =
-        (*interpreter)->GetModelSpec(model_id).node_output_tensors;
-    const std::set<int>& model_outputs =
-        (*interpreter)->GetModelSpec(model_id).output_tensors;
-    std::set_union(all_node_outputs .begin(), all_node_outputs .end(),
-                   subgraph_inputs.begin(), subgraph_inputs.end(),
-                   std::inserter(non_param_tensors, non_param_tensors.end()));
+  std::set<int> real_outputs;
+  if (op_indices.size() == operators->size()) {
+    // Entire model case doesn't need to consider external nodes
+    std::set_difference(node_outputs.begin(), node_outputs.end(),
+                        node_inputs.begin(), node_inputs.end(),
+                        std::inserter(real_outputs, real_outputs.begin()));
+  } else {
+    // See if current subgraph outputs model's output tensor
+    std::set_intersection(model_outputs.begin(), model_outputs.end(),
+                          node_outputs.begin(), node_outputs.end(),
+                          std::inserter(real_outputs, real_outputs.begin()));
 
-    std::set<int> real_inputs;
-    std::set_intersection(non_param_tensors.begin(), non_param_tensors.end(),
-                          external_inputs_params.begin(),
-                          external_inputs_params.end(),
-                          std::inserter(real_inputs, real_inputs.begin()));
-  
-    std::set<int> real_outputs;
-    if (op_indices.size() == operators->size()) {
-      // Entire model case doesn't need to consider external nodes
-      std::set_difference(node_outputs.begin(), node_outputs.end(),
-                    node_inputs.begin(), node_inputs.end(),
-                    std::inserter(real_outputs, real_outputs.begin()));
-    } else {
-      // See if current subgraph outputs model's output tensor
-      std::set_intersection(model_outputs.begin(), model_outputs.end(),
-                            node_outputs.begin(), node_outputs.end(),
-                            std::inserter(real_outputs, real_outputs.begin()));
-      
-      // Find reference from external nodes to internal nodes to find real
-      // output of current subgraph.
-      for (size_t i = 0; i < operators->size(); ++i) {
-        // Skip internal nodes
-        if (op_indices.find(i) != op_indices.end()) {
-          continue;
-        }
-
-        const auto* op = operators->Get(i);
-        auto op_inputs = FlatBufferIntArrayToVector(op->inputs());
-
-        for (auto external_op_input: op_inputs) {
-          if (node_outputs.find(external_op_input) != node_outputs.end()) {
-            real_outputs.insert(external_op_input);
-          }
-        }
-      }
-    }
-  
-    modified_subgraph->SetInputs(
-        std::vector<int>(real_inputs.begin(), real_inputs.end()));
-    modified_subgraph->SetOutputs(
-        std::vector<int>(real_outputs.begin(), real_outputs.end()));
-
-    std::vector<int> variables;
-    for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
-      auto* tensor = modified_subgraph->tensor(i);
-      if (tensor->is_variable) {
-        variables.push_back(i);
-      }
-    }
-
-    // Find input / output ops
-    std::set<int> input_ops;
-    std::set<int> output_ops;
-
-    for (int op_index : op_indices) {
-      const auto* op = operators->Get(op_index);
-
-      auto input_tensors = FlatBufferIntArrayToVector(op->inputs());
-      auto output_tensors = FlatBufferIntArrayToVector(op->outputs());
-
-      for (int input_tensor_index : input_tensors) {
-        if (real_inputs.find(input_tensor_index) != real_inputs.end()) {
-          input_ops.insert(op_index);
-        }
+    // Find reference from external nodes to internal nodes to find real
+    // output of current subgraph.
+    for (size_t i = 0; i < operators->size(); ++i) {
+      // Skip internal nodes
+      if (op_indices.find(i) != op_indices.end()) {
+        continue;
       }
 
-      for (int output_tensor_index : output_tensors) {
-        if (real_outputs.find(output_tensor_index) != real_outputs.end()) {
-          output_ops.insert(op_index);
+      const auto* op = operators->Get(i);
+      auto op_inputs = FlatBufferIntArrayToVector(op->inputs());
+
+      for (auto external_op_input : op_inputs) {
+        if (node_outputs.find(external_op_input) != node_outputs.end()) {
+          real_outputs.insert(external_op_input);
         }
       }
     }
+  }
 
-    modified_subgraph->SetInputOps(input_ops);
-    modified_subgraph->SetOutputOps(output_ops);
+  modified_subgraph->SetInputs(
+      std::vector<int>(real_inputs.begin(), real_inputs.end()));
+  modified_subgraph->SetOutputs(
+      std::vector<int>(real_outputs.begin(), real_outputs.end()));
 
-    modified_subgraph->SetVariables(std::move(variables));
-    modified_subgraph->SetKey(
-        SubgraphKey(model_id, worker_id, input_ops, output_ops));
+  std::vector<int> variables;
+  for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
+    auto* tensor = modified_subgraph->tensor(i);
+    if (tensor->is_variable) {
+      variables.push_back(i);
+    }
+  }
 
-    modified_subgraph->context()->recommended_num_threads = num_threads;
+  // Find input / output ops
+  std::set<int> input_ops;
+  std::set<int> output_ops;
 
-    if ((*interpreter)
-            ->ApplyBestDeviceDelegate(modified_subgraph.get(), (*interpreter)->GetWorkerDeviceFlag(worker_id),
-                                      builder.tensor_types_) != kTfLiteOk)
-      return {};
+  for (int op_index : op_indices) {
+    const auto* op = operators->Get(op_index);
 
-    if (modified_subgraph->AllocateTensors() != kTfLiteOk) {
-      return {};
-    } 
+    auto input_tensors = FlatBufferIntArrayToVector(op->inputs());
+    auto output_tensors = FlatBufferIntArrayToVector(op->outputs());
 
-    return std::move(modified_subgraph);
+    for (int input_tensor_index : input_tensors) {
+      if (real_inputs.find(input_tensor_index) != real_inputs.end()) {
+        input_ops.insert(op_index);
+      }
+    }
+
+    for (int output_tensor_index : output_tensors) {
+      if (real_outputs.find(output_tensor_index) != real_outputs.end()) {
+        output_ops.insert(op_index);
+      }
+    }
+  }
+
+  modified_subgraph->SetInputOps(input_ops);
+  modified_subgraph->SetOutputOps(output_ops);
+
+  modified_subgraph->SetVariables(std::move(variables));
+  modified_subgraph->SetKey(
+      SubgraphKey(model_id, worker_id, input_ops, output_ops));
+
+  modified_subgraph->context()->recommended_num_threads = num_threads;
+
+  if ((*interpreter)
+          ->ApplyBestDeviceDelegate(
+              modified_subgraph.get(),
+              (*interpreter)->GetWorkerDeviceFlag(worker_id),
+              builder.tensor_types_) != kTfLiteOk)
+    return {};
+
+  if (modified_subgraph->AllocateTensors() != kTfLiteOk) {
+    return {};
+  }
+
+  return std::move(modified_subgraph);
 }
 
 }  // namespace impl

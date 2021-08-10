@@ -221,9 +221,12 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // Initialize configurations.
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
+    exit(-1); 
+  }
+  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
+    error_reporter_->Report("Interpreter::Init() failed.");
     exit(-1);
   }
-  
   // Create workers.
   auto& potential_workers = runtime_config.worker_config.workers;
   for (int i = 0; i < potential_workers.size(); i++) {
@@ -278,6 +281,9 @@ Interpreter::~Interpreter() {
 TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
   subgraph_preparation_type_ = config.subgraph_preparation_type;
+
+  TFLITE_LOG(INFO) << "Subgraph prep type:"
+                   << subgraph_preparation_type_;
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
@@ -1411,6 +1417,8 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
             GetModelSpec(model_id).output_tensors.end())) {
       local_min = target_subgraph;
     } else {
+      std::cout << preceded_subgraph_index << "->" << target_subgraph.first
+                << std::endl;
       // there's more ops left for this model, so we need to look further to
       // get the final latency
       local_min =

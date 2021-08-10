@@ -38,12 +38,7 @@ limitations under the License.
 namespace tflite {
 // data structure for identifying subgraphs within whole models
 struct SubgraphKey {
-  SubgraphKey(int model_id = -1, int worker_id = -1,
-              int start = -1, int end = -1)
-      : model_id(model_id),
-        worker_id(worker_id),
-        input_ops(start != -1 ? std::set<int>({start}) : std::set<int>()),
-        output_ops(end != -1 ? std::set<int>({end}) : std::set<int>()) {}
+  SubgraphKey() {}
   SubgraphKey(int model_id, int worker_id,
               std::set<int> input_ops, std::set<int> output_ops)
       : model_id(model_id),
