@@ -300,17 +300,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allowBufferHandleOutput(
   interpreter->SetAllowBufferHandleOutput(allow);
 }
 
-JNIEXPORT void JNICALL
-Java_org_tensorflow_lite_NativeInterpreterWrapper_numThreads(JNIEnv* env,
-                                                             jclass clazz,
-                                                             jlong handle,
-                                                             jint num_threads) {
-  tflite_api_dispatcher::Interpreter* interpreter =
-      convertLongToInterpreter(env, handle);
-  if (interpreter == nullptr) return;
-  interpreter->SetNumThreads(static_cast<int>(num_threads));
-}
-
 JNIEXPORT jlong JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_createErrorReporter(
     JNIEnv* env, jclass clazz, jint size) {
