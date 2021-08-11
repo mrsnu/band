@@ -338,7 +338,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createModel(
     ThrowException(env, kIllegalArgumentException,
                    "Contents of %s does not encode a valid "
                    "TensorFlow Lite model: %s",
-                   path, error_reporter->CachedErrorMessage());
+                   path, error_reporter->CachedLastErrorMessage());
     env->ReleaseStringUTFChars(model_file, path);
     return 0;
   }
@@ -366,7 +366,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createModelWithBuffer(
   if (!model) {
     ThrowException(env, kIllegalArgumentException,
                    "ByteBuffer does not encode a valid model: %s",
-                   error_reporter->CachedErrorMessage());
+                   error_reporter->CachedLastErrorMessage());
     return 0;
   }
   return reinterpret_cast<jlong>(model.release());
@@ -427,7 +427,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
   if (model_id == -1) {
     ThrowException(env, kIllegalArgumentException,
                    "Internal error: Cannot create interpreter: %s",
-                   error_reporter->CachedErrorMessage());
+                   error_reporter->CachedLastErrorMessage());
   }
   interpreter.release();
 
@@ -518,7 +518,7 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
       if (status != kTfLiteOk) {
         ThrowException(env, kIllegalArgumentException,
                       "Internal error: Failed to copy %d-th output of job %d: %s",
-                      i, job_ids_vector[i], error_reporter->CachedErrorMessage());
+                      i, job_ids_vector[i], error_reporter->CachedLastErrorMessage());
         return;
       }
     }
@@ -588,7 +588,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resizeInput(
         if (status != kTfLiteOk) {
           ThrowException(env, kIllegalArgumentException,
                         "Internal error: Failed to resize %d-th input: %s",
-                        input_idx, error_reporter->CachedErrorMessage());
+                        input_idx, error_reporter->CachedLastErrorMessage());
           return JNI_FALSE;
         }
       }
@@ -620,7 +620,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resetVariableTensors(
       if (status != kTfLiteOk) {
         ThrowException(env, kIllegalArgumentException,
                       "Internal error: Failed to reset variable tensors: %s",
-                      error_reporter->CachedErrorMessage());
+                      error_reporter->CachedLastErrorMessage());
       }
     }
   }
