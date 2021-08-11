@@ -1456,7 +1456,8 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
           break;
         }
       }
-
+      
+      // TODO: Update with subgraph dependency generation logic
       // check whether any output tensor is resolved or not
       for (const int& output_tensor: next_subgraph->outputs()) {
         if (resolved_tensors.find(output_tensor) != resolved_tensors.end()) {
