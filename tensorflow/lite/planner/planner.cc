@@ -6,6 +6,7 @@
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
+#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
@@ -62,6 +63,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new RoundRobinScheduler(this));
     } else if (schedulers[i] == kShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(this));
+    } else if (schedulers[i] == kHeterogeneousEarliestFinishTime) {
+      schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeScheduler(this));
     } else {
       return kTfLiteError;
     }

@@ -2,9 +2,11 @@
 #define TENSORFLOW_LITE_PLANNER_PLANNER_H_
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "tensorflow/lite/c/common.h"
