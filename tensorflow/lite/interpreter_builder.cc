@@ -567,6 +567,14 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     return -1;
   }
 
+  int subgraph_index = (*interpreter)->GetSubgraphIdx(model_id, kTfLiteCPU);
+  Subgraph* primary_subgraph = (*interpreter)->subgraph(subgraph_index);
+  if (primary_subgraph->tensors_size() > TensorSize) {
+    TFLITE_LOG(ERROR) << "tensors_size of model " << model_id
+                      << " is larger then TensorSize";
+    return -1;
+  }
+
   // Write the ModelSpec for this model
   (*interpreter)->InvestigateModelSpec(model_id);
 
