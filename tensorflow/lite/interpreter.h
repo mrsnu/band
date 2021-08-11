@@ -662,14 +662,15 @@ class Interpreter {
   }
 
   // Return all subgraph indices that match the given criteria of model_id,
-  // device_id, and op start_idx.
+  // worker_id, and op start_idx.
   std::set<int> GetSubgraphIdx(int model_id, int worker_id,
                                int start_idx);
 
-  // Return the subgraph index for model `model_id` on device `device_idx`.
-  // Op start and end indices are assumed to be 0 and num_ops-1, i.e., the
-  // whole model.
+  // Return the subgraph index for model `model_id` on worker `worker_id`
   int GetSubgraphIdx(int model_id, int worker_id);
+  // Return the subgraph index for model `model_id` on  
+  // representative device worker
+  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_flag);
 
   // Return the subgraph index that matches the given subgraph_key.
   int GetSubgraphIdx(SubgraphKey subgraph_key);

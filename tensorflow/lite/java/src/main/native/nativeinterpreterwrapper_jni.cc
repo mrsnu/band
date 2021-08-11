@@ -191,8 +191,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputNames(JNIEnv* env,
                    "input names.");
     return nullptr;
   }
-  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
   size_t size = interpreter->inputs(subgraph_index).size();
   jobjectArray names = static_cast<jobjectArray>(
       env->NewObjectArray(size, string_class, env->NewStringUTF("")));
@@ -209,8 +208,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateInputTensor(
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
 
   TfLiteTensor* input = TfLiteTensorCreateLike(
       interpreter->tensor(subgraph_index, interpreter->inputs(subgraph_index)[input_index]));
@@ -227,8 +225,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getInputCount(JNIEnv* env,
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
   return static_cast<jint>(interpreter->inputs(subgraph_index).size());
 }
 
@@ -238,8 +235,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_allocateOutputTensor(
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
 
   TfLiteTensor* output = TfLiteTensorCreateLike(
       interpreter->tensor(subgraph_index, interpreter->outputs(subgraph_index)[output_index]));
@@ -256,8 +252,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputCount(JNIEnv* env,
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return 0;
-  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
   return static_cast<jint>(interpreter->outputs(subgraph_index).size());
 }
 
@@ -276,8 +271,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputNames(JNIEnv* env,
                    "output names.");
     return nullptr;
   }
-  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
   size_t size = interpreter->outputs(subgraph_index).size();
   jobjectArray names = static_cast<jobjectArray>(
       env->NewObjectArray(size, string_class, env->NewStringUTF("")));
@@ -550,8 +544,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_getOutputDataType(
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, handle);
   if (interpreter == nullptr) return -1;
-  const int worker_id = interpreter->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, worker_id);
+  size_t subgraph_index = interpreter->GetSubgraphIdx(model_id, kTfLiteCPU);
   const int idx = static_cast<int>(output_idx);
   if (output_idx < 0 || output_idx >= interpreter->outputs(subgraph_index).size()) {
     ThrowException(env, kIllegalArgumentException,
@@ -627,11 +620,11 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resetVariableTensors(
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return;
 
-  for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+  for (int worker_id = 0; worker_id < interpreter->GetNumWorkers(); ++worker_id) {
     // Get all starting subgraphs.
     // TODO(#73): Remove duplicate memcopy for same model
     std::set<int> subgraph_indices = interpreter->GetSubgraphIdx(
-        model_id, static_cast<TfLiteDeviceFlags>(device_id), 0);
+        model_id, worker_id, 0);
 
     for (int subgraph_idx : subgraph_indices) {
       TfLiteStatus status = interpreter->ResetVariableTensors(subgraph_idx);

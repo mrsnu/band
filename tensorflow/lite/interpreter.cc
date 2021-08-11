@@ -1013,6 +1013,10 @@ int Interpreter::GetSubgraphIdx(int model_id, int worker_id) {
   return -1;
 }
 
+int Interpreter::GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_flag) {
+  return GetSubgraphIdx(model_id, GetRepresentativeWorkerId(device_flag));
+}
+
 std::set<int> Interpreter::models() const {
   std::set<int> models;
   for (auto& key : subgraph_idx_map_) {

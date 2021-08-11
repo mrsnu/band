@@ -129,7 +129,7 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
         return kTfLiteError;
       }
 
-      int device_idx = device_flag;
+      int worker_id = device_flag;
       // Add additional device worker
       if (found_default_worker[device_flag]) {
         if (device_flag != kTfLiteCPU) {
@@ -138,7 +138,7 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
                               "multiple workers for now.";
           return kTfLiteError;
         }
-        device_idx = worker_config.workers.size();
+        worker_id = worker_config.workers.size();
         worker_config.workers.push_back(device_flag);
         worker_config.cpu_masks.push_back(impl::kTfLiteNumCpuMasks);
         worker_config.num_threads.push_back(0);
@@ -150,23 +150,23 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
       if (!worker_config_json["cpu_masks"].isNull()) {
         impl::TfLiteCPUMaskFlags flag = impl::TfLiteCPUMaskGetMask(
             worker_config_json["cpu_masks"].asCString());
-        worker_config.cpu_masks[device_idx] = flag;
+        worker_config.cpu_masks[worker_id] = flag;
       }
 
       // 2. worker num threads
       if (!worker_config_json["num_threads"].isNull()) {
-        worker_config.num_threads[device_idx] = worker_config_json["num_threads"].asInt();
+        worker_config.num_threads[worker_id] = worker_config_json["num_threads"].asInt();
       }
     }
   }
 
   // Update default values from interpreter
-  for (auto device_id = 0; device_id < worker_config.workers.size(); ++device_id) {
-    if (worker_config.cpu_masks[device_id] == impl::kTfLiteNumCpuMasks) {
-      worker_config.cpu_masks[device_id] = interpreter_config.cpu_masks;
+  for (auto worker_id = 0; worker_id < worker_config.workers.size(); ++worker_id) {
+    if (worker_config.cpu_masks[worker_id] == impl::kTfLiteNumCpuMasks) {
+      worker_config.cpu_masks[worker_id] = interpreter_config.cpu_masks;
     }
-    if (worker_config.num_threads[device_id] == 0) {
-      worker_config.num_threads[device_id] = interpreter_config.num_threads;
+    if (worker_config.num_threads[worker_id] == 0) {
+      worker_config.num_threads[worker_id] = interpreter_config.num_threads;
     }
   }
 
