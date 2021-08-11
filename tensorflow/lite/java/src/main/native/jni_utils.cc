@@ -68,27 +68,16 @@ BufferErrorReporter::BufferErrorReporter(JNIEnv* env, int limit) {
     return;
   }
   buffer_[0] = '\0';
-  start_idx_ = 0;
-  end_idx_ = limit - 1;
+  limit_ = limit;
 }
 
 BufferErrorReporter::~BufferErrorReporter() { delete[] buffer_; }
 
 int BufferErrorReporter::Report(const char* format, va_list args) {
-  int size = 0;
-  // If an error has already been logged, insert a newline.
-  if (start_idx_ > 0 && start_idx_ < end_idx_) {
-    buffer_[start_idx_++] = '\n';
-    ++size;
-  }
-  if (start_idx_ < end_idx_) {
-    size = vsnprintf(buffer_ + start_idx_, end_idx_ - start_idx_, format, args);
-  }
-  start_idx_ += size;
-  return size;
+  return vsnprintf(buffer_, limit_, format, args);
 }
 
-const char* BufferErrorReporter::CachedErrorMessage() { return buffer_; }
+const char* BufferErrorReporter::CachedLastErrorMessage() { return buffer_; }
 
 }  // namespace jni
 }  // namespace tflite
