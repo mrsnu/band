@@ -1,6 +1,7 @@
 #ifndef TENSORFLOW_LITE_PLANNER_PLANNER_H_
 #define TENSORFLOW_LITE_PLANNER_PLANNER_H_
 
+#include <atomic>
 #include <memory>
 #include <set>
 #include <string>
@@ -138,7 +139,7 @@ class Planner {
   std::vector<std::unique_ptr<Scheduler>> schedulers_;
 
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
-  int num_submitted_jobs_ = 0;
+  std::atomic<int> num_submitted_jobs_;
   int num_finished_jobs_ = 0;
 
   std::condition_variable end_invoke_;

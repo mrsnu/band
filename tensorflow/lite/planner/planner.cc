@@ -12,7 +12,7 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter) {
+Planner::Planner(Interpreter* interpreter) : num_submitted_jobs_(0) {
   interpreter_ = interpreter;
   planner_thread_ = std::thread([this] { this->Plan(); });
 }
