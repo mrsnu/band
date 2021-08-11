@@ -221,7 +221,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // Initialize configurations.
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
-    exit(-1); 
+    exit(-1);
   }
   if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
     error_reporter_->Report("Interpreter::Init() failed.");
@@ -282,7 +282,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
   subgraph_preparation_type_ = config.subgraph_preparation_type;
 
-  TFLITE_LOG(INFO) << "Subgraph prep type:"
+  TFLITE_LOG(INFO) << "Subgraph prep type: "
                    << subgraph_preparation_type_;
 
   if (NeedProfile()) {
@@ -799,7 +799,6 @@ void Interpreter::Profile(int model_id) {
       int64_t profiled_latency = it->second;
       // TODO: Consider affinity of worker thread
       moving_averaged_latencies_[subgraph_key] = profiled_latency;
-      
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
                        << " model=" << subgraph_key.model_id
@@ -1417,8 +1416,6 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
             GetModelSpec(model_id).output_tensors.end())) {
       local_min = target_subgraph;
     } else {
-      std::cout << preceded_subgraph_index << "->" << target_subgraph.first
-                << std::endl;
       // there's more ops left for this model, so we need to look further to
       // get the final latency
       local_min =
@@ -1476,15 +1473,6 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
           break;
         }
       }
-
-      // check whether any output tensor is resolved or not
-      for (const int& output_tensor: next_subgraph->outputs()) {
-        if (resolved_tensors.find(output_tensor) != resolved_tensors.end()) {
-          is_executable = false;
-          break;
-        }
-      }
-
       if (is_executable) {
         candidate_indices.push_back(GetSubgraphIdx(next_subgraph->GetKey()));
       }

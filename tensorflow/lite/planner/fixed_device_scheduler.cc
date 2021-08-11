@@ -11,7 +11,7 @@ void FixedDeviceScheduler::Schedule(JobQueue& requests) {
 
     int model_id = to_execute.model_id;
     int worker_id;
-    if (worker_id >= 0 && GetInterpreter()->GetNumWorkers()) {
+    if (0 <= worker_id && worker_id < GetInterpreter()->GetNumWorkers()) {
       worker_id = to_execute.worker_id;
     } else {
       worker_id = planner_->GetModelWorkerMap()[model_id];

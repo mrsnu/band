@@ -130,7 +130,7 @@ bool Planner::IsSLOViolated(Job& job) {
   if (job.slo_us > 0) {
     int64_t current_time = profiling::time::NowMicros();
     int64_t expected_latency =
-        workers_waiting_[static_cast<TfLiteDeviceFlags>(job.device_id)] +
+        workers_waiting_[job.worker_id] +
         job.profiled_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
@@ -395,7 +395,7 @@ int Planner::GetJobRecordIndex(int job_id) const {
 void Planner::TryUpdateModelWorkerMapping() {
   std::set<int> models = GetInterpreter()->models();
   const int num_workers = GetInterpreter()->GetNumWorkers();
-  if (models.size() != model_worker_map_.size()) {
+  if (models.size() > model_worker_map_.size()) {
     // (# of available workers, vector of model_id)
     std::map<int, std::set<int>> workers_per_models_map;
     for (auto model_id : models) {

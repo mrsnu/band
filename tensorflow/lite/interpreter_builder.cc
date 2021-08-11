@@ -654,7 +654,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     std::set<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices;
     if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
         kTfLiteOk) {
-      TFLITE_LOG(ERROR) << "AddUnitSubgraphs failed";
+      TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
       return -1;
     }
 
@@ -763,7 +763,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   }
 
-  if ((*interpreter)->subgraphs_size() > 0) {
+  if (model_subgraph_indices.size() > 0) {
     if (model_config != nullptr) {
       (*interpreter)->SetModelConfigAndFillProfile(model_id, *model_config);
     }
