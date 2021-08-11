@@ -2,9 +2,11 @@
 #define TENSORFLOW_LITE_PLANNER_PLANNER_H_
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "tensorflow/lite/c/common.h"
@@ -181,6 +183,18 @@ class Scheduler {
   TfLiteWorkerType worker_type_;
   Planner* planner_;
   ScheduleAction action_;
+
+  struct TupleHash {
+    std::size_t operator() (const std::tuple<int, std::set<int>, int> &p) const {
+      auto hash_func = std::hash<int>();
+      std::size_t hash = hash_func(std::get<0>(p));
+      for (int e : std::get<1>(p)) {
+        hash ^= hash_func(e);
+      }
+      hash ^= hash_func(std::get<2>(p));
+      return hash;
+    }
+  };
 };
 
 }  // namespace impl
