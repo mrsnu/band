@@ -387,8 +387,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
 void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
-  job.resolved_tensors =
-      GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
+  job.following_jobs.clear();
 }
 
 bool Planner::IsJobIdValid(int job_id) {
