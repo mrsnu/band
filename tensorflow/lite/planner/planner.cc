@@ -193,7 +193,8 @@ std::set<TfLiteDeviceFlags> Planner::GetIdleDevices() {
   std::set<TfLiteDeviceFlags> idle_devices;
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-    if (device_waiting_[device_flag] == 0) {
+    Worker* worker = GetInterpreter()->GetWorker(device_flag);
+    if (worker != nullptr && !worker->IsBusy()) {
       idle_devices.insert(device_flag);
     }
   }
