@@ -12,13 +12,20 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
   DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
 
+  // stop if there are no idle devices OR there's nothing in `requests`
   while (!idle_devices.empty() && window_size > 0) {
+    // Lookup table for GetShortestLatency().
+    // Although it is tempting to maintain a global cache, the values in
+    // device_waiting are (generally) different for every while loop iteration
+    // so this cache is valid only for this specific loop iteration.
     std::unordered_map<std::tuple<int, std::set<int>, int>, std::pair<int, int64_t>, TupleHash> cache;
 
+    // basically the same as ShortestExpectedLatencyScheduler
     int64_t largest_shortest_latency = -1;
     int target_job_idx = -1;
     int target_subgraph_idx = -1;
 
+    // only check up to `window_size` requests
     for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
       Job& job = *it;
       int preceded_subgraph_index = job.previous_subgraph_indices.empty() ?
@@ -30,12 +37,14 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
 
       auto cache_it = cache.find(cache_key);
       if (cache_it != cache.end()) {
+        // used cached value instead of calling GetShortestLatency()
         best_subgraph = cache_it->second;
       } else {
         best_subgraph = GetInterpreter()->GetShortestLatency(
             job.model_id, job.resolved_tensors, 0, device_waiting,
             preceded_subgraph_index);
 
+        // insert new value into cache
         cache[cache_key] = best_subgraph;
       }
 
@@ -43,6 +52,9 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
       if (largest_shortest_latency < best_subgraph.second) {
         Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
         TfLiteDeviceFlags device = target_subgraph->GetKey().device_flag;
+
+        // skip this job if we can't schedule it immediately,
+        // even if this job is the "most urgent" one
         if (idle_devices.find(device) == idle_devices.end()) {
           continue;
         }
@@ -53,14 +65,15 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
       }
     }
 
-
     if (target_job_idx < 0) {
+      // no one wants to be scheduled..
       break;
     }
 
-
     auto requests_it = requests.begin() + target_job_idx;
     Job job = *requests_it;
+
+    // erase the job from requests and decrement window_size
     requests.erase(requests_it);
     window_size--;
 
@@ -68,10 +81,15 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     TfLiteDeviceFlags device = target_subgraph->GetKey().device_flag;
     auto device_it = idle_devices.find(device);
     assert(device_it != idle_devices.end());
+
+    // mark this device as busy
     idle_devices.erase(device_it);
 
     device_waiting[device] +=
         GetInterpreter()->GetExpectedLatency(target_subgraph->GetKey());
+
+    // Update Job status specific to this planner.
+    // Common status will be updated by `EnqueueAction`.
     if (target_subgraph->IsStart()) {
       // only set these fields if this is the first subgraph of this model
       job.expected_latency = largest_shortest_latency;

@@ -184,6 +184,8 @@ class Scheduler {
   Planner* planner_;
   ScheduleAction action_;
 
+  // used for setting std::tuple<int, std::set<int>, int> as a std::map key
+  // https://stackoverflow.com/a/32685618
   struct TupleHash {
     std::size_t operator() (const std::tuple<int, std::set<int>, int> &p) const {
       auto hash_func = std::hash<int>();

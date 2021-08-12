@@ -32,6 +32,10 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     int target_job_idx;
     int target_subgraph_idx;
 
+    // Lookup table for GetShortestLatency().
+    // Although it is tempting to maintain a global cache, the values in
+    // device_waiting are (generally) different for every while loop iteration
+    // so this cache is valid only for this specific loop iteration.
     std::unordered_map<std::tuple<int, std::set<int>, int>, std::pair<int, int64_t>, TupleHash> cache;
 
     int64_t sched_start = profiling::time::NowMicros();
@@ -47,12 +51,14 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
 
       auto cache_it = cache.find(cache_key);
       if (cache_it != cache.end()) {
+        // used cached value instead of calling GetShortestLatency()
         best_subgraph = cache_it->second;
       } else {
         best_subgraph = GetInterpreter()->GetShortestLatency(
             next_job.model_id, next_job.resolved_tensors, 0, device_waiting,
             preceded_subgraph_index);
 
+        // insert new value into cache
         cache[cache_key] = best_subgraph;
       }
 
