@@ -1,0 +1,15 @@
+{
+    "execution_mode": "periodic",
+    "log_path": "/data/local/tmp/model_execution_log.csv",
+    "models": [
+        {
+            "batch_size": 1,
+            "graph": "/data/local/tmp/ci/mobilenet_v1_1.0_224_quant.tflite",
+            "period_ms": 100
+        }
+    ],
+    "running_time_ms": 1000,
+    "schedulers": [
+        3
+    ]
+}

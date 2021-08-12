@@ -1,0 +1,16 @@
+{
+    "execution_mode": "stream",
+    "log_path": "/data/local/tmp/model_execution_log.csv",
+    "model_profile": "/data/local/tmp/profile.json",
+    "models": [
+        {
+            "batch_size": 1,
+            "graph": "/data/local/tmp/ci/mobilenet_v1_1.0_224_quant.tflite",
+            "period_ms": 100
+        }
+    ],
+    "running_time_ms": 1000,
+    "schedulers": [
+        3
+    ]
+}

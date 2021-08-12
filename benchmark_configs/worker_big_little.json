@@ -1,0 +1,29 @@
+{
+    "execution_mode": "stream",
+    "log_path": "/data/local/tmp/model_execution_log.csv",
+    "model_profile": "/data/local/tmp/profile.json",
+    "models": [
+        {
+            "batch_size": 1,
+            "graph": "/data/local/tmp/ci/retinaface_mbv2_quant_160.tflite"
+        }
+    ],
+    "profile_num_runs": 40,
+    "profile_warmup_runs": 20,
+    "running_time_ms": 100000,
+    "schedule_window_size": 10,
+    "schedulers": [
+        2
+    ],
+    "subgraph_preparation_type": "unit_subgraph",
+    "workers": {
+        "CPU": {
+            "cpu_masks": "BIG",
+            "num_threads": 3
+        },
+        "CPUFallback": {
+            "cpu_masks": "LITTLE",
+            "num_threads": 4
+        }
+    }
+}

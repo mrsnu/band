@@ -1,0 +1,31 @@
+{
+    "execution_mode": "periodic",
+    "log_path": "/data/local/tmp/model_execution_log.csv",
+    "model_profile": "/data/local/tmp/profile.json",
+    "models": [
+        {
+            "batch_size": 5,
+            "graph": "/data/local/tmp/ci/retinaface_mbv2_quant_640.tflite",
+            "period_ms": 100
+        },
+        {
+            "batch_size": 5,
+            "graph": "/data/local/tmp/ci/arc_mbv2_quant.tflite",
+            "period_ms": 100
+        },
+        {
+            "batch_size": 5,
+            "graph": "/data/local/tmp/ci/arc_res50_quant.tflite",
+            "period_ms": 100
+        },
+        {
+            "batch_size": 5,
+            "graph": "/data/local/tmp/ci/ICN_quant.tflite",
+            "period_ms": 100
+        }
+    ],
+    "running_time_ms": 5000,
+    "schedulers": [
+        3
+    ]
+}
