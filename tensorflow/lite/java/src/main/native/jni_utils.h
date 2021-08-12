@@ -48,12 +48,11 @@ class BufferErrorReporter : public ErrorReporter {
   BufferErrorReporter(JNIEnv* env, int limit);
   virtual ~BufferErrorReporter();
   int Report(const char* format, va_list args) override;
-  const char* CachedErrorMessage();
+  const char* CachedLastErrorMessage();
 
  private:
   char* buffer_;
-  int start_idx_ = 0;
-  int end_idx_ = 0;
+  int limit_;
 };
 
 }  // namespace jni

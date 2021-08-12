@@ -608,7 +608,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // TODO(#139): We might generate subgraph indices per `worker_id`
   // to support different op availablity btwn same device types
   // e.g., 2 different NPUs
-
   // Prepare subgraphs candidates
   const std::string& subgraph_preparation_type =
       (*interpreter)->subgraph_preparation_type_;
@@ -651,13 +650,16 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   } else if (subgraph_preparation_type == "unit_subgraph" ||
              subgraph_preparation_type == "merge_unit_subgraph") {
-    std::set<std::pair<TfLiteDeviceFlags, std::set<int>>> subgraph_indices;
+    std::set<DeviceOpIndices> subgraph_indices;
     if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
         kTfLiteOk) {
       TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
       return -1;
     }
 
+    // Create subgraphs
+    // Save subgraph_idx - device_op_indices map for prev/next setting
+    std::map<int, DeviceOpIndices> subgraph_idx_to_device_ops;
     for (auto& device_op_indices : subgraph_indices) {
       const int worker_id =
           (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
@@ -761,6 +763,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                          << prev_subgraph_idx << "'s next";
       }
     }
+  } else {
+    TFLITE_LOG(ERROR) << "Wrong subgraph_preparation_type: "
+                      << subgraph_preparation_type;
+    return -1;
   }
 
   if (model_subgraph_indices.size() > 0) {
@@ -780,16 +786,15 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
 TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     const int model_id,
-    std::map<int, std::pair<TfLiteDeviceFlags, std::set<int>>>&
-        subgraph_idx_to_device_ops,
+    std::map<int, DeviceOpIndices>& subgraph_idx_to_device_ops,
     const ::tflite::Model*& model, const OpResolver& op_resolver,
     std::unique_ptr<Interpreter>* interpreter) {
   Subgraph* primary_subgraph =
       (*interpreter)
           ->subgraph((*interpreter)->GetSubgraphIdx(model_id, kTfLiteCPU));
 
-  // Check all previous output tensors are resolved by next input tensors
-  auto is_all_output_resolved =
+  // Check all next input tensors are resolved by previous output tensors
+  auto is_all_input_prepared =
       [&primary_subgraph](const std::vector<int>& prev_output_tensors,
                           const std::vector<int>& next_input_tensors) {
         for (int input_tensor : next_input_tensors) {
@@ -830,16 +835,18 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
         if (prev_idx_device_ops.first == next_idx_device_ops.first) continue;
         // Skip different device
         if (prev_idx_device_ops.second.first !=
-            next_idx_device_ops.second.first)
+            next_idx_device_ops.second.first) {
           continue;
+        }
         // Skip if there is not resolved output tensor
         Subgraph* prev_subgraph =
             (*interpreter)->subgraph(prev_idx_device_ops.first);
         Subgraph* next_subgraph =
             (*interpreter)->subgraph(next_idx_device_ops.first);
-        if (!is_all_output_resolved(prev_subgraph->outputs(),
-                                    next_subgraph->inputs()))
+        if (!is_all_input_prepared(prev_subgraph->outputs(),
+                                   next_subgraph->inputs())) {
           continue;
+        }
         // Prepare merged device - op_indices
         const TfLiteDeviceFlags& device = prev_idx_device_ops.second.first;
         std::set<int> op_indices;

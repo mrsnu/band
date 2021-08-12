@@ -282,9 +282,6 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
   subgraph_preparation_type_ = config.subgraph_preparation_type;
 
-  TFLITE_LOG(INFO) << "Subgraph prep type: "
-                   << subgraph_preparation_type_;
-
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
     profile_database_json_ = LoadJsonObjectFromFile(config.profile_data_path);
@@ -1051,8 +1048,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
   }
 
   // TODO: Context-independent code / move to interpreter builder
-  int worker_id = GetRepresentativeWorkerId(kTfLiteCPU);
-  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, worker_id));
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
 
   std::set<int> resolved_tensors;
   std::set<int> remaining_ops;
@@ -1178,8 +1174,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
 
   // Prepare variables to use
   const int num_ops = model_specs_[model_id].num_ops;
-  const int worker_id = GetRepresentativeWorkerId(kTfLiteCPU);
-  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, worker_id));
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
 
   // BitMask to check device support or not
   using BitMask = uint32_t;
@@ -1477,6 +1472,16 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
           break;
         }
       }
+      
+      // TODO: Update with subgraph dependency generation logic
+      // check whether any output tensor is resolved or not
+      for (const int& output_tensor: next_subgraph->outputs()) {
+        if (resolved_tensors.find(output_tensor) != resolved_tensors.end()) {
+          is_executable = false;
+          break;
+        }
+      }
+
       if (is_executable) {
         candidate_indices.push_back(GetSubgraphIdx(next_subgraph->GetKey()));
       }
