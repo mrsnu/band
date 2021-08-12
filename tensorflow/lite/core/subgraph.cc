@@ -685,15 +685,7 @@ TfLiteStatus Subgraph::ResetVariableTensors() {
 }
 
 TfLiteStatus Subgraph::SetPrevSubgraph(Subgraph* prev) {
-  std::set<int> input_tensors(inputs_.begin(), inputs_.end());
-  bool has_common_tensor = false;
-  for (int output_tensor_index: prev->outputs()) {
-    if (input_tensors.find(output_tensor_index) != input_tensors.end()) {
-      has_common_tensor = true;
-      break;
-    }
-  }
-  if (!has_common_tensor) {
+  if (!prev) {
     return kTfLiteError;
   }
   prev_subgraphs_.insert(prev);

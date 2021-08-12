@@ -745,7 +745,23 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         // Else try to set prev / next subgraphs
         Subgraph* prev_subgraph = (*interpreter)->subgraph(prev_subgraph_idx);
         Subgraph* next_subgraph = (*interpreter)->subgraph(next_subgraph_idx);
-        next_subgraph->SetPrevSubgraph(prev_subgraph);
+
+        bool is_previous = false;
+
+        std::set<int> input_tensors(next_subgraph->inputs().begin(),
+                                    next_subgraph->inputs().end());
+        for (int tensor_index : prev_subgraph->outputs()) {
+          if (input_tensors.find(tensor_index) != input_tensors.end()) {
+            is_previous = true;
+            break;
+          }
+        }
+
+        if (is_previous) {
+          next_subgraph->SetPrevSubgraph(prev_subgraph);
+          TFLITE_LOG(INFO) << next_subgraph_idx << " is "
+                          << prev_subgraph_idx << "'s next";
+        }
       }
     }
   } else {
