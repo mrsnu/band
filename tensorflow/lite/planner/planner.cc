@@ -150,6 +150,9 @@ void Planner::HandleSLOViolatedJob(Job& job) {
   // mark the time of this decision (of early-dropping this job)
   job.end_time = profiling::time::NowMicros();
   EnqueueFinishedJob(job);
+
+  // Set reschedule flag.
+  need_reschedule_ = true;
 }
 
 void Planner::EnqueueToWorkers(ScheduleAction& action) {
@@ -364,6 +367,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
+    remaining_ops.slo_us = job.slo_us;
     remaining_ops.enqueue_time = job.enqueue_time;
     remaining_ops.following_jobs = job.following_jobs;
     remaining_ops.expected_latency = job.expected_latency;
@@ -464,11 +468,14 @@ void Planner::Plan() {
 
     CopyToLocalQueue(local_queues_[0]);
     TryUpdateModelDeviceMapping();
-    for (size_t i = 0; i < local_queues_.size(); ++i) {
-      UpdateDeviceWaitingTime();
-      schedulers_[i]->Schedule(local_queues_[i]);
-      EnqueueToWorkers(schedulers_[i]->GetAction());
-    }
+    do {
+      need_reschedule_ = false;
+      for (size_t i = 0; i < local_queues_.size(); ++i) {
+        UpdateDeviceWaitingTime();
+        schedulers_[i]->Schedule(local_queues_[i]);
+        EnqueueToWorkers(schedulers_[i]->GetAction());
+      }
+    } while(need_reschedule_);
   }
 }
 
