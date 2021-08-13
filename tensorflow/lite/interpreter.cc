@@ -1367,7 +1367,11 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
     int model_id, std::set<int> resolved_tensors, int64_t start_time,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
     int preceded_subgraph_index) {
+  // lookup key for cache_, below
   std::pair<int, std::set<int>> cache_key = {model_id, resolved_tensors};
+
+  // check if it is safe to lookup the cache:
+  // are all waiting times < start_time ?
   bool wait_time_is_stale = true;
   for (auto& pair : device_waiting) {
     auto wait_time = pair.second;
@@ -1382,6 +1386,10 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
       auto& pair = it->second;
       int subgraph_idx = pair.first;
       int64_t latency = pair.second;
+
+      // the stored latency value assumes a start_time of 0,
+      // so we need to add our own start_time to the stored value to get the
+      // correct return value
       return {subgraph_idx, latency + start_time};
     }
   }
@@ -1433,8 +1441,14 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   }
 
   if (wait_time_is_stale) {
+    // if we've reached this point, then there shouldn't be an entry
+    // for this key in the cache
     assert(cache_.find(cache_key) == cache_.end());
+
+    // we are going to store the latency value for start_time == 0,
+    // so do a sanity check for latency - start_time
     assert(min_subgraph.second >= start_time);
+
     cache_[cache_key] = {min_subgraph.first,
                          min_subgraph.second - start_time};
   }

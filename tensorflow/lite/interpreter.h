@@ -712,6 +712,7 @@ class Interpreter {
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
       int preceded_subgraph_index = -1);
 
+  // hash function to use pair<int, set<int>> as map key in cache_
   struct PairHash {
     std::size_t operator() (const std::pair<int, std::set<int>> &p) const {
       auto hash_func = std::hash<int>();
@@ -723,6 +724,7 @@ class Interpreter {
     }
   };
 
+  // cache for GetShortestLatency()
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // Generate subgraphs for fallback ops in `model_id`.
