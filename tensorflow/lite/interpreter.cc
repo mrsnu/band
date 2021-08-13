@@ -1367,6 +1367,25 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
     int model_id, std::set<int> resolved_tensors, int64_t start_time,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
     int preceded_subgraph_index) {
+  std::tuple<int, std::set<int>, int> cache_key = {model_id, resolved_tensors, start_time};
+  bool stale_wait_time = true;
+  for (auto& pair : device_waiting) {
+    auto wait_time = pair.second;
+    if (wait_time > start_time) {
+      stale_wait_time = false;
+    }
+  }
+
+  if (stale_wait_time) {
+    auto it = cache_.find(cache_key);
+    if (it != cache_.end()) {
+      auto& pair = it->second;
+      int subgraph_idx = pair.first;
+      int64_t latency = pair.second;
+      return {subgraph_idx, latency + start_time};
+    }
+  }
+
   std::vector<int> subgraph_indices =
       GetSubgraphCandidates(model_id, resolved_tensors, preceded_subgraph_index);
   std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
@@ -1411,6 +1430,13 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
       min_subgraph.first = target_subgraph.first;
       min_subgraph.second = local_min.second;
     }
+  }
+
+  if (stale_wait_time) {
+    assert(cache_.find(cache_key) == cache_.end());
+    assert(min_subgraph.second >= start_time);
+    cache_[cache_key] = {min_subgraph.first,
+                         min_subgraph.second - start_time};
   }
 
   return min_subgraph;
