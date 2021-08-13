@@ -1367,16 +1367,16 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
     int model_id, std::set<int> resolved_tensors, int64_t start_time,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
     int preceded_subgraph_index) {
-  std::tuple<int, std::set<int>, int> cache_key = {model_id, resolved_tensors, start_time};
-  bool stale_wait_time = true;
+  std::pair<int, std::set<int>> cache_key = {model_id, resolved_tensors};
+  bool wait_time_is_stale = true;
   for (auto& pair : device_waiting) {
     auto wait_time = pair.second;
     if (wait_time > start_time) {
-      stale_wait_time = false;
+      wait_time_is_stale = false;
     }
   }
 
-  if (stale_wait_time) {
+  if (wait_time_is_stale) {
     auto it = cache_.find(cache_key);
     if (it != cache_.end()) {
       auto& pair = it->second;
@@ -1432,7 +1432,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
     }
   }
 
-  if (stale_wait_time) {
+  if (wait_time_is_stale) {
     assert(cache_.find(cache_key) == cache_.end());
     assert(min_subgraph.second >= start_time);
     cache_[cache_key] = {min_subgraph.first,

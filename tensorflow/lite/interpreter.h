@@ -712,19 +712,18 @@ class Interpreter {
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
       int preceded_subgraph_index = -1);
 
-  struct InterpreterTupleHash {
-    std::size_t operator() (const std::tuple<int, std::set<int>, int> &p) const {
+  struct PairHash {
+    std::size_t operator() (const std::pair<int, std::set<int>> &p) const {
       auto hash_func = std::hash<int>();
-      std::size_t hash = hash_func(std::get<0>(p));
-      for (int e : std::get<1>(p)) {
+      std::size_t hash = hash_func(p.first);
+      for (int e : p.second) {
         hash ^= hash_func(e);
       }
-      hash ^= hash_func(std::get<2>(p));
       return hash;
     }
   };
 
-  std::unordered_map<std::tuple<int, std::set<int>, int>, std::pair<int, int64_t>, InterpreterTupleHash> cache_;
+  std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.
