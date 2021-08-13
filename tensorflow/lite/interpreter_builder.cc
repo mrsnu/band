@@ -23,6 +23,7 @@ limitations under the License.
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <iostream>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -919,16 +920,11 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
                        << "To " << subgraph_key.GetOutputOpsString() << " "
                        << "Index " << subgraph_idx;
       // Check if the merged subgraph consists of unit subgraphs with continuous local ids.
-      int prev = -1;
+      std::cout << "Unit Subgraphs : ";
       for (auto& unit : subgraph_key.unit_indices) {
-        if (prev == -1) {
-          prev = unit;
-        } else {
-          if (prev + 1 != unit) {
-            TFLITE_LOG(ERROR) << "Merged subgraph does not consist of continuous unit subgraphs";
-          }
-        }
+        std::cout << unit << " ";
       }
+      std::cout << std::endl;
     }
   }
 

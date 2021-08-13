@@ -719,7 +719,7 @@ class Interpreter {
       int preceded_subgraph_index = -1);
 
   std::pair<int, int64_t> GetShortestLatencyWithUnitSubgraph(
-      int model_id, int start_unit_idx, int end_unit_idx,
+      int model_id, int start_unit_idx, int64_t start_time,
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
 
   // hash function to use pair<int, set<int>> as map key in cache_
@@ -728,8 +728,10 @@ class Interpreter {
     std::size_t operator() (const std::pair<int, std::set<int>> &p) const {
       auto hash_func = std::hash<int>();
       std::size_t hash = hash_func(p.first);
+      int pos = 2;
       for (int e : p.second) {
-        hash ^= hash_func(e);
+        hash ^= hash_func(e * pos);
+        pos = pos << 1;
       }
       return hash;
     }
@@ -738,8 +740,8 @@ class Interpreter {
   // cache for GetShortestLatency()
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
-  // Unit subgraphs to subgraph idx in the interpreter
-  std::unordered_map<std::pair<int, std::set<int>>, int, PairHash> unit_subgraphs_to_global_idx_;
+  // From the hash of the pair {Model id, Unit subgraph} to subgraph idx
+  std::multimap<std::pair<int, std::set<int>>, int> unit_subgraphs_to_global_indices_;
 
   // Key: model_id, Value: subgraph index
   std::map<int, std::set<int>> model_id_to_subgraph_idx_;

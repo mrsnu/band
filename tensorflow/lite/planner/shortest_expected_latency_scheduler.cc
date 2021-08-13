@@ -43,6 +43,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
           next_job.previous_subgraph_indices.empty()
               ? -1
               : next_job.previous_subgraph_indices.back();
+      /*
       std::pair<int, int64_t> best_subgraph;
       std::pair<int, std::set<int>> cache_key = {next_job.model_id,
                                                  next_job.resolved_tensors};
@@ -59,6 +60,11 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
         // insert new value into cache
         cache[cache_key] = best_subgraph;
       }
+      */
+
+      std::pair<int, int64_t> best_subgraph =
+          GetInterpreter()->GetShortestLatencyWithUnitSubgraph(
+              next_job.model_id, next_job.start_unit_idx, 0, device_waiting);
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;

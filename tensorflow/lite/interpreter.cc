@@ -22,6 +22,7 @@ limitations under the License.
 #include <cstring>
 #include <utility>
 #include <list>
+#include <iostream>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
@@ -1016,9 +1017,23 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
 
     if (subgraph_preparation_type_ == "unit_subgraph" ||
         subgraph_preparation_type_ == "merge_unit_subgraph") {
+      std::pair<int, std::set<int>> key = {model_id, subgraph_key.unit_indices};
+      unit_subgraphs_to_global_indices_.insert({key, i});
+    }
+  }
+
+  for (int i = 0; i < subgraphs_.size(); ++i) {
+    auto& subgraph_key = subgraphs_[i]->GetKey();
+    if (subgraph_preparation_type_ == "unit_subgraph" ||
+        subgraph_preparation_type_ == "merge_unit_subgraph") {
       // Set unit indices to subgraph_idx.
-      std::pair<int, std::set<int>> unit_subgraphs = {model_id, subgraph_key.unit_indices};
-      unit_subgraphs_to_global_idx_[unit_subgraphs] = i;
+      std::pair<int, std::set<int>> key = {model_id, subgraph_key.unit_indices};
+      auto range = unit_subgraphs_to_global_indices_.equal_range(key);
+      std::cout << "unit - ";
+      for_each(range.first, range.second, [](auto& x) {
+        std::cout << x.second << " ";
+      });
+      std::cout << std::endl;
     }
   }
 
@@ -1382,23 +1397,54 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
-    int model_id, int start_unit_idx, int end_unit_idx,
+    int model_id, int start_unit_idx, int64_t start_time,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
   auto& memo = model_specs_[model_id].latency_memo;
   auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
   // Check if start, end idx are not equal or larger than the number of unit subgraphs.
-  for(int j = start_unit_idx; j <= end_unit_idx; ++j) {
+  for(int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
     for(int i = start_unit_idx; i >= 0; --i) {
-      if (i == j) {
-        // Search from the profile result.
-      } else if (i < j) {
-        
+      if (i <= j) {
+        int64_t local_min = -1;
+        int local_min_partition = -1;
+        TFLITE_LOG(INFO) << "Searching... " << i << " " << j;
+        for (int k = i; k < j; ++k) {
+          int64_t local_value = memo[i][k].second + memo[k + 1][j].second;
+          if (local_min == -1 || local_value < local_min) {
+            local_min = local_value;
+            local_min_partition = k;
+          }
+        }
+        TFLITE_LOG(INFO) << "Local Min Partition :  " << local_min_partition << ", " << local_min;
+
+        // Search from the profile result of the unit subgraph.
+        std::vector<int> subgraphs_to_search;
+        std::set<int> unit_indices;
+        for (int k = i; k <= j; ++k) {
+          unit_indices.insert(k);
+        }
+        auto range = unit_subgraphs_to_global_indices_.equal_range({model_id, unit_indices});
+        for_each(range.first,
+                 range.second,
+                 [&](auto& x) {subgraphs_to_search.push_back(x.second);});
+        int64_t start = i == 0 ? start_time : memo[0][i - 1].second;
+        std::pair<int, int64_t> target_subgraph =
+        GetShortestSubgraphIndex(subgraphs_to_search, start, device_waiting);
+
+        TFLITE_LOG(INFO) << "Merged subgraph :  " << target_subgraph.second;
+        if (local_min == -1 || target_subgraph.second < local_min) {
+          memo[i][j] = target_subgraph;
+        } else {
+          memo[i][j] = std::make_pair(memo[i][local_min_partition].first, local_min);
+        }
       } else {
         // i-th unit subgraph should be executed ahead of j-th unit subgraph.
         continue;
       }
     }
   }
+
+  return memo[start_unit_idx][num_unit_subgraphs - 1];
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatency(

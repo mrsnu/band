@@ -385,6 +385,13 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
     remaining_ops.resolved_tensors = job.resolved_tensors;
     remaining_ops.previous_subgraph_indices = job.previous_subgraph_indices;
     remaining_ops.previous_subgraph_indices.emplace_back(job.subgraph_idx);
+    int max_unit_index = -1;
+    for (auto idx : target_key.unit_indices) {
+      if (max_unit_index < idx) {
+        max_unit_index = idx;
+      }
+    }
+    remaining_ops.start_unit_idx = max_unit_index + 1;
 
     for (int output_index : target_subgraph->outputs()) {
       remaining_ops.resolved_tensors.insert(output_index);
