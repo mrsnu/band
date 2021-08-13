@@ -738,6 +738,12 @@ class Interpreter {
   // cache for GetShortestLatency()
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
+  // Unit subgraphs to subgraph idx in the interpreter
+  std::unordered_map<std::pair<int, std::set<int>>, int, PairHash> unit_subgraphs_to_global_idx_;
+
+  // Key: model_id, Value: subgraph index
+  std::map<int, std::set<int>> model_id_to_subgraph_idx_;
+
   // Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.
   std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(

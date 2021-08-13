@@ -1007,8 +1007,22 @@ std::set<int> Interpreter::models() const {
 void Interpreter::SetModelConfigAndFillProfile(int model_id,
                                                ModelConfig& model_config) {
   SetModelConfig(model_id, model_config);
-  std::string& model_fname = model_config.model_fname;
+  // Set model_id -> subgraph idx map.
+  for (int i = 0; i < subgraphs_.size(); ++i) {
+    auto& subgraph_key = subgraphs_[i]->GetKey();
+    if (subgraph_key.model_id == model_id) {
+      model_id_to_subgraph_idx_[model_id].insert(i);
+    }
 
+    if (subgraph_preparation_type_ == "unit_subgraph" ||
+        subgraph_preparation_type_ == "merge_unit_subgraph") {
+      // Set unit indices to subgraph_idx.
+      std::pair<int, std::set<int>> unit_subgraphs = {model_id, subgraph_key.unit_indices};
+      unit_subgraphs_to_global_idx_[unit_subgraphs] = i;
+    }
+  }
+
+  std::string& model_fname = model_config.model_fname;
   auto model_profile =
       profiling::util::ExtractModelProfile(profile_database_json_,
                                            model_fname, model_id);
@@ -1370,8 +1384,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx, int end_unit_idx,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
-  auto& memo = model_spec_[model_id].latency_memo;
-  auto num_unit_subgraphs = model_spec_[model_id].num_unit_subgraphs;
+  auto& memo = model_specs_[model_id].latency_memo;
+  auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
   // Check if start, end idx are not equal or larger than the number of unit subgraphs.
   for(int j = start_unit_idx; j <= end_unit_idx; ++j) {
     for(int i = start_unit_idx; i >= 0; --i) {
