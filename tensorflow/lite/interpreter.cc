@@ -1144,11 +1144,11 @@ std::vector<DeviceOpIndices> Interpreter::MakeSubgraphsForFallbackOps(
 }
 
 TfLiteStatus Interpreter::GetUnitSubgraphs(
-    const int model_id, std::set<DeviceOpIndices>& subgraph_indices) {
+    const int model_id, std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices) {
   if (!planner_->NeedFallbackSubgraphs()) {
     for (auto& worker : workers_) {
       TfLiteDeviceFlags device_flag = worker.first;
-      subgraph_indices.insert({device_flag, {}});
+      subgraph_indices.insert({0, {device_flag, {}}});
     }
     return kTfLiteOk;
   }
@@ -1214,6 +1214,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
     return true;
   };
 
+  int subgraph_local_idx = 0;
   while (true) {
     std::set<int> unit_subgraph_ops;
     BitMask support_devices = 0;
@@ -1260,14 +1261,17 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       if (support_devices & (1 << device_id)) {
         TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-        subgraph_indices.insert({device_flag, unit_subgraph_ops});
+        subgraph_indices.insert({subgraph_local_idx, {device_flag, unit_subgraph_ops}});
       }
     }
+    subgraph_local_idx++;
   }
   if (!remaining_ops.empty()) {
     TFLITE_LOG(ERROR) << "Not empty remaining ops";
     return kTfLiteError;
   }
+  PrepareUnitSubgraphScheduling(model_id, subgraph_local_idx);
+
   return kTfLiteOk;
 }
 
@@ -1361,6 +1365,26 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   }
 
   primary_subgraph->AllocateTensors();
+}
+
+std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
+    int model_id, int start_unit_idx, int end_unit_idx,
+    std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
+  auto& memo = model_spec_[model_id].latency_memo;
+  auto num_unit_subgraphs = model_spec_[model_id].num_unit_subgraphs;
+  // Check if start, end idx are not equal or larger than the number of unit subgraphs.
+  for(int j = start_unit_idx; j <= end_unit_idx; ++j) {
+    for(int i = start_unit_idx; i >= 0; --i) {
+      if (i == j) {
+        // Search from the profile result.
+      } else if (i < j) {
+        
+      } else {
+        // i-th unit subgraph should be executed ahead of j-th unit subgraph.
+        continue;
+      }
+    }
+  }
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatency(
@@ -1577,6 +1601,16 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
 
   return worst_latency;
 }
+
+void Interpreter::PrepareUnitSubgraphScheduling(int model_id, int num_units) {
+  auto& model_spec = model_specs_[model_id];
+  model_spec.num_unit_subgraphs = num_units;
+  model_spec.latency_memo.resize(num_units);
+  for (int i = 0; i < num_units; ++i) {
+    model_spec.latency_memo[i].resize(num_units);
+  }
+}
+
 }  // namespace impl
 
 }  // namespace tflite

@@ -105,6 +105,10 @@ struct ModelSpec {
   std::set<int> node_output_tensors;
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
+  int num_unit_subgraphs;
+  // 2D vector for memo during scheduling.
+  // Each element is a pair of starting subgraph index and shortest latency.
+  std::vector<std::vector<std::pair<int, int64_t>>> latency_memo;
 };
 
 class Interpreter {
@@ -469,6 +473,8 @@ class Interpreter {
   /// Returns status of success or failure.
   TfLiteStatus Invoke(size_t subgraph_index);
 
+  void PrepareUnitSubgraphScheduling(int model_id, int num_units);
+
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   int InvokeModelAsync(int model_id, Tensors inputs = {});
@@ -712,6 +718,10 @@ class Interpreter {
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
       int preceded_subgraph_index = -1);
 
+  std::pair<int, int64_t> GetShortestLatencyWithUnitSubgraph(
+      int model_id, int start_unit_idx, int end_unit_idx,
+      std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
+
   // hash function to use pair<int, set<int>> as map key in cache_
   // https://stackoverflow.com/a/32685618
   struct PairHash {
@@ -733,7 +743,7 @@ class Interpreter {
   std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(
       const int model_id, const TfLiteDeviceFlags device_flag);
   TfLiteStatus GetUnitSubgraphs(const int model_id,
-                                std::set<DeviceOpIndices>& subgraph_indices);
+                                std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
     return own_external_cpu_backend_context_.get();

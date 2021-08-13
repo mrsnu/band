@@ -576,6 +576,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   const std::string& subgraph_preparation_type =
       (*interpreter)->subgraph_preparation_type_;
   if (subgraph_preparation_type == "fallback_per_device") {
+    // Note that this preparation type is not supported.
+    TFLITE_LOG(ERROR) << subgraph_preparation_type << ": preparation type is not supported.";
+
     // Device,ops to subgraph index map to avoid duplicate
     // subgraph construction without input/output ops
     std::map<DeviceOpIndices, int> device_ops_to_subgraph_index;
@@ -673,7 +676,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   } else if (subgraph_preparation_type == "unit_subgraph" ||
              subgraph_preparation_type == "merge_unit_subgraph") {
-    std::set<DeviceOpIndices> subgraph_indices;
+    std::set<std::pair<int, DeviceOpIndices>> subgraph_indices;
     if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
         kTfLiteOk) {
       TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
@@ -683,7 +686,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     // Create subgraphs
     // Save subgraph_idx - device_op_indices map for prev/next setting
     std::map<int, DeviceOpIndices> subgraph_idx_to_device_ops;
-    for (auto& device_op_indices : subgraph_indices) {
+    for (auto& subgraph_metadata : subgraph_indices) {
+      int subgraph_local_idx = subgraph_metadata.first;
+      auto& device_op_indices = subgraph_metadata.second;
       int subgraph_idx = -1;
       auto new_subgraph =
           CreateSubgraph(model, op_resolver, interpreter, model_id,
@@ -703,17 +708,21 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
       // Using GetUnitSubgraphs, different from "fallback_per_device",
       // there is no duplicated subgraphs.
-      const SubgraphKey& subgraph_key = subgraph->GetKey();
+      SubgraphKey& subgraph_key = subgraph->GetKey();
+      subgraph_key.unit_indices.insert(subgraph_local_idx);
       TFLITE_LOG(INFO) << "ADDED Subgraph "
                        << "Model : " << subgraph_key.model_id << " "
                        << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
                        << "From " << subgraph_key.GetInputOpsString() << " "
                        << "To " << subgraph_key.GetOutputOpsString() << " "
-                       << "Index " << subgraph_idx;
+                       << "Global Index " << subgraph_idx;
+      for (auto& unit : subgraph_key.unit_indices) {
+        TFLITE_LOG(INFO) << " Unit Subgraph : " << unit;
+      }
     }
 
     TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
-                     << " unit subgraphs created";
+                     << " subgraphs created during GetUnitSubgraphs()";
 
     // Add merged atomic subgraphs
     if (subgraph_preparation_type == "merge_unit_subgraph") {
@@ -838,7 +847,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
   bool added = true;
   while (added) {
     added = false;
-    std::vector<DeviceOpIndices> to_add;
+    std::vector<std::pair<std::set<int>, DeviceOpIndices>> to_add;
     for (const auto& prev_idx_device_ops : subgraph_idx_to_device_ops) {
       for (const auto& next_idx_device_ops : subgraph_idx_to_device_ops) {
         // Skip same subgraph
@@ -867,13 +876,22 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
         std::set_union(prev_op_indices.begin(), prev_op_indices.end(),
                        next_op_indices.begin(), next_op_indices.end(),
                        std::inserter(op_indices, op_indices.end()));
+
+        std::set<int> unit_subgraph_indices;
+        std::set_union(prev_subgraph->GetKey().unit_indices.begin(),
+                       prev_subgraph->GetKey().unit_indices.end(),
+                       next_subgraph->GetKey().unit_indices.begin(),
+                       next_subgraph->GetKey().unit_indices.end(),
+                       std::inserter(unit_subgraph_indices, unit_subgraph_indices.end()));
         // Add if not already created
         if (!is_already_created({device, op_indices})) {
-          to_add.push_back({device, op_indices});
+          to_add.push_back({unit_subgraph_indices, {device, op_indices}});
         }
       }
     }
-    for (const DeviceOpIndices& device_op_indices : to_add) {
+    for (auto& subgraph_metadata : to_add) {
+      std::set<int>& unit_indices = subgraph_metadata.first;
+      const DeviceOpIndices& device_op_indices = subgraph_metadata.second;
       if (is_already_created(device_op_indices)) continue;
 
       int subgraph_idx = -1;
@@ -892,13 +910,25 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
         return kTfLiteError;
       }
 
-      const SubgraphKey& subgraph_key = subgraph->GetKey();
+      SubgraphKey& subgraph_key = subgraph->GetKey();
+      subgraph_key.unit_indices = unit_indices;
       TFLITE_LOG(INFO) << "ADDED Subgraph "
                        << "Model : " << subgraph_key.model_id << " "
                        << TfLiteDeviceGetName(subgraph_key.device_flag) << " "
                        << "From " << subgraph_key.GetInputOpsString() << " "
                        << "To " << subgraph_key.GetOutputOpsString() << " "
                        << "Index " << subgraph_idx;
+      // Check if the merged subgraph consists of unit subgraphs with continuous local ids.
+      int prev = -1;
+      for (auto& unit : subgraph_key.unit_indices) {
+        if (prev == -1) {
+          prev = unit;
+        } else {
+          if (prev + 1 != unit) {
+            TFLITE_LOG(ERROR) << "Merged subgraph does not consist of continuous unit subgraphs";
+          }
+        }
+      }
     }
   }
 

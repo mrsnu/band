@@ -75,6 +75,7 @@ struct SubgraphKey {
   TfLiteDeviceFlags device_flag;
   std::set<int> input_ops;
   std::set<int> output_ops;
+  std::set<int> unit_indices;
 };
 
 using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
