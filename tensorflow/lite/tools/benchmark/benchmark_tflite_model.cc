@@ -30,7 +30,7 @@ limitations under the License.
 #include "ruy/profiler/profiler.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/util.h"
-#include "tensorflow/lite/core/cpu/cpu.h"
+#include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/kernels/cpu_backend_context.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
@@ -672,7 +672,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
 
 TfLiteStatus BenchmarkTfLiteModel::RunEagleEyeStream() {
   std::srand(5323);
-  int run_duration_us = runtime_config_.running_time_ms * 1000;
+  int run_duration_us = benchmark_config_.running_time_ms * 1000;
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
@@ -781,9 +781,9 @@ std::vector<Job> BenchmarkTfLiteModel::GetEagleEyeFrame() {
   std::vector<int> recognition_requests;
   for (int i = 0; i < 3; ++i) {
     recognition_requests.push_back(
-        model_configs_[i + 1].batch_size);
+        benchmark_config_.model_information[i + 1].config.batch_size);
   }
-  int detection_batch = model_configs_[retina_face].batch_size;
+  int detection_batch = benchmark_config_.model_information[retina_face].config.batch_size;
 
   // ith detection model calls recognition jobs according to ith element.
   std::vector<std::array<int, 3>> recognition_workload;
