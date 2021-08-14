@@ -163,6 +163,10 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
     auto device = queue.first;
     auto& requests = queue.second;
 
+    if (requests.empty()) {
+      continue;
+    }
+
     Worker* worker = GetInterpreter()->GetWorker(device);
     if (worker == nullptr) return;
     {
@@ -473,9 +477,7 @@ void Planner::Plan() {
     do {
       need_reschedule_ = false;
       for (size_t i = 0; i < local_queues_.size(); ++i) {
-        UpdateDeviceWaitingTime();
         schedulers_[i]->Schedule(local_queues_[i]);
-        EnqueueToWorkers(schedulers_[i]->GetAction());
       }
     } while(need_reschedule_);
   }
@@ -484,6 +486,7 @@ void Planner::Plan() {
 void Scheduler::EnqueueAction(Job job, Subgraph* subgraph) {
   planner_->UpdateJobScheduleStatus(job, subgraph);
   action_[subgraph->GetKey().device_flag].push_back(job);
+  planner_->EnqueueToWorkers(action_);
 }
 
 }  // namespace impl

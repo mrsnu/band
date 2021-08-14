@@ -4,12 +4,14 @@ namespace tflite {
 namespace impl {
 
 void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
-  std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
-  DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
-
   // stop if there are no idle devices OR there's nothing in `requests`
-  while (!idle_devices.empty() && window_size > 0) {
+  while (window_size > 0) {
+    planner_->UpdateDeviceWaitingTime();
+    std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
+    if (idle_devices.empty()) {
+      break;
+    }
     // Lookup table for GetShortestLatency().
     // Although it is tempting to maintain a scheduler-wide cache,
     // the values in device_waiting are (generally) different for every while
@@ -48,7 +50,7 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
         best_subgraph = cache_it->second;
       } else {
         best_subgraph = GetInterpreter()->GetShortestLatency(
-            job.model_id, job.resolved_tensors, 0, device_waiting,
+            job.model_id, job.resolved_tensors, 0, GetDeviceWaitingTime(),
             preceded_subgraph_index);
 
         // insert new value into cache
@@ -88,12 +90,6 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     TfLiteDeviceFlags device = target_subgraph->GetKey().device_flag;
     auto device_it = idle_devices.find(device);
     assert(device_it != idle_devices.end());
-
-    // mark this device as busy
-    idle_devices.erase(device_it);
-
-    device_waiting[device] +=
-        GetInterpreter()->GetExpectedLatency(target_subgraph->GetKey());
 
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
