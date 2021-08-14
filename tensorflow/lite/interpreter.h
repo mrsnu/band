@@ -713,6 +713,7 @@ class Interpreter {
       int preceded_subgraph_index = -1);
 
   // hash function to use pair<int, set<int>> as map key in cache_
+  // https://stackoverflow.com/a/32685618
   struct PairHash {
     std::size_t operator() (const std::pair<int, std::set<int>> &p) const {
       auto hash_func = std::hash<int>();

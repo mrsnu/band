@@ -32,6 +32,10 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     int target_job_idx;
     int target_subgraph_idx;
 
+    // Lookup table for GetShortestLatency().
+    // See HeterogeneousEarliestFinishTimeScheduler for detailed comments.
+    std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, Interpreter::PairHash> cache;
+
     int64_t sched_start = profiling::time::NowMicros();
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
@@ -39,10 +43,22 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
           next_job.previous_subgraph_indices.empty()
               ? -1
               : next_job.previous_subgraph_indices.back();
-      std::pair<int, int64_t> best_subgraph =
-          GetInterpreter()->GetShortestLatency(
-              next_job.model_id, next_job.resolved_tensors, 0, device_waiting,
-              preceded_subgraph_index);
+      std::pair<int, int64_t> best_subgraph;
+      std::pair<int, std::set<int>> cache_key = {next_job.model_id,
+                                                 next_job.resolved_tensors};
+
+      auto cache_it = cache.find(cache_key);
+      if (cache_it != cache.end()) {
+        // used cached value instead of calling GetShortestLatency()
+        best_subgraph = cache_it->second;
+      } else {
+        best_subgraph = GetInterpreter()->GetShortestLatency(
+            next_job.model_id, next_job.resolved_tensors, 0, device_waiting,
+            preceded_subgraph_index);
+
+        // insert new value into cache
+        cache[cache_key] = best_subgraph;
+      }
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
