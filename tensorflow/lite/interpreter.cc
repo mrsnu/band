@@ -1144,8 +1144,9 @@ std::vector<DeviceOpIndices> Interpreter::MakeSubgraphsForFallbackOps(
 }
 
 TfLiteStatus Interpreter::GetUnitSubgraphs(
-    const int model_id, std::set<DeviceOpIndices>& subgraph_indices) {
-  if (!planner_->NeedFallbackSubgraphs()) {
+    const int model_id, std::set<DeviceOpIndices>& subgraph_indices,
+    bool need_fallback_subgraph) {
+  if (!need_fallback_subgraph) {
     for (auto& worker : workers_) {
       TfLiteDeviceFlags device_flag = worker.first;
       subgraph_indices.insert({device_flag, {}});

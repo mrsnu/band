@@ -671,11 +671,17 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                          << "Index " << subgraph_idx;
       }
     }
-  } else if (subgraph_preparation_type == "unit_subgraph" ||
+  } else if (subgraph_preparation_type == "no_fallback_subgraph" ||
+             subgraph_preparation_type == "unit_subgraph" ||
              subgraph_preparation_type == "merge_unit_subgraph") {
+    bool need_fallback_subgraph =
+        (*interpreter)->GetPlanner()->NeedFallbackSubgraphs() &&
+        subgraph_preparation_type != "no_fallback_subgraph";
+
     std::set<DeviceOpIndices> subgraph_indices;
-    if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
-        kTfLiteOk) {
+    if ((*interpreter)
+            ->GetUnitSubgraphs(model_id, subgraph_indices,
+                               need_fallback_subgraph) != kTfLiteOk) {
       TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
       return -1;
     }
