@@ -38,6 +38,8 @@ limitations under the License.
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
+#include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/profiling/function_profiler.h"
 #include "tensorflow/lite/tools/logging.h"
 
 // TODO(b/139446230): Move to portable platform header.
@@ -746,15 +748,15 @@ TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
 }
 
 void Interpreter::UpdateExpectedLatency(
-    const SubgraphKey& key, int64_t latency) {
-  int64_t prev_latency = moving_averaged_latencies_[key];
-  moving_averaged_latencies_[key] =
+    const int subgraph_idx, int64_t latency) {
+  int64_t prev_latency = moving_averaged_latencies_[subgraph_idx];
+  moving_averaged_latencies_[subgraph_idx] =
       profile_smoothing_factor_ * latency +
       (1 - profile_smoothing_factor_) * prev_latency;
 }
 
-int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
-  auto it = moving_averaged_latencies_.find(key);
+int64_t Interpreter::GetExpectedLatency(const int subgraph_idx) {
+  auto it = moving_averaged_latencies_.find(subgraph_idx);
   if (it != moving_averaged_latencies_.end()) {
     return it->second;
   } else {
@@ -792,7 +794,7 @@ void Interpreter::Profile(int model_id) {
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
       // TODO: Consider affinity of worker thread
-      moving_averaged_latencies_[subgraph_key] = profiled_latency;
+      moving_averaged_latencies_[i] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
                        << " model=" << subgraph_key.model_id
@@ -829,7 +831,7 @@ void Interpreter::Profile(int model_id) {
 
         int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
 
-        moving_averaged_latencies_[subgraph_key] = latency;
+        moving_averaged_latencies_[i] = latency;
         // record the profiled latency for subsequent benchmark runs
         profile_database_[subgraph_key] = latency;
 
@@ -1017,7 +1019,9 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
 
     if (subgraph_preparation_type_ == "unit_subgraph" ||
         subgraph_preparation_type_ == "merge_unit_subgraph") {
-      std::pair<int, std::set<int>> key = {model_id, subgraph_key.unit_indices};
+      std::pair<int, std::pair<int, int>> key = {model_id,
+                                                 std::make_pair(*subgraph_key.unit_indices.begin(),
+                                                                *subgraph_key.unit_indices.rbegin())};
       unit_subgraphs_to_global_indices_.insert({key, i});
     }
   }
@@ -1027,7 +1031,9 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
     if (subgraph_preparation_type_ == "unit_subgraph" ||
         subgraph_preparation_type_ == "merge_unit_subgraph") {
       // Set unit indices to subgraph_idx.
-      std::pair<int, std::set<int>> key = {model_id, subgraph_key.unit_indices};
+      std::pair<int, std::pair<int, int>> key = {model_id,
+                                                 std::make_pair(*subgraph_key.unit_indices.begin(),
+                                                                *subgraph_key.unit_indices.rbegin())};
       auto range = unit_subgraphs_to_global_indices_.equal_range(key);
       std::cout << "unit - ";
       for_each(range.first, range.second, [](auto& x) {
@@ -1403,44 +1409,39 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
   auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
   // Check if start, end idx are not equal or larger than the number of unit subgraphs.
   for(int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
-    for(int i = start_unit_idx; i >= 0; --i) {
-      if (i <= j) {
-        int64_t local_min = -1;
-        int local_min_partition = -1;
-        TFLITE_LOG(INFO) << "Searching... " << i << " " << j;
-        for (int k = i; k < j; ++k) {
-          int64_t local_value = memo[i][k].second + memo[k + 1][j].second;
-          if (local_min == -1 || local_value < local_min) {
-            local_min = local_value;
-            local_min_partition = k;
-          }
+    for(int i = j; i >= 0; --i) {
+      int64_t start_time = profiling::time::NowNanos();
+      int64_t local_min = -1;
+      int local_min_partition = -1;
+      // TFLITE_LOG(INFO) << "Searching... " << i << " " << j;
+      for (int k = i; k < j; ++k) {
+        int64_t local_value = memo[k + 1][j].second;
+        if (local_min == -1 || local_value < local_min) {
+          local_min = local_value;
+          local_min_partition = k;
         }
-        TFLITE_LOG(INFO) << "Local Min Partition :  " << local_min_partition << ", " << local_min;
-
-        // Search from the profile result of the unit subgraph.
-        std::vector<int> subgraphs_to_search;
-        std::set<int> unit_indices;
-        for (int k = i; k <= j; ++k) {
-          unit_indices.insert(k);
-        }
-        auto range = unit_subgraphs_to_global_indices_.equal_range({model_id, unit_indices});
-        for_each(range.first,
-                 range.second,
-                 [&](auto& x) {subgraphs_to_search.push_back(x.second);});
-        int64_t start = i == 0 ? start_time : memo[0][i - 1].second;
-        std::pair<int, int64_t> target_subgraph =
-        GetShortestSubgraphIndex(subgraphs_to_search, start, device_waiting);
-
-        TFLITE_LOG(INFO) << "Merged subgraph :  " << target_subgraph.second;
-        if (local_min == -1 || target_subgraph.second < local_min) {
-          memo[i][j] = target_subgraph;
-        } else {
-          memo[i][j] = std::make_pair(memo[i][local_min_partition].first, local_min);
-        }
-      } else {
-        // i-th unit subgraph should be executed ahead of j-th unit subgraph.
-        continue;
       }
+      int64_t mid_time = profiling::time::NowNanos();
+      // TFLITE_LOG(INFO) << "Local Min Partition :  " << local_min_partition << ", " << local_min;
+
+      // Search from the profile result of the unit subgraph.
+      std::vector<int> subgraphs_to_search;
+      auto range = unit_subgraphs_to_global_indices_.equal_range({model_id, std::make_pair(i, j)});
+      for_each(range.first,
+               range.second,
+               [&](auto& x) {subgraphs_to_search.push_back(x.second);});
+      int64_t start = i == 0 ? start_time : memo[0][i - 1].second;
+      std::pair<int, int64_t> target_subgraph =
+      GetShortestSubgraphIndex(subgraphs_to_search, start, device_waiting);
+      int64_t search_time = profiling::time::NowNanos();
+
+      // TFLITE_LOG(INFO) << "Merged subgraph :  " << target_subgraph.second;
+      if (local_min == -1 || target_subgraph.second < local_min) {
+        memo[i][j] = target_subgraph;
+      } else {
+        memo[i][j] = std::make_pair(memo[i][local_min_partition].first, local_min);
+      }
+      int64_t memo_time = profiling::time::NowNanos();
     }
   }
 
@@ -1606,7 +1607,7 @@ Interpreter::GetShortestSubgraphIndex(
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
 
     int64_t waiting_time = device_waiting[key.device_flag];
-    int64_t expected_latency = GetExpectedLatency(key);
+    int64_t expected_latency = GetExpectedLatency(subgraph_index);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 
     if (min_latency > total) {
@@ -1645,7 +1646,7 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
       continue;
     }
 
-    auto it = moving_averaged_latencies_.find(subgraph_key);
+    auto it = moving_averaged_latencies_.find(i);
     if (it != moving_averaged_latencies_.end()) {
       int64_t latency = it->second;
       if (worst_latency < latency) {

@@ -698,8 +698,8 @@ class Interpreter {
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
 
-  void UpdateExpectedLatency(const SubgraphKey& key, int64_t latency);
-  int64_t GetExpectedLatency(const SubgraphKey& key);
+  void UpdateExpectedLatency(const int subgraph_idx, int64_t latency);
+  int64_t GetExpectedLatency(const int subgraph_idx);
   int64_t GetProfiledLatency(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
@@ -741,7 +741,7 @@ class Interpreter {
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // From the hash of the pair {Model id, Unit subgraph} to subgraph idx
-  std::multimap<std::pair<int, std::set<int>>, int> unit_subgraphs_to_global_indices_;
+  std::multimap<std::pair<int, std::pair<int, int>>, int> unit_subgraphs_to_global_indices_;
 
   // Key: model_id, Value: subgraph index
   std::map<int, std::set<int>> model_id_to_subgraph_idx_;
@@ -821,7 +821,7 @@ class Interpreter {
   // When a subgraph key is given, returns the profile results in int64_t.
   profiling::util::ModelDeviceToLatency profile_database_;
   // Map structure to store profiling results in microseconds of (model_id, device_id)
-  profiling::util::ModelDeviceToLatency moving_averaged_latencies_;
+  std::unordered_map<int, int64_t> moving_averaged_latencies_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;

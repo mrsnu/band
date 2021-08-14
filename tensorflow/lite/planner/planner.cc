@@ -369,7 +369,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.device_id = target_key.device_flag;
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
-  job.expected_execution_time = interpreter_->GetExpectedLatency(target_key);
+  job.expected_execution_time = interpreter_->GetExpectedLatency(job.subgraph_idx);
 
   if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);
