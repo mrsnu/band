@@ -75,7 +75,7 @@ class Delegate {
       : num_delegate_kernels_(0) {
     options_ = options ? *options : TfLiteGpuDelegateOptionsV2Default();
     if (options_.max_delegated_partitions <= 0) {
-      options_.max_delegated_partitions = 100000;
+      options_.max_delegated_partitions = 1;
     }
   }
 
@@ -442,7 +442,7 @@ TfLiteGpuDelegateOptionsV2 TfLiteGpuDelegateOptionsV2Default() {
       .inference_priority2 = TFLITE_GPU_INFERENCE_PRIORITY_AUTO,
       .inference_priority3 = TFLITE_GPU_INFERENCE_PRIORITY_AUTO,
       .experimental_flags = TFLITE_GPU_EXPERIMENTAL_FLAGS_NONE,
-      .max_delegated_partitions = 100000,
+      .max_delegated_partitions = 1,
   };
   return options;
 }
