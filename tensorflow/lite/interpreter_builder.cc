@@ -719,7 +719,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
 
     TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
-                     << " unit subgraphs created";
+                     << " base subgraphs created";
 
     // Add merged atomic subgraphs
     if (subgraph_preparation_type == "merge_unit_subgraph") {
@@ -909,7 +909,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
   }
 
   TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
-                   << " subgraphs created (after merge)";
+                   << " merged subgraphs created";
   return kTfLiteOk;
 }
 
