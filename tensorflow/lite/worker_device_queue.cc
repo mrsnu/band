@@ -106,7 +106,7 @@ void DeviceQueueWorker::Work() {
               subgraph.GetKey(),
               (job.end_time - job.invoke_time));
           if (job.following_jobs.size() != 0) {
-            planner_ptr->EnqueueBatch(job.following_jobs);
+            planner_ptr->EnqueueBatch(job.following_jobs, true);
           } 
           TryCopyOutputTensors(job);
           job.status = kTfLiteJobSuccess;

@@ -16,6 +16,8 @@ class ShortestExpectedLatencyScheduler : public Scheduler {
     worker_type_ = kDeviceQueue;
   }
   void Schedule(JobQueue& requests) override;
+
+  std::set<int> active_job_ids_;
 };
 
 }  // namespace impl

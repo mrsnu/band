@@ -130,7 +130,7 @@ void GlobalQueueWorker::Work() {
               subgraph.GetKey(),
               (current_job_.end_time - current_job_.invoke_time));
           if (current_job_.following_jobs.size() != 0) {
-            planner_ptr->EnqueueBatch(current_job_.following_jobs);
+            planner_ptr->EnqueueBatch(current_job_.following_jobs, true);
           } 
           TryCopyOutputTensors(current_job_);
           current_job_.status = kTfLiteJobSuccess;
