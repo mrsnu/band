@@ -146,7 +146,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     exit(-1);
   }
 
-  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
+  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU, kTfLiteGPU, kTfLiteDSP, kTfLiteNPU, kTfLiteCPUFallback };
   if (planner_->NeedFallbackSubgraphs()) {
     valid_devices.insert(kTfLiteCPUFallback);
   }
@@ -924,7 +924,7 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
   if (targetDelegate != nullptr) {
     return subgraph->ModifyGraphWithDelegate(targetDelegate);
   } else {
-    return kTfLiteError;
+    return kTfLiteOk;
   }
 }
 

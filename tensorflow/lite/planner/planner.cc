@@ -365,7 +365,8 @@ int Planner::IssueSchedId() { return sched_id_++; }
 
 void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   SubgraphKey& target_key = target_subgraph->GetKey();
-  job.subgraph_idx = interpreter_->GetSubgraphIdx(target_key);
+  job.subgraph_idx = interpreter_->GetSubgraphIdx(
+      job.model_id, static_cast<TfLiteDeviceFlags>(kTfLiteNPU));
   job.device_id = target_key.device_flag;
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
