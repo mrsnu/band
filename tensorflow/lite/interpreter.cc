@@ -1022,6 +1022,8 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
       std::pair<int, std::pair<int, int>> key = {model_id,
                                                  std::make_pair(*subgraph_key.unit_indices.begin(),
                                                                 *subgraph_key.unit_indices.rbegin())};
+      TFLITE_LOG(INFO) << "Subgraph - " << i;
+      TFLITE_LOG(INFO) << "UNIT SUBGRAPH ID - " << key.second.first << " " << key.second.second;
       unit_subgraphs_to_global_indices_.insert({key, i});
     }
   }
@@ -1413,7 +1415,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
       int64_t start_time = profiling::time::NowNanos();
       int64_t local_min = -1;
       int local_min_partition = -1;
-      // TFLITE_LOG(INFO) << "Searching... " << i << " " << j;
+      TFLITE_LOG(INFO) << "Searching... " << i << " " << j;
       for (int k = i; k < j; ++k) {
         int64_t local_value = memo[k + 1][j].second;
         if (local_min == -1 || local_value < local_min) {
@@ -1422,11 +1424,16 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
         }
       }
       int64_t mid_time = profiling::time::NowNanos();
-      // TFLITE_LOG(INFO) << "Local Min Partition :  " << local_min_partition << ", " << local_min;
+      TFLITE_LOG(INFO) << "Local Min Partition :  " << local_min_partition << ", " << local_min;
 
       // Search from the profile result of the unit subgraph.
       std::vector<int> subgraphs_to_search;
+      TFLITE_LOG(INFO) << "unit pair : " << i << " " << j;
       auto range = unit_subgraphs_to_global_indices_.equal_range({model_id, std::make_pair(i, j)});
+      for (int k = 0; k < subgraphs_to_search.size(); ++k) {
+        TFLITE_LOG(INFO) << "Subgraphs to search : " << k;
+      }
+
       for_each(range.first,
                range.second,
                [&](auto& x) {subgraphs_to_search.push_back(x.second);});
@@ -1435,7 +1442,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
       GetShortestSubgraphIndex(subgraphs_to_search, start, device_waiting);
       int64_t search_time = profiling::time::NowNanos();
 
-      // TFLITE_LOG(INFO) << "Merged subgraph :  " << target_subgraph.second;
+      TFLITE_LOG(INFO) << "Merged subgraph : " << target_subgraph.first << " " << target_subgraph.second;
       if (local_min == -1 || target_subgraph.second < local_min) {
         memo[i][j] = target_subgraph;
       } else {
