@@ -75,7 +75,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `PRIMARY`: Primary Core only
 * `num_threads`: Number of computing threads for CPU delegates. [default: -1]
 * `planner_cpu_masks`: CPU cluster mask to set CPU affinity of planner. [default: same value as global `cpu_masks`]
-* `workers`: A vector-like config for per-processor worker. For each worker, specify the following fields. System creates 1 worker per device by default and first provided value overrides the settings (i.e., `cpu_masks`, `num_threads`, ... ) and additional field will add additional worker per device (only for CPU for now).
+* `workers`: A vector-like config for per-processor worker. For each worker, specify the following fields. System creates 1 worker per device by default and first provided value overrides the settings (i.e., `cpu_masks`, `num_threads`, ... ) and additional field will add additional worker per device.
   * `device`: Target device of specific worker.
     * `CPU`
     * `CPUFallback`

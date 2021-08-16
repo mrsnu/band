@@ -597,7 +597,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   // Create subgraphs
   // Save subgraph_idx - device_op_indices map for prev/next setting
-  std::map<int, std::pair<TfLiteDeviceFlags, std::set<int>>>
+  std::map<int, DeviceOpIndices>
       subgraph_idx_to_device_ops;
 
   // Write the ModelSpec for this model
@@ -658,8 +658,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
 
     // Create subgraphs
-    // Save subgraph_idx - device_op_indices map for prev/next setting
-    std::map<int, DeviceOpIndices> subgraph_idx_to_device_ops;
     for (auto& device_op_indices : subgraph_indices) {
       const int worker_id =
           (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);

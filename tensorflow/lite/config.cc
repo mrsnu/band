@@ -132,12 +132,6 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
       int worker_id = device_flag;
       // Add additional device worker
       if (found_default_worker[device_flag]) {
-        if (device_flag != kTfLiteCPU) {
-          // TODO: Support multiple accelerators (#139)
-          TFLITE_LOG(ERROR) << "Non-CPU processors are not allowed to have "
-                              "multiple workers for now.";
-          return kTfLiteError;
-        }
         worker_id = worker_config.workers.size();
         worker_config.workers.push_back(device_flag);
         worker_config.cpu_masks.push_back(impl::kTfLiteNumCpuMasks);
