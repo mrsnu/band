@@ -1390,7 +1390,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   // check if it is safe to lookup the cache:
   // are all waiting times < start_time ?
   bool wait_time_is_stale = true;
-  for (auto& pair : device_waiting) {
+  for (auto& pair : worker_waiting) {
     auto wait_time = pair.second;
     if (wait_time > start_time) {
       wait_time_is_stale = false;

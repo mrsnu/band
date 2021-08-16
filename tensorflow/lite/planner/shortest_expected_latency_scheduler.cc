@@ -12,7 +12,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
                     requests.begin() + window_size);
   requests.erase(requests.begin(), requests.begin() + window_size);
   while (!local_jobs.empty()) {
-    planner_->UpdateDeviceWaitingTime();
+    planner_->UpdateWorkerWaitingTime();
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
     // Put that job into some worker, and repeat this whole loop until we've
