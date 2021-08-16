@@ -763,10 +763,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                          << prev_subgraph_idx << "'s next";
       }
     }
-  } else {
-    TFLITE_LOG(ERROR) << "Wrong subgraph_preparation_type: "
-                      << subgraph_preparation_type;
-    return -1;
   }
 
   if (model_subgraph_indices.size() > 0) {

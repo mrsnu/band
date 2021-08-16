@@ -239,7 +239,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
         worker = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
       }
 
-      if (worker->Init(runtime_config.worker_config, i) != kTfLiteOk) {
+      if (worker->Init(runtime_config.worker_config, workers_.size()) != kTfLiteOk) {
         error_reporter_->Report("Worker::Init() failed for worker : %s",
                                 TfLiteDeviceGetName(device_flag));
         exit(-1);
