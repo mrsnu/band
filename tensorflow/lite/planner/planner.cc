@@ -6,6 +6,7 @@
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
+#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
@@ -63,6 +64,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new RoundRobinScheduler(this));
     } else if (schedulers[i] == kShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(this));
+    } else if (schedulers[i] == kHeterogeneousEarliestFinishTime) {
+      schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeScheduler(this));
     } else {
       return kTfLiteError;
     }
@@ -151,12 +154,19 @@ void Planner::HandleSLOViolatedJob(Job& job) {
   // mark the time of this decision (of early-dropping this job)
   job.end_time = profiling::time::NowMicros();
   EnqueueFinishedJob(job);
+
+  // Set reschedule flag.
+  need_reschedule_ = true;
 }
 
 void Planner::EnqueueToWorkers(ScheduleAction& action) {
   for (auto& queue : action) {
     auto device = queue.first;
     auto& requests = queue.second;
+
+    if (requests.empty()) {
+      continue;
+    }
 
     Worker* worker = GetInterpreter()->GetWorker(device);
     if (worker == nullptr) return;
@@ -187,7 +197,7 @@ void Planner::UpdateWorkerWaitingTime() {
 std::set<int> Planner::GetIdleWorkers() {
   std::set<int> idle_workers;
   for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
-    if (workers_waiting_[i] == 0) {
+    if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
       idle_workers.insert(i);
     }
   }
@@ -359,6 +369,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
+    remaining_ops.slo_us = job.slo_us;
     remaining_ops.enqueue_time = job.enqueue_time;
     remaining_ops.following_jobs = job.following_jobs;
     remaining_ops.expected_latency = job.expected_latency;
@@ -382,8 +393,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
 void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
-  job.resolved_tensors =
-      GetInterpreter()->GetModelSpec(job.model_id).input_tensors;
+  job.following_jobs.clear();
 }
 
 bool Planner::IsJobIdValid(int job_id) {
@@ -459,17 +469,19 @@ void Planner::Plan() {
 
     CopyToLocalQueue(local_queues_[0]);
     TryUpdateModelWorkerMapping();
-    for (size_t i = 0; i < local_queues_.size(); ++i) {
-      UpdateWorkerWaitingTime();
-      schedulers_[i]->Schedule(local_queues_[i]);
-      EnqueueToWorkers(schedulers_[i]->GetAction());
-    }
+    do {
+      need_reschedule_ = false;
+      for (size_t i = 0; i < local_queues_.size(); ++i) {
+        schedulers_[i]->Schedule(local_queues_[i]);
+      }
+    } while(need_reschedule_);
   }
 }
 
 void Scheduler::EnqueueAction(Job job, Subgraph* subgraph) {
   planner_->UpdateJobScheduleStatus(job, subgraph);
   action_[subgraph->GetKey().worker_id].push_back(job);
+  planner_->EnqueueToWorkers(action_);
 }
 
 }  // namespace impl

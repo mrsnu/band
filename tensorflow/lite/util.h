@@ -88,8 +88,6 @@ struct Job {
   explicit Job() : model_id(-1) {}
   explicit Job(int model_id) : model_id(model_id) {}
   explicit Job(int model_id, int64_t slo) : model_id(model_id), slo_us(slo) {}
-  explicit Job(int model_id, std::vector<Job>& following_jobs)
-    : model_id(model_id), following_jobs(following_jobs) {}
 
   // For record (Valid after execution)
   int64_t enqueue_time = 0;

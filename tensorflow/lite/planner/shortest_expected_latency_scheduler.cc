@@ -6,13 +6,13 @@ namespace tflite {
 namespace impl {
 
 void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
-  WorkerWaitingTime worker_waiting = GetWorkerWaitingTime();
   JobQueue local_jobs;
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
   local_jobs.insert(local_jobs.begin(), requests.begin(),
                     requests.begin() + window_size);
   requests.erase(requests.begin(), requests.begin() + window_size);
   while (!local_jobs.empty()) {
+    planner_->UpdateDeviceWaitingTime();
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
     // Put that job into some worker, and repeat this whole loop until we've
@@ -32,6 +32,10 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     int target_job_idx;
     int target_subgraph_idx;
 
+    // Lookup table for GetShortestLatency().
+    // See HeterogeneousEarliestFinishTimeScheduler for detailed comments.
+    std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, Interpreter::PairHash> cache;
+
     int64_t sched_start = profiling::time::NowMicros();
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
@@ -39,10 +43,22 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
           next_job.previous_subgraph_indices.empty()
               ? -1
               : next_job.previous_subgraph_indices.back();
-      std::pair<int, int64_t> best_subgraph =
-          GetInterpreter()->GetShortestLatency(
-              next_job.model_id, next_job.resolved_tensors, 0, worker_waiting,
-              preceded_subgraph_index);
+      std::pair<int, int64_t> best_subgraph;
+      std::pair<int, std::set<int>> cache_key = {next_job.model_id,
+                                                 next_job.resolved_tensors};
+
+      auto cache_it = cache.find(cache_key);
+      if (cache_it != cache.end()) {
+        // used cached value instead of calling GetShortestLatency()
+        best_subgraph = cache_it->second;
+      } else {
+        best_subgraph = GetInterpreter()->GetShortestLatency(
+            next_job.model_id, next_job.resolved_tensors, 0, GetWorkerWaitingTime(),
+            preceded_subgraph_index);
+
+        // insert new value into cache
+        cache[cache_key] = best_subgraph;
+      }
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
@@ -70,9 +86,6 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       most_urgent_job.expected_latency = largest_shortest_latency;
     }
     EnqueueAction(most_urgent_job, target_subgraph);
-
-    worker_waiting[target_subgraph->GetKey().worker_id] +=
-        largest_shortest_latency;
   }
 }
 
