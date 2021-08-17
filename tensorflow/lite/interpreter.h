@@ -733,7 +733,8 @@ class Interpreter {
   std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(
       const int model_id, const TfLiteDeviceFlags device_flag);
   TfLiteStatus GetUnitSubgraphs(const int model_id,
-                                std::set<DeviceOpIndices>& subgraph_indices);
+                                std::set<DeviceOpIndices>& subgraph_indices,
+                                bool need_fallback_subgraph = true);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
     return own_external_cpu_backend_context_.get();
