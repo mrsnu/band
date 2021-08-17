@@ -1405,8 +1405,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
     for (int i = j; i >= start_unit_idx; --i) {
       // Search from the profile result of the unit subgraph.
       auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
-      int64_t start = i > start_unit_idx ?
-                      std::max(start, memo[i - 1].second) : 0;
+      int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
       std::pair<int, int64_t> target_subgraph =
         GetShortestSubgraphIndex(range, start, device_waiting);
 
