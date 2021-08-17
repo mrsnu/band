@@ -244,6 +244,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       }
 
       workers_.emplace_back(std::move(worker));
+    } else {
+      TFLITE_LOG(WARN) << TfLiteDeviceGetName(device_flag) << " worker is not created.";
     }
   }
 }
