@@ -614,14 +614,14 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   if (subgraph_preparation_type == "fallback_per_device") {
     // Device,ops to subgraph index map to avoid duplicate
     // subgraph construction without input/output ops
-    std::map<std::pair<TfLiteDeviceFlags, std::set<int>>, int>
+    std::map<DeviceOpIndices, int>
         device_ops_to_subgraph_index;
 
     // register subgraphs for all devices (skip CPU)
     for (int i = 1; i < kTfLiteNumDevices; ++i) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
 
-      std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>>
+      std::vector<DeviceOpIndices>
           device_subgraph_indices =
               (*interpreter)
                   ->MakeSubgraphsForFallbackOps(model_id, device_flag);
@@ -820,8 +820,9 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     return false;
   };
 
-  bool added = false;
+  bool added = true;
   while (added) {
+    added = false;
     std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> to_add;
     for (const auto& prev_idx_device_ops : subgraph_idx_to_device_ops) {
       for (const auto& next_idx_device_ops : subgraph_idx_to_device_ops) {

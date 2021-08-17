@@ -730,8 +730,6 @@ class Interpreter {
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // Generate subgraphs for fallback ops in `model_id`.
-  // DeviceOpIndices contains device flag and op_indices of single subgraph.
-  using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
   std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(
       const int model_id, const TfLiteDeviceFlags device_flag);
   TfLiteStatus GetUnitSubgraphs(const int model_id,
