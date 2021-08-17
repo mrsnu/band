@@ -71,8 +71,7 @@ ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
       for (auto device_profile_it = device_profile.begin();
            device_profile_it != device_profile.end();
            ++device_profile_it) {
-        int device_id = device_profile_it.key().asInt();
-        TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
+        int worker_id = device_profile_it.key().asInt();
         int64_t profiled_latency = (*device_profile_it).asInt64();
 
         if (profiled_latency <= 0) {
@@ -81,7 +80,7 @@ ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
           continue;
         }
 
-        SubgraphKey key(model_id, device_flag,
+        SubgraphKey key(model_id, worker_id,
                         root_indices, leaf_indices);
         id_profile[key] = profiled_latency;
       }
@@ -112,7 +111,7 @@ void UpdateDatabase(const ModelDeviceToLatency& id_profile,
     // copy all entries in id_profile --> database_json
     // as an ad-hoc method, we simply concat the start/end indices to form
     // the level-two key in the final json value
-    database_json[model_name][start_indices + "/" + end_indices][key.device_flag] = profiled_latency;
+    database_json[model_name][start_indices + "/" + end_indices][key.worker_id] = profiled_latency;
   }
 }
 

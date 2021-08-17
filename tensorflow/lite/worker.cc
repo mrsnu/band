@@ -22,23 +22,25 @@ Worker::~Worker() {
   device_cpu_thread_.join();
 }
 
-TfLiteStatus Worker::Init(WorkerConfig& config) {
+TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
   if (config.allow_worksteal) {
     AllowWorkSteal();
   }
+  
   availability_check_interval_ms_ = config.availability_check_interval_ms;
+  worker_id_ = worker_id;
 
   TFLITE_LOG(INFO) << "Set affinity of "
                    << TfLiteDeviceGetName(device_flag_)
                    << " to "
-                   << TfLiteCPUMaskGetName(config.cpu_masks[device_flag_])
+                   << TfLiteCPUMaskGetName(config.cpu_masks[worker_id])
                    << " cores for " 
-                   << config.num_threads[device_flag_]
+                   << config.num_threads[worker_id]
                    << " threads";
-
+  
   const CpuSet worker_mask_set =
-    TfLiteCPUMaskGetSet(config.cpu_masks[device_flag_]);
-  return UpdateWorkerThread(worker_mask_set, config.num_threads[device_flag_]);
+    TfLiteCPUMaskGetSet(config.cpu_masks[worker_id]);
+  return UpdateWorkerThread(worker_mask_set, config.num_threads[worker_id]);
 }
 
 TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads) {

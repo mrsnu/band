@@ -389,7 +389,8 @@ void TfLiteDriver::ReshapeTensor(int model_id, int id, const string& csv_values)
 }
 
 TfLiteTensor* TfLiteDriver::AllocateInputTensor(int model_id, int input_index) {
-  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter_->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, worker_id);
 
   TfLiteTensor* input = TfLiteTensorCreateLike(
       interpreter_->tensor(subgraph_index, interpreter_->inputs(subgraph_index)[input_index]));
@@ -398,7 +399,8 @@ TfLiteTensor* TfLiteDriver::AllocateInputTensor(int model_id, int input_index) {
 }
 
 TfLiteTensor* TfLiteDriver::AllocateOutputTensor(int model_id, int output_index) {
-  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, kTfLiteCPU);
+  const int worker_id = interpreter_->GetRepresentativeWorkerId(kTfLiteCPU);
+  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, worker_id);
 
   TfLiteTensor* output = TfLiteTensorCreateLike(
       interpreter_->tensor(subgraph_index, interpreter_->outputs(subgraph_index)[output_index]));

@@ -75,16 +75,15 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `PRIMARY`: Primary Core only
 * `num_threads`: Number of computing threads for CPU delegates. [default: -1]
 * `planner_cpu_masks`: CPU cluster mask to set CPU affinity of planner. [default: same value as global `cpu_masks`]
-* `workers`: A map-like config for per-processor worker. For each worker, specify the following fields
-  * Available list of workers (key)
+* `workers`: A vector-like config for per-processor worker. For each worker, specify the following fields. System creates 1 worker per device by default and first provided value overrides the settings (i.e., `cpu_masks`, `num_threads`, ... ) and additional field will add additional worker per device.
+  * `device`: Target device of specific worker.
     * `CPU`
     * `CPUFallback`
     * `GPU`
     * `DSP`
     * `NPU`
-  * Available list of fields
-    * `cpu_masks`: CPU cluster mask to set CPU affinity of specific worker. [default: same value as global `cpu_masks`]
-    * `num_threads`: Number of threads. [default: same value as global `num_threads`]
+  * `cpu_masks`: CPU cluster mask to set CPU affinity of specific worker. [default: same value as global `cpu_masks`]
+  * `num_threads`: Number of threads. [default: same value as global `num_threads`]
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * curr_profile + (1 - profile_smoothing_factor) * prev_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
@@ -128,16 +127,18 @@ An example of complete JSON config file is as follows:
     "cpu_masks": "ALL",
     "num_threads": 1,
     "planner_cpu_masks": "PRIMARY",
-    "workers": {
-      "CPU": {
-        "cpu_masks": "BIG",
-        "num_threads": 3
+    "workers": [
+      {
+        "device": "CPU",
+        "num_threads": 3,
+        "cpu_masks": "BIG"
       },
-      "CPUFallback": {
-        "cpu_masks": "LITTLE",
-        "num_threads": 4
+      {
+        "device": "CPU",
+        "num_threads": 4,
+        "cpu_masks": "LITTLE"
       }
-    },
+    ],
     "running_time_ms": 60000,
     "profile_smoothing_factor": 0.1,
     "model_profile": "/data/local/tmp/profile.json",

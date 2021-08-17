@@ -6,8 +6,8 @@ namespace impl {
 
 void FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
   // TODO: fallback subgraphs for FixedDevicePlanner?
-  std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
-  if (idle_devices.empty()) {
+  std::set<int> idle_workers = planner_->GetIdleWorkers();
+  if (idle_workers.empty()) {
     // no device is idle; wait for next iteration
     return;
   }
@@ -16,35 +16,33 @@ void FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
     Job& to_execute = *it;
     int model_id = to_execute.model_id;
 
-    int device_idx;
-    if (kTfLiteCPU <= to_execute.device_id &&
-        to_execute.device_id < kTfLiteNumDevices) {
-      device_idx = to_execute.device_id;
+    int worker_id;
+    if (worker_id >= 0 && GetInterpreter()->GetNumWorkers()) {
+      worker_id = to_execute.worker_id;
     } else {
-      device_idx = planner_->GetModelDeviceMap()[model_id];
+      worker_id = planner_->GetModelWorkerMap()[model_id];
     }
-    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_idx);
 
-    auto idle_devices_it = idle_devices.find(device_flag);
-    if (idle_devices_it == idle_devices.end()) {
+    auto idle_workers_it = idle_workers.find(worker_id);
+    if (idle_workers_it == idle_workers.end()) {
       // that device is not idle, so leave this job alone for now
       ++it;
       continue;
     }
 
-    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, device_flag);
+    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker_id);
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
     to_execute.expected_latency =
-        GetDeviceWaitingTime()[device_flag] +
+        GetWorkerWaitingTime()[worker_id] +
         GetInterpreter()->GetExpectedLatency(subgraph->GetKey());
     EnqueueAction(to_execute, subgraph);
 
     // delete this job from our request queue and
-    // delete this device from our idle_devices set
+    // delete this device from our idle_workers set
     it = requests.erase(it);
-    idle_devices.erase(idle_devices_it);
+    idle_workers.erase(idle_workers_it);
 
-    if (idle_devices.empty()) {
+    if (idle_workers.empty()) {
       // no device is idle; wait for next iteration
       break;
     }
