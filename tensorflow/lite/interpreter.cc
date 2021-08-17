@@ -1014,12 +1014,13 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
     if (subgraph_key.model_id != model_id) {
       continue;
     }
-    if (subgraph_preparation_type_ == "unit_subgraph" ||
-        subgraph_preparation_type_ == "merge_unit_subgraph") {
-      int start_unit_idx = *subgraph_key.unit_indices.begin();
-      int end_unit_idx = *subgraph_key.unit_indices.rbegin();
-      unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
-    }
+    int start_unit_idx = *subgraph_key.unit_indices.begin();
+    int end_unit_idx = *subgraph_key.unit_indices.rbegin();
+    unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
+    TFLITE_LOG(INFO) << "Set unit subgraphs: model_id - " << model_id
+                     << ", start idx - " << start_unit_idx
+                     << ", end idx - " << end_unit_idx
+                     << ", subgraph idx - " << i;
   }
 
   std::string& model_fname = model_config.model_fname;

@@ -571,30 +571,34 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   (*interpreter)->InvestigateModelSpec(model_id);
 
   ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
+  // Each pair consists of the unit subgraph index and device op indices.
+  std::set<std::pair<int, DeviceOpIndices>> subgraph_indices;
+  if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
+      kTfLiteOk) {
+    TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
+    return -1;
+  }
 
   // Prepare subgraphs candidates
   const std::string& subgraph_preparation_type =
       (*interpreter)->subgraph_preparation_type_;
   if (subgraph_preparation_type == "fallback_per_device") {
-    // Note that this preparation type is not supported.
-    TFLITE_LOG(ERROR) << subgraph_preparation_type << ": preparation type is not supported.";
-
     // Device,ops to subgraph index map to avoid duplicate
     // subgraph construction without input/output ops
     std::map<DeviceOpIndices, int> device_ops_to_subgraph_index;
 
-    // register subgraphs for all devices (skip CPU)
-    for (int i = 1; i < kTfLiteNumDevices; ++i) {
+    // register subgraphs for all devices
+    for (int i = 0; i < kTfLiteNumDevices; ++i) {
       if (i == kTfLiteCPUFallback) {
         // Skip for Fallback worker
         continue;
       }
       TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
 
-      std::vector<DeviceOpIndices> subgraph_indices =
+      std::vector<DeviceOpIndices> device_ops_vector =
           (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_id);
 
-      for (auto& device_op_indices : subgraph_indices) {
+      for (auto& device_op_indices : device_ops_vector) {
         std::string prefix;
         int subgraph_idx = -1;
         // Duplicate subgraph search without key
@@ -622,7 +626,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           continue;
         }
 
-        auto subgraph_key = subgraph->GetKey();
+        auto& subgraph_key = subgraph->GetKey();
         std::set<int> input_tensors(subgraph->inputs().begin(),
                                     subgraph->inputs().end());
 
@@ -665,6 +669,25 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           }
         }
 
+        // Set unit subgraph indices.
+        for (auto& unit_index_device_ops : subgraph_indices) {
+          auto unit_index = unit_index_device_ops.first;
+          auto& device_ops = unit_index_device_ops.second;
+          auto& device = device_ops.first;
+          auto& op_indices = device_ops.second;
+
+          if (device == subgraph_key.device_flag) {
+            std::set<int> merged;
+            std::set_union(op_indices.begin(), op_indices.end(),
+                           device_op_indices.second.begin(), device_op_indices.second.end(),
+                           std::inserter(merged, merged.end()));
+            if (merged == device_op_indices.second) {
+              subgraph_key.unit_indices.insert(unit_index);
+              TFLITE_LOG(INFO) << unit_index << " unit subgarph is in " << subgraph_idx;
+            }
+          }
+        }
+
         has_available_device = true;
         TFLITE_LOG(INFO) << prefix << " Subgraph "
                          << "Model : " << subgraph_key.model_id << " "
@@ -676,13 +699,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   } else if (subgraph_preparation_type == "unit_subgraph" ||
              subgraph_preparation_type == "merge_unit_subgraph") {
-    std::set<std::pair<int, DeviceOpIndices>> subgraph_indices;
-    if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
-        kTfLiteOk) {
-      TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
-      return -1;
-    }
-
     // Create subgraphs
     // Save subgraph_idx - device_op_indices map for prev/next setting
     std::map<int, DeviceOpIndices> subgraph_idx_to_device_ops;
