@@ -1403,7 +1403,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
 std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx,
-    std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
+    std::map<int, int64_t>& worker_waiting) {
   auto& memo = model_specs_[model_id].latency_memo;
   auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
 
@@ -1426,7 +1426,7 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
       auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
       int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
       std::pair<int, int64_t> target_subgraph =
-        GetShortestSubgraphIndex(range, start, device_waiting);
+        GetShortestSubgraphIndex(range, start, worker_waiting);
 
       if (local_min.second == -1 || target_subgraph.second < local_min.second) {
         if (i > start_unit_idx) {

@@ -667,7 +667,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           auto& device = device_ops.first;
           auto& op_indices = device_ops.second;
 
-          if (device == subgraph_key.device_flag) {
+          if (device == (*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id)) {
             std::set<int> merged;
             std::set_union(op_indices.begin(), op_indices.end(),
                            device_op_indices.second.begin(), device_op_indices.second.end(),
@@ -866,7 +866,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
   bool added = true;
   while (added) {
     added = false;
-    std::vector<std::pair<TfLiteDeviceFlags, std::set<int>>> to_add;
+    std::vector<std::pair<std::set<int>, DeviceOpIndices>> to_add;
     for (const auto& prev_idx_device_ops : subgraph_idx_to_device_ops) {
       for (const auto& next_idx_device_ops : subgraph_idx_to_device_ops) {
         // Skip same subgraph
@@ -904,7 +904,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
                        std::inserter(unit_subgraph_indices, unit_subgraph_indices.end()));
         // Add if not already created
         if (!is_already_created(device, op_indices)) {
-          to_add.push_back({device, op_indices});
+          to_add.push_back({unit_subgraph_indices, {device, op_indices}});
         }
       }
     }
