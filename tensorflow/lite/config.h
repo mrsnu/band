@@ -47,12 +47,17 @@ struct PlannerConfig {
 
 struct WorkerConfig {
   WorkerConfig() {
+    // Add one default worker per device
     for (int i = 0; i < kTfLiteNumDevices; i++) {
-      cpu_masks[i] = impl::kTfLiteNumCpuMasks;
+      workers.push_back(static_cast<TfLiteDeviceFlags>(i));
     }
+    cpu_masks = std::vector<impl::TfLiteCPUMaskFlags>(kTfLiteNumDevices,
+                                                      impl::kTfLiteNumCpuMasks);
+    num_threads = std::vector<int>(kTfLiteNumDevices, 0);
   }
-  impl::TfLiteCPUMaskFlags cpu_masks[kTfLiteNumDevices];
-  int num_threads[kTfLiteNumDevices];
+  std::vector<TfLiteDeviceFlags> workers;
+  std::vector<impl::TfLiteCPUMaskFlags> cpu_masks;
+  std::vector<int> num_threads;
   bool allow_worksteal = false;
   int32_t availability_check_interval_ms = 30000;
 };

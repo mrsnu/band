@@ -89,7 +89,7 @@ class Planner {
   void EnqueueToWorkers(ScheduleAction& action);
 
   // Check if the job violated the specified SLO.
-  // This func assumes that device_waiting_, job.profiled_time,
+  // This func assumes that workers_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.
   bool IsSLOViolated(Job& job);
 
@@ -97,21 +97,21 @@ class Planner {
   void HandleSLOViolatedJob(Job& job);
 
   // Update the current device waiting time.
-  void UpdateDeviceWaitingTime();
+  void UpdateWorkerWaitingTime();
 
-  // Update `model_device_map_`.
-  void TryUpdateModelDeviceMapping();
+  // Update `model_worker_map_`.
+  void TryUpdateModelWorkerMapping();
 
-  // Get idle devices from `device_waiting_`.
+  // Get idle workers from `workers_waiting_`.
   // NOTE: Another option to implement the function is to be pass
-  // the current DeviceWaitingTime as a parameter.
-  std::set<TfLiteDeviceFlags> GetIdleDevices();
+  // the current WorkerWaitingTime as a parameter.
+  std::set<int> GetIdleWorkers();
 
-  DeviceWaitingTime& GetDeviceWaitingTime() { return device_waiting_; }
+  WorkerWaitingTime& GetWorkerWaitingTime() { return workers_waiting_; }
 
   int IssueSchedId();
 
-  std::map<int, int>& GetModelDeviceMap() { return model_device_map_; }
+  std::map<int, int>& GetModelWorkerMap() { return model_worker_map_; }
 
   void UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph);
 
@@ -149,9 +149,9 @@ class Planner {
 
   std::thread planner_thread_;
   int sched_id_ = 0;
-  DeviceWaitingTime device_waiting_;
+  WorkerWaitingTime workers_waiting_;
   // Map structure to find assigned device of model idx (model_id, device flag)
-  std::map<int, int> model_device_map_;
+  std::map<int, int> model_worker_map_;
   Interpreter* interpreter_;
   bool need_reschedule_ = false;
 };
@@ -166,8 +166,8 @@ class Scheduler {
   virtual void Schedule(JobQueue& requests) = 0;
   Interpreter* GetInterpreter() { return planner_->GetInterpreter(); }
   int IssueSchedId() { return planner_->IssueSchedId(); }
-  DeviceWaitingTime& GetDeviceWaitingTime() {
-    return planner_->GetDeviceWaitingTime();
+  WorkerWaitingTime& GetWorkerWaitingTime() {
+    return planner_->GetWorkerWaitingTime();
   }
   bool NeedProfile() { return need_profile_; }
   bool NeedFallbackSubgraphs() { return need_fallback_subgraphs_; }

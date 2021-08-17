@@ -12,7 +12,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
                     requests.begin() + window_size);
   requests.erase(requests.begin(), requests.begin() + window_size);
   while (!local_jobs.empty()) {
-    planner_->UpdateDeviceWaitingTime();
+    planner_->UpdateWorkerWaitingTime();
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
     // Put that job into some worker, and repeat this whole loop until we've
@@ -53,7 +53,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
         best_subgraph = cache_it->second;
       } else {
         best_subgraph = GetInterpreter()->GetShortestLatency(
-            next_job.model_id, next_job.resolved_tensors, 0, GetDeviceWaitingTime(),
+            next_job.model_id, next_job.resolved_tensors, 0, GetWorkerWaitingTime(),
             preceded_subgraph_index);
 
         // insert new value into cache
