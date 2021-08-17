@@ -7,12 +7,12 @@ namespace profiling {
 
 FunctionProfiler::FunctionProfiler(std::string function_name)
   : function_name_(function_name) {
-  function_start_time_ = time::NowNanos();
+  function_start_time_ = time::NowMicros();
 }
 
 FunctionProfiler::~FunctionProfiler() {
-  int64_t current_time = time::NowNanos();
-  TFLITE_LOG(INFO) << function_name_ << " took " << current_time - function_start_time_ << " (ns)";
+  int64_t current_time = time::NowMicros();
+  TFLITE_LOG(INFO) << function_name_ << " took " << current_time - function_start_time_ << " (us)";
 }
 
 

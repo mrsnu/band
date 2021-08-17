@@ -1,7 +1,6 @@
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 
 #include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/profiling/function_profiler.h"
 
 namespace tflite {
 namespace impl {

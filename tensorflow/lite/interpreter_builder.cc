@@ -716,9 +716,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                        << "From " << subgraph_key.GetInputOpsString() << " "
                        << "To " << subgraph_key.GetOutputOpsString() << " "
                        << "Global Index " << subgraph_idx;
-      for (auto& unit : subgraph_key.unit_indices) {
-        TFLITE_LOG(INFO) << " Unit Subgraph : " << unit;
-      }
     }
 
     TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()

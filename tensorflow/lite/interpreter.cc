@@ -1018,8 +1018,6 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
         subgraph_preparation_type_ == "merge_unit_subgraph") {
       int start_unit_idx = *subgraph_key.unit_indices.begin();
       int end_unit_idx = *subgraph_key.unit_indices.rbegin();
-      TFLITE_LOG(INFO) << "Subgraph - " << i;
-      TFLITE_LOG(INFO) << "UNIT SUBGRAPH ID - " << start_unit_idx << " " << end_unit_idx;
       unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
     }
   }
