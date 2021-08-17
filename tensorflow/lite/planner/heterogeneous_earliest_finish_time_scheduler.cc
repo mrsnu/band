@@ -35,27 +35,19 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     int target_subgraph_idx = -1;
 
     // only check up to `window_size` requests
+    std::set<std::pair<int, int>> searched_jobs;
     for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
       Job& job = *it;
-      int preceded_subgraph_index = job.previous_subgraph_indices.empty() ?
-                                    -1 : job.previous_subgraph_indices.back();
-
-      std::pair<int, int64_t> best_subgraph = {-1, INT_MAX};
-      std::pair<int, std::set<int>> cache_key = {job.model_id,
-                                                 job.resolved_tensors};
-
-      auto cache_it = cache.find(cache_key);
-      if (cache_it != cache.end()) {
-        // used cached value instead of calling GetShortestLatency()
-        best_subgraph = cache_it->second;
+      std::pair<int, int> job_to_search = std::make_pair(job.model_id, job.start_unit_idx);
+      if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
+        continue;
       } else {
-        best_subgraph = GetInterpreter()->GetShortestLatency(
-            job.model_id, job.resolved_tensors, 0, GetDeviceWaitingTime(),
-            preceded_subgraph_index);
-
-        // insert new value into cache
-        cache[cache_key] = best_subgraph;
+        searched_jobs.insert(job_to_search);
       }
+
+      std::pair<int, int64_t> best_subgraph =
+          GetInterpreter()->GetShortestLatencyWithUnitSubgraph(
+              job.model_id, job.start_unit_idx, GetDeviceWaitingTime());
 
 
       if (largest_shortest_latency < best_subgraph.second) {

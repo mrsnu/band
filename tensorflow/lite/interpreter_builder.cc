@@ -737,6 +737,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                      << " subgraphs created during GetUnitSubgraphs()";
 
     // Add merged atomic subgraphs
+    // Note that each merged subgraph consists of unit subgraphs with
+    // continuous unit subgraph indices.
+    // If we find any of the case that does not satisfy the condition,
+    // we should re-implement the merging logic.
     if (subgraph_preparation_type == "merge_unit_subgraph") {
       if (CreateMergedUnitSubgraphs(model_id, subgraph_idx_to_device_ops, model,
                                     op_resolver, interpreter) != kTfLiteOk) {

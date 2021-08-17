@@ -1008,7 +1008,7 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
                                                ModelConfig& model_config) {
   SetModelConfig(model_id, model_config);
 
-  // Set model_id -> subgraph idx map.
+  // Set (model_id, start_unit_idx, end_unit_idx) -> subgraph idx map.
   for (int i = 0; i < subgraphs_.size(); ++i) {
     auto& subgraph_key = subgraphs_[i]->GetKey();
     if (subgraph_key.model_id != model_id) {
