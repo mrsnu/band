@@ -1013,34 +1013,39 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
   // Set model_id -> subgraph idx map.
   for (int i = 0; i < subgraphs_.size(); ++i) {
     auto& subgraph_key = subgraphs_[i]->GetKey();
-    if (subgraph_key.model_id == model_id) {
-      model_id_to_subgraph_idx_[model_id].insert(i);
+    if (subgraph_key.model_id != model_id) {
+      continue;
     }
-
     if (subgraph_preparation_type_ == "unit_subgraph" ||
         subgraph_preparation_type_ == "merge_unit_subgraph") {
-      std::pair<int, std::pair<int, int>> key = {model_id,
-                                                 std::make_pair(*subgraph_key.unit_indices.begin(),
-                                                                *subgraph_key.unit_indices.rbegin())};
+      int start_unit_idx = *subgraph_key.unit_indices.begin();
+      int end_unit_idx = *subgraph_key.unit_indices.rbegin();
       TFLITE_LOG(INFO) << "Subgraph - " << i;
-      TFLITE_LOG(INFO) << "UNIT SUBGRAPH ID - " << key.second.first << " " << key.second.second;
-      unit_subgraphs_to_global_indices_.insert({key, i});
+      TFLITE_LOG(INFO) << "UNIT SUBGRAPH ID - " << start_unit_idx << " " << end_unit_idx;
+      unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
     }
   }
 
   for (int i = 0; i < subgraphs_.size(); ++i) {
     auto& subgraph_key = subgraphs_[i]->GetKey();
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
     if (subgraph_preparation_type_ == "unit_subgraph" ||
         subgraph_preparation_type_ == "merge_unit_subgraph") {
       // Set unit indices to subgraph_idx.
-      std::pair<int, std::pair<int, int>> key = {model_id,
-                                                 std::make_pair(*subgraph_key.unit_indices.begin(),
-                                                                *subgraph_key.unit_indices.rbegin())};
-      auto range = unit_subgraphs_to_global_indices_.equal_range(key);
+      std::pair<int, int> key = std::make_pair(*subgraph_key.unit_indices.begin(),
+                                               *subgraph_key.unit_indices.rbegin());
+
+      int start_unit_idx = *subgraph_key.unit_indices.begin();
+      int end_unit_idx = *subgraph_key.unit_indices.rbegin();
+      auto& range = unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx];
+      TFLITE_LOG(INFO) << "first - " << key.first << ", second - " << key.second; 
       std::cout << "unit - ";
-      for_each(range.first, range.second, [](auto& x) {
-        std::cout << x.second << " ";
-      });
+      for (auto x : range) {
+      // for_each(range.first, range.second, [](auto& x) {
+        std::cout << x << " ";
+      }
       std::cout << std::endl;
     }
   }
@@ -1405,54 +1410,38 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
-    int model_id, int start_unit_idx, int64_t start_time,
+    int model_id, int start_unit_idx,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
   auto& memo = model_specs_[model_id].latency_memo;
   auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
+
+  for (int i = 0; i < num_unit_subgraphs; ++i) {
+    memo[i] = std::make_pair(-1, INT_MAX);
+  }
   // Check if start, end idx are not equal or larger than the number of unit subgraphs.
-  for(int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
-    for(int i = j; i >= 0; --i) {
-      int64_t start_time = profiling::time::NowNanos();
-      int64_t local_min = -1;
-      int local_min_partition = -1;
-      TFLITE_LOG(INFO) << "Searching... " << i << " " << j;
-      for (int k = i; k < j; ++k) {
-        int64_t local_value = memo[k + 1][j].second;
-        if (local_min == -1 || local_value < local_min) {
-          local_min = local_value;
-          local_min_partition = k;
+  for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
+    std::pair<int, int64_t> local_min = std::make_pair(-1, -1);
+    for (int i = j; i >= start_unit_idx; --i) {
+      // Search from the profile result of the unit subgraph.
+      auto& range = unit_subgraphs_to_global_indices_[model_id][i][j];
+      int64_t start = i > start_unit_idx ?
+                      std::max(start, memo[i - 1].second) : 0;
+      std::pair<int, int64_t> target_subgraph =
+        GetShortestSubgraphIndex(range, start, device_waiting);
+
+      if (local_min.second == -1 || target_subgraph.second < local_min.second) {
+        if (i > start_unit_idx) {
+          local_min.first = memo[i - 1].first;
+          local_min.second = target_subgraph.second;
+        } else {
+          local_min = target_subgraph;
         }
       }
-      int64_t mid_time = profiling::time::NowNanos();
-      TFLITE_LOG(INFO) << "Local Min Partition :  " << local_min_partition << ", " << local_min;
-
-      // Search from the profile result of the unit subgraph.
-      std::vector<int> subgraphs_to_search;
-      TFLITE_LOG(INFO) << "unit pair : " << i << " " << j;
-      auto range = unit_subgraphs_to_global_indices_.equal_range({model_id, std::make_pair(i, j)});
-      for (int k = 0; k < subgraphs_to_search.size(); ++k) {
-        TFLITE_LOG(INFO) << "Subgraphs to search : " << k;
-      }
-
-      for_each(range.first,
-               range.second,
-               [&](auto& x) {subgraphs_to_search.push_back(x.second);});
-      int64_t start = i == 0 ? start_time : memo[0][i - 1].second;
-      std::pair<int, int64_t> target_subgraph =
-      GetShortestSubgraphIndex(subgraphs_to_search, start, device_waiting);
-      int64_t search_time = profiling::time::NowNanos();
-
-      TFLITE_LOG(INFO) << "Merged subgraph : " << target_subgraph.first << " " << target_subgraph.second;
-      if (local_min == -1 || target_subgraph.second < local_min) {
-        memo[i][j] = target_subgraph;
-      } else {
-        memo[i][j] = std::make_pair(memo[i][local_min_partition].first, local_min);
-      }
-      int64_t memo_time = profiling::time::NowNanos();
     }
+    memo[j] = local_min;
   }
 
-  return memo[start_unit_idx][num_unit_subgraphs - 1];
+  return memo[num_unit_subgraphs - 1];
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatency(
@@ -1605,10 +1594,10 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
 
 std::pair<int, int64_t>
 Interpreter::GetShortestSubgraphIndex(
-    std::vector<int> subgraph_indices, int64_t start_time,
+    std::vector<int>& subgraph_indices, int64_t start_time,
     std::map<TfLiteDeviceFlags, int64_t>& device_waiting) {
   int64_t min_latency = INT_MAX;
-  int min_idx = 0;
+  int min_idx = -1;
 
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
@@ -1674,9 +1663,6 @@ void Interpreter::PrepareUnitSubgraphScheduling(int model_id, int num_units) {
   auto& model_spec = model_specs_[model_id];
   model_spec.num_unit_subgraphs = num_units;
   model_spec.latency_memo.resize(num_units);
-  for (int i = 0; i < num_units; ++i) {
-    model_spec.latency_memo[i].resize(num_units);
-  }
 }
 
 }  // namespace impl

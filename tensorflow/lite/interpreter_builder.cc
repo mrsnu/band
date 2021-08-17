@@ -658,8 +658,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           // there are common tensors. Note that This logic cannot guarantees
           // the execution capability as we don't consider resolved tensors here.
           if (is_previous) {
-            TFLITE_LOG(INFO) << "Subgraph " << subgraph_idx << " is "
-                            << potential_prev_subgraph_index << "'s next";
             if (subgraph->SetPrevSubgraph(potential_prev_subgraph) != kTfLiteOk) {
               TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
             }
@@ -779,8 +777,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
         if (is_previous) {
           next_subgraph->SetPrevSubgraph(prev_subgraph);
-          TFLITE_LOG(INFO) << next_subgraph_idx << " is "
-                          << prev_subgraph_idx << "'s next";
         }
       }
     }

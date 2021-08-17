@@ -106,9 +106,9 @@ struct ModelSpec {
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
   int num_unit_subgraphs;
-  // 2D vector for memo during scheduling.
+  // vector for memoization during scheduling.
   // Each element is a pair of starting subgraph index and shortest latency.
-  std::vector<std::vector<std::pair<int, int64_t>>> latency_memo;
+  std::vector<std::pair<int, int64_t>> latency_memo;
 };
 
 class Interpreter {
@@ -719,7 +719,7 @@ class Interpreter {
       int preceded_subgraph_index = -1);
 
   std::pair<int, int64_t> GetShortestLatencyWithUnitSubgraph(
-      int model_id, int start_unit_idx, int64_t start_time,
+      int model_id, int start_unit_idx,
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
 
   // hash function to use pair<int, set<int>> as map key in cache_
@@ -741,7 +741,7 @@ class Interpreter {
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // From the hash of the pair {Model id, Unit subgraph} to subgraph idx
-  std::multimap<std::pair<int, std::pair<int, int>>, int> unit_subgraphs_to_global_indices_;
+  std::map<int, std::map<int, std::map<int, std::vector<int>>>> unit_subgraphs_to_global_indices_;
 
   // Key: model_id, Value: subgraph index
   std::map<int, std::set<int>> model_id_to_subgraph_idx_;
@@ -874,7 +874,7 @@ class Interpreter {
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account
   std::pair<int, int64_t> GetShortestSubgraphIndex(
-      std::vector<int> subgraph_indices, int64_t start_time,
+      std::vector<int>& subgraph_indices, int64_t start_time,
       std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
 
   // Update slo values in model_configs_ according to the worst profiled

@@ -33,39 +33,19 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     int target_job_idx;
     int target_subgraph_idx;
 
-    // Lookup table for GetShortestLatency().
-    // See HeterogeneousEarliestFinishTimeScheduler for detailed comments.
-    std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, Interpreter::PairHash> cache;
-
-    int64_t sched_start = profiling::time::NowMicros();
+    std::set<std::pair<int, int>> searched_jobs;
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
-      int preceded_subgraph_index =
-          next_job.previous_subgraph_indices.empty()
-              ? -1
-              : next_job.previous_subgraph_indices.back();
-      /*
-      std::pair<int, int64_t> best_subgraph;
-      std::pair<int, std::set<int>> cache_key = {next_job.model_id,
-                                                 next_job.resolved_tensors};
-
-      auto cache_it = cache.find(cache_key);
-      if (cache_it != cache.end()) {
-        // used cached value instead of calling GetShortestLatency()
-        best_subgraph = cache_it->second;
+      std::pair<int, int> job_to_search = std::make_pair(next_job.model_id, next_job.start_unit_idx);
+      if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
+        continue;
       } else {
-        best_subgraph = GetInterpreter()->GetShortestLatency(
-            next_job.model_id, next_job.resolved_tensors, 0, GetDeviceWaitingTime(),
-            preceded_subgraph_index);
-
-        // insert new value into cache
-        cache[cache_key] = best_subgraph;
+        searched_jobs.insert(job_to_search);
       }
-      */
 
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatencyWithUnitSubgraph(
-              next_job.model_id, next_job.start_unit_idx, 0, GetDeviceWaitingTime());
+              next_job.model_id, next_job.start_unit_idx, GetDeviceWaitingTime());
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
@@ -73,10 +53,6 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
         target_subgraph_idx = best_subgraph.first;
       }
     }
-    int64_t sched_end = profiling::time::NowMicros();
-    // quick check for roughly examining the planning overhead
-    // std::cout << "Time to Find the next job(us) : " <<  sched_end -
-    // sched_start << std::endl;
 
     // for some reason, this Job must NOT be a reference (&), otherwise
     // we get a segfault at push_back() below
