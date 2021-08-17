@@ -7,9 +7,9 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
-    planner_->UpdateDeviceWaitingTime();
-    std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
-    if (idle_devices.empty()) {
+    planner_->UpdateWorkerWaitingTime();
+    std::set<int> idle_workers = planner_->GetIdleWorkers();
+    if (idle_workers.empty()) {
       break;
     }
     // Lookup table for GetShortestLatency().
@@ -47,16 +47,16 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
 
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatencyWithUnitSubgraph(
-              job.model_id, job.start_unit_idx, GetDeviceWaitingTime());
+              job.model_id, job.start_unit_idx, GetWorkerWaitingTime());
 
 
       if (largest_shortest_latency < best_subgraph.second) {
         Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
-        TfLiteDeviceFlags device = target_subgraph->GetKey().device_flag;
 
         // skip this job if we can't schedule it immediately,
         // even if this job is the "most urgent" one
-        if (idle_devices.find(device) == idle_devices.end()) {
+        if (idle_workers.find(target_subgraph->GetKey().worker_id) ==
+            idle_workers.end()) {
           continue;
         }
 
@@ -79,9 +79,8 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     window_size--;
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    TfLiteDeviceFlags device = target_subgraph->GetKey().device_flag;
-    auto device_it = idle_devices.find(device);
-    assert(device_it != idle_devices.end());
+    auto worker_it = idle_workers.find(target_subgraph->GetKey().worker_id);
+    assert(worker_it != idle_workers.end());
 
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.

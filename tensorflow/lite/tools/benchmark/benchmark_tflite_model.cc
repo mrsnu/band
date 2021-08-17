@@ -514,9 +514,8 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   auto& model_information = benchmark_config_.model_information;
   for (int model_id = 0; model_id < model_information.size(); model_id++) {
     // TODO: #73 share tensors across different subgraphs from same model
-    for (int i = 0; i < kTfLiteNumDevices; i++) {
-      const TfLiteDeviceFlags device_id = static_cast<TfLiteDeviceFlags>(i);
-      auto subgraph_index = interpreter_->GetSubgraphIdx(model_id, device_id);
+    for (int i = 0; i < interpreter_->GetNumWorkers(); i++) {
+      auto subgraph_index = interpreter_->GetSubgraphIdx(model_id, i);
       if (subgraph_index < 0) {
         continue;
       }

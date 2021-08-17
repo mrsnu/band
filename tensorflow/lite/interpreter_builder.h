@@ -62,7 +62,7 @@ class InterpreterBuilder {
       const OpResolver& op_resolver,
       std::unique_ptr<Interpreter>* interpreter,
       int model_id,
-      TfLiteDeviceFlags device_flag,
+      int worker_id,
       std::set<int> op_indices = {},
       int num_threads = -1);
 
@@ -71,7 +71,7 @@ class InterpreterBuilder {
       const OpResolver& op_resolver,
       std::unique_ptr<Interpreter>* interpreter,
       int model_id,
-      TfLiteDeviceFlags device_flag,
+      int worker_id,
       std::set<int> op_indices = {},
       int num_threads = -1);
 
@@ -96,6 +96,10 @@ class InterpreterBuilder {
   InterpreterBuilder() = default;
   ~InterpreterBuilder() = default;
 
+  static int AddSubgraph(
+      const ::tflite::Model* model, const OpResolver& op_resolver,
+      std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
+      const std::pair<TfLiteDeviceFlags, std::set<int>>& device_op_indices);
   static TfLiteStatus CreateMergedUnitSubgraphs(
       const int model_id,
       std::map<int, DeviceOpIndices>& subgraph_idx_to_device_ops,

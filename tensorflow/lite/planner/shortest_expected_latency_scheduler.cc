@@ -12,7 +12,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
                     requests.begin() + window_size);
   requests.erase(requests.begin(), requests.begin() + window_size);
   while (!local_jobs.empty()) {
-    planner_->UpdateDeviceWaitingTime();
+    planner_->UpdateWorkerWaitingTime();
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
     // Put that job into some worker, and repeat this whole loop until we've
@@ -44,7 +44,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
 
       std::pair<int, int64_t> best_subgraph =
           GetInterpreter()->GetShortestLatencyWithUnitSubgraph(
-              next_job.model_id, next_job.start_unit_idx, GetDeviceWaitingTime());
+              next_job.model_id, next_job.start_unit_idx, GetWorkerWaitingTime());
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;

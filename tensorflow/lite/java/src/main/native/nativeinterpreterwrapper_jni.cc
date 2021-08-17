@@ -557,11 +557,11 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resizeInput(
       convertLongToInterpreter(env, interpreter_handle);
   if (interpreter == nullptr) return JNI_FALSE;
   bool is_changed_global = false;
-  for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+  for (int worker_id = 0; worker_id < interpreter->GetNumWorkers(); worker_id++) {
     // Get all starting subgraphs.
     // TODO(#73): Remove duplicate memcopy for same model
     std::set<int> subgraph_indices = interpreter->GetSubgraphIdx(
-        model_id, static_cast<TfLiteDeviceFlags>(device_id), 0);
+        model_id, worker_id, 0);
 
     for (int subgraph_idx : subgraph_indices) {
       if (input_idx < 0 || input_idx >= interpreter->inputs(subgraph_idx).size()) {
@@ -609,11 +609,11 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_resetVariableTensors(
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return;
 
-  for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
+  for (int worker_id = 0; worker_id < interpreter->GetNumWorkers(); ++worker_id) {
     // Get all starting subgraphs.
     // TODO(#73): Remove duplicate memcopy for same model
     std::set<int> subgraph_indices = interpreter->GetSubgraphIdx(
-        model_id, static_cast<TfLiteDeviceFlags>(device_id), 0);
+        model_id, worker_id, 0);
 
     for (int subgraph_idx : subgraph_indices) {
       TfLiteStatus status = interpreter->ResetVariableTensors(subgraph_idx);

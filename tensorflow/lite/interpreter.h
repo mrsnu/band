@@ -655,27 +655,28 @@ class Interpreter {
     return planner_;
   }
 
-  Worker* GetWorker(int device_idx);
-  Worker* GetWorker(TfLiteDeviceFlags device);
+  TfLiteDeviceFlags GetWorkerDeviceFlag(int worker_id);
+  int GetRepresentativeWorkerId(TfLiteDeviceFlags device_flag);
+  Worker* GetWorker(int worker_id);
 
-  std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>>& GetWorkers() {
+  std::vector<std::unique_ptr<Worker>>& GetWorkers() {
     return workers_;
   }
 
-  int GetWorkersSize() {
+  int GetNumWorkers() {
     return workers_.size();
   }
 
   // Return all subgraph indices that match the given criteria of model_id,
-  // device_id, and op start_idx.
-  std::set<int> GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id,
+  // worker_id, and op start_idx.
+  std::set<int> GetSubgraphIdx(int model_id, int worker_id,
                                int start_idx);
 
-  // Return the subgraph index for model `model_id` on device `device_idx`.
-  // Op start and end indices are assumed to be 0 and num_ops-1, i.e., the
-  // whole model.
-  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_id);
-  int GetSubgraphIdx(int model_id, int device_idx);
+  // Return the subgraph index for model `model_id` on worker `worker_id`
+  int GetSubgraphIdx(int model_id, int worker_id);
+  // Return the subgraph index for model `model_id` on  
+  // representative device worker
+  int GetSubgraphIdx(int model_id, TfLiteDeviceFlags device_flag);
 
   // Return the subgraph index that matches the given subgraph_key.
   int GetSubgraphIdx(SubgraphKey subgraph_key);
@@ -715,12 +716,12 @@ class Interpreter {
   // the final op (of the model) in mind.
   std::pair<int, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,
-      std::map<TfLiteDeviceFlags, int64_t>& device_waiting,
+      std::map<int, int64_t>& worker_waiting,
       int preceded_subgraph_index = -1);
 
   std::pair<int, int64_t> GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
-      std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
+      std::map<int, int64_t>& worker_waiting);
 
   // hash function to use pair<int, set<int>> as map key in cache_
   // https://stackoverflow.com/a/32685618
@@ -742,7 +743,7 @@ class Interpreter {
   // NOTE: we assume every subgraph consists of unit subgraphs with the continuous unit subgraph indices.
   std::map<int, std::map<int, std::map<int, std::vector<int>>>> unit_subgraphs_to_subgraph_indices_;
 
-// Generate subgraphs for fallback ops in `model_id`.
+  // Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.
   std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(
       const int model_id, const TfLiteDeviceFlags device_flag);
@@ -766,7 +767,7 @@ class Interpreter {
   friend class tflite::delegates::InterpreterUtils;
   
   std::shared_ptr<Planner> planner_;
-  std::map<TfLiteDeviceFlags, std::unique_ptr<Worker>> workers_;
+  std::vector<std::unique_ptr<Worker>> workers_;
 
   // Map structure to find subgraph idx with SubgraphKeys
   std::map<SubgraphKey, int> subgraph_idx_map_;
@@ -876,7 +877,7 @@ class Interpreter {
   // and per-device waiting times are taken into account
   std::pair<int, int64_t> GetShortestSubgraphIndex(
       std::vector<int>& subgraph_indices, int64_t start_time,
-      std::map<TfLiteDeviceFlags, int64_t>& device_waiting);
+      std::map<int, int64_t>& worker_waiting);
 
   // Update slo values in model_configs_ according to the worst profiled
   // latency of that model x slo_scale.
