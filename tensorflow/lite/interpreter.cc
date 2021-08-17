@@ -1168,7 +1168,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
   
   if (!need_fallback_subgraph) {
     for (auto& worker : workers_) {
-      TfLiteDeviceFlags device_flag = worker.first;
+      TfLiteDeviceFlags device_flag = worker->GetDeviceFlag();
       subgraph_indices.insert({device_flag, {}});
     }
     return kTfLiteOk;
