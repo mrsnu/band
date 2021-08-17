@@ -728,10 +728,8 @@ class Interpreter {
     std::size_t operator() (const std::pair<int, std::set<int>> &p) const {
       auto hash_func = std::hash<int>();
       std::size_t hash = hash_func(p.first);
-      int pos = 2;
       for (int e : p.second) {
-        hash ^= hash_func(e * pos);
-        pos = pos << 1;
+        hash ^= hash_func(e);
       }
       return hash;
     }
@@ -740,11 +738,8 @@ class Interpreter {
   // cache for GetShortestLatency()
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
-  // From the hash of the pair {Model id, Unit subgraph} to subgraph idx
+  // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
   std::map<int, std::map<int, std::map<int, std::vector<int>>>> unit_subgraphs_to_global_indices_;
-
-  // Key: model_id, Value: subgraph index
-  std::map<int, std::set<int>> model_id_to_subgraph_idx_;
 
   // Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.

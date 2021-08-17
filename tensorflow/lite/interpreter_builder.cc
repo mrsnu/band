@@ -23,7 +23,6 @@ limitations under the License.
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <iostream>
 
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
@@ -658,6 +657,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           // there are common tensors. Note that This logic cannot guarantees
           // the execution capability as we don't consider resolved tensors here.
           if (is_previous) {
+            TFLITE_LOG(INFO) << "Subgraph " << subgraph_idx << " is "
+                            << potential_prev_subgraph_index << "'s next";
             if (subgraph->SetPrevSubgraph(potential_prev_subgraph) != kTfLiteOk) {
               TFLITE_LOG(ERROR) << "Failed to set prev subgraph";
             }
@@ -777,6 +778,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
         if (is_previous) {
           next_subgraph->SetPrevSubgraph(prev_subgraph);
+          TFLITE_LOG(INFO) << next_subgraph_idx << " is "
+                          << prev_subgraph_idx << "'s next";
         }
       }
     }
@@ -915,12 +918,6 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
                        << "From " << subgraph_key.GetInputOpsString() << " "
                        << "To " << subgraph_key.GetOutputOpsString() << " "
                        << "Index " << subgraph_idx;
-      // Check if the merged subgraph consists of unit subgraphs with continuous local ids.
-      std::cout << "Unit Subgraphs : ";
-      for (auto& unit : subgraph_key.unit_indices) {
-        std::cout << unit << " ";
-      }
-      std::cout << std::endl;
     }
   }
 

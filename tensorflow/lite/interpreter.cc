@@ -22,7 +22,6 @@ limitations under the License.
 #include <cstring>
 #include <utility>
 #include <list>
-#include <iostream>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
@@ -38,8 +37,6 @@ limitations under the License.
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
-#include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/profiling/function_profiler.h"
 #include "tensorflow/lite/tools/logging.h"
 
 // TODO(b/139446230): Move to portable platform header.
@@ -1010,6 +1007,7 @@ std::set<int> Interpreter::models() const {
 void Interpreter::SetModelConfigAndFillProfile(int model_id,
                                                ModelConfig& model_config) {
   SetModelConfig(model_id, model_config);
+
   // Set model_id -> subgraph idx map.
   for (int i = 0; i < subgraphs_.size(); ++i) {
     auto& subgraph_key = subgraphs_[i]->GetKey();
@@ -1023,30 +1021,6 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
       TFLITE_LOG(INFO) << "Subgraph - " << i;
       TFLITE_LOG(INFO) << "UNIT SUBGRAPH ID - " << start_unit_idx << " " << end_unit_idx;
       unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
-    }
-  }
-
-  for (int i = 0; i < subgraphs_.size(); ++i) {
-    auto& subgraph_key = subgraphs_[i]->GetKey();
-    if (subgraph_key.model_id != model_id) {
-      continue;
-    }
-    if (subgraph_preparation_type_ == "unit_subgraph" ||
-        subgraph_preparation_type_ == "merge_unit_subgraph") {
-      // Set unit indices to subgraph_idx.
-      std::pair<int, int> key = std::make_pair(*subgraph_key.unit_indices.begin(),
-                                               *subgraph_key.unit_indices.rbegin());
-
-      int start_unit_idx = *subgraph_key.unit_indices.begin();
-      int end_unit_idx = *subgraph_key.unit_indices.rbegin();
-      auto& range = unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx];
-      TFLITE_LOG(INFO) << "first - " << key.first << ", second - " << key.second; 
-      std::cout << "unit - ";
-      for (auto x : range) {
-      // for_each(range.first, range.second, [](auto& x) {
-        std::cout << x << " ";
-      }
-      std::cout << std::endl;
     }
   }
 
