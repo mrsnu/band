@@ -739,13 +739,19 @@ class Interpreter {
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
-  std::map<int, std::map<int, std::map<int, std::vector<int>>>> unit_subgraphs_to_global_indices_;
+  // NOTE: we assume every subgraph consists of unit subgraphs with the continuous unit subgraph indices.
+  std::map<int, std::map<int, std::map<int, std::vector<int>>>> unit_subgraphs_to_subgraph_indices_;
 
-  // Generate subgraphs for fallback ops in `model_id`.
+// Generate subgraphs for fallback ops in `model_id`.
   // DeviceOpIndices contains device flag and op_indices of single subgraph.
   std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(
       const int model_id, const TfLiteDeviceFlags device_flag);
-  TfLiteStatus GetUnitSubgraphs(const int model_id,
+
+  // A model is partitioned into unit subgraphs.
+  // We assign an index to each unit subgraph, and the unit subgraph indices are topologically sorted.
+  // Note that there can be better way to assign unit subgraph indices if there exists any unit subgraphs
+  // that can be executed in parallel.
+    TfLiteStatus GetUnitSubgraphs(const int model_id,
                                 std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {

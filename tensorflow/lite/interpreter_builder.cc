@@ -683,7 +683,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                            std::inserter(merged, merged.end()));
             if (merged == device_op_indices.second) {
               subgraph_key.unit_indices.insert(unit_index);
-              TFLITE_LOG(INFO) << unit_index << " unit subgarph is in " << subgraph_idx;
             }
           }
         }

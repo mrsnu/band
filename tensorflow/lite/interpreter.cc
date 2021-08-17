@@ -1016,7 +1016,7 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
     }
     int start_unit_idx = *subgraph_key.unit_indices.begin();
     int end_unit_idx = *subgraph_key.unit_indices.rbegin();
-    unit_subgraphs_to_global_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
+    unit_subgraphs_to_subgraph_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
     TFLITE_LOG(INFO) << "Set unit subgraphs: model_id - " << model_id
                      << ", start idx - " << start_unit_idx
                      << ", end idx - " << end_unit_idx
@@ -1388,15 +1388,23 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
   auto& memo = model_specs_[model_id].latency_memo;
   auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
 
+  // Initialize memo.
   for (int i = 0; i < num_unit_subgraphs; ++i) {
     memo[i] = std::make_pair(-1, INT_MAX);
   }
-  // Check if start, end idx are not equal or larger than the number of unit subgraphs.
+
+  // `i` and `j` refer to an unit subgraph idx.
+  // A subgraph(i, j) consists of the unit subgraphs in [i, j].
+  // The goal of the algorithm is to find the minimum expected latency;
+  // `memo[k].second` is the minimum expected latency of the subgraph(start_unit_idx, k).
+  // `memo[k].first` is the first subgraph index of the best execution plan.
+  // So, the shortest expected latency of a subgraph(start_unit_idx, num_unit_subgraphs - 1) is
+  // `memo[num_unit_subgraphs - 1].second`.
   for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
     std::pair<int, int64_t> local_min = std::make_pair(-1, -1);
     for (int i = j; i >= start_unit_idx; --i) {
       // Search from the profile result of the unit subgraph.
-      auto& range = unit_subgraphs_to_global_indices_[model_id][i][j];
+      auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
       int64_t start = i > start_unit_idx ?
                       std::max(start, memo[i - 1].second) : 0;
       std::pair<int, int64_t> target_subgraph =
