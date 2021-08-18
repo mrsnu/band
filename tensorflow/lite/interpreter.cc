@@ -272,8 +272,8 @@ Interpreter::~Interpreter() {
   }
 
   // update the profile file to include all new profile results from this run
-  profiling::util::UpdateDatabase(profile_database_, model_configs_,
-                                  profile_database_json_);
+  //profiling::util::UpdateDatabase(profile_database_, model_configs_,
+  //                                profile_database_json_);
   WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
 }
 
@@ -1178,7 +1178,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 }
 
 TfLiteStatus Interpreter::GetUnitSubgraphs(
-    const int model_id, std::set<DeviceOpIndices>& subgraph_indices,
+    const int model_id, std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices,
     bool need_fallback_subgraph) {
   if (!need_fallback_subgraph) {
     for (auto& worker : workers_) {
@@ -1536,6 +1536,23 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   }
 
   return min_subgraph;
+}
+
+std::pair<int, int64_t>
+Interpreter::GetSubgraphWithShortestLatency(Job& job,
+                                            std::map<int, int64_t>& worker_waiting) {
+  if (subgraph_preparation_type_ == "fallback_per_device") {
+    int preceded_subgraph_index =
+      job.previous_subgraph_indices.empty() ? -1
+                                            : job.previous_subgraph_indices.back();
+    return GetShortestLatency(job.model_id,
+                              job.resolved_tensors,
+                              0,
+                              worker_waiting,
+                              preceded_subgraph_index);
+  } else {
+    return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
+  }
 }
 
 std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>

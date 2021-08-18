@@ -43,8 +43,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       }
 
       std::pair<int, int64_t> best_subgraph =
-          GetInterpreter()->GetShortestLatencyWithUnitSubgraph(
-              next_job.model_id, next_job.start_unit_idx, GetWorkerWaitingTime());
+          GetInterpreter()->GetSubgraphWithShortestLatency(next_job, GetWorkerWaitingTime());
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;

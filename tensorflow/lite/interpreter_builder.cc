@@ -624,11 +624,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   if (subgraph_preparation_type == "fallback_per_device") {
-    TFLITE_LOG(ERROR) << "*NOTE* `fallback_per_device` requires different latency estimation "
-                      << "strategy. To use the `fallback_per_device` type, use the "
-                      << "`GetShortestLatency()` method.";
-    return -1;
-
     // Device,ops to subgraph index map to avoid duplicate
     // subgraph construction without input/output ops
     std::map<DeviceOpIndices, int> device_ops_to_subgraph_index;
@@ -751,15 +746,33 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   }
 
   // Duplicate subgraphs to extra workers
-  for (auto& device_op_indices : subgraph_idx_to_device_ops) {
+  for (auto& subgraph_metadata : subgraph_idx_to_device_ops) {
+    auto device_op_indices = subgraph_metadata.second;
     auto extra_workers_it =
-        device_to_extra_workers.find(device_op_indices.second.first);
+        device_to_extra_workers.find(device_op_indices.first);
     if (extra_workers_it != device_to_extra_workers.end()) {
       for (int extra_worker_id : extra_workers_it->second) {
-        if (AddSubgraph(model, op_resolver, interpreter, model_id,
-                        extra_worker_id, device_op_indices.second) == -1) {
+        const int subgraph_idx =
+            AddSubgraph(model, op_resolver, interpreter, model_id, extra_worker_id,
+                        device_op_indices);
+
+        if (subgraph_idx == -1) {
           return -1;
         }
+
+        Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
+        if (subgraph == nullptr) {
+          TFLITE_LOG(ERROR) << "Subgraph creation failure";
+          return -1;
+        }
+
+        // Using GetUnitSubgraphs, different from "fallback_per_device",
+        // there is no duplicated subgraphs.
+        SubgraphKey& subgraph_key = subgraph->GetKey();
+        SubgraphKey temp_subgraph_key = subgraph->GetKey();
+        temp_subgraph_key.worker_id = (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
+        Subgraph* representative_subgraph = (*interpreter)->subgraph((*interpreter)->GetSubgraphIdx(temp_subgraph_key));
+        subgraph_key.unit_indices = representative_subgraph->GetKey().unit_indices;
       }
     }
   }
