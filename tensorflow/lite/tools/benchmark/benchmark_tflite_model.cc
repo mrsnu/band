@@ -671,6 +671,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
 }
 
 void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
+  std::mt19937_64 eng{std::random_device{}()};
   for (auto& m : interpreter_->GetModelConfig()) {
     int model_id = m.first;
     ModelConfig& model_config = m.second;

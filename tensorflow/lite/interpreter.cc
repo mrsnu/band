@@ -908,6 +908,14 @@ void Interpreter::StaticProfile(int model_id) {
   SetSLOBasedOnProfile();
 }
 
+struct ProfileResult {
+  std::string name;
+  std::vector<int64_t> latencies;
+  std::vector<int64_t> start_frequencies;
+  std::vector<int64_t> start_time;
+  std::vector<int64_t> end_time;
+};
+
 void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_samples) {
   std::mt19937_64 eng{std::random_device{}()};
   for (int i = 0; i < subgraphs_size(); ++i) {
@@ -926,10 +934,6 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
         processor::GetAvailableFrequenciesKhz(device, cpu_set);
     std::map<int, std::vector<int64_t>> frequency_to_latencies;
 
-    if (available_frequencies.size() == 0) {
-      continue;
-    }
-
     std::sort(available_frequencies.begin(), available_frequencies.end());
     int min_freq = processor::GetMinFrequencyKhz(device, cpu_set);
     for (int freq: available_frequencies) {
@@ -938,6 +942,9 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
         frequency_to_latencies[freq] = {};
       }
     }
+
+    std::string device_name = TfLiteDeviceGetName(device);
+    std::vector<ProfileResult> profile_results;
 
     int interval_ms =
         processor::GetUpdateIntervalMs(device, cpu_set);
@@ -954,45 +961,68 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
       }
 
       auto update_interval = processor::GetUpdateIntervalMs(device, cpu_set);
-      std::vector<int> max_intervals = {0, update_interval, update_interval * 2,
-                                        update_interval * 4};
+      std::vector<int> max_intervals = {0, 20};
 
       // Give more time to GPU, as it requires more time to completely 
       // cool down to reach lowest frequency.
-      if (device == kTfLiteGPU) {
+      if (device == kTfLiteGPU || device == kTfLiteDSP) {
         max_intervals.push_back(update_interval * 8);
       }
+      
+      for (int i = 0; i < num_warmups_; i++) {
+        subgraph->Invoke();
+      }
+      
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
       for (int interval : max_intervals) {
-        // Random-interval for well-distributed start frequencies
-        std::uniform_int_distribution<> dist_us{0, interval * 1000};
-        for (int i = 0; i < num_profile; i++) {
-          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
-          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
+        if (interval != 0) {
+          ProfileResult result;
+          result.name = "random_" + std::to_string(interval);
+          // Random-interval for well-distributed start frequencies
+          std::uniform_int_distribution<> dist_us{0, interval * 1000};
+          for (int i = 0; i < num_profile; i++) {
+            auto start_frequency =
+                processor::GetTargetFrequencyKhz(device, cpu_set);
             auto start = std::chrono::high_resolution_clock::now();
             subgraph->Invoke();
-
+            auto end = std::chrono::high_resolution_clock::now();
             int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::high_resolution_clock::now() - start)
-                    .count();
+                              end - start)
+                              .count();
             frequency_to_latencies[start_frequency].push_back(time_us);
+            result.latencies.push_back(time_us);
+            result.start_time.push_back(start.time_since_epoch().count());
+            result.end_time.push_back(end.time_since_epoch().count());
+            result.start_frequencies.push_back(start_frequency);
             std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
           }
+          profile_results.push_back(result);
         }
 
-        // Static-interval for few-step based processors
-        for (int i = 0; i < num_profile; i++) {
-          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
-          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
-            auto start = std::chrono::high_resolution_clock::now();
-            subgraph->Invoke();
+        {
+          ProfileResult result;
+          result.name = "fixed_" + std::to_string(interval);
+          // Static-interval for few-step based processors
+          for (int i = 0; i < num_profile; i++) {
+              auto start_frequency =
+                processor::GetTargetFrequencyKhz(device, cpu_set);
+              auto start = std::chrono::high_resolution_clock::now();
+              subgraph->Invoke();
 
-            int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::high_resolution_clock::now() - start)
-                    .count();
-            frequency_to_latencies[start_frequency].push_back(time_us);
-            std::this_thread::sleep_for(std::chrono::microseconds{interval * 1000});
+              auto end = std::chrono::high_resolution_clock::now();
+              int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                                end - start)
+                                .count();
+              frequency_to_latencies[start_frequency].push_back(time_us);
+              result.latencies.push_back(time_us);
+              result.start_time.push_back(start.time_since_epoch().count());
+              result.end_time.push_back(end.time_since_epoch().count());
+              result.start_frequencies.push_back(start_frequency);
+              std::this_thread::sleep_for(std::chrono::microseconds{interval * 1000});
           }
+
+          profile_results.push_back(result);
         }
       }
 
@@ -1050,6 +1080,23 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
           frequency_to_latency;
     });
     t.join();
+
+    std::string model_name = model_configs_[model_id].model_fname;
+    model_name = model_name.substr(model_name.find_last_of("/") + 1);
+    model_name = model_name.substr(0, model_name.find_last_of("."));
+
+    std::cout <<  model_name << std::endl;
+
+    for(auto& result : profile_results) {
+      std::ofstream ofs("/data/local/tmp/freq/" + model_name + "_" + device_name + "_" + result.name + ".csv");
+      ofs << "start,end,latency,start_frequency" << std::endl;
+      for (int i = 0; i < result.latencies.size(); i++) {
+        ofs << result.start_time[i] << "," << result.end_time[i] << ","
+            << result.latencies[i] << "," << result.start_frequencies[i]
+            << std::endl;
+      }
+    }
+
   }
 }
 

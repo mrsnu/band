@@ -559,7 +559,7 @@ class Interpreter {
   // NOTE: the profiling step may affects other running requests,
   // and vice versa.
   void StaticProfile(int model_id);
-  void FrequencyProfile(int model_id, int num_profile = 20, int num_max_samples = 50);
+  void FrequencyProfile(int model_id, int num_profile = 200, int num_max_samples = 5000);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
