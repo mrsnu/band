@@ -61,6 +61,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `1`: Round-Robin Planner
   * `2`: Shortest Expected Latency Planner
 * `subgraph_preparation_type`: For schedulers using fallback, determine how to generate candidate subgraphs. [default: `merge_unit_subgraph`]
+  * `no_fallback_subgraph`: Generate subgraphs per device. Explicit fallback subgraph will not be generated.
   * `fallback_per_device`: Generate fallback subgraphs for each device.
   * `unit_subgraph`: Generate unit subgraphs considering all device supportiveness. All ops in same unit subgraph have same support devices.
   * `merge_unit_subgraph`: Add merged unit subgraphs to `unit_subgraph`.

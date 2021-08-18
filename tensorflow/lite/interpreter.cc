@@ -1178,7 +1178,7 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 }
 
 TfLiteStatus Interpreter::GetUnitSubgraphs(
-    const int model_id, std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices,
+    const int model_id, std::set<DeviceOpIndices>& subgraph_indices,
     bool need_fallback_subgraph) {
   if (!need_fallback_subgraph) {
     for (auto& worker : workers_) {

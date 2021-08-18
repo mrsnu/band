@@ -951,7 +951,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
   }
 
   TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
-                   << " subgraphs created (after merge)";
+                   << " merged subgraphs created";
   return kTfLiteOk;
 }
 
