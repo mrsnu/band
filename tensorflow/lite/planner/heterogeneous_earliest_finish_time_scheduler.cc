@@ -33,10 +33,18 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     int64_t largest_shortest_latency = -1;
     int target_job_idx = -1;
     int target_subgraph_idx = -1;
+    
+    // hold on to a local copy of worker waiting time
+    WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
 
     // only check up to `window_size` requests
+    std::set<int> skip_job_ids;
     for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
       Job& job = *it;
+      if (skip_job_ids.find(job.job_id) != skip_job_ids.end()) {
+        continue;
+      }
+      
       int preceded_subgraph_index = job.previous_subgraph_indices.empty() ?
                                     -1 : job.previous_subgraph_indices.back();
 
@@ -50,7 +58,7 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
         best_subgraph = cache_it->second;
       } else {
         best_subgraph = GetInterpreter()->GetShortestLatency(
-            job.model_id, job.resolved_tensors, 0, GetWorkerWaitingTime(),
+            job.model_id, job.resolved_tensors, 0, waiting_time,
             preceded_subgraph_index);
 
         // insert new value into cache
@@ -60,13 +68,6 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
 
       if (largest_shortest_latency < best_subgraph.second) {
         Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
-
-        // skip this job if we can't schedule it immediately,
-        // even if this job is the "most urgent" one
-        if (idle_workers.find(target_subgraph->GetKey().worker_id) ==
-            idle_workers.end()) {
-          continue;
-        }
 
         largest_shortest_latency = best_subgraph.second;
         target_job_idx = it - requests.begin();
@@ -78,6 +79,17 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
       // no one wants to be scheduled..
       break;
     }
+    
+    // skip this job if we can't schedule it immediately,
+    // even if this job is the "most urgent" one
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    int worker_id = target_subgraph->GetKey().worker_id;
+    if (idle_workers.find(worker_id) == idle_workers.end()) {
+      Job& job = *requests_it;
+      skip_job_ids.insert(job.job_id);
+      waiting_time[worker_id] += interpreter_->GetExpectedLatency(target_subgraph->GetKey());
+      continue;
+    }
 
     auto requests_it = requests.begin() + target_job_idx;
     Job job = *requests_it;
@@ -85,10 +97,6 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     // erase the job from requests and decrement window_size
     requests.erase(requests_it);
     window_size--;
-
-    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    auto worker_it = idle_workers.find(target_subgraph->GetKey().worker_id);
-    assert(worker_it != idle_workers.end());
 
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
