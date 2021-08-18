@@ -1200,6 +1200,24 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
                       << kTfLiteNumDevices;
   }
 
+  std::map<TfLiteDeviceFlags, std::set<int>> op_sets_to_ignore;
+  // register subgraphs for all devices
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+    std::vector<DeviceOpIndices> device_op_sets =
+      MakeSubgraphsForFallbackOps(model_id, device_flag);
+    for (auto device_and_ops : device_op_sets) {
+      auto device = device_and_ops.first;
+      auto& ops = device_and_ops.second;
+      if (device == kTfLiteCPU) continue;
+      if (ops.size() <= 6) {
+        for (auto op : ops) {
+          op_sets_to_ignore[device].insert(op);
+        }
+      }
+    }
+  }
+
   // Build op_support_table
   std::vector<BitMask> op_support_table(num_ops, 0U);
   const std::map<TfLiteDeviceFlags, std::set<int>>& unsupported_ops =
@@ -1213,7 +1231,9 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
       }
       if (unsupported_ops.find(device_flag) == unsupported_ops.end() ||
           unsupported_ops.at(device_flag).find(op_index) == unsupported_ops.at(device_flag).end()) {
-        op_support_table[op_index] |= 1 << device_id;
+        if (op_sets_to_ignore[device_flag].find(op_index) == op_sets_to_ignore[device_flag].end()) {
+          op_support_table[op_index] |= 1 << device_id;
+        }
       }
     }
   }
