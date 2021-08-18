@@ -272,8 +272,8 @@ Interpreter::~Interpreter() {
   }
 
   // update the profile file to include all new profile results from this run
-  //profiling::util::UpdateDatabase(profile_database_, model_configs_,
-  //                                profile_database_json_);
+  profiling::util::UpdateDatabase(profile_database_, model_configs_,
+                                  profile_database_json_);
   WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
 }
 
