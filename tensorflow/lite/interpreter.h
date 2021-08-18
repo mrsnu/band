@@ -753,7 +753,8 @@ class Interpreter {
   // Note that there can be better way to assign unit subgraph indices if there exists any unit subgraphs
   // that can be executed in parallel.
     TfLiteStatus GetUnitSubgraphs(const int model_id,
-                                std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices);
+                                  std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices,
+                                  bool need_fallback_subgraph = true);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
     return own_external_cpu_backend_context_.get();

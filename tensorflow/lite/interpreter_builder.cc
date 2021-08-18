@@ -603,13 +603,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   (*interpreter)->InvestigateModelSpec(model_id);
 
   ModelSpec& model_spec = (*interpreter)->model_specs_[model_id];
-  // Each pair consists of the unit subgraph index and device op indices.
-  std::set<std::pair<int, DeviceOpIndices>> subgraph_indices;
-  if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices) !=
-      kTfLiteOk) {
-    TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
-    return -1;
-  }
 
   // TODO(#139): We might generate subgraph indices per `worker_id`
   // to support different op availablity btwn same device types
@@ -617,11 +610,28 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // Prepare subgraphs candidates
   const std::string& subgraph_preparation_type =
       (*interpreter)->subgraph_preparation_type_;
+
+  bool need_fallback_subgraph =
+    (*interpreter)->GetPlanner()->NeedFallbackSubgraphs() &&
+    subgraph_preparation_type != "no_fallback_subgraph";
+
+  // Each pair consists of the unit subgraph index and device op indices.
+  std::set<std::pair<int, DeviceOpIndices>> subgraph_indices;
+  if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices, need_fallback_subgraph) !=
+      kTfLiteOk) {
+    TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
+    return -1;
+  }
+
   if (subgraph_preparation_type == "fallback_per_device") {
+    TFLITE_LOG(ERROR) << "*NOTE* `fallback_per_device` requires different latency estimation "
+                      << "strategy. To use the `fallback_per_device` type, use the "
+                      << "`GetShortestLatency()` method.";
+    return -1;
+
     // Device,ops to subgraph index map to avoid duplicate
     // subgraph construction without input/output ops
-    std::map<DeviceOpIndices, int>
-        device_ops_to_subgraph_index;
+    std::map<DeviceOpIndices, int> device_ops_to_subgraph_index;
 
     // register subgraphs for all devices
     for (int i = 0; i < kTfLiteNumDevices; ++i) {
@@ -679,7 +689,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         }
       }
     }
-  } else if (subgraph_preparation_type == "unit_subgraph" ||
+  } else if (subgraph_preparation_type == "no_fallback_subgraph" ||
+             subgraph_preparation_type == "unit_subgraph" ||
              subgraph_preparation_type == "merge_unit_subgraph") {
     // Create subgraphs
     // Save subgraph_idx - device_op_indices map for prev/next setting
@@ -707,6 +718,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       // there is no duplicated subgraphs.
       SubgraphKey& subgraph_key = subgraph->GetKey();
       subgraph_key.unit_indices.insert(subgraph_local_idx);
+      TFLITE_LOG(INFO) << subgraph_idx << " Subgraph has " << subgraph_local_idx << " unit subgraph.";
     }
 
     TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
@@ -908,13 +920,14 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
         }
       }
     }
+    TFLITE_LOG(INFO) << to_add.size() << " amount of merged subgraph created.";
     for (auto& subgraph_metadata : to_add) {
       std::set<int>& unit_indices = subgraph_metadata.first;
       const DeviceOpIndices& device_op_indices = subgraph_metadata.second;
  
       const TfLiteDeviceFlags& device_flag = device_op_indices.first;
       const std::set<int>& op_indices = device_op_indices.second;
-      if (!is_already_created(device_flag, op_indices)) continue;
+      if (is_already_created(device_flag, op_indices)) continue;
 
       int worker_id = (*interpreter)->GetRepresentativeWorkerId(device_flag);
       int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
@@ -925,6 +938,15 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
 
       added = true;
       subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
+
+      Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
+      if (subgraph == nullptr) {
+        TFLITE_LOG(ERROR) << "Subgraph creation failure";
+        return kTfLiteError;
+      }
+
+      SubgraphKey& subgraph_key = subgraph->GetKey();
+      subgraph_key.unit_indices = unit_indices;
     }
   }
 
