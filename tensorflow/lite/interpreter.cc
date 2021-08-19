@@ -1418,10 +1418,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     }
 
     // revert changes
-    primary_subgraph->UndoAllDelegates();
+    primary_subgraph->RemoveAllDelegates();
   }
-
-  primary_subgraph->AllocateTensors();
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
