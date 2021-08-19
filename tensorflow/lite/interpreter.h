@@ -801,6 +801,10 @@ class Interpreter {
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_;
 
+  // Minimum subgraph size.
+  // Will not create subgraph if num operators < minimum_subgraph_size.
+  int minimum_subgraph_size_;
+
   // Subgraph preparation type
   // "fallback_per_device", "unit_subgraph"
   std::string subgraph_preparation_type_;

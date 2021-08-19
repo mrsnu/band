@@ -60,6 +60,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `0`: Fixed Device Planner
   * `1`: Round-Robin Planner
   * `2`: Shortest Expected Latency Planner
+* `minimum_subgraph_size`: Minimum subgraph size. If candidate subgraph size is smaller than `minimum_subgraph_size`, the subgraph will not be created. [default: 7]
 * `subgraph_preparation_type`: For schedulers using fallback, determine how to generate candidate subgraphs. [default: `merge_unit_subgraph`]
   * `no_fallback_subgraph`: Generate subgraphs per device. Explicit fallback subgraph will not be generated.
   * `fallback_per_device`: Generate fallback subgraphs for each device.
@@ -123,6 +124,7 @@ An example of complete JSON config file is as follows:
     ],
     "log_path": "/data/local/tmp/log.csv",
     "schedulers": [0, 2],
+    "minimum_subgraph_size": 7,
     "subgraph_preparation_type": "merge_unit_subgraph",
     "execution_mode": "periodic",
     "cpu_masks": "ALL",

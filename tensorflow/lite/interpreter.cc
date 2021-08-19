@@ -281,6 +281,7 @@ Interpreter::~Interpreter() {
 TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
   subgraph_preparation_type_ = config.subgraph_preparation_type;
+  minimum_subgraph_size_ = config.minimum_subgraph_size;
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
@@ -1210,7 +1211,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
       auto device = device_and_ops.first;
       auto& ops = device_and_ops.second;
       if (device == kTfLiteCPU) continue;
-      if (ops.size() <= 6) {
+      if (ops.size() < minimum_subgraph_size_) {
         for (auto op : ops) {
           op_sets_to_ignore[device].insert(op);
         }
