@@ -98,6 +98,7 @@ struct Job {
   int64_t profiled_execution_time = 0;
   // Expected invoke execution time
   int64_t expected_execution_time = 0;
+  int64_t frequency_expected_execution_time = 0;
   // Expected total latency
   int64_t expected_latency = 0;
   int64_t slo_us = 0;

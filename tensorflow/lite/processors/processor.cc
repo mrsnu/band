@@ -9,7 +9,7 @@ namespace tflite {
 namespace impl {
 namespace processor {
 int GetUpdateIntervalMs(TfLiteDeviceFlags flag, CpuSet cpu_set) {
-  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+  if (flag == kTfLiteCPU) {
     // Use longer interval (Down transition for CPU)
     return cpu::GetDownTransitionLatencyMs(cpu_set);
   } else if (flag == kTfLiteGPU) {
@@ -20,7 +20,7 @@ int GetUpdateIntervalMs(TfLiteDeviceFlags flag, CpuSet cpu_set) {
 }
 
 int GetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
-  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+  if (flag == kTfLiteCPU) {
     return cpu::GetFrequencyKhz(cpu_set);
   } else if (flag == kTfLiteGPU) {
     return gpu::GetFrequencyKhz();
@@ -30,7 +30,7 @@ int GetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
 }
 
 int GetMinFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
-  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+  if (flag == kTfLiteCPU) {
     return cpu::GetTargetMinFrequencyKhz(cpu_set);
   } else if (flag == kTfLiteGPU) {
     return gpu::GetMinFrequencyKhz();
@@ -40,7 +40,7 @@ int GetMinFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
 }
 
 int GetMaxFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
-  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+  if (flag == kTfLiteCPU) {
     return cpu::GetTargetMaxFrequencyKhz(cpu_set);
   } else if (flag == kTfLiteGPU) {
     return gpu::GetMaxFrequencyKhz();
@@ -50,7 +50,7 @@ int GetMaxFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
 }
 
 int GetTargetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
-  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+  if (flag == kTfLiteCPU) {
     return cpu::GetTargetFrequencyKhz(cpu_set);
   } else if (flag == kTfLiteGPU) {
     return gpu::GetFrequencyKhz();
@@ -60,7 +60,7 @@ int GetTargetFrequencyKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
 }
 
 std::vector<int> GetAvailableFrequenciesKhz(TfLiteDeviceFlags flag, CpuSet cpu_set) {
-  if (flag == kTfLiteCPU || flag == kTfLiteCPUFallback) {
+  if (flag == kTfLiteCPU) {
     return cpu::GetAvailableFrequenciesKhz(cpu_set);
   } else if (flag == kTfLiteGPU) {
     return gpu::GetAvailableFrequenciesKhz();
