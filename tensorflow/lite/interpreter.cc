@@ -917,6 +917,9 @@ void Interpreter::StaticProfile(int model_id) {
 }
 
 void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_samples) {
+  if (profiler_type_ != kFrequencySmoothing) {
+    return;
+  }
   std::mt19937_64 eng{std::random_device{}()};
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
