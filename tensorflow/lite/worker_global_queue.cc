@@ -134,7 +134,6 @@ void GlobalQueueWorker::Work() {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
           }
           TryCopyOutputTensors(current_job_);
-          planner_ptr->UpdateJobEndStatus(current_job_, this);
           current_job_.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {

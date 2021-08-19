@@ -98,7 +98,6 @@ struct Job {
   int64_t profiled_execution_time = 0;
   // Expected invoke execution time
   int64_t expected_execution_time = 0;
-  int64_t frequency_expected_execution_time = 0;
   // Expected total latency
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
@@ -120,17 +119,6 @@ struct Job {
   int start_unit_idx = 0;
   
   int64_t start_target_frequency = 0;
-  int64_t start_frequency = 0;
-  int64_t start_target_min_frequency = 0;
-  int64_t start_target_max_frequency = 0;
-  int64_t start_transition_count = 0;
-
-  int64_t end_target_frequency = 0;
-  int64_t end_frequency = 0;
-  int64_t end_target_min_frequency = 0;
-  int64_t end_target_max_frequency = 0;
-  int64_t end_transition_count = 0;
-  int64_t expected_transition_count;
 
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field

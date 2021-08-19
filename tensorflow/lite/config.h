@@ -35,6 +35,7 @@ struct InterpreterConfig {
   int minimum_subgraph_size = 7;
   float profile_smoothing_factor = 0.1;
   std::string subgraph_preparation_type = "merge_unit_subgraph";
+  TfLiteProfilerType profiler_type = kFrequencySmoothing;
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
   int num_threads = -1;
 };

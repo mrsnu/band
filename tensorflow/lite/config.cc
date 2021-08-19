@@ -61,26 +61,42 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     interpreter_config.profile_smoothing_factor =
       root["profile_smoothing_factor"].asFloat();
   }
-  // 3. File path to profile data
+  // 3. Profiler latency estimation type
+  if (!root["profiler_type"].isNull()) {
+    std::string profiler_type = root["profiler_type"].asString();
+
+    if (profiler_type == "static") {
+      interpreter_config.profiler_type = kStatic;
+    } else if (profiler_type == "smoothing") {
+      interpreter_config.profiler_type = kSmoothing;
+    } else if (profiler_type == "frequency_smoothing") {
+      interpreter_config.profiler_type = kFrequencySmoothing;
+    } else {
+      TFLITE_LOG(ERROR) << "Make sure `profiler_type` is valid [static, "
+                           "smoothing, frequency_smoothing].";
+      return kTfLiteError;
+    }
+  }
+  // 4. File path to profile data
   if (!root["model_profile"].isNull()) {
     interpreter_config.profile_data_path = root["model_profile"].asString();
   }
-  // 4. Number of threads
+  // 5. Number of threads
   if (!root["num_threads"].isNull()) {
     interpreter_config.num_threads = root["num_threads"].asInt();
   }
-  // 5. Profile config
+  // 6. Profile config
   if (!root["profile_warmup_runs"].isNull()) {
     interpreter_config.profile_config.num_warmups = root["profile_warmup_runs"].asInt();
   }
   if (!root["profile_num_runs"].isNull()) {
     interpreter_config.profile_config.num_runs = root["profile_num_runs"].asInt();
   }
-  // 6. Subgraph preparation type
+  // 7. Subgraph preparation type
   if (!root["subgraph_preparation_type"].isNull()) {
     interpreter_config.subgraph_preparation_type = root["subgraph_preparation_type"].asString();
   }
-  // 7. Minimum subgraph size
+  // 8. Minimum subgraph size
   if (!root["minimum_subgraph_size"].isNull()) {
     interpreter_config.minimum_subgraph_size = root["minimum_subgraph_size"].asInt();
   }
@@ -111,11 +127,6 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
         impl::TfLiteCPUMaskGetMask(root["planner_cpu_masks"].asCString());
   } else {
     planner_config.cpu_masks = interpreter_config.cpu_masks;
-  }
-  // 5. Log processor frequency
-  if (!root["log_processor_frequency"].isNull()) {
-    planner_config.log_processor_frequency =
-        root["log_processor_frequency"].asBool();
   }
 
   std::vector<bool> found_default_worker(kTfLiteNumDevices, false);

@@ -56,7 +56,6 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `input_layer_value_files`: A map-like string representing value file. Each item is separated by ',', and the item value consists of input layer name and value file path separated by ':', e.g. input1:file_path1,input2:file_path2. If the input_name appears both in input_layer_value_range and input_layer_value_files, input_layer_value_range of the input_name will be ignored. The file format is binary and it should be array format or null separated strings format.
   * `slo_us` and `slo_scale`: **Optional** fields for specifying an SLO value for a model. Setting `slo_scale` will make the SLO = worst profiled latency of that model * `slo_scale`. `slo_scale` will be ignored if `slo_us` is given (i.e., no reason to specify both options).
 * `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
-* `log_processor_frequency`: Whether planner log processor frequencies to log file. [default: true]
 * `schedulers`: The scheduler types in `list[int]`. If N schedulers are specified, then N queues are generated.
   * `0`: Fixed Device Planner
   * `1`: Round-Robin Planner
@@ -89,6 +88,10 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `num_threads`: Number of threads. [default: same value as global `num_threads`]
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * curr_profile + (1 - profile_smoothing_factor) * prev_profile` [default: 0.1]
+* `profiler_type`: Profiler type for latency estimation. [default: `frequency_smoothing`].
+  * `static`
+  * `smoothing`
+  * `frequency_smoothing`
 * `model_profile`: The path to file with model profile results. [default: None]
 * `profile_warmup_runs`: Number of warmup runs before profile. [default: 3]
 * `profile_num_runs`: Number of runs for profile. [default: 50]

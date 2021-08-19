@@ -110,7 +110,6 @@ void DeviceQueueWorker::Work() {
             planner_ptr->EnqueueBatch(job.following_jobs);
           }
           TryCopyOutputTensors(job);
-          planner_ptr->UpdateJobEndStatus(job, this);
           job.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {
