@@ -12,72 +12,70 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     if (idle_workers.empty()) {
       break;
     }
-    // Lookup table for GetShortestLatency().
-    // Although it is tempting to maintain a scheduler-wide cache,
-    // the values in device_waiting are (generally) different for every while
-    // loop iteration so this cache is valid only for this specific loop iter.
-    //
-    // Although this cache looks the same as the one inside
-    // GetShortestLatency(), we can get slightly more cache hits by having
-    // it again here. The reason is because we know that `device_waiting`
-    // values are unchanged within this loop iter, so if two Jobs have the
-    // same model_id and resolved_tensors then GetShortestLatency() will
-    // return the same value. In contrast, GetShortestLatency() always skips
-    // the cache lookup if start_time is not larger than all `device_waiting`
-    // values, even if the same `device_waiting` values are given.
-    std::unordered_map<std::pair<int, std::set<int>>,
-                       std::pair<int, int64_t>,
-                       Interpreter::PairHash> cache;
 
+    // TODO #172
+    // Update HEFT description
+
+    // hold on to a local copy of worker waiting time
+    WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
+
+    std::set<int> jobs_to_yield;
     // basically the same as ShortestExpectedLatencyScheduler
-    int64_t largest_shortest_latency = -1;
-    int target_job_idx = -1;
-    int target_subgraph_idx = -1;
+    int64_t largest_shortest_latency;
+    int target_job_idx;
+    int target_subgraph_idx;
+    do {
+      largest_shortest_latency = -1;
+      target_job_idx = -1;
+      target_subgraph_idx = -1;
 
-    // only check up to `window_size` requests
-    for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
-      Job& job = *it;
-      int preceded_subgraph_index = job.previous_subgraph_indices.empty() ?
-                                    -1 : job.previous_subgraph_indices.back();
+      // only check up to `window_size` requests
+      std::set<std::pair<int, int>> searched_jobs;
+      for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
+        Job& job = *it;
 
-      std::pair<int, int64_t> best_subgraph = {-1, INT_MAX};
-      std::pair<int, std::set<int>> cache_key = {job.model_id,
-                                                 job.resolved_tensors};
-
-      auto cache_it = cache.find(cache_key);
-      if (cache_it != cache.end()) {
-        // used cached value instead of calling GetShortestLatency()
-        best_subgraph = cache_it->second;
-      } else {
-        best_subgraph = GetInterpreter()->GetShortestLatency(
-            job.model_id, job.resolved_tensors, 0, GetWorkerWaitingTime(),
-            preceded_subgraph_index);
-
-        // insert new value into cache
-        cache[cache_key] = best_subgraph;
-      }
-
-
-      if (largest_shortest_latency < best_subgraph.second) {
-        Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
-
-        // skip this job if we can't schedule it immediately,
-        // even if this job is the "most urgent" one
-        if (idle_workers.find(target_subgraph->GetKey().worker_id) ==
-            idle_workers.end()) {
+        if (jobs_to_yield.find(job.job_id) != jobs_to_yield.end()) {
           continue;
         }
 
-        largest_shortest_latency = best_subgraph.second;
-        target_job_idx = it - requests.begin();
-        target_subgraph_idx = best_subgraph.first;
-      }
-    }
+        std::pair<int, int> job_to_search = std::make_pair(job.model_id, job.start_unit_idx);
+        if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
+          continue;
+        } else {
+          searched_jobs.insert(job_to_search);
+        }
 
-    if (target_job_idx < 0) {
-      // no one wants to be scheduled..
-      break;
-    }
+        std::pair<int, int64_t> best_subgraph =
+            GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
+
+        if (largest_shortest_latency < best_subgraph.second) {
+          Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
+
+          largest_shortest_latency = best_subgraph.second;
+          target_subgraph_idx = best_subgraph.first;
+          target_job_idx = it - requests.begin();
+        }
+      }
+
+      if (target_job_idx < 0) {
+        // no one wants to be scheduled..
+        return;
+      }
+
+      // skip this job if we can't schedule it immediately,
+      // even if this job is the "most urgent" one
+      Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+      int worker_id = target_subgraph->GetKey().worker_id;
+      if (idle_workers.find(worker_id) == idle_workers.end()) {
+        waiting_time[worker_id] += GetInterpreter()->GetExpectedLatency(target_subgraph_idx);
+        auto requests_it = requests.begin() + target_job_idx;
+        Job job = *requests_it;
+        jobs_to_yield.insert(job.job_id);
+        continue;
+      } else {
+        break;
+      }
+    } while (true);
 
     auto requests_it = requests.begin() + target_job_idx;
     Job job = *requests_it;
@@ -87,9 +85,6 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     window_size--;
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    auto worker_it = idle_workers.find(target_subgraph->GetKey().worker_id);
-    assert(worker_it != idle_workers.end());
-
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
     if (target_subgraph->IsStart()) {

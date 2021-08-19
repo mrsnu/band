@@ -281,6 +281,7 @@ Interpreter::~Interpreter() {
 TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
   subgraph_preparation_type_ = config.subgraph_preparation_type;
+  minimum_subgraph_size_ = config.minimum_subgraph_size;
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
@@ -748,15 +749,15 @@ TfLiteStatus Interpreter::GetBufferHandle(size_t subgraph_index,
 }
 
 void Interpreter::UpdateExpectedLatency(
-    const SubgraphKey& key, int64_t latency) {
-  int64_t prev_latency = moving_averaged_latencies_[key];
-  moving_averaged_latencies_[key] =
+    const int subgraph_idx, int64_t latency) {
+  int64_t prev_latency = moving_averaged_latencies_[subgraph_idx];
+  moving_averaged_latencies_[subgraph_idx] =
       profile_smoothing_factor_ * latency +
       (1 - profile_smoothing_factor_) * prev_latency;
 }
 
-int64_t Interpreter::GetExpectedLatency(const SubgraphKey& key) {
-  auto it = moving_averaged_latencies_.find(key);
+int64_t Interpreter::GetExpectedLatency(const int subgraph_idx) {
+  auto it = moving_averaged_latencies_.find(subgraph_idx);
   if (it != moving_averaged_latencies_.end()) {
     return it->second;
   } else {
@@ -795,7 +796,7 @@ void Interpreter::Profile(int model_id) {
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
       // TODO: Consider affinity of worker thread
-      moving_averaged_latencies_[subgraph_key] = profiled_latency;
+      moving_averaged_latencies_[i] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
                        << " model=" << subgraph_key.model_id
@@ -833,7 +834,7 @@ void Interpreter::Profile(int model_id) {
 
         int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
 
-        moving_averaged_latencies_[subgraph_key] = latency;
+        moving_averaged_latencies_[i] = latency;
         // record the profiled latency for subsequent benchmark runs
         profile_database_[subgraph_key] = latency;
 
@@ -1025,8 +1026,23 @@ std::set<int> Interpreter::models() const {
 void Interpreter::SetModelConfigAndFillProfile(int model_id,
                                                ModelConfig& model_config) {
   SetModelConfig(model_id, model_config);
-  std::string& model_fname = model_config.model_fname;
 
+  // Set (model_id, start_unit_idx, end_unit_idx) -> subgraph idx map.
+  for (int i = 0; i < subgraphs_.size(); ++i) {
+    auto& subgraph_key = subgraphs_[i]->GetKey();
+    if (subgraph_key.model_id != model_id) {
+      continue;
+    }
+    int start_unit_idx = *subgraph_key.unit_indices.begin();
+    int end_unit_idx = *subgraph_key.unit_indices.rbegin();
+    unit_subgraphs_to_subgraph_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
+    TFLITE_LOG(INFO) << "Set unit subgraphs: model_id - " << model_id
+                     << ", start idx - " << start_unit_idx
+                     << ", end idx - " << end_unit_idx
+                     << ", subgraph idx - " << i;
+  }
+
+  std::string& model_fname = model_config.model_fname;
   auto model_profile =
       profiling::util::ExtractModelProfile(profile_database_json_,
                                            model_fname, model_id);
@@ -1163,14 +1179,14 @@ Interpreter::MakeSubgraphsForFallbackOps(const int model_id,
 }
 
 TfLiteStatus Interpreter::GetUnitSubgraphs(
-    const int model_id, std::set<DeviceOpIndices>& subgraph_indices,
+    const int model_id, std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices,
     bool need_fallback_subgraph) {
-  
   if (!need_fallback_subgraph) {
     for (auto& worker : workers_) {
       TfLiteDeviceFlags device_flag = worker->GetDeviceFlag();
-      subgraph_indices.insert({device_flag, {}});
+      subgraph_indices.insert({0, {device_flag, {}}});
     }
+    PrepareUnitSubgraphScheduling(model_id, 1);
     return kTfLiteOk;
   }
 
@@ -1183,6 +1199,24 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
   if (kTfLiteNumDevices > 8 * sizeof(BitMask)) {
     TFLITE_LOG(ERROR) << "kTfLiteNumDevices is larger than BitMask: "
                       << kTfLiteNumDevices;
+  }
+
+  std::map<TfLiteDeviceFlags, std::set<int>> op_sets_to_ignore;
+  // register subgraphs for all devices
+  for (int i = 0; i < kTfLiteNumDevices; ++i) {
+    TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+    std::vector<DeviceOpIndices> device_op_sets =
+      MakeSubgraphsForFallbackOps(model_id, device_flag);
+    for (auto device_and_ops : device_op_sets) {
+      auto device = device_and_ops.first;
+      auto& ops = device_and_ops.second;
+      if (device == kTfLiteCPU) continue;
+      if (ops.size() < minimum_subgraph_size_) {
+        for (auto op : ops) {
+          op_sets_to_ignore[device].insert(op);
+        }
+      }
+    }
   }
 
   // Build op_support_table
@@ -1198,7 +1232,9 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
       }
       if (unsupported_ops.find(device_flag) == unsupported_ops.end() ||
           unsupported_ops.at(device_flag).find(op_index) == unsupported_ops.at(device_flag).end()) {
-        op_support_table[op_index] |= 1 << device_id;
+        if (op_sets_to_ignore[device_flag].find(op_index) == op_sets_to_ignore[device_flag].end()) {
+          op_support_table[op_index] |= 1 << device_id;
+        }
       }
     }
   }
@@ -1234,6 +1270,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
     return true;
   };
 
+  int subgraph_local_idx = 0;
   while (true) {
     std::set<int> unit_subgraph_ops;
     BitMask support_devices = 0;
@@ -1280,14 +1317,17 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       if (support_devices & (1 << device_id)) {
         TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-        subgraph_indices.insert({device_flag, unit_subgraph_ops});
+        subgraph_indices.insert({subgraph_local_idx, {device_flag, unit_subgraph_ops}});
       }
     }
+    subgraph_local_idx++;
   }
   if (!remaining_ops.empty()) {
     TFLITE_LOG(ERROR) << "Not empty remaining ops";
     return kTfLiteError;
   }
+  PrepareUnitSubgraphScheduling(model_id, subgraph_local_idx);
+
   return kTfLiteOk;
 }
 
@@ -1380,6 +1420,48 @@ void Interpreter::InvestigateModelSpec(int model_id) {
     // revert changes
     primary_subgraph->RemoveAllDelegates();
   }
+}
+
+std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
+    int model_id, int start_unit_idx,
+    std::map<int, int64_t>& worker_waiting) {
+  auto& memo = model_specs_[model_id].latency_memo;
+  auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
+
+  // Initialize memo.
+  for (int i = 0; i < num_unit_subgraphs; ++i) {
+    memo[i] = std::make_pair(-1, INT_MAX);
+  }
+
+  // `i` and `j` refer to an unit subgraph idx.
+  // A subgraph(i, j) consists of the unit subgraphs in [i, j].
+  // The goal of the algorithm is to find the minimum expected latency;
+  // `memo[k].second` is the minimum expected latency of the subgraph(start_unit_idx, k).
+  // `memo[k].first` is the first subgraph index of the best execution plan.
+  // So, the shortest expected latency of a subgraph(start_unit_idx, num_unit_subgraphs - 1) is
+  // `memo[num_unit_subgraphs - 1].second`.
+  for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
+    std::pair<int, int64_t> local_min = std::make_pair(-1, -1);
+    for (int i = j; i >= start_unit_idx; --i) {
+      // Search from the profile result of the unit subgraph.
+      auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
+      int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
+      std::pair<int, int64_t> target_subgraph =
+        GetShortestSubgraphIndex(range, start, worker_waiting);
+
+      if (local_min.second == -1 || target_subgraph.second < local_min.second) {
+        if (i > start_unit_idx) {
+          local_min.first = memo[i - 1].first;
+          local_min.second = target_subgraph.second;
+        } else {
+          local_min = target_subgraph;
+        }
+      }
+    }
+    memo[j] = local_min;
+  }
+
+  return memo[num_unit_subgraphs - 1];
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatency(
@@ -1475,6 +1557,23 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   return min_subgraph;
 }
 
+std::pair<int, int64_t>
+Interpreter::GetSubgraphWithShortestLatency(Job& job,
+                                            std::map<int, int64_t>& worker_waiting) {
+  if (subgraph_preparation_type_ == "fallback_per_device") {
+    int preceded_subgraph_index =
+      job.previous_subgraph_indices.empty() ? -1
+                                            : job.previous_subgraph_indices.back();
+    return GetShortestLatency(job.model_id,
+                              job.resolved_tensors,
+                              0,
+                              worker_waiting,
+                              preceded_subgraph_index);
+  } else {
+    return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
+  }
+}
+
 std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
 Interpreter::GroupByStartEndIdx(
     std::vector<int> subgraph_indices) {
@@ -1532,16 +1631,16 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
 
 std::pair<int, int64_t>
 Interpreter::GetShortestSubgraphIndex(
-    std::vector<int> subgraph_indices, int64_t start_time,
+    std::vector<int>& subgraph_indices, int64_t start_time,
     std::map<int, int64_t>& worker_waiting) {
   int64_t min_latency = INT_MAX;
-  int min_idx = 0;
+  int min_idx = -1;
 
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
 
     int64_t waiting_time = worker_waiting[key.worker_id];
-    int64_t expected_latency = GetExpectedLatency(key);
+    int64_t expected_latency = GetExpectedLatency(subgraph_index);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 
     if (min_latency > total) {
@@ -1580,7 +1679,7 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
       continue;
     }
 
-    auto it = moving_averaged_latencies_.find(subgraph_key);
+    auto it = moving_averaged_latencies_.find(i);
     if (it != moving_averaged_latencies_.end()) {
       int64_t latency = it->second;
       if (worst_latency < latency) {
@@ -1596,6 +1695,13 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
 
   return worst_latency;
 }
+
+void Interpreter::PrepareUnitSubgraphScheduling(int model_id, int num_units) {
+  auto& model_spec = model_specs_[model_id];
+  model_spec.num_unit_subgraphs = num_units;
+  model_spec.latency_memo.resize(num_units);
+}
+
 }  // namespace impl
 
 }  // namespace tflite

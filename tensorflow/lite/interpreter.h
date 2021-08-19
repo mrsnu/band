@@ -105,6 +105,10 @@ struct ModelSpec {
   std::set<int> node_output_tensors;
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
+  int num_unit_subgraphs;
+  // vector for memoization during scheduling.
+  // Each element is a pair of starting subgraph index and shortest latency.
+  std::vector<std::pair<int, int64_t>> latency_memo;
 };
 
 class Interpreter {
@@ -469,6 +473,8 @@ class Interpreter {
   /// Returns status of success or failure.
   TfLiteStatus Invoke(size_t subgraph_index);
 
+  void PrepareUnitSubgraphScheduling(int model_id, int num_units);
+
   /// Invoke one subgraph with the model_id in the interpreter.
   /// This method is an asychronous call.
   int InvokeModelAsync(int model_id, Tensors inputs = {});
@@ -693,8 +699,8 @@ class Interpreter {
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
 
-  void UpdateExpectedLatency(const SubgraphKey& key, int64_t latency);
-  int64_t GetExpectedLatency(const SubgraphKey& key);
+  void UpdateExpectedLatency(const int subgraph_idx, int64_t latency);
+  int64_t GetExpectedLatency(const int subgraph_idx);
   int64_t GetProfiledLatency(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
@@ -713,6 +719,14 @@ class Interpreter {
       std::map<int, int64_t>& worker_waiting,
       int preceded_subgraph_index = -1);
 
+  std::pair<int, int64_t> GetShortestLatencyWithUnitSubgraph(
+      int model_id, int start_unit_idx,
+      std::map<int, int64_t>& worker_waiting);
+
+
+  std::pair<int, int64_t> GetSubgraphWithShortestLatency(Job& job,
+                                                         std::map<int, int64_t>& worker_waiting);
+
   // hash function to use pair<int, set<int>> as map key in cache_
   // https://stackoverflow.com/a/32685618
   struct PairHash {
@@ -729,11 +743,21 @@ class Interpreter {
   // cache for GetShortestLatency()
   std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
+  // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
+  // NOTE: we assume every subgraph consists of unit subgraphs with the continuous unit subgraph indices.
+  std::map<int, std::map<int, std::map<int, std::vector<int>>>> unit_subgraphs_to_subgraph_indices_;
+
   // Generate subgraphs for fallback ops in `model_id`.
+  // DeviceOpIndices contains device flag and op_indices of single subgraph.
   std::vector<DeviceOpIndices> MakeSubgraphsForFallbackOps(
       const int model_id, const TfLiteDeviceFlags device_flag);
+
+  // A model is partitioned into unit subgraphs.
+  // We assign an index to each unit subgraph, and the unit subgraph indices are topologically sorted.
+  // Note that there can be better way to assign unit subgraph indices if there exists any unit subgraphs
+  // that can be executed in parallel.
   TfLiteStatus GetUnitSubgraphs(const int model_id,
-                                std::set<DeviceOpIndices>& subgraph_indices,
+                                std::set<std::pair<int, DeviceOpIndices>>& subgraph_indices,
                                 bool need_fallback_subgraph = true);
 
   ExternalCpuBackendContext* GetCpuBackendContext() {
@@ -777,6 +801,10 @@ class Interpreter {
   // The smaller profile_smoothing_factor_, the smoother the profile results.
   float profile_smoothing_factor_;
 
+  // Minimum subgraph size.
+  // Will not create subgraph if num operators < minimum_subgraph_size.
+  int minimum_subgraph_size_;
+
   // Subgraph preparation type
   // "fallback_per_device", "unit_subgraph"
   std::string subgraph_preparation_type_;
@@ -804,7 +832,7 @@ class Interpreter {
   // When a subgraph key is given, returns the profile results in int64_t.
   profiling::util::ModelDeviceToLatency profile_database_;
   // Map structure to store profiling results in microseconds of (model_id, device_id)
-  profiling::util::ModelDeviceToLatency moving_averaged_latencies_;
+  std::unordered_map<int, int64_t> moving_averaged_latencies_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;
@@ -857,7 +885,7 @@ class Interpreter {
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account
   std::pair<int, int64_t> GetShortestSubgraphIndex(
-      std::vector<int> subgraph_indices, int64_t start_time,
+      std::vector<int>& subgraph_indices, int64_t start_time,
       std::map<int, int64_t>& worker_waiting);
 
   // Update slo values in model_configs_ according to the worst profiled

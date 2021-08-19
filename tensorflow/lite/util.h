@@ -69,6 +69,7 @@ struct SubgraphKey {
   int worker_id;
   std::set<int> input_ops;
   std::set<int> output_ops;
+  std::set<int> unit_indices;
 };
 
 using DeviceOpIndices = std::pair<TfLiteDeviceFlags, std::set<int>>;
@@ -115,6 +116,7 @@ struct Job {
   int subgraph_idx = -1;
   int worker_id = -1;
   int device_id = -1;
+  int start_unit_idx = 0;
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
   std::set<int> resolved_tensors;

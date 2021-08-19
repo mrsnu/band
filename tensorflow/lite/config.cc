@@ -80,6 +80,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["subgraph_preparation_type"].isNull()) {
     interpreter_config.subgraph_preparation_type = root["subgraph_preparation_type"].asString();
   }
+  // 7. Minimum subgraph size
+  if (!root["minimum_subgraph_size"].isNull()) {
+    interpreter_config.minimum_subgraph_size = root["minimum_subgraph_size"].asInt();
+  }
 
   // Set Planner configs
   // 1. Log path

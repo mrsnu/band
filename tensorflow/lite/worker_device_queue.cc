@@ -35,7 +35,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
        it != requests_.end(); ++it) {
     Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
     int64_t expected_latency =
-      interpreter->GetExpectedLatency(current_subgraph->GetKey());
+      interpreter->GetExpectedLatency(it->subgraph_idx);
 
     total += expected_latency;
     if (it == requests_.begin()) {
@@ -103,7 +103,7 @@ void DeviceQueueWorker::Work() {
         if (status == kTfLiteOk) {
           job.end_time = profiling::time::NowMicros();
           interpreter_ptr->UpdateExpectedLatency(
-              subgraph.GetKey(),
+              subgraph_idx,
               (job.end_time - job.invoke_time));
           if (job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(job.following_jobs);
@@ -160,6 +160,7 @@ void DeviceQueueWorker::Work() {
 }
 
 void DeviceQueueWorker::TryWorkSteal() {
+/*
   std::shared_ptr<Planner> planner_ptr = planner_.lock();
   if (!planner_ptr) {
     TFLITE_LOG(ERROR) << "Worker " << worker_id_
@@ -243,6 +244,7 @@ void DeviceQueueWorker::TryWorkSteal() {
   // finally, we perform the swap
   target_worker->GetDeviceRequests().pop_back();
   requests_.push_back(job);
+*/
 }
 
 }  // namespace impl
