@@ -825,11 +825,21 @@ void Interpreter::Profile(int model_id) {
         }
 
         for (int i = 0; i < num_warmups_; i++) {
-          subgraph->Invoke();
+          if (subgraph->Invoke() != kTfLiteOk) {
+            subgraph->SetHealth(false);
+            moving_averaged_latencies_[i] = INT_MAX;
+            profile_database_[subgraph_key] = INT_MAX;
+            return;
+          }
         }
         timer.ClearRecords();
         for (int i = 0; i < num_runs_; i++) {
-          subgraph->Invoke();
+          if (subgraph->Invoke() != kTfLiteOk) {
+            subgraph->SetHealth(false);
+            moving_averaged_latencies_[i] = INT_MAX;
+            profile_database_[subgraph_key] = INT_MAX;
+            return;
+          }
         }
 
         int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
@@ -1035,6 +1045,7 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
     }
     int start_unit_idx = *subgraph_key.unit_indices.begin();
     int end_unit_idx = *subgraph_key.unit_indices.rbegin();
+
     unit_subgraphs_to_subgraph_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
     TFLITE_LOG(INFO) << "Set unit subgraphs: model_id - " << model_id
                      << ", start idx - " << start_unit_idx
@@ -1638,6 +1649,9 @@ Interpreter::GetShortestSubgraphIndex(
 
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
+    if (!subgraph(subgraph_index)->GetHealth()) {
+      continue;
+    }
 
     int64_t waiting_time = worker_waiting[key.worker_id];
     int64_t expected_latency = GetExpectedLatency(subgraph_index);
@@ -1700,6 +1714,11 @@ void Interpreter::PrepareUnitSubgraphScheduling(int model_id, int num_units) {
   auto& model_spec = model_specs_[model_id];
   model_spec.num_unit_subgraphs = num_units;
   model_spec.latency_memo.resize(num_units);
+
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
+  for (int i = 0; i < num_units; ++i) {
+    primary_subgraph->GetKey().unit_indices.insert(i);
+  }
 }
 
 }  // namespace impl
