@@ -85,9 +85,6 @@ class Planner {
   // Copy the Job instances from the `requests_` to the local queue.
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueues();
-  void UpdateJobEnqueueStatus(Job& job, SubgraphKey& target) const;
-  void UpdateJobStartStatus(Job& job, Worker* worker) const;
-  void UpdateJobEndStatus(Job& job, Worker* worker) const;
 
   // Enqueue the request to the worker.
   void EnqueueToWorkers(ScheduleAction& action);
