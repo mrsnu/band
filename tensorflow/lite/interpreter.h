@@ -554,7 +554,8 @@ class Interpreter {
   // Profile the subgraphs with the given model id.
   // NOTE: the profiling step may affects other running requests,
   // and vice versa.
-  void Profile(int model_id);
+  void StaticProfile(int model_id);
+  void FrequencyProfile(int model_id, int num_profile = 20, int num_max_samples = 50);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
@@ -698,9 +699,9 @@ class Interpreter {
   // into `profile_database_`.
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
-
-  void UpdateExpectedLatency(const int subgraph_idx, int64_t latency);
+  void UpdateInvokedLatency(const int subgraph_idx, int64_t latency, int64_t frequency);
   int64_t GetExpectedLatency(const int subgraph_idx);
+  int64_t GetFrequencyBasedExpectedLatency(const int subgraph_idx, int64_t frequency);
   int64_t GetProfiledLatency(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
@@ -837,6 +838,7 @@ class Interpreter {
   profiling::util::ModelDeviceToLatency profile_database_;
   // Map structure to store profiling results in microseconds of (model_id, device_id)
   std::unordered_map<int, int64_t> moving_averaged_latencies_;
+  std::unordered_map<int, std::map<int64_t, int64_t>> profile_frequency_to_latencies_;
 
   // The error reporter delegate that tflite will forward queries errors to.
   ErrorReporter* error_reporter_ = nullptr;

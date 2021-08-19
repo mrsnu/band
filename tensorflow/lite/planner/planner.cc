@@ -50,6 +50,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "execution_time\t"
              << "profiled_execution_time\t"
              << "expected_execution_time\t"
+             << "frequency_expected_execution_time\t"
              << "start_frequency\t"
              << "start_target_frequency\t"
              << "start_target_min_frequency\t"
@@ -384,6 +385,7 @@ void Planner::FlushFinishedJobs() {
                << job.end_time - job.invoke_time << "\t"
                << job.profiled_execution_time << "\t"
                << job.expected_execution_time << "\t"
+               << job.frequency_expected_execution_time << "\t"
                << job.start_frequency << "\t"
                << job.start_target_frequency << "\t"
                << job.start_target_min_frequency << "\t"
@@ -453,13 +455,16 @@ void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
   std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
   auto cpu_set = worker->GetWorkerThreadAffinity();
   auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
-  if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
+  if (job.device_id == kTfLiteCPU) {
     job.start_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
     job.start_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
     job.start_transition_count = cpu::GetTotalTransitionCount(cpu_set);
   } 
   job.start_frequency = processor::GetFrequencyKhz(device_flag, cpu_set);
   job.start_target_frequency = processor::GetTargetFrequencyKhz(device_flag, cpu_set);
+  job.frequency_expected_execution_time =
+      interpreter_->GetFrequencyBasedExpectedLatency(
+          job.subgraph_idx, job.start_target_frequency);
 }
 
 void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
@@ -467,7 +472,7 @@ void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
   std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
   auto cpu_set = worker->GetWorkerThreadAffinity();
   auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
-  if (job.device_id == kTfLiteCPU || job.device_id == kTfLiteCPUFallback) {
+  if (job.device_id == kTfLiteCPU) {
     job.end_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
     job.end_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
     job.end_transition_count = cpu::GetTotalTransitionCount(cpu_set);
