@@ -12,22 +12,9 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(JobQueue& requests) {
     if (idle_workers.empty()) {
       break;
     }
-    // Lookup table for GetShortestLatency().
-    // Although it is tempting to maintain a scheduler-wide cache,
-    // the values in device_waiting are (generally) different for every while
-    // loop iteration so this cache is valid only for this specific loop iter.
-    //
-    // Although this cache looks the same as the one inside
-    // GetShortestLatency(), we can get slightly more cache hits by having
-    // it again here. The reason is because we know that `device_waiting`
-    // values are unchanged within this loop iter, so if two Jobs have the
-    // same model_id and resolved_tensors then GetShortestLatency() will
-    // return the same value. In contrast, GetShortestLatency() always skips
-    // the cache lookup if start_time is not larger than all `device_waiting`
-    // values, even if the same `device_waiting` values are given.
-    std::unordered_map<std::pair<int, std::set<int>>,
-                       std::pair<int, int64_t>,
-                       Interpreter::PairHash> cache;
+
+    // TODO #172
+    // Update HEFT description
 
     // hold on to a local copy of worker waiting time
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
