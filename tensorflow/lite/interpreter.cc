@@ -253,6 +253,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       TFLITE_LOG(WARN) << TfLiteDeviceGetName(device_flag) << " worker is not created.";
     }
   }
+
+  worker_observe_thread_ = std::thread([this] { this->UpdateWorkerState(); });
 }
 
 Interpreter::~Interpreter() {
@@ -280,6 +282,9 @@ Interpreter::~Interpreter() {
   profiling::util::UpdateDatabase(profile_database_, model_configs_,
                                   profile_database_json_);
   WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
+
+  observe_thread_exit_ = true;
+  worker_observe_thread_.join();
 }
 
 
@@ -287,6 +292,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
   subgraph_preparation_type_ = config.subgraph_preparation_type;
   minimum_subgraph_size_ = config.minimum_subgraph_size;
+  profiler_type_ = config.profiler_type;
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
@@ -760,7 +766,7 @@ void Interpreter::UpdateInvokedLatency(
       profile_smoothing_factor_ * latency +
       (1 - profile_smoothing_factor_) * prev_latency;
 
-  int64_t prev_freq_latency = GetFrequencyBasedExpectedLatency(subgraph_idx, frequency);
+  int64_t prev_freq_latency = GetFrequencyBasedExpectedLatency(subgraph_idx);
   if (prev_freq_latency > 0) {
     auto& frequency_table = profile_frequency_to_latencies_[subgraph_idx];
     auto frequency_table_it = frequency_table.find(frequency);
@@ -773,24 +779,38 @@ void Interpreter::UpdateInvokedLatency(
 }
 
 int64_t Interpreter::GetExpectedLatency(const int subgraph_idx) {
+  if (profiler_type_ == kStatic) {
+    return GetProfiledLatency(subgraph(subgraph_idx)->GetKey());
+  } else if (profiler_type_ == kSmoothing) {
+    return GetSmoothingBasedExpectedLatency(subgraph_idx);
+  } else if (profiler_type_ == kFrequencySmoothing) {
+    return GetFrequencyBasedExpectedLatency(subgraph_idx);
+  } else {
+    return -1;
+  }
+}
+
+int64_t Interpreter::GetFrequencyBasedExpectedLatency(const int subgraph_idx) {
+  const int worker_id = subgraph(subgraph_idx)->GetKey().worker_id;
+  auto it = profile_frequency_to_latencies_.find(subgraph_idx);
+  if (it != profile_frequency_to_latencies_.end()) {
+    auto frequency_table = it->second;
+    auto frequency_table_it = frequency_table.find(
+      worker_frequencies_[worker_id]);
+    if (frequency_table_it != frequency_table.end()) {
+      return frequency_table_it->second;
+    }
+  }
+  return GetSmoothingBasedExpectedLatency(subgraph_idx);
+}
+
+int64_t Interpreter::GetSmoothingBasedExpectedLatency(const int subgraph_idx) {
   auto it = moving_averaged_latencies_.find(subgraph_idx);
   if (it != moving_averaged_latencies_.end()) {
     return it->second;
   } else {
     return -1;
   }
-}
-
-int64_t Interpreter::GetFrequencyBasedExpectedLatency(const int subgraph_idx, int64_t frequency) {
-  auto it = profile_frequency_to_latencies_.find(subgraph_idx);
-  if (it != profile_frequency_to_latencies_.end()) {
-    auto frequency_table = it->second;
-    auto frequency_table_it = frequency_table.find(frequency);
-    if (frequency_table_it != frequency_table.end()) {
-      return frequency_table_it->second;
-    }
-  }
-  return GetExpectedLatency(subgraph_idx);
 }
 
 int64_t Interpreter::GetProfiledLatency(SubgraphKey& key) {
@@ -1938,6 +1958,27 @@ void Interpreter::PrepareUnitSubgraphScheduling(int model_id, int num_units) {
   Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
   for (int i = 0; i < num_units; ++i) {
     primary_subgraph->GetKey().unit_indices.insert(i);
+  }
+}
+
+void Interpreter::UpdateWorkerState() {
+  if (profiler_type_ == kFrequencySmoothing) {
+    while (true) {
+      if (!observe_thread_exit_) {
+        return;
+      }
+
+      for (int worker_id = 0; worker_id < GetNumWorkers();
+          worker_id++) {
+        auto worker = GetWorker(worker_id);
+        std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
+        worker_frequencies_[worker_id] = processor::GetTargetFrequencyKhz(
+            worker->GetDeviceFlag(), worker->GetWorkerThreadAffinity());
+      }
+
+      std::this_thread::sleep_for(
+          std::chrono::microseconds(worker_observe_interval_us_));
+    }
   }
 }
 

@@ -29,7 +29,6 @@ Planner::~Planner() {
 
 TfLiteStatus Planner::Init(PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
-  log_processor_frequency_ = config.log_processor_frequency;
   log_path_ = config.log_path;
   if (log_path_.size()) {
     // Open file to write per-request timestamps later
@@ -50,17 +49,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "execution_time\t"
              << "profiled_execution_time\t"
              << "expected_execution_time\t"
-             << "frequency_expected_execution_time\t"
-             << "start_frequency\t"
-             << "start_target_frequency\t"
-             << "start_target_min_frequency\t"
-             << "start_target_max_frequency\t"
-             << "end_frequency\t"
-             << "end_target_frequency\t"
-             << "end_target_min_frequency\t"
-             << "end_target_max_frequency\t"
-             << "transition_count\t"
-             << "expected_transition_count\t"
              << "slo_us\t"
              << "job_status\t"
              << "is_final_subgraph\t"
@@ -215,8 +203,6 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
           HandleSLOViolatedJob(request);
           continue;
         }
-        // update job status before we copy
-        UpdateJobStartStatus(request, worker);
         if (!worker->GiveJob(request)) {
           PrepareReenqueue(request);
           EnqueueRequest(request, true);
@@ -385,17 +371,6 @@ void Planner::FlushFinishedJobs() {
                << job.end_time - job.invoke_time << "\t"
                << job.profiled_execution_time << "\t"
                << job.expected_execution_time << "\t"
-               << job.frequency_expected_execution_time << "\t"
-               << job.start_frequency << "\t"
-               << job.start_target_frequency << "\t"
-               << job.start_target_min_frequency << "\t"
-               << job.start_target_max_frequency << "\t"
-               << job.end_frequency << "\t"
-               << job.end_target_frequency << "\t"
-               << job.end_target_min_frequency << "\t"
-               << job.end_target_max_frequency << "\t"
-               << job.end_transition_count - job.start_transition_count << "\t"
-               << job.expected_transition_count << "\t"
                << job.slo_us << "\t"
                << job.status << "\t"
                << is_final_subgraph << "\t"
@@ -417,6 +392,8 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
   job.expected_execution_time = interpreter_->GetExpectedLatency(job.subgraph_idx);
+  // timing is a bit off but won't make that much difference.
+  job.start_target_frequency = interpreter_->GetWorkerFrequency(target_key.worker_id);
 
   if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);
@@ -448,40 +425,6 @@ void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
   job.following_jobs.clear();
-}
-
-void Planner::UpdateJobStartStatus(Job& job, Worker* worker) const {
-  if (!log_processor_frequency_) return;
-  std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
-  auto cpu_set = worker->GetWorkerThreadAffinity();
-  auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
-  if (job.device_id == kTfLiteCPU) {
-    job.start_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
-    job.start_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
-    job.start_transition_count = cpu::GetTotalTransitionCount(cpu_set);
-  } 
-  job.start_frequency = processor::GetFrequencyKhz(device_flag, cpu_set);
-  job.start_target_frequency = processor::GetTargetFrequencyKhz(device_flag, cpu_set);
-  job.frequency_expected_execution_time =
-      interpreter_->GetFrequencyBasedExpectedLatency(
-          job.subgraph_idx, job.start_target_frequency);
-}
-
-void Planner::UpdateJobEndStatus(Job& job, Worker* worker) const {
-  if (!log_processor_frequency_) return;
-  std::lock_guard<std::mutex> cpu_lock(worker->GetCpuSetMtx());
-  auto cpu_set = worker->GetWorkerThreadAffinity();
-  auto device_flag = static_cast<TfLiteDeviceFlags>(job.device_id);
-  if (job.device_id == kTfLiteCPU) {
-    job.end_target_min_frequency = cpu::GetTargetMinFrequencyKhz(cpu_set);
-    job.end_target_max_frequency = cpu::GetTargetMaxFrequencyKhz(cpu_set);
-    job.end_transition_count = cpu::GetTotalTransitionCount(cpu_set);
-    job.expected_transition_count =
-        (job.end_time - job.enqueue_time)                 // execution time
-        / (cpu::GetUpTransitionLatencyMs(cpu_set) / 1000);  // transition limit
-  } 
-  job.end_frequency = processor::GetFrequencyKhz(device_flag, cpu_set);
-  job.end_target_frequency = processor::GetTargetFrequencyKhz(device_flag, cpu_set);
 }
 
 bool Planner::IsJobIdValid(int job_id) {

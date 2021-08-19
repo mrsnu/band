@@ -702,8 +702,17 @@ class Interpreter {
   void UpdateInvokedLatency(const int subgraph_idx, int64_t latency, int64_t frequency);
   int64_t GetExpectedLatency(const int subgraph_idx);
   // Start frequency based estimation. Fall back to GetExpectedLatency if fails
-  int64_t GetFrequencyBasedExpectedLatency(const int subgraph_idx, int64_t frequency);
+  int64_t GetFrequencyBasedExpectedLatency(const int subgraph_idx);
+  int64_t GetSmoothingBasedExpectedLatency(const int subgraph_idx);
   int64_t GetProfiledLatency(SubgraphKey& key);
+  int64_t GetWorkerFrequency(const int worker_id) const {
+    auto it = worker_frequencies_.find(worker_id);
+    if (it != worker_frequencies_.end()) {
+      return it->second;
+    } else {
+      return -1;
+    }
+  }
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
 
@@ -876,6 +885,12 @@ class Interpreter {
 
   std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffer_;
   std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
+  
+  TfLiteProfilerType profiler_type_;
+  std::thread worker_observe_thread_;
+  std::unordered_map<int, int64_t> worker_frequencies_;
+  const int worker_observe_interval_us_ = 5000;
+  bool observe_thread_exit_ = false;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;
@@ -904,6 +919,7 @@ class Interpreter {
   // Returns the largest profiled latency of `model_id`, across all devices.
   // Must be called after this model has been profiled.
   int64_t GetWorstDeviceProfileResult(int model_id);
+  void UpdateWorkerState();
 };
 
 }  // namespace impl

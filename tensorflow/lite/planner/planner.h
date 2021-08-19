@@ -4,6 +4,7 @@
 #include <atomic>
 #include <memory>
 #include <set>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -147,7 +148,6 @@ class Planner {
 
   std::condition_variable end_invoke_;
   std::string log_path_;
-  bool log_processor_frequency_;
 
   int schedule_window_size_ = INT_MAX;
 

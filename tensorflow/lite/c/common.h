@@ -79,6 +79,13 @@ typedef enum TfLiteSchedulerType {
   kNumSchedulerTypes = 6
 } TfLiteSchedulerType;
 
+typedef enum TfLiteProfilerType {
+  kStatic = 0,
+  kSmoothing = 1,
+  kFrequencySmoothing = 2,
+  kNumProfilerTypes = 3
+} TfLiteProfilerType;
+
 // Forward declare so dependent structs and methods can reference these types
 // prior to the struct definitions.
 struct TfLiteContext;
