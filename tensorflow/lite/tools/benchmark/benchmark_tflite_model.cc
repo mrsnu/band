@@ -669,6 +669,48 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   return kTfLiteOk;
 }
 
+TfLiteStatus BenchmarkTfLiteModel::RunMultiStream() {
+  kill_app_ = false;
+
+  std::vector<std::thread> stream_threads;
+
+  for (auto& m : interpreter_->GetModelConfig()) {
+    int model_id = m.first;
+    ModelConfig& model_config = m.second;
+    int batch_size = model_config.batch_size;
+
+    stream_threads.push_back(std::thread([this, batch_size, model_id]() {
+      while(!kill_app_) {
+        std::vector<Job> requests(batch_size, Job(model_id));
+        std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
+        auto job_ids = interpreter_->InvokeModelsAsync(requests, input_tensors);
+        interpreter_->GetPlanner()->Wait(job_ids);
+      }
+    }));
+
+  }
+  std::this_thread::sleep_for(
+      std::chrono::milliseconds(benchmark_config_.running_time_ms));
+  kill_app_ = true;
+
+  for (auto& t: stream_threads) {
+    t.join();
+  }
+
+  auto model_count = interpreter_->GetPlanner()->GetModelExecutionCounts();
+  for (auto& m : interpreter_->GetModelConfig()) {
+    if (model_count.find(m.first) != model_count.end()) {
+      int num_frames = model_count[m.first] / m.second.batch_size;
+      TFLITE_LOG(INFO) << "Model id : " << m.first
+                      << " # of execution : " << num_frames
+                      << " Measured FPS: "
+                        << (num_frames * 1000 / benchmark_config_.running_time_ms);
+    }
+  }
+
+  return kTfLiteOk;
+}
+
 void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
   for (auto& m : interpreter_->GetModelConfig()) {
     int model_id = m.first;
