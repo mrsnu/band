@@ -146,12 +146,6 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     exit(-1);
   }
 
-  // Initialize configurations.
-  if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
-    error_reporter_->Report("Interpreter::Init() failed.");
-    exit(-1);
-  }
-
   std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
