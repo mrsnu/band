@@ -21,8 +21,8 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
       return;
     }
     Job& next_job = *it;
-    int best_subgraph_idx =
-        GetInterpreter()->GetSubgraphIdxSatisfyingSLO(next_job, waiting_time, idle_workers);
+    int best_subgraph_idx = GetInterpreter()->GetSubgraphIdxSatisfyingSLO(
+        next_job, waiting_time, idle_workers);
 
     // If the target device is not idle, give opportunity to the next job.
     if (best_subgraph_idx == -1) {
@@ -60,7 +60,9 @@ void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests) {
 void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests) {
   for (auto& request : requests) {
     request.expected_latency =
-        GetInterpreter()->GetSubgraphWithShortestLatency(request, GetWorkerWaitingTime()).second;
+        GetInterpreter()
+            ->GetSubgraphWithShortestLatency(request, GetWorkerWaitingTime())
+            .second;
   }
 }
 
