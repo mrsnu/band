@@ -47,6 +47,7 @@ class BenchmarkTfLiteModel : public BenchmarkModel {
   TfLiteStatus RunPeriodic() override;
   TfLiteStatus RunPeriodicSingleThread() override;
   TfLiteStatus RunStream() override;
+  TfLiteStatus RunMultiStream() override;
   static BenchmarkParams DefaultParams();
 
  protected:
