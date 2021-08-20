@@ -12,7 +12,6 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
   SortBySlackTime(requests);
 
   planner_->UpdateWorkerWaitingTime();
-  // hold on to a local copy of worker waiting time
   WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
   for (auto it = requests.begin(); it != requests.end();) {
     std::set<int> idle_workers = planner_->GetIdleWorkers();
