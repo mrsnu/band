@@ -6,35 +6,33 @@ namespace tflite {
 namespace impl {
 
 void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
-  std::set<TfLiteDeviceFlags> idle_devices = planner_->GetIdleDevices();
-  DeviceWaitingTime device_waiting = GetDeviceWaitingTime();
-
+  // Note Scheduler may fail to enqueue the jobs if they do not
+  // have SLOs.
+  // TODO: Support jobs with fallback
   SortBySlackTime(requests);
   for (auto it = requests.begin(); it != requests.end();) {
-    if (idle_devices.empty()) {
+    planner_->UpdateWorkerWaitingTime();
+    // hold on to a local copy of worker waiting time
+    WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
+    std::set<int> idle_workers = planner_->GetIdleWorkers();
+    if (idle_workers.empty()) {
       // no device is idle; wait for next iteration
       return;
     }
     Job next_job = *it;
-    std::pair<int, int64_t> best_subgraph =
-        GetInterpreter()->GetShortestLatency(
-            next_job.model_id, next_job.resolved_tensors, 0, device_waiting);
-    Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
+    int best_subgraph_idx =
+        GetInterpreter()->GetSubgraphIdxSatisfyingSLO(next_job, waiting_time, idle_workers);
 
     // If the target device is not idle, give opportunity to the next job.
-    TfLiteDeviceFlags device = target_subgraph->GetKey().device_flag;
-    auto device_it = idle_devices.find(device);
-    if (device_it == idle_devices.end()) {
+    if (best_subgraph_idx == -1) {
       ++it;
       continue;
     }
 
-    EnqueueAction(next_job, target_subgraph);
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph_idx);
 
+    EnqueueAction(next_job, target_subgraph);
     it = requests.erase(it);
-    idle_devices.erase(device_it);
-    device_waiting[device] +=
-        GetInterpreter()->GetExpectedLatency(target_subgraph->GetKey());
   }
 }
 
@@ -58,11 +56,11 @@ void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests) {
 void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests) {
   for (auto& request : requests) {
     if (request.expected_latency == 0) {
-      DeviceWaitingTime idle_devices;
+      DeviceWaitingTime idle_workers;
       request.expected_latency =
           GetInterpreter()
               ->GetShortestLatency(request.model_id, request.resolved_tensors,
-                                   0, idle_devices)
+                                   0, idle_workers)
               .second;
     }
   }

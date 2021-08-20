@@ -159,7 +159,7 @@ bool Planner::IsSLOViolated(Job& job) {
     int64_t current_time = profiling::time::NowMicros();
     int64_t expected_latency =
         workers_waiting_[job.worker_id] +
-        job.profiled_execution_time;
+        job.expected_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
       return true;

@@ -11,7 +11,7 @@ class LeastSlackFirstScheduler : public Scheduler {
  public:
   explicit LeastSlackFirstScheduler(Planner* planner) : Scheduler(planner) {
     need_profile_ = true;
-    need_fallback_subgraphs_ = true;
+    need_fallback_subgraphs_ = false;
     worker_type_ = kGlobalQueue;
   }
   void Schedule(JobQueue& requests) override;
