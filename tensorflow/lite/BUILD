@@ -85,11 +85,8 @@ FRAMEWORK_LIB_HDRS = [
     "planner/fixed_device_scheduler.h",
     "planner/round_robin_scheduler.h",
     "planner/shortest_expected_latency_scheduler.h",
-<<<<<<< HEAD
     "planner/heterogeneous_earliest_finish_time_scheduler.h",
-=======
     "planner/least_slack_first_scheduler.h",
->>>>>>> 0bb3937... impl lsf
     "worker.h",
     "safe_bool.h"
 ]
