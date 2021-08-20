@@ -83,7 +83,7 @@ class Planner {
 
   // Copy the Job instances from the `requests_` to the local queue.
   // Note that this function is to minimize the hold time for the queue lock.
-  void CopyToLocalQueue(JobQueue& local_jobs);
+  void CopyToLocalQueues();
 
   // Enqueue the request to the worker.
   void EnqueueToWorkers(ScheduleAction& action);
