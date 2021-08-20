@@ -37,6 +37,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
+#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
 // TODO(b/139446230): Move to portable platform header.
@@ -1599,6 +1600,7 @@ int Interpreter::GetSubgraphIdxSatisfyingSLO(Job& job,
       satisfy_slo = true;
       if (min_expected_latency == -1 || expected_latency < min_expected_latency) {
         if (idle_workers.find(key.worker_id) != idle_workers.end()) {
+          min_expected_latency = expected_latency;
           target_subgraph_idx = subgraph_index;
         }
       }

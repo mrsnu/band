@@ -56,12 +56,8 @@ void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests) {
 void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests) {
   for (auto& request : requests) {
     if (request.expected_latency == 0) {
-      DeviceWaitingTime idle_workers;
       request.expected_latency =
-          GetInterpreter()
-              ->GetShortestLatency(request.model_id, request.resolved_tensors,
-                                   0, idle_workers)
-              .second;
+          GetInterpreter()->GetSubgraphWithShortestLatency(request, GetWorkerWaitingTime()).second;
     }
   }
 }
