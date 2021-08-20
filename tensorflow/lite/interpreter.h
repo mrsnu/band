@@ -727,6 +727,10 @@ class Interpreter {
   std::pair<int, int64_t> GetSubgraphWithShortestLatency(Job& job,
                                                          std::map<int, int64_t>& worker_waiting);
 
+  int GetSubgraphIdxSatisfyingSLO(Job& job,
+                                  std::map<int, int64_t>& worker_waiting,
+                                  std::set<int>& idle_workers);
+
   // hash function to use pair<int, set<int>> as map key in cache_
   // https://stackoverflow.com/a/32685618
   struct PairHash {

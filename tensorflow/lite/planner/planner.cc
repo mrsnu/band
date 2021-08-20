@@ -7,6 +7,7 @@
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
+#include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
@@ -61,7 +62,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   local_queues_.resize(schedulers.size());
-  bool allow_fallback;
   for (int i = 0; i < schedulers.size(); ++i) {
     if (schedulers[i] == kFixedDevice) {
       schedulers_.emplace_back(new FixedDeviceScheduler(this));
@@ -73,6 +73,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(this));
     } else if (schedulers[i] == kHeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeScheduler(this));
+    } else if (schedulers[i] == kLSF) {
+      schedulers_.emplace_back(new LeastSlackFirstScheduler(this));
     } else {
       return kTfLiteError;
     }
@@ -81,11 +83,11 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     // fallback subgraphs.
     // Currently, we do not allow using schedulers with different requirements
     // for the fallback subgraphs.
-    if (i == 0) {
-      allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
-    } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
-      return kTfLiteError;
-    }
+    // if (i == 0) {
+    //   allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
+    // } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
+    //   return kTfLiteError;
+    // }
   }
 
   // All schedulers must have the same worker type.
@@ -156,7 +158,7 @@ bool Planner::IsSLOViolated(Job& job) {
     int64_t current_time = profiling::time::NowMicros();
     int64_t expected_latency =
         workers_waiting_[job.worker_id] +
-        job.profiled_execution_time;
+        job.expected_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
       return true;
