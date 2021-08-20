@@ -53,6 +53,13 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   auto& schedulers = config.schedulers;
+  if (schedulers.size() == 0 || schedulers.size() > 2) {
+    TFLITE_LOG(ERROR) << "Planner not supported for "
+                      << schedulers_.size()
+                      << " schedulers. Aborting.";
+    return kTfLiteError;
+  }
+
   local_queues_.resize(schedulers.size());
   bool allow_fallback;
   for (int i = 0; i < schedulers.size(); ++i) {
@@ -116,14 +123,28 @@ bool Planner::NeedFallbackSubgraphs() const {
   return false;
 }
 
-void Planner::CopyToLocalQueue(JobQueue& local_jobs) {
+void Planner::CopyToLocalQueues() {
   std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
   JobQueue& requests = GetRequests();
   if (!requests.empty()) {
-    // Gets jobs from requests and removes those jobs from the requests.
-    local_jobs.insert(local_jobs.end(),
-                      std::make_move_iterator(requests.begin()),
-                      std::make_move_iterator(requests.end()));
+    if (schedulers_.size() == 1) {
+      // Gets jobs from requests and removes those jobs from the requests.
+      auto& local_jobs = local_queues_[0];
+      local_jobs.insert(local_jobs.end(),
+                        std::make_move_iterator(requests.begin()),
+                        std::make_move_iterator(requests.end()));
+
+    } else if (schedulers_.size() == 2) {
+      // TODO: general method for assigning SLO/non-SLO requests
+      for (Job& job : requests) {
+        if (job.slo_us > 0) {
+          local_queues_[0].push_back(std::move(job));
+        } else {
+          local_queues_[1].push_back(std::move(job));
+        }
+      }
+    } // other else cases should have been caught in Init()
+
     requests.clear();
   }
   request_lock.unlock();
@@ -469,7 +490,7 @@ void Planner::Plan() {
       need_cpu_update_ = false;
     }
 
-    CopyToLocalQueue(local_queues_[0]);
+    CopyToLocalQueues();
     TryUpdateModelWorkerMapping();
     do {
       need_reschedule_ = false;
