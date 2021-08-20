@@ -62,7 +62,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   local_queues_.resize(schedulers.size());
-  bool allow_fallback;
   for (int i = 0; i < schedulers.size(); ++i) {
     if (schedulers[i] == kFixedDevice) {
       schedulers_.emplace_back(new FixedDeviceScheduler(this));
@@ -84,11 +83,11 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     // fallback subgraphs.
     // Currently, we do not allow using schedulers with different requirements
     // for the fallback subgraphs.
-    if (i == 0) {
-      allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
-    } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
-      return kTfLiteError;
-    }
+    // if (i == 0) {
+    //   allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
+    // } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
+    //   return kTfLiteError;
+    // }
   }
 
   // All schedulers must have the same worker type.
