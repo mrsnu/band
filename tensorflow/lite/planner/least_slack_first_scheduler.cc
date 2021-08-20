@@ -10,16 +10,17 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
   // have SLOs.
   // TODO: Support jobs with fallback
   SortBySlackTime(requests);
+
+  planner_->UpdateWorkerWaitingTime();
+  // hold on to a local copy of worker waiting time
+  WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
   for (auto it = requests.begin(); it != requests.end();) {
-    planner_->UpdateWorkerWaitingTime();
-    // hold on to a local copy of worker waiting time
-    WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
     std::set<int> idle_workers = planner_->GetIdleWorkers();
     if (idle_workers.empty()) {
       // no device is idle; wait for next iteration
       return;
     }
-    Job next_job = *it;
+    Job& next_job = *it;
     int best_subgraph_idx =
         GetInterpreter()->GetSubgraphIdxSatisfyingSLO(next_job, waiting_time, idle_workers);
 
@@ -33,6 +34,9 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
     EnqueueAction(next_job, target_subgraph);
     it = requests.erase(it);
+
+    planner_->UpdateWorkerWaitingTime();
+    waiting_time = GetWorkerWaitingTime();
   }
 }
 
@@ -55,10 +59,8 @@ void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests) {
 
 void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests) {
   for (auto& request : requests) {
-    if (request.expected_latency == 0) {
-      request.expected_latency =
-          GetInterpreter()->GetSubgraphWithShortestLatency(request, GetWorkerWaitingTime()).second;
-    }
+    request.expected_latency =
+        GetInterpreter()->GetSubgraphWithShortestLatency(request, GetWorkerWaitingTime()).second;
   }
 }
 
