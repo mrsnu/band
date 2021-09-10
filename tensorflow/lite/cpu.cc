@@ -35,6 +35,8 @@ void CpuSet::DisableAll() { CPU_ZERO(&cpu_set_); }
 
 bool CpuSet::IsEnabled(int cpu) const { return CPU_ISSET(cpu, &cpu_set_); }
 
+const unsigned long* CpuSet::GetMaskBits() const { return cpu_set_.__bits; }
+
 int CpuSet::NumEnabled() const {
   int NumEnabled = 0;
   for (int i = 0; i < (int)sizeof(cpu_set_t) * 8; i++) {
@@ -51,6 +53,8 @@ void CpuSet::Enable(int /* cpu */) {}
 void CpuSet::Disable(int /* cpu */) {}
 
 void CpuSet::DisableAll() {}
+
+const unsigned long* CpuSet::GetMaskBits() const { return nullptr; }
 
 bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
