@@ -109,7 +109,7 @@ void CpuBackendContext::UpdateCpuSet(std::thread::id tid) {
     impl::CpuSet current_set = cpu_masks_[tid];
     int max_threads = std::min(max_num_threads_, current_set.NumEnabled());
     ruy_contexts_[tid]->set_max_num_threads(max_threads);
-    ruy_contexts_[tid]->set_cpu_mask(current_set.GetCpuSet());
+    ruy_contexts_[tid]->set_cpu_mask(current_set.GetCpuSet().__bits);
     TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Ruy tid %d number of threads %d.", tid, max_threads);
   }
 }
