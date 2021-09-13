@@ -41,6 +41,7 @@ limitations under the License.
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
+#include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
 // TODO(b/139446230): Move to portable platform header.
@@ -872,11 +873,21 @@ void Interpreter::StaticProfile(int model_id) {
         }
 
         for (int i = 0; i < num_warmups_; i++) {
-          subgraph->Invoke();
+          if (subgraph->Invoke() != kTfLiteOk) {
+            subgraph->SetHealth(false);
+            moving_averaged_latencies_[i] = INT_MAX;
+            profile_database_[subgraph_key] = INT_MAX;
+            return;
+          }
         }
         timer.ClearRecords();
         for (int i = 0; i < num_runs_; i++) {
-          subgraph->Invoke();
+          if (subgraph->Invoke() != kTfLiteOk) {
+            subgraph->SetHealth(false);
+            moving_averaged_latencies_[i] = INT_MAX;
+            profile_database_[subgraph_key] = INT_MAX;
+            return;
+          }
         }
 
         int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
@@ -1229,6 +1240,7 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
     }
     int start_unit_idx = *subgraph_key.unit_indices.begin();
     int end_unit_idx = *subgraph_key.unit_indices.rbegin();
+
     unit_subgraphs_to_subgraph_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
     TFLITE_LOG(INFO) << "Set unit subgraphs: model_id - " << model_id
                      << ", start idx - " << start_unit_idx
@@ -1751,6 +1763,54 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
   return min_subgraph;
 }
 
+int Interpreter::GetSubgraphIdxSatisfyingSLO(Job& job,
+                                             std::map<int, int64_t>& worker_waiting,
+                                             std::set<int>& idle_workers) {
+  // TODO: support models with fallback ops.
+  int target_subgraph_idx = -1;
+  int model_id = job.model_id;
+  auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
+  auto& range = unit_subgraphs_to_subgraph_indices_[model_id][0][num_unit_subgraphs - 1];
+
+  if (range.size() == 0) {
+    return -1;
+  }
+
+  bool satisfy_slo = false;
+  // NOTE: Consider changing to `max_expected_latency`,
+  // to yield faster accelerators to following requests.
+  int64_t min_expected_latency = -1;
+  for (auto subgraph_index : range) {
+    SubgraphKey& key = subgraph(subgraph_index)->GetKey();
+    if (!subgraph(subgraph_index)->GetHealth()) {
+      continue;
+    }
+    int64_t waiting_time = worker_waiting[key.worker_id];
+    int64_t expected_execution_time = GetExpectedLatency(subgraph_index);
+    int64_t current_time = profiling::time::NowMicros();
+    int64_t expected_latency = expected_execution_time + waiting_time;
+
+    if (current_time + expected_latency < job.enqueue_time + job.slo_us) {
+      satisfy_slo = true;
+      if (min_expected_latency == -1 || expected_latency < min_expected_latency) {
+        if (idle_workers.find(key.worker_id) != idle_workers.end()) {
+          min_expected_latency = expected_latency;
+          target_subgraph_idx = subgraph_index;
+        }
+      }
+    }
+  }
+
+  if (!satisfy_slo) {
+    // If all the subgraphs cannot satisfy the slo,
+    // then enqueue any subgraph.
+    // `HandleSLOViolatedJob` will deal with the rest.
+    target_subgraph_idx = range[0];
+  }
+
+  return target_subgraph_idx;
+}
+
 std::pair<int, int64_t>
 Interpreter::GetSubgraphWithShortestLatency(Job& job,
                                             std::map<int, int64_t>& worker_waiting) {
@@ -1832,6 +1892,9 @@ Interpreter::GetShortestSubgraphIndex(
 
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
+    if (!subgraph(subgraph_index)->GetHealth()) {
+      continue;
+    }
 
     int64_t waiting_time = worker_waiting[key.worker_id];
     int64_t expected_latency = GetExpectedLatency(subgraph_index);
@@ -1894,6 +1957,11 @@ void Interpreter::PrepareUnitSubgraphScheduling(int model_id, int num_units) {
   auto& model_spec = model_specs_[model_id];
   model_spec.num_unit_subgraphs = num_units;
   model_spec.latency_memo.resize(num_units);
+
+  Subgraph* primary_subgraph = subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
+  for (int i = 0; i < num_units; ++i) {
+    primary_subgraph->GetKey().unit_indices.insert(i);
+  }
 }
 
 void Interpreter::UpdateWorkerState() {

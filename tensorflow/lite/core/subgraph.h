@@ -602,6 +602,14 @@ class Subgraph {
   // Returns true if cancellation function returns true.
   bool IsCancelled();
   
+  bool GetHealth() {
+    return healthy_;
+  }
+
+  void SetHealth(bool healthy) {
+    healthy_ = healthy;
+  }
+
   // The state of the subgraph.
   enum State {
     // The subgraph isn't ready to be invoked.
@@ -733,6 +741,7 @@ class Subgraph {
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
   SubgraphKey key_;
+  bool healthy_ = true;
 
   std::set<Subgraph*> next_subgraphs_;
   std::set<Subgraph*> prev_subgraphs_;

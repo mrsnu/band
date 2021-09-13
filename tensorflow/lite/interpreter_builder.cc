@@ -653,7 +653,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
             subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
             device_ops_to_subgraph_index[device_op_indices] = subgraph_idx;
           } else {
-            return -1;
+            continue;
           }
         }
 
@@ -697,14 +697,15 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
                       device_op_indices);
       if (subgraph_idx == -1) {
-        return -1;
+        TFLITE_LOG(ERROR) << "Subgraph creation failure";
+        continue;
       }
       subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
 
       Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
       if (subgraph == nullptr) {
         TFLITE_LOG(ERROR) << "Subgraph creation failure";
-        return -1;
+        continue;
       }
 
       // Using GetUnitSubgraphs, different from "fallback_per_device",
@@ -756,13 +757,14 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                         device_op_indices);
 
         if (subgraph_idx == -1) {
-          return -1;
+          TFLITE_LOG(ERROR) << "Subgraph creation failure";
+          continue;
         }
 
         Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
         if (subgraph == nullptr) {
           TFLITE_LOG(ERROR) << "Subgraph creation failure";
-          return -1;
+          continue;
         }
 
         // Using GetUnitSubgraphs, different from "fallback_per_device",
@@ -950,7 +952,8 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
       int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
                                      worker_id, device_op_indices);
       if (subgraph_idx == -1) {
-        return kTfLiteError;
+        TFLITE_LOG(ERROR) << "Subgraph creation failure";
+        return kTfLiteOk;
       }
 
       added = true;
@@ -959,7 +962,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
       Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
       if (subgraph == nullptr) {
         TFLITE_LOG(ERROR) << "Subgraph creation failure";
-        return kTfLiteError;
+        return kTfLiteOk;
       }
 
       SubgraphKey& subgraph_key = subgraph->GetKey();
