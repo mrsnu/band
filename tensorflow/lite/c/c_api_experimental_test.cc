@@ -51,7 +51,7 @@ TEST(CApiExperimentalTest, Smoke) {
     input_tensors.push_back(TfLiteInterpreterAllocateInputTensor(interpreter, model_id, i));
   }
 
-  TfLiteTensor* output_tensor = TfLiteInterpreterAllocateOutputTensor(interpreter,model_id, 0);
+  TfLiteTensor* output_tensor = TfLiteInterpreterAllocateOutputTensor(interpreter, model_id, 0);
 
   TfLiteInterpreterInvokeSync(interpreter, model_id, input_tensors.data(), output_tensor);
 

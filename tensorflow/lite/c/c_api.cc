@@ -156,12 +156,13 @@ int32_t TfLiteInterpreterInvokeAsync(TfLiteInterpreter* interpreter, int32_t mod
   }
 }
 
-void TFLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs) {
+TfLiteStatus TFLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs) {
   interpreter->impl->GetPlanner()->Wait({job_id});
   if (outputs) {
     std::vector<TfLiteTensor*> output_tensors(outputs, outputs + sizeof(outputs) / sizeof(TfLiteTensor*));
-    interpreter->impl->GetOutputTensors(job_id, output_tensors);
+    return interpreter->impl->GetOutputTensors(job_id, output_tensors);
   }
+  return kTfLiteOk;
 }
 
 int32_t TfLiteInterpreterGetInputTensorCount(

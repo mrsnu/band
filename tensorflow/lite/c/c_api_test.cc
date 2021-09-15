@@ -37,26 +37,21 @@ TEST(CApiSimple, Smoke) {
 
   TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
   ASSERT_NE(options, nullptr);
-  TfLiteInterpreterOptionsSetNumThreads(options, 2);
+  TfLiteInterpreterOptionsSetConfigPath(options, "tensorflow/lite/testdata/runtime_config.json")
 
-  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(model, options);
+  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(options);
   ASSERT_NE(interpreter, nullptr);
+
+  int32_t model_id = TfLiteInterpreterRegisterModel(interpreter, model);
 
   // The options/model can be deleted immediately after interpreter creation.
   TfLiteInterpreterOptionsDelete(options);
   TfLiteModelDelete(model);
 
-  ASSERT_EQ(TfLiteInterpreterAllocateTensors(interpreter), kTfLiteOk);
-  ASSERT_EQ(TfLiteInterpreterGetInputTensorCount(interpreter), 1);
-  ASSERT_EQ(TfLiteInterpreterGetOutputTensorCount(interpreter), 1);
+  ASSERT_EQ(TfLiteInterpreterGetInputTensorCount(interpreter, model_id), 1);
+  ASSERT_EQ(TfLiteInterpreterGetOutputTensorCount(interpreter, model_id), 1);
 
-  std::array<int, 1> input_dims = {2};
-  ASSERT_EQ(TfLiteInterpreterResizeInputTensor(
-                interpreter, 0, input_dims.data(), input_dims.size()),
-            kTfLiteOk);
-  ASSERT_EQ(TfLiteInterpreterAllocateTensors(interpreter), kTfLiteOk);
-
-  TfLiteTensor* input_tensor = TfLiteInterpreterGetInputTensor(interpreter, 0);
+  TfLiteTensor* input_tensor = TfLiteInterpreterAllocateInputTensor(interpreter, model_id, 0);
   ASSERT_NE(input_tensor, nullptr);
   EXPECT_EQ(TfLiteTensorType(input_tensor), kTfLiteFloat32);
   EXPECT_EQ(TfLiteTensorNumDims(input_tensor), 1);
@@ -75,10 +70,10 @@ TEST(CApiSimple, Smoke) {
                                        input.size() * sizeof(float)),
             kTfLiteOk);
 
-  ASSERT_EQ(TfLiteInterpreterInvoke(interpreter), kTfLiteOk);
+  TfLiteTensor* output_tensor = TfLiteInterpreterAllocateOutputTensor(interpreter, model_id, 0);
 
-  const TfLiteTensor* output_tensor =
-      TfLiteInterpreterGetOutputTensor(interpreter, 0);
+  TfLiteInterpreterInvokeSync(interpreter, model_id, &input_tensor, &output_tensor);
+
   ASSERT_NE(output_tensor, nullptr);
   EXPECT_EQ(TfLiteTensorType(output_tensor), kTfLiteFloat32);
   EXPECT_EQ(TfLiteTensorNumDims(output_tensor), 1);
@@ -107,18 +102,18 @@ TEST(CApiSimple, QuantizationParams) {
       "tensorflow/lite/testdata/add_quantized.bin");
   ASSERT_NE(model, nullptr);
 
-  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(model, nullptr);
+  TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
+  ASSERT_NE(options, nullptr);
+  TfLiteInterpreterOptionsSetConfigPath(options, "tensorflow/lite/testdata/runtime_config.json")
+
+  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(options);
   ASSERT_NE(interpreter, nullptr);
 
+  // The options/model can be deleted immediately after interpreter creation.
+  TfLiteInterpreterOptionsDelete(options);
   TfLiteModelDelete(model);
 
-  const std::array<int, 1> input_dims = {2};
-  ASSERT_EQ(TfLiteInterpreterResizeInputTensor(
-                interpreter, 0, input_dims.data(), input_dims.size()),
-            kTfLiteOk);
-  ASSERT_EQ(TfLiteInterpreterAllocateTensors(interpreter), kTfLiteOk);
-
-  TfLiteTensor* input_tensor = TfLiteInterpreterGetInputTensor(interpreter, 0);
+  TfLiteTensor* input_tensor = TfLiteInterpreterAllocateInputTensor(interpreter, model_id, 0);
   ASSERT_NE(input_tensor, nullptr);
   EXPECT_EQ(TfLiteTensorType(input_tensor), kTfLiteUInt8);
   EXPECT_EQ(TfLiteTensorNumDims(input_tensor), 1);
@@ -134,10 +129,9 @@ TEST(CApiSimple, QuantizationParams) {
                                        input.size() * sizeof(uint8_t)),
             kTfLiteOk);
 
-  ASSERT_EQ(TfLiteInterpreterInvoke(interpreter), kTfLiteOk);
+  TfLiteTensor* output_tensor = TfLiteInterpreterAllocateOutputTensor(interpreter, model_id, 0);
 
-  const TfLiteTensor* output_tensor =
-      TfLiteInterpreterGetOutputTensor(interpreter, 0);
+  TfLiteInterpreterInvokeSync(interpreter, model_id, input_tensors.data(), output_tensor);
   ASSERT_NE(output_tensor, nullptr);
 
   TfLiteQuantizationParams output_params =
@@ -158,83 +152,6 @@ TEST(CApiSimple, QuantizationParams) {
       output_params.scale * (output[1] - output_params.zero_point);
   EXPECT_EQ(dequantizedOutput0, 0.011766f);
   EXPECT_EQ(dequantizedOutput1, 0.035298f);
-
-  TfLiteInterpreterDelete(interpreter);
-}
-
-TEST(CApiSimple, Delegate) {
-  TfLiteModel* model =
-      TfLiteModelCreateFromFile("tensorflow/lite/testdata/add.bin");
-
-  // Create and install a delegate instance.
-  bool delegate_prepared = false;
-  TfLiteDelegate delegate = TfLiteDelegateCreate();
-  delegate.data_ = &delegate_prepared;
-  delegate.Prepare = [](TfLiteContext* context, TfLiteDelegate* delegate) {
-    *static_cast<bool*>(delegate->data_) = true;
-    return kTfLiteOk;
-  };
-  TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
-  TfLiteInterpreterOptionsAddDelegate(options, &delegate);
-  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(model, options);
-
-  // The delegate should have been applied.
-  EXPECT_TRUE(delegate_prepared);
-
-  // Subsequent execution should behave properly (the delegate is a no-op).
-  TfLiteInterpreterOptionsDelete(options);
-  TfLiteModelDelete(model);
-  EXPECT_EQ(TfLiteInterpreterInvoke(interpreter), kTfLiteOk);
-  TfLiteInterpreterDelete(interpreter);
-}
-
-TEST(CApiSimple, DelegateFails) {
-  TfLiteModel* model =
-      TfLiteModelCreateFromFile("tensorflow/lite/testdata/add.bin");
-
-  // Create and install a delegate instance.
-  TfLiteDelegate delegate = TfLiteDelegateCreate();
-  delegate.Prepare = [](TfLiteContext* context, TfLiteDelegate* delegate) {
-    return kTfLiteError;
-  };
-  TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
-  TfLiteInterpreterOptionsAddDelegate(options, &delegate);
-  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(model, options);
-
-  // Interpreter creation should fail as delegate preparation failed.
-  EXPECT_EQ(nullptr, interpreter);
-
-  TfLiteInterpreterOptionsDelete(options);
-  TfLiteModelDelete(model);
-}
-
-TEST(CApiSimple, ErrorReporter) {
-  TfLiteModel* model =
-      TfLiteModelCreateFromFile("tensorflow/lite/testdata/add.bin");
-  TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
-
-  // Install a custom error reporter into the interpreter by way of options.
-  tflite::TestErrorReporter reporter;
-  TfLiteInterpreterOptionsSetErrorReporter(
-      options,
-      [](void* user_data, const char* format, va_list args) {
-        reinterpret_cast<tflite::TestErrorReporter*>(user_data)->Report(format,
-                                                                        args);
-      },
-      &reporter);
-  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(model, options);
-
-  // The options/model can be deleted immediately after interpreter creation.
-  TfLiteInterpreterOptionsDelete(options);
-  TfLiteModelDelete(model);
-
-  // Invoke the interpreter before tensor allocation.
-  EXPECT_EQ(TfLiteInterpreterInvoke(interpreter), kTfLiteError);
-
-  // The error should propagate to the custom error reporter.
-  EXPECT_EQ(reporter.error_messages(),
-            "Invoke called on model that is not ready.");
-  EXPECT_EQ(reporter.num_calls(), 1);
 
   TfLiteInterpreterDelete(interpreter);
 }
