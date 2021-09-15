@@ -493,6 +493,8 @@ class Interpreter {
   std::vector<int> InvokeModelsAsync(std::vector<Job> requests,
                                      std::vector<Tensors> request_inputs = {});
 
+  void InvokeModelSync(int model_id, Tensors inputs = {}, Tensors outputs = {});
+  void InvokeModelSync(Job request, Tensors inputs = {}, Tensors outputs = {});
   /// Invoke models with a batch size given by the model config.
   /// # of inputs and outputs should equal to model_configs_.size()
   /// Returns when all the requests are done.
@@ -778,7 +780,11 @@ class Interpreter {
   }
 
   // Get the error reporter associated with this interpreter.
+<<<<<<< HEAD
   ErrorReporter* error_reporter() { return error_reporter_; }
+=======
+  ErrorReporter* GetErrorReporter() { return error_reporter_; }
+>>>>>>> 3855094 (C_API refactor)
 
  private:
   friend class Worker;

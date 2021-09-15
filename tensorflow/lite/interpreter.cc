@@ -522,6 +522,14 @@ std::vector<int> Interpreter::InvokeModelsAsync(
   return planner_->EnqueueBatch(requests);
 }
 
+void Interpreter::InvokeModelSync(int model_id, Tensors inputs, Tensors outputs) {
+  return InvokeModelSync(Job(model_id), inputs, outputs);
+}
+
+void Interpreter::InvokeModelSync(Job request, Tensors inputs, Tensors outputs) {
+  InvokeModelsSync({request}, {inputs}, {outputs});
+}
+
 void Interpreter::InvokeModelsSync(std::vector<Tensors> model_inputs,
                                    std::vector<Tensors> model_outputs) {
   if (model_inputs.size() != model_configs_.size() ||

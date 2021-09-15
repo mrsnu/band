@@ -38,19 +38,31 @@ TEST(CApiExperimentalTest, Smoke) {
   ASSERT_NE(model, nullptr);
 
   TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
-  TfLiteInterpreterOptionsAddBuiltinOp(options, kTfLiteBuiltinAdd,
-                                       GetDummyRegistration(), 1, 1);
-  TfLiteInterpreterOptionsSetUseNNAPI(options, true);
+  TfLiteInterpreterOptionsSetConfigPath(options, "tensorflow/lite/testdata/runtime_config.json")
 
-  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(model, options);
+  TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(options);
+  TfLiteModelAddBuiltinOp(interpreter, kTfLiteBuiltinAdd,
+                                       GetDummyRegistration(), 1, 1);
   ASSERT_NE(interpreter, nullptr);
-  ASSERT_EQ(TfLiteInterpreterAllocateTensors(interpreter), kTfLiteOk);
-  EXPECT_EQ(TfLiteInterpreterResetVariableTensors(interpreter), kTfLiteOk);
-  EXPECT_EQ(TfLiteInterpreterInvoke(interpreter), kTfLiteOk);
+  int32_t model_id = TfLiteInterpreterRegisterModel(interpreter, model);
+
+  std::vector<TfLiteTensor*> input_tensors;
+  for (int i = 0; i < TfLiteInterpreterGetInputTensorCount(interpreter, model_id); i++) {
+    input_tensors.push_back(TfLiteInterpreterAllocateInputTensor(interpreter, model_id, i));
+  }
+
+  TfLiteTensor* output_tensor = TfLiteInterpreterAllocateOutputTensor(interpreter,model_id, 0);
+
+  TfLiteInterpreterInvokeSync(interpreter, model_id, input_tensors.data(), output_tensor);
 
   TfLiteInterpreterDelete(interpreter);
   TfLiteInterpreterOptionsDelete(options);
   TfLiteModelDelete(model);
+
+  for (int i = 0; i < TfLiteInterpreterGetInputTensorCount(interpreter, model_id); i++) {
+    TfLiteInterpreterDeleteTensor(input_tensors[i]);
+  }
+  TfLiteInterpreterDeleteTensor(output_tensor);
 }
 
 }  // namespace

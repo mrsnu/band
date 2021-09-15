@@ -116,20 +116,6 @@ TfLiteInterpreterOptionsCreate();
 TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsDelete(
     TfLiteInterpreterOptions* options);
 
-// Sets the number of CPU threads to use for the interpreter.
-TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetNumThreads(
-    TfLiteInterpreterOptions* options, int32_t num_threads);
-
-// Adds a delegate to be applied during `TfLiteInterpreter` creation.
-//
-// If delegate application fails, interpreter creation will also fail with an
-// associated error logged.
-//
-// NOTE: The caller retains ownership of the delegate and should ensure that it
-// remains valid for the duration of any created interpreter's lifetime.
-TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsAddDelegate(
-    TfLiteInterpreterOptions* options, TfLiteDelegate* delegate);
-
 // Sets a custom error reporter for interpreter execution.
 //
 // * `reporter` takes the provided `user_data` object, as well as a C-style
@@ -140,6 +126,10 @@ TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetErrorReporter(
     TfLiteInterpreterOptions* options,
     void (*reporter)(void* user_data, const char* format, va_list args),
     void* user_data);
+
+TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetConfigPath(
+    TfLiteInterpreterOptions* options,
+    const char* config_path);
 
 // --------------------------------------------------------------------------
 // TfLiteInterpreter provides inference from a provided model.
@@ -156,66 +146,37 @@ typedef struct TfLiteInterpreter TfLiteInterpreter;
 //
 // NOTE: The client *must* explicitly allocate tensors before attempting to
 // access input tensor data or invoke the interpreter.
-TFL_CAPI_EXPORT extern TfLiteInterpreter* TfLiteInterpreterCreate(
-    const TfLiteModel* model, const TfLiteInterpreterOptions* optional_options);
+TFL_CAPI_EXPORT extern TfLiteInterpreter* TfLiteInterpreterCreate(const TfLiteInterpreterOptions* optional_options);
 
 // Destroys the interpreter.
 TFL_CAPI_EXPORT extern void TfLiteInterpreterDelete(
     TfLiteInterpreter* interpreter);
 
-// Returns the number of input tensors associated with the model.
-TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterGetInputTensorCount(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index);
-
-// Returns the tensor associated with the input index.
-// REQUIRES: 0 <= input_index < TfLiteInterpreterGetInputTensorCount(tensor)
-TFL_CAPI_EXPORT extern TfLiteTensor* TfLiteInterpreterGetInputTensor(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t input_index);
-
-// Resizes the specified input tensor.
-//
-// NOTE: After a resize, the client *must* explicitly allocate tensors before
-// attempting to access the resized tensor data or invoke the interpreter.
-// REQUIRES: 0 <= input_index < TfLiteInterpreterGetInputTensorCount(tensor)
-TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterResizeInputTensor(
-    TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t input_index,
-    const int* input_dims, int32_t input_dims_size);
-
-// Updates allocations for all tensors, resizing dependent tensors using the
-// specified input tensor dimensionality.
-//
-// This is a relatively expensive operation, and need only be called after
-// creating the graph and/or resizing any inputs.
-TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterAllocateTensors(
-    TfLiteInterpreter* interpreter);
+TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterRegisterModel(TfLiteInterpreter* interpreter, TfLiteModel* model);
 
 TFL_CAPI_EXPORT extern void TfLiteInterpreterInvokeSync(
-    TfLiteInterpreter* interpreter, int32_t* model_indices, uint32_t count);
+    TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs, TfLiteTensor** outputs);
 
-TFL_CAPI_EXPORT extern void TfLiteInterpreterInvokeAsync(
-    TfLiteInterpreter* interpreter, int32_t* model_indices, uint32_t count);
+TFL_CAPI_EXPORT extern int TfLiteInterpreterInvokeAsync(
+    TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs);
+
+TFL_CAPI_EXPORT extern void TFLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs);
+
+// Returns the number of input tensors associated with the model.
+TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterGetInputTensorCount(
+    const TfLiteInterpreter* interpreter, int32_t model_id);
 
 // Returns the number of output tensors associated with the model.
 TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterGetOutputTensorCount(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index);
+    const TfLiteInterpreter* interpreter, int32_t model_id);
 
-// Returns the tensor associated with the output index.
-// REQUIRES: 0 <= input_index < TfLiteInterpreterGetOutputTensorCount(tensor)
-//
-// NOTE: The shape and underlying data buffer for output tensors may be not
-// be available until after the output tensor has been both sized and allocated.
-// In general, best practice is to interact with the output tensor *after*
-// calling TfLiteInterpreterInvoke().
-TFL_CAPI_EXPORT extern const TfLiteTensor* TfLiteInterpreterGetOutputTensor(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t output_index);
+TFL_CAPI_EXPORT extern TfLiteTensor* TfLiteInterpreterAllocateInputTensor(
+    const TfLiteInterpreter* interpreter, int32_t model_id, int32_t input_index);
 
-// --------------------------------------------------------------------------
-// TfLiteTensor wraps data associated with a graph tensor.
-//
-// Note that, while the TfLiteTensor struct is not currently opaque, and its
-// fields can be accessed directly, these methods are still convenient for
-// language bindings. In the future the tensor struct will likely be made opaque
-// in the public API.
+TFL_CAPI_EXPORT extern TfLiteTensor* TfLiteInterpreterAllocateOutputTensor(
+    const TfLiteInterpreter* interpreter, int32_t model_id, int32_t output_index);
+
+TFL_CAPI_EXPORT extern void TfLiteInterpreterDeleteTensor(TfLiteTensor* tensor);
 
 // Returns the type of a tensor element.
 TFL_CAPI_EXPORT extern TfLiteType TfLiteTensorType(const TfLiteTensor* tensor);

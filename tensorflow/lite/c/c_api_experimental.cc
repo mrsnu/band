@@ -22,37 +22,26 @@ limitations under the License.
 #include "tensorflow/lite/builtin_ops.h"
 #include "tensorflow/lite/c/c_api.h"
 #include "tensorflow/lite/c/c_api_internal.h"
-#include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/mutable_op_resolver.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
 
-TfLiteStatus TfLiteInterpreterResetVariableTensors(
-    TfLiteInterpreter* interpreter, int32_t subgraph_idx) {
-  return interpreter->impl->ResetVariableTensors(subgraph_idx);
-}
-
-void TfLiteInterpreterOptionsAddBuiltinOp(
-    TfLiteInterpreterOptions* options, TfLiteBuiltinOperator op,
+void TfLiteModelOptionsAddBuiltinOp(
+    TfLiteModel* model, TfLiteBuiltinOperator op,
     const TfLiteRegistration* registration, int32_t min_version,
     int32_t max_version) {
-  options->op_resolver.AddBuiltin(static_cast<tflite::BuiltinOperator>(op),
+  model->op_resolver.AddBuiltin(static_cast<tflite::BuiltinOperator>(op),
                                   registration, min_version, max_version);
 }
 
-void TfLiteInterpreterOptionsAddCustomOp(TfLiteInterpreterOptions* options,
+void TfLiteModelOptionsAddCustomOp(TfLiteModel* model, 
                                          const char* name,
                                          const TfLiteRegistration* registration,
                                          int32_t min_version,
                                          int32_t max_version) {
-  options->op_resolver.AddCustom(name, registration, min_version, max_version);
-}
-
-void TfLiteInterpreterOptionsSetUseNNAPI(TfLiteInterpreterOptions* options,
-                                         bool enable) {
-  options->use_nnapi = enable;
+  model->op_resolver.AddCustom(name, registration, min_version, max_version);
 }
 
 #ifdef __cplusplus
