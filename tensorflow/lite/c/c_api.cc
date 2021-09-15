@@ -88,7 +88,7 @@ void TfLiteInterpreterOptionsSetErrorReporter(
 void TfLiteInterpreterOptionsSetConfigPath(
     TfLiteInterpreterOptions* options,
     const char* config_path) {
-  std::strcpy(options->config_path ,config_path);
+  options->config_path = config_path;
 }
 
 TfLiteInterpreter* TfLiteInterpreterCreate(
@@ -104,7 +104,7 @@ TfLiteInterpreter* TfLiteInterpreterCreate(
                                               : tflite::DefaultErrorReporter();
   tflite::RuntimeConfig runtime_config;
   if (tflite::ParseRuntimeConfigFromJson(optional_options->config_path, runtime_config) != kTfLiteOk) {
-    error_reporter->Report("Parsing runtime_config json file failed");
+    error_reporter->Report("Parsing runtime_config json file %s failed", optional_options->config_path.c_str());
     return nullptr;
   }
 

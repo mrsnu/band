@@ -42,7 +42,7 @@ struct TfLiteInterpreterOptions {
   void (*error_reporter)(void* user_data, const char* format,
                          va_list args) = nullptr;
   void* error_reporter_user_data = nullptr;
-  char* config_path = nullptr;
+  std::string config_path;
 };
 
 struct TfLiteInterpreter {
