@@ -780,11 +780,7 @@ class Interpreter {
   }
 
   // Get the error reporter associated with this interpreter.
-<<<<<<< HEAD
-  ErrorReporter* error_reporter() { return error_reporter_; }
-=======
   ErrorReporter* GetErrorReporter() { return error_reporter_; }
->>>>>>> 3855094 (C_API refactor)
 
  private:
   friend class Worker;

@@ -21,6 +21,7 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/lite/core/api/error_reporter.h"
+#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/mutable_op_resolver.h"
@@ -42,7 +43,7 @@ struct TfLiteInterpreterOptions {
   void (*error_reporter)(void* user_data, const char* format,
                          va_list args) = nullptr;
   void* error_reporter_user_data = nullptr;
-  std::string config_path;
+  tflite::RuntimeConfig config;
 };
 
 struct TfLiteInterpreter {

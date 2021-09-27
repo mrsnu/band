@@ -127,9 +127,9 @@ TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetErrorReporter(
     void (*reporter)(void* user_data, const char* format, va_list args),
     void* user_data);
 
-TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetConfigPath(
+TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterOptionsSetConfigFile(
     TfLiteInterpreterOptions* options,
-    const char* config_path);
+    const void* config_data, size_t config_size);
 
 // --------------------------------------------------------------------------
 // TfLiteInterpreter provides inference from a provided model.
@@ -176,7 +176,7 @@ TFL_CAPI_EXPORT extern TfLiteTensor* TfLiteInterpreterAllocateInputTensor(
 TFL_CAPI_EXPORT extern TfLiteTensor* TfLiteInterpreterAllocateOutputTensor(
     const TfLiteInterpreter* interpreter, int32_t model_id, int32_t output_index);
 
-TFL_CAPI_EXPORT extern void TfLiteInterpreterDeleteTensor(TfLiteTensor* tensor);
+TFL_CAPI_EXPORT extern void TfLiteTensorDeallocate(TfLiteTensor* tensor);
 
 // Returns the type of a tensor element.
 TFL_CAPI_EXPORT extern TfLiteType TfLiteTensorType(const TfLiteTensor* tensor);

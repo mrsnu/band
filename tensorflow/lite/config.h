@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/error_reporter.h"
 #include "tensorflow/lite/util.h"
 
 namespace tflite {

@@ -85,10 +85,25 @@ void TfLiteInterpreterOptionsSetErrorReporter(
   options->error_reporter_user_data = user_data;
 }
 
-void TfLiteInterpreterOptionsSetConfigPath(
+TfLiteStatus TfLiteInterpreterOptionsSetConfigFile(
     TfLiteInterpreterOptions* options,
-    const char* config_path) {
-  options->config_path = config_path;
+    const void* config_data, size_t config_size) {
+  std::unique_ptr<tflite::ErrorReporter> optional_error_reporter;
+  if (options && options->error_reporter != nullptr) {
+    optional_error_reporter.reset(
+        new CallbackErrorReporter(options->error_reporter,
+                                  options->error_reporter_user_data));
+  }
+  tflite::ErrorReporter* error_reporter = optional_error_reporter
+                                              ? optional_error_reporter.get()
+                                              : tflite::DefaultErrorReporter();
+
+  if (tflite::ParseRuntimeConfigFromJson(config_data, config_size, options->config, error_reporter) != kTfLiteOk) {
+    error_reporter->Report("Parsing runtime_config json file failed");
+    return kTfLiteError;
+  }
+
+  return kTfLiteOk;
 }
 
 TfLiteInterpreter* TfLiteInterpreterCreate(
@@ -102,13 +117,8 @@ TfLiteInterpreter* TfLiteInterpreterCreate(
   tflite::ErrorReporter* error_reporter = optional_error_reporter
                                               ? optional_error_reporter.get()
                                               : tflite::DefaultErrorReporter();
-  tflite::RuntimeConfig runtime_config;
-  if (tflite::ParseRuntimeConfigFromJson(optional_options->config_path, runtime_config) != kTfLiteOk) {
-    error_reporter->Report("Parsing runtime_config json file %s failed", optional_options->config_path.c_str());
-    return nullptr;
-  }
 
-  std::unique_ptr<tflite::Interpreter> interpreter = std::make_unique<tflite::Interpreter>(error_reporter, runtime_config);
+  std::unique_ptr<tflite::Interpreter> interpreter = std::make_unique<tflite::Interpreter>(error_reporter, optional_options->config);
   return new TfLiteInterpreter{std::move(optional_error_reporter),
                                std::move(interpreter)};
 }
@@ -121,7 +131,6 @@ int32_t TfLiteInterpreterRegisterModel(TfLiteInterpreter* interpreter, TfLiteMod
   if (interpreter == nullptr || model == nullptr) return 0;
 
   tflite::ModelConfig model_config;
-  model_config.model_fname = model->model_path;
 
   // TODO(b/111881878): Allow use of C API without pulling in all builtin ops.
   tflite::ops::builtin::BuiltinOpResolver resolver;
@@ -197,7 +206,7 @@ TfLiteTensor* TfLiteInterpreterAllocateOutputTensor(
       interpreter->impl->tensor(subgraph_index, interpreter->impl->outputs(subgraph_index)[output_index]));
 }
 
-void TfLiteInterpreterDeleteTensor(TfLiteTensor* tensor) {
+void TfLiteTensorDeallocate(TfLiteTensor* tensor) {
   TfLiteTensorDelete(tensor);
 }
 
