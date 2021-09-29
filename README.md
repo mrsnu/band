@@ -93,6 +93,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `smoothing`
   * `frequency_smoothing`
 * `model_profile`: The path to file with model profile results. [default: None]
+* `model_frequency_profile`: The path to file with model frequency profile results. [default: None]
 * `profile_warmup_runs`: Number of warmup runs before profile. [default: 3]
 * `profile_num_runs`: Number of runs for profile. [default: 50]
 * `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.

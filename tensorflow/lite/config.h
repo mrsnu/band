@@ -31,6 +31,7 @@ struct ProfileConfig {
 
 struct InterpreterConfig {
   std::string profile_data_path;
+  std::string frequency_profile_data_path;
   ProfileConfig profile_config;
   int minimum_subgraph_size = 7;
   float profile_smoothing_factor = 0.1;

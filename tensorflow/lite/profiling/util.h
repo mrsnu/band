@@ -25,6 +25,7 @@ namespace profiling {
 namespace util {
 
 using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
+using ModelDeviceToFrequencyLatency = std::map<SubgraphKey, std::map<int64_t, int64_t>>;
 
 // Convert entries in the json value to ModelDeviceToLatency format,
 // for the given model name and id.
@@ -32,14 +33,21 @@ using ModelDeviceToLatency = std::map<SubgraphKey, int64_t>;
 ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
                                          const std::string& model_fname,
                                          const int model_id);
+ModelDeviceToFrequencyLatency ExtractModelFrequencyProfile(
+    const Json::Value& name_frequency_profile, const std::string& model_fname,
+    const int model_id);
 
 // Convert model integer ids back to string-type names for model profiles,
 // and update database_json with the newly updated profiled latency values.
 // This function does not erase entries in database_json for models that were
 // not run during this benchmark run.
-void UpdateDatabase(const ModelDeviceToLatency& id_profile,
-                    const std::map<int, ModelConfig>& model_configs,
-                    Json::Value& database_json);
+void UpdateStaticDatabase(const ModelDeviceToLatency& id_profile,
+                          const std::map<int, ModelConfig>& model_configs,
+                          Json::Value& database_json);
+void UpdateFrequencyDatabase(
+    const ModelDeviceToFrequencyLatency& id_frequency_profile,
+    const std::map<int, ModelConfig>& model_configs,
+    Json::Value& frequency_database_json);
 }  // namespace util
 }  // namespace profiling
 }  // namespace tflite
