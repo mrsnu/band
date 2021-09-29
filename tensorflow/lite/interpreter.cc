@@ -278,14 +278,19 @@ Interpreter::~Interpreter() {
   }
 
   // update the profile file to include all new profile results from this run
-  profiling::util::UpdateDatabase(profile_database_, model_configs_,
-                                  profile_database_json_);
+  profiling::util::UpdateStaticDatabase(profile_database_, model_configs_,
+                                        profile_database_json_);
   WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
+
+  profiling::util::UpdateFrequencyDatabase(frequency_profile_database_,
+                                           model_configs_,
+                                           frequency_profile_database_json_);
+  WriteJsonObjectToFile(frequency_profile_database_json_,
+                        frequency_profile_data_path_);
 
   observe_thread_exit_ = true;
   worker_observe_thread_.join();
 }
-
 
 TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
@@ -295,7 +300,10 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
-    profile_database_json_ = LoadJsonObjectFromFile(config.profile_data_path);
+    profile_database_json_ = LoadJsonObjectFromFile(profile_data_path_);
+    frequency_profile_data_path_ = config.frequency_profile_data_path;
+    frequency_profile_database_json_ =
+        LoadJsonObjectFromFile(frequency_profile_data_path_);
     // we cannot convert the model name strings to integer ids yet,
     // (profile_database_json_ --> profile_database_)
     // since we don't have anything in model_configs_ at the moment
@@ -919,136 +927,159 @@ void Interpreter::FrequencyProfile(int model_id, int num_profile, int num_max_sa
       continue;
     }
 
-    auto cpu_set =
-        workers_[device]->GetWorkerThreadAffinity();
-    SetCPUThreadAffinity(cpu_set);
-    auto available_frequencies =
-        processor::GetAvailableFrequenciesKhz(device, cpu_set);
-    std::map<int, std::vector<int64_t>> frequency_to_latencies;
+    auto it = frequency_profile_database_.find(subgraph_key);
+    if (it != frequency_profile_database_.end()) {
+      // if an entry for this SubgraphKey exists in the profiled data,
+      // then reuse it to reduce initialization time
+      std::map<int64_t, int64_t> frequency_to_latency = it->second;
+      // TODO: Consider affinity of worker thread
+      profile_frequency_to_latencies_[i] = frequency_to_latency;
 
-    if (available_frequencies.size() == 0) {
-      continue;
-    }
-
-    std::sort(available_frequencies.begin(), available_frequencies.end());
-    int min_freq = processor::GetMinFrequencyKhz(device, cpu_set);
-    for (int freq: available_frequencies) {
-      // Discard invalid frequency
-      if (freq < min_freq) {
-        frequency_to_latencies[freq] = {};
-      }
-    }
-
-    int interval_ms =
-        processor::GetUpdateIntervalMs(device, cpu_set);
-
-    std::thread t([&]() {
-      if (device == kTfLiteCPU) {
-        auto internal_backend =
-            GetCpuBackendContext()->internal_backend_context();
-        // Update internal cpu backend (ruy)
-        internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
-        internal_backend->SetMaxNumThreads(
-            workers_[device]->GetNumThreads());
-      }
-
-      auto update_interval = processor::GetUpdateIntervalMs(device, cpu_set);
-      std::vector<int> max_intervals = {0, update_interval, update_interval * 2,
-                                        update_interval * 4};
-
-      // Give more time to GPU, as it requires more time to completely 
-      // cool down to reach lowest frequency.
-      if (device == kTfLiteGPU) {
-        max_intervals.push_back(update_interval * 8);
-      }
-
-      for (int interval : max_intervals) {
-        // Random-interval for well-distributed start frequencies
-        std::uniform_int_distribution<> dist_us{0, interval * 1000};
-        for (int i = 0; i < num_profile; i++) {
-          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
-          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
-            auto start = std::chrono::high_resolution_clock::now();
-            subgraph->Invoke();
-
-            int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::high_resolution_clock::now() - start)
-                    .count();
-            frequency_to_latencies[start_frequency].push_back(time_us);
-            std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
-          }
-        }
-
-        // Static-interval for few-step based processors
-        for (int i = 0; i < num_profile; i++) {
-          int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
-          if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
-            auto start = std::chrono::high_resolution_clock::now();
-            subgraph->Invoke();
-
-            int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::high_resolution_clock::now() - start)
-                    .count();
-            frequency_to_latencies[start_frequency].push_back(time_us);
-            std::this_thread::sleep_for(std::chrono::microseconds{interval * 1000});
-          }
-        }
-      }
-
-      // For easier lerp
-      std::map<int64_t, int64_t> valid_frequency_to_latency;
-
-      for (int freq : available_frequencies) {
-        std::vector<int64_t> latencies = frequency_to_latencies[freq];
-
-        if (latencies.size()) {
-          valid_frequency_to_latency[freq] =
-              std::accumulate(latencies.begin(), latencies.end(), 0) /
-              latencies.size();
-        }
-      }
-
-      TFLITE_LOG(INFO) << "Profiling frequency table result\n"
+      TFLITE_LOG(INFO) << "Reusing frequency table result\n"
                        << " model=" << subgraph_key.model_id 
                        << " device="
                        << TfLiteDeviceGetName(device)
                        << " start=" << subgraph_key.GetInputOpsString()
                        << " end=" << subgraph_key.GetOutputOpsString() << ".";
 
-      std::map<int64_t, int64_t> frequency_to_latency =
-          valid_frequency_to_latency;
-      for (int freq : available_frequencies) {
-        // We already have a valid freq to latency mapping
-        if (valid_frequency_to_latency.find(freq) == valid_frequency_to_latency.end()) {
-          // Get next, prev valid frequencies
-          auto upper_it = frequency_to_latency.upper_bound(freq);
-          // Cannot lerp if freq is lower than a lowest valid frequency
-          // We could wait until the complete cooldown of the processor, 
-          // but certain logic might cause infinite spin when there is a single 
-          // valid frequency bigger than the minimum value (most of DSP, NPU). 
-          // Therefore, we just discard a frequency here.
-          if (upper_it != frequency_to_latency.begin() && upper_it != frequency_to_latency.end()) {
-            auto lower_it = std::prev(upper_it);
-            double fraction = (double)(freq - lower_it->first) /
-                              (upper_it->first - lower_it->first);
+      for (auto& frequency_to_latency : frequency_to_latency) {
+        TFLITE_LOG(INFO) << "Frequency=" << frequency_to_latency.first << " "
+                         << "Latency=" << frequency_to_latency.second;
+      }
+    } else {
+      auto cpu_set =
+          workers_[device]->GetWorkerThreadAffinity();
+      SetCPUThreadAffinity(cpu_set);
+      auto available_frequencies =
+          processor::GetAvailableFrequenciesKhz(device, cpu_set);
+      std::map<int, std::vector<int64_t>> frequency_to_latencies;
 
-            frequency_to_latency[freq] =
-                lower_it->second +
-                (upper_it->second - lower_it->second) * fraction;
-          } else {
-            continue;
-          }
-        }
-        
-        TFLITE_LOG(INFO) << "Frequency=" << freq << " "
-                         << "Count=" << frequency_to_latencies[freq].size() << " "
-                         << "Latency=" << frequency_to_latency[freq];
+      if (available_frequencies.size() == 0) {
+        continue;
       }
 
-      profile_frequency_to_latencies_[i] =
-          frequency_to_latency;
-    });
-    t.join();
+      std::sort(available_frequencies.begin(), available_frequencies.end());
+      int min_freq = processor::GetMinFrequencyKhz(device, cpu_set);
+      for (int freq: available_frequencies) {
+        // Discard invalid frequency
+        if (freq < min_freq) {
+          frequency_to_latencies[freq] = {};
+        }
+      }
+
+      int interval_ms =
+          processor::GetUpdateIntervalMs(device, cpu_set);
+
+      std::thread t([&]() {
+        if (device == kTfLiteCPU) {
+          auto internal_backend =
+              GetCpuBackendContext()->internal_backend_context();
+          // Update internal cpu backend (ruy)
+          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
+          internal_backend->SetMaxNumThreads(
+              workers_[device]->GetNumThreads());
+        }
+
+        auto update_interval = processor::GetUpdateIntervalMs(device, cpu_set);
+        std::vector<int> max_intervals = {0, update_interval, update_interval * 2,
+                                          update_interval * 4};
+
+        // Give more time to GPU, as it requires more time to completely 
+      // Give more time to GPU, as it requires more time to completely 
+        // Give more time to GPU, as it requires more time to completely 
+        // cool down to reach lowest frequency.
+        if (device == kTfLiteGPU) {
+          max_intervals.push_back(update_interval * 8);
+        }
+
+        for (int interval : max_intervals) {
+          // Random-interval for well-distributed start frequencies
+          std::uniform_int_distribution<> dist_us{0, interval * 1000};
+          for (int i = 0; i < num_profile; i++) {
+            int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
+            if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
+              auto start = std::chrono::high_resolution_clock::now();
+              subgraph->Invoke();
+
+              int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::high_resolution_clock::now() - start)
+                      .count();
+              frequency_to_latencies[start_frequency].push_back(time_us);
+              std::this_thread::sleep_for(std::chrono::microseconds{dist_us(eng)});
+            }
+          }
+
+          // Static-interval for few-step based processors
+          for (int i = 0; i < num_profile; i++) {
+            int start_frequency = processor::GetTargetFrequencyKhz(device, cpu_set);
+            if (frequency_to_latencies[start_frequency].size() < num_max_samples) {
+              auto start = std::chrono::high_resolution_clock::now();
+              subgraph->Invoke();
+
+              int time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::high_resolution_clock::now() - start)
+                      .count();
+              frequency_to_latencies[start_frequency].push_back(time_us);
+              std::this_thread::sleep_for(std::chrono::microseconds{interval * 1000});
+            }
+          }
+        }
+
+        // For easier lerp
+        std::map<int64_t, int64_t> valid_frequency_to_latency;
+
+        for (int freq : available_frequencies) {
+          std::vector<int64_t> latencies = frequency_to_latencies[freq];
+
+          if (latencies.size()) {
+            valid_frequency_to_latency[freq] =
+                std::accumulate(latencies.begin(), latencies.end(), 0) /
+                latencies.size();
+          }
+        }
+
+        TFLITE_LOG(INFO) << "Profiling frequency table result\n"
+                         << " model=" << subgraph_key.model_id
+                         << " device="
+                         << TfLiteDeviceGetName(device)
+                         << " start=" << subgraph_key.GetInputOpsString()
+                         << " end=" << subgraph_key.GetOutputOpsString() << ".";
+
+        std::map<int64_t, int64_t> frequency_to_latency =
+            valid_frequency_to_latency;
+        for (int freq : available_frequencies) {
+          // We already have a valid freq to latency mapping
+          if (valid_frequency_to_latency.find(freq) == valid_frequency_to_latency.end()) {
+            // Get next, prev valid frequencies
+            auto upper_it = frequency_to_latency.upper_bound(freq);
+            // Cannot lerp if freq is lower than a lowest valid frequency
+            // We could wait until the complete cooldown of the processor,
+            // but certain logic might cause infinite spin when there is a single
+            // valid frequency bigger than the minimum value (most of DSP, NPU).
+            // Therefore, we just discard a frequency here.
+            if (upper_it != frequency_to_latency.begin() && upper_it != frequency_to_latency.end()) {
+              auto lower_it = std::prev(upper_it);
+              double fraction = (double)(freq - lower_it->first) /
+                                (upper_it->first - lower_it->first);
+
+              frequency_to_latency[freq] =
+                  lower_it->second +
+                  (upper_it->second - lower_it->second) * fraction;
+            } else {
+              continue;
+            }
+          }
+          
+          TFLITE_LOG(INFO) << "Frequency=" << freq << " "
+                           << "Count=" << frequency_to_latencies[freq].size() << " "
+                           << "Latency=" << frequency_to_latency[freq];
+        }
+
+        profile_frequency_to_latencies_[i] = frequency_to_latency;
+        frequency_profile_database_[subgraph_key] = frequency_to_latency;
+      });
+      t.join();
+    }
   }
 }
 
@@ -1240,9 +1271,13 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
   auto model_profile =
       profiling::util::ExtractModelProfile(profile_database_json_,
                                            model_fname, model_id);
+  auto model_frequency_profile = profiling::util::ExtractModelFrequencyProfile(
+      frequency_profile_database_json_, model_fname, model_id);
 
   // merge `profile_database_` with `model_profile`
   profile_database_.insert(model_profile.begin(), model_profile.end());
+  frequency_profile_database_.insert(model_frequency_profile.begin(),
+                                     model_frequency_profile.end());
 }
 
 std::vector<std::pair<TfLiteDeviceFlags,std::set<int>>>

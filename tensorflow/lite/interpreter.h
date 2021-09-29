@@ -832,16 +832,19 @@ class Interpreter {
   // The data in the path will be read during initial phase, and also
   // will be updated at the end of the run.
   std::string profile_data_path_;
+  std::string frequency_profile_data_path_;
 
   // The contents of the file at `profile_data_path_`.
   // We keep this separately from `profile_database_`, since we cannot
   // immediately put `profile_data_path_`'s contents into `profile_database_`
   // because the model name --> int mapping is not available at init time.
   Json::Value profile_database_json_;
+  Json::Value frequency_profile_database_json_;
 
   // Stores the profile results
   // When a subgraph key is given, returns the profile results in int64_t.
   profiling::util::ModelDeviceToLatency profile_database_;
+  profiling::util::ModelDeviceToFrequencyLatency frequency_profile_database_;
   // Map structure to store profiling results in microseconds of (model_id, device_id)
   std::unordered_map<int, int64_t> moving_averaged_latencies_;
   std::unordered_map<int, std::map<int64_t, int64_t>> profile_frequency_to_latencies_;

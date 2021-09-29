@@ -81,6 +81,9 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["model_profile"].isNull()) {
     interpreter_config.profile_data_path = root["model_profile"].asString();
   }
+  if (!root["model_frequency_profile"].isNull()) {
+    interpreter_config.frequency_profile_data_path = root["model_frequency_profile"].asString();
+  }
   // 5. Number of threads
   if (!root["num_threads"].isNull()) {
     interpreter_config.num_threads = root["num_threads"].asInt();
