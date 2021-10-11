@@ -57,9 +57,12 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `slo_us` and `slo_scale`: **Optional** fields for specifying an SLO value for a model. Setting `slo_scale` will make the SLO = worst profiled latency of that model * `slo_scale`. `slo_scale` will be ignored if `slo_us` is given (i.e., no reason to specify both options).
 * `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
 * `schedulers`: The scheduler types in `list[int]`. If N schedulers are specified, then N queues are generated.
-  * `0`: Fixed Device Planner
-  * `1`: Round-Robin Planner
-  * `2`: Shortest Expected Latency Planner
+  * `0`: Fixed Device Scheduler
+  * `1`: Round-Robin Scheduler
+  * `2`: Shortest Expected Latency Scheduler
+  * `3`: Fixed Device Scheduler (Global Queue)
+  * `4`: Heterogeneous Earliest Finish Time Scheduler (Global Queue)
+  * `5`: Least Slack Time Scheduler (Global Queue)
 * `minimum_subgraph_size`: Minimum subgraph size. If candidate subgraph size is smaller than `minimum_subgraph_size`, the subgraph will not be created. [default: 7]
 * `subgraph_preparation_type`: For schedulers using fallback, determine how to generate candidate subgraphs. [default: `merge_unit_subgraph`]
   * `no_fallback_subgraph`: Generate subgraphs per device. Explicit fallback subgraph will not be generated.
@@ -136,6 +139,7 @@ An example of complete JSON config file is as follows:
     "execution_mode": "periodic",
     "cpu_masks": "ALL",
     "num_threads": 1,
+    "observe_cpu_masks": "ALL",
     "planner_cpu_masks": "PRIMARY",
     "workers": [
       {
@@ -150,10 +154,12 @@ An example of complete JSON config file is as follows:
       }
     ],
     "running_time_ms": 60000,
-    "profile_smoothing_factor": 0.1,
-    "model_profile": "/data/local/tmp/profile.json",
+    "profiler_type": "frequency_smoothing",
     "profile_warmup_runs": 10,
     "profile_num_runs": 20,
+    "profile_smoothing_factor": 0.1,
+    "model_profile": "/data/local/tmp/profile.json",
+    "model_frequency_profile": "/data/local/tmp/frequency_profile.json",
     "allow_work_steal": true,
     "availability_check_interval_ms": 30000,
     "schedule_window_size": 10
