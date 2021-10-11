@@ -120,7 +120,7 @@ struct Job {
   int device_id = -1;
   int start_unit_idx = 0;
   
-  int64_t start_target_frequency = 0;
+  int64_t start_frequency = -1;
 
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field

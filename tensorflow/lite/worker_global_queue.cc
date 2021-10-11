@@ -129,7 +129,7 @@ void GlobalQueueWorker::Work() {
           interpreter_ptr->UpdateInvokedLatency(
               subgraph_idx,
               (current_job_.end_time - current_job_.invoke_time),
-              current_job_.start_target_frequency);
+              current_job_.start_frequency);
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
           }

@@ -49,6 +49,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "execution_time\t"
              << "profiled_execution_time\t"
              << "expected_execution_time\t"
+             << "start_frequency\t"
              << "slo_us\t"
              << "job_status\t"
              << "is_final_subgraph\t"
@@ -371,6 +372,7 @@ void Planner::FlushFinishedJobs() {
                << job.end_time - job.invoke_time << "\t"
                << job.profiled_execution_time << "\t"
                << job.expected_execution_time << "\t"
+               << job.start_frequency << "\t"
                << job.slo_us << "\t"
                << job.status << "\t"
                << is_final_subgraph << "\t"
@@ -391,9 +393,12 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.device_id = interpreter_->GetWorkerDeviceFlag(target_key.worker_id);
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
-  job.expected_execution_time = interpreter_->GetExpectedLatency(job.subgraph_idx);
-  // timing is a bit off but won't make that much difference.
-  job.start_target_frequency = interpreter_->GetWorkerFrequency(target_key.worker_id);
+  int64_t start_frequency = -1;
+  job.expected_execution_time = interpreter_->GetExpectedLatency(
+      job.subgraph_idx, &start_frequency);
+  if (start_frequency != -1) {
+    job.start_frequency = start_frequency;
+  }
 
   if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);

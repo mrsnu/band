@@ -254,7 +254,19 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     }
   }
 
-  worker_observe_thread_ = std::thread([this] { this->UpdateWorkerState(); });
+  worker_observe_thread_ = std::thread([this, &runtime_config] {
+    const TfLiteCPUMaskFlags cpu_mask = static_cast<TfLiteCPUMaskFlags>(
+        runtime_config.interpreter_config.observe_cpu_masks);
+    auto cpu_mask_set = TfLiteCPUMaskGetSet(cpu_mask);
+
+    TFLITE_LOG(INFO) << "Set observe thread affinity to "
+                     << TfLiteCPUMaskGetName(cpu_mask) << " cores";
+
+    if (SetCPUThreadAffinity(cpu_mask_set) != kTfLiteOk) {
+      TFLITE_LOG(ERROR) << "Failed to set observe thread affinity.";
+    }
+    this->UpdateWorkerState();
+  });
 }
 
 Interpreter::~Interpreter() {
@@ -566,9 +578,14 @@ void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs,
 
 void Interpreter::InvokeModelsSync(std::vector<Job> requests,
                                    std::vector<Tensors> inputs,
-                                   std::vector<Tensors> outputs) {
+                                   std::vector<Tensors> outputs,
+                                   bool waitall) {
   std::vector<int> job_ids = InvokeModelsAsync(requests, inputs);
-  planner_->Wait(job_ids);
+  if (waitall) {
+    planner_->WaitAll();
+  } else {
+    planner_->Wait(job_ids);
+  }
   for (size_t i = 0; i < job_ids.size(); i++) {
     GetOutputTensors(job_ids[i], outputs[i]);
   }
@@ -786,19 +803,21 @@ void Interpreter::UpdateInvokedLatency(
   }
 }
 
-int64_t Interpreter::GetExpectedLatency(const int subgraph_idx) {
+int64_t Interpreter::GetExpectedLatency(const int subgraph_idx,
+                                        int64_t* frequency) {
   if (profiler_type_ == kStatic) {
     return GetProfiledLatency(subgraph(subgraph_idx)->GetKey());
   } else if (profiler_type_ == kSmoothing) {
     return GetSmoothingBasedExpectedLatency(subgraph_idx);
   } else if (profiler_type_ == kFrequencySmoothing) {
-    return GetFrequencyBasedExpectedLatency(subgraph_idx);
+    return GetFrequencyBasedExpectedLatency(subgraph_idx, frequency);
   } else {
     return -1;
   }
 }
 
-int64_t Interpreter::GetFrequencyBasedExpectedLatency(const int subgraph_idx) {
+int64_t Interpreter::GetFrequencyBasedExpectedLatency(const int subgraph_idx,
+                                                      int64_t* frequency) {
   const int worker_id = subgraph(subgraph_idx)->GetKey().worker_id;
   auto it = profile_frequency_to_latencies_.find(subgraph_idx);
   if (it != profile_frequency_to_latencies_.end()) {
@@ -806,6 +825,9 @@ int64_t Interpreter::GetFrequencyBasedExpectedLatency(const int subgraph_idx) {
     auto frequency_table_it = frequency_table.find(
       worker_frequencies_[worker_id]);
     if (frequency_table_it != frequency_table.end()) {
+      if (frequency != nullptr) {
+        *frequency = frequency_table_it->first;
+      }
       return frequency_table_it->second;
     }
   }
@@ -2002,7 +2024,7 @@ void Interpreter::PrepareUnitSubgraphScheduling(int model_id, int num_units) {
 void Interpreter::UpdateWorkerState() {
   if (profiler_type_ == kFrequencySmoothing) {
     while (true) {
-      if (!observe_thread_exit_) {
+      if (observe_thread_exit_) {
         return;
       }
 

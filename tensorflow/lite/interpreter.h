@@ -495,8 +495,11 @@ class Interpreter {
   void InvokeModelsSync(std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
   
   /// Invoke models with model requests.
-  /// Returns when all the requests are done. 
-  void InvokeModelsSync(std::vector<Job> requests, std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+  /// Returns when all the requests are done.
+  void InvokeModelsSync(std::vector<Job> requests,
+                        std::vector<Tensors> inputs = {},
+                        std::vector<Tensors> outputs = {},
+                        bool waitall = false);
 
   TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
@@ -700,9 +703,11 @@ class Interpreter {
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
   void UpdateInvokedLatency(const int subgraph_idx, int64_t latency, int64_t frequency);
-  int64_t GetExpectedLatency(const int subgraph_idx);
+  int64_t GetExpectedLatency(const int subgraph_idx,
+                             int64_t* frequency = nullptr);
   // Start frequency based estimation. Fall back to GetExpectedLatency if fails
-  int64_t GetFrequencyBasedExpectedLatency(const int subgraph_idx);
+  int64_t GetFrequencyBasedExpectedLatency(const int subgraph_idx,
+                                           int64_t* frequency = nullptr);
   int64_t GetSmoothingBasedExpectedLatency(const int subgraph_idx);
   int64_t GetProfiledLatency(SubgraphKey& key);
   int64_t GetWorkerFrequency(const int worker_id) const {

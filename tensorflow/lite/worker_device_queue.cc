@@ -105,7 +105,7 @@ void DeviceQueueWorker::Work() {
           interpreter_ptr->UpdateInvokedLatency(
               subgraph_idx,
               (job.end_time - job.invoke_time),
-              job.start_target_frequency);
+              job.start_frequency);
           if (job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(job.following_jobs);
           }

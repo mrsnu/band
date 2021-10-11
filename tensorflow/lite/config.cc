@@ -56,6 +56,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     interpreter_config.cpu_masks =
         impl::TfLiteCPUMaskGetMask(root["cpu_masks"].asCString());
   }
+  if (!root["observe_cpu_masks"].isNull()) {
+    interpreter_config.observe_cpu_masks =
+        impl::TfLiteCPUMaskGetMask(root["observe_cpu_masks"].asCString());
+  }
   // 2. Dynamic profile config
   if (!root["profile_smoothing_factor"].isNull()) {
     interpreter_config.profile_smoothing_factor =

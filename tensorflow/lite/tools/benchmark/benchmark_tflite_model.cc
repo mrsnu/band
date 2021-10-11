@@ -660,6 +660,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
     num_frames++;
     if (current - start >= run_duration_us)
       break;
+    util::SleepForSeconds(params_.Get<float>("run_delay"));
   }
   int64_t end = profiling::time::NowMicros();
   TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
@@ -676,7 +677,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunEagleEyeStream() {
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
-    interpreter_->InvokeModelsSync(GetEagleEyeFrame());
+    interpreter_->InvokeModelsSync(GetEagleEyeFrame(), {}, {}, true);
     int64_t current = profiling::time::NowMicros();
     num_frames++;
     if (current - start >= run_duration_us)
