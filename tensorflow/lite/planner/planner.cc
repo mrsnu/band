@@ -393,12 +393,8 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.device_id = interpreter_->GetWorkerDeviceFlag(target_key.worker_id);
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
-  int64_t start_frequency = -1;
   job.expected_execution_time = interpreter_->GetExpectedLatency(
-      job.subgraph_idx, &start_frequency);
-  if (start_frequency != -1) {
-    job.start_frequency = start_frequency;
-  }
+      job.subgraph_idx, &job.start_frequency);
 
   if (!target_subgraph->IsEnd()) {
     Job remaining_ops(job.model_id);
