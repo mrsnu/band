@@ -530,7 +530,7 @@ class Interpreter {
   }
 #endif  // DOXYGEN_SKIP
 
- private:
+ protected:
   friend class InterpreterBuilder;
   friend class tflite::InterpreterTest;
   friend class tflite::TestDelegate;

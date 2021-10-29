@@ -1,20 +1,14 @@
 
 #include "tensorflow/lite/band/band_interpreter.h"
 
-#include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/minimal_logging.h"
 
 namespace tflite {
 
 namespace impl {
 
-namespace {
-
-BandInterpreter::BandInterpreter(ErrorReporter* error_reporter)
-    : error_reporter_(error_reporter ? error_reporter : DefaultErrorReporter()),
-      lazy_delegate_provider_(
-          TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {})) {
-
-  TFLITE_LOG(INFO) << "Initialized TensorFlow Lite runtime.";
+BandInterpreter::BandInterpreter(ErrorReporter* error_reporter) {
+  TFLITE_LOG_PROD_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
 
   InitBackendContext();
 }
@@ -32,9 +26,9 @@ void BandInterpreter::InitBackendContext() {
       own_external_cpu_backend_context_.get();
 
   // Initialize internal backend context for cpu contexts
-  own_external_cpu_backend_context_->
-      set_internal_backend_context(
-          std::make_unique<CpuBackendContext>());
+//  own_external_cpu_backend_context_->
+//      set_internal_backend_context(
+//          std::make_unique<CpuBackendContext>());
 }
 
 BandInterpreter::~BandInterpreter() {
@@ -51,4 +45,3 @@ BandInterpreter::~BandInterpreter() {
 
 }
 
-}
