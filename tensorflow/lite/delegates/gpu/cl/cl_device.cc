@@ -414,6 +414,21 @@ DeviceInfo::DeviceInfo(cl_device_id id) {
   image3d_max_height = GetDeviceInfo<size_t>(id, CL_DEVICE_IMAGE2D_MAX_HEIGHT);
   image3d_max_depth = GetDeviceInfo<size_t>(id, CL_DEVICE_IMAGE3D_MAX_DEPTH);
   GetDeviceWorkDimsSizes(id, &max_work_group_sizes);
+
+  image_pitch_alignment = 0;
+  if (cl_version == OpenClVersion::kCl2_0 ||
+      cl_version == OpenClVersion::kCl2_1 ||
+      cl_version == OpenClVersion::kCl2_2) {
+    image_pitch_alignment =
+        GetDeviceInfo<cl_uint>(id, CL_DEVICE_IMAGE_PITCH_ALIGNMENT);
+  } else if (SupportsExtension("cl_khr_image2d_from_buffer")) {
+    cl_uint result;
+    auto status =
+        GetDeviceInfo(id, CL_DEVICE_IMAGE_PITCH_ALIGNMENT_KHR, &result);
+    if (status.ok()) {
+      image_pitch_alignment = result;
+    }
+  }
 }
 
 bool DeviceInfo::SupportsTextureArray() const {
@@ -430,6 +445,27 @@ bool DeviceInfo::SupportsImage3D() const {
     return false;
   }
   return supports_image3d_writes;
+}
+
+bool DeviceInfo::SupportsExtension(const std::string& extension) const {
+  for (const auto& ext : extensions) {
+    if (ext == extension) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DeviceInfo::SupportsImage2dFromBuffer() const {
+  if (image_pitch_alignment == 0) {
+    return false;
+  }
+  if (cl_version == OpenCLVersion::CL_2_0 ||
+      cl_version == OpenClVersion::CL_2_1 ||
+      cl_version == OpenClVersion::CL_2_2) {
+    return true;
+  }
+  return SupportsExtension("cl_khr_image2d_from_buffer");
 }
 
 CLDevice::CLDevice(cl_device_id id, cl_platform_id platform_id)
@@ -469,12 +505,7 @@ CLDevice& CLDevice::operator=(CLDevice&& device) {
 bool CLDevice::SupportsFP16() const { return info_.supports_fp16; }
 
 bool CLDevice::SupportsExtension(const std::string& extension) const {
-  for (const auto& ext : info_.extensions) {
-    if (ext == extension) {
-      return true;
-    }
-  }
-  return false;
+  return info_.SupportsExtension(extension);
 }
 
 bool CLDevice::SupportsTextureArray() const {

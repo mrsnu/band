@@ -116,6 +116,8 @@ struct DeviceInfo {
   bool SupportsTextureArray() const;
   bool SupportsImageBuffer() const;
   bool SupportsImage3D() const;
+  bool SupportsExtension() const;
+  bool SupportsImage2dFromBuffer() const;
 
   std::vector<std::string> extensions;
   bool supports_fp16;
@@ -132,6 +134,7 @@ struct DeviceInfo {
   uint64_t image3d_max_height;
   uint64_t image3d_max_depth;
   int3 max_work_group_sizes;
+  uint64_t image_pitch_alignment;
 
   cl_device_fp_config f32_config;
   // valid only with cl_khr_fp16
