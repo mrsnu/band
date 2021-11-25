@@ -112,9 +112,14 @@ void AddUsage(ValueId id, int task_index,
 
 // returns true if actual memory for this storage type will be allocated with
 // clCreateBuffer.
-bool IsBufferBased(const TensorStorageType& type) {
+bool IsBufferBased(const CLDevice& gpu, const TensorStorageType& type) {
+  const bool image2d_based_buffer =
+      (type == TensorStorageType::TEXTURE_2D ||
+       type == TensorStorageType::SINGLE_TEXTURE_2D) &&
+      gpu.GetInfo().SupportsImage2dFromBuffer() &&
+      gpu.IsAdreno();
   return type == TensorStorageType::BUFFER ||
-         type == TensorStorageType::IMAGE_BUFFER;
+         type == TensorStorageType::IMAGE_BUFFER || image2d_based_buffer;
 }
 
 // Generic add is add that have several runtime inputs and they are not
@@ -435,7 +440,7 @@ absl::Status InferenceContext::AllocateMemoryForBuffers(const CLDevice& device,
                                                         CLContext* context) {
   std::map<ValueId, int2> buffer_usages;
   GetUsages(
-      [](const TensorDescriptor& t) { return IsBufferBased(t.storage_type); },
+      [&device](const TensorDescriptor& t) { return IsBufferBased(device, t.storage_type); },
       &buffer_usages);
 
   std::vector<TensorUsageRecord<size_t>> buffer_usage_records;
@@ -445,8 +450,24 @@ absl::Status InferenceContext::AllocateMemoryForBuffers(const CLDevice& device,
     const auto& descriptor = t.descriptor;
     const size_t element_size =
         descriptor.data_type == DataType::FLOAT32 ? 4 : 2;
-    const size_t buffer_size =
-        shape.b * shape.w * shape.h * AlignByN(shape.c, 4) * element_size;
+    size_t buffer_size;
+    if (descriptor.storage_type == TensorStorageType::TEXTURE_2D) {
+      const size_t bytes_per_row = element_size * shape.b * shape.w * 4;
+      const size_t height = shape.h * DivideRoundUp(shape.c, 4);
+      buffer_size =
+          AlignByN(bytes_per_row, device.GetInfo().image_pitch_alignment) *
+          height;
+    } else if (descriptor.storage_type ==
+               TensorStorageType::SINGLE_TEXTURE_2D) {
+      const size_t bytes_per_row = element_size * shape.b * shape.w * shape.c;
+      const size_t height = shape.h;
+      buffer_size =
+          AlignByN(bytes_per_row, device.GetInfo().image_pitch_alignment) *
+          height;
+    } else {
+      buffer_size =
+          shape.b * shape.w * shape.h * AlignByN(shape.c, 4) * element_size;
+    }
     graph_ids_to_shared_buffer_tensors_[usage.first] =
         buffer_usage_records.size();
     buffer_usage_records.push_back({buffer_size,
@@ -469,14 +490,22 @@ absl::Status InferenceContext::AllocateMemoryForBuffers(const CLDevice& device,
   for (auto& node : nodes_) {
     auto tensors = GetCLNodeTensors(node);
     for (auto& t : tensors) {
-      if (!IsBufferBased(t.second.storage_type)) continue;
+      if (!IsBufferBased(device, t.second.storage_type)) continue;
       const int tensor_index = graph_ids_to_shared_buffer_tensors_[t.first];
       if (created_tensors[tensor_index]) continue;
       const auto& shape = tensor_reserver_.Get(t.first).shape;
       const int buffer_index = buffer_assignment.object_ids[tensor_index];
-      RETURN_IF_ERROR(CreateSharedTensor(
-          *context, device, shared_buffers_[buffer_index].GetMemoryPtr(), shape,
-          t.second, &shared_buffer_tensors_[tensor_index]));
+      if (t.second.storage_type == TensorStorageType::TEXTURE_2D ||
+          t.second.storage_type == TensorStorageType::SINGLE_TEXTURE_2D) {
+        RETURN_IF_ERROR(CreateSharedImage2DBufferTensor(
+            *context, shared_buffers_[buffer_index].GetMemoryPtr(), shape,
+            t.second, device.GetInfo().image_pitch_alignment,
+            &shared_buffer_tensors_[tensor_index]));
+      } else {
+        RETURN_IF_ERROR(CreateSharedTensor(
+            *context, device, shared_buffers_[buffer_index].GetMemoryPtr(), shape,
+            t.second, &shared_buffer_tensors_[tensor_index]));
+      }
       created_tensors[tensor_index] = true;
     }
   }
@@ -487,7 +516,9 @@ absl::Status InferenceContext::AllocateMemoryForStrongShapes(
     const CLDevice& device, CLContext* context) {
   std::map<ValueId, int2> usages;
   GetUsages(
-      [](const TensorDescriptor& t) { return !IsBufferBased(t.storage_type); },
+      [&device](const TensorDescriptor& t) {
+        return !IsBufferBased(device, t.storage_type);
+      },
       &usages);
 
   std::vector<TensorUsageRecord<DummyTensor>> usage_records;
@@ -506,7 +537,7 @@ absl::Status InferenceContext::AllocateMemoryForStrongShapes(
   for (auto& node : nodes_) {
     auto tensors = GetCLNodeTensors(node);
     for (auto& t : tensors) {
-      if (IsBufferBased(t.second.storage_type)) continue;
+      if (IsBufferBased(device, t.second.storage_type)) continue;
       const auto& shape = tensor_reserver_.Get(t.first).shape;
       const auto id = assignment.object_ids[remap_from_graph_ids[t.first]];
       graph_ids_to_strong_shape_tensors_[t.first] = id;

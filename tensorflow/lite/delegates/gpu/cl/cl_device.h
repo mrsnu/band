@@ -116,7 +116,7 @@ struct DeviceInfo {
   bool SupportsTextureArray() const;
   bool SupportsImageBuffer() const;
   bool SupportsImage3D() const;
-  bool SupportsExtension() const;
+  bool SupportsExtension(const std::string& extension) const;
   bool SupportsImage2dFromBuffer() const;
 
   std::vector<std::string> extensions;

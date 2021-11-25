@@ -416,9 +416,9 @@ DeviceInfo::DeviceInfo(cl_device_id id) {
   GetDeviceWorkDimsSizes(id, &max_work_group_sizes);
 
   image_pitch_alignment = 0;
-  if (cl_version == OpenClVersion::kCl2_0 ||
-      cl_version == OpenClVersion::kCl2_1 ||
-      cl_version == OpenClVersion::kCl2_2) {
+  if (cl_version == OpenCLVersion::CL_2_0 ||
+      cl_version == OpenCLVersion::CL_2_1 ||
+      cl_version == OpenCLVersion::CL_2_2) {
     image_pitch_alignment =
         GetDeviceInfo<cl_uint>(id, CL_DEVICE_IMAGE_PITCH_ALIGNMENT);
   } else if (SupportsExtension("cl_khr_image2d_from_buffer")) {
@@ -461,8 +461,8 @@ bool DeviceInfo::SupportsImage2dFromBuffer() const {
     return false;
   }
   if (cl_version == OpenCLVersion::CL_2_0 ||
-      cl_version == OpenClVersion::CL_2_1 ||
-      cl_version == OpenClVersion::CL_2_2) {
+      cl_version == OpenCLVersion::CL_2_1 ||
+      cl_version == OpenCLVersion::CL_2_2) {
     return true;
   }
   return SupportsExtension("cl_khr_image2d_from_buffer");

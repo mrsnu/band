@@ -149,8 +149,9 @@ class Tensor : public GPUObject {
   void Release();
 
   cl_mem memory_;
-  cl_mem image_buffer_memory_;  // for TensorStorageType::IMAGE_BUFFER only
+  cl_mem image_buffer_memory_;  // for IMAGE_BUFFER/TEXTURE_2D/SINGLE_TEXTURE_2D
   bool memory_owner_;
+  bool buffer_based_ = false;
   BHWDC shape_;
   TensorDescriptor descriptor_;
 };
@@ -186,6 +187,12 @@ absl::Status CreateSharedTensor(const CLContext& context,
                                 const BHWDC& shape,
                                 const TensorDescriptor& descriptor,
                                 Tensor* result);
+
+absl::Status CreateSharedImage2DBufferTensor(const CLContext& context,
+                                             cl_mem memory, const BHWC& shape,
+                                             const TensorDescriptor& descriptor,
+                                             int row_bytes_alignment,
+                                             Tensor* result);
 
 }  // namespace cl
 }  // namespace gpu
