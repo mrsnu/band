@@ -14,6 +14,12 @@ limitations under the License.
 ==============================================================================*/
 #include "tensorflow/lite/interpreter_builder.h"
 
+// Temporal usage for debugging
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG   , "libtflite", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
+#include <android/log.h>
+
 #if !defined(__ANDROID__) && !defined(__APPLE__) && !defined(_WIN32)
 #include <dlfcn.h>
 #endif
@@ -562,6 +568,11 @@ int InterpreterBuilder::AddSubgraph(
       << "From " << subgraph_key.GetInputOpsString() << " "
       << "To " << subgraph_key.GetOutputOpsString() << " "
       << "Index " << subgraph_idx;
+  LOGI("ADDED Subgraph Model : %d %s From %s To %s", 
+      subgraph_key.model_id, 
+      TfLiteDeviceGetName((*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id)), 
+      subgraph_key.GetInputOpsString().c_str(), 
+      subgraph_key.GetOutputOpsString().c_str());
   return subgraph_idx;
 }
 
@@ -690,6 +701,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     for (auto& subgraph_metadata : subgraph_indices) {
       int unit_subgraph_idx = subgraph_metadata.first;
       auto& device_op_indices = subgraph_metadata.second;
+      if (device_op_indices.first != 1) continue;
 
       const int worker_id =
           (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);

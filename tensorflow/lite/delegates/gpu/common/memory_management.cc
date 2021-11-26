@@ -15,6 +15,11 @@ limitations under the License.
 
 #include "tensorflow/lite/delegates/gpu/common/memory_management.h"
 
+// Temporal usage for debugging
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG   , "libtflite", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
+#include <android/log.h>
 #include <algorithm>
 #include <limits>
 #include <numeric>
@@ -73,19 +78,25 @@ absl::Status AssignObjectsToTensors(
     const std::vector<TensorUsageRecord<size_t>>& usage_records,
     MemoryStrategy strategy, ObjectsAssignment<size_t>* assignment,
     const UsageGraph* reallocation_graph) {
+  LOGI("Changjin AssignObjectsToTensors : %d", strategy);
+
   switch (strategy) {
     case MemoryStrategy::NAIVE:
       return NaiveAssignment(usage_records, assignment);
     case MemoryStrategy::EQUALITY:
+      LOGI("Changjin AssignObjectsToTensors : EQUALTY");
       return EqualityAssignmentWithHash(usage_records, assignment);
     case MemoryStrategy::GREEDY_IN_ORDER:
       return GreedyInOrderAssignment(usage_records, assignment,
                                      reallocation_graph);
     case MemoryStrategy::GREEDY_BY_BREADTH:
+      LOGI("Changjin AssignObjectsToTensors : GREEDY_BY_BREADTH");
       return GreedyByBreadthAssignment(usage_records, assignment);
     case MemoryStrategy::GREEDY_BY_SIZE:
+      LOGI("Changjin AssignObjectsToTensors : GREEDY_BY_SIZE");
       return GreedyBySizeDistPriorityAssignment(usage_records, assignment);
     case MemoryStrategy::GREEDY_BEST:
+      LOGI("Changjin AssignObjectsToTensors : GREEDY_BEST");
       return BestGreedy(usage_records, assignment);
     case MemoryStrategy::MINCOSTFLOW:
       return MinCostFlowAssignment(usage_records, assignment);

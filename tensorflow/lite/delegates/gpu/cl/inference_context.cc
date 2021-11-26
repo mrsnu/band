@@ -15,6 +15,12 @@ limitations under the License.
 
 #include "tensorflow/lite/delegates/gpu/cl/inference_context.h"
 
+// Temporal usage for debugging
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG   , "libtflite", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
+#include <android/log.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -407,12 +413,15 @@ void InferenceContext::Merge() {
 void InferenceContext::GetUsages(
     const std::function<bool(const TensorDescriptor&)>& functor,
     std::map<ValueId, int2>* usages) {
++
+  LOGI("Changjin: input_ids = %d", input_ids_.size()); 
   for (ValueId in_id : input_ids_) {
     const auto& desc = tensor_reserver_.Get(in_id).descriptor;
     if (functor(desc)) {
       AddUsage(in_id, 0, usages);
     }
   }
+  LOGI("Changjin: nodes = %d", nodes_.size()); 
   for (int op_index = 0; op_index < nodes_.size(); ++op_index) {
     auto tensors = GetCLNodeTensors(nodes_[op_index]);
     for (auto& tensor : tensors) {
@@ -421,6 +430,7 @@ void InferenceContext::GetUsages(
       }
     }
   }
+  LOGI("Changjin: output_id s= %d", output_ids_.size()); 
   for (ValueId out_id : output_ids_) {
     const auto& desc = tensor_reserver_.Get(out_id).descriptor;
     if (functor(desc)) {
@@ -433,17 +443,20 @@ absl::Status InferenceContext::AllocateMemory(const CLDevice& device,
                                               CLContext* context) {
   RETURN_IF_ERROR(AllocateMemoryForBuffers(device, context));
   RETURN_IF_ERROR(AllocateMemoryForStrongShapes(device, context));
+  LOGI("Changjin: [Final] total intermediate tensors = %lld", GetSizeOfMemoryAllocatedForIntermediateTensors());
   return absl::OkStatus();
 }
 
 absl::Status InferenceContext::AllocateMemoryForBuffers(const CLDevice& device,
                                                         CLContext* context) {
+  LOGI("Changjin: CL (Allocate memory for buffers)");
   std::map<ValueId, int2> buffer_usages;
   GetUsages(
       [&device](const TensorDescriptor& t) { return IsBufferBased(device, t.storage_type); },
       &buffer_usages);
-
+  int count = 0;
   std::vector<TensorUsageRecord<size_t>> buffer_usage_records;
+  LOGI("Changjin: buffer_usages = %d", count++);
   for (auto& usage : buffer_usages) {
     const auto& t = tensor_reserver_.Get(usage.first);
     const auto& shape = t.shape;
@@ -474,10 +487,11 @@ absl::Status InferenceContext::AllocateMemoryForBuffers(const CLDevice& device,
                                     static_cast<TaskId>(usage.second.x),
                                     static_cast<TaskId>(usage.second.y)});
   }
+  LOGI("Changjin: buffer_usages_records = %d", buffer_usage_records.size());
 
   ObjectsAssignment<size_t> buffer_assignment;
   RETURN_IF_ERROR(AssignObjectsToTensors(
-      buffer_usage_records, MemoryStrategy::GREEDY_BEST, &buffer_assignment));
+      buffer_usage_records, MemoryStrategy::GREEDY_BY_SIZE, &buffer_assignment));
 
   shared_buffers_.resize(buffer_assignment.object_sizes.size());
   for (int i = 0; i < buffer_assignment.object_sizes.size(); ++i) {
@@ -509,6 +523,7 @@ absl::Status InferenceContext::AllocateMemoryForBuffers(const CLDevice& device,
       created_tensors[tensor_index] = true;
     }
   }
+  LOGI("Changjin: Allocate memory for buffers done = %lld", GetSizeOfMemoryAllocatedForIntermediateTensors());
   return absl::OkStatus();
 }
 
@@ -548,6 +563,7 @@ absl::Status InferenceContext::AllocateMemoryForStrongShapes(
       }
     }
   }
+  LOGI("Changjin: Allocate memory for strong shapes done = %lld", GetSizeOfMemoryAllocatedForIntermediateTensors());
   return absl::OkStatus();
 }
 
@@ -624,9 +640,11 @@ uint64_t InferenceContext::GetSizeOfMemoryAllocatedForIntermediateTensors()
   for (const auto& t : strong_shape_tensors_) {
     total_memory += t.second.GetMemorySizeInBytes();
   }
+  LOGI("Changjin : strong_shape_tensors_.size() = %d", strong_shape_tensors_.size());
   for (const auto& b : shared_buffers_) {
     total_memory += b.GetMemorySizeInBytes();
   }
+  LOGI("Changjin : shared_buffers_.size() = %d", shared_buffers_.size());
 
   return total_memory;
 }

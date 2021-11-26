@@ -14,6 +14,11 @@ limitations under the License.
 ==============================================================================*/
 
 #include "tensorflow/lite/delegates/gpu/gl/runtime.h"
+// Temporal usage for debugging
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG   , "libtflite", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
+#include <android/log.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -245,6 +250,7 @@ absl::Status Runtime::AddProgram(const GlShader& shader,
 }
 
 absl::Status Runtime::AllocateInternalObject(const Object& object) {
+  LOGI("Changjin : AllocateInternalObject");
   const ObjectRef ref = GetRef(object);
   switch (object.object_type) {
     case ObjectType::BUFFER: {
