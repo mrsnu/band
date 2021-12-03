@@ -20,7 +20,7 @@ void DeviceQueueWorker::AllowWorkSteal() {
 
 int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
-  if (is_throttling_) {
+  if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
   }
 
@@ -55,7 +55,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 }
 
 bool DeviceQueueWorker::GiveJob(Job& job) {
-  if (is_throttling_) {
+  if (!IsAvailable()) {
     return false;
   }
 

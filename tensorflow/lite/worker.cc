@@ -77,7 +77,7 @@ void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
 
 bool Worker::IsAvailable() {
   std::lock_guard<std::mutex> lock(device_mtx_);
-  return !is_throttling_;
+  return !is_throttling_ && !is_profiling_;
 }
 
 const CpuSet& Worker::GetWorkerThreadAffinity() const {

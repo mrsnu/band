@@ -60,6 +60,7 @@ class Worker {
   std::condition_variable request_cv_;
   bool kill_worker_ = false;
   bool is_throttling_ = false;
+  bool is_profiling_ = false;
   int32_t availability_check_interval_ms_;
 
   // GlobalQueueWorker doesn't actually use this for scheduling, but we
