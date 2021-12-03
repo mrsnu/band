@@ -26,6 +26,11 @@ bool GlobalQueueWorker::IsBusy() {
   return is_busy_;
 }
 
+int GlobalQueueWorker::GetCurrentJobId() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  return current_job_.job_id;
+}
+
 // This function returns the remaining time until this worker can start
 // processing another Job.
 //
@@ -90,7 +95,7 @@ void GlobalQueueWorker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
-      return kill_worker_ || is_busy_;
+      return (kill_worker_ || is_busy_) && !is_paused_;
     });
 
     if (kill_worker_) {

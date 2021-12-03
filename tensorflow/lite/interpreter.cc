@@ -813,6 +813,13 @@ void Interpreter::ProfileOnline(int model_id,
       if (max_size == -1) {
         return;
       }
+
+      worker->Pause();
+      int job_id = worker->GetCurrentJobId();
+      if (job_id != -1) {
+        planner_->Wait({job_id});
+      }
+
       Subgraph* subgraph = subgraphs_[max_index].get();
       SubgraphKey& subgraph_key = subgraph->GetKey();
 
@@ -820,7 +827,6 @@ void Interpreter::ProfileOnline(int model_id,
       if (ProfileSubgraph(subgraph, timer, latency) != kTfLiteOk) {
         return;
       }
-
       moving_averaged_latencies_[max_index] = latency;
       // record the profiled latency for subsequent benchmark runs
       profile_database_[subgraph_key] = latency;
@@ -836,6 +842,7 @@ void Interpreter::ProfileOnline(int model_id,
                        << subgraph_key.GetInputOpsString()
                        << " end="
                        << subgraph_key.GetOutputOpsString() << ".";
+      worker->Resume();
     }));
   }
   for (std::thread& thread : profiling_threads) {

@@ -18,6 +18,14 @@ void DeviceQueueWorker::AllowWorkSteal() {
   allow_work_steal_ = true;
 }
 
+int DeviceQueueWorker::GetCurrentJobId() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  if (requests_.empty()) {
+    return -1;
+  }
+  return requests_.front().job_id;
+}
+
 int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {
@@ -68,7 +76,7 @@ void DeviceQueueWorker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
-      return kill_worker_ || !requests_.empty();
+      return (kill_worker_ || !requests_.empty()) && !is_paused_;
     });
 
     if (kill_worker_) {
