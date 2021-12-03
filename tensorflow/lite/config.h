@@ -26,8 +26,8 @@ limitations under the License.
 namespace tflite {
 struct ProfileConfig {
   bool online = true;
-  int num_warmups = 3;
-  int num_runs = 50;
+  int num_warmups = 1;
+  int num_runs = 1;
 };
 
 struct InterpreterConfig {
