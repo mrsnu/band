@@ -20,7 +20,7 @@ void DeviceQueueWorker::AllowWorkSteal() {
 
 int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
-  if (!is_available_) {
+  if (is_throttling_) {
     return LARGE_WAITING_TIME;
   }
 
@@ -55,7 +55,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 }
 
 bool DeviceQueueWorker::GiveJob(Job& job) {
-  if (!is_available_) {
+  if (is_throttling_) {
     return false;
   }
 
@@ -114,7 +114,7 @@ void DeviceQueueWorker::Work() {
         } else if (status == kTfLiteDelegateError) {
           // TODO #142: Test handling unavailable device with fallback subgraphs.
           lock.lock();
-          is_available_ = false;
+          is_throttling_ = true;
           planner_ptr->PrepareReenqueue(job);
           std::vector<Job> jobs(requests_.begin(), requests_.end());
           requests_.clear();
@@ -124,7 +124,7 @@ void DeviceQueueWorker::Work() {
           WaitUntilDeviceAvailable(subgraph);
 
           lock.lock();
-          is_available_ = true;
+          is_throttling_ = false;
           lock.unlock();
 
           planner_ptr->GetSafeBool().notify();

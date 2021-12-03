@@ -11,7 +11,7 @@ namespace tflite {
 namespace impl {
 
 bool GlobalQueueWorker::GiveJob(Job& job) {
-  if (is_busy_ || !is_available_) {
+  if (is_busy_ || is_throttling_) {
     return false;
   }
 
@@ -42,7 +42,7 @@ bool GlobalQueueWorker::IsBusy() {
 // we print an error message and this function returns -1.
 int64_t GlobalQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
-  if (!is_available_) {
+  if (is_throttling_) {
     return LARGE_WAITING_TIME;
   }
 
@@ -137,7 +137,7 @@ void GlobalQueueWorker::Work() {
 
         } else if (status == kTfLiteDelegateError) {
           lock.lock();
-          is_available_ = false;
+          is_throttling_ = true;
           planner_ptr->PrepareReenqueue(current_job_);
           lock.unlock();
 
@@ -145,7 +145,7 @@ void GlobalQueueWorker::Work() {
           WaitUntilDeviceAvailable(subgraph);
 
           lock.lock();
-          is_available_ = true;
+          is_throttling_ = false;
           is_busy_ = false;
           lock.unlock();
 
