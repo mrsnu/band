@@ -68,24 +68,23 @@ void DeviceQueueWorker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
-      return kill_worker_ || !this->requests_.empty();
+      return kill_worker_ || !requests_.empty();
     });
 
-    if (requests_.empty()) {
-      lock.unlock();
+    if (kill_worker_) {
       break;
     }
 
-    Job& job = requests_.front();
+    Job& current_job = requests_.front();
     lock.unlock();
 
-    if (!IsValid(job)) {
+    if (!IsValid(current_job)) {
       TFLITE_LOG(ERROR) << "Worker " << device_flag_
                         << " spotted an invalid job";
       break;
     }
 
-    int subgraph_idx = job.subgraph_idx;
+    int subgraph_idx = current_job.subgraph_idx;
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
@@ -96,26 +95,29 @@ void DeviceQueueWorker::Work() {
         break;
       }
 
-      if (TryCopyInputTensors(job) == kTfLiteOk) {
-        job.invoke_time = profiling::time::NowMicros();
+      if (TryCopyInputTensors(current_job) == kTfLiteOk) {
+        lock.lock();
+        current_job.invoke_time = profiling::time::NowMicros();
+        lock.unlock();
 
         TfLiteStatus status = subgraph.Invoke();
         if (status == kTfLiteOk) {
-          job.end_time = profiling::time::NowMicros();
+          // end_time is never read/written by any other thread as long as
+          // is_busy == true, so it's safe to update it w/o grabbing the lock
+          current_job.end_time = profiling::time::NowMicros();
           interpreter_ptr->UpdateExpectedLatency(
               subgraph_idx,
-              (job.end_time - job.invoke_time));
-          if (job.following_jobs.size() != 0) {
-            planner_ptr->EnqueueBatch(job.following_jobs);
+              (current_job.end_time - current_job.invoke_time));
+          if (current_job.following_jobs.size() != 0) {
+            planner_ptr->EnqueueBatch(current_job.following_jobs);
           } 
-          TryCopyOutputTensors(job);
-          job.status = kTfLiteJobSuccess;
+          TryCopyOutputTensors(current_job);
+          current_job.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {
-          // TODO #142: Test handling unavailable device with fallback subgraphs.
           lock.lock();
           is_throttling_ = true;
-          planner_ptr->PrepareReenqueue(job);
+          planner_ptr->PrepareReenqueue(current_job);
           std::vector<Job> jobs(requests_.begin(), requests_.end());
           requests_.clear();
           lock.unlock();
@@ -131,16 +133,18 @@ void DeviceQueueWorker::Work() {
           continue;
 
         } else {
-          job.end_time = profiling::time::NowMicros();
+          // end_time is never read/written by any other thread as long as
+          // !requests_.empty(), so it's safe to update it w/o grabbing the lock
+          current_job.end_time = profiling::time::NowMicros();
           // TODO #21: Handle errors in multi-thread environment
-          job.status = kTfLiteJobInvokeFailure;
+          current_job.status = kTfLiteJobInvokeFailure;
         }
       } else {
         TFLITE_LOG(ERROR) << "Worker failed to copy input.";
         // TODO #21: Handle errors in multi-thread environment
-        job.status = kTfLiteJobInputCopyFailure;
+        current_job.status = kTfLiteJobInputCopyFailure;
       }
-      planner_ptr->EnqueueFinishedJob(job);
+      planner_ptr->EnqueueFinishedJob(current_job);
       
       lock.lock();
       requests_.pop_front();
@@ -154,6 +158,8 @@ void DeviceQueueWorker::Work() {
       planner_ptr->GetSafeBool().notify();
     } else {
       // TODO #21: Handle errors in multi-thread environment
+      TFLITE_LOG(ERROR) << "Worker " << device_flag_
+                        << " failed to acquire ptr to planner";
       return;
     }
   }
