@@ -552,8 +552,9 @@ class Interpreter {
                                TfLiteDelegate** delegate);
 
   // Profile the subgraphs with the given model id.
-  // NOTE: the profiling step may affects other running requests,
-  // and vice versa.
+  // If profile_online_ is true, interpreter uses workers to profile the
+  // subgraph. If profile_online_ is false, interpreter profiles the subgraph
+  // separately from workers.
   void Profile(int model_id);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
@@ -815,9 +816,9 @@ class Interpreter {
 
   // Parameters for profiling.
   // The results during warmup period are not counted.
-  int num_warmups_ = 3;
-
-  int num_runs_ = 50;
+  bool profile_online_;
+  int profile_num_warmups_;
+  int profile_num_runs_;
 
   int next_model_id_ = 0;
 

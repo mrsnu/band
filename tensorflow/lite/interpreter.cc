@@ -292,12 +292,13 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
     // since we don't have anything in model_configs_ at the moment
 
     // Set how many runs are required to get the profile results.
-    num_warmups_ = config.profile_config.num_warmups;
-    num_runs_ = config.profile_config.num_runs;
+    profile_online_ = config.profile_config.online;
+    profile_num_warmups_ = config.profile_config.num_warmups;
+    profile_num_runs_ = config.profile_config.num_runs;
 
     TFLITE_LOG(INFO) << "Set Profiling Configuration:"
-                     << " warmup=" << num_warmups_
-                     << " count=" << num_runs_;
+                     << " warmup=" << profile_num_warmups_
+                     << " count=" << profile_num_runs_;
   }
 
   const TfLiteCPUMaskFlags cpu_mask = 
@@ -825,7 +826,7 @@ void Interpreter::Profile(int model_id) {
               workers_[subgraph_key.worker_id]->GetNumThreads());
         }
 
-        for (int i = 0; i < num_warmups_; i++) {
+        for (int i = 0; i < profile_num_warmups_; i++) {
           if (subgraph->Invoke() != kTfLiteOk) {
             subgraph->SetHealth(false);
             moving_averaged_latencies_[i] = INT_MAX;
@@ -834,7 +835,7 @@ void Interpreter::Profile(int model_id) {
           }
         }
         timer.ClearRecords();
-        for (int i = 0; i < num_runs_; i++) {
+        for (int i = 0; i < profile_num_runs_; i++) {
           if (subgraph->Invoke() != kTfLiteOk) {
             subgraph->SetHealth(false);
             moving_averaged_latencies_[i] = INT_MAX;

@@ -70,6 +70,9 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     interpreter_config.num_threads = root["num_threads"].asInt();
   }
   // 5. Profile config
+  if (!root["profile_online"].isNull()) {
+    interpreter_config.profile_config.online = root["profile_online"].asBool();
+  }
   if (!root["profile_warmup_runs"].isNull()) {
     interpreter_config.profile_config.num_warmups = root["profile_warmup_runs"].asInt();
   }
