@@ -304,7 +304,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
       static_cast<TfLiteCPUMaskFlags>(config.cpu_masks);
   auto cpu_mask_set = TfLiteCPUMaskGetSet(cpu_mask);
 
-  TFLITE_LOG(INFO) << "Set interpreter affinity to "
+  TFLITE_LOG(INFO) << "Set affinity to "
                    << TfLiteCPUMaskGetName(cpu_mask) << " cores";
 
   return SetCPUThreadAffinity(cpu_mask_set);
