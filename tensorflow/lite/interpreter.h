@@ -559,8 +559,8 @@ class Interpreter {
   // subgraph. If profile_online_ is false, interpreter profiles the subgraph
   // separately from workers.
   void Profile(int model_id);
-  void ProfileOnline(int model_id);
-  void ProfileOffline(int model_id);
+  void ProfileOnline(int model_id, tflite::profiling::TimeProfiler& timer);
+  void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
   TfLiteStatus ProfileSubgraph(Subgraph* subgraph,
                                tflite::profiling::TimeProfiler& timer,
                                int64_t& latency);

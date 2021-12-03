@@ -777,14 +777,24 @@ int64_t Interpreter::GetProfiledLatency(SubgraphKey& key) {
 }
 
 void Interpreter::Profile(int model_id) {
+  tflite::Profiler* previous_profiler = GetProfiler();
+  // Assign temporal time profiler for profiling.
+  tflite::profiling::TimeProfiler timer;
+  // Only update subgraph profilers to not care ownership of the profiler
+  SetSubgraphProfiler(&timer);
+
   if (profile_online_) {
-    ProfileOnline(model_id);
+    ProfileOnline(model_id, timer);
   } else {
-    ProfileOffline(model_id);
+    ProfileOffline(model_id, timer);
   }
+
+  SetSubgraphProfiler(previous_profiler);
+  SetSLOBasedOnProfile();
 }
 
-void Interpreter::ProfileOnline(int model_id) {
+void Interpreter::ProfileOnline(int model_id,
+                                tflite::profiling::TimeProfiler& timer) {
   std::vector<std::thread> profiling_threads;
   for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
     Worker* worker = workers_[worker_id].get();
@@ -797,13 +807,8 @@ void Interpreter::ProfileOnline(int model_id) {
   }
 }
 
-void Interpreter::ProfileOffline(int model_id) {
-  tflite::Profiler* previous_profiler = GetProfiler();
-  // Assign temporal time profiler for profiling.
-  tflite::profiling::TimeProfiler timer;
-  // Only update subgraph profilers to not care ownership of the profiler
-  SetSubgraphProfiler(&timer);
-
+void Interpreter::ProfileOffline(int model_id,
+                                 tflite::profiling::TimeProfiler& timer) {
   for (int i = 0; i < subgraphs_size(); ++i) {
     Subgraph* subgraph = subgraphs_[i].get();
     SubgraphKey& subgraph_key = subgraph->GetKey();
@@ -858,9 +863,6 @@ void Interpreter::ProfileOffline(int model_id) {
       t.join();
     }
   }
-
-  SetSubgraphProfiler(previous_profiler);
-  SetSLOBasedOnProfile();
 }
 
 TfLiteStatus Interpreter::ProfileSubgraph(
