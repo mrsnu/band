@@ -777,6 +777,27 @@ int64_t Interpreter::GetProfiledLatency(SubgraphKey& key) {
 }
 
 void Interpreter::Profile(int model_id) {
+  if (profile_online_) {
+    ProfileOnline(model_id);
+  } else {
+    ProfileOffline(model_id);
+  }
+}
+
+void Interpreter::ProfileOnline(int model_id) {
+  std::vector<std::thread> profiling_threads;
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    Worker* worker = workers_[worker_id].get();
+    profiling_threads.push_back(std::thread([&, worker_id](){
+
+    }));
+  }
+  for (std::thread& thread : profiling_threads) {
+    thread.join();
+  }
+}
+
+void Interpreter::ProfileOffline(int model_id) {
   tflite::Profiler* previous_profiler = GetProfiler();
   // Assign temporal time profiler for profiling.
   tflite::profiling::TimeProfiler timer;
@@ -814,38 +835,10 @@ void Interpreter::Profile(int model_id) {
 
     } else {
       std::thread t([&]() {
-        auto cpu_set =
-            workers_[subgraph_key.worker_id]->GetWorkerThreadAffinity();
-        SetCPUThreadAffinity(cpu_set);
-        if (device_flag == kTfLiteCPU) {
-          auto internal_backend =
-              GetCpuBackendContext()->internal_backend_context();
-          // Update internal cpu backend (ruy)
-          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
-          internal_backend->SetMaxNumThreads(
-              workers_[subgraph_key.worker_id]->GetNumThreads());
+        int64_t latency;
+        if (ProfileSubgraph(subgraph, timer, latency) != kTfLiteOk) {
+          return;
         }
-
-        for (int i = 0; i < profile_num_warmups_; i++) {
-          if (subgraph->Invoke() != kTfLiteOk) {
-            subgraph->SetHealth(false);
-            moving_averaged_latencies_[i] = INT_MAX;
-            profile_database_[subgraph_key] = INT_MAX;
-            return;
-          }
-        }
-        timer.ClearRecords();
-        for (int i = 0; i < profile_num_runs_; i++) {
-          if (subgraph->Invoke() != kTfLiteOk) {
-            subgraph->SetHealth(false);
-            moving_averaged_latencies_[i] = INT_MAX;
-            profile_database_[subgraph_key] = INT_MAX;
-            return;
-          }
-        }
-
-        int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
-
         moving_averaged_latencies_[i] = latency;
         // record the profiled latency for subsequent benchmark runs
         profile_database_[subgraph_key] = latency;
@@ -868,6 +861,43 @@ void Interpreter::Profile(int model_id) {
 
   SetSubgraphProfiler(previous_profiler);
   SetSLOBasedOnProfile();
+}
+
+TfLiteStatus Interpreter::ProfileSubgraph(
+    Subgraph* subgraph, tflite::profiling::TimeProfiler& timer,
+    int64_t& latency) {
+  SubgraphKey& subgraph_key = subgraph->GetKey();
+  Worker* worker = workers_[subgraph_key.worker_id].get();
+  auto cpu_set = worker->GetWorkerThreadAffinity();
+  SetCPUThreadAffinity(cpu_set);
+  if (worker->GetDeviceFlag() == kTfLiteCPU) {
+    auto internal_backend = GetCpuBackendContext()->internal_backend_context();
+    // Update internal cpu backend (ruy)
+    internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
+    internal_backend->SetMaxNumThreads(
+        workers_[subgraph_key.worker_id]->GetNumThreads());
+  }
+
+  for (int i = 0; i < profile_num_warmups_; i++) {
+    if (subgraph->Invoke() != kTfLiteOk) {
+      subgraph->SetHealth(false);
+      moving_averaged_latencies_[i] = INT_MAX;
+      profile_database_[subgraph_key] = INT_MAX;
+      return kTfLiteError;
+    }
+  }
+  timer.ClearRecords();
+  for (int i = 0; i < profile_num_runs_; i++) {
+    if (subgraph->Invoke() != kTfLiteOk) {
+      subgraph->SetHealth(false);
+      moving_averaged_latencies_[i] = INT_MAX;
+      profile_database_[subgraph_key] = INT_MAX;
+      return kTfLiteError;
+    }
+  }
+
+  latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
+  return kTfLiteOk;
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {

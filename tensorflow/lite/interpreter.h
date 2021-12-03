@@ -56,6 +56,9 @@ class TestDelegate;
 namespace delegates {
 class InterpreterUtils;  // Class for friend declarations.
 }  // namespace delegates
+namespace profiling {
+class TimeProfiler;
+}  // namespace profiling
 
 namespace impl {
 
@@ -556,6 +559,11 @@ class Interpreter {
   // subgraph. If profile_online_ is false, interpreter profiles the subgraph
   // separately from workers.
   void Profile(int model_id);
+  void ProfileOnline(int model_id);
+  void ProfileOffline(int model_id);
+  TfLiteStatus ProfileSubgraph(Subgraph* subgraph,
+                               tflite::profiling::TimeProfiler& timer,
+                               int64_t& latency);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
