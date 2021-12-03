@@ -798,8 +798,44 @@ void Interpreter::ProfileOnline(int model_id,
   std::vector<std::thread> profiling_threads;
   for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
     Worker* worker = workers_[worker_id].get();
-    profiling_threads.push_back(std::thread([&, worker_id](){
+    profiling_threads.push_back(std::thread([&, worker_id]() {
+      int max_size = -1;
+      int max_index = -1;
+      for (int i = 0; i < subgraphs_size(); i++) {
+        if (worker_id == subgraphs_[i]->GetKey().worker_id) {
+          int size = subgraphs_[i]->execution_plan().size();
+          if (size > max_size) {
+            max_size = size;
+            max_index = i;
+          }
+        }
+      }
+      if (max_size == -1) {
+        return;
+      }
+      Subgraph* subgraph = subgraphs_[max_index].get();
+      SubgraphKey& subgraph_key = subgraph->GetKey();
 
+      int64_t latency;
+      if (ProfileSubgraph(subgraph, timer, latency) != kTfLiteOk) {
+        return;
+      }
+
+      moving_averaged_latencies_[max_index] = latency;
+      // record the profiled latency for subsequent benchmark runs
+      profile_database_[subgraph_key] = latency;
+
+      TFLITE_LOG(INFO) << "Profiling result\n"
+                       << " model=" << subgraph_key.model_id
+                       << " avg=" << latency << " us"
+                       << " worker="
+                       << subgraph_key.worker_id
+                       << " device="
+                       << TfLiteDeviceGetName(worker->GetDeviceFlag())
+                       << " start="
+                       << subgraph_key.GetInputOpsString()
+                       << " end="
+                       << subgraph_key.GetOutputOpsString() << ".";
     }));
   }
   for (std::thread& thread : profiling_threads) {
