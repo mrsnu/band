@@ -159,6 +159,8 @@ Stat<int64_t> BenchmarkModel::Run(int min_num_times, float min_secs,
       status = RunPeriodicSingleThread();
     } else if (mode == "stream") {
       status = RunStream();
+    } else if (mode == "workload") {
+      status = RunWorkload();
     } else if (mode == "default") {
       status = RunAll();
     } else {

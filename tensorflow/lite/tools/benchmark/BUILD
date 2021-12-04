@@ -239,6 +239,7 @@ cc_library(
         "//tensorflow/lite:config",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/tools:logging",
+        "//tensorflow/lite/tools:workload",
         "@com_google_absl//absl/strings:str_format",
         "@jsoncpp_git//:jsoncpp",
     ],

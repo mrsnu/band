@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
+#include "tensorflow/lite/tools/workload.h"
 
 namespace tflite {
 namespace benchmark {
@@ -67,6 +68,7 @@ struct ModelInformation {
 
 struct BenchmarkConfig {
   std::string execution_mode;
+  std::shared_ptr<Workload> workload = nullptr;
   unsigned model_id_random_seed;
   int global_period_ms;
   int running_time_ms = 60000;
@@ -75,6 +77,10 @@ struct BenchmarkConfig {
 
 TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
                                           BenchmarkConfig& benchmark_config);
+
+TfLiteStatus ParseWorkloadConfigFromJson(
+    std::string json_fname, std::map<int, ModelConfig>& model_config,
+    BenchmarkConfig& benchmark_config);
 
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.
