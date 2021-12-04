@@ -9,12 +9,14 @@ namespace tflite {
 
 namespace impl {
 
-// assigns requested model to devices according to model_id.
+// Assigns requested subgraph to corresponding device.
+// Select entire model subgraph in case when 
+// given subgraph id is invalid (not -1).
 class FixedDeviceScheduler : public Scheduler {
  public:
   explicit FixedDeviceScheduler(Planner* planner) : Scheduler(planner) {
     need_profile_ = false;
-    need_fallback_subgraphs_ = false;
+    need_fallback_subgraphs_ = true;
     worker_type_ = kDeviceQueue;
   }
   void Schedule(JobQueue& requests) override;
