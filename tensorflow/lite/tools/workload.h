@@ -33,13 +33,16 @@ class Workload {
   size_t GetCurrentFrame() const { return current_frame_; }
 
  private:
-  std::vector<Job> GetNextRequests(const Frame& frame, std::set<int>& resolved_requests) const;
+  std::vector<Job> GetNextRequests(const Frame& frame,
+                                   std::set<int>& resolved_requests) const;
 
   size_t current_frame_ = 0;
   std::vector<Frame> frames_;
 };
 
-TfLiteStatus ParseWorkloadFromJson(std::string json_fname, std::map<int, ModelConfig>& model_config, Workload& workload);
+TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
+                                   std::map<int, ModelConfig>& model_config,
+                                   Workload& workload);
 
 }  // namespace tflite
 
