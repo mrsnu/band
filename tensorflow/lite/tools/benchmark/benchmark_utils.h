@@ -68,7 +68,7 @@ struct ModelInformation {
 
 struct BenchmarkConfig {
   std::string execution_mode;
-  std::shared_ptr<Workload> workload = nullptr;
+  std::shared_ptr<WorkloadSimulator> workload_simulator = nullptr;
   unsigned model_id_random_seed;
   int global_period_ms;
   int running_time_ms = 60000;

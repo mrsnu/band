@@ -11,11 +11,11 @@ Frame::ModelRequest::ModelRequest(Job job, int id, int count,
                                   std::vector<int> dependency)
     : job(job), id(id), count(count), dependency(dependency) {}
 
-Workload::Workload() {}
+WorkloadSimulator::WorkloadSimulator() {}
 
-Workload::Workload(std::vector<Frame> frames) : frames_(frames) {}
+WorkloadSimulator::WorkloadSimulator(std::vector<Frame> frames) : frames_(frames) {}
 
-TfLiteStatus Workload::ExecuteFrame(tflite::Interpreter* interpreter) {
+TfLiteStatus WorkloadSimulator::ExecuteFrame(tflite::Interpreter* interpreter) {
   if (IsFinished()) {
     return kTfLiteError;
   }
@@ -34,11 +34,11 @@ TfLiteStatus Workload::ExecuteFrame(tflite::Interpreter* interpreter) {
   return kTfLiteOk;
 }
 
-void Workload::Reset() { current_frame_ = 0; }
+void WorkloadSimulator::Reset() { current_frame_ = 0; }
 
-bool Workload::IsFinished() const { return current_frame_ >= frames_.size(); }
+bool WorkloadSimulator::IsFinished() const { return current_frame_ >= frames_.size(); }
 
-std::vector<Job> Workload::GetNextRequests(
+std::vector<Job> WorkloadSimulator::GetNextRequests(
     const Frame& frame, std::set<int>& resolved_requests) const {
   std::set<int> current_requests;
   bool requires_update = true;
@@ -80,7 +80,7 @@ std::vector<Job> Workload::GetNextRequests(
 
 TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
                                    std::map<int, ModelConfig>& model_config,
-                                   Workload& workload) {
+                                   WorkloadSimulator& workload) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
   if (!config.is_open()) {
@@ -133,7 +133,7 @@ TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
     }
   }
 
-  workload = Workload(frames);
+  workload = WorkloadSimulator(frames);
 
   return kTfLiteOk;
 }

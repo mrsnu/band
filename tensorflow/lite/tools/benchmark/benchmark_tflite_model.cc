@@ -680,8 +680,8 @@ TfLiteStatus BenchmarkTfLiteModel::RunWorkload() {
   int run_duration_us = benchmark_config_.running_time_ms * 1000;
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
-  while(!benchmark_config_.workload->IsFinished()) {
-    benchmark_config_.workload->ExecuteFrame(interpreter_.get());
+  while(!benchmark_config_.workload_simulator->IsFinished()) {
+    benchmark_config_.workload_simulator->ExecuteFrame(interpreter_.get());
     num_frames++;
   }
   int64_t end = profiling::time::NowMicros();
