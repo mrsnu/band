@@ -22,10 +22,10 @@ struct Frame {
   std::map<int, ModelRequest> requests;
 };
 
-class Workload {
+class WorkloadSimulator {
  public:
-  Workload();
-  Workload(std::vector<Frame> frames);
+  WorkloadSimulator();
+  WorkloadSimulator(std::vector<Frame> frames);
 
   TfLiteStatus ExecuteFrame(tflite::Interpreter* interpreter);
   void Reset();
@@ -42,7 +42,7 @@ class Workload {
 
 TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
                                    std::map<int, ModelConfig>& model_config,
-                                   Workload& workload);
+                                   WorkloadSimulator& workload);
 
 }  // namespace tflite
 
