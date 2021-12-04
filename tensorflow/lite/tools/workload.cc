@@ -1,10 +1,8 @@
-#include "tensorflow/lite/tools/workload.h"
-
 #include <json/json.h>
-
 #include <algorithm>
 #include <set>
 
+#include "tensorflow/lite/tools/workload.h"
 #include "tensorflow/lite/config.h"
 
 namespace tflite {
@@ -112,7 +110,8 @@ TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
       int request_id = stoi(itr.key().asString());
       auto& request = *itr;
 
-      TF_LITE_ENSURE_STATUS(ValidateJsonConfig(request, {"model", "count", "dependency"}));
+      TF_LITE_ENSURE_STATUS(
+          ValidateJsonConfig(request, {"model", "count", "dependency"}));
 
       std::string model_name = request["model"].asString();
       if (model_fname_to_id.find(model_name) == model_fname_to_id.end()) {
