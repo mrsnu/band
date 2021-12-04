@@ -5,6 +5,7 @@
 #include "tensorflow/lite/tools/workload.h"
 #include "tensorflow/lite/config.h"
 
+
 namespace tflite {
 Frame::ModelRequest::ModelRequest(Job job, int id, int count,
                                   std::vector<int> dependency)
