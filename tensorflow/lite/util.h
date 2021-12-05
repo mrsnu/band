@@ -62,6 +62,10 @@ struct SubgraphKey {
     return output_ops < key.output_ops;
   }
 
+  explicit operator std::string() const {
+    return GetInputOpsString() + "/" + GetOutputOpsString();
+  }
+
   std::string GetInputOpsString() const;
   std::string GetOutputOpsString() const;
 

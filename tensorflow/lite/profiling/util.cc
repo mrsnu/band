@@ -96,8 +96,6 @@ void UpdateDatabase(const ModelDeviceToLatency& id_profile,
   for (auto& pair : id_profile) {
     SubgraphKey key = pair.first;
     int model_id = key.model_id;
-    std::string start_indices = key.GetInputOpsString();
-    std::string end_indices = key.GetOutputOpsString();
     int64_t profiled_latency = pair.second;
 
     // check the string name of this model id
@@ -111,7 +109,7 @@ void UpdateDatabase(const ModelDeviceToLatency& id_profile,
     // copy all entries in id_profile --> database_json
     // as an ad-hoc method, we simply concat the start/end indices to form
     // the level-two key in the final json value
-    database_json[model_name][start_indices + "/" + end_indices][key.worker_id] = profiled_latency;
+    database_json[model_name][static_cast<std::string>(key)][key.worker_id] = profiled_latency;
   }
 }
 

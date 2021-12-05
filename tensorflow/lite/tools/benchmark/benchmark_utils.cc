@@ -164,8 +164,8 @@ TfLiteStatus PopulateInputLayerInfo(
   return kTfLiteOk;
 }
 
-TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
-                                          util::BenchmarkConfig& benchmark_config) {
+TfLiteStatus ParseBenchmarkConfigFromJson(
+    std::string json_fname, util::BenchmarkConfig& benchmark_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
   Json::Value root;
@@ -298,10 +298,65 @@ TfLiteStatus ParseWorkloadConfigFromJson(
                         << "is given in the configs.";
       return kTfLiteError;
     } else {
-      benchmark_config.workload_simulator = std::make_shared<WorkloadSimulator>();
+      benchmark_config.workload_simulator =
+          std::make_shared<WorkloadSimulator>();
       TF_LITE_ENSURE_STATUS(
-          ParseWorkloadFromJson(root["workload"].asString(), model_config, *benchmark_config.workload_simulator));
+          ParseWorkloadFromJson(root["workload"].asString(), model_config,
+                                *benchmark_config.workload_simulator));
     }
+  }
+
+  return kTfLiteOk;
+}
+
+template <typename Iterable>
+Json::Value iterable2json(Iterable const& cont) {
+  Json::Value v;
+  for (auto&& element : cont) {
+    v.append(element);
+  }
+  return v;
+}
+
+TfLiteStatus TryDumpSubgraphsToJson(std::string json_fname,
+                                    Interpreter* interpreter) {
+  std::ifstream config(json_fname, std::ifstream::binary);
+
+  Json::Value root;
+  config >> root;
+
+  if (!root.isObject()) {
+    TFLITE_LOG(ERROR) << "Please validate the json config file.";
+    return kTfLiteError;
+  }
+
+  if (!root["model_subgraphs"].isNull()) {
+    Json::Value model_subgraphs_json;
+    auto model_configs = interpreter->GetModelConfig();
+    for (auto model_config : model_configs) {
+      auto model_spec = interpreter->GetModelSpec(model_config.first);
+      model_subgraphs_json[model_config.second.model_fname]["input"] =
+          iterable2json(model_spec.input_tensors);
+      model_subgraphs_json[model_config.second.model_fname]["output"] =
+          iterable2json(model_spec.output_tensors);
+    }
+
+    for (int i = 0; i < interpreter->subgraphs_size(); i++) {
+      Subgraph* subgraph = interpreter->subgraph(i);
+      const SubgraphKey& key = subgraph->GetKey();
+      std::string model_fname =
+          interpreter->GetModelConfig()[key.model_id].model_fname;
+
+      model_subgraphs_json[model_fname]["subgraph"]
+                          [static_cast<std::string>(key)]["input"] =
+                              iterable2json(subgraph->inputs());
+      model_subgraphs_json[model_fname]["subgraph"]
+                          [static_cast<std::string>(key)]["output"] =
+                              iterable2json(subgraph->outputs());
+    }
+
+    WriteJsonObjectToFile(model_subgraphs_json,
+                          root["model_subgraphs"].asString());
   }
 
   return kTfLiteOk;

@@ -82,6 +82,8 @@ TfLiteStatus ParseWorkloadConfigFromJson(
     std::string json_fname, std::map<int, ModelConfig>& model_config,
     BenchmarkConfig& benchmark_config);
 
+TfLiteStatus TryDumpSubgraphsToJson(std::string json_fname, Interpreter* interpreter);
+
 // A convenient function that wraps tflite::profiling::time::SleepForMicros and
 // simply return if 'sleep_seconds' is negative.
 void SleepForSeconds(double sleep_seconds);

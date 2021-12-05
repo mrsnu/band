@@ -510,6 +510,10 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
                                          benchmark_config_)
   );
 
+  TF_LITE_ENSURE_STATUS(
+      util::TryDumpSubgraphsToJson(params_.Get<std::string>("json_path"), interpreter_.get())
+  );
+
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the
   // installed profiler profile memory usage information.
