@@ -164,8 +164,8 @@ TfLiteStatus PopulateInputLayerInfo(
   return kTfLiteOk;
 }
 
-TfLiteStatus ParseBenchmarkConfigFromJson(
-    std::string json_fname, util::BenchmarkConfig& benchmark_config) {
+TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
+                                          util::BenchmarkConfig& benchmark_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
 
   Json::Value root;
@@ -347,6 +347,8 @@ TfLiteStatus TryDumpSubgraphsToJson(std::string json_fname,
       std::string model_fname =
           interpreter->GetModelConfig()[key.model_id].model_fname;
 
+      model_subgraphs_json[model_fname]["subgraph"]
+                          [static_cast<std::string>(key)]["index"][key.worker_id] = i;
       model_subgraphs_json[model_fname]["subgraph"]
                           [static_cast<std::string>(key)]["input"] =
                               iterable2json(subgraph->inputs());
