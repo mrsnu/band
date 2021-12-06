@@ -559,11 +559,6 @@ class Interpreter {
   // subgraph. If profile_online_ is false, interpreter profiles the subgraph
   // separately from workers.
   void Profile(int model_id);
-  void ProfileOnline(int model_id, tflite::profiling::TimeProfiler& timer);
-  void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
-  TfLiteStatus ProfileSubgraph(Subgraph* subgraph,
-                               tflite::profiling::TimeProfiler& timer,
-                               int64_t& latency);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
   /// of the profiler and must ensure its validity.
@@ -800,6 +795,14 @@ class Interpreter {
 
   // Helper function that sets the profiler to all subgraphs.
   void SetSubgraphProfiler(Profiler * profiler);
+
+  // On/Offline profile implementation and helper methods.
+  void ProfileOnline(int model_id, tflite::profiling::TimeProfiler& timer);
+  void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
+  int64_t ProfileSubgraph(Subgraph* subgraph,
+                          tflite::profiling::TimeProfiler& timer);
+  int64_t EstimateLatency(const Subgraph* target_subgraph,
+                          const Subgraph* max_subgraph, int64_t max_latency);
 
   // Returns true if delegates have been applied.
   bool HasDelegates(size_t subgraph_index);
