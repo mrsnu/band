@@ -597,7 +597,7 @@ class Subgraph {
   // Returns true if cancellation function returns true.
   bool IsCancelled();
   
-  bool GetHealth() {
+  bool GetHealth() const {
     return healthy_;
   }
 

@@ -804,47 +804,49 @@ void Interpreter::ProfileOnline(int model_id,
       }
     }
     std::thread t([&, worker_id]() {
-      int max_num_ops = -1;
-      int max_subgraph_idx = -1;
-      for (const int& sub_idx : worker_subgraph_indices) {
-        const Subgraph* subgraph = subgraphs_[sub_idx].get();
-        const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
-        const int& num_ops = subgraph->op_indices().size();
-        if (num_ops > max_num_ops) {
-          max_num_ops = num_ops;
-          max_subgraph_idx = sub_idx;
-        }
-      }
-      if (max_num_ops == -1) {
-        TFLITE_LOG(ERROR) << "Cannot find largest subgraph of worker "
-                          << worker_id;
-        return;
-      }
+      Subgraph* max_subgraph = nullptr;
+      int64_t max_latency = -1;
 
-      // Stop worker and profile largest subgraph
-      worker->Pause();
-      int job_id = worker->GetCurrentJobId();
-      if (job_id != -1) {
-        planner_->Wait({job_id});
-      }
-
-      Subgraph* max_subgraph = subgraphs_[max_subgraph_idx].get();
-      int64_t max_latency = ProfileSubgraph(max_subgraph, timer);
-      worker->Resume();
-
-      if (max_latency < 0) {
-        std::string error_msg = max_latency == -1
-                                    ? "Cannot profile largest subgraph"
-                                    : "Profiled largest subgraph latency < 0";
-        TFLITE_LOG(ERROR) << "Worker " << worker_id << ": " << error_msg;
+      while (true) {
+        int max_num_ops = -1;
+        int max_subgraph_idx = -1;
         for (const int& sub_idx : worker_subgraph_indices) {
-          Subgraph* subgraph = subgraphs_[sub_idx].get();
+          const Subgraph* subgraph = subgraphs_[sub_idx].get();
           const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
-          subgraph->SetHealth(false);
-          moving_averaged_latencies_[sub_idx] = INT_MAX;
-          profile_database_[key] = INT_MAX;
+          const int& num_ops = subgraph->op_indices().size();
+          if (subgraph->GetHealth() && num_ops > max_num_ops) {
+            max_num_ops = num_ops;
+            max_subgraph_idx = sub_idx;
+          }
         }
-        return;
+        if (max_num_ops == -1) {
+          TFLITE_LOG(ERROR) << "Cannot find largest subgraph of worker "
+                            << worker_id;
+          break;
+        }
+
+        // Stop worker and profile largest subgraph
+        worker->Pause();
+        int job_id = worker->GetCurrentJobId();
+        if (job_id != -1) {
+          planner_->Wait({job_id});
+        }
+
+        max_subgraph = subgraphs_[max_subgraph_idx].get();
+        max_latency = ProfileSubgraph(max_subgraph, timer);
+        worker->Resume();
+
+        if (max_latency < 0) {
+          std::string error_msg = max_latency == -1
+                                      ? "Cannot profile largest subgraph"
+                                      : "Profiled largest subgraph latency < 0";
+          TFLITE_LOG(WARN) << "Worker " << worker_id << ": " << error_msg;
+          max_subgraph->SetHealth(false);
+          moving_averaged_latencies_[max_subgraph_idx] = INT_MAX;
+          profile_database_[max_subgraph->GetKey()] = INT_MAX;
+        } else {
+          break;
+        }
       }
 
       for (const int& sub_idx : worker_subgraph_indices) {
