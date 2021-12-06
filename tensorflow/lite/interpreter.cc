@@ -807,6 +807,8 @@ void Interpreter::ProfileOnline(int model_id,
       Subgraph* max_subgraph = nullptr;
       int64_t max_latency = -1;
 
+      // Profile largest subgraph
+      // Retry until one success or all failure.
       while (true) {
         int max_num_ops = -1;
         int max_subgraph_idx = -1;
@@ -849,6 +851,7 @@ void Interpreter::ProfileOnline(int model_id,
         }
       }
 
+      // Estimate latency with largest subgraph latency
       for (const int& sub_idx : worker_subgraph_indices) {
         const Subgraph* subgraph = subgraphs_[sub_idx].get();
         const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
