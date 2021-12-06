@@ -857,7 +857,7 @@ void Interpreter::ProfileOnline(int model_id,
         moving_averaged_latencies_[sub_idx] = latency;
         profile_database_[key] = latency;
 
-        const char*& device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
+        const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
         TFLITE_LOG(INFO) << "Profiling result\n"
                          << " model=" << key.model_id
                          << " avg=" << latency << " us"
