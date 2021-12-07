@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_LITE_TOOLS_WORKLOAD_H_
-#define TENSORFLOW_LITE_TOOLS_WORKLOAD_H_
+#ifndef TENSORFLOW_LITE_TOOLS_WORKLOAD_SIMULATOR_H_
+#define TENSORFLOW_LITE_TOOLS_WORKLOAD_SIMULATOR_H_
 
 #include <map>
 #include <vector>
@@ -12,13 +12,14 @@ namespace tflite {
 
 struct Frame {
   struct ModelRequest {
-    ModelRequest(Job job, int id, int count, std::vector<int> dependency);
+    ModelRequest(Job job, int id, int count, std::vector<int> parent_requests);
     const Job job;
     const int id;
     const int count;
-    const std::vector<int> dependency;
+    const std::vector<int> parent_requests;
   };
 
+  // job id to requests
   std::map<int, ModelRequest> requests;
 };
 
@@ -27,7 +28,7 @@ class WorkloadSimulator {
   WorkloadSimulator();
   WorkloadSimulator(std::vector<Frame> frames);
 
-  TfLiteStatus ExecuteFrame(tflite::Interpreter* interpreter);
+  TfLiteStatus ExecuteCurrentFrame(tflite::Interpreter* interpreter);
   void Reset();
   bool IsFinished() const;
   size_t GetCurrentFrame() const { return current_frame_; }
@@ -46,4 +47,4 @@ TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
 
 }  // namespace tflite
 
-#endif  // TENSORFLOW_LITE_TOOLS_WORKLOAD_H_
+#endif  // TENSORFLOW_LITE_TOOLS_WORKLOAD_SIMULATOR_H_

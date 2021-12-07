@@ -22,7 +22,7 @@ limitations under the License.
 
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/util.h"
-#include "tensorflow/lite/tools/workload.h"
+#include "tensorflow/lite/tools/workload_simulator.h"
 
 namespace tflite {
 namespace benchmark {

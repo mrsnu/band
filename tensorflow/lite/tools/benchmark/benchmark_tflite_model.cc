@@ -42,7 +42,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/benchmark/profiling_listener.h"
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
 #include "tensorflow/lite/tools/logging.h"
-#include "tensorflow/lite/tools/workload.h"
+#include "tensorflow/lite/tools/workload_simulator.h"
 #include "tensorflow/lite/tools/logging_reporter.h"
 
 void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
@@ -677,11 +677,10 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunWorkload() {
-  int run_duration_us = benchmark_config_.running_time_ms * 1000;
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(!benchmark_config_.workload_simulator->IsFinished()) {
-    benchmark_config_.workload_simulator->ExecuteFrame(interpreter_.get());
+    benchmark_config_.workload_simulator->ExecuteCurrentFrame(interpreter_.get());
     num_frames++;
   }
   int64_t end = profiling::time::NowMicros();

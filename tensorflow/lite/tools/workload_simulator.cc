@@ -2,27 +2,27 @@
 #include <algorithm>
 #include <set>
 
-#include "tensorflow/lite/tools/workload.h"
+#include "tensorflow/lite/tools/workload_simulator.h"
 #include "tensorflow/lite/config.h"
 
 
 namespace tflite {
 Frame::ModelRequest::ModelRequest(Job job, int id, int count,
-                                  std::vector<int> dependency)
-    : job(job), id(id), count(count), dependency(dependency) {}
+                                  std::vector<int> parent_requests)
+    : job(job), id(id), count(count), parent_requests(parent_requests) {}
 
 WorkloadSimulator::WorkloadSimulator() {}
 
 WorkloadSimulator::WorkloadSimulator(std::vector<Frame> frames) : frames_(frames) {}
 
-TfLiteStatus WorkloadSimulator::ExecuteFrame(tflite::Interpreter* interpreter) {
+TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(tflite::Interpreter* interpreter) {
   if (IsFinished()) {
     return kTfLiteError;
   }
 
   auto& current_frame = frames_[current_frame_++];
   std::set<int> resolved_requests;
-
+  
   std::vector<Job> next_batch =
       GetNextRequests(current_frame, resolved_requests);
 
@@ -53,7 +53,7 @@ std::vector<Job> WorkloadSimulator::GetNextRequests(
 
       auto& request = request_it.second;
       if (std::includes(resolved_requests.begin(), resolved_requests.end(),
-                        request.dependency.begin(), request.dependency.end())) {
+                        request.parent_requests.begin(), request.parent_requests.end())) {
         // re-iterate if there is a zero-sized request
         if (request.count == 0) {
           requires_update = true;
