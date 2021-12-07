@@ -217,8 +217,8 @@ cc_library(
 )
 
 cc_library(
-    name = "workload",
-    srcs = ["workload.cc"],
+    name = "workload_simulator",
+    srcs = ["workload_simulator.cc"],
     hdrs = ["workload_simulator.h"],
     copts = common_copts,
     deps = [

@@ -22,13 +22,12 @@ TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(tflite::Interpreter* interpr
 
   auto& current_frame = frames_[current_frame_++];
   std::set<int> resolved_requests;
-  
-  std::vector<Job> next_batch =
-      GetNextRequests(current_frame, resolved_requests);
 
-  while (next_batch.size()) {
+  while (true) {
+    std::vector<Job> next_batch =
+        GetNextRequests(current_frame, resolved_requests);
+    if (next_batch.size() == 0) break;
     interpreter->InvokeModelsSync(next_batch);
-    next_batch = GetNextRequests(current_frame, resolved_requests);
   };
 
   return kTfLiteOk;
