@@ -298,9 +298,11 @@ TfLiteStatus ParseWorkloadConfigFromJson(
                         << "is given in the configs.";
       return kTfLiteError;
     } else {
-      benchmark_config.workload_simulator = std::make_shared<WorkloadSimulator>();
+      benchmark_config.workload_simulator =
+          std::make_shared<WorkloadSimulator>();
       TF_LITE_ENSURE_STATUS(
-          ParseWorkloadFromJson(root["workload"].asString(), model_config, *benchmark_config.workload_simulator));
+          ParseWorkloadFromJson(root["workload"].asString(), model_config,
+                                *benchmark_config.workload_simulator));
     }
   }
 
