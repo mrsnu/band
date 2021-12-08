@@ -28,7 +28,6 @@ TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
   }
   
   availability_check_interval_ms_ = config.availability_check_interval_ms;
-  worker_id_ = worker_id;
 
   TFLITE_LOG(INFO) << "Set affinity of "
                    << TfLiteDeviceGetName(device_flag_)

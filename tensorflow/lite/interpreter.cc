@@ -973,9 +973,9 @@ TfLiteDeviceFlags Interpreter::GetWorkerDeviceFlag(int worker_id) {
 }
 
 int Interpreter::GetRepresentativeWorkerId(TfLiteDeviceFlags device_flag) {
-  for(auto it = workers_.begin(); it != workers_.end(); it++) {
-    if (it->get()->GetDeviceFlag() == device_flag) {
-      return it->get()->GetWorkerId();
+  for(int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (workers_[worker_id].get()->GetDeviceFlag() == device_flag) {
+      return worker_id;
     }
   }
   return -1;

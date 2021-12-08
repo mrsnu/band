@@ -26,7 +26,6 @@ class Worker {
 
   TfLiteStatus Init(WorkerConfig& config, int worker_id);
   TfLiteDeviceFlags GetDeviceFlag() const { return device_flag_; }
-  int GetWorkerId() const { return worker_id_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   TfLiteStatus UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads);
@@ -72,7 +71,6 @@ class Worker {
   std::mutex cpu_mtx_;
 
   const TfLiteDeviceFlags device_flag_;
-  int worker_id_;
 
   static const int64_t LARGE_WAITING_TIME = INT_MAX/2;
 };
