@@ -799,7 +799,8 @@ void Interpreter::ProfileOnline(int model_id,
     Worker* worker = workers_[worker_id].get();
     std::vector<int> worker_subgraph_indices;
     for (int sub_idx = 0; sub_idx < subgraphs_size(); sub_idx++) {
-      if (subgraphs_[sub_idx]->GetKey().worker_id == worker_id) {
+      SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
+      if (key.model_id == model_id && key.worker_id == worker_id) {
         worker_subgraph_indices.push_back(sub_idx);
       }
     }
@@ -855,21 +856,23 @@ void Interpreter::ProfileOnline(int model_id,
       for (const int& sub_idx : worker_subgraph_indices) {
         const Subgraph* subgraph = subgraphs_[sub_idx].get();
         const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
-        const int& num_ops = subgraph->op_indices().size();
-        const int64_t latency =
-            EstimateLatency(subgraph, max_subgraph, max_latency);
+        if (subgraph->GetHealth()) {
+          const int64_t latency =
+              EstimateLatency(subgraph, max_subgraph, max_latency);
 
-        moving_averaged_latencies_[sub_idx] = latency;
-        profile_database_[key] = latency;
+          moving_averaged_latencies_[sub_idx] = latency;
+          profile_database_[key] = latency;
 
-        const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
-        TFLITE_LOG(INFO) << "Profiling result\n"
-                         << " model=" << key.model_id
-                         << " avg=" << latency << " us"
-                         << " worker=" << key.worker_id
-                         << " device=" << device_name
-                         << " start=" << key.GetInputOpsString()
-                         << " end=" << key.GetOutputOpsString() << ".";
+          const char* device_name =
+              TfLiteDeviceGetName(worker->GetDeviceFlag());
+          TFLITE_LOG(INFO) << "Profiling result\n"
+                           << " model=" << key.model_id
+                           << " avg=" << latency << " us"
+                           << " worker=" << key.worker_id
+                           << " device=" << device_name
+                           << " start=" << key.GetInputOpsString()
+                           << " end=" << key.GetOutputOpsString() << ".";
+        }
       }
     });
     t.join();
