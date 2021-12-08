@@ -853,6 +853,15 @@ void Interpreter::ProfileOnline(int model_id,
           moving_averaged_latencies_[max_subgraph_idx] = INT_MAX;
           profile_database_[max_subgraph->GetKey()] = INT_MAX;
         } else {
+          const SubgraphKey& key = max_subgraph->GetKey();
+          const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
+          TFLITE_LOG(INFO) << "Largest Subgraph Profiling result\n"
+                           << " model=" << model_id
+                           << " avg=" << max_latency << " us"
+                           << " worker=" << worker_id
+                           << " device=" << device_name
+                           << " start=" << key.GetInputOpsString()
+                           << " end=" << key.GetOutputOpsString() << ".";
           break;
         }
       }
@@ -870,7 +879,7 @@ void Interpreter::ProfileOnline(int model_id,
 
           const char* device_name =
               TfLiteDeviceGetName(worker->GetDeviceFlag());
-          TFLITE_LOG(INFO) << "Profiling result\n"
+          TFLITE_LOG(INFO) << "Estimated Latency\n"
                            << " model=" << key.model_id
                            << " avg=" << latency << " us"
                            << " worker=" << key.worker_id
