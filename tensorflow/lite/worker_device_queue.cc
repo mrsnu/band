@@ -160,6 +160,11 @@ void DeviceQueueWorker::Work() {
 }
 
 void DeviceQueueWorker::TryWorkSteal() {
+  // Note: Due to the removal of attribute `Worker::worker_id_`,
+  // `target_worker->GetWorkerId() == worker_id_` should be updated to
+  // `target_worker == this`, and the type of `max_latency_gain_worker` should
+  // be changed from `int` to `Worker*`.
+
 /*
   std::shared_ptr<Planner> planner_ptr = planner_.lock();
   if (!planner_ptr) {
