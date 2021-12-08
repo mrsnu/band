@@ -804,6 +804,11 @@ void Interpreter::ProfileOnline(int model_id,
         worker_subgraph_indices.push_back(sub_idx);
       }
     }
+    if (worker_subgraph_indices.size() == 0) {
+      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                        << ": No subgraph exist";
+    }
+
     std::thread t([&, worker_id]() {
       Subgraph* max_subgraph = nullptr;
       int64_t max_latency = -1;
@@ -823,8 +828,8 @@ void Interpreter::ProfileOnline(int model_id,
           }
         }
         if (max_num_ops == -1) {
-          TFLITE_LOG(ERROR) << "Cannot find largest subgraph of worker "
-                            << worker_id;
+          TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                            << ": All subgraphs failed to profile";
           break;
         }
 
@@ -840,10 +845,10 @@ void Interpreter::ProfileOnline(int model_id,
         worker->Resume();
 
         if (max_latency < 0) {
-          std::string error_msg = max_latency == -1
-                                      ? "Cannot profile largest subgraph"
-                                      : "Profiled largest subgraph latency < 0";
-          TFLITE_LOG(WARN) << "Worker " << worker_id << ": " << error_msg;
+          std::string msg =
+              max_latency == -1 ? "Profiling failed" : "Profiled latency < 0";
+          TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                            << " Subgraph " << max_subgraph_idx << ": " << msg;
           max_subgraph->SetHealth(false);
           moving_averaged_latencies_[max_subgraph_idx] = INT_MAX;
           profile_database_[max_subgraph->GetKey()] = INT_MAX;
@@ -917,7 +922,10 @@ void Interpreter::ProfileOffline(int model_id,
       std::thread t([&]() {
         int64_t latency = ProfileSubgraph(subgraph, timer);
         if (latency == -1) {
-          TFLITE_LOG(ERROR) << "Latency profile failed for subgraph " << i;
+          std::string msg = "Latency profile failed";
+          const int& worker_id = subgraph_key.worker_id;
+          TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                            << " Subgraph " << i << ": " << msg;
           return;
         }
         moving_averaged_latencies_[i] = latency;
