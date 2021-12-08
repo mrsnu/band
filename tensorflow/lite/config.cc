@@ -91,6 +91,18 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["minimum_subgraph_size"].isNull()) {
     interpreter_config.minimum_subgraph_size = root["minimum_subgraph_size"].asInt();
   }
+  // 8. Disabled devices
+  if (!root["disabled_devices"].isNull()) {
+    for (int i = 0; i < root["disabled_devices"].size(); i++) {
+      TfLiteDeviceFlags device_flag =
+          TfLiteDeviceGetFlag(root["disabled_devices"][i].asCString());
+      if (device_flag == kTfLiteCPU) {
+        TFLITE_LOG(ERROR) << "Cannot disable CPU";
+        return kTfLiteError;
+      }
+      interpreter_config.disabled_devices.insert(device_flag);
+    }
+  }
 
   // Set Planner configs
   // 1. Log path

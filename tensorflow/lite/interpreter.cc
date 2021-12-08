@@ -231,7 +231,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   auto& potential_workers = runtime_config.worker_config.workers;
   for (int i = 0; i < potential_workers.size(); i++) {
     TfLiteDeviceFlags device_flag = potential_workers[i];
-    if (valid_devices.find(device_flag) != valid_devices.end()) {
+    if (valid_devices.find(device_flag) != valid_devices.end() &&
+        disabled_devices_.find(device_flag) == disabled_devices_.end()) {
       std::unique_ptr<Worker> worker;
       if (planner_->GetWorkerType() == kGlobalQueue) {
         worker = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
@@ -284,6 +285,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
   profile_smoothing_factor_ = config.profile_smoothing_factor;
   subgraph_preparation_type_ = config.subgraph_preparation_type;
   minimum_subgraph_size_ = config.minimum_subgraph_size;
+  disabled_devices_ = config.disabled_devices;
 
   if (NeedProfile()) {
     profile_data_path_ = config.profile_data_path;
@@ -1667,6 +1669,14 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 
     if (device_flag == kTfLiteCPU) {
       // no need to check supportability for CPU
+      continue;
+    }
+
+    if (disabled_devices_.find(device_flag) != disabled_devices_.end()) {
+      // if device is diabled, treat all operators as unsupported
+      for (auto node_index : execution_plan) {
+        model_spec.unsupported_ops[device_flag].insert(node_index);
+      }
       continue;
     }
 

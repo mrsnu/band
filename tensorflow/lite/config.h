@@ -43,6 +43,7 @@ struct InterpreterConfig {
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
   int copy_computation_ratio = 1000;
   int num_threads = -1;
+  std::set<TfLiteDeviceFlags> disabled_devices;
 };
 
 struct PlannerConfig {

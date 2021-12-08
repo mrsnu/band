@@ -87,6 +87,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
     * `NPU`
   * `cpu_masks`: CPU cluster mask to set CPU affinity of specific worker. [default: same value as global `cpu_masks`]
   * `num_threads`: Number of threads. [default: same value as global `num_threads`]
+* `disabled_devices`: List of devices to disable. [default: None]
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * curr_profile + (1 - profile_smoothing_factor) * prev_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
@@ -148,6 +149,7 @@ An example of complete JSON config file is as follows:
         "profile_copy_computation_ratio": 10
       }
     ],
+    "disabled_devices": ["GPU"],
     "running_time_ms": 60000,
     "profile_smoothing_factor": 0.1,
     "model_profile": "/data/local/tmp/profile.json",

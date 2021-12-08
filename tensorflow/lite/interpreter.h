@@ -829,6 +829,10 @@ class Interpreter {
   // Will not create subgraph if num operators < minimum_subgraph_size.
   int minimum_subgraph_size_;
 
+  // Disabled devices.
+  // Workers using disabled devices will not be generated.
+  std::set<TfLiteDeviceFlags> disabled_devices_;
+
   // Subgraph preparation type
   // "fallback_per_device", "unit_subgraph"
   std::string subgraph_preparation_type_;
