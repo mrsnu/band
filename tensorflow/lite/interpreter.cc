@@ -797,6 +797,9 @@ void Interpreter::ProfileOnline(int model_id,
                                 tflite::profiling::TimeProfiler& timer) {
   for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
     Worker* worker = workers_[worker_id].get();
+    const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
+
+    // Get subgraphs for target model & worker
     std::vector<int> worker_subgraph_indices;
     for (int sub_idx = 0; sub_idx < subgraphs_size(); sub_idx++) {
       SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
@@ -807,89 +810,109 @@ void Interpreter::ProfileOnline(int model_id,
     if (worker_subgraph_indices.size() == 0) {
       TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
                         << ": No subgraph exist";
+      continue;
     }
 
-    std::thread t([&, worker_id]() {
-      Subgraph* max_subgraph = nullptr;
-      int64_t max_latency = -1;
+    // Pause worker for profiling
+    // Must resume before continue
+    worker->Pause();
+    int job_id = worker->GetCurrentJobId();
+    if (job_id != -1) {
+      planner_->Wait({job_id});
+    }
 
-      // Profile largest subgraph
-      // Retry until one success or all failure.
-      while (true) {
-        int max_num_ops = -1;
-        int max_subgraph_idx = -1;
-        for (const int& sub_idx : worker_subgraph_indices) {
-          const Subgraph* subgraph = subgraphs_[sub_idx].get();
-          const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
-          const int& num_ops = subgraph->op_indices().size();
-          if (subgraph->GetHealth() && num_ops > max_num_ops) {
-            max_num_ops = num_ops;
-            max_subgraph_idx = sub_idx;
-          }
-        }
-        if (max_num_ops == -1) {
+    // Health check for subgraphs
+    std::thread health_check_thread([&]() {
+      bool all_healthy = true;
+      SetProfileEnvironment(worker);
+      for (const int& sub_idx : worker_subgraph_indices) {
+        Subgraph* subgraph = subgraphs_[sub_idx].get();
+        const SubgraphKey& key = subgraph->GetKey();
+        if (subgraph->Invoke() != kTfLiteOk) {
+          all_healthy = false;
+          subgraph->SetHealth(false);
+          moving_averaged_latencies_[sub_idx] = INT_MAX;
+          profile_database_[key] = INT_MAX;
+
+          std::string msg = "Subgraph execution failed";
           TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                            << ": All subgraphs failed to profile";
-          break;
-        }
-
-        // Stop worker and profile largest subgraph
-        worker->Pause();
-        int job_id = worker->GetCurrentJobId();
-        if (job_id != -1) {
-          planner_->Wait({job_id});
-        }
-
-        max_subgraph = subgraphs_[max_subgraph_idx].get();
-        max_latency = ProfileSubgraph(max_subgraph, timer);
-        worker->Resume();
-
-        if (max_latency < 0) {
-          std::string msg =
-              max_latency == -1 ? "Profiling failed" : "Profiled latency < 0";
-          TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                            << " Subgraph " << max_subgraph_idx << ": " << msg;
-          max_subgraph->SetHealth(false);
-          moving_averaged_latencies_[max_subgraph_idx] = INT_MAX;
-          profile_database_[max_subgraph->GetKey()] = INT_MAX;
-        } else {
-          const SubgraphKey& key = max_subgraph->GetKey();
-          const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
-          TFLITE_LOG(INFO) << "Largest Subgraph Profiling result\n"
-                           << " model=" << model_id
-                           << " avg=" << max_latency << " us"
-                           << " worker=" << worker_id
-                           << " device=" << device_name
-                           << " start=" << key.GetInputOpsString()
-                           << " end=" << key.GetOutputOpsString() << ".";
-          break;
+                            << " Subgraph " << sub_idx << ": " << msg;
         }
       }
-
-      // Estimate latency with largest subgraph latency
-      for (const int& sub_idx : worker_subgraph_indices) {
-        const Subgraph* subgraph = subgraphs_[sub_idx].get();
-        const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
-        if (subgraph->GetHealth()) {
-          const int64_t latency =
-              EstimateLatency(subgraph, max_subgraph, max_latency);
-
-          moving_averaged_latencies_[sub_idx] = latency;
-          profile_database_[key] = latency;
-
-          const char* device_name =
-              TfLiteDeviceGetName(worker->GetDeviceFlag());
-          TFLITE_LOG(INFO) << "Estimated Latency\n"
-                           << " model=" << key.model_id
-                           << " avg=" << latency << " us"
-                           << " worker=" << key.worker_id
-                           << " device=" << device_name
-                           << " start=" << key.GetInputOpsString()
-                           << " end=" << key.GetOutputOpsString() << ".";
-        }
+      if (all_healthy) {
+        TFLITE_LOG(INFO) << "Model " << model_id << " Worker " << worker_id
+                         << ": All subgraphs are executable";
       }
     });
-    t.join();
+    health_check_thread.join();
+
+    // Get largest subgraph
+    int max_num_ops = -1;
+    int max_subgraph_idx = -1;
+    for (const int& sub_idx : worker_subgraph_indices) {
+      const Subgraph* subgraph = subgraphs_[sub_idx].get();
+      const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
+      const int& num_ops = subgraph->op_indices().size();
+      if (subgraph->GetHealth() && num_ops > max_num_ops) {
+        max_num_ops = num_ops;
+        max_subgraph_idx = sub_idx;
+      }
+    }
+    if (max_subgraph_idx == -1) {
+      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                        << ": No executable subgraphs";
+      worker->Resume();
+      continue;
+    }
+
+    // Profile largest subgraph
+    Subgraph* max_subgraph = subgraphs_[max_subgraph_idx].get();
+    int64_t max_latency = ProfileSubgraph(max_subgraph, timer);
+    if (max_latency < 0) {
+      max_subgraph->SetHealth(false);
+      moving_averaged_latencies_[max_subgraph_idx] = INT_MAX;
+      profile_database_[max_subgraph->GetKey()] = INT_MAX;
+
+      std::string msg = max_latency == -1 ? "Largest subgraph profile failed"
+                                          : "Largest subgraph latency < 0";
+      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                        << " Subgraph " << max_subgraph_idx << ": " << msg;
+      worker->Resume();
+      continue;
+    }
+
+    const SubgraphKey& key = max_subgraph->GetKey();
+    TFLITE_LOG(INFO) << "Largest Subgraph Profiling result\n"
+                     << " model=" << model_id
+                     << " avg=" << max_latency << " us"
+                     << " worker=" << worker_id
+                     << " device=" << device_name
+                     << " start=" << key.GetInputOpsString()
+                     << " end=" << key.GetOutputOpsString() << ".";
+
+    // Resume worker
+    worker->Resume();
+
+    // Estimate latency with largest subgraph latency
+    for (const int& sub_idx : worker_subgraph_indices) {
+      const Subgraph* subgraph = subgraphs_[sub_idx].get();
+      const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
+      if (subgraph->GetHealth()) {
+        const int64_t latency =
+            EstimateLatency(subgraph, max_subgraph, max_latency);
+
+        moving_averaged_latencies_[sub_idx] = latency;
+        profile_database_[key] = latency;
+
+        TFLITE_LOG(INFO) << "Estimated Latency\n"
+                         << " model=" << key.model_id
+                         << " avg=" << latency << " us"
+                         << " worker=" << key.worker_id
+                         << " device=" << device_name
+                         << " start=" << key.GetInputOpsString()
+                         << " end=" << key.GetOutputOpsString() << ".";
+      }
+    }
   }
 }
 
@@ -902,90 +925,95 @@ int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
 
 void Interpreter::ProfileOffline(int model_id,
                                  tflite::profiling::TimeProfiler& timer) {
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    Subgraph* subgraph = subgraphs_[i].get();
-    SubgraphKey& subgraph_key = subgraph->GetKey();
-    TfLiteDeviceFlags device_flag = GetWorkerDeviceFlag(subgraph_key.worker_id);
+  for (int sub_idx = 0; sub_idx < subgraphs_size(); sub_idx++) {
+    Subgraph* subgraph = subgraphs_[sub_idx].get();
+    SubgraphKey& key = subgraph->GetKey();
+    const char* device_name =
+        TfLiteDeviceGetName(GetWorkerDeviceFlag(key.worker_id));
 
-    if (subgraph_key.model_id != model_id) {
+    if (key.model_id != model_id) {
       continue;
     }
 
-    auto it = profile_database_.find(subgraph_key);
+    auto it = profile_database_.find(key);
     if (it != profile_database_.end()) {
+      // TODO: Consider affinity of worker thread
       // if an entry for this SubgraphKey exists in the profiled data,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
-      // TODO: Consider affinity of worker thread
-      moving_averaged_latencies_[i] = profiled_latency;
+      moving_averaged_latencies_[sub_idx] = profiled_latency;
 
       TFLITE_LOG(INFO) << "Reusing profiled result\n"
-                       << " model=" << subgraph_key.model_id
+                       << " model=" << key.model_id
                        << " avg=" << profiled_latency << " us"
-                       << " worker=" << subgraph_key.worker_id
-                       << " device=" << TfLiteDeviceGetName(device_flag)
-                       << " start=" << subgraph_key.GetInputOpsString()
-                       << " end=" << subgraph_key.GetOutputOpsString() << ".";
+                       << " worker=" << key.worker_id
+                       << " device=" << device_name
+                       << " start=" << key.GetInputOpsString()
+                       << " end=" << key.GetOutputOpsString() << ".";
 
     } else {
-      std::thread t([&]() {
-        int64_t latency = ProfileSubgraph(subgraph, timer);
-        if (latency == -1) {
-          std::string msg = "Latency profile failed";
-          const int& worker_id = subgraph_key.worker_id;
-          TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                            << " Subgraph " << i << ": " << msg;
-          return;
-        }
-        moving_averaged_latencies_[i] = latency;
-        profile_database_[subgraph_key] = latency;
+      int64_t latency = ProfileSubgraph(subgraph, timer);
+      if (latency < 0) {
+        subgraph->SetHealth(false);
+        moving_averaged_latencies_[sub_idx] = INT_MAX;
+        profile_database_[key] = INT_MAX;
 
-        TFLITE_LOG(INFO) << "Profiling result\n"
-                         << " model=" << subgraph_key.model_id
-                         << " avg=" << latency << " us"
-                         << " worker=" << subgraph_key.worker_id
-                         << " device=" << TfLiteDeviceGetName(device_flag)
-                         << " start=" << subgraph_key.GetInputOpsString()
-                         << " end=" << subgraph_key.GetOutputOpsString() << ".";
-      });
-      t.join();
+        std::string msg =
+            latency == -1 ? "Latency profile failed" : "Profiled latency < 0";
+        TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << key.worker_id
+                          << " Subgraph " << sub_idx << ": " << msg;
+        continue;
+      }
+
+      moving_averaged_latencies_[sub_idx] = latency;
+      profile_database_[key] = latency;
+
+      TFLITE_LOG(INFO) << "Profiling result\n"
+                       << " model=" << key.model_id
+                       << " avg=" << latency << " us"
+                       << " worker=" << key.worker_id
+                       << " device=" << device_name
+                       << " start=" << key.GetInputOpsString()
+                       << " end=" << key.GetOutputOpsString() << ".";
     }
   }
 }
 
 int64_t Interpreter::ProfileSubgraph(Subgraph* subgraph,
                                      tflite::profiling::TimeProfiler& timer) {
-  SubgraphKey& subgraph_key = subgraph->GetKey();
-  Worker* worker = workers_[subgraph_key.worker_id].get();
+  int64_t latency = -1;
+
+  std::thread t([&]() {
+    SubgraphKey& subgraph_key = subgraph->GetKey();
+    Worker* worker = workers_[subgraph_key.worker_id].get();
+    SetProfileEnvironment(worker);
+    for (int i = 0; i < profile_num_warmups_; i++) {
+      if (subgraph->Invoke() != kTfLiteOk) {
+        return;
+      }
+    }
+    timer.ClearRecords();
+    for (int i = 0; i < profile_num_runs_; i++) {
+      if (subgraph->Invoke() != kTfLiteOk) {
+        return;
+      }
+    }
+    latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
+  });
+  t.join();
+
+  return latency;
+}
+
+void Interpreter::SetProfileEnvironment(Worker* worker) {
   auto cpu_set = worker->GetWorkerThreadAffinity();
   SetCPUThreadAffinity(cpu_set);
   if (worker->GetDeviceFlag() == kTfLiteCPU) {
     auto internal_backend = GetCpuBackendContext()->internal_backend_context();
     // Update internal cpu backend (ruy)
     internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
-    internal_backend->SetMaxNumThreads(
-        workers_[subgraph_key.worker_id]->GetNumThreads());
+    internal_backend->SetMaxNumThreads(worker->GetNumThreads());
   }
-
-  for (int i = 0; i < profile_num_warmups_; i++) {
-    if (subgraph->Invoke() != kTfLiteOk) {
-      subgraph->SetHealth(false);
-      moving_averaged_latencies_[i] = INT_MAX;
-      profile_database_[subgraph_key] = INT_MAX;
-      return -1;
-    }
-  }
-  timer.ClearRecords();
-  for (int i = 0; i < profile_num_runs_; i++) {
-    if (subgraph->Invoke() != kTfLiteOk) {
-      subgraph->SetHealth(false);
-      moving_averaged_latencies_[i] = INT_MAX;
-      profile_database_[subgraph_key] = INT_MAX;
-      return -1;
-    }
-  }
-
-  return timer.GetAverageElapsedTime<std::chrono::microseconds>();
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {

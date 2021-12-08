@@ -803,6 +803,7 @@ class Interpreter {
                           tflite::profiling::TimeProfiler& timer);
   int64_t EstimateLatency(const Subgraph* target_subgraph,
                           const Subgraph* max_subgraph, int64_t max_latency);
+  void SetProfileEnvironment(Worker* worker);
 
   // Returns true if delegates have been applied.
   bool HasDelegates(size_t subgraph_index);
