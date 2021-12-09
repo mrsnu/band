@@ -42,6 +42,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/benchmark/profiling_listener.h"
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
 #include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/tools/workload_simulator.h"
 #include "tensorflow/lite/tools/logging_reporter.h"
 
 void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
@@ -503,6 +504,12 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   );
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
+  TF_LITE_ENSURE_STATUS(
+      ParseWorkloadConfigFromJson(params_.Get<std::string>("json_path"),
+                                         interpreter_->GetModelConfig(),
+                                         benchmark_config_)
+  );
+
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the
   // installed profiler profile memory usage information.
@@ -665,6 +672,22 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
   TFLITE_LOG(INFO) << "Measured FPS: "
                    << (num_frames / (float)(end - start)) * 1000000;
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunWorkload() {
+  int64_t start = profiling::time::NowMicros();
+  auto& simulator = benchmark_config_.workload_simulator;
+  while (!simulator->IsFinished()) {
+    benchmark_config_.workload_simulator->ExecuteCurrentFrame(
+        interpreter_.get(), model_input_tensors_, model_output_tensors_);
+  }
+  int64_t end = profiling::time::NowMicros();
+  TFLITE_LOG(INFO) << "# processed frames: " << simulator->GetNumFrames();
+  TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
+  TFLITE_LOG(INFO) << "Measured FPS: "
+                   << (simulator->GetNumFrames() / (float)(end - start)) * 1000000;
 
   return kTfLiteOk;
 }
