@@ -28,9 +28,13 @@ class WorkloadSimulator {
   WorkloadSimulator();
   WorkloadSimulator(std::vector<Frame> frames);
 
-  TfLiteStatus ExecuteCurrentFrame(tflite::Interpreter* interpreter);
+  TfLiteStatus ExecuteCurrentFrame(
+      tflite::Interpreter* interpreter,
+      const std::vector<Tensors>& model_input_tensors = {},
+      const std::vector<Tensors>& model_output_tensors = {});
   void Reset();
   bool IsFinished() const;
+  size_t GetNumFrames() const { return frames_.size(); }
   size_t GetCurrentFrame() const { return current_frame_; }
 
  private:

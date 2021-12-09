@@ -677,17 +677,17 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
 }
 
 TfLiteStatus BenchmarkTfLiteModel::RunWorkload() {
-  int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
-  while(!benchmark_config_.workload_simulator->IsFinished()) {
-    benchmark_config_.workload_simulator->ExecuteCurrentFrame(interpreter_.get());
-    num_frames++;
+  auto& simulator = benchmark_config_.workload_simulator;
+  while (!simulator->IsFinished()) {
+    benchmark_config_.workload_simulator->ExecuteCurrentFrame(
+        interpreter_.get(), model_input_tensors_, model_output_tensors_);
   }
   int64_t end = profiling::time::NowMicros();
-  TFLITE_LOG(INFO) << "# processed frames: " << num_frames;
+  TFLITE_LOG(INFO) << "# processed frames: " << simulator->GetNumFrames();
   TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
   TFLITE_LOG(INFO) << "Measured FPS: "
-                   << (num_frames / (float)(end - start)) * 1000000;
+                   << (simulator->GetNumFrames() / (float)(end - start)) * 1000000;
 
   return kTfLiteOk;
 }

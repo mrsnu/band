@@ -1,10 +1,11 @@
+#include "tensorflow/lite/tools/workload_simulator.h"
+
 #include <json/json.h>
+
 #include <algorithm>
 #include <set>
 
-#include "tensorflow/lite/tools/workload_simulator.h"
 #include "tensorflow/lite/config.h"
-
 
 namespace tflite {
 Frame::ModelRequest::ModelRequest(Job job, int id, int count,
@@ -13,9 +14,13 @@ Frame::ModelRequest::ModelRequest(Job job, int id, int count,
 
 WorkloadSimulator::WorkloadSimulator() {}
 
-WorkloadSimulator::WorkloadSimulator(std::vector<Frame> frames) : frames_(frames) {}
+WorkloadSimulator::WorkloadSimulator(std::vector<Frame> frames)
+    : frames_(frames) {}
 
-TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(tflite::Interpreter* interpreter) {
+TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(
+    tflite::Interpreter* interpreter, 
+    const std::vector<Tensors>& model_input_tensors,
+    const std::vector<Tensors>& model_output_tensors) {
   if (IsFinished()) {
     return kTfLiteError;
   }
@@ -27,7 +32,17 @@ TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(tflite::Interpreter* interpr
     std::vector<Job> next_batch =
         GetNextRequests(current_frame, resolved_requests);
     if (next_batch.size() == 0) break;
-    interpreter->InvokeModelsSync(next_batch);
+
+    std::vector<Tensors> inputs, outputs;
+
+    if (model_input_tensors.size() && model_output_tensors.size()) {
+      for(auto& job : next_batch) {
+        inputs.push_back(model_input_tensors[job.model_id]);
+        outputs.push_back(model_output_tensors[job.model_id]);
+      }
+    }
+
+    interpreter->InvokeModelsSync(next_batch, inputs, outputs);
   };
 
   return kTfLiteOk;
@@ -35,7 +50,9 @@ TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(tflite::Interpreter* interpr
 
 void WorkloadSimulator::Reset() { current_frame_ = 0; }
 
-bool WorkloadSimulator::IsFinished() const { return current_frame_ >= frames_.size(); }
+bool WorkloadSimulator::IsFinished() const {
+  return current_frame_ >= frames_.size();
+}
 
 std::vector<Job> WorkloadSimulator::GetNextRequests(
     const Frame& frame, std::set<int>& resolved_requests) const {
@@ -52,7 +69,8 @@ std::vector<Job> WorkloadSimulator::GetNextRequests(
 
       auto& request = request_it.second;
       if (std::includes(resolved_requests.begin(), resolved_requests.end(),
-                        request.parent_requests.begin(), request.parent_requests.end())) {
+                        request.parent_requests.begin(),
+                        request.parent_requests.end())) {
         // re-iterate if there is a zero-sized request
         if (request.count == 0) {
           requires_update = true;
