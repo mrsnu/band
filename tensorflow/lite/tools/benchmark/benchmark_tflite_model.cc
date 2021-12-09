@@ -661,7 +661,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
-    interpreter_->InvokeModelsSync(model_input_tensors_);
+    interpreter_->InvokeModelsSync(model_input_tensors_, model_output_tensors_);
     int64_t current = profiling::time::NowMicros();
     num_frames++;
     if (current - start >= run_duration_us)
@@ -706,11 +706,14 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
-      std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
+      std::vector<std::vector<TfLiteTensor*>> input_tensors(
+          batch_size, model_input_tensors_[model_id]);
+      std::vector<std::vector<TfLiteTensor*>> output_tensors(
+          batch_size, model_output_tensors_[model_id]);
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
-        auto job_ids = interpreter_->InvokeModelsAsync(requests, input_tensors);
+        interpreter_->InvokeModelsSync(requests, input_tensors, output_tensors);
         int64_t end = profiling::time::NowMicros();
         int duration_ms = (end - start) / 1000;
 
