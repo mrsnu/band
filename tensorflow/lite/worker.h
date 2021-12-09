@@ -31,8 +31,11 @@ class Worker {
   TfLiteStatus UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads);
   void WaitUntilDeviceAvailable(Subgraph& subgraph);
   bool IsAvailable();
+  void Pause();
+  void Resume();
   const CpuSet& GetWorkerThreadAffinity() const;
   int GetNumThreads() const;
+  virtual int GetCurrentJobId() = 0;
   virtual int64_t GetWaitingTime() = 0;
   // Make sure the worker lock is acquired before calling the function.
   // Currently, `Planner::Plan()` is the only user of the method, and `Plan()` calls `GiveJob`
@@ -58,7 +61,8 @@ class Worker {
   std::mutex device_mtx_;
   std::condition_variable request_cv_;
   bool kill_worker_ = false;
-  bool is_available_ = true;
+  bool is_throttling_ = false;
+  bool is_paused_ = false;
   int32_t availability_check_interval_ms_;
 
   // GlobalQueueWorker doesn't actually use this for scheduling, but we
@@ -83,6 +87,7 @@ class DeviceQueueWorker : public Worker {
     device_cpu_thread_ = std::thread([this]{this->Work();});
   }
 
+  int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
@@ -105,6 +110,7 @@ class GlobalQueueWorker : public Worker {
     device_cpu_thread_ = std::thread([this]{this->Work();});
   }
 
+  int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   bool IsBusy() override;

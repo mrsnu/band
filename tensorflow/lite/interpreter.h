@@ -56,6 +56,9 @@ class TestDelegate;
 namespace delegates {
 class InterpreterUtils;  // Class for friend declarations.
 }  // namespace delegates
+namespace profiling {
+class TimeProfiler;
+}  // namespace profiling
 
 namespace impl {
 
@@ -552,8 +555,9 @@ class Interpreter {
                                TfLiteDelegate** delegate);
 
   // Profile the subgraphs with the given model id.
-  // NOTE: the profiling step may affects other running requests,
-  // and vice versa.
+  // If profile_online_ is true, interpreter uses workers to profile the
+  // subgraph. If profile_online_ is false, interpreter profiles the subgraph
+  // separately from workers.
   void Profile(int model_id);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
@@ -792,6 +796,15 @@ class Interpreter {
   // Helper function that sets the profiler to all subgraphs.
   void SetSubgraphProfiler(Profiler * profiler);
 
+  // On/Offline profile implementation and helper methods.
+  void ProfileOnline(int model_id, tflite::profiling::TimeProfiler& timer);
+  void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
+  int64_t ProfileSubgraph(Subgraph* subgraph,
+                          tflite::profiling::TimeProfiler& timer);
+  int64_t EstimateLatency(const Subgraph* target_subgraph,
+                          const Subgraph* max_subgraph, int64_t max_latency);
+  void SetProfileEnvironment(Worker* worker);
+
   // Returns true if delegates have been applied.
   bool HasDelegates(size_t subgraph_index);
 
@@ -815,9 +828,9 @@ class Interpreter {
 
   // Parameters for profiling.
   // The results during warmup period are not counted.
-  int num_warmups_ = 3;
-
-  int num_runs_ = 50;
+  bool profile_online_;
+  int profile_num_warmups_;
+  int profile_num_runs_;
 
   int next_model_id_ = 0;
 

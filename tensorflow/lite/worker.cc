@@ -75,8 +75,20 @@ void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
 }
 
 bool Worker::IsAvailable() {
+  return !is_throttling_ && !is_paused_;
+}
+
+void Worker::Pause() {
   std::lock_guard<std::mutex> lock(device_mtx_);
-  return is_available_;
+  is_paused_ = true;
+}
+
+void Worker::Resume() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  is_paused_ = false;
+  lock.unlock();
+
+  request_cv_.notify_one();
 }
 
 const CpuSet& Worker::GetWorkerThreadAffinity() const {
