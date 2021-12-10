@@ -47,7 +47,7 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
         // update waiting_time for all future jobs in reserved_
         WorkerWaitingTime reserved_time(waiting_time);
         for (auto pair : reserved_) {
-          if (pair.first != job.job_id) {
+          if (pair.first == job.job_id) {
             continue;
           }
 
