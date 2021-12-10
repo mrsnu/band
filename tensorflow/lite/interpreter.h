@@ -111,7 +111,7 @@ struct ModelSpec {
   int num_unit_subgraphs;
   // vector for memoization during scheduling.
   // Each element is a pair of starting subgraph index and shortest latency.
-  std::vector<std::pair<int, int64_t>> latency_memo;
+  std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
 };
 
 class Interpreter {
@@ -723,13 +723,14 @@ class Interpreter {
       std::map<int, int64_t>& worker_waiting,
       int preceded_subgraph_index = -1);
 
-  std::pair<int, int64_t> GetShortestLatencyWithUnitSubgraph(
+  std::pair<std::vector<int>, int64_t> GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
       std::map<int, int64_t>& worker_waiting);
 
 
-  std::pair<int, int64_t> GetSubgraphWithShortestLatency(Job& job,
-                                                         std::map<int, int64_t>& worker_waiting);
+  std::pair<std::vector<int>, int64_t>
+  GetSubgraphWithShortestLatency(Job& job,
+                                 std::map<int, int64_t>& worker_waiting);
 
   int GetSubgraphIdxSatisfyingSLO(Job& job,
                                   std::map<int, int64_t>& worker_waiting,
