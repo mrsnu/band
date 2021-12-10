@@ -13,9 +13,6 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
       break;
     }
 
-    // TODO #172
-    // Update HEFT description
-
     // hold on to a local copy of worker waiting time
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
 
@@ -47,18 +44,19 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
           searched_jobs.insert(job_to_search);
         }
 
+        // update waiting_time for all future jobs in reserved_
         WorkerWaitingTime reserved_time(waiting_time);
-        // for (auto pair : reserved_) {
-        //   if (pair.first != job.job_id) {
-        //     continue;
-        //   }
+        for (auto pair : reserved_) {
+          if (pair.first != job.job_id) {
+            continue;
+          }
 
-        //   int reserved_id = pair.second;
-        //   Subgraph* reserved_subgraph = GetInterpreter()->subgraph(reserved_id);
-        //   int worker_id = reserved_subgraph->GetKey().worker_id;
-        //   int64_t latency = GetInterpreter()->GetExpectedLatency(reserved_id);
-        //   reserved_time[worker_id] += latency;
-        // }
+          int reserved_id = pair.second;
+          Subgraph* reserved_subgraph = GetInterpreter()->subgraph(reserved_id);
+          int worker_id = reserved_subgraph->GetKey().worker_id;
+          int64_t latency = GetInterpreter()->GetExpectedLatency(reserved_id);
+          reserved_time[worker_id] += latency;
+        }
 
         std::pair<std::vector<int>, int64_t> best_subgraph =
             GetInterpreter()->GetSubgraphWithShortestLatency(job, reserved_time);
@@ -74,21 +72,6 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
           } else {
             target_subgraph_idx_next = -1;
           }
-
-
-        // auto reserved_it = reserved_.find(job.job_id);
-        // if (reserved_it != reserved_.end()) {
-        //   std::cout << job.job_id << " " << job.model_id << " "
-        //             << reserved_it->second << " "
-        //             << best_subgraph.first.front() << std::endl;
-        // }
-
-          // if (job.model_id == 0) {
-          //   for (int a : best_subgraph.first) {
-          //     std::cout << a << " ";
-          //   }
-          //   std::cout << std::endl;
-          // }
         }
       }
 
@@ -128,6 +111,7 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
     }
     EnqueueAction(job, target_subgraph);
 
+    // add next job to reserved_, if one exists
     if (target_subgraph_idx_next != -1) {
       reserved_[job.job_id] = target_subgraph_idx_next;
     } else {
