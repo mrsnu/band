@@ -14,9 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 // Temporal usage for debugging
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO   , "libtflite", __VA_ARGS__)
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG   , "libtflite", __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR  , "libtflite", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 
 #include <dlfcn.h>
@@ -375,7 +373,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createModelWithBuffer(
 JNIEXPORT jlong JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
     JNIEnv* env, jclass clazz, jlong error_handle, jstring json_file) {
-  LOGI("CreateInterpreter starts");
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
   if (error_reporter == nullptr) return 0;
@@ -389,15 +386,10 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
     return 0;
   }
 
-  for (int i = 0; i < runtime_config.planner_config.schedulers.size() ; i++) {
-    LOGI("Parse done interpreter's planner : %d",
-         runtime_config.planner_config.schedulers[i]);
-  }
   auto interpreter(std::make_unique<tflite_api_dispatcher::Interpreter>(
       error_reporter, runtime_config));
   env->ReleaseStringUTFChars(json_file, path);
 
-  LOGI("CreateInterpreter finishes");
   return reinterpret_cast<jlong>(interpreter.release());
 }
 
@@ -405,7 +397,6 @@ JNIEXPORT jint JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong interpreter_handle, jlong model_handle, 
     jlong error_handle, jstring model_name) {
-  LOGI("RegisterModel starts");
   std::unique_ptr<tflite_api_dispatcher::Interpreter> interpreter(
       convertLongToInterpreter(env, interpreter_handle));
   if (interpreter == nullptr) return 0;
@@ -457,7 +448,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
 
   for (int i = 0; i < num_models; i++) {
     jobs.push_back(tflite::Job(model_ids_elements[i], slo));
-    LOGI("RunAsync starts with model_id = %d", model_ids_elements[i]);
 
     if (input_tensors.size()) {
       jlongArray input_handles =
@@ -476,8 +466,6 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
   }
   job_ids_string.pop_back();
 
-  LOGI("RunAsync starts with job ids=%s", job_ids_string.c_str());
-  LOGI("RunAsync finishes");
   return convertVectorToJIntArray(env, job_ids_vector);
 }
 
@@ -500,8 +488,6 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
   }
   job_ids_string.pop_back();
 
-  LOGI("Wait starts with job ids=%s", job_ids_string.c_str());
-    
   interpreter->GetPlanner()->Wait(job_ids_vector);
 
   jsize num_model_outputs = env->GetArrayLength(output_tensor_handles);
@@ -523,8 +509,6 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
       }
     }
   }
-
-  LOGI("Wait finishes");
 }
 
 JNIEXPORT jint JNICALL
