@@ -1586,7 +1586,8 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 std::pair<std::vector<int>, int64_t>
 Interpreter::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx,
-    const std::map<int, int64_t>& worker_waiting) {
+    const std::map<int, int64_t>& worker_waiting,
+    const ReservedTime& reserved_time) {
   auto& memo = model_specs_[model_id].latency_memo;
   auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
 
@@ -1609,7 +1610,7 @@ Interpreter::GetShortestLatencyWithUnitSubgraph(
       auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
       int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
       std::pair<int, int64_t> target_subgraph =
-          GetShortestSubgraphIndex(range, start, worker_waiting);
+          GetShortestSubgraphIndex(range, start, worker_waiting, reserved_time);
 
       if (local_min.second == -1 || target_subgraph.second < local_min.second) {
         if (i > start_unit_idx) {
@@ -1770,7 +1771,8 @@ int Interpreter::GetSubgraphIdxSatisfyingSLO(Job& job,
 
 std::pair<std::vector<int>, int64_t>
 Interpreter::GetSubgraphWithShortestLatency(
-    Job& job, const std::map<int, int64_t>& worker_waiting) {
+    Job& job, const std::map<int, int64_t>& worker_waiting,
+    const ReservedTime& reserved_time) {
   if (subgraph_preparation_type_ == "fallback_per_device") {
     int preceded_subgraph_index =
       job.previous_subgraph_indices.empty() ? -1
@@ -1784,7 +1786,8 @@ Interpreter::GetSubgraphWithShortestLatency(
     ret.first.push_back(pair.first);
     return ret;
   } else {
-    return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
+    return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx,
+                                              worker_waiting, reserved_time);
   }
 }
 
@@ -1845,7 +1848,8 @@ std::vector<int> Interpreter::GetSubgraphCandidates(
 
 std::pair<int, int64_t> Interpreter::GetShortestSubgraphIndex(
     const std::vector<int>& subgraph_indices, int64_t start_time,
-    const std::map<int, int64_t>& worker_waiting) {
+    const std::map<int, int64_t>& worker_waiting,
+    const ReservedTime& reserved_time) {
   int64_t min_latency = INT_MAX;
   int min_idx = -1;
 
@@ -1854,9 +1858,20 @@ std::pair<int, int64_t> Interpreter::GetShortestSubgraphIndex(
       continue;
     }
     const SubgraphKey& key = subgraph(subgraph_index)->GetKey();
+    const std::set<std::pair<int64_t, int64_t>>& worker_reserved_time =
+        reserved_time.at(key.worker_id);
     int64_t waiting_time = worker_waiting.at(key.worker_id);
     int64_t expected_latency = GetExpectedLatency(subgraph_index);
-    int64_t total = expected_latency + std::max(waiting_time, start_time);
+
+    int64_t prev_end_time = std::max(waiting_time, start_time);
+    for (const auto& start_end : worker_reserved_time) {
+      if (prev_end_time + expected_latency <= start_end.first) {
+        break;
+      }
+      prev_end_time = start_end.second;
+    }
+
+    int64_t total = prev_end_time + expected_latency;
     if (min_latency > total) {
       min_latency = total;
       min_idx = subgraph_index;
