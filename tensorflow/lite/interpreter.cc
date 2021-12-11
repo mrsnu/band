@@ -1782,6 +1782,7 @@ Interpreter::GetSubgraphWithShortestLatency(Job& job,
                               preceded_subgraph_index);
     std::pair<std::vector<int>, int64_t> ret = std::pair<std::vector<int>, int64_t>({}, pair.second);
     ret.first.push_back(pair.first);
+    return ret;
   } else {
     return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
   }
