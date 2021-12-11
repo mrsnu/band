@@ -1598,7 +1598,7 @@ std::pair<std::vector<int>, int64_t> Interpreter::GetShortestLatencyWithUnitSubg
   // A subgraph(i, j) consists of the unit subgraphs in [i, j].
   // The goal of the algorithm is to find the minimum expected latency;
   // `memo[k].second` is the minimum expected latency of the subgraph(start_unit_idx, k).
-  // `memo[k].first` is the first subgraph index of the best execution plan.
+  // `memo[k].first` is the list of subgraph indices of the best execution plan.
   // So, the shortest expected latency of a subgraph(start_unit_idx, num_unit_subgraphs - 1) is
   // `memo[num_unit_subgraphs - 1].second`.
   for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {

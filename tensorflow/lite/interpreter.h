@@ -110,7 +110,7 @@ struct ModelSpec {
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
   int num_unit_subgraphs;
   // vector for memoization during scheduling.
-  // Each element is a pair of starting subgraph index and shortest latency.
+  // Each element is a pair of subgraph indices list and shortest latency.
   std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
 };
 
