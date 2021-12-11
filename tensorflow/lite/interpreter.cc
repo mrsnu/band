@@ -1858,17 +1858,21 @@ std::pair<int, int64_t> Interpreter::GetShortestSubgraphIndex(
       continue;
     }
     const SubgraphKey& key = subgraph(subgraph_index)->GetKey();
-    const std::set<std::pair<int64_t, int64_t>>& worker_reserved_time =
-        reserved_time.at(key.worker_id);
+
     int64_t waiting_time = worker_waiting.at(key.worker_id);
     int64_t expected_latency = GetExpectedLatency(subgraph_index);
-
     int64_t prev_end_time = std::max(waiting_time, start_time);
-    for (const auto& start_end : worker_reserved_time) {
-      if (prev_end_time + expected_latency <= start_end.first) {
-        break;
+
+    if (reserved_time.find(key.worker_id) != reserved_time.end()) {
+      const std::set<std::pair<int64_t, int64_t>>& worker_reserved_time =
+          reserved_time.at(key.worker_id);
+
+      for (const auto& start_end : worker_reserved_time) {
+        if (prev_end_time + expected_latency <= start_end.first) {
+          break;
+        }
+        prev_end_time = start_end.second;
       }
-      prev_end_time = start_end.second;
     }
 
     int64_t total = prev_end_time + expected_latency;
