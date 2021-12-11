@@ -9,7 +9,6 @@
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
 #include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
-#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserve_all_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/logging.h"
 
@@ -79,8 +78,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new LeastSlackFirstScheduler(this));
     } else if (schedulers[i] == kHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeReservedScheduler(this));
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTimeReserveAll) {
-      schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeReserveAllScheduler(this));
     } else {
       return kTfLiteError;
     }
