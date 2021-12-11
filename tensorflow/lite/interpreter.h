@@ -720,17 +720,17 @@ class Interpreter {
   // the final op (of the model) in mind.
   std::pair<int, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,
-      std::map<int, int64_t>& worker_waiting,
+      const std::map<int, int64_t>& worker_waiting,
       int preceded_subgraph_index = -1);
 
   std::pair<std::vector<int>, int64_t> GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
-      std::map<int, int64_t>& worker_waiting);
+      const std::map<int, int64_t>& worker_waiting,
+      const ReservedTime& reserved_time = {});
 
-
-  std::pair<std::vector<int>, int64_t>
-  GetSubgraphWithShortestLatency(Job& job,
-                                 std::map<int, int64_t>& worker_waiting);
+  std::pair<std::vector<int>, int64_t> GetSubgraphWithShortestLatency(
+      Job& job, const std::map<int, int64_t>& worker_waiting,
+      const ReservedTime& reserved_time = {});
 
   int GetSubgraphIdxSatisfyingSLO(Job& job,
                                   std::map<int, int64_t>& worker_waiting,
@@ -903,8 +903,9 @@ class Interpreter {
   // return the shortest subgraph out of given subgraphs, when the start time
   // and per-device waiting times are taken into account
   std::pair<int, int64_t> GetShortestSubgraphIndex(
-      std::vector<int>& subgraph_indices, int64_t start_time,
-      std::map<int, int64_t>& worker_waiting);
+      const std::vector<int>& subgraph_indices, int64_t start_time,
+      const std::map<int, int64_t>& worker_waiting,
+      const ReservedTime& reserved_time = {});
 
   // Update slo values in model_configs_ according to the worst profiled
   // latency of that model x slo_scale.
