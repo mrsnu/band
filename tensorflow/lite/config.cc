@@ -79,6 +79,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["profile_num_runs"].isNull()) {
     interpreter_config.profile_config.num_runs = root["profile_num_runs"].asInt();
   }
+  if (!root["profile_copy_computation_ratio"].isNull()) {
+    interpreter_config.profile_config.copy_computation_ratio =
+        root["profile_copy_computation_ratio"].asInt();
+  }
   // 6. Subgraph preparation type
   if (!root["subgraph_preparation_type"].isNull()) {
     interpreter_config.subgraph_preparation_type = root["subgraph_preparation_type"].asString();
