@@ -933,8 +933,8 @@ int64_t Interpreter::EstimateLatency(Subgraph* target_subgraph,
 
   int64_t estimated_latency =
       max_latency *
-      (target_flops * (int64_t)profile_copy_computation_ratio_ + target_size) /
-      (max_flops * (int64_t)profile_copy_computation_ratio_ + max_size);
+      (target_flops + target_size * (int64_t)profile_copy_computation_ratio_) /
+      (max_flops + max_size * (int64_t)profile_copy_computation_ratio_);
   return std::max(estimated_latency, 1L);
 }
 
