@@ -802,8 +802,10 @@ class Interpreter {
   void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
   int64_t ProfileSubgraph(Subgraph* subgraph,
                           tflite::profiling::TimeProfiler& timer);
-  int64_t EstimateLatency(const SubgraphKey& target_key,
-                          const SubgraphKey& max_key, int64_t max_latency);
+  int64_t EstimateLatency(Subgraph* target_subgraph,
+                          Subgraph* max_subgraph, int64_t max_latency);
+  int64_t EstimateFLOPS(Subgraph* subgraph);
+  int64_t EstimateInputOutputSize(Subgraph* subgraph);
   void SetProfileEnvironment(Worker* worker);
 
   // Returns true if delegates have been applied.
@@ -832,6 +834,7 @@ class Interpreter {
   bool profile_online_;
   int profile_num_warmups_;
   int profile_num_runs_;
+  int profile_copy_computation_ratio_;
 
   int next_model_id_ = 0;
 
