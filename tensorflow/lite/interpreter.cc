@@ -1720,7 +1720,7 @@ std::pair<std::vector<int>, int64_t> Interpreter::GetShortestLatencyWithUnitSubg
           local_min.first.push_back(target_subgraph.first);
           local_min.second = target_subgraph.second;
         } else {
-          local_min.first.clear()
+          local_min.first.clear();
           local_min.first.push_back(target_subgraph.first);
           local_min.second = target_subgraph.second;
         }
