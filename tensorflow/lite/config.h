@@ -28,6 +28,7 @@ struct ProfileConfig {
   bool online = true;
   int num_warmups = 1;
   int num_runs = 1;
+  int copy_computation_ratio = 1000;
 };
 
 struct InterpreterConfig {
