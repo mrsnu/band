@@ -27,7 +27,6 @@ void HeterogeneousEarliestFinishTimeReserveAllScheduler::Schedule(JobQueue& requ
     int64_t largest_shortest_latency = -1;
     int target_job_idx = -1;
     std::vector<int> target_subgraphs;
-    int target_subgraph_idx_next = -1;
 
     // only check up to `window_size` requests
     for (auto it = requests.begin(); it != requests.begin() + window_size;
@@ -49,11 +48,6 @@ void HeterogeneousEarliestFinishTimeReserveAllScheduler::Schedule(JobQueue& requ
         largest_shortest_latency = best_subgraph.second;
         target_subgraphs = best_subgraph.first;
         target_job_idx = it - requests.begin();
-        if (best_subgraph.first.size() > 1) {
-          target_subgraph_idx_next = best_subgraph.first[1];
-        } else {
-          target_subgraph_idx_next = -1;
-        }
       }
     }
 
