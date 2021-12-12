@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <algorithm>
 
+#include "tensorflow/lite/builtin_ops.h"
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/arena_planner.h"
 #include "tensorflow/lite/c/common.h"
@@ -210,6 +211,136 @@ Subgraph::Subgraph(ErrorReporter* error_reporter,
 }
 
 void Subgraph::Print() {
+  std::map<TfLiteBuiltinOperator, const char*> builtin_code_to_name = {
+    {kTfLiteBuiltinAdd, "kTfLiteBuiltinAdd"},
+    {kTfLiteBuiltinAveragePool2d, "kTfLiteBuiltinAveragePool2d"},
+    {kTfLiteBuiltinConcatenation, "kTfLiteBuiltinConcatenation"},
+    {kTfLiteBuiltinConv2d, "kTfLiteBuiltinConv2d"},
+    {kTfLiteBuiltinDepthwiseConv2d, "kTfLiteBuiltinDepthwiseConv2d"},
+    {kTfLiteBuiltinDepthToSpace, "kTfLiteBuiltinDepthToSpace"},
+    {kTfLiteBuiltinDequantize, "kTfLiteBuiltinDequantize"},
+    {kTfLiteBuiltinEmbeddingLookup, "kTfLiteBuiltinEmbeddingLookup"},
+    {kTfLiteBuiltinFloor, "kTfLiteBuiltinFloor"},
+    {kTfLiteBuiltinFullyConnected, "kTfLiteBuiltinFullyConnected"},
+    {kTfLiteBuiltinHashtableLookup, "kTfLiteBuiltinHashtableLookup"},
+    {kTfLiteBuiltinL2Normalization, "kTfLiteBuiltinL2Normalization"},
+    {kTfLiteBuiltinL2Pool2d, "kTfLiteBuiltinL2Pool2d"},
+    {kTfLiteBuiltinLocalResponseNormalization, "kTfLiteBuiltinLocalResponseNormalization"},
+    {kTfLiteBuiltinLogistic, "kTfLiteBuiltinLogistic"},
+    {kTfLiteBuiltinLshProjection, "kTfLiteBuiltinLshProjection"},
+    {kTfLiteBuiltinLstm, "kTfLiteBuiltinLstm"},
+    {kTfLiteBuiltinMaxPool2d, "kTfLiteBuiltinMaxPool2d"},
+    {kTfLiteBuiltinMul, "kTfLiteBuiltinMul"},
+    {kTfLiteBuiltinRelu, "kTfLiteBuiltinRelu"},
+    {kTfLiteBuiltinReluN1To1, "kTfLiteBuiltinReluN1To1"},
+    {kTfLiteBuiltinRelu6, "kTfLiteBuiltinRelu6"},
+    {kTfLiteBuiltinReshape, "kTfLiteBuiltinReshape"},
+    {kTfLiteBuiltinResizeBilinear, "kTfLiteBuiltinResizeBilinear"},
+    {kTfLiteBuiltinRnn, "kTfLiteBuiltinRnn"},
+    {kTfLiteBuiltinSoftmax, "kTfLiteBuiltinSoftmax"},
+    {kTfLiteBuiltinSpaceToDepth, "kTfLiteBuiltinSpaceToDepth"},
+    {kTfLiteBuiltinSvdf, "kTfLiteBuiltinSvdf"},
+    {kTfLiteBuiltinTanh, "kTfLiteBuiltinTanh"},
+    {kTfLiteBuiltinConcatEmbeddings, "kTfLiteBuiltinConcatEmbeddings"},
+    {kTfLiteBuiltinSkipGram, "kTfLiteBuiltinSkipGram"},
+    {kTfLiteBuiltinCall, "kTfLiteBuiltinCall"},
+    {kTfLiteBuiltinCustom, "kTfLiteBuiltinCustom"},
+    {kTfLiteBuiltinEmbeddingLookupSparse, "kTfLiteBuiltinEmbeddingLookupSparse"},
+    {kTfLiteBuiltinPad, "kTfLiteBuiltinPad"},
+    {kTfLiteBuiltinUnidirectionalSequenceRnn, "kTfLiteBuiltinUnidirectionalSequenceRnn"},
+    {kTfLiteBuiltinGather, "kTfLiteBuiltinGather"},
+    {kTfLiteBuiltinBatchToSpaceNd, "kTfLiteBuiltinBatchToSpaceNd"},
+    {kTfLiteBuiltinSpaceToBatchNd, "kTfLiteBuiltinSpaceToBatchNd"},
+    {kTfLiteBuiltinTranspose, "kTfLiteBuiltinTranspose"},
+    {kTfLiteBuiltinMean, "kTfLiteBuiltinMean"},
+    {kTfLiteBuiltinSub, "kTfLiteBuiltinSub"},
+    {kTfLiteBuiltinDiv, "kTfLiteBuiltinDiv"},
+    {kTfLiteBuiltinSqueeze, "kTfLiteBuiltinSqueeze"},
+    {kTfLiteBuiltinUnidirectionalSequenceLstm, "kTfLiteBuiltinUnidirectionalSequenceLstm"},
+    {kTfLiteBuiltinStridedSlice, "kTfLiteBuiltinStridedSlice"},
+    {kTfLiteBuiltinBidirectionalSequenceRnn, "kTfLiteBuiltinBidirectionalSequenceRnn"},
+    {kTfLiteBuiltinExp, "kTfLiteBuiltinExp"},
+    {kTfLiteBuiltinTopkV2, "kTfLiteBuiltinTopkV2"},
+    {kTfLiteBuiltinSplit, "kTfLiteBuiltinSplit"},
+    {kTfLiteBuiltinLogSoftmax, "kTfLiteBuiltinLogSoftmax"},
+    {kTfLiteBuiltinDelegate, "kTfLiteBuiltinDelegate"},
+    {kTfLiteBuiltinBidirectionalSequenceLstm, "kTfLiteBuiltinBidirectionalSequenceLstm"},
+    {kTfLiteBuiltinCast, "kTfLiteBuiltinCast"},
+    {kTfLiteBuiltinPrelu, "kTfLiteBuiltinPrelu"},
+    {kTfLiteBuiltinMaximum, "kTfLiteBuiltinMaximum"},
+    {kTfLiteBuiltinArgMax, "kTfLiteBuiltinArgMax"},
+    {kTfLiteBuiltinMinimum, "kTfLiteBuiltinMinimum"},
+    {kTfLiteBuiltinLess, "kTfLiteBuiltinLess"},
+    {kTfLiteBuiltinNeg, "kTfLiteBuiltinNeg"},
+    {kTfLiteBuiltinPadv2, "kTfLiteBuiltinPadv2"},
+    {kTfLiteBuiltinGreater, "kTfLiteBuiltinGreater"},
+    {kTfLiteBuiltinGreaterEqual, "kTfLiteBuiltinGreaterEqual"},
+    {kTfLiteBuiltinLessEqual, "kTfLiteBuiltinLessEqual"},
+    {kTfLiteBuiltinSelect, "kTfLiteBuiltinSelect"},
+    {kTfLiteBuiltinSlice, "kTfLiteBuiltinSlice"},
+    {kTfLiteBuiltinSin, "kTfLiteBuiltinSin"},
+    {kTfLiteBuiltinTransposeConv, "kTfLiteBuiltinTransposeConv"},
+    {kTfLiteBuiltinSparseToDense, "kTfLiteBuiltinSparseToDense"},
+    {kTfLiteBuiltinTile, "kTfLiteBuiltinTile"},
+    {kTfLiteBuiltinExpandDims, "kTfLiteBuiltinExpandDims"},
+    {kTfLiteBuiltinEqual, "kTfLiteBuiltinEqual"},
+    {kTfLiteBuiltinNotEqual, "kTfLiteBuiltinNotEqual"},
+    {kTfLiteBuiltinLog, "kTfLiteBuiltinLog"},
+    {kTfLiteBuiltinSum, "kTfLiteBuiltinSum"},
+    {kTfLiteBuiltinSqrt, "kTfLiteBuiltinSqrt"},
+    {kTfLiteBuiltinRsqrt, "kTfLiteBuiltinRsqrt"},
+    {kTfLiteBuiltinShape, "kTfLiteBuiltinShape"},
+    {kTfLiteBuiltinPow, "kTfLiteBuiltinPow"},
+    {kTfLiteBuiltinArgMin, "kTfLiteBuiltinArgMin"},
+    {kTfLiteBuiltinFakeQuant, "kTfLiteBuiltinFakeQuant"},
+    {kTfLiteBuiltinReduceProd, "kTfLiteBuiltinReduceProd"},
+    {kTfLiteBuiltinReduceMax, "kTfLiteBuiltinReduceMax"},
+    {kTfLiteBuiltinPack, "kTfLiteBuiltinPack"},
+    {kTfLiteBuiltinLogicalOr, "kTfLiteBuiltinLogicalOr"},
+    {kTfLiteBuiltinOneHot, "kTfLiteBuiltinOneHot"},
+    {kTfLiteBuiltinLogicalAnd, "kTfLiteBuiltinLogicalAnd"},
+    {kTfLiteBuiltinLogicalNot, "kTfLiteBuiltinLogicalNot"},
+    {kTfLiteBuiltinUnpack, "kTfLiteBuiltinUnpack"},
+    {kTfLiteBuiltinReduceMin, "kTfLiteBuiltinReduceMin"},
+    {kTfLiteBuiltinFloorDiv, "kTfLiteBuiltinFloorDiv"},
+    {kTfLiteBuiltinReduceAny, "kTfLiteBuiltinReduceAny"},
+    {kTfLiteBuiltinSquare, "kTfLiteBuiltinSquare"},
+    {kTfLiteBuiltinZerosLike, "kTfLiteBuiltinZerosLike"},
+    {kTfLiteBuiltinFill, "kTfLiteBuiltinFill"},
+    {kTfLiteBuiltinFloorMod, "kTfLiteBuiltinFloorMod"},
+    {kTfLiteBuiltinRange, "kTfLiteBuiltinRange"},
+    {kTfLiteBuiltinResizeNearestNeighbor, "kTfLiteBuiltinResizeNearestNeighbor"},
+    {kTfLiteBuiltinLeakyRelu, "kTfLiteBuiltinLeakyRelu"},
+    {kTfLiteBuiltinSquaredDifference, "kTfLiteBuiltinSquaredDifference"},
+    {kTfLiteBuiltinMirrorPad, "kTfLiteBuiltinMirrorPad"},
+    {kTfLiteBuiltinAbs, "kTfLiteBuiltinAbs"},
+    {kTfLiteBuiltinSplitV, "kTfLiteBuiltinSplitV"},
+    {kTfLiteBuiltinUnique, "kTfLiteBuiltinUnique"},
+    {kTfLiteBuiltinCeil, "kTfLiteBuiltinCeil"},
+    {kTfLiteBuiltinReverseV2, "kTfLiteBuiltinReverseV2"},
+    {kTfLiteBuiltinAddN, "kTfLiteBuiltinAddN"},
+    {kTfLiteBuiltinGatherNd, "kTfLiteBuiltinGatherNd"},
+    {kTfLiteBuiltinCos, "kTfLiteBuiltinCos"},
+    {kTfLiteBuiltinWhere, "kTfLiteBuiltinWhere"},
+    {kTfLiteBuiltinRank, "kTfLiteBuiltinRank"},
+    {kTfLiteBuiltinElu, "kTfLiteBuiltinElu"},
+    {kTfLiteBuiltinReverseSequence, "kTfLiteBuiltinReverseSequence"},
+    {kTfLiteBuiltinMatrixDiag, "kTfLiteBuiltinMatrixDiag"},
+    {kTfLiteBuiltinQuantize, "kTfLiteBuiltinQuantize"},
+    {kTfLiteBuiltinMatrixSetDiag, "kTfLiteBuiltinMatrixSetDiag"},
+    {kTfLiteBuiltinRound, "kTfLiteBuiltinRound"},
+    {kTfLiteBuiltinHardSwish, "kTfLiteBuiltinHardSwish"},
+    {kTfLiteBuiltinIf, "kTfLiteBuiltinIf"},
+    {kTfLiteBuiltinWhile, "kTfLiteBuiltinWhile"},
+    {kTfLiteBuiltinNonMaxSuppressionV4, "kTfLiteBuiltinNonMaxSuppressionV4"},
+    {kTfLiteBuiltinNonMaxSuppressionV5, "kTfLiteBuiltinNonMaxSuppressionV5"},
+    {kTfLiteBuiltinScatterNd, "kTfLiteBuiltinScatterNd"},
+    {kTfLiteBuiltinSelectV2, "kTfLiteBuiltinSelectV2"},
+    {kTfLiteBuiltinDensify, "kTfLiteBuiltinDensify"},
+    {kTfLiteBuiltinSegmentSum, "kTfLiteBuiltinSegmentSum"},
+    {kTfLiteBuiltinBatchMatmul, "kTfLiteBuiltinBatchMatmul"}
+  };
+
   error_reporter_->Report("=====   Nodes   =====");
   for (int node_index = 0; node_index < nodes_and_registration_.size(); node_index++) {
     auto node_and_registration = nodes_and_registration_[node_index];
@@ -223,9 +354,14 @@ void Subgraph::Print() {
       outputs_str += std::to_string(output) + " ";
     TfLiteDelegateFlags delegate_flag = static_cast<TfLiteDelegateFlags>(
         node.delegate ? node.delegate->flags : kTfLiteDelegateFlagsNone);
-    error_reporter_->Report("Idx: %4d, Delegate: %s, builtin_code: %d",
-                            node_index, TfLiteDelegateGetName(delegate_flag),
-                            registration.builtin_code);
+    error_reporter_->Report(
+        "Idx: %4d, Operator: %s", node_index,
+        builtin_code_to_name[static_cast<TfLiteBuiltinOperator>(
+            registration.builtin_code)]);
+    if (delegate_flag != kTfLiteDelegateFlagsNone) {
+      error_reporter_->Report("Delegate: %s",
+                              TfLiteDelegateGetName(delegate_flag));
+    }
     error_reporter_->Report("Node inputs: %s", inputs_str.c_str());
     error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
     error_reporter_->Report("---------------------");
