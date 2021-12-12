@@ -559,8 +559,7 @@ int InterpreterBuilder::AddSubgraph(
       << TfLiteDeviceGetName(
              (*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id))
       << " "
-      << "From " << subgraph_key.GetInputOpsString() << " "
-      << "To " << subgraph_key.GetOutputOpsString() << " "
+      << "Op Indices " << subgraph_key.GetOpIndicesString() << " "
       << "Index " << subgraph_idx;
   return subgraph_idx;
 }
@@ -1189,10 +1188,8 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
     }
   }
 
-  modified_subgraph->SetOpIndices(std::move(op_indices));
   modified_subgraph->SetVariables(std::move(variables));
-  modified_subgraph->SetKey(
-      SubgraphKey(model_id, worker_id, input_ops, output_ops));
+  modified_subgraph->SetKey(SubgraphKey(model_id, worker_id, op_indices));
 
   modified_subgraph->context()->recommended_num_threads = num_threads;
 

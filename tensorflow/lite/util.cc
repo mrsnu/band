@@ -33,12 +33,8 @@ std::string IndexSetToString(const std::set<int>& indices) {
     return result;
 }
 
-std::string SubgraphKey::GetInputOpsString() const {
-  return IndexSetToString(input_ops);
-}
-
-std::string SubgraphKey::GetOutputOpsString() const {
-  return IndexSetToString(output_ops);
+std::string SubgraphKey::GetOpIndicesString() const {
+  return IndexSetToString(op_indices);
 }
 
 TfLiteStatus UnresolvedOpInvoke(TfLiteContext* context, TfLiteNode* node) {

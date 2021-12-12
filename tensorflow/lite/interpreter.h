@@ -672,9 +672,9 @@ class Interpreter {
   }
 
   // Return all subgraph indices that match the given criteria of model_id,
-  // worker_id, and op start_idx.
+  // worker_id, and start_unit_subgraph_idx.
   std::set<int> GetSubgraphIdx(int model_id, int worker_id,
-                               int start_idx);
+                               int start_unit_subgraph_idx);
 
   // Return the subgraph index for model `model_id` on worker `worker_id`
   int GetSubgraphIdx(int model_id, int worker_id);
@@ -802,8 +802,8 @@ class Interpreter {
   void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
   int64_t ProfileSubgraph(Subgraph* subgraph,
                           tflite::profiling::TimeProfiler& timer);
-  int64_t EstimateLatency(const Subgraph* target_subgraph,
-                          const Subgraph* max_subgraph, int64_t max_latency);
+  int64_t EstimateLatency(const SubgraphKey& target_key,
+                          const SubgraphKey& max_key, int64_t max_latency);
   void SetProfileEnvironment(Worker* worker);
 
   // Returns true if delegates have been applied.
@@ -892,10 +892,10 @@ class Interpreter {
   resource::ResourceMap resources_;
 
   /* private methods related to subgraph scheduling */
-  // divide the given subgraphs into groups that share the same start/end idxs
-  // e.g., {(0,10): [1,3], (0,20): [2,4]}
-  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
-  GroupByStartEndIdx(std::vector<int> subgraph_indices);
+  // divide the given subgraphs into groups that share the same op_indices
+  // e.g., {(0,1,2): [1,3], (5,6): [2,4]}
+  std::map<std::set<int>, std::vector<int>> GroupByOpIndices(
+      std::vector<int> subgraph_indices);
 
   // return next subgraph indices of preceded subgraph 
   std::vector<int> GetSubgraphCandidates(int model_id, std::set<int> resolved_tensors, int preceded_subgraph_index);

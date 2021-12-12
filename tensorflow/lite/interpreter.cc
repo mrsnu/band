@@ -854,7 +854,7 @@ void Interpreter::ProfileOnline(int model_id,
     for (const int& sub_idx : worker_subgraph_indices) {
       const Subgraph* subgraph = subgraphs_[sub_idx].get();
       const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
-      const int& num_ops = subgraph->op_indices().size();
+      const int& num_ops = key.op_indices.size();
       if (subgraph->GetHealth() && num_ops > max_num_ops) {
         max_num_ops = num_ops;
         max_subgraph_idx = sub_idx;
@@ -883,14 +883,13 @@ void Interpreter::ProfileOnline(int model_id,
       continue;
     }
 
-    const SubgraphKey& key = max_subgraph->GetKey();
+    const SubgraphKey& max_key = max_subgraph->GetKey();
     TFLITE_LOG(INFO) << "Largest Subgraph Profiling result\n"
                      << " model=" << model_id
                      << " avg=" << max_latency << " us"
                      << " worker=" << worker_id
                      << " device=" << device_name
-                     << " start=" << key.GetInputOpsString()
-                     << " end=" << key.GetOutputOpsString() << ".";
+                     << " op_indices=" << max_key.GetOpIndicesString() << ".";
 
     // Resume worker
     worker->Resume();
@@ -900,8 +899,7 @@ void Interpreter::ProfileOnline(int model_id,
       const Subgraph* subgraph = subgraphs_[sub_idx].get();
       const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
       if (subgraph->GetHealth()) {
-        const int64_t latency =
-            EstimateLatency(subgraph, max_subgraph, max_latency);
+        const int64_t latency = EstimateLatency(key, max_key, max_latency);
 
         moving_averaged_latencies_[sub_idx] = latency;
         profile_database_[key] = latency;
@@ -911,18 +909,16 @@ void Interpreter::ProfileOnline(int model_id,
                          << " avg=" << latency << " us"
                          << " worker=" << key.worker_id
                          << " device=" << device_name
-                         << " start=" << key.GetInputOpsString()
-                         << " end=" << key.GetOutputOpsString() << ".";
+                         << " op_indices=" << key.GetOpIndicesString() << ".";
       }
     }
   }
 }
 
-int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
-                                     const Subgraph* max_subgraph,
+int64_t Interpreter::EstimateLatency(const SubgraphKey& target_key,
+                                     const SubgraphKey& max_key,
                                      int64_t max_latency) {
-  return max_latency * target_subgraph->op_indices().size() /
-         max_subgraph->op_indices().size();
+  return max_latency * target_key.op_indices.size() / max_key.op_indices.size();
 }
 
 void Interpreter::ProfileOffline(int model_id,
@@ -950,8 +946,7 @@ void Interpreter::ProfileOffline(int model_id,
                        << " avg=" << profiled_latency << " us"
                        << " worker=" << key.worker_id
                        << " device=" << device_name
-                       << " start=" << key.GetInputOpsString()
-                       << " end=" << key.GetOutputOpsString() << ".";
+                       << " op_indices=" << key.GetOpIndicesString() << ".";
 
     } else {
       int64_t latency = ProfileSubgraph(subgraph, timer);
@@ -975,8 +970,7 @@ void Interpreter::ProfileOffline(int model_id,
                        << " avg=" << latency << " us"
                        << " worker=" << key.worker_id
                        << " device=" << device_name
-                       << " start=" << key.GetInputOpsString()
-                       << " end=" << key.GetOutputOpsString() << ".";
+                       << " op_indices=" << key.GetOpIndicesString() << ".";
     }
   }
 }
@@ -1138,16 +1132,16 @@ Worker* Interpreter::GetWorker(int worker_id) {
   }
 }
 
-std::set<int> Interpreter::GetSubgraphIdx(int model_id,
-                                          int worker_id,
-                                          int start_idx) {
+std::set<int> Interpreter::GetSubgraphIdx(int model_id, int worker_id,
+                                          int start_unit_subgraph_idx) {
   std::set<int> indices;
   for (auto& subgraph_key_id : subgraph_idx_map_) {
     const SubgraphKey& key = subgraph_key_id.first;
     int subgraph_index = subgraph_key_id.second;
 
-    if (key.model_id == model_id && key.worker_id == worker_id
-        && key.input_ops.find(start_idx) != key.input_ops.end()) {
+    if (key.model_id == model_id && key.worker_id == worker_id &&
+        key.unit_indices.find(start_unit_subgraph_idx) !=
+            key.unit_indices.end()) {
       indices.insert(subgraph_index);
     }
   }
@@ -1661,8 +1655,8 @@ std::pair<int, int64_t> Interpreter::GetShortestLatency(
 
   std::vector<int> subgraph_indices =
       GetSubgraphCandidates(model_id, resolved_tensors, preceded_subgraph_index);
-  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
-      subgraph_map = GroupByStartEndIdx(subgraph_indices);
+  std::map<std::set<int>, std::vector<int>> subgraph_map =
+      GroupByOpIndices(subgraph_indices);
 
   std::pair<int, int64_t> min_subgraph = {-1, INT_MAX};
   for (auto iter = subgraph_map.begin(); iter != subgraph_map.end(); iter++) {
@@ -1791,14 +1785,12 @@ Interpreter::GetSubgraphWithShortestLatency(
   }
 }
 
-std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>
-Interpreter::GroupByStartEndIdx(
+std::map<std::set<int>, std::vector<int>> Interpreter::GroupByOpIndices(
     std::vector<int> subgraph_indices) {
-  std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>> ret;
+  std::map<std::set<int>, std::vector<int>> ret;
   for (auto subgraph_index : subgraph_indices) {
     SubgraphKey& key = subgraph(subgraph_index)->GetKey();
-    ret[{key.input_ops, key.output_ops}].push_back(
-        subgraph_index);
+    ret[key.op_indices].push_back(subgraph_index);
   }
   return ret;
 }

@@ -170,12 +170,6 @@ class Subgraph {
   // Read only access to list of outputs.
   const std::vector<int>& outputs() const { return outputs_; }
 
-  void SetOpIndices(std::set<int> op_indices) { op_indices_ = op_indices; }
-
-  std::set<int> op_indices() const {
-    return op_indices_;
-  }
-
   // Read only access to list of variable tensors.
   std::vector<int>& variables() { return variables_; }
 
@@ -640,8 +634,6 @@ class Subgraph {
   // of every node and the global inputs and outputs are valid indexes into
   // the tensor array.
   bool consistent_ = true;
-
-  std::set<int> op_indices_;
 
   // Array of indices representing the tensors that are inputs to the
   // interpreter.

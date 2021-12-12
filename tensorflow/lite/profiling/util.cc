@@ -61,11 +61,7 @@ ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
 
       // parse the key to retrieve start/end indices
       // e.g., "25/50" --> delim_pos = 2
-      auto delim_pos = idx.find("/");
-      std::set<int> root_indices =
-          string_to_node_indices(idx.substr(0, delim_pos));
-      std::set<int> leaf_indices =
-          string_to_node_indices(idx.substr(delim_pos + 1, idx.length() - delim_pos - 1));
+      std::set<int> op_indices = string_to_node_indices(idx);
       
       const Json::Value device_profile = *idx_profile_it;
       for (auto device_profile_it = device_profile.begin();
@@ -80,8 +76,7 @@ ModelDeviceToLatency ExtractModelProfile(const Json::Value& name_profile,
           continue;
         }
 
-        SubgraphKey key(model_id, worker_id,
-                        root_indices, leaf_indices);
+        SubgraphKey key(model_id, worker_id, op_indices);
         id_profile[key] = profiled_latency;
       }
     }
@@ -96,8 +91,7 @@ void UpdateDatabase(const ModelDeviceToLatency& id_profile,
   for (auto& pair : id_profile) {
     SubgraphKey key = pair.first;
     int model_id = key.model_id;
-    std::string start_indices = key.GetInputOpsString();
-    std::string end_indices = key.GetOutputOpsString();
+    std::string op_indices = key.GetOpIndicesString();
     int64_t profiled_latency = pair.second;
 
     // check the string name of this model id
@@ -111,7 +105,7 @@ void UpdateDatabase(const ModelDeviceToLatency& id_profile,
     // copy all entries in id_profile --> database_json
     // as an ad-hoc method, we simply concat the start/end indices to form
     // the level-two key in the final json value
-    database_json[model_name][start_indices + "/" + end_indices][key.worker_id] = profiled_latency;
+    database_json[model_name][op_indices][key.worker_id] = profiled_latency;
   }
 }
 

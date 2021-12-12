@@ -39,12 +39,8 @@ namespace tflite {
 // data structure for identifying subgraphs within whole models
 struct SubgraphKey {
   SubgraphKey() {}
-  SubgraphKey(int model_id, int worker_id,
-              std::set<int> input_ops, std::set<int> output_ops)
-      : model_id(model_id),
-        worker_id(worker_id),
-        input_ops(input_ops),
-        output_ops(output_ops) {}
+  SubgraphKey(int model_id, int worker_id, std::set<int> op_indices)
+      : model_id(model_id), worker_id(worker_id), op_indices(op_indices) {}
 
   bool operator<(const SubgraphKey& key) const {
     if (model_id != key.model_id) {
@@ -55,20 +51,14 @@ struct SubgraphKey {
       return worker_id < key.worker_id;
     }
 
-    if (input_ops != key.input_ops) {
-      return input_ops < key.input_ops;
-    }
-
-    return output_ops < key.output_ops;
+    return op_indices < key.op_indices;
   }
 
-  std::string GetInputOpsString() const;
-  std::string GetOutputOpsString() const;
+  std::string GetOpIndicesString() const;
 
   int model_id;
   int worker_id;
-  std::set<int> input_ops;
-  std::set<int> output_ops;
+  std::set<int> op_indices;
   std::set<int> unit_indices;
 };
 
