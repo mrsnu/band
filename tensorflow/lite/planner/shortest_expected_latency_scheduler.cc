@@ -42,13 +42,13 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
         searched_jobs.insert(job_to_search);
       }
 
-      std::pair<int, int64_t> best_subgraph =
+      std::pair<std::vector<int>, int64_t> best_subgraph =
           GetInterpreter()->GetSubgraphWithShortestLatency(next_job, GetWorkerWaitingTime());
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
         target_job_idx = it - local_jobs.begin();
-        target_subgraph_idx = best_subgraph.first;
+        target_subgraph_idx = best_subgraph.first.front();
       }
     }
 

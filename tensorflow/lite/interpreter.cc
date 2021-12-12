@@ -1583,7 +1583,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   }
 }
 
-std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
+std::pair<std::vector<int>, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx,
     std::map<int, int64_t>& worker_waiting) {
   auto& memo = model_specs_[model_id].latency_memo;
@@ -1591,18 +1591,18 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
 
   // Initialize memo.
   for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair(-1, INT_MAX);
+    memo[i] = std::make_pair<std::vector<int>, int64_t>({}, INT_MAX);
   }
 
   // `i` and `j` refer to an unit subgraph idx.
   // A subgraph(i, j) consists of the unit subgraphs in [i, j].
   // The goal of the algorithm is to find the minimum expected latency;
   // `memo[k].second` is the minimum expected latency of the subgraph(start_unit_idx, k).
-  // `memo[k].first` is the first subgraph index of the best execution plan.
+  // `memo[k].first` is the list of subgraph indices of the best execution plan.
   // So, the shortest expected latency of a subgraph(start_unit_idx, num_unit_subgraphs - 1) is
   // `memo[num_unit_subgraphs - 1].second`.
   for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
-    std::pair<int, int64_t> local_min = std::make_pair(-1, -1);
+    std::pair<std::vector<int>, int64_t> local_min = std::make_pair<std::vector<int>, int64_t>({}, -1);
     for (int i = j; i >= start_unit_idx; --i) {
       // Search from the profile result of the unit subgraph.
       auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
@@ -1613,9 +1613,11 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
       if (local_min.second == -1 || target_subgraph.second < local_min.second) {
         if (i > start_unit_idx) {
           local_min.first = memo[i - 1].first;
+          local_min.first.push_back(target_subgraph.first);
           local_min.second = target_subgraph.second;
         } else {
-          local_min = target_subgraph;
+          local_min.first.push_back(target_subgraph.first);
+          local_min.second = target_subgraph.second;
         }
       }
     }
@@ -1766,18 +1768,21 @@ int Interpreter::GetSubgraphIdxSatisfyingSLO(Job& job,
   return target_subgraph_idx;
 }
 
-std::pair<int, int64_t>
+std::pair<std::vector<int>, int64_t>
 Interpreter::GetSubgraphWithShortestLatency(Job& job,
                                             std::map<int, int64_t>& worker_waiting) {
   if (subgraph_preparation_type_ == "fallback_per_device") {
     int preceded_subgraph_index =
       job.previous_subgraph_indices.empty() ? -1
                                             : job.previous_subgraph_indices.back();
-    return GetShortestLatency(job.model_id,
+    auto pair = GetShortestLatency(job.model_id,
                               job.resolved_tensors,
                               0,
                               worker_waiting,
                               preceded_subgraph_index);
+    std::pair<std::vector<int>, int64_t> ret = std::pair<std::vector<int>, int64_t>({}, pair.second);
+    ret.first.push_back(pair.first);
+    return ret;
   } else {
     return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
   }
