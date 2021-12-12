@@ -115,6 +115,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   } else {
     planner_config.cpu_masks = interpreter_config.cpu_masks;
   }
+  // 5. Schedule log path
+  if (!root["schedule_log_path"].isNull()) {
+    planner_config.schedule_log_path = root["schedule_log_path"].asString();
+  }
 
   std::vector<bool> found_default_worker(kTfLiteNumDevices, false);
   // Set Worker configs

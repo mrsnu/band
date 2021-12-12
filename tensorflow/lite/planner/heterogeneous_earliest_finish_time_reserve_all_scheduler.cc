@@ -13,10 +13,9 @@ void HeterogeneousEarliestFinishTimeReserveAllScheduler::Schedule(JobQueue& requ
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > jobs_to_yield.size()) {
     std::set<int> idle_workers;
-    for (int worker_id = 0; worker_id < GetInterpreter()->GetNumWorkers();
-         worker_id++) {
-      if (waiting_time[worker_id] == 0) {
-        idle_workers.insert(worker_id);
+    for (int wid = 0; wid < GetInterpreter()->GetNumWorkers(); wid++) {
+      if (waiting_time[wid] == 0) {
+        idle_workers.insert(wid);
       }
     }
     if (idle_workers.empty()) {
@@ -27,6 +26,7 @@ void HeterogeneousEarliestFinishTimeReserveAllScheduler::Schedule(JobQueue& requ
     int64_t largest_shortest_latency = -1;
     int target_job_idx = -1;
     std::vector<int> target_subgraphs;
+    ScheduleLog log;
 
     // only check up to `window_size` requests
     for (auto it = requests.begin(); it != requests.begin() + window_size;
@@ -40,6 +40,9 @@ void HeterogeneousEarliestFinishTimeReserveAllScheduler::Schedule(JobQueue& requ
       std::pair<std::vector<int>, int64_t> best_subgraph =
           GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time,
                                                            reserved_time);
+
+      planner_->LogScheduleStep(log, job.model_id, job.start_unit_idx,
+                                best_subgraph.second);
 
       if (largest_shortest_latency < best_subgraph.second) {
         Subgraph* target_subgraph =
@@ -55,6 +58,8 @@ void HeterogeneousEarliestFinishTimeReserveAllScheduler::Schedule(JobQueue& requ
       // no one wants to be scheduled..
       return;
     }
+
+    planner_->LogSchedule(waiting_time, target_subgraphs, log);
 
     // skip this job if we can't schedule it immediately,
     // even if this job is the "most urgent" one

@@ -42,6 +42,7 @@ struct InterpreterConfig {
 
 struct PlannerConfig {
   std::string log_path;
+  std::string schedule_log_path;
   int schedule_window_size = INT_MAX;
   std::vector<TfLiteSchedulerType> schedulers;
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;

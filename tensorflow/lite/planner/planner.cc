@@ -30,6 +30,7 @@ Planner::~Planner() {
 TfLiteStatus Planner::Init(PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
+  schedule_log_path_ = config.schedule_log_path;
   if (log_path_.size()) {
     // Open file to write per-request timestamps later
     // NOTE: Columns starting `sched_id` are added for debugging purpose
@@ -53,6 +54,17 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "is_final_subgraph\t"
              << "prev_subgraphs\n";
     log_file.close();
+  }
+  if (schedule_log_path_.size()) {
+    std::ofstream schedule_log_file(schedule_log_path_);
+    if (!schedule_log_file.is_open()) return kTfLiteError;
+    schedule_log_file << "time\t"
+                      << "selected_path\t"
+                      << "waiting_time\t"
+                      << "model_ids\t"
+                      << "start_unit_indices\t"
+                      << "shortest_latencies\n";
+    schedule_log_file.close();
   }
 
   auto& schedulers = config.schedulers;
@@ -107,6 +119,51 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   return kTfLiteOk;
+}
+
+void Planner::LogScheduleStep(ScheduleLog& log, const int& model_id,
+                              const int& start_unit_idx,
+                              const int& expected_latency) {
+  if (schedule_log_path_.size()) {
+    log.model_ids.push_back(model_id);
+    log.start_unit_indices.push_back(start_unit_idx);
+    log.shortest_latencies.push_back(expected_latency);
+  }
+}
+
+void Planner::LogSchedule(const WorkerWaitingTime& waiting_time,
+                          const std::vector<int>& selected_path,
+                          const ScheduleLog& log) {
+  if (!schedule_log_path_.size()) return;
+  std::ofstream schedule_log_file(schedule_log_path_, std::ofstream::app);
+  if (!schedule_log_file.is_open()) return;
+  const char delim = ',';
+
+  auto log_vector = [&schedule_log_file](const std::vector<int>& vec,
+                                         char end) {
+    for (int i = 0; i < vec.size(); i++) {
+      schedule_log_file << vec[i];
+      if (i != vec.size() - 1) {
+        schedule_log_file << delim;
+      }
+    }
+    schedule_log_file << end;
+  };
+
+  schedule_log_file << profiling::time::NowMicros() << '\t';
+  log_vector(selected_path, '\t');
+  const int num_workers = GetInterpreter()->GetNumWorkers();
+  for (int worker_id = 0; worker_id < num_workers; worker_id++) {
+    schedule_log_file << waiting_time.at(worker_id);
+    if (worker_id != num_workers - 1) {
+      schedule_log_file << delim;
+    }
+  }
+  schedule_log_file << "\t";
+  log_vector(log.model_ids, '\t');
+  log_vector(log.start_unit_indices, '\t');
+  log_vector(log.shortest_latencies, '\n');
+  schedule_log_file.close();
 }
 
 bool Planner::NeedProfile() {

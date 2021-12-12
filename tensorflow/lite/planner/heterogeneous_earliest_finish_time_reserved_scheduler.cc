@@ -24,8 +24,8 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
     // basically the same as ShortestExpectedLatencyScheduler
     int64_t largest_shortest_latency = -1;
     int target_job_idx = -1;
-    int target_subgraph_idx = -1;
-    int target_subgraph_idx_next = -1;
+    std::vector<int> target_subgraphs;
+    ScheduleLog log;
 
     // only check up to `window_size` requests
     for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
@@ -52,18 +52,15 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
       std::pair<std::vector<int>, int64_t> best_subgraph =
           GetInterpreter()->GetSubgraphWithShortestLatency(job, reserved_time);
 
+      planner_->LogScheduleStep(log, job.model_id, job.start_unit_idx,
+                                best_subgraph.second);
+
       if (largest_shortest_latency < best_subgraph.second) {
-        Subgraph* target_subgraph =
-            GetInterpreter()->subgraph(best_subgraph.first.front());
+        Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first.front());
 
         largest_shortest_latency = best_subgraph.second;
-        target_subgraph_idx = best_subgraph.first.front();
+        target_subgraphs = best_subgraph.first;
         target_job_idx = it - requests.begin();
-        if (best_subgraph.first.size() > 1) {
-          target_subgraph_idx_next = best_subgraph.first[1];
-        } else {
-          target_subgraph_idx_next = -1;
-        }
       }
     }
 
@@ -72,12 +69,14 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
       return;
     }
 
+    planner_->LogSchedule(waiting_time, target_subgraphs, log);
+
     // skip this job if we can't schedule it immediately,
     // even if this job is the "most urgent" one
+    const int& target_subgraph_idx = target_subgraphs.front();
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     int worker_id = target_subgraph->GetKey().worker_id;
-    waiting_time[worker_id] +=
-        GetInterpreter()->GetExpectedLatency(target_subgraph_idx);
+    waiting_time[worker_id] += GetInterpreter()->GetExpectedLatency(target_subgraph_idx);
     if (idle_workers.find(worker_id) == idle_workers.end()) {
       auto requests_it = requests.begin() + target_job_idx;
       jobs_to_yield.insert(requests_it->job_id);
@@ -89,8 +88,7 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
       requests.erase(requests_it);
       window_size--;
 
-      Subgraph* target_subgraph =
-          GetInterpreter()->subgraph(target_subgraph_idx);
+      Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
       // Update Job status specific to this planner.
       // Common status will be updated by `EnqueueAction`.
       if (target_subgraph->IsStart()) {
@@ -100,8 +98,8 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
       EnqueueAction(job, target_subgraph);
 
       // add next job to reserved_, if one exists
-      if (target_subgraph_idx_next != -1) {
-        reserved_[job.job_id] = target_subgraph_idx_next;
+      if (target_subgraphs.size() > 1) {
+        reserved_[job.job_id] = target_subgraphs[1];
       } else {
         reserved_.erase(job.job_id);
       }

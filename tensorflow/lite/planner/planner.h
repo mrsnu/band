@@ -30,6 +30,12 @@ class Planner {
 
   void Plan();
 
+  void LogScheduleStep(ScheduleLog& log, const int& model_id,
+                       const int& start_unit_idx, const int& expected_latency);
+  void LogSchedule(const WorkerWaitingTime& waiting_time,
+                   const std::vector<int>& selected_path,
+                   const ScheduleLog& log);
+
   // Check whether profiling is required or not.
   bool NeedProfile();
 
@@ -144,6 +150,7 @@ class Planner {
 
   std::condition_variable end_invoke_;
   std::string log_path_;
+  std::string schedule_log_path_;
 
   int schedule_window_size_ = INT_MAX;
 

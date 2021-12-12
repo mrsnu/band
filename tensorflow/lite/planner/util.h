@@ -30,6 +30,13 @@ using ReservedTime = std::map<int, std::set<std::pair<int64_t, int64_t>>>;
 // the appropriate workers.
 using ScheduleAction = std::map<int, std::vector<Job>>;
 
+// Data type for logging schedule
+struct ScheduleLog {
+  std::vector<int> model_ids;
+  std::vector<int> start_unit_indices;
+  std::vector<int> shortest_latencies;
+};
+
 // The job queue which can be shared by multiple threads.
 struct ConcurrentJobQueue {
   JobQueue queue;
