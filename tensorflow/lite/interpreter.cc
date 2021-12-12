@@ -936,7 +936,11 @@ int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
       max_latency *
       (target_flops + target_size * (int64_t)profile_copy_computation_ratio_) /
       (max_flops + max_size * (int64_t)profile_copy_computation_ratio_);
-  return std::max(estimated_latency, 1L);
+  if (estimated_latency == 0) {
+    return 1;
+  } else {
+    return estimated_latency;
+  }
 }
 
 int64_t Interpreter::EstimateFLOPS(const Subgraph* subgraph,
@@ -1017,10 +1021,10 @@ int64_t Interpreter::EstimateInputOutputSize(const Subgraph* subgraph) {
   const std::vector<int>& output_tensors = subgraph->outputs();
   int64_t subgraph_input_output_size = 0;
   for (int tensor_idx : input_tensors) {
-    subgraph_input_output_size += subgraph->tensor(tensor_idx)->bytes;
+    subgraph_input_output_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
   }
   for (int tensor_idx : output_tensors) {
-    subgraph_input_output_size += subgraph->tensor(tensor_idx)->bytes;
+    subgraph_input_output_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
   }
   return subgraph_input_output_size;
 }
