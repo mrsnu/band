@@ -904,8 +904,9 @@ void Interpreter::ProfileOnline(int model_id,
       const Subgraph* subgraph = subgraphs_[sub_idx].get();
       const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
       if (subgraph->GetHealth()) {
-        const int64_t latency = EstimateLatency(subgraph, max_subgraph,
-                                                primary_subgraph, max_latency);
+        const int64_t latency = EstimateLatency(
+            subgraph, max_subgraph, primary_subgraph, max_latency,
+            profile_copy_computation_ratio_[worker_id]);
 
         moving_averaged_latencies_[sub_idx] = latency;
         profile_database_[key] = latency;
@@ -925,7 +926,8 @@ void Interpreter::ProfileOnline(int model_id,
 int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
                                      const Subgraph* max_subgraph,
                                      const Subgraph* primary_subgraph,
-                                     int64_t max_latency) {
+                                     int64_t max_latency,
+                                     int64_t copy_computation_ratio) {
   int64_t target_flops = EstimateFLOPS(target_subgraph, primary_subgraph);
   int64_t target_size = EstimateInputOutputSize(target_subgraph);
 
@@ -934,8 +936,8 @@ int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
 
   int64_t estimated_latency =
       max_latency *
-      (target_flops + target_size * (int64_t)profile_copy_computation_ratio_) /
-      (max_flops + max_size * (int64_t)profile_copy_computation_ratio_);
+      (target_flops + target_size * copy_computation_ratio) /
+      (max_flops + max_size * copy_computation_ratio);
   if (estimated_latency == 0) {
     return 1;
   } else {

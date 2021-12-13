@@ -805,7 +805,8 @@ class Interpreter {
   int64_t EstimateLatency(const Subgraph* target_subgraph,
                           const Subgraph* max_subgraph,
                           const Subgraph* primary_subgraph,
-                          int64_t max_latency);
+                          int64_t max_latency,
+                          int64_t copy_computation_ratio);
   int64_t EstimateFLOPS(const Subgraph* subgraph,
                         const Subgraph* primary_subgraph);
   int64_t EstimateInputOutputSize(const Subgraph* subgraph);
@@ -837,7 +838,7 @@ class Interpreter {
   bool profile_online_;
   int profile_num_warmups_;
   int profile_num_runs_;
-  int profile_copy_computation_ratio_;
+  std::vector<int> profile_copy_computation_ratio_;
 
   int next_model_id_ = 0;
 
