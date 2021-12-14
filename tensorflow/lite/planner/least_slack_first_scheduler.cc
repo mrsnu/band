@@ -7,9 +7,12 @@ namespace impl {
 
 void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
+  if (window_size <= 0) {
+    return;
+  }
+
   std::set<int> idle_workers = planner_->GetIdleWorkers();
   if (idle_workers.empty()) {
-    // no device is idle; wait for next iteration
     return;
   }
 
@@ -18,15 +21,12 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
     Job& job = *it;
-    job.expected_latency =
-        GetInterpreter()
-            ->GetSubgraphWithShortestLatency(job, waiting_time)
-            .second;
+    std::pair<std::vector<int>, int> best_subgraph =
+        GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
+    job.subgraph_idx = best_subgraph.first.front();
+    job.expected_latency = best_subgraph.second;
   }
 
-  // Note Scheduler may fail to enqueue the jobs if they do not
-  // have SLOs.
-  // TODO: Support jobs with fallback
   int64_t current_time = profiling::time::NowMicros();
   std::sort(requests.begin(), requests.begin() + window_size,
             [&](const Job& first, const Job& second) -> bool {
@@ -34,29 +34,33 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
                      GetSlackTime(current_time, second);
             });
 
-  std::vector<int> indices_to_erase;
+  std::set<int> job_indices_to_erase;
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
     Job job = *it;
-    if (GetSlackTime(current_time, job) < 0) {
-      indices_to_erase.push_back(it - requests.begin());
-      planner_->HandleSLOViolatedJob(job);
-      continue;
-    }
 
     std::pair<std::vector<int>, int> best_subgraph =
         GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
-    
+
     int target_subgraph_idx = best_subgraph.first.front();
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    if (current_time + best_subgraph.second > job.enqueue_time + job.slo_us) {
+      job.status = kTfLiteJobSLOViolation;
+      EnqueueAction(job, target_subgraph);
+      job_indices_to_erase.insert(it - requests.begin());
+      continue;
+    }
+
     int worker_id = target_subgraph->GetKey().worker_id;
     if (idle_workers.find(worker_id) != idle_workers.end()) {
-      indices_to_erase.push_back(it - requests.begin());
       waiting_time[worker_id] +=
           GetInterpreter()->GetExpectedLatency(target_subgraph_idx);
       EnqueueAction(job, target_subgraph);
+      job_indices_to_erase.insert(it - requests.begin());
+      continue;
     }
   }
-  for (auto it = indices_to_erase.rbegin(); it != indices_to_erase.rend(); it++) {
+  for (auto it = job_indices_to_erase.rbegin();
+       it != job_indices_to_erase.rend(); ++it) {
     requests.erase(requests.begin() + *it);
   }
 }
