@@ -617,6 +617,7 @@ class Interpreter {
 
 #ifndef DOXYGEN_SKIP
   int AddSubgraph(std::unique_ptr<Subgraph> subgraph);
+  void AddSubgraphKey(SubgraphKey key, int index);
   std::unique_ptr<Subgraph> CreateSubgraph();
 
   void DeleteSubgraphs(size_t starting_index_to_delete,

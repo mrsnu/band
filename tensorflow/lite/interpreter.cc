@@ -388,6 +388,12 @@ int Interpreter::AddSubgraph(std::unique_ptr<Subgraph> subgraph) {
   return index;
 }
 
+void Interpreter::AddSubgraphKey(SubgraphKey key, int index) {
+  if ( index < subgraphs_.size()) {
+    subgraph_idx_map_[key] = index;
+  }
+}
+
 std::unique_ptr<Subgraph> Interpreter::CreateSubgraph() {
   return std::make_unique<Subgraph>(error_reporter_, external_contexts_,
                                       &subgraphs_, &resources_);
