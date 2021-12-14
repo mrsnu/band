@@ -50,6 +50,7 @@ struct PlannerConfig {
   int schedule_window_size = INT_MAX;
   std::vector<TfLiteSchedulerType> schedulers;
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
+  std::string schedule_log_path;
 };
 
 struct WorkerConfig {

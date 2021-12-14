@@ -22,6 +22,7 @@ Planner::Planner(Interpreter* interpreter) : num_submitted_jobs_(0) {
 
 Planner::~Planner() {
   FlushFinishedJobs();
+  FlushScheduleLog();
   planner_safe_bool_.terminate();
   planner_thread_.join();
 }
@@ -29,6 +30,8 @@ Planner::~Planner() {
 TfLiteStatus Planner::Init(PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
+  schedule_log_path_ = config.schedule_log_path;
+
   if (log_path_.size()) {
     // Open file to write per-request timestamps later
     // NOTE: Columns starting `sched_id` are added for debugging purpose
@@ -54,29 +57,38 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     log_file.close();
   }
 
-  auto& schedulers = config.schedulers;
-  if (schedulers.size() == 0 || schedulers.size() > 2) {
+  if (schedule_log_path_.size()) {
+    std::ofstream schedule_log_file(schedule_log_path_);
+    if (!schedule_log_file.is_open()) return kTfLiteError;
+    schedule_log_file << "scheduler\t"
+                      << "time\t"
+                      << "tag\n";
+    schedule_log_file.close();
+  }
+
+  scheduler_types_ = config.schedulers;
+  if (scheduler_types_.size() == 0 || scheduler_types_.size() > 2) {
     TFLITE_LOG(ERROR) << "Planner not supported for "
-                      << schedulers_.size()
+                      << scheduler_types_.size()
                       << " schedulers. Aborting.";
     return kTfLiteError;
   }
 
-  local_queues_.resize(schedulers.size());
-  for (int i = 0; i < schedulers.size(); ++i) {
-    if (schedulers[i] == kFixedDevice) {
+  local_queues_.resize(scheduler_types_.size());
+  for (int i = 0; i < scheduler_types_.size(); ++i) {
+    if (scheduler_types_[i] == kFixedDevice) {
       schedulers_.emplace_back(new FixedDeviceScheduler(this));
-    } else if (schedulers[i] == kFixedDeviceGlobalQueue) {
+    } else if (scheduler_types_[i] == kFixedDeviceGlobalQueue) {
       schedulers_.emplace_back(new FixedDeviceGlobalQueueScheduler(this));
-    } else if (schedulers[i] == kRoundRobin) {
+    } else if (scheduler_types_[i] == kRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(this));
-    } else if (schedulers[i] == kShortestExpectedLatency) {
+    } else if (scheduler_types_[i] == kShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(this));
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTime) {
+    } else if (scheduler_types_[i] == kHeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeScheduler(this));
-    } else if (schedulers[i] == kLSF) {
+    } else if (scheduler_types_[i] == kLSF) {
       schedulers_.emplace_back(new LeastSlackFirstScheduler(this));
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTimeReserved) {
+    } else if (scheduler_types_[i] == kHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeReservedScheduler(this));
     } else {
       return kTfLiteError;
@@ -104,6 +116,30 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   return kTfLiteOk;
+}
+
+void Planner::ScheduleLog(const ScheduleTag& tag,
+                          const TfLiteSchedulerType& scheduler_type) {
+  if (!schedule_log_path_.size()) return;
+  scheduler_type_logs_.push_back(scheduler_type);
+  schedule_time_logs_.push_back(profiling::time::NowMicros());
+  schedule_tag_logs_.push_back(tag);
+}
+
+void Planner::FlushScheduleLog() {
+  if (!schedule_log_path_.size()) return;
+  std::ofstream schedule_log_file(schedule_log_path_, std::ofstream::app);
+  if (!schedule_log_file.is_open() ||
+      scheduler_type_logs_.size() != schedule_time_logs_.size() ||
+      scheduler_type_logs_.size() != schedule_tag_logs_.size()) {
+    return;
+  }
+  for (int i = 0; i < schedule_time_logs_.size(); i++) {
+    schedule_log_file << scheduler_type_logs_[i] << "\t"
+                      << schedule_time_logs_[i] << "\t"
+                      << schedule_tag_logs_[i] << "\n";
+  }
+  schedule_log_file.close();
 }
 
 bool Planner::NeedProfile() {
@@ -500,7 +536,9 @@ void Planner::Plan() {
     do {
       need_reschedule_ = false;
       for (size_t i = 0; i < local_queues_.size(); ++i) {
+        ScheduleLog(kScheduleStart, scheduler_types_[i]);
         schedulers_[i]->Schedule(local_queues_[i]);
+        ScheduleLog(kScheduleEnd, scheduler_types_[i]);
       }
     } while(need_reschedule_);
   }
@@ -510,6 +548,7 @@ void Scheduler::EnqueueAction(Job job, Subgraph* subgraph) {
   planner_->UpdateJobScheduleStatus(job, subgraph);
   action_[subgraph->GetKey().worker_id].push_back(job);
   planner_->EnqueueToWorkers(action_);
+  planner_->ScheduleLog(kScheduleStep, kNumSchedulerTypes);
 }
 
 }  // namespace impl

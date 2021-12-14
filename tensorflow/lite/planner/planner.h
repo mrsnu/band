@@ -30,6 +30,9 @@ class Planner {
 
   void Plan();
 
+  void ScheduleLog(const ScheduleTag& tag,
+                   const TfLiteSchedulerType& scheduler_type);
+
   // Check whether profiling is required or not.
   bool NeedProfile();
 
@@ -120,6 +123,7 @@ class Planner {
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
+  void FlushScheduleLog();
 
   CpuSet cpu_set_;
   bool need_cpu_update_ = false;
@@ -137,6 +141,7 @@ class Planner {
   // The closer the index is to 0, the higher the priority.
   std::vector<JobQueue> local_queues_;
   std::vector<std::unique_ptr<Scheduler>> schedulers_;
+  std::vector<TfLiteSchedulerType> scheduler_types_;
 
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   std::atomic<int> num_submitted_jobs_;
@@ -144,6 +149,11 @@ class Planner {
 
   std::condition_variable end_invoke_;
   std::string log_path_;
+
+  std::string schedule_log_path_;
+  std::vector<int> scheduler_type_logs_;
+  std::vector<int64_t> schedule_time_logs_;
+  std::vector<ScheduleTag> schedule_tag_logs_;
 
   int schedule_window_size_ = INT_MAX;
 

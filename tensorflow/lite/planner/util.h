@@ -27,6 +27,12 @@ using WorkerWaitingTime = std::map<int, int64_t>;
 // the appropriate workers.
 using ScheduleAction = std::map<int, std::vector<Job>>;
 
+enum ScheduleTag {
+  kScheduleStart = 0,
+  kScheduleEnd = 1,
+  kScheduleStep = 2
+};
+
 // The job queue which can be shared by multiple threads.
 struct ConcurrentJobQueue {
   JobQueue queue;
