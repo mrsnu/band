@@ -43,6 +43,11 @@ int CpuSet::NumEnabled() const {
 
   return NumEnabled;
 }
+
+bool CpuSet::operator==(const CpuSet& cpuset) const {
+  return CPU_EQUAL(&cpu_set_, &cpuset.cpu_set_);
+}
+
 #else   // defined __ANDROID__ || defined __linux__
 CpuSet::CpuSet() {}
 
@@ -55,6 +60,8 @@ void CpuSet::DisableAll() {}
 bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
 int CpuSet::NumEnabled() const { return GetCPUCount(); }
+
+bool CpuSet::operator==(const CpuSet& cpuset) const { return false; }
 #endif  // defined __ANDROID__ || defined __linux__
 
 static CpuSet g_thread_affinity_mask_all;

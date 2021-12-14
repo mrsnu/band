@@ -49,6 +49,8 @@ class Worker {
   // GlobalQueueWorker methods
   virtual bool IsBusy();
 
+  bool operator==(const Worker& worker) const;
+
  protected:
   bool IsValid(Job& job);
   TfLiteStatus TryCopyInputTensors(const Job& job);

@@ -541,20 +541,28 @@ int InterpreterBuilder::AddSubgraph(
     const ::tflite::Model* model, const OpResolver& op_resolver,
     std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
     const std::pair<TfLiteDeviceFlags, std::set<int>>& device_op_indices) {
-  auto new_subgraph = CreateSubgraph(model, op_resolver, interpreter, model_id,
+    
+  // Skip if there exists identical subgraphs from same worker
+  std::string log_prefix = "REUSE";
+  int subgraph_idx = (*interpreter)->GetSubgraphIdx(model_id, device_op_indices.first, device_op_indices.second);
+  if (subgraph_idx == -1) {
+    log_prefix = "ADDED";
+    auto new_subgraph = CreateSubgraph(model, op_resolver, interpreter, model_id,
                                      worker_id, device_op_indices.second);
-  if (new_subgraph == nullptr) {
-    TFLITE_LOG(ERROR) << "Subgraph creation failure";
-    return -1;
+    if (new_subgraph == nullptr) {
+      TFLITE_LOG(ERROR) << "Subgraph creation failure";
+      return -1;
+    }
+
+    subgraph_idx = (*interpreter)->AddSubgraph(std::move(new_subgraph));
   }
 
-  int subgraph_idx = (*interpreter)->AddSubgraph(std::move(new_subgraph));
   Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
 
   const SubgraphKey& subgraph_key = subgraph->GetKey();
 
   TFLITE_LOG(INFO)
-      << "ADDED Subgraph "
+      << log_prefix << " Subgraph "
       << "Model : " << subgraph_key.model_id << " "
       << TfLiteDeviceGetName(
              (*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id))

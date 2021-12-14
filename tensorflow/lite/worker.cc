@@ -113,6 +113,11 @@ bool Worker::IsBusy() {
   return false;
 }
 
+bool Worker::operator==(const Worker& worker) const {
+  return device_flag_ == worker.device_flag_ && cpu_set_ == worker.cpu_set_ &&
+         num_threads_ == worker.num_threads_;
+}
+
 TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {

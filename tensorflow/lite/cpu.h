@@ -44,6 +44,7 @@ public:
     void DisableAll();
     bool IsEnabled(int cpu) const;
     int NumEnabled() const;
+    bool operator==(const CpuSet& cpuset) const;
 #if defined __ANDROID__ || defined __linux__
     const cpu_set_t& GetCpuSet() const { return cpu_set_; }
    private:

@@ -1261,6 +1261,26 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
   return indices;
 }
 
+int Interpreter::GetSubgraphIdx(int model_id,
+                                          TfLiteDeviceFlags device_flag,
+                                          std::set<int> op_indices) {
+  for (auto& subgraph_key_id : subgraph_idx_map_) {
+    const SubgraphKey& key = subgraph_key_id.first;
+    int subgraph_index = subgraph_key_id.second;
+    Subgraph* subgraph_ptr = subgraph(subgraph_index); 
+
+    if (key.model_id == model_id && 
+        workers_[key.worker_id]->GetDeviceFlag() == device_flag &&
+        std::includes(op_indices.begin(), op_indices.end(), key.input_ops.begin(), key.input_ops.end()) &&
+        std::includes(op_indices.begin(), op_indices.end(), key.output_ops.begin(), key.output_ops.end()) &&
+        subgraph_ptr->nodes_size() == op_indices.size()) {
+      return subgraph_index;
+    }
+  }
+
+  return -1;   
+}
+
 int Interpreter::GetSubgraphIdx(int model_id, int worker_id) {
   // start_idx and end_idx weren't specified, so we assume that the caller
   // intended to retrieve the whole model
