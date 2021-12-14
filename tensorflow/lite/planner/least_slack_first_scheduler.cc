@@ -23,7 +23,6 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     Job& job = *it;
     std::pair<std::vector<int>, int> best_subgraph =
         GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
-    job.subgraph_idx = best_subgraph.first.front();
     job.expected_latency = best_subgraph.second;
   }
 
