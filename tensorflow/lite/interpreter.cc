@@ -494,7 +494,6 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     ModelConfig& model_config = model_configs_[model_id];
     request.model_fname = model_config.model_fname;
     request.device_id = model_config.device;
-    request.slo_us = model_config.slo_us;
   }
 
   std::vector<Job> valid_requests;
