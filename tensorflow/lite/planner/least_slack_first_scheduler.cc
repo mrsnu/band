@@ -19,19 +19,8 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
   planner_->UpdateWorkerWaitingTime();
   WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
 
-  for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
-    Job& job = *it;
-    std::pair<std::vector<int>, int> best_subgraph =
-        GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
-    job.expected_latency = best_subgraph.second;
-  }
-
   int64_t current_time = profiling::time::NowMicros();
-  std::sort(requests.begin(), requests.begin() + window_size,
-            [&](const Job& first, const Job& second) -> bool {
-              return GetSlackTime(current_time, first) <
-                     GetSlackTime(current_time, second);
-            });
+  SortBySlackTime(requests, window_size, current_time);
 
   std::set<int> job_indices_to_erase;
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
@@ -69,6 +58,27 @@ int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
   int64_t deadline = job.enqueue_time + job.slo_us;
   int64_t remaining_execution_time = job.expected_latency;
   return deadline - current_time - remaining_execution_time;
+}
+
+void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests,
+                                               int window_size,
+                                               int64_t current_time) {
+  UpdateExpectedLatency(requests, window_size);
+  std::sort(requests.begin(), requests.begin() + window_size,
+            [&](const Job& first, const Job& second) -> bool {
+              return GetSlackTime(current_time, first) <
+                     GetSlackTime(current_time, second);
+            });
+}
+
+void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests,
+                                                     int window_size) {
+  for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
+    it->expected_latency =
+        GetInterpreter()
+            ->GetSubgraphWithShortestLatency(*it, GetWorkerWaitingTime())
+            .second;
+  }
 }
 
 }  // namespace impl
