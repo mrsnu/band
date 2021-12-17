@@ -474,6 +474,9 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Tensors> inputs) {
     int model_id = m.first;
     ModelConfig& model_config = m.second;
     Job request = Job(model_id);
+    request.model_fname = model_config.model_fname;
+    request.device_id = model_config.device;
+    request.slo_us = model_config.slo_us;
     for (int k = 0; k < model_config.batch_size; ++k) {
       requests.push_back(request);
       duplicate_inputs.push_back(inputs[model_id]);
@@ -487,13 +490,6 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
                                                 std::vector<Tensors> inputs) {
   if (requests.size() == 0) {
     return {};
-  }
-
-  for (auto& request: requests) {
-    int model_id = request.model_id;
-    ModelConfig& model_config = model_configs_[model_id];
-    request.model_fname = model_config.model_fname;
-    request.device_id = model_config.device;
   }
 
   std::vector<Job> valid_requests;

@@ -31,7 +31,8 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
     int target_subgraph_idx = best_subgraph.first.front();
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    if (current_time + best_subgraph.second > job.enqueue_time + job.slo_us) {
+    if (job.slo_us > 0 &&
+        current_time + best_subgraph.second > job.enqueue_time + job.slo_us) {
       job.status = kTfLiteJobSLOViolation;
       EnqueueAction(job, target_subgraph);
       job_indices_to_erase.insert(it - requests.begin());
@@ -55,9 +56,13 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
                                                const Job& job) {
-  int64_t deadline = job.enqueue_time + job.slo_us;
-  int64_t remaining_execution_time = job.expected_latency;
-  return deadline - current_time - remaining_execution_time;
+  if (job.slo_us > 0) {
+    int64_t deadline = job.enqueue_time + job.slo_us;
+    int64_t remaining_execution_time = job.expected_latency;
+    return deadline - current_time - remaining_execution_time;
+  } else {
+    return INT_MAX;
+  }
 }
 
 void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests,
