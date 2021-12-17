@@ -895,6 +895,7 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     added = false;
     std::vector<std::pair<std::set<int>, DeviceOpIndices>> to_add;
     for (const auto& prev_idx_device_ops : subgraph_idx_to_device_ops) {
+      if (prev_idx_device_ops.second.first == kTfLiteCPU) continue;
       for (const auto& next_idx_device_ops : subgraph_idx_to_device_ops) {
         // Skip same subgraph
         if (prev_idx_device_ops.first == next_idx_device_ops.first) continue;
