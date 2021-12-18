@@ -788,6 +788,7 @@ void Interpreter::Profile(int model_id) {
   SetSubgraphProfiler(&timer);
 
   if (profile_online_) {
+    SubgraphHealthCheck(model_id);
     ProfileOnline(model_id, timer);
   } else {
     ProfileOffline(model_id, timer);
@@ -797,8 +798,7 @@ void Interpreter::Profile(int model_id) {
   SetSLOBasedOnProfile();
 }
 
-void Interpreter::ProfileOnline(int model_id,
-                                tflite::profiling::TimeProfiler& timer) {
+void Interpreter::SubgraphHealthCheck(int model_id) {
   for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
     Worker* worker = workers_[worker_id].get();
     const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
@@ -817,7 +817,7 @@ void Interpreter::ProfileOnline(int model_id,
       continue;
     }
 
-    // Pause worker for profiling
+    // Pause worker for healthcheck
     // Must resume before continue
     worker->Pause();
     int job_id = worker->GetCurrentJobId();
@@ -849,6 +849,37 @@ void Interpreter::ProfileOnline(int model_id,
       }
     });
     health_check_thread.join();
+    worker->Resume();
+  }
+}
+
+void Interpreter::ProfileOnline(int model_id,
+                                tflite::profiling::TimeProfiler& timer) {
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    Worker* worker = workers_[worker_id].get();
+    const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
+
+    // Get subgraphs for target model & worker
+    std::vector<int> worker_subgraph_indices;
+    for (int sub_idx = 0; sub_idx < subgraphs_size(); sub_idx++) {
+      SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
+      if (key.model_id == model_id && key.worker_id == worker_id) {
+        worker_subgraph_indices.push_back(sub_idx);
+      }
+    }
+    if (worker_subgraph_indices.size() == 0) {
+      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                        << ": No subgraph exist";
+      continue;
+    }
+
+    // Pause worker for profiling
+    // Must resume before continue
+    worker->Pause();
+    int job_id = worker->GetCurrentJobId();
+    if (job_id != -1) {
+      planner_->Wait({job_id});
+    }
 
     // Get largest subgraph
     int max_num_ops = -1;
@@ -872,19 +903,6 @@ void Interpreter::ProfileOnline(int model_id,
     // Profile largest subgraph
     Subgraph* max_subgraph = subgraphs_[max_subgraph_idx].get();
     int64_t max_latency = ProfileSubgraph(max_subgraph, timer);
-    if (max_latency < 0) {
-      max_subgraph->SetHealth(false);
-      moving_averaged_latencies_[max_subgraph_idx] = INT_MAX;
-      profile_database_[max_subgraph->GetKey()] = INT_MAX;
-
-      std::string msg = max_latency == -1 ? "Largest subgraph profile failed"
-                                          : "Largest subgraph latency < 0";
-      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                        << " Subgraph " << max_subgraph_idx << ": " << msg;
-      worker->Resume();
-      continue;
-    }
-
     const SubgraphKey& key = max_subgraph->GetKey();
     TFLITE_LOG(INFO) << "Largest Subgraph Profiling result\n"
                      << " model=" << model_id

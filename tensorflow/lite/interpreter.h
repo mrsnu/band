@@ -798,6 +798,7 @@ class Interpreter {
   void SetSubgraphProfiler(Profiler * profiler);
 
   // On/Offline profile implementation and helper methods.
+  void SubgraphHealthCheck(int model_id);
   void ProfileOnline(int model_id, tflite::profiling::TimeProfiler& timer);
   void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
   int64_t ProfileSubgraph(Subgraph* subgraph,
