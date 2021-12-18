@@ -166,49 +166,49 @@ public final class Interpreter implements AutoCloseable {
   public void runSync(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, 0);
+    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, null);
   }
 
   public void runSync(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs, long slo) {
     checkNotClosed();
-    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, slo);
+    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, new long[]{slo});
   }
 
   public void runSyncMultipleRequests(
     @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
     checkNotClosed();
-    wrapper.runSync(modelIds, inputs, outputs, 0);
+    wrapper.runSync(modelIds, inputs, outputs, null);
   }
 
   public void runSyncMultipleRequests(
-      @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs, long slo) {
+      @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs, long[] slos) {
     checkNotClosed();
-    wrapper.runSync(modelIds, inputs, outputs, slo);
+    wrapper.runSync(modelIds, inputs, outputs, slos);
   }
 
   public int runAsync(
     int modelId, @NonNull Tensor[] inputs) {
     checkNotClosed();
-    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs}, 0)[0];
+    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs}, null)[0];
   }
 
   public int runAsync(
       int modelId, @NonNull Tensor[] inputs, long slo) {
     checkNotClosed();
-    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs}, slo)[0];
+    return wrapper.runAsync(new int[]{modelId}, new Tensor[][]{inputs}, new long[]{slo})[0];
   }
 
   public int[] runAsyncMultipleRequests(
     int[] modelIds, @NonNull Tensor[][] inputs) {
     checkNotClosed();
-    return wrapper.runAsync(modelIds, inputs, 0);
+    return wrapper.runAsync(modelIds, inputs, null);
   }
 
   public int[] runAsyncMultipleRequests(
-      int[] modelIds, @NonNull Tensor[][] inputs, long slo) {
+      int[] modelIds, @NonNull Tensor[][] inputs, long[] slos) {
     checkNotClosed();
-    return wrapper.runAsync(modelIds, inputs, slo);
+    return wrapper.runAsync(modelIds, inputs, slos);
   }
 
   public void wait(int jobId, @NonNull Tensor[] outputs) {

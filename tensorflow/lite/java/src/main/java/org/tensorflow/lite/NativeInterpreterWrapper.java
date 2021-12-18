@@ -81,11 +81,11 @@ final class NativeInterpreterWrapper implements AutoCloseable {
   }
 
   /** Sets inputs, runs model inference and returns outputs. */
-  void runSync(int[] modelIds, Tensor[][] modelInputs, Tensor[][] modelOutputs, long slo) {
+  void runSync(int[] modelIds, Tensor[][] modelInputs, Tensor[][] modelOutputs, long[] slos) {
     inferenceDurationNanoseconds = -1;
 
     long inferenceStartNanos = System.nanoTime();
-    int[] jobIds = runAsync(modelIds, modelInputs, slo);
+    int[] jobIds = runAsync(modelIds, modelInputs, slos);
     wait(jobIds, modelOutputs);
     long inferenceDurationNanoseconds = System.nanoTime() - inferenceStartNanos;
 
@@ -93,7 +93,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
     this.inferenceDurationNanoseconds = inferenceDurationNanoseconds;
   }
 
-  int[] runAsync(int[] modelIds, Tensor[][] modelInputs, long slo) {
+  int[] runAsync(int[] modelIds, Tensor[][] modelInputs, long[] slos) {
     if (modelIds == null) {
       throw new IllegalArgumentException("Input error: modelIds should not be null.");
     }
@@ -119,10 +119,10 @@ final class NativeInterpreterWrapper implements AutoCloseable {
       }
     }
 
-    return runAsync(modelIds, inputHandles, interpreterHandle, errorHandle, slo);
+    return runAsync(modelIds, inputHandles, interpreterHandle, errorHandle, slos);
   }
 
-  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle, long slo);
+  private static native int[] runAsync(int[] modelIds, long[][] inputTensorHandles, long interpreterHandle, long errorHandle, long[] slos);
 
   void wait(int[] jobIds, Tensor[][] modelOutputs) {
     if (jobIds == null) {

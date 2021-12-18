@@ -431,7 +431,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_registerModel(
 JNIEXPORT jintArray JNICALL
 Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
     JNIEnv* env, jclass clazz, jintArray model_ids, jobjectArray input_tensor_handles,
-    jlong interpreter_handle, jlong error_handle, jlong slo) {
+    jlong interpreter_handle, jlong error_handle, jlongArray slos) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
   if (interpreter == nullptr) return NULL;
@@ -442,12 +442,14 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
   jsize num_models = env->GetArrayLength(model_ids);
   jint* model_ids_elements = env->GetIntArrayElements(model_ids, NULL);
   jsize num_model_inputs = env->GetArrayLength(input_tensor_handles);
+  jlong* slos_elements = slos ? env->GetLongArrayElements(slos, NULL) : nullptr;
 
   std::vector<tflite::Job> jobs;
   std::vector<tflite::Tensors> input_tensors(num_model_inputs);
 
   for (int i = 0; i < num_models; i++) {
-    jobs.push_back(tflite::Job(model_ids_elements[i], slo));
+    jobs.push_back(tflite::Job(model_ids_elements[i],
+                               slos ? slos_elements[i] : 0));
 
     if (input_tensors.size()) {
       jlongArray input_handles =
@@ -455,8 +457,9 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
       input_tensors[i] = convertJLongArrayToTensors(env, input_handles);
     }
   }
-  
+
   env->ReleaseIntArrayElements(model_ids, model_ids_elements, 0);
+  env->ReleaseLongArrayElements(slos, slos_elements, 0);
 
   std::vector<int> job_ids_vector =
       interpreter->InvokeModelsAsync(jobs, input_tensors);
