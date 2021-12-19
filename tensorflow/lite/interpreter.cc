@@ -22,6 +22,7 @@ limitations under the License.
 #include <cstring>
 #include <utility>
 #include <list>
+#include <random>
 
 #include "tensorflow/lite/builtin_ops.h"
 #include "tensorflow/lite/c/common.h"
@@ -296,6 +297,10 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
     profile_online_ = config.profile_config.online;
     profile_num_warmups_ = config.profile_config.num_warmups;
     profile_num_runs_ = config.profile_config.num_runs;
+    profile_max_noise_percent_ = config.profile_config.max_noise_percent;
+    random_engine_ = std::mt19937(1004UL);
+    noise_distribution_ = std::uniform_int_distribution<>(
+        -profile_max_noise_percent_, profile_max_noise_percent_);
     profile_copy_computation_ratio_ = config.profile_config.copy_computation_ratio;
 
     TFLITE_LOG(INFO) << "Set Profiling Configuration:"
@@ -928,6 +933,7 @@ int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
                                      const Subgraph* primary_subgraph,
                                      int64_t max_latency,
                                      int64_t copy_computation_ratio) {
+  int64_t multiplier = 100 + noise_distribution_(random_engine_);
   int64_t target_flops = EstimateFLOPS(target_subgraph, primary_subgraph);
   int64_t target_size = EstimateInputOutputSize(target_subgraph);
 
@@ -941,7 +947,7 @@ int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
   if (estimated_latency == 0) {
     return 1;
   } else {
-    return estimated_latency;
+    return multiplier * estimated_latency / (int64_t)100;
   }
 }
 

@@ -31,6 +31,7 @@ struct ProfileConfig {
   bool online = true;
   int num_warmups = 1;
   int num_runs = 1;
+  int max_noise_percent = 0;
   std::vector<int> copy_computation_ratio;
 };
 

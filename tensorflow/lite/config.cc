@@ -79,6 +79,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["profile_num_runs"].isNull()) {
     interpreter_config.profile_config.num_runs = root["profile_num_runs"].asInt();
   }
+  if (!root["profile_noise_percent"].isNull()) {
+    interpreter_config.profile_config.max_noise_percent =
+        root["profile_noise_percent"].asFloat();
+  }
   if (!root["profile_copy_computation_ratio"].isNull()) {
     interpreter_config.copy_computation_ratio =
         root["profile_copy_computation_ratio"].asInt();

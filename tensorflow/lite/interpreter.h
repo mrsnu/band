@@ -21,6 +21,7 @@ limitations under the License.
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <random>
 #include <vector>
 
 #include "tensorflow/lite/context_util.h"
@@ -838,7 +839,11 @@ class Interpreter {
   bool profile_online_;
   int profile_num_warmups_;
   int profile_num_runs_;
+  float profile_max_noise_percent_;
   std::vector<int> profile_copy_computation_ratio_;
+
+  std::mt19937 random_engine_;
+  std::uniform_int_distribution<> noise_distribution_;
 
   int next_model_id_ = 0;
 
