@@ -42,7 +42,7 @@ class Planner {
 
   // Waits until the jobs are done.
   // The interpreter calls the method.
-  void Wait(std::vector<int> job_ids);
+  std::vector<JobStatus> Wait(std::vector<int> job_ids);
   void WaitAll();
 
   // Enqueues a finised job to the queue.

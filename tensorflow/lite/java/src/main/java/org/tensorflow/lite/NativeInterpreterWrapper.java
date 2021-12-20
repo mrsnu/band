@@ -144,7 +144,7 @@ final class NativeInterpreterWrapper implements AutoCloseable {
 
     wait(jobIds, outputHandles, interpreterHandle, errorHandle);
   }
-  private static native void wait(int[] jobIds, long[][] outputTensorHandles, long interpreterHandle, long errorHandle);
+  private static native int[] wait(int[] jobIds, long[][] outputTensorHandles, long interpreterHandle, long errorHandle);
 
   void setNumThreads(int numThreads) {
     numThreads(interpreterHandle, numThreads);

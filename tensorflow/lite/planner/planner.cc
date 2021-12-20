@@ -233,9 +233,10 @@ std::set<int> Planner::GetIdleWorkers() {
   return idle_workers;
 }
 
-void Planner::Wait(std::vector<int> job_ids) {
+std::vector<JobStatus> Planner::Wait(std::vector<int> job_ids) {
+  std::vector<JobStatus> status;
   if (job_ids.size() == 0) {
-    return;
+    return status;
   }
 
   std::unique_lock<std::mutex> request_lock(requests_.mtx);
@@ -253,6 +254,17 @@ void Planner::Wait(std::vector<int> job_ids) {
 
   request_lock.unlock();
   FlushFinishedJobs();
+
+  for (int job_id : job_ids) {
+    if (IsJobIdValid(job_id)) {
+      status.push_back(jobs_finished_record_[GetJobRecordIndex(job_id)].status);
+    }
+    else {
+      status.push_back(JobStatus::kTfLiteJobInvokeFailure);
+    }
+  } 
+
+  return status;
 }
 
 void Planner::WaitAll() {

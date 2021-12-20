@@ -469,7 +469,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
   return convertVectorToJIntArray(env, job_ids_vector);
 }
 
-JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
+JNIEXPORT jintArray JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
     JNIEnv* env, jclass clazz, jintArray job_ids,
     jobjectArray output_tensor_handles, jlong interpreter_handle,
     jlong error_handle) {
@@ -488,13 +488,17 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
   }
   job_ids_string.pop_back();
 
-  interpreter->GetPlanner()->Wait(job_ids_vector);
+  auto job_status = interpreter->GetPlanner()->Wait(job_ids_vector);
 
   jsize num_model_outputs = env->GetArrayLength(output_tensor_handles);
   if (num_model_outputs > 0) {
     std::vector<tflite::Tensors> output_tensors(num_model_outputs);
 
     for (int i = 0; i < num_model_outputs; i++) {
+      if (job_status[i] != JobStatus::kTfLiteJobSuccess) {
+        continue;
+      }
+
       jlongArray output_handles =
           (jlongArray)(env->GetObjectArrayElement(output_tensor_handles, i));
       output_tensors[i] = convertJLongArrayToTensors(env, output_handles);
@@ -505,10 +509,12 @@ JNIEXPORT void JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wait(
         ThrowException(env, kIllegalArgumentException,
                       "Internal error: Failed to copy %d-th output of job %d: %s",
                       i, job_ids_vector[i], error_reporter->CachedLastErrorMessage());
-        return;
+        return nullptr;
       }
     }
   }
+
+  return convertVectorToJIntArray(env, job_status);
 }
 
 JNIEXPORT jint JNICALL
