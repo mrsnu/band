@@ -163,28 +163,28 @@ public final class Interpreter implements AutoCloseable {
     return wrapper.registerModel(byteBuffer, fileName);
   }
 
-  public void runSync(
+  public int runSync(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, 0);
+    return wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, 0)[0];
   }
 
-  public void runSync(
+  public int runSync(
       int modelId, @NonNull Tensor[] inputs, @NonNull Tensor[] outputs, long slo) {
     checkNotClosed();
-    wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, slo);
+    return wrapper.runSync(new int[]{modelId}, new Tensor[][]{inputs}, new Tensor[][]{outputs}, slo)[0];
   }
 
-  public void runSyncMultipleRequests(
+  public int[] runSyncMultipleRequests(
     @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs) {
     checkNotClosed();
-    wrapper.runSync(modelIds, inputs, outputs, 0);
+    return wrapper.runSync(modelIds, inputs, outputs, 0);
   }
 
-  public void runSyncMultipleRequests(
+  public int[] runSyncMultipleRequests(
       @NonNull int[] modelIds, @NonNull Tensor[][] inputs, @NonNull Tensor[][] outputs, long slo) {
     checkNotClosed();
-    wrapper.runSync(modelIds, inputs, outputs, slo);
+    return wrapper.runSync(modelIds, inputs, outputs, slo);
   }
 
   public int runAsync(
@@ -211,14 +211,14 @@ public final class Interpreter implements AutoCloseable {
     return wrapper.runAsync(modelIds, inputs, slo);
   }
 
-  public void wait(int jobId, @NonNull Tensor[] outputs) {
+  public int wait(int jobId, @NonNull Tensor[] outputs) {
     checkNotClosed();
-    wrapper.wait(new int[]{jobId}, new Tensor[][]{outputs});
+    return wrapper.wait(new int[]{jobId}, new Tensor[][]{outputs})[0];
   }
 
-  public void waitMultipleRequests(@NonNull int[] jobIds, @NonNull Tensor[][] outputs) {
+  public int[] waitMultipleRequests(@NonNull int[] jobIds, @NonNull Tensor[][] outputs) {
     checkNotClosed();
-    wrapper.wait(jobIds, outputs);
+    return wrapper.wait(jobIds, outputs);
   }
 
   /** Gets the number of input tensors. */

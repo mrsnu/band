@@ -475,13 +475,13 @@ JNIEXPORT jintArray JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wa
     jlong error_handle) {
   tflite_api_dispatcher::Interpreter* interpreter =
       convertLongToInterpreter(env, interpreter_handle);
-  if (interpreter == nullptr) return;
+  if (interpreter == nullptr) return nullptr;
   BufferErrorReporter* error_reporter =
       convertLongToErrorReporter(env, error_handle);
-  if (error_reporter == nullptr) return;
+  if (error_reporter == nullptr) return nullptr;
 
   std::vector<int> job_ids_vector = convertJIntArrayToVector(env, job_ids);
-  if (job_ids_vector.size() == 0) return;
+  if (job_ids_vector.size() == 0) return nullptr;
   std::string job_ids_string;
   for (int job_id : job_ids_vector) {
     job_ids_string += std::to_string(job_id) + ",";
@@ -495,7 +495,7 @@ JNIEXPORT jintArray JNICALL Java_org_tensorflow_lite_NativeInterpreterWrapper_wa
     std::vector<tflite::Tensors> output_tensors(num_model_outputs);
 
     for (int i = 0; i < num_model_outputs; i++) {
-      if (job_status[i] != JobStatus::kTfLiteJobSuccess) {
+      if (job_status[i] != tflite::JobStatus::kTfLiteJobSuccess) {
         continue;
       }
 

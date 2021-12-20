@@ -233,8 +233,8 @@ std::set<int> Planner::GetIdleWorkers() {
   return idle_workers;
 }
 
-std::vector<JobStatus> Planner::Wait(std::vector<int> job_ids) {
-  std::vector<JobStatus> status;
+std::vector<int> Planner::Wait(std::vector<int> job_ids) {
+  std::vector<int> status;
   if (job_ids.size() == 0) {
     return status;
   }
