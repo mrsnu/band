@@ -8,8 +8,9 @@ void FixedDeviceScheduler::Schedule(JobQueue& requests) {
     Job to_execute = requests.front();
     requests.pop_front();
 
+    // if subgraph idx is given, use that specific subgraph
     int subgraph_idx = to_execute.subgraph_idx;
-
+    // otherwise, search for a `model subgraph` of given (device id, model id) pair
     if (subgraph_idx == -1) {
       int model_id = to_execute.model_id;
       int worker_id;
@@ -26,7 +27,12 @@ void FixedDeviceScheduler::Schedule(JobQueue& requests) {
     }
 
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
-    EnqueueAction(to_execute, subgraph);
+    if (subgraph) {
+      EnqueueAction(to_execute, subgraph);
+    } else {
+      to_execute.status = kTfLiteJobInvokeFailure;
+      planner_->EnqueueFinishedJob(to_execute);
+    }
   }
 }
 

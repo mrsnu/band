@@ -11,7 +11,7 @@ namespace impl {
 
 // Assigns requested subgraph to corresponding device.
 // Select entire model subgraph in case when 
-// given subgraph id is invalid (not -1).
+// given subgraph id is not -1.
 class FixedDeviceScheduler : public Scheduler {
  public:
   explicit FixedDeviceScheduler(Planner* planner) : Scheduler(planner) {
