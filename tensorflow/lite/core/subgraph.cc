@@ -342,7 +342,9 @@ void Subgraph::Print() {
   };
 
   error_reporter_->Report("=====   Nodes   =====");
-  for (int node_index = 0; node_index < nodes_and_registration_.size(); node_index++) {
+  error_reporter_->Report("index,inputs,outputs,op,delegate");
+  for (int node_index = 0; node_index < nodes_and_registration_.size();
+       node_index++) {
     auto node_and_registration = nodes_and_registration_[node_index];
     TfLiteNode node = node_and_registration.first;
     TfLiteRegistration registration = node_and_registration.second;
@@ -355,20 +357,14 @@ void Subgraph::Print() {
     TfLiteDelegateFlags delegate_flag = static_cast<TfLiteDelegateFlags>(
         node.delegate ? node.delegate->flags : kTfLiteDelegateFlagsNone);
     error_reporter_->Report(
-        "Idx: %4d, Operator: %s", node_index,
+        "%d,%s,%s,%s,%s", node_index, inputs_str.c_str(), outputs_str.c_str(),
         builtin_code_to_name[static_cast<TfLiteBuiltinOperator>(
-            registration.builtin_code)]);
-    if (delegate_flag != kTfLiteDelegateFlagsNone) {
-      error_reporter_->Report("Delegate: %s",
-                              TfLiteDelegateGetName(delegate_flag));
-    }
-    error_reporter_->Report("Node inputs: %s", inputs_str.c_str());
-    error_reporter_->Report("Node outputs: %s", outputs_str.c_str());
-    error_reporter_->Report("---------------------");
+            registration.builtin_code)],
+        TfLiteDelegateGetName(delegate_flag));
   }
 
   error_reporter_->Report("=====  Tensors  =====");
-  error_reporter_->Report("Idx  s delegate  value type      dims            bytes   q v a name");
+  error_reporter_->Report("index,is_stale,delegate,type,dims,bytes,quantization,is_variable,allocation,value,name");
   for (int tensor_idx = 0; tensor_idx < tensors_.size(); ++tensor_idx) {
     TfLiteTensor tensor = tensors_[tensor_idx];
     PrintTensor(tensor, tensor_idx);
@@ -401,11 +397,18 @@ void Subgraph::PrintTensor(TfLiteTensor& tensor, int tensor_idx) {
   TfLiteDelegateFlags delegate_flag = static_cast<TfLiteDelegateFlags>(
       tensor.delegate ? tensor.delegate->flags : kTfLiteDelegateFlagsNone);
   error_reporter_->Report(
-      "%-4d %d %-9s %-5d %-9s %-16s%-7d %d %d %d %s", tensor_idx,
-      tensor.data_is_stale, TfLiteDelegateGetName(delegate_flag),
-      tensor.data.raw[0], TfLiteTypeGetName(tensor.type), dim_str.c_str(),
-      tensor.bytes, tensor.quantization.type, tensor.is_variable,
-      tensor.allocation_type, tensor.name);
+      "%d,%d,%s,%s,%s,%d,%d,%d,%d,%d,%s",
+      tensor_idx,
+      tensor.data_is_stale,
+      TfLiteDelegateGetName(delegate_flag),
+      TfLiteTypeGetName(tensor.type),
+      dim_str.c_str(),
+      tensor.bytes,
+      tensor.quantization.type,
+      tensor.is_variable,
+      tensor.allocation_type,
+      tensor.data.raw[0],
+      tensor.name);
 }
 
 Subgraph::~Subgraph() {
