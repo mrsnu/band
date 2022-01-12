@@ -246,8 +246,6 @@ TfLiteStatus Interpreter::Invoke() {
     }
   }
 
-  primary_subgraph().Print();
-
   return kTfLiteOk;
 }
 
