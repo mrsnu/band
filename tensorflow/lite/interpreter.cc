@@ -459,37 +459,33 @@ int Interpreter::InvokeModelAsync(Job request, Tensors inputs) {
   return job_ids.size() == 1 ? job_ids[0] : -1;
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Tensors> inputs) {
-  std::vector<Job> requests;
-  std::vector<Tensors> duplicate_inputs;
-
-  if (inputs.size() != model_configs_.size()) {
+std::vector<int> Interpreter::InvokeModelsAsync(
+    std::vector<Tensors> model_inputs) {
+  if (model_inputs.size() != model_configs_.size()) {
     error_reporter_->Report(
-        "Invalid input size input.size() %d != model_configs_.size() %d",
-        inputs.size(), model_configs_.size());
+        "Invalid input size model_input.size() %d != model_configs_.size() %d",
+        model_inputs.size(), model_configs_.size());
     return {};
   }
 
+  std::vector<Job> requests;
+  std::vector<Tensors> request_inputs;
   for (auto& m : model_configs_) {
     int model_id = m.first;
     ModelConfig& model_config = m.second;
     Job request = Job(model_id);
     for (int k = 0; k < model_config.batch_size; ++k) {
       requests.push_back(request);
-      duplicate_inputs.push_back(inputs[model_id]);
+      request_inputs.push_back(model_inputs[model_id]);
     }
   }
 
-  return InvokeModelsAsync(requests, duplicate_inputs);
+  return InvokeModelsAsync(requests, request_inputs);
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests, 
-                                                std::vector<Tensors> inputs) {
-  if (requests.size() == 0) {
-    return {};
-  }
-
-  for (auto& request: requests) {
+std::vector<int> Interpreter::InvokeModelsAsync(
+    std::vector<Job> requests, std::vector<Tensors> request_inputs) {
+  for (auto& request : requests) {
     int model_id = request.model_id;
     ModelConfig& model_config = model_configs_[model_id];
     request.model_fname = model_config.model_fname;
@@ -497,66 +493,76 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     request.slo_us = model_config.slo_us;
   }
 
-  std::vector<Job> valid_requests;
-  std::vector<bool> valid_requests_masks(requests.size(), true);
+  if (request_inputs.size() > 0) {
+    if (requests.size() != request_inputs.size()) {
+      error_reporter_->Report(
+          "Invalid input size requests.size() %d != request_inputs.size() %d",
+          requests.size(), request_inputs.size());
+      return {};
+    }
 
-  if (inputs.size() > 0) {
-    assert(inputs.size() == requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
       int input_handle = model_input_buffer_[request.model_id]->Alloc();
       if (model_input_buffer_[request.model_id]->PutTensorsToHandle(
-              inputs[i], input_handle) == kTfLiteOk) {
+              request_inputs[i], input_handle) == kTfLiteOk) {
         request.input_handle = input_handle;
         request.output_handle = model_output_buffer_[request.model_id]->Alloc();
-        valid_requests.push_back(std::move(request));
       } else {
-        valid_requests_masks[i] = false;
+        error_reporter_->Report("Input copy failure for model %d request %d",
+                                request.model_id, i);
+        return {};
       }
     }
-  } else {
-    // we don't care about the inputs, just make input/output-less requests
-    for (Job& request : requests) {
-      valid_requests.push_back(std::move(request));
-    }
   }
 
-  std::vector<int> job_ids(requests.size(), -1);
-  std::vector<int> valid_job_ids = planner_->EnqueueBatch(valid_requests);
-
-  int valid_index = 0;
-  for (size_t i = 0; i < requests.size(); i++) {
-    if (valid_requests_masks[i]) {
-      job_ids[i] = valid_job_ids[valid_index++];
-    }
-  }
-  
-  return job_ids;
+  return planner_->EnqueueBatch(requests);
 }
 
-void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs,
-                                   std::vector<Tensors> outputs) {
-  std::vector<int> job_ids = InvokeModelsAsync(inputs);
+void Interpreter::InvokeModelsSync(std::vector<Tensors> model_inputs,
+                                   std::vector<Tensors> model_outputs) {
+  if (model_inputs.size() != model_configs_.size() ||
+      model_outputs.size() != model_configs_.size()) {
+    error_reporter_->Report(
+        "Invalid input/output size model_inputs.size() %d, "
+        "model_outputs.size() %d, model_configs_.size() %d",
+        model_inputs.size(), model_outputs.size(), model_configs_.size());
+    return;
+  }
+
+  std::vector<int> job_ids = InvokeModelsAsync(model_inputs);
   planner_->Wait(job_ids);
-  
-  if (inputs.size() == outputs.size()) {
-    int accumulated_job_index = 0;
-    int output_index = 0;
-    for (auto& m : model_configs_) {
-      GetOutputTensors(job_ids[accumulated_job_index], outputs[output_index++]);
-      accumulated_job_index += m.second.batch_size;
+
+  int job_index = 0;
+  for (int model_id = 0; model_id < model_configs_.size(); model_id++) {
+    const ModelConfig& m = model_configs_[model_id];
+    for (int batch_idx = 0; batch_idx < m.batch_size; batch_idx++) {
+      GetOutputTensors(job_ids[job_index], model_outputs[model_id]);
+      job_index++;
     }
   }
 }
 
 void Interpreter::InvokeModelsSync(std::vector<Job> requests,
-                                   std::vector<Tensors> inputs,
-                                   std::vector<Tensors> outputs) {
-  std::vector<int> job_ids = InvokeModelsAsync(requests, inputs);
+                                   std::vector<Tensors> request_inputs,
+                                   std::vector<Tensors> request_outputs) {
+  if (request_inputs.size() > 0 &&
+      (request_inputs.size() != requests.size() ||
+       request_outputs.size() != requests.size())) {
+    error_reporter_->Report(
+        "Invalid input/output size request_inputs.size() %d, "
+        "request_outputs.size() %d, requests.size() %d",
+        request_inputs.size(), request_outputs.size(), requests.size());
+    return;
+  }
+
+  std::vector<int> job_ids = InvokeModelsAsync(requests, request_inputs);
   planner_->Wait(job_ids);
-  if (inputs.size() == requests.size() && inputs.size() == outputs.size()) {
+
+  // We don't have to check request_outputs.size() again.
+  if (request_inputs.size() > 0) {
     for (size_t i = 0; i < job_ids.size(); i++) {
-      GetOutputTensors(job_ids[i], outputs[i]);
+      GetOutputTensors(job_ids[i], request_outputs[i]);
     }
   }
 }
