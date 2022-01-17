@@ -117,6 +117,9 @@ class Planner {
 
   void PrepareReenqueue(Job& job);
 
+  // returns if of last job that executed given subgraph idx.
+  int GetActiveJobId(int subgraph_idx) const;
+
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
@@ -125,6 +128,11 @@ class Planner {
   bool need_cpu_update_ = false;
 
   SafeBool planner_safe_bool_;
+
+  // (subgraph idx, job id)
+  // records last successfully executed job id
+  // per each non-terminal subgraph. 
+  std::map<int, int> subgraph_job_record_;
 
   // Jobs Finished
   ConcurrentJobQueue jobs_finished_;

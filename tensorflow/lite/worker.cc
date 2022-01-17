@@ -132,6 +132,13 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
         const TfLiteTensor* src = preceded_subgraph->tensor(tensor_index);
         TfLiteTensor* dst = subgraph->tensor(tensor_index);
 
+        const int active_job_id = planner_.lock()->GetActiveJobId(job.subgraph_idx);
+        if (active_job_id != -1 && job.job_id != active_job_id) {
+           TFLITE_LOG(ERROR)
+               << "Trying to copy overwritten tensor of job id : " << active_job_id
+               << ", from job id : " << job.job_id;
+        }
+
         if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
            TFLITE_LOG(ERROR)
                << "Tensor data copy failure. src name : " << src->name

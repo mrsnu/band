@@ -128,6 +128,15 @@ bool Planner::NeedFallbackSubgraphs() const {
   return false;
 }
 
+int Planner::GetActiveJobId(int subgraph_idx) const {
+  auto it = subgraph_job_record_.find(subgraph_idx);
+  if (it == subgraph_job_record_.end()) {
+    return -1;
+  } else {
+    *it;
+  }
+}
+
 void Planner::CopyToLocalQueues() {
   std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
   JobQueue& requests = GetRequests();
@@ -277,6 +286,16 @@ void Planner::EnqueueFinishedJob(Job job) {
     num_finished_jobs_++;
 
     end_invoke_.notify_all();
+  } else if (!interpreter_->subgraph(job.subgraph_idx)->IsEnd() ||
+      job.status == kTfLiteJobSuccess) {
+    const int last_subgraph = job.previous_subgraph_indices.back();
+    // invalidate previously executed subgraph
+    if (last_subgraph != -1) {
+      subgraph_job_record_[last_subgraph] = -1;
+    }
+    // record job id of previously executed subgraph
+    // for intermediate tensor communication
+    subgraph_job_record_[job.subgraph_idx] = job.job_id;
   }
 }
 

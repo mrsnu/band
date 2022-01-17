@@ -30,6 +30,7 @@ limitations under the License.
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/core/api/profiler.h"
 #include "tensorflow/lite/core/subgraph.h"
+#include "tensorflow/lite/memory/tensor_memory_pool.h"
 #include "tensorflow/lite/memory/tensor_ring_buffer.h"
 #include "tensorflow/lite/experimental/resource/resource_base.h"
 #include "tensorflow/lite/external_cpu_backend_context.h"
@@ -109,6 +110,8 @@ struct ModelSpec {
   std::set<TfLiteType> tensor_types;
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
   int num_unit_subgraphs;
+  // maximum bytes of intermediate tensors (output of subgraph).
+  int max_intermediate_tensors_btyes;
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
   std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
@@ -894,6 +897,8 @@ class Interpreter {
 
   std::map<int, std::unique_ptr<TensorRingBuffer>> model_input_buffer_;
   std::map<int, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
+
+  std::unique_ptr<TensorMemoryPool> intermediate_tensor_pool_;
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap resources_;

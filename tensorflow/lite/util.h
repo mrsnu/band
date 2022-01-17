@@ -132,6 +132,7 @@ struct ModelConfig {
   int batch_size = 1;
   int64_t slo_us = -1;
   float slo_scale = -1.f;
+  size_t maximum_intermediate_size_bytes = 0;
 };
 
 // Find model id from model name.

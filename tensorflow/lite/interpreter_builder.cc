@@ -832,8 +832,48 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   }
 
+  size_t maximum_intermediate_tensor_size = 0;
+  std::vector<int> intermediate_tensors;
+
+  for (int i : model_subgraph_indices) {
+    Subgraph* subgraph = (*interpreter)->subgraph(i);
+
+    auto getAlignedTensorsSize = [&](std::vector<int> tensor_indices) {
+      size_t accumulated_size = 0;
+      for (int i : tensor_indices) {
+        accumulated_size += AlignTo(kTfLiteTensorDefaultAlignment, subgraph->tensor(i)->bytes);
+      }
+      return accumulated_size;
+    };
+
+    if (!subgraph->IsStart()) {
+      size_t aligned_input_size = getAlignedTensorsSize(subgraph->inputs());
+      if (maximum_intermediate_tensor_size > aligned_input_size) {
+        maximum_intermediate_tensor_size = aligned_input_size;
+        intermediate_tensors = subgraph->inputs();
+      }
+    }
+
+    if (!subgraph->IsEnd()) {
+      size_t aligned_output_size = getAlignedTensorsSize(subgraph->outputs());
+      if (maximum_intermediate_tensor_size > aligned_output_size) {
+        maximum_intermediate_tensor_size = aligned_output_size;
+        intermediate_tensors = subgraph->outputs();
+      }
+    }
+  }
+
+  TFLITE_LOG(INFO) << "maximum_intermediate_tensor_count: "
+                   << intermediate_tensors.size();
+
+  for (auto o : intermediate_tensors) {
+    TFLITE_LOG(INFO) << o;
+  }
+
   if (model_subgraph_indices.size() > 0) {
     if (model_config != nullptr) {
+      model_config->maximum_intermediate_size_bytes =
+          maximum_intermediate_tensor_size;
       (*interpreter)->SetModelConfigAndFillProfile(model_id, *model_config);
     }
 

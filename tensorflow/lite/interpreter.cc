@@ -136,6 +136,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       set_internal_backend_context(
           std::make_unique<CpuBackendContext>());
 
+  intermediate_tensor_pool_.reset(new TensorMemoryPool(error_reporter_));
+
   // Create a Planner instance.
   planner_.reset(new Planner(this));
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
@@ -1292,6 +1294,10 @@ std::set<int> Interpreter::models() const {
 void Interpreter::SetModelConfigAndFillProfile(int model_id,
                                                ModelConfig& model_config) {
   SetModelConfig(model_id, model_config);
+
+  TFLITE_LOG(INFO) << "Maximum intermediate tensor bytes: model_id - "
+                   << model_id << " size - "
+                   << model_config.maximum_intermediate_size_bytes;
 
   // Set (model_id, start_unit_idx, end_unit_idx) -> subgraph idx map.
   for (int i = 0; i < subgraphs_.size(); ++i) {
