@@ -28,7 +28,6 @@ namespace tflite {
 
 // Memory allocation tuning
 constexpr const int kDefaultArenaAlignment = 64;
-constexpr const int kDefaultTensorAlignment = 64;
 
 struct AllocationInfo;
 
@@ -53,7 +52,7 @@ class ArenaPlanner : public MemoryPlanner {
   // them until the end of inference.
   ArenaPlanner(TfLiteContext* context, std::unique_ptr<GraphInfo> graph_info,
                bool preserve_inputs, bool preserve_intermediates,
-               int tensor_alignment = kDefaultTensorAlignment);
+               int tensor_alignment = kTfLiteTensorDefaultAlignment);
   ~ArenaPlanner() override;
   ArenaPlanner(const ArenaPlanner&) = delete;
   ArenaPlanner& operator=(const ArenaPlanner&) = delete;

@@ -504,11 +504,11 @@ std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests,
     assert(inputs.size() == requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
-      int input_handle = model_input_buffer_[request.model_id]->Alloc();
+      int input_handle = model_input_buffer_[request.model_id]->Allocate();
       if (model_input_buffer_[request.model_id]->PutTensorsToHandle(
               inputs[i], input_handle) == kTfLiteOk) {
         request.input_handle = input_handle;
-        request.output_handle = model_output_buffer_[request.model_id]->Alloc();
+        request.output_handle = model_output_buffer_[request.model_id]->Allocate();
         valid_requests.push_back(std::move(request));
       } else {
         valid_requests_masks[i] = false;

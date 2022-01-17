@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_LITE_TENSOR_RING_BUFFER_H_
-#define TENSORFLOW_LITE_TENSOR_RING_BUFFER_H_
+#ifndef TENSORFLOW_LITE_MEMORY_TENSOR_RING_BUFFER_H_
+#define TENSORFLOW_LITE_MEMORY_TENSOR_RING_BUFFER_H_
 
 #include <array>
 #include <vector>
@@ -17,7 +17,7 @@ class TensorRingBuffer {
   ~TensorRingBuffer();
 
   const int GetTensorsLength() const;
-  int Alloc();
+  int Allocate();
   bool IsTensorIndexValid(int tensor_index) const;
   bool IsHandleValid(int handle) const;
   TfLiteStatus GetTensorFromHandle(TfLiteTensor* dst, int tensor_index, int handle) const;
@@ -40,4 +40,4 @@ class TensorRingBuffer {
 };
 }  // namespace tflite
 
-#endif TENSORFLOW_LITE_TENSOR_RING_BUFFER_H_
+#endif TENSORFLOW_LITE_MEMORY_TENSOR_RING_BUFFER_H_

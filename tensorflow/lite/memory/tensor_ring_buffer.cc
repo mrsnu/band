@@ -2,7 +2,7 @@
 #include <cstring>  // memcpy
 #include <mutex>
 
-#include "tensorflow/lite/tensor_ring_buffer.h"
+#include "tensorflow/lite/memory/tensor_ring_buffer.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 
 namespace tflite {
@@ -38,7 +38,7 @@ TensorRingBuffer::~TensorRingBuffer() {
 
 const int TensorRingBuffer::GetTensorsLength() const { return tensors_[0].size(); }
 
-int TensorRingBuffer::Alloc() {
+int TensorRingBuffer::Allocate() {
   std::lock_guard<std::mutex> lock(head_mtx_);
   return head_++;
 }

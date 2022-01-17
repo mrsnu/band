@@ -39,10 +39,10 @@ int GetNumThreads(int num_threads) {
 #ifndef EIGEN_DONT_ALIGN
 // Eigen may require buffers to be aligned to 16, 32 or 64 bytes depending on
 // hardware architecture and build configurations.
-// If the static assertion fails, try to increase `kDefaultTensorAlignment` to
-// in `arena_planner.h` to 32 or 64.
+// If the static assertion fails, try to increase 
+// `kTfLiteTensorDefaultAlignment` to in `common.h` to 32 or 64.
 static_assert(
-    kDefaultTensorAlignment % EIGEN_MAX_ALIGN_BYTES == 0,
+    kTfLiteTensorDefaultAlignment % EIGEN_MAX_ALIGN_BYTES == 0,
     "kDefaultArenaAlignment doesn't comply with Eigen alignment requirement.");
 #endif  // EIGEN_DONT_ALIGN
 

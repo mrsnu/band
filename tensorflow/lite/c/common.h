@@ -233,6 +233,15 @@ void TfLiteFloatArrayFree(TfLiteFloatArray* a);
     }                                                                      \
   } while (0)
 
+#define TF_LITE_ENSURE_NEQ(context, a, b)                                   \
+  do {                                                                     \
+    if ((a) == (b)) {                                                      \
+      TF_LITE_KERNEL_LOG((context), "%s:%d %s != %s (%d != %d)", __FILE__, \
+                         __LINE__, #a, #b, (a), (b));                      \
+      return kTfLiteError;                                                 \
+    }                                                                      \
+  } while (0)
+
 #define TF_LITE_ENSURE_TYPES_EQ(context, a, b)                             \
   do {                                                                     \
     if ((a) != (b)) {                                                      \
@@ -391,6 +400,7 @@ typedef struct TfLiteSparsity {
   int dim_metadata_size;
 } TfLiteSparsity;
 
+#define kTfLiteTensorDefaultAlignment 64
 // An tensor in the interpreter system which is a wrapper around a buffer of
 // data including a dimensionality (or NULL if not currently defined).
 #ifndef TF_LITE_STATIC_MEMORY
