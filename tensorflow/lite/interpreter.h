@@ -35,7 +35,6 @@ limitations under the License.
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/stderr_reporter.h"
-#include "tensorflow/lite/tensor_ring_buffer.h"
 #include "tensorflow/lite/type_to_tflitetype.h"
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/util.h"
