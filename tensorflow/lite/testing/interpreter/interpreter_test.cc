@@ -32,7 +32,11 @@ using ::testing::ElementsAre;
 
 TEST(TfliteDriverTest, SimpleTest) {
   std::unique_ptr<TestRunner> runner(new TfLiteDriver());
-  runner->ResetInterpreter();
+  tflite::RuntimeConfig runtime_config;
+  std::string filepath = "tensorflow/lite/testdata/runtime_config.json";
+  EXPECT_EQ(ParseRuntimeConfigFromJson(filepath, runtime_config), kTfLiteOk);
+ 
+  runner->ResetInterpreter(runtime_config);
 
   runner->SetModelBaseDir("tensorflow/lite");
   int model_id = runner->LoadModel("testdata/multi_add.bin");
@@ -66,7 +70,11 @@ TEST(TfliteDriverTest, SimpleTest) {
 
 TEST(TfliteDriverTest, AddQuantizedInt8Test) {
   std::unique_ptr<TestRunner> runner(new TfLiteDriver());
-  runner->ResetInterpreter();
+  tflite::RuntimeConfig runtime_config;
+  std::string filepath = "tensorflow/lite/testdata/runtime_config.json";
+  EXPECT_EQ(ParseRuntimeConfigFromJson(filepath, runtime_config), kTfLiteOk);
+ 
+  runner->ResetInterpreter(runtime_config);
 
   runner->SetModelBaseDir("tensorflow/lite");
   int model_id = runner->LoadModel("testdata/add_quantized_int8.bin");
