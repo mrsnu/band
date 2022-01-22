@@ -113,27 +113,57 @@ bool Worker::IsBusy() {
   return false;
 }
 
-TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
+TfLiteStatus Worker::PreSubgraphInvoke(const Job& job) {
   // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {
     return kTfLiteOk;
   }
 
+  auto is_overwrite = [](int last_job_id, int current_job_id) {
+    return last_job_id != -1 && last_job_id != current_job_id;
+  };
+
   Interpreter* interpreter = planner_.lock()->GetInterpreter();
   Subgraph* subgraph = interpreter->subgraph(job.subgraph_idx);
-  std::set<int> unresolved_tensors(subgraph->inputs().begin(), subgraph->inputs().end());
-  // Intermediate tensor communication
-  for (auto subgraph_it = job.previous_subgraph_indices.cbegin(); subgraph_it != job.previous_subgraph_indices.cend(); ++subgraph_it) {
-    const int preceded_subgraph_index = *subgraph_it;
-    Subgraph* preceded_subgraph = interpreter->subgraph(preceded_subgraph_index);
-    const int preceded_subgraph_last_job = planner_.lock()->GetActiveJobId(preceded_subgraph_index);
-    const bool is_overwritten = preceded_subgraph_last_job != -1 && job.job_id != preceded_subgraph_last_job;
+  const int subgraph_last_job_id =
+      planner_.lock()->GetActiveJobId(job.subgraph_idx);
+  std::set<int> unresolved_tensors(subgraph->inputs().begin(),
+                                   subgraph->inputs().end());
 
-    for(int tensor_index: preceded_subgraph->outputs()) {
+  // copy output tensors if an upcoming invoke overwrites other job's
+  // intermediate result
+  if (is_overwrite(subgraph_last_job_id, job.job_id)) {
+    // TODO(dostos): remove before PR
+    TFLITE_LOG(INFO) << "Detected overwriting subgraph id " << job.subgraph_idx
+                     << " from job " << job.job_id << " to "
+                     << subgraph_last_job_id;
+    for (int tensor_index : subgraph->outputs()) {
+      if (interpreter->intermediate_tensor_pool_->PutTensorToHandle(
+              subgraph->tensor(tensor_index), subgraph_last_job_id,
+              tensor_index)) {
+        TFLITE_LOG(ERROR) << "Error occured while put tensor to handle "
+                          << subgraph_last_job_id << " tensor index "
+                          << tensor_index << " from subgraph "
+                          << job.subgraph_idx;
+        return kTfLiteError;
+      }
+    }
+  }
+
+  // copy input tensors from preceded subgraphs
+  for (auto subgraph_it = job.previous_subgraph_indices.cbegin();
+       subgraph_it != job.previous_subgraph_indices.cend(); ++subgraph_it) {
+    const int preceded_subgraph_index = *subgraph_it;
+    Subgraph* preceded_subgraph =
+        interpreter->subgraph(preceded_subgraph_index);
+    const int preceded_subgraph_last_job =
+        planner_.lock()->GetActiveJobId(preceded_subgraph_index);
+
+    for (int tensor_index : preceded_subgraph->outputs()) {
       if (unresolved_tensors.find(tensor_index) != unresolved_tensors.end()) {
         TfLiteTensor* dst = subgraph->tensor(tensor_index);
         // Copy intermediate tensor from pool
-        if (is_overwritten) {
+        if (is_overwrite(preceded_subgraph_last_job, job.job_id)) {
           // TODO(dostos): remove before PR
           TFLITE_LOG(INFO) << "Detected overwritten subgraph id "
                            << preceded_subgraph_index << " from job "
@@ -142,6 +172,9 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
           if (interpreter->intermediate_tensor_pool_->GetTensorFromHandle(
                   dst, job.job_id, tensor_index) == kTfLiteError) {
             // TODO(dostos): error msg
+            TFLITE_LOG(ERROR) << "Error occured while get tensor from handle"
+                              << job.job_id << " tensor idx " << tensor_index
+                              << " from subgraph " << preceded_subgraph_index;
             return kTfLiteError;
           }
         } else {
@@ -167,7 +200,8 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   }
 
   // Copy model input
-  for (auto tensor_it = unresolved_tensors.begin(); tensor_it != unresolved_tensors.end();) {
+  for (auto tensor_it = unresolved_tensors.begin();
+       tensor_it != unresolved_tensors.end();) {
     int tensor_index = *tensor_it;
     if (input_buffer->IsTensorIndexValid(tensor_index)) {
       if (input_buffer->GetTensorFromHandle(subgraph->tensor(tensor_index),
@@ -190,7 +224,7 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   }
 }
 
-TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
+TfLiteStatus Worker::PostSubgraphInvoke(const Job& job) {
   // Compute only.
   if (job.output_handle < 0) {
     return kTfLiteOk;

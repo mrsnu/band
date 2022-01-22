@@ -51,8 +51,8 @@ class Worker {
 
  protected:
   bool IsValid(Job& job);
-  TfLiteStatus TryCopyInputTensors(const Job& job);
-  TfLiteStatus TryCopyOutputTensors(const Job& job);
+  TfLiteStatus PreSubgraphInvoke(const Job& job);
+  TfLiteStatus PostSubgraphInvoke(const Job& job);
   TfLiteStatus TryUpdateWorkerThread();
   virtual void Work() = 0;
 

@@ -103,7 +103,7 @@ void DeviceQueueWorker::Work() {
         break;
       }
 
-      if (TryCopyInputTensors(current_job) == kTfLiteOk) {
+      if (PreSubgraphInvoke(current_job) == kTfLiteOk) {
         lock.lock();
         current_job.invoke_time = profiling::time::NowMicros();
         lock.unlock();
@@ -119,7 +119,7 @@ void DeviceQueueWorker::Work() {
           if (current_job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job.following_jobs);
           } 
-          TryCopyOutputTensors(current_job);
+          PostSubgraphInvoke(current_job);
           current_job.status = kTfLiteJobSuccess;
 
         } else if (status == kTfLiteDelegateError) {
