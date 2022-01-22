@@ -124,26 +124,34 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   std::set<int> unresolved_tensors(subgraph->inputs().begin(), subgraph->inputs().end());
   // Intermediate tensor communication
   for (auto subgraph_it = job.previous_subgraph_indices.cbegin(); subgraph_it != job.previous_subgraph_indices.cend(); ++subgraph_it) {
-    int preceded_subgraph_index = *subgraph_it;
+    const int preceded_subgraph_index = *subgraph_it;
     Subgraph* preceded_subgraph = interpreter->subgraph(preceded_subgraph_index);
+    const int preceded_subgraph_last_job = planner_.lock()->GetActiveJobId(preceded_subgraph_index);
+    const bool is_overwritten = preceded_subgraph_last_job != -1 && job.job_id != preceded_subgraph_last_job;
 
     for(int tensor_index: preceded_subgraph->outputs()) {
       if (unresolved_tensors.find(tensor_index) != unresolved_tensors.end()) {
-        const TfLiteTensor* src = preceded_subgraph->tensor(tensor_index);
         TfLiteTensor* dst = subgraph->tensor(tensor_index);
-
-        const int active_job_id = planner_.lock()->GetActiveJobId(job.subgraph_idx);
-        if (active_job_id != -1 && job.job_id != active_job_id) {
-           TFLITE_LOG(ERROR)
-               << "Trying to copy overwritten tensor of job id : " << active_job_id
-               << ", from job id : " << job.job_id;
-        }
-
-        if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
-           TFLITE_LOG(ERROR)
-               << "Tensor data copy failure. src name : " << src->name
-               << ", dst name : " << dst->name;
-           return kTfLiteError;
+        // Copy intermediate tensor from pool
+        if (is_overwritten) {
+          // TODO(dostos): remove before PR
+          TFLITE_LOG(INFO) << "Detected overwritten subgraph id "
+                           << preceded_subgraph_index << " from job "
+                           << preceded_subgraph_last_job
+                           << " while executing job id : " << job.job_id;
+          if (interpreter->intermediate_tensor_pool_->GetTensorFromHandle(
+                  dst, job.job_id, tensor_index) == kTfLiteError) {
+            // TODO(dostos): error msg
+            return kTfLiteError;
+          }
+        } else {
+          const TfLiteTensor* src = preceded_subgraph->tensor(tensor_index);
+          if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
+            TFLITE_LOG(ERROR)
+                << "Tensor data copy failure. src name : " << src->name
+                << ", dst name : " << dst->name;
+            return kTfLiteError;
+          }
         }
 
         unresolved_tensors.erase(tensor_index);
