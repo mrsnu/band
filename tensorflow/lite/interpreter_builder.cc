@@ -560,7 +560,8 @@ int InterpreterBuilder::AddSubgraph(
       subgraph_idx, subgraph_key.model_id,
       TfLiteDeviceGetName(
           (*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id)),
-      subgraph_key.GetInputOpsString(), subgraph_key.GetOutputOpsString());
+      subgraph_key.GetInputOpsString().c_str(),
+      subgraph_key.GetOutputOpsString().c_str());
   return subgraph_idx;
 }
 

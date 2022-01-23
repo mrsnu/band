@@ -75,6 +75,7 @@ struct RuntimeConfig {
   WorkerConfig worker_config;
 };
 
+class ErrorReporter;
 // Parse runtime config from a json file path
 TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
                                         std::string json_fname,
