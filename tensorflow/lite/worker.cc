@@ -117,6 +117,7 @@ bool Worker::IsBusy() {
 }
 
 ErrorReporter* Worker::GetErrorReporter() {
+  // TODO(dostos): thread-safety for error reporter
   auto planner_ptr = planner_.lock();
   if (planner_ptr) {
     return planner_ptr->GetInterpreter()->error_reporter();
