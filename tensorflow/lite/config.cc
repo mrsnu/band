@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/error_reporter.h"
+#include "tensorflow/lite/tools/logging.h"
 
 #include <json/json.h>
 #include <fstream>
@@ -33,7 +34,7 @@ TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
   config >> root;
 
   TF_LITE_ENSURE(error_reporter, root.isObject());
-  TF_LITE_REPORT_ERROR(error_reporter, "Runtime config: %s", root.asCString());
+  TFLITE_LOG(INFO) << "Runtime config: " << root;
 
   if (ValidateJsonConfig(error_reporter, root, {"log_path", "schedulers"}) !=
       kTfLiteOk) {
