@@ -777,6 +777,9 @@ class Interpreter {
     return own_external_cpu_backend_context_.get();
   }
 
+  // Get the error reporter associated with this interpreter.
+  ErrorReporter* error_reporter() { return error_reporter_; }
+
  private:
   friend class Worker;
   friend class InterpreterBuilder;
@@ -821,9 +824,6 @@ class Interpreter {
 
   // Returns true if cancellation function returns true.
   bool IsCancelled(size_t subgraph_index);
-
-  // Get the error reporter associated with this interpreter.
-  ErrorReporter* error_reporter() { return error_reporter_; }
 
   // Smoothing constant to update profile result.
   // The smaller profile_smoothing_factor_, the smoother the profile results.

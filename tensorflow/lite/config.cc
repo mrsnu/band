@@ -33,9 +33,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
   config >> root;
 
   TF_LITE_ENSURE(error_reporter, root.isObject());
-  TF_LITE_KERNEL_LOG(error_reporter, "Runtime config: %s", root);
+  TF_LITE_REPORT_ERROR(error_reporter, "Runtime config: %s", root.asCString());
 
-  if (ValidateJsonConfig(root, {"log_path", "schedulers"}) != kTfLiteOk) {
+  if (ValidateJsonConfig(error_reporter, root, {"log_path", "schedulers"}) !=
+      kTfLiteOk) {
     return kTfLiteError;
   }
 
@@ -128,7 +129,7 @@ TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
       TfLiteDeviceFlags device_flag =
           TfLiteDeviceGetFlag(worker_config_json["device"].asCString());
       if (device_flag == kTfLiteNumDevices) {
-        TF_LITE_KERNEL_LOG(error_reporter,
+        TF_LITE_REPORT_ERROR(error_reporter,
                            "Wrong `device` argument is given. %s",
                            worker_config_json["device"].asCString());
         return kTfLiteError;
@@ -200,11 +201,11 @@ TfLiteStatus ValidateJsonConfig(ErrorReporter* error_reporter,
                                 const Json::Value& json_config,
                                 std::vector<std::string> keys) {
   for (auto key : keys) {
-    TF_LITE_ENSURE(error_reporter, )
     if (json_config[key].isNull()) {
-      TF_LITE_KERNEL_LOG(
+      TF_LITE_REPORT_ERROR(
           error_reporter,
-          "Please check if the argument %s is given in the config file.", key);
+          "Please check if the argument %s is given in the config file.",
+          key.c_str());
       return kTfLiteError;
     }
   }
