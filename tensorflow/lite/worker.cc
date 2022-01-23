@@ -113,6 +113,10 @@ bool Worker::IsBusy() {
   return false;
 }
 
+ErrorReporter* Worker::GetErrorReporter() {
+  if (planner)
+}
+
 TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {

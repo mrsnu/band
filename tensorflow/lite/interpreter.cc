@@ -820,8 +820,9 @@ void Interpreter::ProfileOnline(int model_id,
       }
     }
     if (worker_subgraph_indices.size() == 0) {
-      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                        << ": No subgraph exist";
+      TF_LITE_REPORT_ERROR(error_reporter_,
+                           "No subgraph for model %d and worker %d", model_id,
+                           worker_id);
       continue;
     }
 
@@ -846,14 +847,15 @@ void Interpreter::ProfileOnline(int model_id,
           moving_averaged_latencies_[sub_idx] = INT_MAX;
           profile_database_[key] = INT_MAX;
 
-          std::string msg = "Subgraph execution failed";
-          TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                            << " Subgraph " << sub_idx << ": " << msg;
+          TF_LITE_REPORT_ERROR(
+              error_reporter_,
+              "Subgraph %d execution failed for model %d and worker %d",
+              sub_idx, model_id, worker_id);
         }
       }
       if (all_healthy) {
-        TFLITE_LOG(INFO) << "Model " << model_id << " Worker " << worker_id
-                         << ": All subgraphs are executable";
+        TFLITE_LOG(INFO) << "All subgraphs are executable for model "
+                         << model_id << " worker " << worker_id;
       }
     });
     health_check_thread.join();
@@ -871,8 +873,9 @@ void Interpreter::ProfileOnline(int model_id,
       }
     }
     if (max_subgraph_idx == -1) {
-      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                        << ": No executable subgraphs";
+      TF_LITE_REPORT_ERROR(error_reporter_,
+                           "No executable subgraphs for model %d and worker %d",
+                           model_id, worker_id);
       worker->Resume();
       continue;
     }
@@ -887,8 +890,9 @@ void Interpreter::ProfileOnline(int model_id,
 
       std::string msg = max_latency == -1 ? "Largest subgraph profile failed"
                                           : "Largest subgraph latency < 0";
-      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
-                        << " Subgraph " << max_subgraph_idx << ": " << msg;
+      TF_LITE_REPORT_ERROR(error_reporter_,
+                           "%s for subgraph %d ,model %d and worker %d",
+                           msg.c_str(), max_subgraph_idx, model_id, worker_id);
       worker->Resume();
       continue;
     }
@@ -1076,8 +1080,9 @@ void Interpreter::ProfileOffline(int model_id,
 
         std::string msg =
             latency == -1 ? "Latency profile failed" : "Profiled latency < 0";
-        TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << key.worker_id
-                          << " Subgraph " << sub_idx << ": " << msg;
+        TF_LITE_REPORT_ERROR(error_reporter_,
+                            "%s for subgraph %d ,model %d and worker %d",
+                            msg.c_str(), sub_idx, model_id, key.worker_id);
         continue;
       }
 
@@ -1472,8 +1477,9 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
   // BitMask to check device support or not
   using BitMask = uint32_t;
   if (kTfLiteNumDevices > 8 * sizeof(BitMask)) {
-    TFLITE_LOG(ERROR) << "kTfLiteNumDevices is larger than BitMask: "
-                      << kTfLiteNumDevices;
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "kTfLiteNumDevices is larger than BitMask %d",
+                         kTfLiteNumDevices);
   }
 
   std::map<TfLiteDeviceFlags, std::set<int>> op_sets_to_ignore;
@@ -1598,7 +1604,8 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
     subgraph_local_idx++;
   }
   if (!remaining_ops.empty()) {
-    TFLITE_LOG(ERROR) << "Not empty remaining ops";
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "Not empty remaining ops");
     return kTfLiteError;
   }
   PrepareUnitSubgraphScheduling(model_id, subgraph_local_idx);
@@ -2021,8 +2028,10 @@ int64_t Interpreter::GetWorstDeviceProfileResult(int model_id) {
   }
 
   if (worst_latency == 0) {
-    TFLITE_LOG(ERROR) << "Model #" << model_id << " has no profile results, "
-                      << "but GetWorstDeviceProfileResult was called.";
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "Model %d has no profile results, but "
+                         "GetWorstDeviceProfileResult was called",
+                         model_id);
   }
 
   return worst_latency;

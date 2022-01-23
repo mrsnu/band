@@ -50,6 +50,7 @@ class Worker {
   virtual bool IsBusy();
 
  protected:
+  ErrorReporter* GetErrorReporter();
   bool IsValid(Job& job);
   TfLiteStatus TryCopyInputTensors(const Job& job);
   TfLiteStatus TryCopyOutputTensors(const Job& job);
