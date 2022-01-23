@@ -136,6 +136,7 @@ TFLITE_ATTRIBUTE_WEAK Interpreter::TfLiteDelegatePtr AcquireFlexDelegate() {
 }
 
 namespace impl {
+// TODO(dostos): get error_reporter_ from interpreter
 ErrorReporter* InterpreterBuilder::error_reporter_ = DefaultErrorReporter();
 
 TfLiteStatus InterpreterBuilder::BuildLocalIndexToRegistrationMapping(
@@ -461,12 +462,7 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
       // constant.
       *buffer_data = nullptr;
       if (tensor->buffer() == 0) return kTfLiteOk;
-      if (tensor->buffer() >= buffers->size()) {
-        error_reporter_->Report(
-            "Tensor %d specifies out of range buffer %d (only %d buffers).\n",
-            i, tensor->buffer(), buffers->size());
-        return kTfLiteError;
-      }
+      TF_LITE_ENSURE(error_reporter_, tensor->buffer() < buffers->size());
       if (auto* buffer = (*buffers)[tensor->buffer()]) {
         if (auto* array = buffer->data()) {
           if (size_t size = array->size()) {
@@ -485,8 +481,9 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
     const auto* src_quantization = tensor->quantization();
     TfLiteQuantization quantization;
     if (ParseQuantization(src_quantization, &quantization, dims) != kTfLiteOk) {
-      error_reporter_->Report("Tensor %d has invalid quantization parameters.",
-                              i);
+      TF_LITE_REPORT_ERROR(
+          error_reporter_,
+          "[ParseTensors] Tensor %d has invalid quantization parameters.", i);
       status = kTfLiteError;
     }
 
@@ -500,8 +497,9 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
     bool is_variable = tensor->is_variable();
     if (buffer_ptr) {
       if (is_variable) {
-        error_reporter_->Report(
-            "Tensor %d is a variable tensor with buffer. "
+        TF_LITE_REPORT_ERROR(
+            error_reporter_,
+            "[ParseTensors] Tensor %d is a variable tensor with buffer. "
             "It's not supported now.\n",
             i);
         status = kTfLiteError;
@@ -511,24 +509,27 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
       const auto* src_sparsity = tensor->sparsity();
       TfLiteSparsity* sparsity = nullptr;
       if (ParseSparsity(src_sparsity, &sparsity) != kTfLiteOk) {
-        error_reporter_->Report("Tensor %d has invalid sparsity parameters.",
-                                i);
+        TF_LITE_REPORT_ERROR(
+            error_reporter_,
+            "[ParseTensors] Tensor %d has invalid sparsity parameters.", i);
         status = kTfLiteError;
       }
 
       if (subgraph->SetTensorParametersReadOnly(
               i, type, get_name(tensor), dims, quantization, buffer_ptr,
               buffer_size, allocation_, sparsity) != kTfLiteOk) {
-        error_reporter_->Report("Tensor %d is invalidly specified in schema.\n",
-                                i);
+        TF_LITE_REPORT_ERROR(
+            error_reporter_,
+            "[ParseTensors] Tensor %d is invalidly specified in schema.\n", i);
         status = kTfLiteError;
       }
     } else {
       if (subgraph->SetTensorParametersReadWrite(
               i, type, get_name(tensor), dims, quantization, is_variable,
               dims_signature_rank, dims_signature_data) != kTfLiteOk) {
-        error_reporter_->Report("Tensor %d is invalidly specified in schema.\n",
-                                i);
+        TF_LITE_REPORT_ERROR(
+            error_reporter_,
+            "[ParseTensors] Tensor %d is invalidly specified in schema.\n", i);
         status = kTfLiteError;
       }
     }
@@ -544,7 +545,7 @@ int InterpreterBuilder::AddSubgraph(
   auto new_subgraph = CreateSubgraph(model, op_resolver, interpreter, model_id,
                                      worker_id, device_op_indices.second);
   if (new_subgraph == nullptr) {
-    TFLITE_LOG(ERROR) << "Subgraph creation failure";
+    TF_LITE_REPORT_ERROR(error_reporter_, "[Subgraph] creation failure");
     return -1;
   }
 
@@ -553,15 +554,13 @@ int InterpreterBuilder::AddSubgraph(
 
   const SubgraphKey& subgraph_key = subgraph->GetKey();
 
-  TFLITE_LOG(INFO)
-      << "ADDED Subgraph "
-      << "Model : " << subgraph_key.model_id << " "
-      << TfLiteDeviceGetName(
-             (*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id))
-      << " "
-      << "From " << subgraph_key.GetInputOpsString() << " "
-      << "To " << subgraph_key.GetOutputOpsString() << " "
-      << "Index " << subgraph_idx;
+  TF_LITE_REPORT_ERROR(
+      error_reporter_,
+      "[Subgraph] added to %dth index for model %d %s from %s to %s",
+      subgraph_idx, subgraph_key.model_id,
+      TfLiteDeviceGetName(
+          (*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id)),
+      subgraph_key.GetInputOpsString(), subgraph_key.GetOutputOpsString());
   return subgraph_idx;
 }
 
@@ -590,7 +589,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
   // Add entire model on CPU
   if (cpu_subgraph == nullptr ||
       (*interpreter)->AddSubgraph(std::move(cpu_subgraph)) == -1) {
-    TFLITE_LOG(ERROR) << "Failed to create subgraph on CPU delegate";
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "[Subgraph] Failed to create on CPU delegate");
     (*interpreter)->InvalidateRecentModelId();
     return -1;
   }
@@ -617,9 +617,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
   // Each pair consists of the unit subgraph index and device op indices.
   std::set<std::pair<int, DeviceOpIndices>> subgraph_indices;
-  if ((*interpreter)->GetUnitSubgraphs(model_id, subgraph_indices, need_fallback_subgraph) !=
-      kTfLiteOk) {
-    TFLITE_LOG(ERROR) << "GetUnitSubgraphs failed";
+  if ((*interpreter)
+          ->GetUnitSubgraphs(model_id, subgraph_indices,
+                             need_fallback_subgraph) != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "[Subgraph] Failed to get unit subgraph");
     return -1;
   }
 
@@ -631,10 +633,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     // register subgraphs for all devices
     for (int i = 0; i < kTfLiteNumDevices; ++i) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
-      std::vector<DeviceOpIndices>
-          device_subgraph_indices =
-              (*interpreter)
-                  ->MakeSubgraphsForFallbackOps(model_id, device_flag);
+      std::vector<DeviceOpIndices> device_subgraph_indices =
+          (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_flag);
 
       for (auto& device_op_indices : device_subgraph_indices) {
         const int worker_id =
@@ -645,7 +645,7 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         if (device_ops_to_subgraph_index.find(device_op_indices) !=
             device_ops_to_subgraph_index.end()) {
           subgraph_idx = device_ops_to_subgraph_index[device_op_indices];
-          TFLITE_LOG(INFO) << "REUSE Subgraph " << subgraph_idx;
+          TFLITE_LOG(INFO) << "[Subgraph] Reuse " << subgraph_idx;
         } else {
           subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
                                      worker_id, device_op_indices);
@@ -660,7 +660,9 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
         Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
 
         if (subgraph == nullptr) {
-          TFLITE_LOG(ERROR) << "Failed to create subgraph";
+          TF_LITE_REPORT_ERROR(
+              error_reporter_,
+              "[Subgraph] Failed to get subgraph from index %d", subgraph_idx);
           continue;
         }
 
@@ -697,14 +699,18 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
           AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
                       device_op_indices);
       if (subgraph_idx == -1) {
-        TFLITE_LOG(ERROR) << "Subgraph creation failure";
+        TF_LITE_REPORT_ERROR(error_reporter_,
+                             "[Subgraph] Failed to add subgraph to index %d",
+                             subgraph_idx);
         continue;
       }
       subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
 
       Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
       if (subgraph == nullptr) {
-        TFLITE_LOG(ERROR) << "Subgraph creation failure";
+        TF_LITE_REPORT_ERROR(
+            error_reporter_,
+            "[Subgraph] Failed to get subgraph from index %d", subgraph_idx);
         continue;
       }
 
@@ -712,11 +718,11 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
       // there is no duplicated subgraphs.
       SubgraphKey& subgraph_key = subgraph->GetKey();
       subgraph_key.unit_indices.insert(unit_subgraph_idx);
-      TFLITE_LOG(INFO) << subgraph_idx << " Subgraph has "
+      TFLITE_LOG(INFO) << "[Subgraph] " << subgraph_idx << "th subgraph has "
                        << unit_subgraph_idx << " unit subgraph.";
     }
 
-    TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size()
+    TFLITE_LOG(INFO) << "[Subgraph] " << subgraph_idx_to_device_ops.size()
                      << " subgraphs created during GetUnitSubgraphs()";
 
     // Add merged atomic subgraphs
@@ -729,8 +735,10 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                                 op_resolver, interpreter);
     }
   } else {
-    TFLITE_LOG(ERROR) << "Wrong subgraph_preparation_type: "
-                      << subgraph_preparation_type;
+    
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                          "[Subgraph] Wrong subgraph_preparation_type %s",
+                          subgraph_preparation_type.c_str());
     return -1;
   }
 
@@ -757,13 +765,17 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
                         device_op_indices);
 
         if (subgraph_idx == -1) {
-          TFLITE_LOG(ERROR) << "Subgraph creation failure";
+          TF_LITE_REPORT_ERROR(error_reporter_,
+                               "[Subgraph] Failed to add subgraph to index %d",
+                               subgraph_idx);
           continue;
         }
 
         Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
         if (subgraph == nullptr) {
-          TFLITE_LOG(ERROR) << "Subgraph creation failure";
+          TF_LITE_REPORT_ERROR(
+              error_reporter_,
+              "[Subgraph] Failed to get subgraph from index %d", subgraph_idx);
           continue;
         }
 
@@ -778,8 +790,8 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     }
   }
 
-  TFLITE_LOG(INFO) << "# Subgraphs after Duplication for extra workers: "
-                   << (*interpreter)->subgraphs_size();
+  TFLITE_LOG(INFO) << "[Subgraphs] " << (*interpreter)->subgraphs_size()
+                   << " subgraphs after duplication for extra workers";
 
   // Set Prev - Next relation between subgraphs
   std::set<int> model_subgraph_indices;
@@ -826,8 +838,6 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
 
       if (is_previous) {
         next_subgraph->SetPrevSubgraph(prev_subgraph);
-        TFLITE_LOG(INFO) << next_subgraph_idx << " is "
-                         << prev_subgraph_idx << "'s next";
       }
     }
   }
@@ -951,7 +961,9 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
       int subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
                                      worker_id, device_op_indices);
       if (subgraph_idx == -1) {
-        TFLITE_LOG(ERROR) << "Subgraph creation failure";
+        TF_LITE_REPORT_ERROR(error_reporter_,
+                              "[Subgraph] Failed to add subgraph to index %d",
+                              subgraph_idx);
         return kTfLiteOk;
       }
 
@@ -960,7 +972,9 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
 
       Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
       if (subgraph == nullptr) {
-        TFLITE_LOG(ERROR) << "Subgraph creation failure";
+        TF_LITE_REPORT_ERROR(
+            error_reporter_,
+            "[Subgraph] Failed to get subgraph from index %d", subgraph_idx);
         return kTfLiteOk;
       }
 
@@ -969,7 +983,8 @@ TfLiteStatus InterpreterBuilder::CreateMergedUnitSubgraphs(
     }
   }
 
-  TFLITE_LOG(INFO) << subgraph_idx_to_device_ops.size() -
+  TFLITE_LOG(INFO) << "[Subgraph] "
+                   << subgraph_idx_to_device_ops.size() -
                           num_subgraphs_before_merge
                    << " amount of merged subgraph created.";
   return kTfLiteOk;
@@ -988,19 +1003,21 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
     std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
     std::set<int> op_indices, int num_threads) {
   if (!interpreter || !interpreter->get()) {
-    error_reporter_->Report("Interpreter is invalid");
+    TF_LITE_REPORT_ERROR(error_reporter_, "[Subgraph] Interpreter is invalid");
     return {};
   }
 
   if (!model) {
-    error_reporter_->Report("Null pointer passed in as model.");
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "[Subgraph] Null pointer passed in as model");
     return {};
   }
 
   if (model->version() != TFLITE_SCHEMA_VERSION) {
-    error_reporter_->Report(
-        "Model provided is schema version %d not equal "
-        "to supported version %d.\n",
+    TF_LITE_REPORT_ERROR(
+        error_reporter_,
+        "[Subgraph] Model provided is schema version %d not equal "
+        "to supported version %d\n",
         model->version(), TFLITE_SCHEMA_VERSION);
     return {};
   }
@@ -1009,7 +1026,7 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
 
   if (builder.BuildLocalIndexToRegistrationMapping(model, op_resolver) !=
       kTfLiteOk) {
-    error_reporter_->Report("Registration failed.\n");
+    TF_LITE_REPORT_ERROR(error_reporter_, "[Subgraph] Registration failed");
     return {};
   }
 
@@ -1022,14 +1039,16 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
   auto* buffers = model->buffers();
 
   if (subgraphs->size() == 0) {
-    error_reporter_->Report("No subgraph in the model.\n");
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "[Subgraph] No subgraph in the model");
     return {};
   }
 
   // Assume FlatBuffer model has only one subgraph.
   // TODO #28: We assume a tflite model has only one Subgraph element
   if (subgraphs->size() > 1) {
-    error_reporter_->Report("More than one subgraphs in the model.\n");
+    TF_LITE_REPORT_ERROR(error_reporter_,
+                         "[Subgraph] More than one subgraphs in the model");
     return {};
   }
 
@@ -1039,8 +1058,9 @@ std::unique_ptr<Subgraph> InterpreterBuilder::CreateSubgraph(
   auto operators = subgraph->operators();
   auto tensors = subgraph->tensors();
   if (!operators || !tensors || !buffers) {
-    error_reporter_->Report(
-        "Did not get operators, tensors, or buffers in subgraph.\n");
+    TF_LITE_REPORT_ERROR(
+        error_reporter_,
+        "[Subgraph] Did not get operators, tensors, or buffers in subgraph");
     return {};
   }
   if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {

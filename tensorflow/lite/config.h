@@ -76,11 +76,13 @@ struct RuntimeConfig {
 };
 
 // Parse runtime config from a json file path
-TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
+TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
+                                        std::string json_fname,
                                         RuntimeConfig& runtime_config);
 
 // Check if the keys exist in the config
-TfLiteStatus ValidateJsonConfig(const Json::Value& json_config,
+TfLiteStatus ValidateJsonConfig(ErrorReporter* error_reporter,
+                                const Json::Value& json_config,
                                 std::vector<std::string> keys);
 }  // namespace tflite
 #endif  // TENSORFLOW_LITE_CONFIG_H_

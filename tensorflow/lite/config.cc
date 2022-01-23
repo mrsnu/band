@@ -13,34 +13,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/error_reporter.h"
 
 #include <json/json.h>
 #include <fstream>
 
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 
 // Note : program aborts when asX fails below
 // e.g., asInt, asCString, ...
-TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
+TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
+                                        std::string json_fname,
                                         RuntimeConfig& runtime_config) {
   std::ifstream config(json_fname, std::ifstream::binary);
-
-  if (!config.is_open()) {
-    TFLITE_LOG(ERROR) << "Check if the config file exists.";
-    return kTfLiteError;
-  }
+  TF_LITE_ENSURE(error_reporter, config.is_open());
 
   Json::Value root;
   config >> root;
 
-  if (!root.isObject()) {
-    TFLITE_LOG(ERROR) << "Check the json config file format.";
-    return kTfLiteError;
-  }
-
-  TFLITE_LOG(INFO) << root;
+  TF_LITE_ENSURE(error_reporter, root.isObject());
+  TF_LITE_KERNEL_LOG(error_reporter, "Runtime config: %s", root);
 
   if (ValidateJsonConfig(root, {"log_path", "schedulers"}) != kTfLiteOk) {
     return kTfLiteError;
@@ -59,7 +52,7 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   // 2. Dynamic profile config
   if (!root["profile_smoothing_factor"].isNull()) {
     interpreter_config.profile_smoothing_factor =
-      root["profile_smoothing_factor"].asFloat();
+        root["profile_smoothing_factor"].asFloat();
   }
   // 3. File path to profile data
   if (!root["model_profile"].isNull()) {
@@ -74,10 +67,12 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     interpreter_config.profile_config.online = root["profile_online"].asBool();
   }
   if (!root["profile_warmup_runs"].isNull()) {
-    interpreter_config.profile_config.num_warmups = root["profile_warmup_runs"].asInt();
+    interpreter_config.profile_config.num_warmups =
+        root["profile_warmup_runs"].asInt();
   }
   if (!root["profile_num_runs"].isNull()) {
-    interpreter_config.profile_config.num_runs = root["profile_num_runs"].asInt();
+    interpreter_config.profile_config.num_runs =
+        root["profile_num_runs"].asInt();
   }
   if (!root["profile_copy_computation_ratio"].isNull()) {
     interpreter_config.copy_computation_ratio =
@@ -85,11 +80,13 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   }
   // 6. Subgraph preparation type
   if (!root["subgraph_preparation_type"].isNull()) {
-    interpreter_config.subgraph_preparation_type = root["subgraph_preparation_type"].asString();
+    interpreter_config.subgraph_preparation_type =
+        root["subgraph_preparation_type"].asString();
   }
   // 7. Minimum subgraph size
   if (!root["minimum_subgraph_size"].isNull()) {
-    interpreter_config.minimum_subgraph_size = root["minimum_subgraph_size"].asInt();
+    interpreter_config.minimum_subgraph_size =
+        root["minimum_subgraph_size"].asInt();
   }
 
   // Set Planner configs
@@ -98,19 +95,17 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   // 2. Scheduling window size
   if (!root["schedule_window_size"].isNull()) {
     planner_config.schedule_window_size = root["schedule_window_size"].asInt();
-    if (planner_config.schedule_window_size <= 0) {
-      TFLITE_LOG(ERROR) << "Make sure `schedule_window_size` > 0.";
-      return kTfLiteError;
-    }
+    TF_LITE_ENSURE(error_reporter, planner_config.schedule_window_size > 0);
   }
   // 3. Planner type
   for (int i = 0; i < root["schedulers"].size(); ++i) {
     int scheduler_id = root["schedulers"][i].asInt();
-    if (scheduler_id < kFixedDevice || scheduler_id >= kNumSchedulerTypes) {
-      TFLITE_LOG(ERROR) << "Wrong `schedulers` argument is given.";
-      return kTfLiteError;
-    }
-    planner_config.schedulers.push_back(static_cast<TfLiteSchedulerType>(scheduler_id));
+    TF_LITE_ENSURE_MSG(
+        error_reporter,
+        scheduler_id >= kFixedDevice && scheduler_id < kNumSchedulerTypes,
+        "Wrong `schedulers` argument is given.");
+    planner_config.schedulers.push_back(
+        static_cast<TfLiteSchedulerType>(scheduler_id));
   }
   // 4. Planner CPU masks
   if (!root["planner_cpu_masks"].isNull()) {
@@ -125,18 +120,17 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   if (!root["workers"].isNull()) {
     for (int i = 0; i < root["workers"].size(); ++i) {
       auto worker_config_json = root["workers"][i];
-      
-      if (worker_config_json["device"].isNull()) {
-        TFLITE_LOG(ERROR) << "Please check if argument `device` is given in "
-                          << "the worker configs.";
-        return kTfLiteError;
-      }
+
+      TF_LITE_ENSURE_MSG(
+          error_reporter, !worker_config_json["device"].isNull(),
+          "Please check if argument `device` is given in the worker configs.");
 
       TfLiteDeviceFlags device_flag =
           TfLiteDeviceGetFlag(worker_config_json["device"].asCString());
       if (device_flag == kTfLiteNumDevices) {
-        TFLITE_LOG(ERROR) << "Wrong `device` argument is given. "
-                          << worker_config_json["device"].asCString();
+        TF_LITE_KERNEL_LOG(error_reporter,
+                           "Wrong `device` argument is given. %s",
+                           worker_config_json["device"].asCString());
         return kTfLiteError;
       }
 
@@ -161,7 +155,8 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
 
       // 2. worker num threads
       if (!worker_config_json["num_threads"].isNull()) {
-        worker_config.num_threads[worker_id] = worker_config_json["num_threads"].asInt();
+        worker_config.num_threads[worker_id] =
+            worker_config_json["num_threads"].asInt();
       }
 
       // Copy/computation ratio for profiling
@@ -181,7 +176,8 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     if (worker_config.num_threads[worker_id] == 0) {
       worker_config.num_threads[worker_id] = interpreter_config.num_threads;
     }
-    if (interpreter_config.profile_config.copy_computation_ratio[worker_id] == 0) {
+    if (interpreter_config.profile_config.copy_computation_ratio[worker_id] ==
+        0) {
       interpreter_config.profile_config.copy_computation_ratio[worker_id] =
           interpreter_config.copy_computation_ratio;
     }
@@ -193,19 +189,22 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
   }
   // 3. availability_check_interval_ms
   if (!root["availability_check_interval_ms"].isNull()) {
-    worker_config.availability_check_interval_ms = root["availability_check_interval_ms"].asInt();
+    worker_config.availability_check_interval_ms =
+        root["availability_check_interval_ms"].asInt();
   }
 
   return kTfLiteOk;
 }
 
-TfLiteStatus ValidateJsonConfig(const Json::Value& json_config,
+TfLiteStatus ValidateJsonConfig(ErrorReporter* error_reporter,
+                                const Json::Value& json_config,
                                 std::vector<std::string> keys) {
   for (auto key : keys) {
+    TF_LITE_ENSURE(error_reporter, )
     if (json_config[key].isNull()) {
-      TFLITE_LOG(ERROR) << "Please check if the argument `"
-                        << key
-                        << "` is given in the config file.";
+      TF_LITE_KERNEL_LOG(
+          error_reporter,
+          "Please check if the argument %s is given in the config file.", key);
       return kTfLiteError;
     }
   }
