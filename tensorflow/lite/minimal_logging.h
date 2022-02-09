@@ -32,6 +32,8 @@ namespace logging_internal {
 // size impact.
 class MinimalLogger {
  public:
+  static void SetVerbosity(int severity);
+
   // Logging hook that takes variadic args.
   static void Log(LogSeverity severity, const char* format, ...);
 
@@ -40,6 +42,8 @@ class MinimalLogger {
                            va_list args);
 
  private:
+  // Only accept logs with higher severity than verbosity level.
+  static LogSeverity verbosity;
   static const char* GetSeverityName(LogSeverity severity);
 };
 
@@ -67,11 +71,11 @@ class MinimalLogger {
 
 #ifndef NDEBUG
 // In debug builds, always log.
-#define TFLITE_LOG TFLITE_LOG_PROD
+#define TFLITE_LOG_INTERNAL TFLITE_LOG_PROD
 #define TFLITE_LOG_ONCE TFLITE_LOG_PROD_ONCE
 #else
 // In prod builds, never log, but ensure the code is well-formed and compiles.
-#define TFLITE_LOG(severity, format, ...)             \
+#define TFLITE_LOG_INTERNAL(severity, format, ...)             \
   while (false) {                                     \
     TFLITE_LOG_PROD(severity, format, ##__VA_ARGS__); \
   }
