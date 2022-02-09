@@ -72,7 +72,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   if (!planner) {
     TF_LITE_MAYBE_REPORT_ERROR(
         GetErrorReporter(),
-        "[DeviceQueueWorker] %s worker failed to acquire ptr to planner",
+        "%s worker failed to acquire ptr to planner",
         TfLiteDeviceGetName(device_flag_));
     return -1;
   }
@@ -109,7 +109,7 @@ void GlobalQueueWorker::Work() {
     if (!IsValid(current_job_)) {
       TF_LITE_MAYBE_REPORT_ERROR(
           GetErrorReporter(),
-          "[DeviceQueueWorker] %s worker failed to acquire ptr to planner",
+          "%s worker failed to acquire ptr to planner",
           TfLiteDeviceGetName(device_flag_));
       break;
     }
@@ -171,7 +171,7 @@ void GlobalQueueWorker::Work() {
       } else {
         TF_LITE_MAYBE_REPORT_ERROR(
             GetErrorReporter(),
-            "[DeviceQueueWorker] %s worker failed to copy input",
+            "%s worker failed to copy input",
             TfLiteDeviceGetName(device_flag_));
         // TODO #21: Handle errors in multi-thread environment
         current_job_.status = kTfLiteJobInputCopyFailure;
@@ -187,7 +187,7 @@ void GlobalQueueWorker::Work() {
       // TODO #21: Handle errors in multi-thread environment
       TF_LITE_MAYBE_REPORT_ERROR(
           GetErrorReporter(),
-          "[DeviceQueueWorker] %s worker failed to acquire ptr to planner",
+          "%s worker failed to acquire ptr to planner",
           TfLiteDeviceGetName(device_flag_));
       return;
     }
