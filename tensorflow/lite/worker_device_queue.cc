@@ -89,7 +89,7 @@ void DeviceQueueWorker::Work() {
     if (!IsValid(current_job)) {
       TF_LITE_MAYBE_REPORT_ERROR(
           GetErrorReporter(),
-          "[DeviceQueueWorker] %s worker spotted an invalid job",
+          "%s worker spotted an invalid job",
           TfLiteDeviceGetName(device_flag_));
       break;
     }
@@ -152,7 +152,7 @@ void DeviceQueueWorker::Work() {
       } else {
         TF_LITE_MAYBE_REPORT_ERROR(
             GetErrorReporter(),
-            "[DeviceQueueWorker] %s worker failed to copy input",
+            "%s worker failed to copy input",
             TfLiteDeviceGetName(device_flag_));
         // TODO #21: Handle errors in multi-thread environment
         current_job.status = kTfLiteJobInputCopyFailure;
@@ -173,7 +173,7 @@ void DeviceQueueWorker::Work() {
       // TODO #21: Handle errors in multi-thread environment
       TF_LITE_MAYBE_REPORT_ERROR(
           GetErrorReporter(),
-          "[DeviceQueueWorker] %s worker failed to acquire ptr to planner",
+          "%s worker failed to acquire ptr to planner",
           TfLiteDeviceGetName(device_flag_));
       return;
     }
