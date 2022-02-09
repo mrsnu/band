@@ -27,6 +27,7 @@ limitations under the License.
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/context_util.h"
+#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/delegates/status.h"
 #include "tensorflow/lite/graph_info.h"
@@ -39,7 +40,6 @@ limitations under the License.
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
 #include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/tools/logging.h"
 
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
@@ -118,7 +118,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // TODO(b/128420794): Include the TFLite runtime version in the log.
   // Prod logging is useful for mobile platforms where scraping console logs is
   // critical for debugging.
-  TFLITE_LOG(INFO) << "Initialized TensorFlow Lite runtime.";
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
 
   // Reserve some space for the tensors to avoid excessive resizing.
   for (int i = 0; i < kTfLiteMaxExternalContexts; ++i) {
@@ -184,7 +184,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // huawei npu : liteadaptor
   for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
-      TFLITE_LOG(INFO) << "Available NNAPI device name: " << device_name;
+      TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Available NNAPI device name %s", device_name);
       StatefulNnApiDelegate::Options nnapi_options = StatefulNnApiDelegate::Options();
       // Unlimited partition : 0
       nnapi_options.max_number_delegated_partitions = 0;
@@ -240,14 +240,15 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       }
 
       if (worker->Init(runtime_config.worker_config, workers_.size()) != kTfLiteOk) {
-        error_reporter_->Report("Worker::Init() failed for worker : %s",
+        error_reporter_->Report("Worker::Init() failed for worker : %s.",
                                 TfLiteDeviceGetName(device_flag));
         exit(-1);
       }
 
       workers_.emplace_back(std::move(worker));
     } else {
-      TFLITE_LOG(WARN) << TfLiteDeviceGetName(device_flag) << " worker is not created.";
+      TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "%s worker is not created.",
+                 TfLiteDeviceGetName(device_flag));
     }
   }
 }
@@ -298,17 +299,17 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
     profile_num_runs_ = config.profile_config.num_runs;
     profile_copy_computation_ratio_ = config.profile_config.copy_computation_ratio;
 
-    TFLITE_LOG(INFO) << "Set Profiling Configuration:"
-                     << " warmup=" << profile_num_warmups_
-                     << " count=" << profile_num_runs_;
+    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+               "Set Profiling Configuration: warmup=%d count=%d.",
+               profile_num_warmups_, profile_num_runs_);
   }
 
   const TfLiteCPUMaskFlags cpu_mask = 
       static_cast<TfLiteCPUMaskFlags>(config.cpu_masks);
   auto cpu_mask_set = TfLiteCPUMaskGetSet(cpu_mask);
 
-  TFLITE_LOG(INFO) << "Set affinity to "
-                   << TfLiteCPUMaskGetName(cpu_mask) << " cores";
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Set affinity to %s cores.",
+             TfLiteCPUMaskGetName(cpu_mask));
 
   return SetCPUThreadAffinity(cpu_mask_set);
 }
@@ -463,7 +464,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(
     std::vector<Tensors> model_inputs) {
   if (model_inputs.size() != model_configs_.size()) {
     error_reporter_->Report(
-        "Invalid input size model_input.size() %d != model_configs_.size() %d",
+        "Invalid input size model_input.size() %d != model_configs_.size() %d.",
         model_inputs.size(), model_configs_.size());
     return {};
   }
@@ -498,7 +499,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(
   if (request_inputs.size() > 0) {
     if (requests.size() != request_inputs.size()) {
       error_reporter_->Report(
-          "Invalid input size requests.size() %d != request_inputs.size() %d",
+          "Invalid input size requests.size() %d != request_inputs.size() %d.",
           requests.size(), request_inputs.size());
       return {};
     }
@@ -511,7 +512,7 @@ std::vector<int> Interpreter::InvokeModelsAsync(
         request.input_handle = input_handle;
         request.output_handle = model_output_buffer_[request.model_id]->Alloc();
       } else {
-        error_reporter_->Report("Input copy failure for model %d request %d",
+        error_reporter_->Report("Input copy failure for model %d request %d.",
                                 request.model_id, i);
         return {};
       }
@@ -527,7 +528,7 @@ void Interpreter::InvokeModelsSync(std::vector<Tensors> model_inputs,
       model_outputs.size() != model_configs_.size()) {
     error_reporter_->Report(
         "Invalid input/output size model_inputs.size() %d, "
-        "model_outputs.size() %d, model_configs_.size() %d",
+        "model_outputs.size() %d, model_configs_.size() %d.",
         model_inputs.size(), model_outputs.size(), model_configs_.size());
     return;
   }
@@ -553,7 +554,7 @@ void Interpreter::InvokeModelsSync(std::vector<Job> requests,
        request_outputs.size() != requests.size())) {
     error_reporter_->Report(
         "Invalid input/output size request_inputs.size() %d, "
-        "request_outputs.size() %d, requests.size() %d",
+        "request_outputs.size() %d, requests.size() %d.",
         request_inputs.size(), request_outputs.size(), requests.size());
     return;
   }
@@ -578,7 +579,7 @@ TfLiteStatus Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
   }
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
-    error_reporter_->Report("Invalid model_id : %d", job.model_id);
+    error_reporter_->Report("Invalid model_id : %d.", job.model_id);
     return kTfLiteError;
   }
 
@@ -821,7 +822,7 @@ void Interpreter::ProfileOnline(int model_id,
     }
     if (worker_subgraph_indices.size() == 0) {
       TF_LITE_REPORT_ERROR(error_reporter_,
-                           "No subgraph for model %d and worker %d", model_id,
+                           "No subgraph for model %d and worker %d.", model_id,
                            worker_id);
       continue;
     }
@@ -849,13 +850,14 @@ void Interpreter::ProfileOnline(int model_id,
 
           TF_LITE_REPORT_ERROR(
               error_reporter_,
-              "Subgraph %d execution failed for model %d and worker %d",
+              "Subgraph %d execution failed for model %d and worker %d.",
               sub_idx, model_id, worker_id);
         }
       }
       if (all_healthy) {
-        TFLITE_LOG(INFO) << "All subgraphs are executable for model "
-                         << model_id << " worker " << worker_id;
+        TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+                   "All subgraphs are executable for model %d worker %d.",
+                   model_id, worker_id);
       }
     });
     health_check_thread.join();
@@ -874,7 +876,7 @@ void Interpreter::ProfileOnline(int model_id,
     }
     if (max_subgraph_idx == -1) {
       TF_LITE_REPORT_ERROR(error_reporter_,
-                           "No executable subgraphs for model %d and worker %d",
+                           "No executable subgraphs for model %d and worker %d.",
                            model_id, worker_id);
       worker->Resume();
       continue;
@@ -891,20 +893,19 @@ void Interpreter::ProfileOnline(int model_id,
       std::string msg = max_latency == -1 ? "Largest subgraph profile failed"
                                           : "Largest subgraph latency < 0";
       TF_LITE_REPORT_ERROR(error_reporter_,
-                           "%s for subgraph %d ,model %d and worker %d",
+                           "%s for subgraph %d ,model %d and worker %d.",
                            msg.c_str(), max_subgraph_idx, model_id, worker_id);
       worker->Resume();
       continue;
     }
 
     const SubgraphKey& key = max_subgraph->GetKey();
-    TFLITE_LOG(INFO) << "Largest Subgraph Profiling result\n"
-                     << " model=" << model_id
-                     << " avg=" << max_latency << " us"
-                     << " worker=" << worker_id
-                     << " device=" << device_name
-                     << " start=" << key.GetInputOpsString()
-                     << " end=" << key.GetOutputOpsString() << ".";
+    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+               "Largest Subgraph Profiling result\n model=%d avg=%d us "
+               "worker=%d device=%s start=%s end=%s.",
+               model_id, max_latency, worker_id, device_name,
+               key.GetInputOpsString().c_str(),
+               key.GetOutputOpsString().c_str());
 
     // Resume worker
     worker->Resume();
@@ -923,13 +924,12 @@ void Interpreter::ProfileOnline(int model_id,
         moving_averaged_latencies_[sub_idx] = latency;
         profile_database_[key] = latency;
 
-        TFLITE_LOG(INFO) << "Estimated Latency\n"
-                         << " model=" << key.model_id << " avg=" << latency
-                         << " us"
-                         << " worker=" << key.worker_id
-                         << " device=" << device_name
-                         << " start=" << key.GetInputOpsString()
-                         << " end=" << key.GetOutputOpsString() << ".";
+        TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+                   "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
+                   "start=%s end=%s.",
+                   key.model_id, latency, key.worker_id, device_name,
+                   key.GetInputOpsString().c_str(),
+                   key.GetOutputOpsString().c_str());
       }
     }
   }
@@ -1063,14 +1063,12 @@ void Interpreter::ProfileOffline(int model_id,
       int64_t profiled_latency = it->second;
       moving_averaged_latencies_[sub_idx] = profiled_latency;
 
-      TFLITE_LOG(INFO) << "Reusing profiled result\n"
-                       << " model=" << key.model_id
-                       << " avg=" << profiled_latency << " us"
-                       << " worker=" << key.worker_id
-                       << " device=" << device_name
-                       << " start=" << key.GetInputOpsString()
-                       << " end=" << key.GetOutputOpsString() << ".";
-
+      TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+                 "Reusing profiled result\n model=%d avg=%d us worker=%d "
+                 "device=%s start=%s end=%s.",
+                 key.model_id, profiled_latency, key.worker_id, device_name,
+                 key.GetInputOpsString().c_str(),
+                 key.GetOutputOpsString().c_str());
     } else {
       int64_t latency = ProfileSubgraph(subgraph, timer);
       if (latency < 0) {
@@ -1089,13 +1087,12 @@ void Interpreter::ProfileOffline(int model_id,
       moving_averaged_latencies_[sub_idx] = latency;
       profile_database_[key] = latency;
 
-      TFLITE_LOG(INFO) << "Profiling result\n"
-                       << " model=" << key.model_id
-                       << " avg=" << latency << " us"
-                       << " worker=" << key.worker_id
-                       << " device=" << device_name
-                       << " start=" << key.GetInputOpsString()
-                       << " end=" << key.GetOutputOpsString() << ".";
+      TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+                 "Profiling result\n model=%d avg=%d us worker=%d "
+                 "device=%s start=%s end=%s.",
+                 key.model_id, latency, key.worker_id, device_name,
+                 key.GetInputOpsString().c_str(),
+                 key.GetOutputOpsString().c_str());
     }
   }
 }
@@ -1316,10 +1313,10 @@ void Interpreter::SetModelConfigAndFillProfile(int model_id,
     int end_unit_idx = *subgraph_key.unit_indices.rbegin();
 
     unit_subgraphs_to_subgraph_indices_[model_id][start_unit_idx][end_unit_idx].push_back(i);
-    TFLITE_LOG(INFO) << "Set unit subgraphs: model_id - " << model_id
-                     << ", start idx - " << start_unit_idx
-                     << ", end idx - " << end_unit_idx
-                     << ", subgraph idx - " << i;
+    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+               "Set unit subgraphs: model_id %d, start idx %d, end idx %d, "
+               "subgraph idx %d",
+               model_id, start_unit_idx, end_unit_idx, i);
   }
 
   std::string& model_fname = model_config.model_fname;

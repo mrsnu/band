@@ -19,12 +19,19 @@ limitations under the License.
 
 namespace tflite {
 namespace logging_internal {
+LogSeverity MinimalLogger::verbosity = TFLITE_LOG_INFO;
 
 void MinimalLogger::Log(LogSeverity severity, const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  LogFormatted(severity, format, args);
-  va_end(args);
+  if (verbosity <= severity) {
+    va_list args;
+    va_start(args, format);
+    LogFormatted(severity, format, args);
+    va_end(args);
+  }
+}
+
+void MinimalLogger::SetVerbosity(int severity) {
+  verbosity = static_cast<LogSeverity>(severity);
 }
 
 const char* MinimalLogger::GetSeverityName(LogSeverity severity) {

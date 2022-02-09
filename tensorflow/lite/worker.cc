@@ -1,8 +1,8 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/worker.h"
+#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/subgraph.h"
-#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
@@ -29,14 +29,12 @@ TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
   
   availability_check_interval_ms_ = config.availability_check_interval_ms;
 
-  TFLITE_LOG(INFO) << "Set affinity of "
-                   << TfLiteDeviceGetName(device_flag_)
-                   << " to "
-                   << TfLiteCPUMaskGetName(config.cpu_masks[worker_id])
-                   << " cores for " 
-                   << config.num_threads[worker_id]
-                   << " threads";
-  
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+                      "Set affinity of %s to %s cores for %d threads.",
+                      TfLiteDeviceGetName(device_flag_),
+                      TfLiteCPUMaskGetName(config.cpu_masks[worker_id]),
+                      config.num_threads[worker_id]);
+
   const CpuSet worker_mask_set =
     TfLiteCPUMaskGetSet(config.cpu_masks[worker_id]);
   return UpdateWorkerThread(worker_mask_set, config.num_threads[worker_id]);
@@ -67,7 +65,8 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
 void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
   while (true) {
     tflite::profiling::time::SleepForMicros(1000 * availability_check_interval_ms_);
-    TFLITE_LOG(INFO) << "Availability check at " << tflite::profiling::time::NowMicros();
+    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Availability check at %d ms.",
+                        tflite::profiling::time::NowMicros());
     if (subgraph.Invoke() == kTfLiteOk) {
       return;
     }
@@ -100,19 +99,17 @@ int Worker::GetNumThreads() const {
 }
 
 JobQueue& Worker::GetDeviceRequests() {
-  TF_LITE_MAYBE_REPORT_ERROR(GetErrorReporter(),
-                             "[Worker] GetDeviceRequests() Not implemented");
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING,
+                      "GetDeviceRequests() Not implemented");
   return requests_;
 }
 
 void Worker::AllowWorkSteal() {
-  TF_LITE_MAYBE_REPORT_ERROR(GetErrorReporter(),
-                             "[Worker] AllowWorkSteal() Not implemented");
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "AllowWorkSteal() Not implemented");
 }
 
 bool Worker::IsBusy() {
-  TF_LITE_MAYBE_REPORT_ERROR(GetErrorReporter(),
-                             "[Worker] IsBusy() Not implemented");
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "IsBusy() Not implemented");
   return false;
 }
 
@@ -148,7 +145,7 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
         if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
           TF_LITE_MAYBE_REPORT_ERROR(
               GetErrorReporter(),
-              "[Worker] Tensor data copy failure from %s to %s", src->name,
+              "Tensor data copy failure from %s to %s", src->name,
               dst->name);
           return kTfLiteError;
         }
@@ -162,7 +159,7 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
 
   if (!input_buffer) {
     TF_LITE_MAYBE_REPORT_ERROR(GetErrorReporter(),
-                               "[Worker] No input buffer for model id %d",
+                               "No input buffer for model id %d",
                                job.model_id);
     return kTfLiteError;
   }
@@ -180,7 +177,7 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
     } else {
       TF_LITE_MAYBE_REPORT_ERROR(
           GetErrorReporter(),
-          "[Worker] Unresolved input tensor %d of subgraph %d", tensor_index,
+          "Unresolved input tensor %d of subgraph %d", tensor_index,
           job.subgraph_idx);
       ++tensor_it;
     }
@@ -204,7 +201,7 @@ TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
 
   if (!output_buffer) {
     TF_LITE_MAYBE_REPORT_ERROR(GetErrorReporter(),
-                               "[Worker] No output buffer for model id %d",
+                               "No output buffer for model id %d",
                                job.model_id);
     return kTfLiteError;
   }
@@ -248,7 +245,7 @@ TfLiteStatus Worker::TryUpdateWorkerThread() {
     if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
       TF_LITE_MAYBE_REPORT_ERROR(
           GetErrorReporter(),
-          "[Worker] Worker for device %d failed to set cpu thread affinity",
+          "Worker for device %d failed to set cpu thread affinity",
           device_flag_);
       return kTfLiteError;
     }

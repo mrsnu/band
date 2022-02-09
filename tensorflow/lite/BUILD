@@ -313,7 +313,6 @@ cc_library(
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/profiling:util",
-        "//tensorflow/lite/tools:logging",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",
@@ -625,9 +624,9 @@ cc_library(
     deps = [
         "//tensorflow/lite:cpu",
         "//tensorflow/lite:error_reporter",
+        "//tensorflow/lite:minimal_logging",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite:util",
-        "//tensorflow/lite/tools:logging",
         "@jsoncpp_git//:jsoncpp",
     ],
 )
@@ -639,9 +638,9 @@ cc_library(
     copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
     deps = [
         ":kernel_api",
+        "//tensorflow/lite:minimal_logging",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/schema:schema_fbs",
-        "//tensorflow/lite/tools:logging",
         "@jsoncpp_git//:jsoncpp",
     ],
 )
