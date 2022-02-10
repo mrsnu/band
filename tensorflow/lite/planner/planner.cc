@@ -156,6 +156,9 @@ void Planner::CopyToLocalQueues() {
 }
 
 bool Planner::IsSLOViolated(Job& job) {
+  if (job.status == kTfLiteJobSLOViolation) {
+    return true;
+  }
   // this job has an SLO; check if it's not too late already
   if (job.slo_us > 0) {
     int64_t current_time = profiling::time::NowMicros();
