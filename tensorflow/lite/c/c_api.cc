@@ -85,6 +85,27 @@ void TfLiteInterpreterOptionsSetErrorReporter(
   options->error_reporter_user_data = user_data;
 }
 
+TfLiteStatus TfLiteInterpreterOptionsSetConfigPath(
+    TfLiteInterpreterOptions* options,
+    const char* config_path) {
+  std::unique_ptr<tflite::ErrorReporter> optional_error_reporter;
+  if (options && options->error_reporter != nullptr) {
+    optional_error_reporter.reset(
+        new CallbackErrorReporter(options->error_reporter,
+                                  options->error_reporter_user_data));
+  }
+  tflite::ErrorReporter* error_reporter = optional_error_reporter
+                                              ? optional_error_reporter.get()
+                                              : tflite::DefaultErrorReporter();
+
+  if (tflite::ParseRuntimeConfigFromJson(config_path, options->config, error_reporter) != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Parsing runtime_config json file failed.");
+    return kTfLiteError;
+  }
+
+  return kTfLiteOk;
+}
+
 TfLiteStatus TfLiteInterpreterOptionsSetConfigFile(
     TfLiteInterpreterOptions* options,
     const void* config_data, size_t config_size) {
@@ -99,7 +120,7 @@ TfLiteStatus TfLiteInterpreterOptionsSetConfigFile(
                                               : tflite::DefaultErrorReporter();
 
   if (tflite::ParseRuntimeConfigFromJson(config_data, config_size, options->config, error_reporter) != kTfLiteOk) {
-    error_reporter->Report("Parsing runtime_config json file failed");
+    TF_LITE_REPORT_ERROR(error_reporter, "Parsing runtime_config json file failed.");
     return kTfLiteError;
   }
 
@@ -140,7 +161,9 @@ int32_t TfLiteInterpreterRegisterModel(TfLiteInterpreter* interpreter, TfLiteMod
       tflite::InterpreterBuilder::RegisterModel(*model->impl, &model_config, resolver, &interpreter->impl);
 
   if (model_id == -1) {
-    interpreter->impl->GetErrorReporter()->Report("Internal error: Cannot register model: %s", model->model_path);
+    TF_LITE_REPORT_ERROR(interpreter->impl->GetErrorReporter(),
+                         "Internal error: Cannot register model: %s",
+                         model->model_path);
   }
 
   return model_id;

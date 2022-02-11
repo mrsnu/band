@@ -127,6 +127,12 @@ TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetErrorReporter(
     void (*reporter)(void* user_data, const char* format, va_list args),
     void* user_data);
 
+// Set config options from file path.
+TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterOptionsSetConfigPath(
+    TfLiteInterpreterOptions* options,
+    const char* config_path);
+
+// Set config options from binary dump.
 TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterOptionsSetConfigFile(
     TfLiteInterpreterOptions* options,
     const void* config_data, size_t config_size);

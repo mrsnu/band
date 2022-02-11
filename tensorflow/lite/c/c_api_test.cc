@@ -37,7 +37,7 @@ TEST(CApiSimple, Smoke) {
 
   TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
   ASSERT_NE(options, nullptr);
-  TfLiteInterpreterOptionsSetConfigPath(options, "tensorflow/lite/testdata/runtime_config.json")
+  TfLiteInterpreterOptionsSetConfigPath(options, "tensorflow/lite/testdata/runtime_config.json");
 
   TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(options);
   ASSERT_NE(interpreter, nullptr);
@@ -104,10 +104,12 @@ TEST(CApiSimple, QuantizationParams) {
 
   TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
   ASSERT_NE(options, nullptr);
-  TfLiteInterpreterOptionsSetConfigPath(options, "tensorflow/lite/testdata/runtime_config.json")
+  TfLiteInterpreterOptionsSetConfigPath(options, "tensorflow/lite/testdata/runtime_config.json");
 
   TfLiteInterpreter* interpreter = TfLiteInterpreterCreate(options);
   ASSERT_NE(interpreter, nullptr);
+
+  int32_t model_id = TfLiteInterpreterRegisterModel(interpreter, model);
 
   // The options/model can be deleted immediately after interpreter creation.
   TfLiteInterpreterOptionsDelete(options);
@@ -131,7 +133,7 @@ TEST(CApiSimple, QuantizationParams) {
 
   TfLiteTensor* output_tensor = TfLiteInterpreterAllocateOutputTensor(interpreter, model_id, 0);
 
-  TfLiteInterpreterInvokeSync(interpreter, model_id, input_tensors.data(), output_tensor);
+  TfLiteInterpreterInvokeSync(interpreter, model_id, &input_tensor, &output_tensor);
   ASSERT_NE(output_tensor, nullptr);
 
   TfLiteQuantizationParams output_params =
