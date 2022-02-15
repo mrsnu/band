@@ -166,7 +166,7 @@ TFL_CAPI_EXPORT extern void TfLiteInterpreterInvokeSync(
 TFL_CAPI_EXPORT extern int TfLiteInterpreterInvokeAsync(
     TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs);
 
-TFL_CAPI_EXPORT extern TfLiteStatus TFLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs);
+TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs);
 
 // Returns the number of input tensors associated with the model.
 TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterGetInputTensorCount(
