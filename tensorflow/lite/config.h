@@ -78,13 +78,21 @@ struct RuntimeConfig {
 
 class ErrorReporter;
 // Parse runtime config from a json file path
-TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
-                                        std::string json_fname,
-                                        RuntimeConfig& runtime_config);
+TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
+                                        RuntimeConfig& runtime_config,
+                                        ErrorReporter* error_reporter);
+
+TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
+                                        RuntimeConfig& runtime_config,
+                                        ErrorReporter* error_reporter);
+                                        
+TfLiteStatus ParseRuntimeConfigFromJson(const void* buffer, size_t buffer_length,
+                                        RuntimeConfig& runtime_config,
+                                        ErrorReporter* error_reporter);
 
 // Check if the keys exist in the config
-TfLiteStatus ValidateJsonConfig(ErrorReporter* error_reporter,
-                                const Json::Value& json_config,
-                                std::vector<std::string> keys);
+TfLiteStatus ValidateJsonConfig(const Json::Value& json_config,
+                                std::vector<std::string> keys,
+                                ErrorReporter* error_reporter);
 }  // namespace tflite
 #endif  // TENSORFLOW_LITE_CONFIG_H_

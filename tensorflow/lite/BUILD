@@ -234,15 +234,6 @@ cc_library(
 )
 
 cc_library(
-    name = "error_reporter",
-    hdrs = [
-        "error_reporter.h",
-        "stderr_reporter.h",
-    ],
-    deps = ["//tensorflow/lite/core/api"],
-)
-
-cc_library(
     name = "cpu",
     srcs = [
         "cpu.cc",
