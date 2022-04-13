@@ -25,8 +25,13 @@ limitations under the License.
 
 namespace tflite {
 struct ProfileConfig {
-  int num_warmups = 3;
-  int num_runs = 50;
+  ProfileConfig() {
+    copy_computation_ratio = std::vector<int>(kTfLiteNumDevices, 0);
+  }
+  bool online = true;
+  int num_warmups = 1;
+  int num_runs = 1;
+  std::vector<int> copy_computation_ratio;
 };
 
 struct InterpreterConfig {
@@ -36,6 +41,7 @@ struct InterpreterConfig {
   float profile_smoothing_factor = 0.1;
   std::string subgraph_preparation_type = "merge_unit_subgraph";
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
+  int copy_computation_ratio = 1000;
   int num_threads = -1;
 };
 
@@ -62,7 +68,6 @@ struct WorkerConfig {
   bool allow_worksteal = false;
   int32_t availability_check_interval_ms = 30000;
 };
-
 
 struct RuntimeConfig {
   InterpreterConfig interpreter_config;

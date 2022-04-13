@@ -42,6 +42,7 @@ limitations under the License.
 #include "tensorflow/lite/tools/benchmark/profiling_listener.h"
 #include "tensorflow/lite/tools/delegates/delegate_provider.h"
 #include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/tools/workload_simulator.h"
 #include "tensorflow/lite/tools/logging_reporter.h"
 
 void RegisterSelectedOps(::tflite::MutableOpResolver* resolver);
@@ -503,6 +504,12 @@ TfLiteStatus BenchmarkTfLiteModel::Init() {
   );
   TF_LITE_ENSURE_STATUS(InitInterpreter());
 
+  TF_LITE_ENSURE_STATUS(
+      ParseWorkloadConfigFromJson(params_.Get<std::string>("json_path"),
+                                         interpreter_->GetModelConfig(),
+                                         benchmark_config_)
+  );
+
   // Install profilers if necessary right after interpreter is created so that
   // any memory allocations inside the TFLite runtime could be recorded if the
   // installed profiler profile memory usage information.
@@ -598,14 +605,7 @@ BenchmarkTfLiteModel::MayCreateProfilingListener() const {
 
 TfLiteStatus BenchmarkTfLiteModel::RunImpl(int i) { return interpreter_->Invoke(i); }
 TfLiteStatus BenchmarkTfLiteModel::RunAll() {
-  int num_iters = 3;
-  std::vector<int> job_ids;
-  for (int i = 0; i < num_iters; ++i) {
-    for (int j = 0; j < models_.size(); ++j) {
-      job_ids.push_back(interpreter_->InvokeModelAsync(j, model_input_tensors_[j]));
-    }
-  }
-  interpreter_->GetPlanner()->Wait(job_ids);
+  interpreter_->InvokeModelsSync(model_input_tensors_, model_output_tensors_);
   return kTfLiteOk;
 }
 
@@ -654,7 +654,7 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   int num_frames = 0;
   int64_t start = profiling::time::NowMicros();
   while(true) {
-    interpreter_->InvokeModelsSync(model_input_tensors_);
+    interpreter_->InvokeModelsSync(model_input_tensors_, model_output_tensors_);
     int64_t current = profiling::time::NowMicros();
     num_frames++;
     if (current - start >= run_duration_us)
@@ -665,6 +665,22 @@ TfLiteStatus BenchmarkTfLiteModel::RunStream() {
   TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
   TFLITE_LOG(INFO) << "Measured FPS: "
                    << (num_frames / (float)(end - start)) * 1000000;
+
+  return kTfLiteOk;
+}
+
+TfLiteStatus BenchmarkTfLiteModel::RunWorkload() {
+  int64_t start = profiling::time::NowMicros();
+  auto& simulator = benchmark_config_.workload_simulator;
+  while (!simulator->IsFinished()) {
+    benchmark_config_.workload_simulator->ExecuteCurrentFrame(
+        interpreter_.get(), model_input_tensors_, model_output_tensors_);
+  }
+  int64_t end = profiling::time::NowMicros();
+  TFLITE_LOG(INFO) << "# processed frames: " << simulator->GetNumFrames();
+  TFLITE_LOG(INFO) << "Time taken (us): " << (end - start);
+  TFLITE_LOG(INFO) << "Measured FPS: "
+                   << (simulator->GetNumFrames() / (float)(end - start)) * 1000000;
 
   return kTfLiteOk;
 }
@@ -683,11 +699,14 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequests() {
 
     std::thread t([this, batch_size, model_id, period_ms]() {
       std::vector<Job> requests(batch_size, Job(model_id));
-      std::vector<std::vector<TfLiteTensor*>> input_tensors(batch_size, model_input_tensors_[model_id]);
+      std::vector<std::vector<TfLiteTensor*>> input_tensors(
+          batch_size, model_input_tensors_[model_id]);
+      std::vector<std::vector<TfLiteTensor*>> output_tensors(
+          batch_size, model_output_tensors_[model_id]);
       while (true) {
         // measure the time it took to generate requests
         int64_t start = profiling::time::NowMicros();
-        auto job_ids = interpreter_->InvokeModelsAsync(requests, input_tensors);
+        interpreter_->InvokeModelsSync(requests, input_tensors, output_tensors);
         int64_t end = profiling::time::NowMicros();
         int duration_ms = (end - start) / 1000;
 
@@ -722,11 +741,15 @@ void BenchmarkTfLiteModel::GeneratePeriodicRequestsSingleThread() {
     while (true) {
       int num_models = interpreter_->GetModelConfig().size();
       int model_id = std::rand() % num_models;
+      std::vector<std::vector<TfLiteTensor*>> input_tensors(
+          1, model_input_tensors_[model_id]);
+      std::vector<std::vector<TfLiteTensor*>> output_tensors(
+          1, model_output_tensors_[model_id]);
       std::vector<Job> requests(1, Job(model_id));
 
       // measure the time it took to generate requests
       int64_t start = profiling::time::NowMicros();
-      auto job_ids = interpreter_->InvokeModelsAsync(requests, {model_input_tensors_[model_id]});
+      interpreter_->InvokeModelsSync(requests, input_tensors, output_tensors);
       int64_t end = profiling::time::NowMicros();
       int duration_ms = (end - start) / 1000;
 

@@ -279,6 +279,36 @@ TfLiteStatus ParseBenchmarkConfigFromJson(std::string json_fname,
   return kTfLiteOk;
 }
 
+TfLiteStatus ParseWorkloadConfigFromJson(
+    std::string json_fname, std::map<int, ModelConfig>& model_config,
+    util::BenchmarkConfig& benchmark_config) {
+  std::ifstream config(json_fname, std::ifstream::binary);
+
+  Json::Value root;
+  config >> root;
+
+  if (!root.isObject()) {
+    TFLITE_LOG(ERROR) << "Please validate the json config file.";
+    return kTfLiteError;
+  }
+
+  if (benchmark_config.execution_mode == "workload") {
+    if (root["workload"].isNull()) {
+      TFLITE_LOG(ERROR) << "Please check if argument `workload` "
+                        << "is given in the configs.";
+      return kTfLiteError;
+    } else {
+      benchmark_config.workload_simulator =
+          std::make_shared<WorkloadSimulator>();
+      TF_LITE_ENSURE_STATUS(
+          ParseWorkloadFromJson(root["workload"].asString(), model_config,
+                                *benchmark_config.workload_simulator));
+    }
+  }
+
+  return kTfLiteOk;
+}
+
 }  // namespace util
 }  // namespace benchmark
 }  // namespace tflite

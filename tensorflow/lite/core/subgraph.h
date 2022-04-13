@@ -170,15 +170,10 @@ class Subgraph {
   // Read only access to list of outputs.
   const std::vector<int>& outputs() const { return outputs_; }
 
-  void SetInputOps(std::set<int> input_ops) { input_ops_ = input_ops; }
-  void SetOutputOps(std::set<int> output_ops) { output_ops_ = output_ops; }
+  void SetOpIndices(std::set<int> op_indices) { op_indices_ = op_indices; }
 
-  std::set<int> input_ops() const {
-    return input_ops_;
-  }
-
-  std::set<int> output_ops() const {
-    return output_ops_;
+  std::set<int> op_indices() const {
+    return op_indices_;
   }
 
   // Read only access to list of variable tensors.
@@ -602,7 +597,7 @@ class Subgraph {
   // Returns true if cancellation function returns true.
   bool IsCancelled();
   
-  bool GetHealth() {
+  bool GetHealth() const {
     return healthy_;
   }
 
@@ -646,8 +641,7 @@ class Subgraph {
   // the tensor array.
   bool consistent_ = true;
 
-  std::set<int> input_ops_;
-  std::set<int> output_ops_;
+  std::set<int> op_indices_;
 
   // Array of indices representing the tensors that are inputs to the
   // interpreter.

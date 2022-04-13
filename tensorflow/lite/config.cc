@@ -70,11 +70,18 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
     interpreter_config.num_threads = root["num_threads"].asInt();
   }
   // 5. Profile config
+  if (!root["profile_online"].isNull()) {
+    interpreter_config.profile_config.online = root["profile_online"].asBool();
+  }
   if (!root["profile_warmup_runs"].isNull()) {
     interpreter_config.profile_config.num_warmups = root["profile_warmup_runs"].asInt();
   }
   if (!root["profile_num_runs"].isNull()) {
     interpreter_config.profile_config.num_runs = root["profile_num_runs"].asInt();
+  }
+  if (!root["profile_copy_computation_ratio"].isNull()) {
+    interpreter_config.copy_computation_ratio =
+        root["profile_copy_computation_ratio"].asInt();
   }
   // 6. Subgraph preparation type
   if (!root["subgraph_preparation_type"].isNull()) {
@@ -140,6 +147,7 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
         worker_config.workers.push_back(device_flag);
         worker_config.cpu_masks.push_back(impl::kTfLiteNumCpuMasks);
         worker_config.num_threads.push_back(0);
+        interpreter_config.profile_config.copy_computation_ratio.push_back(0);
       } else {
         found_default_worker[device_flag] = true;
       }
@@ -155,16 +163,27 @@ TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
       if (!worker_config_json["num_threads"].isNull()) {
         worker_config.num_threads[worker_id] = worker_config_json["num_threads"].asInt();
       }
+
+      // Copy/computation ratio for profiling
+      if (!worker_config_json["profile_copy_computation_ratio"].isNull()) {
+        interpreter_config.profile_config.copy_computation_ratio[worker_id] =
+            worker_config_json["profile_copy_computation_ratio"].asInt();
+      }
     }
   }
 
   // Update default values from interpreter
-  for (auto worker_id = 0; worker_id < worker_config.workers.size(); ++worker_id) {
+  for (auto worker_id = 0; worker_id < worker_config.workers.size();
+       ++worker_id) {
     if (worker_config.cpu_masks[worker_id] == impl::kTfLiteNumCpuMasks) {
       worker_config.cpu_masks[worker_id] = interpreter_config.cpu_masks;
     }
     if (worker_config.num_threads[worker_id] == 0) {
       worker_config.num_threads[worker_id] = interpreter_config.num_threads;
+    }
+    if (interpreter_config.profile_config.copy_computation_ratio[worker_id] == 0) {
+      interpreter_config.profile_config.copy_computation_ratio[worker_id] =
+          interpreter_config.copy_computation_ratio;
     }
   }
 

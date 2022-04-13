@@ -56,6 +56,9 @@ class TestDelegate;
 namespace delegates {
 class InterpreterUtils;  // Class for friend declarations.
 }  // namespace delegates
+namespace profiling {
+class TimeProfiler;
+}  // namespace profiling
 
 namespace impl {
 
@@ -107,8 +110,8 @@ struct ModelSpec {
   std::map<TfLiteDeviceFlags, std::set<int>> unsupported_ops;
   int num_unit_subgraphs;
   // vector for memoization during scheduling.
-  // Each element is a pair of starting subgraph index and shortest latency.
-  std::vector<std::pair<int, int64_t>> latency_memo;
+  // Each element is a pair of subgraph indices list and shortest latency.
+  std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
 };
 
 class Interpreter {
@@ -483,20 +486,24 @@ class Interpreter {
   /// Invoke models with a batch size given by the model config.
   /// # of inputs and outputs should equal to model_configs_.size()
   /// This method is an asychronous call.
-  std::vector<int> InvokeModelsAsync(std::vector<Tensors> inputs = {});
+  std::vector<int> InvokeModelsAsync(std::vector<Tensors> model_inputs);
 
   /// Invoke models with model requests.
   /// This method is an asychronous call.
-  std::vector<int> InvokeModelsAsync(std::vector<Job> requests, std::vector<Tensors> inputs = {});
+  std::vector<int> InvokeModelsAsync(std::vector<Job> requests,
+                                     std::vector<Tensors> request_inputs = {});
 
   /// Invoke models with a batch size given by the model config.
   /// # of inputs and outputs should equal to model_configs_.size()
-  /// Returns when all the requests are done. 
-  void InvokeModelsSync(std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
-  
+  /// Returns when all the requests are done.
+  void InvokeModelsSync(std::vector<Tensors> model_inputs,
+                        std::vector<Tensors> model_outputs);
+
   /// Invoke models with model requests.
-  /// Returns when all the requests are done. 
-  void InvokeModelsSync(std::vector<Job> requests, std::vector<Tensors> inputs = {}, std::vector<Tensors> outputs = {});
+  /// Returns when all the requests are done.
+  void InvokeModelsSync(std::vector<Job> requests,
+                        std::vector<Tensors> request_inputs = {},
+                        std::vector<Tensors> request_outputs = {});
 
   TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
@@ -552,8 +559,9 @@ class Interpreter {
                                TfLiteDelegate** delegate);
 
   // Profile the subgraphs with the given model id.
-  // NOTE: the profiling step may affects other running requests,
-  // and vice versa.
+  // If profile_online_ is true, interpreter uses workers to profile the
+  // subgraph. If profile_online_ is false, interpreter profiles the subgraph
+  // separately from workers.
   void Profile(int model_id);
 
   /// Sets the profiler to tracing execution. The caller retains ownership
@@ -719,13 +727,14 @@ class Interpreter {
       std::map<int, int64_t>& worker_waiting,
       int preceded_subgraph_index = -1);
 
-  std::pair<int, int64_t> GetShortestLatencyWithUnitSubgraph(
+  std::pair<std::vector<int>, int64_t> GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
       std::map<int, int64_t>& worker_waiting);
 
 
-  std::pair<int, int64_t> GetSubgraphWithShortestLatency(Job& job,
-                                                         std::map<int, int64_t>& worker_waiting);
+  std::pair<std::vector<int>, int64_t>
+  GetSubgraphWithShortestLatency(Job& job,
+                                 std::map<int, int64_t>& worker_waiting);
 
   int GetSubgraphIdxSatisfyingSLO(Job& job,
                                   std::map<int, int64_t>& worker_waiting,
@@ -792,6 +801,21 @@ class Interpreter {
   // Helper function that sets the profiler to all subgraphs.
   void SetSubgraphProfiler(Profiler * profiler);
 
+  // On/Offline profile implementation and helper methods.
+  void ProfileOnline(int model_id, tflite::profiling::TimeProfiler& timer);
+  void ProfileOffline(int model_id, tflite::profiling::TimeProfiler& timer);
+  int64_t ProfileSubgraph(Subgraph* subgraph,
+                          tflite::profiling::TimeProfiler& timer);
+  int64_t EstimateLatency(const Subgraph* target_subgraph,
+                          const Subgraph* max_subgraph,
+                          const Subgraph* primary_subgraph,
+                          int64_t max_latency,
+                          int64_t copy_computation_ratio);
+  int64_t EstimateFLOPS(const Subgraph* subgraph,
+                        const Subgraph* primary_subgraph);
+  int64_t EstimateInputOutputSize(const Subgraph* subgraph);
+  void SetProfileEnvironment(Worker* worker);
+
   // Returns true if delegates have been applied.
   bool HasDelegates(size_t subgraph_index);
 
@@ -815,9 +839,10 @@ class Interpreter {
 
   // Parameters for profiling.
   // The results during warmup period are not counted.
-  int num_warmups_ = 3;
-
-  int num_runs_ = 50;
+  bool profile_online_;
+  int profile_num_warmups_;
+  int profile_num_runs_;
+  std::vector<int> profile_copy_computation_ratio_;
 
   int next_model_id_ = 0;
 

@@ -70,6 +70,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `stream`: consecutively run batches.
   * `periodic`: invoke requests periodically.
   * `periodic_single_thread`: invoke requests periodically with a single thread.
+  * `workload`: execute pre-defined sequence in `stream` manner based on a given workload file.
 * `cpu_masks`: CPU cluster mask to set CPU affinity. [default: `ALL`]
   * `ALL`: All Cluster
   * `LITTLE`: LITTLE Cluster only
@@ -77,7 +78,7 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
   * `PRIMARY`: Primary Core only
 * `num_threads`: Number of computing threads for CPU delegates. [default: -1]
 * `planner_cpu_masks`: CPU cluster mask to set CPU affinity of planner. [default: same value as global `cpu_masks`]
-* `workers`: A vector-like config for per-processor worker. For each worker, specify the following fields. System creates 1 worker per device by default and first provided value overrides the settings (i.e., `cpu_masks`, `num_threads`, ... ) and additional field will add additional worker per device.
+* `workers`: A vector-like config for per-processor worker. For each worker, specify the following fields. System creates 1 worker per device by default and first provided value overrides the settings (i.e., `cpu_masks`, `num_threads`, `profile_copy_computation_ratio`, ... ) and additional field will add additional worker per device.
   * `device`: Target device of specific worker.
     * `CPU`
     * `CPUFallback`
@@ -89,13 +90,16 @@ $ adb shell /data/local/tmp/benchmark_model --json_path=$PATH_TO_CONFIG_FILE [OP
 * `running_time_ms`: Experiment duration in ms. [default: 60000]
 * `profile_smoothing_factor`: Current profile reflection ratio. `updated_profile = profile_smoothing_factor * curr_profile + (1 - profile_smoothing_factor) * prev_profile` [default: 0.1]
 * `model_profile`: The path to file with model profile results. [default: None]
-* `profile_warmup_runs`: Number of warmup runs before profile. [default: 3]
-* `profile_num_runs`: Number of runs for profile. [default: 50]
+* `profile_online`: Online profile or offline profile [default: true]
+* `profile_warmup_runs`: Number of warmup runs before profile. [default: 1]
+* `profile_num_runs`: Number of runs for profile. [default: 1]
+* `profile_copy_computation_ratio`: Ratio of computation / input-ouput copy. Used for latency estimation. [default: 1000]
 * `allow_work_steal`: True if work-stealing is allowed. The argument is only effective with `ShortestExpectedLatencyPlanner`.
 * `availability_check_interval_ms`: Availability check interval for disabled device due to thermal throttling. [default: 30000]
 * `schedule_window_size`: The number of planning unit.
 * `global_period_ms`: Request interval value used for execution mode `periodic_single_thread` only. Should be > 0.
 * `model_id_random_seed`: Random seed value used for picking model ids, in `periodic_single_thread` only. 0 is treated as the current timestamp.
+* `workload`: The path to file with workload information. [default: None] 
 
 An example of complete JSON config file is as follows:
 ```json
@@ -134,19 +138,23 @@ An example of complete JSON config file is as follows:
       {
         "device": "CPU",
         "num_threads": 3,
-        "cpu_masks": "BIG"
+        "cpu_masks": "BIG",
+        "profile_copy_computation_ratio": 10
       },
       {
         "device": "CPU",
         "num_threads": 4,
-        "cpu_masks": "LITTLE"
+        "cpu_masks": "LITTLE",
+        "profile_copy_computation_ratio": 10
       }
     ],
     "running_time_ms": 60000,
     "profile_smoothing_factor": 0.1,
     "model_profile": "/data/local/tmp/profile.json",
-    "profile_warmup_runs": 10,
-    "profile_num_runs": 20,
+    "profile_online": true,
+    "profile_warmup_runs": 1,
+    "profile_num_runs": 1,
+    "profile_copy_computation_ratio": 1000,
     "allow_work_steal": true,
     "availability_check_interval_ms": 30000,
     "schedule_window_size": 10

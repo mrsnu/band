@@ -23,6 +23,7 @@ limitations under the License.
 #include <utility>
 #include <list>
 
+#include "tensorflow/lite/builtin_ops.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
 #include "tensorflow/lite/context_util.h"
@@ -292,12 +293,14 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
     // since we don't have anything in model_configs_ at the moment
 
     // Set how many runs are required to get the profile results.
-    num_warmups_ = config.profile_config.num_warmups;
-    num_runs_ = config.profile_config.num_runs;
+    profile_online_ = config.profile_config.online;
+    profile_num_warmups_ = config.profile_config.num_warmups;
+    profile_num_runs_ = config.profile_config.num_runs;
+    profile_copy_computation_ratio_ = config.profile_config.copy_computation_ratio;
 
     TFLITE_LOG(INFO) << "Set Profiling Configuration:"
-                     << " warmup=" << num_warmups_
-                     << " count=" << num_runs_;
+                     << " warmup=" << profile_num_warmups_
+                     << " count=" << profile_num_runs_;
   }
 
   const TfLiteCPUMaskFlags cpu_mask = 
@@ -456,103 +459,113 @@ int Interpreter::InvokeModelAsync(Job request, Tensors inputs) {
   return job_ids.size() == 1 ? job_ids[0] : -1;
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Tensors> inputs) {
-  std::vector<Job> requests;
-  std::vector<Tensors> duplicate_inputs;
-
-  if (inputs.size() != model_configs_.size()) {
+std::vector<int> Interpreter::InvokeModelsAsync(
+    std::vector<Tensors> model_inputs) {
+  if (model_inputs.size() != model_configs_.size()) {
     error_reporter_->Report(
-        "Invalid input size input.size() %d != model_configs_.size() %d",
-        inputs.size(), model_configs_.size());
+        "Invalid input size model_input.size() %d != model_configs_.size() %d",
+        model_inputs.size(), model_configs_.size());
     return {};
   }
 
+  std::vector<Job> requests;
+  std::vector<Tensors> request_inputs;
   for (auto& m : model_configs_) {
     int model_id = m.first;
     ModelConfig& model_config = m.second;
     Job request = Job(model_id);
+    request.model_fname = model_config.model_fname;
+    request.device_id = model_config.device;
+    request.slo_us = model_config.slo_us;
     for (int k = 0; k < model_config.batch_size; ++k) {
       requests.push_back(request);
-      duplicate_inputs.push_back(inputs[model_id]);
+      request_inputs.push_back(model_inputs[model_id]);
     }
   }
 
-  return InvokeModelsAsync(requests, duplicate_inputs);
+  return InvokeModelsAsync(requests, request_inputs);
 }
 
-std::vector<int> Interpreter::InvokeModelsAsync(std::vector<Job> requests, 
-                                                std::vector<Tensors> inputs) {
-  if (requests.size() == 0) {
-    return {};
-  }
-
-  for (auto& request: requests) {
+std::vector<int> Interpreter::InvokeModelsAsync(
+    std::vector<Job> requests, std::vector<Tensors> request_inputs) {
+  for (auto& request : requests) {
     int model_id = request.model_id;
     ModelConfig& model_config = model_configs_[model_id];
     request.model_fname = model_config.model_fname;
     request.device_id = model_config.device;
-    request.slo_us = model_config.slo_us;
   }
 
-  std::vector<Job> valid_requests;
-  std::vector<bool> valid_requests_masks(requests.size(), true);
+  if (request_inputs.size() > 0) {
+    if (requests.size() != request_inputs.size()) {
+      error_reporter_->Report(
+          "Invalid input size requests.size() %d != request_inputs.size() %d",
+          requests.size(), request_inputs.size());
+      return {};
+    }
 
-  if (inputs.size() > 0) {
-    assert(inputs.size() == requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
       Job& request = requests[i];
       int input_handle = model_input_buffer_[request.model_id]->Alloc();
       if (model_input_buffer_[request.model_id]->PutTensorsToHandle(
-              inputs[i], input_handle) == kTfLiteOk) {
+              request_inputs[i], input_handle) == kTfLiteOk) {
         request.input_handle = input_handle;
         request.output_handle = model_output_buffer_[request.model_id]->Alloc();
-        valid_requests.push_back(std::move(request));
       } else {
-        valid_requests_masks[i] = false;
+        error_reporter_->Report("Input copy failure for model %d request %d",
+                                request.model_id, i);
+        return {};
       }
     }
-  } else {
-    // we don't care about the inputs, just make input/output-less requests
-    for (Job& request : requests) {
-      valid_requests.push_back(std::move(request));
-    }
   }
 
-  std::vector<int> job_ids(requests.size(), -1);
-  std::vector<int> valid_job_ids = planner_->EnqueueBatch(valid_requests);
-
-  int valid_index = 0;
-  for (size_t i = 0; i < requests.size(); i++) {
-    if (valid_requests_masks[i]) {
-      job_ids[i] = valid_job_ids[valid_index++];
-    }
-  }
-  
-  return job_ids;
+  return planner_->EnqueueBatch(requests);
 }
 
-void Interpreter::InvokeModelsSync(std::vector<Tensors> inputs,
-                                   std::vector<Tensors> outputs) {
-  std::vector<int> job_ids = InvokeModelsAsync(inputs);
+void Interpreter::InvokeModelsSync(std::vector<Tensors> model_inputs,
+                                   std::vector<Tensors> model_outputs) {
+  if (model_inputs.size() != model_configs_.size() ||
+      model_outputs.size() != model_configs_.size()) {
+    error_reporter_->Report(
+        "Invalid input/output size model_inputs.size() %d, "
+        "model_outputs.size() %d, model_configs_.size() %d",
+        model_inputs.size(), model_outputs.size(), model_configs_.size());
+    return;
+  }
+
+  std::vector<int> job_ids = InvokeModelsAsync(model_inputs);
   planner_->Wait(job_ids);
-  
-  if (inputs.size() == outputs.size()) {
-    int accumulated_job_index = 0;
-    int output_index = 0;
-    for (auto& m : model_configs_) {
-      GetOutputTensors(job_ids[accumulated_job_index], outputs[output_index++]);
-      accumulated_job_index += m.second.batch_size;
+
+  int job_index = 0;
+  for (int model_id = 0; model_id < model_configs_.size(); model_id++) {
+    const ModelConfig& m = model_configs_[model_id];
+    for (int batch_idx = 0; batch_idx < m.batch_size; batch_idx++) {
+      GetOutputTensors(job_ids[job_index], model_outputs[model_id]);
+      job_index++;
     }
   }
 }
 
 void Interpreter::InvokeModelsSync(std::vector<Job> requests,
-                                   std::vector<Tensors> inputs,
-                                   std::vector<Tensors> outputs) {
-  std::vector<int> job_ids = InvokeModelsAsync(requests, inputs);
+                                   std::vector<Tensors> request_inputs,
+                                   std::vector<Tensors> request_outputs) {
+  if (request_inputs.size() > 0 &&
+      (request_inputs.size() != requests.size() ||
+       request_outputs.size() != requests.size())) {
+    error_reporter_->Report(
+        "Invalid input/output size request_inputs.size() %d, "
+        "request_outputs.size() %d, requests.size() %d",
+        request_inputs.size(), request_outputs.size(), requests.size());
+    return;
+  }
+
+  std::vector<int> job_ids = InvokeModelsAsync(requests, request_inputs);
   planner_->Wait(job_ids);
-  for (size_t i = 0; i < job_ids.size(); i++) {
-    GetOutputTensors(job_ids[i], outputs[i]);
+
+  // We don't have to check request_outputs.size() again.
+  if (request_inputs.size() > 0) {
+    for (size_t i = 0; i < job_ids.size(); i++) {
+      GetOutputTensors(job_ids[i], request_outputs[i]);
+    }
   }
 }
 
@@ -782,91 +795,341 @@ void Interpreter::Profile(int model_id) {
   // Only update subgraph profilers to not care ownership of the profiler
   SetSubgraphProfiler(&timer);
 
-  for (int i = 0; i < subgraphs_size(); ++i) {
-    Subgraph* subgraph = subgraphs_[i].get();
-    SubgraphKey& subgraph_key = subgraph->GetKey();
-    TfLiteDeviceFlags device_flag = GetWorkerDeviceFlag(subgraph_key.worker_id);
-
-    if (subgraph_key.model_id != model_id) {
-      continue;
-    }
-
-    auto it = profile_database_.find(subgraph_key);
-    if (it != profile_database_.end()) {
-      // if an entry for this SubgraphKey exists in the profiled data,
-      // then reuse it to reduce initialization time
-      int64_t profiled_latency = it->second;
-      // TODO: Consider affinity of worker thread
-      moving_averaged_latencies_[i] = profiled_latency;
-
-      TFLITE_LOG(INFO) << "Reusing profiled result\n"
-                       << " model=" << subgraph_key.model_id
-                       << " avg=" << profiled_latency << " us"
-                       << " worker="
-                       << subgraph_key.worker_id
-                       << " device="
-                       << TfLiteDeviceGetName(device_flag)
-                       << " start="
-                       << subgraph_key.GetInputOpsString()
-                       << " end=" 
-                       << subgraph_key.GetOutputOpsString() << ".";
-
-    } else {
-      std::thread t([&]() {
-        auto cpu_set =
-            workers_[subgraph_key.worker_id]->GetWorkerThreadAffinity();
-        SetCPUThreadAffinity(cpu_set);
-        if (device_flag == kTfLiteCPU) {
-          auto internal_backend =
-              GetCpuBackendContext()->internal_backend_context();
-          // Update internal cpu backend (ruy)
-          internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
-          internal_backend->SetMaxNumThreads(
-              workers_[subgraph_key.worker_id]->GetNumThreads());
-        }
-
-        for (int i = 0; i < num_warmups_; i++) {
-          if (subgraph->Invoke() != kTfLiteOk) {
-            subgraph->SetHealth(false);
-            moving_averaged_latencies_[i] = INT_MAX;
-            profile_database_[subgraph_key] = INT_MAX;
-            return;
-          }
-        }
-        timer.ClearRecords();
-        for (int i = 0; i < num_runs_; i++) {
-          if (subgraph->Invoke() != kTfLiteOk) {
-            subgraph->SetHealth(false);
-            moving_averaged_latencies_[i] = INT_MAX;
-            profile_database_[subgraph_key] = INT_MAX;
-            return;
-          }
-        }
-
-        int64_t latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
-
-        moving_averaged_latencies_[i] = latency;
-        // record the profiled latency for subsequent benchmark runs
-        profile_database_[subgraph_key] = latency;
-
-        TFLITE_LOG(INFO) << "Profiling result\n"
-                         << " model=" << subgraph_key.model_id
-                         << " avg=" << latency << " us"
-                         << " worker="
-                         << subgraph_key.worker_id
-                         << " device="
-                         << TfLiteDeviceGetName(device_flag)
-                         << " start="
-                         << subgraph_key.GetInputOpsString()
-                         << " end=" 
-                         << subgraph_key.GetOutputOpsString() << ".";
-      });
-      t.join();
-    }
+  if (profile_online_) {
+    ProfileOnline(model_id, timer);
+  } else {
+    ProfileOffline(model_id, timer);
   }
 
   SetSubgraphProfiler(previous_profiler);
   SetSLOBasedOnProfile();
+}
+
+void Interpreter::ProfileOnline(int model_id,
+                                tflite::profiling::TimeProfiler& timer) {
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    Worker* worker = workers_[worker_id].get();
+    const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
+
+    // Get subgraphs for target model & worker
+    std::vector<int> worker_subgraph_indices;
+    for (int sub_idx = 0; sub_idx < subgraphs_size(); sub_idx++) {
+      SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
+      if (key.model_id == model_id && key.worker_id == worker_id) {
+        worker_subgraph_indices.push_back(sub_idx);
+      }
+    }
+    if (worker_subgraph_indices.size() == 0) {
+      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                        << ": No subgraph exist";
+      continue;
+    }
+
+    // Pause worker for profiling
+    // Must resume before continue
+    worker->Pause();
+    int job_id = worker->GetCurrentJobId();
+    if (job_id != -1) {
+      planner_->Wait({job_id});
+    }
+
+    // Health check for subgraphs
+    std::thread health_check_thread([&]() {
+      bool all_healthy = true;
+      SetProfileEnvironment(worker);
+      for (const int& sub_idx : worker_subgraph_indices) {
+        Subgraph* subgraph = subgraphs_[sub_idx].get();
+        const SubgraphKey& key = subgraph->GetKey();
+        if (subgraph->Invoke() != kTfLiteOk) {
+          all_healthy = false;
+          subgraph->SetHealth(false);
+          moving_averaged_latencies_[sub_idx] = INT_MAX;
+          profile_database_[key] = INT_MAX;
+
+          std::string msg = "Subgraph execution failed";
+          TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                            << " Subgraph " << sub_idx << ": " << msg;
+        }
+      }
+      if (all_healthy) {
+        TFLITE_LOG(INFO) << "Model " << model_id << " Worker " << worker_id
+                         << ": All subgraphs are executable";
+      }
+    });
+    health_check_thread.join();
+
+    // Get largest subgraph
+    int max_num_ops = -1;
+    int max_subgraph_idx = -1;
+    for (const int& sub_idx : worker_subgraph_indices) {
+      const Subgraph* subgraph = subgraphs_[sub_idx].get();
+      const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
+      const int& num_ops = subgraph->op_indices().size();
+      if (subgraph->GetHealth() && num_ops > max_num_ops) {
+        max_num_ops = num_ops;
+        max_subgraph_idx = sub_idx;
+      }
+    }
+    if (max_subgraph_idx == -1) {
+      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                        << ": No executable subgraphs";
+      worker->Resume();
+      continue;
+    }
+
+    // Profile largest subgraph
+    Subgraph* max_subgraph = subgraphs_[max_subgraph_idx].get();
+    int64_t max_latency = ProfileSubgraph(max_subgraph, timer);
+    if (max_latency < 0) {
+      max_subgraph->SetHealth(false);
+      moving_averaged_latencies_[max_subgraph_idx] = INT_MAX;
+      profile_database_[max_subgraph->GetKey()] = INT_MAX;
+
+      std::string msg = max_latency == -1 ? "Largest subgraph profile failed"
+                                          : "Largest subgraph latency < 0";
+      TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << worker_id
+                        << " Subgraph " << max_subgraph_idx << ": " << msg;
+      worker->Resume();
+      continue;
+    }
+
+    const SubgraphKey& key = max_subgraph->GetKey();
+    TFLITE_LOG(INFO) << "Largest Subgraph Profiling result\n"
+                     << " model=" << model_id
+                     << " avg=" << max_latency << " us"
+                     << " worker=" << worker_id
+                     << " device=" << device_name
+                     << " start=" << key.GetInputOpsString()
+                     << " end=" << key.GetOutputOpsString() << ".";
+
+    // Resume worker
+    worker->Resume();
+
+    // Estimate latency with largest subgraph latency
+    const Subgraph* primary_subgraph =
+        subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
+    for (const int& sub_idx : worker_subgraph_indices) {
+      const Subgraph* subgraph = subgraphs_[sub_idx].get();
+      const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
+      if (subgraph->GetHealth()) {
+        const int64_t latency = EstimateLatency(
+            subgraph, max_subgraph, primary_subgraph, max_latency,
+            profile_copy_computation_ratio_[worker_id]);
+
+        moving_averaged_latencies_[sub_idx] = latency;
+        profile_database_[key] = latency;
+
+        TFLITE_LOG(INFO) << "Estimated Latency\n"
+                         << " model=" << key.model_id << " avg=" << latency
+                         << " us"
+                         << " worker=" << key.worker_id
+                         << " device=" << device_name
+                         << " start=" << key.GetInputOpsString()
+                         << " end=" << key.GetOutputOpsString() << ".";
+      }
+    }
+  }
+}
+
+int64_t Interpreter::EstimateLatency(const Subgraph* target_subgraph,
+                                     const Subgraph* max_subgraph,
+                                     const Subgraph* primary_subgraph,
+                                     int64_t max_latency,
+                                     int64_t copy_computation_ratio) {
+  int64_t target_flops = EstimateFLOPS(target_subgraph, primary_subgraph);
+  int64_t target_size = EstimateInputOutputSize(target_subgraph);
+
+  int64_t max_flops = EstimateFLOPS(max_subgraph, primary_subgraph);
+  int64_t max_size = EstimateInputOutputSize(max_subgraph);
+
+  int64_t estimated_latency =
+      max_latency *
+      (target_flops + target_size * copy_computation_ratio) /
+      (max_flops + max_size * copy_computation_ratio);
+  if (estimated_latency == 0) {
+    return 1;
+  } else {
+    return estimated_latency;
+  }
+}
+
+int64_t Interpreter::EstimateFLOPS(const Subgraph* subgraph,
+                                   const Subgraph* primary_subgraph) {
+  int64_t flops = 0;
+  for (int op_index : subgraph->op_indices()) {
+    const auto node_registration =
+        primary_subgraph->node_and_registration(op_index);
+    const TfLiteNode& node = node_registration->first;
+    const TfLiteRegistration& registration = node_registration->second;
+    switch (registration.builtin_code) {
+      case kTfLiteBuiltinConv2d:
+      case kTfLiteBuiltinDepthwiseConv2d: {
+        assert(node.inputs->size == 3);
+        assert(node.outputs->size == 1);
+        const TfLiteTensor* input =
+            primary_subgraph->tensor(node.inputs->data[0]);
+        const TfLiteTensor* weight =
+            primary_subgraph->tensor(node.inputs->data[1]);
+        const TfLiteTensor* bias =
+            primary_subgraph->tensor(node.inputs->data[2]);
+        const TfLiteTensor* output =
+            primary_subgraph->tensor(node.outputs->data[0]);
+        assert(input->dims->size == 4);   // batch, iw, ih, ic
+        assert(weight->dims->size == 4);  // oc, kw, kh, ic
+        assert(bias->dims->size == 1);    // oc
+        assert(output->dims->size == 4);  // batch, ow, oh, oc
+
+        const int64_t kw = weight->dims->data[1];
+        const int64_t kh = weight->dims->data[2];
+        const int64_t ic = input->dims->data[3];
+        const int64_t oc = output->dims->data[3];
+        const int64_t o_size = output->dims->data[0] * output->dims->data[1] *
+                               output->dims->data[2];
+
+        int64_t conv_flops = o_size * kw * kh * ic * oc;
+        if (registration.builtin_code == kTfLiteBuiltinDepthwiseConv2d) {
+          conv_flops /= ic;
+        }
+        flops += conv_flops;
+      } break;
+      case kTfLiteBuiltinTransposeConv: {
+        assert(node.inputs->size == 3);
+        assert(node.outputs->size == 1);
+        const TfLiteTensor* bias =
+            primary_subgraph->tensor(node.inputs->data[0]);
+        const TfLiteTensor* weight =
+            primary_subgraph->tensor(node.inputs->data[1]);
+        const TfLiteTensor* input =
+            primary_subgraph->tensor(node.inputs->data[2]);
+        const TfLiteTensor* output =
+            primary_subgraph->tensor(node.outputs->data[0]);
+        assert(bias->dims->size == 1);    // ??
+        assert(weight->dims->size == 4);  // oc, kw, kh, ic
+        assert(input->dims->size == 4);   // batch, iw, ih, ic
+        assert(output->dims->size == 4);  // batch, ow, oh, oc
+
+        const int64_t kw = weight->dims->data[1];
+        const int64_t kh = weight->dims->data[2];
+        const int64_t ic = input->dims->data[3];
+        const int64_t oc = output->dims->data[3];
+        const int64_t i_size =
+            input->dims->data[0] * input->dims->data[1] * input->dims->data[2];
+
+        int64_t trconv_flops = i_size * kw * kh * ic * oc;
+        flops += trconv_flops;
+      } break;
+      default:
+        break;
+    }
+  }
+  return flops;
+}
+
+int64_t Interpreter::EstimateInputOutputSize(const Subgraph* subgraph) {
+  // TODO: Add input/output tensors without weights.
+  const std::vector<int>& input_tensors = subgraph->inputs();
+  const std::vector<int>& output_tensors = subgraph->outputs();
+  int64_t subgraph_input_output_size = 0;
+  for (int tensor_idx : input_tensors) {
+    subgraph_input_output_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
+  }
+  for (int tensor_idx : output_tensors) {
+    subgraph_input_output_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
+  }
+  return subgraph_input_output_size;
+}
+
+void Interpreter::ProfileOffline(int model_id,
+                                 tflite::profiling::TimeProfiler& timer) {
+  for (int sub_idx = 0; sub_idx < subgraphs_size(); sub_idx++) {
+    Subgraph* subgraph = subgraphs_[sub_idx].get();
+    SubgraphKey& key = subgraph->GetKey();
+    const char* device_name =
+        TfLiteDeviceGetName(GetWorkerDeviceFlag(key.worker_id));
+
+    if (key.model_id != model_id) {
+      continue;
+    }
+
+    auto it = profile_database_.find(key);
+    if (it != profile_database_.end()) {
+      // TODO: Consider affinity of worker thread
+      // if an entry for this SubgraphKey exists in the profiled data,
+      // then reuse it to reduce initialization time
+      int64_t profiled_latency = it->second;
+      moving_averaged_latencies_[sub_idx] = profiled_latency;
+
+      TFLITE_LOG(INFO) << "Reusing profiled result\n"
+                       << " model=" << key.model_id
+                       << " avg=" << profiled_latency << " us"
+                       << " worker=" << key.worker_id
+                       << " device=" << device_name
+                       << " start=" << key.GetInputOpsString()
+                       << " end=" << key.GetOutputOpsString() << ".";
+
+    } else {
+      int64_t latency = ProfileSubgraph(subgraph, timer);
+      if (latency < 0) {
+        subgraph->SetHealth(false);
+        moving_averaged_latencies_[sub_idx] = INT_MAX;
+        profile_database_[key] = INT_MAX;
+
+        std::string msg =
+            latency == -1 ? "Latency profile failed" : "Profiled latency < 0";
+        TFLITE_LOG(ERROR) << "Model " << model_id << " Worker " << key.worker_id
+                          << " Subgraph " << sub_idx << ": " << msg;
+        continue;
+      }
+
+      moving_averaged_latencies_[sub_idx] = latency;
+      profile_database_[key] = latency;
+
+      TFLITE_LOG(INFO) << "Profiling result\n"
+                       << " model=" << key.model_id
+                       << " avg=" << latency << " us"
+                       << " worker=" << key.worker_id
+                       << " device=" << device_name
+                       << " start=" << key.GetInputOpsString()
+                       << " end=" << key.GetOutputOpsString() << ".";
+    }
+  }
+}
+
+int64_t Interpreter::ProfileSubgraph(Subgraph* subgraph,
+                                     tflite::profiling::TimeProfiler& timer) {
+  int64_t latency = -1;
+
+  std::thread t([&]() {
+    SubgraphKey& subgraph_key = subgraph->GetKey();
+    Worker* worker = workers_[subgraph_key.worker_id].get();
+    SetProfileEnvironment(worker);
+    for (int i = 0; i < profile_num_warmups_; i++) {
+      if (subgraph->Invoke() != kTfLiteOk) {
+        return;
+      }
+    }
+    timer.ClearRecords();
+    for (int i = 0; i < profile_num_runs_; i++) {
+      if (subgraph->Invoke() != kTfLiteOk) {
+        return;
+      }
+    }
+    latency = timer.GetAverageElapsedTime<std::chrono::microseconds>();
+  });
+  t.join();
+
+  return latency;
+}
+
+void Interpreter::SetProfileEnvironment(Worker* worker) {
+  auto cpu_set = worker->GetWorkerThreadAffinity();
+  SetCPUThreadAffinity(cpu_set);
+  if (worker->GetDeviceFlag() == kTfLiteCPU) {
+    auto internal_backend = GetCpuBackendContext()->internal_backend_context();
+    // Update internal cpu backend (ruy)
+    internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set);
+    internal_backend->SetMaxNumThreads(worker->GetNumThreads());
+  }
 }
 
 void Interpreter::SetProfiler(Profiler* profiler) {
@@ -973,9 +1236,9 @@ TfLiteDeviceFlags Interpreter::GetWorkerDeviceFlag(int worker_id) {
 }
 
 int Interpreter::GetRepresentativeWorkerId(TfLiteDeviceFlags device_flag) {
-  for(auto it = workers_.begin(); it != workers_.end(); it++) {
-    if (it->get()->GetDeviceFlag() == device_flag) {
-      return it->get()->GetWorkerId();
+  for(int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (workers_[worker_id].get()->GetDeviceFlag() == device_flag) {
+      return worker_id;
     }
   }
   return -1;
@@ -1434,7 +1697,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   }
 }
 
-std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
+std::pair<std::vector<int>, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx,
     std::map<int, int64_t>& worker_waiting) {
   auto& memo = model_specs_[model_id].latency_memo;
@@ -1442,18 +1705,18 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
 
   // Initialize memo.
   for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair(-1, INT_MAX);
+    memo[i] = std::make_pair<std::vector<int>, int64_t>({}, INT_MAX);
   }
 
   // `i` and `j` refer to an unit subgraph idx.
   // A subgraph(i, j) consists of the unit subgraphs in [i, j].
   // The goal of the algorithm is to find the minimum expected latency;
   // `memo[k].second` is the minimum expected latency of the subgraph(start_unit_idx, k).
-  // `memo[k].first` is the first subgraph index of the best execution plan.
+  // `memo[k].first` is the list of subgraph indices of the best execution plan.
   // So, the shortest expected latency of a subgraph(start_unit_idx, num_unit_subgraphs - 1) is
   // `memo[num_unit_subgraphs - 1].second`.
   for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
-    std::pair<int, int64_t> local_min = std::make_pair(-1, -1);
+    std::pair<std::vector<int>, int64_t> local_min = std::make_pair<std::vector<int>, int64_t>({}, -1);
     for (int i = j; i >= start_unit_idx; --i) {
       // Search from the profile result of the unit subgraph.
       auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
@@ -1464,9 +1727,12 @@ std::pair<int, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
       if (local_min.second == -1 || target_subgraph.second < local_min.second) {
         if (i > start_unit_idx) {
           local_min.first = memo[i - 1].first;
+          local_min.first.push_back(target_subgraph.first);
           local_min.second = target_subgraph.second;
         } else {
-          local_min = target_subgraph;
+          local_min.first.clear();
+          local_min.first.push_back(target_subgraph.first);
+          local_min.second = target_subgraph.second;
         }
       }
     }
@@ -1617,18 +1883,21 @@ int Interpreter::GetSubgraphIdxSatisfyingSLO(Job& job,
   return target_subgraph_idx;
 }
 
-std::pair<int, int64_t>
+std::pair<std::vector<int>, int64_t>
 Interpreter::GetSubgraphWithShortestLatency(Job& job,
                                             std::map<int, int64_t>& worker_waiting) {
   if (subgraph_preparation_type_ == "fallback_per_device") {
     int preceded_subgraph_index =
       job.previous_subgraph_indices.empty() ? -1
                                             : job.previous_subgraph_indices.back();
-    return GetShortestLatency(job.model_id,
+    auto pair = GetShortestLatency(job.model_id,
                               job.resolved_tensors,
                               0,
                               worker_waiting,
                               preceded_subgraph_index);
+    std::pair<std::vector<int>, int64_t> ret = std::pair<std::vector<int>, int64_t>({}, pair.second);
+    ret.first.push_back(pair.first);
+    return ret;
   } else {
     return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
   }
