@@ -6,6 +6,7 @@
 #include <set>
 
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/minimal_logging.h"
 
 namespace tflite {
 Frame::ModelRequest::ModelRequest(Job job, int id, int count,
@@ -101,7 +102,7 @@ TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
   std::ifstream config(json_fname, std::ifstream::binary);
 
   if (!config.is_open()) {
-    TFLITE_LOG(ERROR) << "Check if the workload file exists.";
+    TFLITE_LOG_PROD(TFLITE_LOG_ERROR, "Check if %s exists in workload.", json_fname.c_str());
     return kTfLiteError;
   }
 
@@ -133,8 +134,7 @@ TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
 
       std::string model_name = request["model"].asString();
       if (model_fname_to_id.find(model_name) == model_fname_to_id.end()) {
-        TFLITE_LOG(ERROR) << "Check if " << model_name
-                          << " exists in model list.";
+        TFLITE_LOG_PROD(TFLITE_LOG_ERROR, "Check if %s exists in model list.", model_name.c_str());
         return kTfLiteError;
       }
 

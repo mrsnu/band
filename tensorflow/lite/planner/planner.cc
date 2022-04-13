@@ -10,7 +10,6 @@
 #include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace impl {

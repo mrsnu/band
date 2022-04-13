@@ -5,7 +5,6 @@
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace impl {
