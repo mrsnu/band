@@ -44,6 +44,7 @@ public:
     void DisableAll();
     bool IsEnabled(int cpu) const;
     int NumEnabled() const;
+    const unsigned long* GetMaskBits() const;
 #if defined __ANDROID__ || defined __linux__
     const cpu_set_t& GetCpuSet() const { return cpu_set_; }
    private:
