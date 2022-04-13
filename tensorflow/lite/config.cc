@@ -32,11 +32,9 @@ TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
 
   Json::Value root;
   config >> root;
-
-  const std::string dump_string = Json::writeString(Json::StreamWriterBuilder(), root);
-
+  
   TF_LITE_ENSURE(error_reporter, root.isObject());
-  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Runtime config %s", dump_string.c_str());
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Runtime config %s", root.toStyledString().c_str());
 
   if (ValidateJsonConfig(error_reporter, root, {"log_path", "schedulers"}) !=
       kTfLiteOk) {
@@ -131,12 +129,10 @@ TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
 
       TfLiteDeviceFlags device_flag =
           TfLiteDeviceGetFlag(worker_config_json["device"].asCString());
-      if (device_flag == kTfLiteNumDevices) {
-        TF_LITE_REPORT_ERROR(error_reporter,
-                           "Wrong `device` argument is given. %s",
-                           worker_config_json["device"].asCString());
-        return kTfLiteError;
-      }
+      TF_LITE_ENSURE_FORMATTED_MSG(error_reporter,
+                                   device_flag != kTfLiteNumDevices,
+                                   "Wrong `device` argument is given. %s",
+                                   worker_config_json["device"].asCString());
 
       int worker_id = device_flag;
       // Add additional device worker
@@ -205,11 +201,10 @@ TfLiteStatus ValidateJsonConfig(ErrorReporter* error_reporter,
                                 std::vector<std::string> keys) {
   for (auto key : keys) {
     if (json_config[key].isNull()) {
-      TF_LITE_REPORT_ERROR(
-          error_reporter,
+      TF_LITE_ENSURE_FORMATTED_MSG(
+          error_reporter, !json_config[key].isNull(),
           "Please check if the argument %s is given in the config file.",
           key.c_str());
-      return kTfLiteError;
     }
   }
   return kTfLiteOk;

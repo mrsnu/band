@@ -190,6 +190,14 @@ void TfLiteFloatArrayFree(TfLiteFloatArray* a);
 #define TF_LITE_MAYBE_KERNEL_LOG(context, ...)
 #endif  // TF_LITE_STRIP_ERROR_STRINGS
 
+#define TF_LITE_ENSURE_FORMATTED_MSG(context, value, ...)        \
+  do {                                                 \
+    if (!(value)) {                                    \
+      TF_LITE_KERNEL_LOG((context), __VA_ARGS__); \
+      return kTfLiteError;                             \
+    }                                                  \
+  } while (0)
+
 // Check whether value is true, and if not return kTfLiteError from
 // the current function (and report the error string msg).
 #define TF_LITE_ENSURE_MSG(context, value, msg)        \
