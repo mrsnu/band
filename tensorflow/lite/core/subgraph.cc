@@ -368,7 +368,7 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
   PartitionGraphIntoIndependentNodeSubsets(&info, nodes_to_replace,
                                            &node_subsets);
 
-  TFLITE_LOG(
+  TFLITE_LOG_INTERNAL(
       tflite::TFLITE_LOG_INFO,
       "Replacing %d node(s) with delegate (%s) node, yielding %zu partitions.",
       nodes_to_replace->size,
@@ -403,7 +403,7 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
           if(tensor->delegate != nullptr && tensor->delegate != delegate) {
             // TODO #13 : Print name of the delegate 
             // Expected output : Overwriting delegate from %s to %s.
-            TFLITE_LOG(
+            TFLITE_LOG_INTERNAL(
               tflite::TFLITE_LOG_WARNING,
               "Overwriting delegate.");
           }

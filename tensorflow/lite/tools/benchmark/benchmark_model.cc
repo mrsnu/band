@@ -22,6 +22,7 @@ limitations under the License.
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
 #include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/minimal_logging.h"
 
 namespace tflite {
 namespace benchmark {
@@ -29,7 +30,7 @@ using tensorflow::Stat;
 
 BenchmarkParams BenchmarkModel::DefaultParams() {
   BenchmarkParams params;
-
+  
   // setting this to one because the periodic benchmark takes long
   params.AddParam("num_runs", BenchmarkParam::Create<int32_t>(1));
   params.AddParam("min_secs", BenchmarkParam::Create<float>(0.0f));
@@ -38,6 +39,8 @@ BenchmarkParams BenchmarkModel::DefaultParams() {
   params.AddParam("use_caching", BenchmarkParam::Create<bool>(false));
   params.AddParam("benchmark_name", BenchmarkParam::Create<std::string>(""));
   params.AddParam("output_prefix", BenchmarkParam::Create<std::string>(""));
+  // default verbosity - TFLITE_LOG_WARNING(1)
+  params.AddParam("verbosity", BenchmarkParam::Create<int32_t>(1));
 
   // setting this to zero because the periodic benchmark takes long
   params.AddParam("warmup_runs", BenchmarkParam::Create<int32_t>(0));
@@ -94,6 +97,10 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
       CreateFlag<std::string>("benchmark_name", &params_, "benchmark name"),
       CreateFlag<std::string>("output_prefix", &params_,
                               "benchmark output prefix"),
+      CreateFlag<int32_t>("verbosity", &params_,
+                          "verbosity level of internal log. Only logs error "
+                          "reported with higher severity than specified "
+                          "verbosity. Note: 0 - Info, 1 - Warning, 2 - Error"),
       CreateFlag<int32_t>(
           "warmup_runs", &params_,
           "minimum number of runs performed on initialization, to "
@@ -103,8 +110,9 @@ std::vector<Flag> BenchmarkModel::GetFlags() {
           "warmup_min_secs", &params_,
           "minimum number of seconds to rerun for, potentially making the "
           "actual number of warm-up runs to be greater than warmup_runs"),
-      CreateFlag<std::string>("json_path", &params_, "path to json file with "
-          "model configurations"),
+      CreateFlag<std::string>("json_path", &params_,
+                              "path to json file with "
+                              "model configurations"),
   };
 }
 
@@ -123,6 +131,8 @@ void BenchmarkModel::LogParams() {
                    << params_.Get<std::string>("benchmark_name") << "]";
   TFLITE_LOG(INFO) << "Output prefix: ["
                    << params_.Get<std::string>("output_prefix") << "]";
+  TFLITE_LOG(INFO) << "verbosity level: ["
+                   << params_.Get<int32_t>("verbosity") << "]";
   TFLITE_LOG(INFO) << "Min warmup runs: ["
                    << params_.Get<int32_t>("warmup_runs") << "]";
   TFLITE_LOG(INFO) << "Min warmup runs duration (seconds): ["
@@ -199,6 +209,11 @@ TfLiteStatus BenchmarkModel::Run() {
   TF_LITE_ENSURE_STATUS(ValidateParams());
 
   LogParams();
+
+  const int32_t verbosity = params_.Get<int32_t>("verbosity");
+  TFLITE_LOG(INFO) << "Update verbosity level of internal logging to "
+                   << verbosity << ".";
+  logging_internal::MinimalLogger::SetVerbosity(verbosity);
 
   const double model_size_mb = MayGetModelFileSize() / 1e6;
   const auto start_mem_usage = profiling::memory::GetMemoryUsage();

@@ -18,9 +18,9 @@ limitations under the License.
 #include <cstring>
 
 #include "tensorflow/lite/builtin_ops.h"
+#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/schema/schema_generated.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 
@@ -80,7 +80,8 @@ Json::Value LoadJsonObjectFromFile(std::string file_path) {
     std::ifstream in(file_path, std::ifstream::binary);
     in >> json_object;
   } else {
-    TFLITE_LOG(WARN) << "There is no such file: " << file_path;
+    TFLITE_LOG_PROD(TFLITE_LOG_WARNING, "There is no such file %s",
+                    file_path.c_str());
   }
   return json_object;
 }
@@ -91,7 +92,8 @@ void WriteJsonObjectToFile(const Json::Value& json_object,
   if (out_file.is_open()) {
     out_file << json_object;
   } else {
-    TFLITE_LOG(ERROR) << "Cannot save profiled results to " << file_path;
+    TFLITE_LOG_PROD(TFLITE_LOG_ERROR, "Cannot save profiled results to  %s",
+                    file_path.c_str());
   }
 }
 

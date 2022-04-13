@@ -69,7 +69,6 @@ FRAMEWORK_LIB_HDRS = [
     "context_util.h",
     "core/macros.h",
     "core/subgraph.h",
-    "error_reporter.h",
     "graph_info.h",
     "interpreter.h",
     "model.h",
@@ -78,7 +77,6 @@ FRAMEWORK_LIB_HDRS = [
     "mutable_op_resolver.h",
     "op_resolver.h",
     "optional_debug_tools.h",
-    "stderr_reporter.h",
     "tensor_ring_buffer.h",
     "planner/util.h",
     "planner/planner.h",
@@ -236,6 +234,15 @@ cc_library(
 )
 
 cc_library(
+    name = "error_reporter",
+    hdrs = [
+        "error_reporter.h",
+        "stderr_reporter.h",
+    ],
+    deps = ["//tensorflow/lite/core/api"],
+)
+
+cc_library(
     name = "cpu",
     srcs = [
         "cpu.cc",
@@ -281,6 +288,7 @@ cc_library(
         ":allocation",
         ":arena_planner",
         ":cpu",
+        ":error_reporter",
         ":external_cpu_backend_context",
         ":graph_info",
         ":memory_planner",
@@ -305,7 +313,6 @@ cc_library(
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/profiling:util",
-        "//tensorflow/lite/tools:logging",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",
@@ -616,9 +623,10 @@ cc_library(
     copts = TFLITE_DEFAULT_COPTS,
     deps = [
         "//tensorflow/lite:cpu",
+        "//tensorflow/lite:error_reporter",
+        "//tensorflow/lite:minimal_logging",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite:util",
-        "//tensorflow/lite/tools:logging",
         "@jsoncpp_git//:jsoncpp",
     ],
 )
@@ -630,9 +638,9 @@ cc_library(
     copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
     deps = [
         ":kernel_api",
+        "//tensorflow/lite:minimal_logging",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/schema:schema_fbs",
-        "//tensorflow/lite/tools:logging",
         "@jsoncpp_git//:jsoncpp",
     ],
 )

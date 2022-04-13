@@ -1,8 +1,8 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/worker.h"
+#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/subgraph.h"
-#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/profiling/time.h"
 
 namespace tflite {
@@ -29,14 +29,12 @@ TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
   
   availability_check_interval_ms_ = config.availability_check_interval_ms;
 
-  TFLITE_LOG(INFO) << "Set affinity of "
-                   << TfLiteDeviceGetName(device_flag_)
-                   << " to "
-                   << TfLiteCPUMaskGetName(config.cpu_masks[worker_id])
-                   << " cores for " 
-                   << config.num_threads[worker_id]
-                   << " threads";
-  
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+                      "Set affinity of %s to %s cores for %d threads.",
+                      TfLiteDeviceGetName(device_flag_),
+                      TfLiteCPUMaskGetName(config.cpu_masks[worker_id]),
+                      config.num_threads[worker_id]);
+
   const CpuSet worker_mask_set =
     TfLiteCPUMaskGetSet(config.cpu_masks[worker_id]);
   return UpdateWorkerThread(worker_mask_set, config.num_threads[worker_id]);
@@ -67,7 +65,8 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
 void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
   while (true) {
     tflite::profiling::time::SleepForMicros(1000 * availability_check_interval_ms_);
-    TFLITE_LOG(INFO) << "Availability check at " << tflite::profiling::time::NowMicros();
+    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Availability check at %d ms.",
+                        tflite::profiling::time::NowMicros());
     if (subgraph.Invoke() == kTfLiteOk) {
       return;
     }
@@ -100,17 +99,28 @@ int Worker::GetNumThreads() const {
 }
 
 JobQueue& Worker::GetDeviceRequests() {
-  TFLITE_LOG(ERROR) << "Worker::GetDeviceRequests() Not implemented.";
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING,
+                      "GetDeviceRequests() Not implemented");
   return requests_;
 }
 
 void Worker::AllowWorkSteal() {
-  TFLITE_LOG(ERROR) << "Worker::AllowWorkSteal() Not implemented.";
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "AllowWorkSteal() Not implemented");
 }
 
 bool Worker::IsBusy() {
-  TFLITE_LOG(ERROR) << "Worker::IsBusy() Not implemented.";
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "IsBusy() Not implemented");
   return false;
+}
+
+ErrorReporter* Worker::GetErrorReporter() {
+  // TODO(dostos): thread-safety for error reporter
+  auto planner_ptr = planner_.lock();
+  if (planner_ptr) {
+    return planner_ptr->GetInterpreter()->error_reporter();
+  } else {
+    nullptr;
+  }
 }
 
 TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
@@ -133,10 +143,11 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
         TfLiteTensor* dst = subgraph->tensor(tensor_index);
 
         if (TfLiteTensorDataCopy(src, dst) == kTfLiteError) {
-           TFLITE_LOG(ERROR)
-               << "Tensor data copy failure. src name : " << src->name
-               << ", dst name : " << dst->name;
-           return kTfLiteError;
+          TF_LITE_MAYBE_REPORT_ERROR(
+              GetErrorReporter(),
+              "Tensor data copy failure from %s to %s", src->name,
+              dst->name);
+          return kTfLiteError;
         }
 
         unresolved_tensors.erase(tensor_index);
@@ -147,7 +158,9 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
   auto input_buffer = interpreter->model_input_buffer_[job.model_id].get();
 
   if (!input_buffer) {
-    TFLITE_LOG(ERROR) << "No input buffer for model id " << job.model_id;
+    TF_LITE_MAYBE_REPORT_ERROR(GetErrorReporter(),
+                               "No input buffer for model id %d",
+                               job.model_id);
     return kTfLiteError;
   }
 
@@ -162,8 +175,10 @@ TfLiteStatus Worker::TryCopyInputTensors(const Job& job) {
       }
       tensor_it = unresolved_tensors.erase(tensor_it);
     } else {
-      TFLITE_LOG(ERROR) << "Unresolved input tensor " << tensor_index
-                        << " of subgraph " << job.subgraph_idx;
+      TF_LITE_MAYBE_REPORT_ERROR(
+          GetErrorReporter(),
+          "Unresolved input tensor %d of subgraph %d", tensor_index,
+          job.subgraph_idx);
       ++tensor_it;
     }
   }
@@ -185,7 +200,9 @@ TfLiteStatus Worker::TryCopyOutputTensors(const Job& job) {
   auto output_buffer = interpreter->model_output_buffer_[job.model_id].get();
 
   if (!output_buffer) {
-    TFLITE_LOG(ERROR) << "No output buffer for model id " << job.model_id;
+    TF_LITE_MAYBE_REPORT_ERROR(GetErrorReporter(),
+                               "No output buffer for model id %d",
+                               job.model_id);
     return kTfLiteError;
   }
 
@@ -226,8 +243,10 @@ TfLiteStatus Worker::TryUpdateWorkerThread() {
     internal_backend->SetMaxNumThreads(num_threads_);
 
     if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
-      TFLITE_LOG(ERROR) << "Worker " << device_flag_
-                        << " failed to set cpu thread affinity";
+      TF_LITE_MAYBE_REPORT_ERROR(
+          GetErrorReporter(),
+          "Worker for device %d failed to set cpu thread affinity",
+          device_flag_);
       return kTfLiteError;
     }
   }

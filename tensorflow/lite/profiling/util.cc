@@ -16,7 +16,7 @@ limitations under the License.
 #include <string>
 
 #include "tensorflow/lite/profiling/util.h"
-#include "tensorflow/lite/tools/logging.h"
+#include "tensorflow/lite/minimal_logging.h"
 
 namespace tflite {
 namespace profiling {
@@ -103,8 +103,8 @@ void UpdateDatabase(const ModelDeviceToLatency& id_profile,
     // check the string name of this model id
     std::string model_name = GetModelName(key.model_id, model_configs);
     if (model_name.empty()) {
-      TFLITE_LOG(WARN) << "UpdateDatabase: Cannot find model #" << model_id
-                       << " in model_configs. Will ignore.";
+      TFLITE_LOG_PROD(TFLITE_LOG_ERROR, "UpdateDatabase: Cannot find model #  %d in model_configs. Will ignore.",
+                      model_id);
       continue;
     }
 

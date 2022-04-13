@@ -10,7 +10,6 @@
 #include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace impl {
@@ -56,9 +55,9 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
-    TFLITE_LOG(ERROR) << "Planner not supported for "
-                      << schedulers_.size()
-                      << " schedulers. Aborting.";
+    TF_LITE_REPORT_ERROR(interpreter_->error_reporter(),
+                         "[Planner] Not supported for %d schedulers",
+                         schedulers_.size());
     return kTfLiteError;
   }
 
@@ -380,7 +379,9 @@ void Planner::FlushFinishedJobs() {
     }
     log_file.close();
   } else {
-    TFLITE_LOG(ERROR) << "Invalid log file path :" << log_path_;
+    TF_LITE_REPORT_ERROR(interpreter_->error_reporter(),
+                         "[Planner] Invalid log file path %s",
+                         log_path_.c_str());
   }
 }
 
@@ -492,7 +493,8 @@ void Planner::Plan() {
 
     if (need_cpu_update_) {
       if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
-        TFLITE_LOG(ERROR) << "Planner failed to set cpu thread affinity";
+        TF_LITE_REPORT_ERROR(interpreter_->error_reporter(),
+                            "[Planner] Failed to set cpu thread affinity");
         // TODO #21: Handle errors in multi-thread environment
       } 
       need_cpu_update_ = false;

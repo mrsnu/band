@@ -5,7 +5,6 @@
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace impl {
@@ -70,8 +69,10 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
 
   std::shared_ptr<Planner> planner = planner_.lock();
   if (!planner) {
-    TFLITE_LOG(ERROR) << "Worker " << device_flag_
-                      << " failed to acquire ptr to planner";
+    TF_LITE_MAYBE_REPORT_ERROR(
+        GetErrorReporter(),
+        "%s worker failed to acquire ptr to planner",
+        TfLiteDeviceGetName(device_flag_));
     return -1;
   }
   Interpreter* interpreter = planner->GetInterpreter();
@@ -105,8 +106,10 @@ void GlobalQueueWorker::Work() {
     lock.unlock();
 
     if (!IsValid(current_job_)) {
-      TFLITE_LOG(ERROR) << "Worker " << device_flag_
-                        << " spotted an invalid job";
+      TF_LITE_MAYBE_REPORT_ERROR(
+          GetErrorReporter(),
+          "%s worker failed to acquire ptr to planner",
+          TfLiteDeviceGetName(device_flag_));
       break;
     }
 
@@ -165,7 +168,10 @@ void GlobalQueueWorker::Work() {
           current_job_.status = kTfLiteJobInvokeFailure;
         }
       } else {
-        TFLITE_LOG(ERROR) << "Worker failed to copy input.";
+        TF_LITE_MAYBE_REPORT_ERROR(
+            GetErrorReporter(),
+            "%s worker failed to copy input",
+            TfLiteDeviceGetName(device_flag_));
         // TODO #21: Handle errors in multi-thread environment
         current_job_.status = kTfLiteJobInputCopyFailure;
       }
@@ -178,8 +184,10 @@ void GlobalQueueWorker::Work() {
       planner_ptr->GetSafeBool().notify();
     } else {
       // TODO #21: Handle errors in multi-thread environment
-      TFLITE_LOG(ERROR) << "Worker " << device_flag_
-                        << " failed to acquire ptr to planner";
+      TF_LITE_MAYBE_REPORT_ERROR(
+          GetErrorReporter(),
+          "%s worker failed to acquire ptr to planner",
+          TfLiteDeviceGetName(device_flag_));
       return;
     }
   }

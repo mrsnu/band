@@ -52,7 +52,7 @@ cc_library(
     copts = common_copts,
     deps = [
         "//tensorflow/lite/profiling:time",
-        "//tensorflow/lite/tools:logging",
+        "//tensorflow/lite:minimal_logging"
     ],
 )
 
@@ -104,7 +104,6 @@ cc_library(
     copts = common_copts,
     deps = [
         "//tensorflow/lite:util",
-        "//tensorflow/lite/tools:logging",
         "@jsoncpp_git//:jsoncpp",
     ],
 )

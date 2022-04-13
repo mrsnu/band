@@ -21,9 +21,9 @@ limitations under the License.
 #include "ruy/context.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
+#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/kernels/op_macros.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace {
 const int kDefaultNumThreadpoolThreads = 1;
@@ -110,7 +110,7 @@ void CpuBackendContext::UpdateCpuSet(std::thread::id tid) {
     int max_threads = std::min(max_num_threads_, current_set.NumEnabled());
     ruy_contexts_[tid]->set_max_num_threads(max_threads);
     ruy_contexts_[tid]->set_cpu_mask(current_set.GetMaskBits());
-    TFLITE_LOG(INFO) << "Ruy tid " << tid << " number of threads " << max_threads;
+    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Ruy tid %d number of threads %d.", tid, max_threads);
   }
 }
 

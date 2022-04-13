@@ -11,7 +11,6 @@
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/planner/util.h"
 #include "tensorflow/lite/safe_bool.h"
-#include "tensorflow/lite/tools/logging.h"
 #include "tensorflow/lite/worker.h"
 
 namespace tflite {
