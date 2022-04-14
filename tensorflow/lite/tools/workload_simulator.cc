@@ -130,7 +130,7 @@ TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
       auto& request = *itr;
 
       TF_LITE_ENSURE_STATUS(ValidateJsonConfig(
-          request, {"model", "count", "dependency"}, DefaultErrorReporter()));
+          request, {"model", "count", "dependency"}));
 
       std::string model_name = request["model"].asString();
       if (model_fname_to_id.find(model_name) == model_fname_to_id.end()) {
