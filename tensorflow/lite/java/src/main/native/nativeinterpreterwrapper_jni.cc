@@ -459,7 +459,9 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_runAsync(
   }
 
   env->ReleaseIntArrayElements(model_ids, model_ids_elements, 0);
-  env->ReleaseLongArrayElements(slos, slos_elements, 0);
+  if (slos) {
+    env->ReleaseLongArrayElements(slos, slos_elements, 0);
+  }
 
   std::vector<int> job_ids_vector =
       interpreter->InvokeModelsAsync(jobs, input_tensors);
