@@ -171,8 +171,8 @@ int32_t TfLiteInterpreterRegisterModel(TfLiteInterpreter* interpreter, TfLiteMod
 
 void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs, TfLiteTensor** outputs) {
   if (inputs && outputs) {
-    std::vector<TfLiteTensor*> input_tensors(inputs, inputs + sizeof(inputs) / sizeof(TfLiteTensor*));
-    std::vector<TfLiteTensor*> output_tensors(outputs, outputs + sizeof(outputs) / sizeof(TfLiteTensor*));
+    std::vector<TfLiteTensor*> input_tensors(inputs, inputs + TfLiteInterpreterGetInputTensorCount(interpreter, model_id));
+    std::vector<TfLiteTensor*> output_tensors(outputs, outputs + TfLiteInterpreterGetOutputTensorCount(interpreter, model_id));
     interpreter->impl->InvokeModelSync(model_id, input_tensors, output_tensors);
   } else {
     interpreter->impl->InvokeModelSync(model_id);
