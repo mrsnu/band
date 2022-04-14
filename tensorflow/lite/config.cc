@@ -17,26 +17,17 @@ limitations under the License.
 #include "tensorflow/lite/minimal_logging.h"
 
 #include <json/json.h>
-#include <fstream>
 
+#include <fstream>
 
 namespace tflite {
 
 // Note : program aborts when asX fails below
 // e.g., asInt, asCString, ...
-TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
-                                        std::string json_fname,
-                                        RuntimeConfig& runtime_config) {
-  std::ifstream config(json_fname, std::ifstream::binary);
-  TF_LITE_ENSURE(error_reporter, config.is_open());
-
-  Json::Value root;
-  config >> root;
-  
-  TF_LITE_ENSURE(error_reporter, root.isObject());
-  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Runtime config %s", root.toStyledString().c_str());
-
-  if (ValidateJsonConfig(error_reporter, root, {"log_path", "schedulers"}) !=
+TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
+                                              RuntimeConfig& runtime_config,
+                                              ErrorReporter* error_reporter) {
+  if (ValidateJsonConfig(root, {"log_path", "schedulers"}, error_reporter) !=
       kTfLiteOk) {
     return kTfLiteError;
   }
@@ -196,18 +187,47 @@ TfLiteStatus ParseRuntimeConfigFromJson(ErrorReporter* error_reporter,
   return kTfLiteOk;
 }
 
-TfLiteStatus ValidateJsonConfig(ErrorReporter* error_reporter,
-                                const Json::Value& json_config,
-                                std::vector<std::string> keys) {
+TfLiteStatus ValidateJsonConfig(const Json::Value& json_config,
+                                std::vector<std::string> keys,
+                                ErrorReporter* error_reporter) {
   for (auto key : keys) {
-    if (json_config[key].isNull()) {
-      TF_LITE_ENSURE_FORMATTED_MSG(
-          error_reporter, !json_config[key].isNull(),
-          "Please check if the argument %s is given in the config file.",
-          key.c_str());
-    }
+    TF_LITE_ENSURE_FORMATTED_MSG(
+        error_reporter, !json_config[key].isNull(),
+        "Please check if the argument %s is given in the config file.",
+        key.c_str());
   }
   return kTfLiteOk;
+}
+
+TfLiteStatus ParseRuntimeConfigFromJson(std::string json_fname,
+                                        RuntimeConfig & runtime_config,
+                                        ErrorReporter * error_reporter) {
+  std::ifstream config(json_fname, std::ifstream::binary);
+  TF_LITE_ENSURE(error_reporter, config.is_open());
+
+  Json::Value root;
+  config >> root;
+
+  TF_LITE_ENSURE(error_reporter, root.isObject());
+  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Runtime config %s",
+                      root.toStyledString().c_str());
+
+  return ParseRuntimeConfigFromJsonObject(root, runtime_config, error_reporter);
+}
+
+TfLiteStatus ParseRuntimeConfigFromJson(
+    const void* buffer, size_t buffer_length, RuntimeConfig& runtime_config,
+    ErrorReporter* error_reporter) {
+  Json::Reader reader;
+  Json::Value root;
+
+  TF_LITE_ENSURE(
+      error_reporter,
+      reader.parse(static_cast<const char*>(buffer),
+                   static_cast<const char*>(buffer) + buffer_length, root));
+  TF_LITE_ENSURE(error_reporter, root.isObject());
+
+  return ParseRuntimeConfigFromJsonObject(root, runtime_config, error_reporter);
 }
 
 }  // namespace tflite

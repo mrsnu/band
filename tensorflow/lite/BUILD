@@ -234,15 +234,6 @@ cc_library(
 )
 
 cc_library(
-    name = "error_reporter",
-    hdrs = [
-        "error_reporter.h",
-        "stderr_reporter.h",
-    ],
-    deps = ["//tensorflow/lite/core/api"],
-)
-
-cc_library(
     name = "cpu",
     srcs = [
         "cpu.cc",
@@ -256,6 +247,21 @@ cc_library(
 )
 
 cc_library(
+    name = "error_reporter",
+    srcs = [
+        "stderr_reporter.cc",
+    ],
+    hdrs = [
+        "error_reporter.h",
+        "stderr_reporter.h",
+    ],
+    deps = [
+        ":minimal_logging",
+        "//tensorflow/lite/core/api",
+    ],
+)
+
+cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
@@ -265,7 +271,6 @@ cc_library(
         "model_builder.cc",
         "mutable_op_resolver.cc",
         "optional_debug_tools.cc",
-        "stderr_reporter.cc",
         "tensor_ring_buffer.cc",
         "planner/planner.cc",
         "planner/fixed_device_scheduler.cc",

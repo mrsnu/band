@@ -55,7 +55,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
-    TF_LITE_REPORT_ERROR(interpreter_->error_reporter(),
+    TF_LITE_REPORT_ERROR(interpreter_->GetErrorReporter(),
                          "[Planner] Not supported for %d schedulers",
                          schedulers_.size());
     return kTfLiteError;
@@ -379,7 +379,7 @@ void Planner::FlushFinishedJobs() {
     }
     log_file.close();
   } else {
-    TF_LITE_REPORT_ERROR(interpreter_->error_reporter(),
+    TF_LITE_REPORT_ERROR(interpreter_->GetErrorReporter(),
                          "[Planner] Invalid log file path %s",
                          log_path_.c_str());
   }
@@ -493,7 +493,7 @@ void Planner::Plan() {
 
     if (need_cpu_update_) {
       if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
-        TF_LITE_REPORT_ERROR(interpreter_->error_reporter(),
+        TF_LITE_REPORT_ERROR(interpreter_->GetErrorReporter(),
                             "[Planner] Failed to set cpu thread affinity");
         // TODO #21: Handle errors in multi-thread environment
       } 

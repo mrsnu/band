@@ -17,8 +17,10 @@ limitations under the License.
 #include <memory>
 
 #include "tensorflow/lite/c/c_api_internal.h"
+#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/error_reporter.h"
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/util.h"
@@ -56,13 +58,13 @@ TfLiteModel* TfLiteModelCreate(const void* model_data, size_t model_size) {
   auto model = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(
       static_cast<const char*>(model_data), model_size);
   std::shared_ptr<const tflite::FlatBufferModel> shared_model(model.release());
-  return shared_model ? new TfLiteModel{std::move(shared_model)} : nullptr;
+  return shared_model ? new TfLiteModel{std::move(shared_model), nullptr, tflite::MutableOpResolver()} : nullptr;
 }
 
 TfLiteModel* TfLiteModelCreateFromFile(const char* model_path) {
   auto model = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path);
   std::shared_ptr<const tflite::FlatBufferModel> shared_model(model.release());
-  return shared_model ? new TfLiteModel{std::move(shared_model)} : nullptr;
+  return shared_model ? new TfLiteModel{std::move(shared_model), model_path, tflite::MutableOpResolver()} : nullptr;
 }
 
 void TfLiteModelDelete(TfLiteModel* model) { delete model; }
@@ -75,16 +77,6 @@ void TfLiteInterpreterOptionsDelete(TfLiteInterpreterOptions* options) {
   delete options;
 }
 
-void TfLiteInterpreterOptionsSetNumThreads(TfLiteInterpreterOptions* options,
-                                           int32_t num_threads) {
-  options->num_threads = num_threads;
-}
-
-void TfLiteInterpreterOptionsAddDelegate(TfLiteInterpreterOptions* options,
-                                         TfLiteDelegate* delegate) {
-  options->delegates.push_back(delegate);
-}
-
 void TfLiteInterpreterOptionsSetErrorReporter(
     TfLiteInterpreterOptions* options,
     void (*reporter)(void* user_data, const char* format, va_list args),
@@ -93,32 +85,62 @@ void TfLiteInterpreterOptionsSetErrorReporter(
   options->error_reporter_user_data = user_data;
 }
 
-TfLiteInterpreter* TfLiteInterpreterCreate(
-    const TfLiteModel* model,
-    const TfLiteInterpreterOptions* optional_options) {
-  if (!model || !model->impl) {
-    return nullptr;
+TfLiteStatus TfLiteInterpreterOptionsSetConfigPath(
+    TfLiteInterpreterOptions* options,
+    const char* config_path) {
+  std::unique_ptr<tflite::ErrorReporter> optional_error_reporter;
+  if (options && options->error_reporter != nullptr) {
+    optional_error_reporter.reset(
+        new CallbackErrorReporter(options->error_reporter,
+                                  options->error_reporter_user_data));
+  }
+  tflite::ErrorReporter* error_reporter = optional_error_reporter
+                                              ? optional_error_reporter.get()
+                                              : tflite::DefaultErrorReporter();
+
+  if (tflite::ParseRuntimeConfigFromJson(config_path, options->config, error_reporter) != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Parsing runtime_config json file failed.");
+    return kTfLiteError;
   }
 
+  return kTfLiteOk;
+}
+
+TfLiteStatus TfLiteInterpreterOptionsSetConfigFile(
+    TfLiteInterpreterOptions* options,
+    const void* config_data, size_t config_size) {
+  std::unique_ptr<tflite::ErrorReporter> optional_error_reporter;
+  if (options && options->error_reporter != nullptr) {
+    optional_error_reporter.reset(
+        new CallbackErrorReporter(options->error_reporter,
+                                  options->error_reporter_user_data));
+  }
+  tflite::ErrorReporter* error_reporter = optional_error_reporter
+                                              ? optional_error_reporter.get()
+                                              : tflite::DefaultErrorReporter();
+
+  if (tflite::ParseRuntimeConfigFromJson(config_data, config_size, options->config, error_reporter) != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Parsing runtime_config json file failed.");
+    return kTfLiteError;
+  }
+
+  return kTfLiteOk;
+}
+
+TfLiteInterpreter* TfLiteInterpreterCreate(
+    const TfLiteInterpreterOptions* optional_options) {
   std::unique_ptr<tflite::ErrorReporter> optional_error_reporter;
   if (optional_options && optional_options->error_reporter != nullptr) {
     optional_error_reporter.reset(
         new CallbackErrorReporter(optional_options->error_reporter,
                                   optional_options->error_reporter_user_data));
   }
-
-  // TODO(b/111881878): Allow use of C API without pulling in all builtin ops.
-  tflite::ops::builtin::BuiltinOpResolver resolver;
-  if (optional_options) {
-    resolver.AddAll(optional_options->op_resolver);
-  }
   tflite::ErrorReporter* error_reporter = optional_error_reporter
                                               ? optional_error_reporter.get()
                                               : tflite::DefaultErrorReporter();
-  std::unique_ptr<tflite::Interpreter> interpreter;
-  // TODO: Interpreter config / register model
 
-  return new TfLiteInterpreter{model->impl, std::move(optional_error_reporter),
+  std::unique_ptr<tflite::Interpreter> interpreter = std::make_unique<tflite::Interpreter>(error_reporter, optional_options->config);
+  return new TfLiteInterpreter{std::move(optional_error_reporter),
                                std::move(interpreter)};
 }
 
@@ -126,54 +148,89 @@ void TfLiteInterpreterDelete(TfLiteInterpreter* interpreter) {
   delete interpreter;
 }
 
+int32_t TfLiteInterpreterRegisterModel(TfLiteInterpreter* interpreter, TfLiteModel* model) {
+  if (interpreter == nullptr || model == nullptr) return 0;
+
+  tflite::ModelConfig model_config;
+
+  // TODO(b/111881878): Allow use of C API without pulling in all builtin ops.
+  tflite::ops::builtin::BuiltinOpResolver resolver;
+  resolver.AddAll(model->op_resolver);
+
+  int model_id =
+      tflite::InterpreterBuilder::RegisterModel(*model->impl, &model_config, resolver, &interpreter->impl);
+
+  if (model_id == -1) {
+    TF_LITE_REPORT_ERROR(interpreter->impl->GetErrorReporter(),
+                         "Internal error: Cannot register model: %s",
+                         model->model_path);
+  }
+
+  return model_id;
+}
+
+void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs, TfLiteTensor** outputs) {
+  if (inputs && outputs) {
+    std::vector<TfLiteTensor*> input_tensors(inputs, inputs + sizeof(inputs) / sizeof(TfLiteTensor*));
+    std::vector<TfLiteTensor*> output_tensors(outputs, outputs + sizeof(outputs) / sizeof(TfLiteTensor*));
+    interpreter->impl->InvokeModelSync(model_id, input_tensors, output_tensors);
+  } else {
+    interpreter->impl->InvokeModelSync(model_id);
+  }
+}
+
+int32_t TfLiteInterpreterInvokeAsync(TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs) {
+  if (inputs) {
+    std::vector<TfLiteTensor*> input_tensors(inputs, inputs + sizeof(inputs) / sizeof(TfLiteTensor*));
+    return interpreter->impl->InvokeModelAsync(model_id, input_tensors);
+  } else {
+    return interpreter->impl->InvokeModelAsync(model_id);
+  }
+}
+
+TfLiteStatus TfLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs) {
+  interpreter->impl->GetPlanner()->Wait({job_id});
+  if (outputs) {
+    std::vector<TfLiteTensor*> output_tensors(outputs, outputs + sizeof(outputs) / sizeof(TfLiteTensor*));
+    return interpreter->impl->GetOutputTensors(job_id, output_tensors);
+  }
+  return kTfLiteOk;
+}
+
 int32_t TfLiteInterpreterGetInputTensorCount(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index) {
-  return static_cast<int32_t>(interpreter->impl->inputs(subgraph_index).size());
-}
-
-TfLiteTensor* TfLiteInterpreterGetInputTensor(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t input_index) {
-  return interpreter->impl->tensor(subgraph_index, interpreter->impl->inputs(subgraph_index)[input_index]);
-}
-
-TfLiteStatus TfLiteInterpreterResizeInputTensor(TfLiteInterpreter* interpreter,
-                                                int32_t subgraph_index,
-                                                int32_t input_index,
-                                                const int* input_dims,
-                                                int32_t input_dims_size) {
-  std::vector<int> dims{input_dims, input_dims + input_dims_size};
-  return interpreter->impl->ResizeInputTensor(subgraph_index,
-      interpreter->impl->inputs(subgraph_index)[input_index], dims);
-}
-
-TfLiteStatus TfLiteInterpreterAllocateTensors(TfLiteInterpreter* interpreter) {
-  return interpreter->impl->AllocateTensors();
-}
-
-void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter, int32_t* model_id, uint32_t count) {
-  std::vector<tflite::Job> jobs;
-  for (uint32_t i = 0; i < count; i++) {
-    jobs.push_back(tflite::Job(model_id[i]));
-  }
-  interpreter->impl->InvokeModelsSync(jobs);
-}
-
-void TfLiteInterpreterInvokeAsync(TfLiteInterpreter* interpreter, int32_t* model_id, uint32_t count) {
-  std::vector<tflite::Job> jobs;
-  for (uint32_t i = 0; i < count; i++) {
-    jobs.push_back(tflite::Job(model_id[i]));
-  }
-  interpreter->impl->InvokeModelsAsync(jobs);
+    const TfLiteInterpreter* interpreter, int32_t model_id) {
+  if (interpreter == nullptr) return 0;
+  size_t subgraph_index = interpreter->impl->GetSubgraphIdx(model_id, kTfLiteCPU);
+  return interpreter->impl->inputs(subgraph_index).size();
 }
 
 int32_t TfLiteInterpreterGetOutputTensorCount(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index) {
-  return static_cast<int32_t>(interpreter->impl->outputs(subgraph_index).size());
+    const TfLiteInterpreter* interpreter, int32_t model_id) {
+  if (interpreter == nullptr) return 0;
+  size_t subgraph_index = interpreter->impl->GetSubgraphIdx(model_id, kTfLiteCPU);
+  return interpreter->impl->outputs(subgraph_index).size();
 }
 
-const TfLiteTensor* TfLiteInterpreterGetOutputTensor(
-    const TfLiteInterpreter* interpreter, int32_t subgraph_index, int32_t output_index) {
-  return interpreter->impl->tensor(subgraph_index, interpreter->impl->outputs(subgraph_index)[output_index]);
+TfLiteTensor* TfLiteInterpreterAllocateInputTensor(
+    const TfLiteInterpreter* interpreter, int32_t model_id, int32_t input_index) {
+  if (interpreter == nullptr) return nullptr;
+  size_t subgraph_index = interpreter->impl->GetSubgraphIdx(model_id, kTfLiteCPU);
+
+  return TfLiteTensorCreateLike(
+      interpreter->impl->tensor(subgraph_index, interpreter->impl->inputs(subgraph_index)[input_index]));
+}
+
+TfLiteTensor* TfLiteInterpreterAllocateOutputTensor(
+    const TfLiteInterpreter* interpreter, int32_t model_id, int32_t output_index) {
+  if (interpreter == nullptr) return nullptr;
+  size_t subgraph_index = interpreter->impl->GetSubgraphIdx(model_id, kTfLiteCPU);
+
+  return TfLiteTensorCreateLike(
+      interpreter->impl->tensor(subgraph_index, interpreter->impl->outputs(subgraph_index)[output_index]));
+}
+
+void TfLiteTensorDeallocate(TfLiteTensor* tensor) {
+  TfLiteTensorDelete(tensor);
 }
 
 TfLiteType TfLiteTensorType(const TfLiteTensor* tensor) { return tensor->type; }
