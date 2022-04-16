@@ -141,12 +141,8 @@ TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterOptionsSetConfigFile(
 // TfLiteInterpreter provides inference from a provided model.
 typedef struct TfLiteInterpreter TfLiteInterpreter;
 
-// Returns a new interpreter using the provided model and options, or null on
-// failure.
-//
-// * `model` must be a valid model instance. The caller retains ownership of the
-//   object, and can destroy it immediately after creating the interpreter; the
-//   interpreter will maintain its own reference to the underlying model data.
+// Returns a new interpreter using the options, or null on failure.
+// 
 // * `optional_options` may be null. The caller retains ownership of the object,
 //   and can safely destroy it immediately after creating the interpreter.
 //

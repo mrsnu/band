@@ -28,19 +28,17 @@ limitations under the License.
 extern "C" {
 #endif  // __cplusplus
 
-void TfLiteModelOptionsAddBuiltinOp(
-    TfLiteModel* model, TfLiteBuiltinOperator op,
-    const TfLiteRegistration* registration, int32_t min_version,
-    int32_t max_version) {
+void TfLiteModelOptionsAddBuiltinOp(TfLiteModel* model,
+                                    TfLiteBuiltinOperator op,
+                                    const TfLiteRegistration* registration,
+                                    int32_t min_version, int32_t max_version) {
   model->op_resolver.AddBuiltin(static_cast<tflite::BuiltinOperator>(op),
-                                  registration, min_version, max_version);
+                                registration, min_version, max_version);
 }
 
-void TfLiteModelOptionsAddCustomOp(TfLiteModel* model, 
-                                         const char* name,
-                                         const TfLiteRegistration* registration,
-                                         int32_t min_version,
-                                         int32_t max_version) {
+void TfLiteModelOptionsAddCustomOp(TfLiteModel* model, const char* name,
+                                   const TfLiteRegistration* registration,
+                                   int32_t min_version, int32_t max_version) {
   model->op_resolver.AddCustom(name, registration, min_version, max_version);
 }
 
