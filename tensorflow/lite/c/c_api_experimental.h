@@ -23,18 +23,14 @@ limitations under the License.
 extern "C" {
 #endif  // __cplusplus
 
-// Resets all variable tensors to zero.
-TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterResetVariableTensors(
-    TfLiteInterpreter* interpreter, int32_t subgraph_idx);
-
 // Adds an op registration for a builtin operator.
 //
 // NOTE: The interpreter will make a copy of `registration` internally, so the
 // caller should ensure that its contents (function pointers, etc...) remain
 // valid for the duration of the interpreter's lifetime. A common practice is
 // making the provided TfLiteRegistration instance static.
-TFL_CAPI_EXPORT void TfLiteInterpreterOptionsAddBuiltinOp(
-    TfLiteInterpreterOptions* options, TfLiteBuiltinOperator op,
+TFL_CAPI_EXPORT void TfLiteModelAddBuiltinOp(
+    TfLiteModel* model, TfLiteBuiltinOperator op,
     const TfLiteRegistration* registration, int32_t min_version,
     int32_t max_version);
 
@@ -44,14 +40,10 @@ TFL_CAPI_EXPORT void TfLiteInterpreterOptionsAddBuiltinOp(
 // caller should ensure that its contents (function pointers, etc...) remain
 // valid for the duration of any created interpreter's lifetime. A common
 // practice is making the provided TfLiteRegistration instance static.
-TFL_CAPI_EXPORT void TfLiteInterpreterOptionsAddCustomOp(
-    TfLiteInterpreterOptions* options, const char* name,
+TFL_CAPI_EXPORT void TfLiteModelOptionsAddCustomOp(
+    TfLiteModel* model, const char* name,
     const TfLiteRegistration* registration, int32_t min_version,
     int32_t max_version);
-
-// Enable or disable the NN API for the interpreter (true to enable).
-TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetUseNNAPI(
-    TfLiteInterpreterOptions* options, bool enable);
 
 #ifdef __cplusplus
 }  // extern "C"
