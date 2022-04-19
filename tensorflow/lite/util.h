@@ -102,6 +102,8 @@ struct Job {
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
 
+  int64_t scheduling_time = 0;
+
   // Constant variables (Valid after invoke)
   // TODO: better job life-cycle to change these to `const`
   int model_id;

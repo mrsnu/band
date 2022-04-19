@@ -1,4 +1,5 @@
  #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
+ #include <chrono>
 
 namespace tflite {
 namespace impl {
@@ -7,6 +8,7 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
+    auto scheduling_time_begin = std::chrono::system_clock::now();
     planner_->UpdateWorkerWaitingTime();
     std::set<int> idle_workers = planner_->GetIdleWorkers();
     if (idle_workers.empty()) {
@@ -109,6 +111,7 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
       // only set these fields if this is the first subgraph of this model
       job.expected_latency = largest_shortest_latency;
     }
+    job.scheduling_time = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - scheduling_time_begin).count();
     EnqueueAction(job, target_subgraph);
 
     // add next job to reserved_, if one exists
