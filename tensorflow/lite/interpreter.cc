@@ -595,6 +595,11 @@ TfLiteStatus Interpreter::GetOutputTensors(int job_id, Tensors& outputs) const {
       ->GetTensorsFromHandle(outputs, job.output_handle);
 }
 
+void Interpreter::SetEndInvokeFunction(void (*end_invoke_func)(int /* job_id */,
+                                                  TfLiteStatus /* result */)) {
+                                                    planner_->SetEndInvokeFunction(end_invoke_func);
+                                                  }
+
 TfLiteStatus Interpreter::AddTensors(size_t subgraph_index, int tensors_to_add,
                                      int* first_new_tensor_index) {
   TF_LITE_ENSURE_SUBGRAPH_INDEX(subgraph_index);

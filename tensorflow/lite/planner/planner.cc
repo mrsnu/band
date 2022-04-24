@@ -280,6 +280,12 @@ void Planner::EnqueueFinishedJob(Job job) {
 
     end_invoke_.notify_all();
   }
+
+  // report end invoke using callback
+  if (on_end_invoke_ && interpreter_->subgraph(job.subgraph_idx)->IsEnd()) {
+    on_end_invoke_(job.job_id,
+                   job.status == kTfLiteJobSuccess ? kTfLiteOk : kTfLiteError);
+  }
 }
 
 int Planner::EnqueueRequest(Job job, bool push_front) {
@@ -317,6 +323,11 @@ std::vector<int> Planner::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
 
 void Planner::SetWindowSize(int schedule_window_size) {
   schedule_window_size_ = schedule_window_size;
+}
+
+void Planner::SetEndInvokeFunction(
+    void (*end_invoke_func)(int /* job_id */, TfLiteStatus /* result */)) {
+  on_end_invoke_ = end_invoke_func;
 }
 
 Job Planner::GetFinishedJob(int job_id) {

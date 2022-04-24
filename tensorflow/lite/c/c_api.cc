@@ -85,6 +85,12 @@ void TfLiteInterpreterOptionsSetErrorReporter(
   options->error_reporter_user_data = user_data;
 }
 
+void TfLiteInterpreterOptionsSetOnInvokeEnd(
+    TfLiteInterpreterOptions* options,
+    void (*on_invoke_end)(int job_id, TfLiteStatus status)) {
+  options->on_invoke_end = on_invoke_end;
+}
+
 TfLiteStatus TfLiteInterpreterOptionsSetConfigPath(
     TfLiteInterpreterOptions* options,
     const char* config_path) {
@@ -140,6 +146,9 @@ TfLiteInterpreter* TfLiteInterpreterCreate(
                                               : tflite::DefaultErrorReporter();
 
   std::unique_ptr<tflite::Interpreter> interpreter = std::make_unique<tflite::Interpreter>(error_reporter, optional_options->config);
+  if (optional_options->on_invoke_end) {
+    interpreter->SetEndInvokeFunction(optional_options->on_invoke_end);
+  }
   return new TfLiteInterpreter{std::move(optional_error_reporter),
                                std::move(interpreter)};
 }

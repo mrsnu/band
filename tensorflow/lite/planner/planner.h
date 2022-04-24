@@ -65,6 +65,10 @@ class Planner {
     return model_execution_count_;
   }
 
+  // Sets the callback function pointer to report the end of invoke.
+  void SetEndInvokeFunction(void (*end_invoke_func)(int /* job_id */,
+                                                    TfLiteStatus /* result */));
+
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
 
@@ -128,6 +132,8 @@ class Planner {
   // Jobs Finished
   ConcurrentJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
+
+  std::function<void(int, TfLiteStatus)> on_end_invoke_;
 
   // Request Queue
   ConcurrentJobQueue requests_;

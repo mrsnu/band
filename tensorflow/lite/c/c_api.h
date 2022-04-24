@@ -127,6 +127,11 @@ TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetErrorReporter(
     void (*reporter)(void* user_data, const char* format, va_list args),
     void* user_data);
 
+// Sets an on end invoke callback for interpreter execution.
+TFL_CAPI_EXPORT extern void TfLiteInterpreterOptionsSetOnInvokeEnd(
+    TfLiteInterpreterOptions* options,
+    void (*on_invoke_end)(int job_id, TfLiteStatus status));
+
 // Set config options from file path.
 TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterOptionsSetConfigPath(
     TfLiteInterpreterOptions* options,
