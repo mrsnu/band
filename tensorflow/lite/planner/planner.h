@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
