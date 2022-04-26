@@ -510,8 +510,7 @@ class Interpreter {
   TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetEndInvokeFunction(void (*end_invoke_func)(int /* job_id */,
-                                                    TfLiteStatus /* result */));
+  void SetEndInvokeFunction(std::function<void(int, TfLiteStatus)> on_end_invoke);
 
   void SetXNNPACKNumThreads(int num_threads);
 

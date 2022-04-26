@@ -326,8 +326,8 @@ void Planner::SetWindowSize(int schedule_window_size) {
 }
 
 void Planner::SetEndInvokeFunction(
-    void (*end_invoke_func)(int /* job_id */, TfLiteStatus /* result */)) {
-  on_end_invoke_ = end_invoke_func;
+  std::function<void(int, TfLiteStatus)> on_end_invoke) {
+  on_end_invoke_ = on_end_invoke;
 }
 
 Job Planner::GetFinishedJob(int job_id) {

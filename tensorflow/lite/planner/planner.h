@@ -67,8 +67,7 @@ class Planner {
   }
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetEndInvokeFunction(void (*end_invoke_func)(int /* job_id */,
-                                                    TfLiteStatus /* result */));
+  void SetEndInvokeFunction(std::function<void(int, TfLiteStatus)> on_end_invoke);
 
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
