@@ -99,6 +99,7 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
 
     auto requests_it = requests.begin() + target_job_idx;
     Job job = *requests_it;
+    job.window_size = window_size;
 
     // erase the job from requests and decrement window_size
     requests.erase(requests_it);

@@ -461,11 +461,14 @@ TfLiteStatus BenchmarkTfLiteModel::InitInterpreter() {
 
   auto& model_information = benchmark_config_.model_information;
   for (int i = 0; i < model_information.size(); ++i) {
+    size_t prev_subgraphs = interpreter_->subgraphs_size();
     std::string model_name = model_information[i].config.model_fname;
     TF_LITE_ENSURE_STATUS(LoadModel(model_name));
     int model_id = tflite::InterpreterBuilder::RegisterModel(
         *models_[i], &model_information[i].config, *resolver, &interpreter_, num_threads);
 
+    TFLITE_LOG(INFO) <<  interpreter_->subgraphs_size() - prev_subgraphs
+                    << " subgraphs loaded for model " << model_name;
     if (model_id == -1)
       return kTfLiteError;
   }
