@@ -42,7 +42,10 @@ struct TfLiteModel {
 struct TfLiteInterpreterOptions {
   void (*error_reporter)(void* user_data, const char* format,
                          va_list args) = nullptr;
+  void (*on_end_invoke)(void* user_data, int job_id,
+                        TfLiteStatus status) = nullptr;
   void* error_reporter_user_data = nullptr;
+  void* on_invoke_user_data = nullptr;
   tflite::RuntimeConfig config;
 };
 

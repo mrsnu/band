@@ -509,6 +509,9 @@ class Interpreter {
 
   TfLiteStatus GetOutputTensors(int job_id, Tensors& outputs) const;
 
+  // Sets the callback function pointer to report the end of invoke.
+  void SetEndInvokeFunction(std::function<void(int, TfLiteStatus)> on_end_invoke);
+
   void SetXNNPACKNumThreads(int num_threads);
 
   /// Allow float16 precision for FP32 calculation when possible.
