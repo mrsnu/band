@@ -162,12 +162,13 @@ TFL_CAPI_EXPORT extern void TfLiteInterpreterDelete(
 
 TFL_CAPI_EXPORT extern int32_t TfLiteInterpreterRegisterModel(TfLiteInterpreter* interpreter, TfLiteModel* model);
 
+// NOTE: The client *must* ensure the length of inputs, outputs are equal to the
+// given model's tensor count, otherwise, the below functions could cause an
+// access violation
 TFL_CAPI_EXPORT extern void TfLiteInterpreterInvokeSync(
     TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs, TfLiteTensor** outputs);
-
 TFL_CAPI_EXPORT extern int TfLiteInterpreterInvokeAsync(
     TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs);
-
 TFL_CAPI_EXPORT extern TfLiteStatus TfLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs);
 
 // Returns the number of input tensors associated with the model.
