@@ -185,29 +185,43 @@ int32_t TfLiteInterpreterRegisterModel(TfLiteInterpreter* interpreter, TfLiteMod
   return model_id;
 }
 
-void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs, TfLiteTensor** outputs) {
+void TfLiteInterpreterInvokeSync(TfLiteInterpreter* interpreter,
+                                 int32_t model_id, TfLiteTensor** inputs,
+                                 TfLiteTensor** outputs) {
   if (inputs && outputs) {
-    std::vector<TfLiteTensor*> input_tensors(inputs, inputs + TfLiteInterpreterGetInputTensorCount(interpreter, model_id));
-    std::vector<TfLiteTensor*> output_tensors(outputs, outputs + TfLiteInterpreterGetOutputTensorCount(interpreter, model_id));
+    std::vector<TfLiteTensor*> input_tensors(
+        inputs,
+        inputs + TfLiteInterpreterGetInputTensorCount(interpreter, model_id));
+    std::vector<TfLiteTensor*> output_tensors(
+        outputs,
+        outputs + TfLiteInterpreterGetOutputTensorCount(interpreter, model_id));
     interpreter->impl->InvokeModelSync(model_id, input_tensors, output_tensors);
   } else {
     interpreter->impl->InvokeModelSync(model_id);
   }
 }
 
-int32_t TfLiteInterpreterInvokeAsync(TfLiteInterpreter* interpreter, int32_t model_id, TfLiteTensor** inputs) {
+int32_t TfLiteInterpreterInvokeAsync(TfLiteInterpreter* interpreter,
+                                     int32_t model_id, TfLiteTensor** inputs) {
   if (inputs) {
-    std::vector<TfLiteTensor*> input_tensors(inputs, inputs + sizeof(inputs) / sizeof(TfLiteTensor*));
+    std::vector<TfLiteTensor*> input_tensors(
+        inputs,
+        inputs + TfLiteInterpreterGetInputTensorCount(interpreter, model_id));
     return interpreter->impl->InvokeModelAsync(model_id, input_tensors);
   } else {
     return interpreter->impl->InvokeModelAsync(model_id);
   }
 }
 
-TfLiteStatus TfLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id, TfLiteTensor** outputs) {
+TfLiteStatus TfLiteInterpreterWait(TfLiteInterpreter* interpreter, int job_id,
+                                   TfLiteTensor** outputs) {
   interpreter->impl->GetPlanner()->Wait({job_id});
   if (outputs) {
-    std::vector<TfLiteTensor*> output_tensors(outputs, outputs + sizeof(outputs) / sizeof(TfLiteTensor*));
+    const int model_id =
+        interpreter->impl->GetPlanner()->GetFinishedJob(job_id).model_id;
+    std::vector<TfLiteTensor*> output_tensors(
+        outputs,
+        outputs + TfLiteInterpreterGetOutputTensorCount(interpreter, model_id));
     return interpreter->impl->GetOutputTensors(job_id, output_tensors);
   }
   return kTfLiteOk;
