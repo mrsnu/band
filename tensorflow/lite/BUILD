@@ -86,6 +86,7 @@ FRAMEWORK_LIB_HDRS = [
     "planner/heterogeneous_earliest_finish_time_scheduler.h",
     "planner/least_slack_first_scheduler.h",
     "planner/heterogeneous_earliest_finish_time_reserved_scheduler.h",
+    "planner/offloading_scheduler.h",
     "worker.h",
     "safe_bool.h"
 ]
@@ -280,9 +281,11 @@ cc_library(
         "planner/heterogeneous_earliest_finish_time_scheduler.cc",
         "planner/least_slack_first_scheduler.cc",
         "planner/heterogeneous_earliest_finish_time_reserved_scheduler.cc",
+        "planner/offloading_scheduler.cc",
         "worker.cc",
         "worker_device_queue.cc",
-        "worker_global_queue.cc"
+        "worker_global_queue.cc",
+        "worker_device_queue_offloading.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,
@@ -318,6 +321,9 @@ cc_library(
         "//tensorflow/lite/schema:schema_fbs",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/profiling:util",
+        "//external:grpc_lib",
+        "@com_github_grpc_grpc//:grpc++_reflection",
+        "//tensorflow/lite/proto:helloworld_cc_grpc",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",

@@ -68,6 +68,7 @@ struct WorkerConfig {
   std::vector<int> num_threads;
   bool allow_worksteal = false;
   int32_t availability_check_interval_ms = 30000;
+  std::string offloading_target = "";
 };
 
 struct RuntimeConfig {

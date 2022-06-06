@@ -65,6 +65,7 @@ class Worker {
   bool is_throttling_ = false;
   bool is_paused_ = false;
   int32_t availability_check_interval_ms_;
+  std::string offloading_target_;
 
   // GlobalQueueWorker doesn't actually use this for scheduling, but we
   // need this for the return value of GetDeviceRequests()
@@ -122,6 +123,29 @@ class GlobalQueueWorker : public Worker {
  private:
   Job current_job_{-1};
   bool is_busy_ = false;
+};
+
+class DeviceQueueOffloadingWorker : public Worker {
+ public:
+  explicit DeviceQueueOffloadingWorker(std::shared_ptr<Planner> planner,
+                                       TfLiteDeviceFlags device_flag)
+      : Worker(planner, device_flag) {
+    device_cpu_thread_ = std::thread([this]{this->Work();});
+  }
+
+  int GetCurrentJobId() override;
+  int64_t GetWaitingTime() override;
+  bool GiveJob(Job& job) override;
+  JobQueue& GetDeviceRequests() override;
+  void AllowWorkSteal() override;
+
+ protected:
+  void Work() override;
+
+ private:
+  void TryWorkSteal();
+
+  bool allow_work_steal_ = false;
 };
 
 }  // namespace impl

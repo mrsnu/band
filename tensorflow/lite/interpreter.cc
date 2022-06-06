@@ -148,7 +148,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     exit(-1);
   }
 
-  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU };
+  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU, kTfLiteOffloading };
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
   TfLiteDelegatePtr null_delegate =
@@ -233,10 +233,20 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     TfLiteDeviceFlags device_flag = potential_workers[i];
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
-      if (planner_->GetWorkerType() == kGlobalQueue) {
-        worker = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
+
+      if (device_flag == kTfLiteOffloading) {
+        if (planner_->GetWorkerType() == kGlobalQueue) {
+          error_reporter_->Report("Does not support global queue for offloading yet");
+          exit(-1);
+        } else {
+          worker = std::make_unique<DeviceQueueOffloadingWorker>(planner_, device_flag);
+        }
       } else {
-        worker = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
+        if (planner_->GetWorkerType() == kGlobalQueue) {
+          worker = std::make_unique<GlobalQueueWorker>(planner_, device_flag);
+        } else {
+          worker = std::make_unique<DeviceQueueWorker>(planner_, device_flag);
+        }
       }
 
       if (worker->Init(runtime_config.worker_config, workers_.size()) != kTfLiteOk) {
@@ -1192,6 +1202,7 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
 
   switch (device) {
     case kTfLiteCPU:
+    case kTfLiteOffloading:
       // TODO #23: XNNPACK seems inefficient than default CPU
       if (targetDelegate == nullptr)
         // Only valid case to return Ok with nullptr
@@ -1501,7 +1512,9 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
     for (auto device_and_ops : device_op_sets) {
       auto device = device_and_ops.first;
       auto& ops = device_and_ops.second;
-      if (device == kTfLiteCPU) continue;
+      if (device == kTfLiteCPU || device == kTfLiteOffloading) {
+        continue;
+      }
       if (ops.size() < minimum_subgraph_size_) {
         for (auto op : ops) {
           op_sets_to_ignore[device].insert(op);
@@ -1517,7 +1530,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
   for (int op_index = 0; op_index < num_ops; op_index++) {
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      if (device_flag == kTfLiteCPU) {
+      if (device_flag == kTfLiteCPU || device_flag == kTfLiteOffloading) {
         op_support_table[op_index] |= 1 << device_id;
         continue;
       }
@@ -1690,7 +1703,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
 
-    if (device_flag == kTfLiteCPU) {
+    if (device_flag == kTfLiteCPU || device_flag == kTfLiteOffloading) {
       // no need to check supportability for CPU
       continue;
     }

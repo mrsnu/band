@@ -28,6 +28,7 @@ TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
   }
   
   availability_check_interval_ms_ = config.availability_check_interval_ms;
+  offloading_target_ = config.offloading_target;
 
   TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                       "Set affinity of %s to %s cores for %d threads.",

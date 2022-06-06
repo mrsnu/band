@@ -77,7 +77,8 @@ typedef enum TfLiteSchedulerType {
   kHeterogeneousEarliestFinishTime = 4,
   kLSF = 5,
   kHeterogeneousEarliestFinishTimeReserved = 6,
-  kNumSchedulerTypes = 7
+  kOffloading = 7,
+  kNumSchedulerTypes = 8
 } TfLiteSchedulerType;
 
 // Forward declare so dependent structs and methods can reference these types
@@ -808,7 +809,8 @@ typedef enum {
   kTfLiteGPU = 1,
   kTfLiteDSP = 2,
   kTfLiteNPU = 3,
-  kTfLiteNumDevices = 4,
+  kTfLiteOffloading = 4,
+  kTfLiteNumDevices = 5,
 } TfLiteDeviceFlags;
 
 const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag);

@@ -183,6 +183,9 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     worker_config.availability_check_interval_ms =
         root["availability_check_interval_ms"].asInt();
   }
+  if (!root["offloading_target"].isNull()) {
+    worker_config.offloading_target = root["offloading_target"].asCString();
+  }
 
   return kTfLiteOk;
 }
