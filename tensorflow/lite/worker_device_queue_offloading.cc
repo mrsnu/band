@@ -1,3 +1,7 @@
+// Temporal usage for debugging
+#include <android/log.h>
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+
 #include "tensorflow/lite/worker.h"
 
 #include <algorithm>
@@ -11,6 +15,7 @@
 #include <grpcpp/grpcpp.h>
 
 #include "tensorflow/lite/proto/helloworld.grpc.pb.h"
+
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -44,15 +49,21 @@ class GreeterClient {
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     // The actual RPC.
     Status status = stub_->SayHello(&context, request, &reply);
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+    LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000 );
 
     // Act upon its status.
     if (status.ok()) {
+      LOGI("RPC OK : %s", reply.message().c_str());
       return reply.message();
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
+      LOGI("RPC failed: %d, : %s", status.error_code(), status.error_message().c_str());
       return "RPC failed";
     }
   }
@@ -112,6 +123,7 @@ void DeviceQueueOffloadingWorker::Work() {
   // random string; copy-pasted from grpc example
   std::string user("world");
 
+  LOGI("Offloading target: %s", offloading_target_.c_str());
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
