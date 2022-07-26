@@ -39,9 +39,11 @@ limitations under the License.
 #if defined(TFLITE_ENABLE_DEFAULT_PROFILER)
 #include "tensorflow/lite/profiling/platform_profiler.h"
 #endif
-// Temporal usage for debugging
+
+#if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#endif // defined(__ANDROID__)
 
 // aligned_alloc is available (via cstdlib/stdlib.h) with C++17/C11.
 #if __cplusplus >= 201703L || __STDC_VERSION__ >= 201112L

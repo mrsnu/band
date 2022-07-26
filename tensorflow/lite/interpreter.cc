@@ -40,9 +40,11 @@ limitations under the License.
 #endif
 #include "tensorflow/lite/profiling/time_profiler.h"
 #include "tensorflow/lite/profiling/time.h"
-// Temporal usage for debugging
+
+#if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#endif // defined(__ANDROID__)
 
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)

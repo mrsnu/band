@@ -1,6 +1,7 @@
-// Temporal usage for debugging
-#include <android/log.h>
+#if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 
 #include "tensorflow/lite/worker.h"
 
@@ -13,6 +14,10 @@
 #include <iostream>
 #include <string>
 #include <grpcpp/grpcpp.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "tensorflow/lite/proto/helloworld.grpc.pb.h"
 
@@ -55,6 +60,21 @@ class GreeterClient {
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
     LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000 );
+    int fd;
+    int temp;
+    std::string path = "/sys/devices/virtual/thermal/tz-by-name/cpu-0-0-step/temp";
+    system("cat aaaaa >> /data/local/tmp/a.txt");
+    // std::ifstream openFile(path.data());
+	  // if (openFile.is_open()) {
+    //   LOGI("is open! ");
+	  // 	std::string line;
+		//   while (getline(openFile, line)){
+    //     LOGI("Temperature : %s", line.c_str());
+	  // 	}
+		//   openFile.close();
+	  // }
+
+    // LOGI("Temperature : %s", gpio_path);
 
     // Act upon its status.
     if (status.ok()) {
