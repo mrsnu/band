@@ -183,6 +183,14 @@ At server:
 python server/server.py
 ```
 
+For TF version v2:
+```sh
+python server/server_v2.py --workload=<comma separated model list>
+
+# `workload`: `MobileNet` or `MobiletNetTRT`
+```
+For the execution of MobileNetTRT, you should build your tensorflow with TensorRT. Download models [here](https://drive.google.com/drive/folders/1VGKoIKsL3ckqfRPJIVucUwaZOxzuMZY3?usp=sharing)
+
 At client (phone):
 Example config.json is shown below.
 The most important fields are "schedulers" and "offloading_target".
