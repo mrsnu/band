@@ -107,8 +107,8 @@ class Greeter(helloworld_pb2_grpc.GreeterServicer):
 
   def SayHello(self, request, context):
     start_time = datetime.datetime.now()
-    for i in range(0, len(self.workload)):
-      self.workload[i].Run() # TODO : Multi-Threading
+    # for i in range(0, len(self.workload)):
+    #   self.workload[i].Run() # TODO : Multi-Threading
 
     # threadList = list()
     # for i in range(0, len(self.workload)):
