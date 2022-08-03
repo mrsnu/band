@@ -21,18 +21,77 @@ args = parser.parse_args()
 try:
     workload_list = args.workload.split(",")
 except:
-    workload_list = ["MobileNet", "MobileNetTRT"]
+    workload_list = [
+            "MobileNetV1", 
+            "MobileNetV1TRT",
+            "MobileNetV2",
+            "MobileNetV2TRT",
+            "MobileNetV3Small",
+            "MobileNetV3SmallTRT",
+            "MobileNetV3Large",
+            "MobileNetV3LargeTRT",
+            "ResNet50",
+            "ResNet50TRT"
+        ]
 
-MobileNet = {
-        "file_path": "./models/mobilenet",
+MobileNetV1 = {
+        "file_path": "./models/mobilenetv1",
         "shape": (1, 224, 224, 3),
         "name": "MobileNet"
     }
 
-MobileNetTRT = {
-        "file_path": "./models/mobilenet_trt",
+MobileNetV1TRT = {
+        "file_path": "./models/mobilenetv1_trt",
         "shape": (1, 224, 224, 3),
         "name": "MobileNetTRT"
+    }
+
+MobileNetV2 = {
+        "file_path": "./models/mobilenetv2",
+        "shape": (1, 224, 224, 3),
+        "name": "MobileNetV2"
+    }
+
+MobileNetV2TRT = {
+        "file_path": "./models/mobilenetv2_trt",
+        "shape": (1, 224, 224, 3),
+        "name": "MobileNetV2TRT"
+    }
+
+MobileNetV3Small = {
+        "file_path": "./models/mobilenetv3-small",
+        "shape": (1, 224, 224, 3),
+        "name": "MobileNetV3Small"
+    }
+
+MobileNetV3SmallTRT = {
+        "file_path": "./models/mobilenetv3-small_trt",
+        "shape": (1, 224, 224, 3),
+        "name": "MobileNetV3SmallTRT"
+    }
+
+MobileNetV3Large = {
+        "file_path": "./models/mobilenetv3-large",
+        "shape": (1, 224, 224, 3),
+        "name": "MobileNetV3Large"
+    }
+
+MobileNetV3LargeTRT = {
+        "file_path": "./models/mobilenetv3-large_trt",
+        "shape": (1, 224, 224, 3),
+        "name": "MobileNetV3LargeTRT"
+    }
+
+ResNet50 = {
+        "file_path": "./models/resnet50",
+        "shape": (1, 224, 224, 3),
+        "name": "ResNet50"
+    }
+
+ResNet50TRT = {
+        "file_path": "./models/resnet50_trt",
+        "shape": (1, 224, 224, 3),
+        "name": "ResNet50TRT"
     }
 
 class Job(object):
@@ -71,11 +130,10 @@ class Model(object):
 class Greeter(helloworld_pb2_grpc.GreeterServicer):
     def __init__(self):
         super().__init__()
-        self.MobileNet = Model(MobileNet)
-        self.MobileNetTRT = Model(MobileNetTRT)
         self.workload = list()
         
         for workload_name in workload_list:
+            setattr(self, workload_name, Model(globals()[workload_name]))
             self.workload += [Job(getattr(self, workload_name), list(), 1)] * 10
             
 
