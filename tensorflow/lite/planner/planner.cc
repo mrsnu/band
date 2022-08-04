@@ -56,8 +56,14 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "job_status\t"
              << "is_final_subgraph\t"
              << "prev_subgraphs\t"
-             << "cur_temp\t"
-             << "cur_freq\n";
+             << "cur_temp_cpu\t"
+             << "cur_temp_gpu\t"
+             << "cur_temp_dsp\t"
+             << "cur_temp_npu\t"
+             << "cur_freq_cpu\t"
+             << "cur_freq_gpu\t"
+             << "cur_freq_dsp\t"
+             << "cur_freq_npu\n";
     log_file.close();
   }
 
@@ -381,8 +387,14 @@ void Planner::FlushFinishedJobs() {
       }
 
       // get current temp and freq
-      long long int temp = GetTemperature(job.device_id);
-      long long int frequency = GetFrequency(job.device_id);
+      long long int tempCPU = GetTemperature(kTfLiteCPU);
+      long long int tempGPU = GetTemperature(kTfLiteGPU);
+      long long int tempDSP = GetTemperature(kTfLiteDSP);
+      long long int tempNPU = GetTemperature(kTfLiteNPU);
+      long long int frequencyCPU = GetFrequency(kTfLiteCPU);
+      long long int frequencyGPU = GetFrequency(kTfLiteGPU);
+      long long int frequencyDSP = GetFrequency(kTfLiteDSP);
+      long long int frequencyNPU = GetFrequency(kTfLiteNPU);
       
 
       // write all timestamp statistics to log file
@@ -402,8 +414,14 @@ void Planner::FlushFinishedJobs() {
                << job.status << "\t"
                << is_final_subgraph << "\t"
                << prev_subgraphs << "\t"
-               << temp << "\t"
-               << frequency << "\n";
+               << tempCPU << "\t"
+               << tempGPU << "\t"
+               << tempDSP << "\t"
+               << tempNPU << "\t"
+               << frequencyCPU << "\t"
+               << frequencyGPU << "\t"
+               << frequencyDSP << "\t"
+               << frequencyNPU << "\n";
     }
     log_file.close();
   } else {
@@ -414,6 +432,7 @@ void Planner::FlushFinishedJobs() {
 }
 
 long long int Planner::GetTemperature(int device_id) {
+  return -1;
   std::ifstream indata;
   switch(device_id) {
     case kTfLiteCPU:
@@ -443,6 +462,7 @@ long long int Planner::GetTemperature(int device_id) {
 }
 
 long long int Planner::GetFrequency(int device_id) {
+  return -1;
   std::string file_name;
   switch(device_id) {
     case kTfLiteCPU:

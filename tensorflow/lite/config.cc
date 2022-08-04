@@ -187,6 +187,10 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     worker_config.offloading_target = root["offloading_target"].asCString();
   }
 
+  if (!root["offloading_data_size"].isNull()) {
+    worker_config.offloading_data_size = root["offloading_data_size"].asInt();
+  }
+
   return kTfLiteOk;
 }
 

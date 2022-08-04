@@ -37,15 +37,22 @@ using helloworld::HelloRequest;
  */
 class GreeterClient {
  public:
-  GreeterClient(std::shared_ptr<Channel> channel)
-      : stub_(Greeter::NewStub(channel)) {}
+  GreeterClient(std::shared_ptr<Channel> channel, int data_size)
+      : stub_(Greeter::NewStub(channel)) {
+        dataSize = data_size;
+      }
 
   // Assembles the client's payload, sends it and presents the response back
   // from the server.
   std::string SayHello(const std::string& user) {
     // Data we are sending to the server.
     HelloRequest request;
-    request.set_name(user);
+    std::allocator<char> alloc;
+    char* buffer = alloc.allocate(dataSize);
+    for (int i = 0; i < dataSize; i++) {
+      buffer[i] = (char) i;
+    }
+    request.set_input(buffer);
 
     // Container for the data we expect from the server.
     HelloReply reply;
@@ -60,36 +67,24 @@ class GreeterClient {
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
     LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000 );
-    int fd;
-    int temp;
-    std::string path = "/sys/devices/virtual/thermal/tz-by-name/cpu-0-0-step/temp";
-    system("cat aaaaa >> /data/local/tmp/a.txt");
-    // std::ifstream openFile(path.data());
-	  // if (openFile.is_open()) {
-    //   LOGI("is open! ");
-	  // 	std::string line;
-		//   while (getline(openFile, line)){
-    //     LOGI("Temperature : %s", line.c_str());
-	  // 	}
-		//   openFile.close();
-	  // }
-
-    // LOGI("Temperature : %s", gpio_path);
 
     // Act upon its status.
     if (status.ok()) {
       LOGI("RPC OK : %s", reply.message().c_str());
+      alloc.deallocate(buffer, dataSize);
       return reply.message();
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
       LOGI("RPC failed: %d, : %s", status.error_code(), status.error_message().c_str());
+      alloc.deallocate(buffer, dataSize);
       return "RPC failed";
     }
   }
 
  private:
   std::unique_ptr<Greeter::Stub> stub_;
+  int dataSize;
 };
 
 namespace tflite {
@@ -139,7 +134,7 @@ bool DeviceQueueOffloadingWorker::GiveJob(Job& job) {
 
 void DeviceQueueOffloadingWorker::Work() {
   GreeterClient greeter(
-  grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()));
+  grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()), offloading_data_size_);
   // random string; copy-pasted from grpc example
   std::string user("world");
 
