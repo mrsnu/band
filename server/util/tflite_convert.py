@@ -3,7 +3,7 @@ import tensorflow as tf
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model', type=str, required=True)
-parser.add_argument('-t', '--type', type=str, required=True)
+parser.add_argument('-t', '--type', type=str, default='float32', required=False)
 args = parser.parse_args()
 
 converter = tf.lite.TFLiteConverter.from_saved_model(args.model)

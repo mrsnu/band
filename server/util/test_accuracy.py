@@ -8,6 +8,7 @@ from tqdm import tqdm
 from PIL import Image
 
 from dataloader import ImageNetDataset
+from dataloader import ImageNetImmDataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--dataset', type=str, default='/home/mjkim/data/val', required=False)
@@ -21,17 +22,22 @@ keras_package = {
         'mobilenetv2': mobilenet_v2,
         'mobilenetv2_trt': mobilenet_v2,
         'resnet50': resnet50,
-        'resnet50_trt': resnet50
+        'resnet50_trt': resnet50,
+        'mobilenetv2_part1': mobilenet_v2,
     }
 
 partition_points = {
+        'mobilenetv2_part1': {
+            'input': ["input_1"],
+            'output': "predictions",
+        },
         'mobilenetv2': {
             'input': ["input_2", "block_15_add"],
             'output': "predictions",
         },
         'resnet50': {
-            'input': [],
-            "output": "",
+            'input': ["input_5"],
+            "output": "predictions",
         }
     }
 
@@ -45,13 +51,18 @@ def load_model(model_path):
 
 def main():
     model_name = pathlib.Path(args.model).name
-    dataset = ImageNetDataset(args.dataset).take().batch(128)
+    dataset = ImageNetImmDataset(args.dataset).take().batch(128)
 
     model = load_model(args.model)
+    model.summary()
     model = partition_model(model, partition_points[model_name])
+    model.summary()
     
     count = 0
-    preprocessor = keras_package[model_name].preprocess_input
+    if 'part' not in model_name:
+        preprocessor = keras_package[model_name].preprocess_input
+    else:
+        preprocessor = lambda x: x
     postprocessor = keras_package[model_name].decode_predictions
     for i, (img, labels) in enumerate(tqdm(dataset)):
         pred = model(preprocessor(img))

@@ -4,8 +4,6 @@ import tensorflow as tf
 class ImageNetDataset(object):
     def __init__(self, dataset_path):
         self.counter = 0
-        self.image_height = 224
-        self.image_width = 224
         self.dataset_path = pathlib.Path(dataset_path)
         self.image_count = len(list(self.dataset_path.glob('*.JPEG')))
         self.list_ds = tf.data.Dataset.list_files(
@@ -26,7 +24,7 @@ class ImageNetDataset(object):
         img = tf.io.read_file(file_path)
         img = tf.io.decode_jpeg(img, channels=3)
         img = tf.image.resize(img, [256, 256])
-        img = tf.image.central_crop(img, central_fraction=0.875)
+        img = tf.image.resize_with_crop_or_pad(img, 224, 224)
         return img
 
     def take(self, num=None):
