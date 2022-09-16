@@ -3,15 +3,12 @@
 #include <cerrno>
 #include <cassert>
 
-#include "tensorflow/lite/minimal_logging.h"
-
 namespace tflite {
 namespace impl {
 
 bool ThermalZoneManager::CheckPathSanity(std::string path) {
   FILE* fp = fopen(path.c_str(), "r");
   if (fp == nullptr) {
-    TFLITE_LOG_PROD(TFLITE_LOG_INFO, "File open failed: %d", errno);
     return false;
   }
 

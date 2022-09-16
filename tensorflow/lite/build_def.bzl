@@ -164,6 +164,29 @@ def tflite_cc_shared_object(
         **kwargs
     )
 
+def tflite_cc_android_test(
+        name,
+        copts = ["-Wall"] + tflite_copts(),
+        linkopts = tflite_linkopts() + select({
+            clean_dep("//tensorflow:android"): [
+                "-pie",
+                "-lm",
+                "-static",
+                "-Wl,--rpath=/data/local/tmp/",
+            ],
+            "//conditions:default": [],
+        }),
+        linkstatic = 1,
+        **kwargs):
+    """Builds a standalone test for android device when android config is on."""
+    native.cc_test(
+        name = name,
+        copts = copts,
+        linkopts = linkopts,
+        linkstatic = linkstatic,
+        **kwargs
+    )
+
 def tf_to_tflite(name, src, options, out):
     """Convert a frozen tensorflow graphdef to TF Lite's flatbuffer.
 

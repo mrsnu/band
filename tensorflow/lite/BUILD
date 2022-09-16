@@ -1,5 +1,5 @@
 load("//tensorflow:tensorflow.bzl", "if_not_windows", "tf_cc_test")
-load("//tensorflow/lite:build_def.bzl", "if_tflite_experimental_runtime", "tflite_cc_shared_object", "tflite_copts", "tflite_experimental_runtime_linkopts", "tflite_linkopts")
+load("//tensorflow/lite:build_def.bzl", "if_tflite_experimental_runtime", "tflite_cc_shared_object", "tflite_copts", "tflite_experimental_runtime_linkopts", "tflite_linkopts", "tflite_cc_android_test")
 load("//tensorflow/lite/micro:build_def.bzl", "cc_library")
 load("//tensorflow/lite:special_rules.bzl", "tflite_portable_test_suite")
 
@@ -92,6 +92,51 @@ FRAMEWORK_LIB_HDRS = [
     "worker.h",
     "safe_bool.h"
 ]
+
+cc_library(
+    name = "thermal_zone",
+    srcs = ["thermal_zone.cc"],
+    hdrs = ["thermal_zone.h"],
+    copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
+    deps = [
+        "//tensorflow/lite/c:common",
+    ]
+)
+
+tflite_cc_android_test(
+    name = "thermal_zone_test",
+    srcs = [
+        "thermal_zone_test.cc"
+    ],
+    deps = [
+        ":thermal_zone",
+        "//tensorflow/lite/c:common",
+        "@com_google_googletest//:gtest",
+    ]
+)
+
+# cc_test(
+#     name = "thermal_zone_test",
+#     srcs = [
+#         "thermal_zone_test.cc"
+#     ],
+#     linkstatic = True,
+#     linkopts = tflite_linkopts() + select({
+#         "//tensorflow:android": [
+#             "-pie",
+#             "-lm",
+#             "-static",
+#             "-Wl,--rpath=/data/local/tmp/",
+#         ],
+#         "//conditions:default": [],
+#     }),
+#     copts = common_copts,
+#     deps = [
+#         ":thermal_zone",
+#         "//tensorflow/lite/c:common",
+#         "@com_google_googletest//:gtest",
+#     ]
+# )
 
 cc_library(
     name = "version",
@@ -670,54 +715,6 @@ cc_test(
         ":util",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/schema:schema_fbs",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-cc_library(
-    name = "thermal_zone",
-    srcs = ["thermal_zone.cc"],
-    hdrs = ["thermal_zone.h"],
-    copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
-    deps = [
-        ":minimal_logging",
-        "//tensorflow/lite/c:common",
-    ]
-)
-
-cc_test(
-    name = "thermal_zone_test",
-    srcs = [
-        "thermal_zone_test.cc"
-    ],
-    copts = common_copts,
-    deps = [
-        ":thermal_zone",
-        ":minimal_logging",
-        "//tensorflow/lite/c:common",
-        "@com_google_googletest//:gtest",
-    ]
-)
-
-cc_binary(
-    name = "thermal_zone_test_binary",
-    srcs = [
-        "thermal_zone_test.cc"
-    ],
-    copts = common_copts,
-    linkopts = tflite_linkopts() + select({
-        "//tensorflow:android": [
-            # "-pie",
-            "-lm",
-            "-Wl,--rpath=/data/local/tmp/",
-        ],
-        "//conditions:default": [],
-    }),
-    tags = ["builder_default_android_arm64"],
-    deps = [
-        ":thermal_zone",
-        ":minimal_logging",
-        "//tensorflow/lite/c:common",
         "@com_google_googletest//:gtest",
     ],
 )

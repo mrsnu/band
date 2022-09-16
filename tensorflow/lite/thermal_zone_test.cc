@@ -4,7 +4,6 @@
 
 #include <gtest/gtest.h>
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/minimal_logging.h"
 
 namespace tflite {
 namespace {
@@ -57,35 +56,27 @@ TEST(ThermalZoneManagerTest, SetCPUPathTest) {
 TEST(ThermalZoneManagerTest, GetCPUTemperatureTest) {
   impl::ThermalZoneManager& manager = impl::ThermalZoneManager::instance();
   impl::thermal_t temp = manager.GetTemperature("CPU0");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU0's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 
   temp = manager.GetTemperature("CPU1");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU1's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 
   temp = manager.GetTemperature("CPU2");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU2's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 
   temp = manager.GetTemperature("CPU3");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU3's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 
   temp = manager.GetTemperature("CPU4");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU4's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 
   temp = manager.GetTemperature("CPU5");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU5's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 
   temp = manager.GetTemperature("CPU6");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU6's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 
   temp = manager.GetTemperature("CPU7");
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "CPU7's temp: %d", temp);
   EXPECT_GE(temp, 10000);
 }
 
