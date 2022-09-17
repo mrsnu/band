@@ -3,25 +3,30 @@
 #include <cerrno>
 #include <cassert>
 
+#include <fstream>
+
 namespace tflite {
 namespace impl {
 
 bool ThermalZoneManager::CheckPathSanity(std::string path) {
-  FILE* fp = fopen(path.c_str(), "r");
-  if (fp == nullptr) {
+  std::ifstream fin;
+  fin.open(path);
+  if (!fin.is_open()) {
+    printf("File did not open.\n");
     return false;
   }
-
-  fclose(fp);
+  fin.close();
   return true;
 }
 
 thermal_t ThermalZoneManager::GetTemperature(thermal_id_t tid) {
-    FILE* fp = fopen(GetThermalZonePath(tid).c_str(), "r");
+    //int fp = fopen(GetThermalZonePath(tid).c_str(), O_RDONLY);
     // Ensure that the path is sanitized.
-    assert(fp != nullptr);
-    thermal_t temperature_curr;
-    fscanf(fp, "%d", &temperature_curr);
+    std::ifstream fin;
+    fin.open(GetThermalZonePath(tid));
+    assert(fin.is_open());
+    thermal_t temperature_curr = -1;
+    fin >> temperature_curr;
     // TODO(widiba03304): figure out how to find availability.
     if (temperature_curr < 0) {
       // Negative value indicates the disabled status.
@@ -30,6 +35,24 @@ thermal_t ThermalZoneManager::GetTemperature(thermal_id_t tid) {
     thermal_table_[tid].push_back(temperature_curr);
     return temperature_curr;
   }
+
+std::vector<thermal_t> ThermalZoneManager::GetTemperatureHistory(thermal_id_t tid) {
+  return thermal_table_[tid];
+}
+
+thermal_t ThermalZoneManager::GetTemperatureHistory(thermal_id_t tid, int index) {
+  return thermal_table_[tid][index];
+}
+
+void ThermalZoneManager::ClearHistory(thermal_id_t tid) {
+  thermal_table_[tid].clear();
+}
+
+void ThermalZoneManager::ClearHistoryAll() {
+  for (auto& history : thermal_table_) {
+    history.second.clear();
+  }
+}
 
 } // namespace impl
 } // namespace tflite
