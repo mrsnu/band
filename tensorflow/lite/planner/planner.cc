@@ -4,6 +4,7 @@
 
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
+#include "tensorflow/lite/planner/random_assign_scheduler.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
@@ -85,6 +86,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeReservedScheduler(this));
     } else if (schedulers[i] == kOffloading) {
       schedulers_.emplace_back(new OffloadingScheduler(this));
+    } else if (schedulers[i] == kRandomAssign) {
+      schedulers_.emplace_back(new RandomAssignScheduler(this));
     } else {
       return kTfLiteError;
     }
