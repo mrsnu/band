@@ -44,6 +44,11 @@ limitations under the License.
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
+
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
 #include "tensorflow/lite/nnapi/nnapi_util.h"

@@ -1,6 +1,7 @@
-// Temporal usage for debugging
-#include <android/log.h>
+#if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 
 #include "tensorflow/lite/worker.h"
 
@@ -13,6 +14,10 @@
 #include <iostream>
 #include <string>
 #include <grpcpp/grpcpp.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "tensorflow/lite/proto/helloworld.grpc.pb.h"
 
@@ -32,15 +37,22 @@ using helloworld::HelloRequest;
  */
 class GreeterClient {
  public:
-  GreeterClient(std::shared_ptr<Channel> channel)
-      : stub_(Greeter::NewStub(channel)) {}
+  GreeterClient(std::shared_ptr<Channel> channel, int data_size)
+      : stub_(Greeter::NewStub(channel)) {
+        dataSize = data_size;
+      }
 
   // Assembles the client's payload, sends it and presents the response back
   // from the server.
   std::string SayHello(const std::string& user) {
     // Data we are sending to the server.
     HelloRequest request;
-    request.set_name(user);
+    std::allocator<char> alloc;
+    char* buffer = alloc.allocate(dataSize);
+    for (int i = 0; i < dataSize; i++) {
+      buffer[i] = (char) i;
+    }
+    request.set_input(buffer);
 
     // Container for the data we expect from the server.
     HelloReply reply;
@@ -59,17 +71,20 @@ class GreeterClient {
     // Act upon its status.
     if (status.ok()) {
       LOGI("RPC OK : %s", reply.message().c_str());
+      alloc.deallocate(buffer, dataSize);
       return reply.message();
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
       LOGI("RPC failed: %d, : %s", status.error_code(), status.error_message().c_str());
+      alloc.deallocate(buffer, dataSize);
       return "RPC failed";
     }
   }
 
  private:
   std::unique_ptr<Greeter::Stub> stub_;
+  int dataSize;
 };
 
 namespace tflite {
@@ -119,7 +134,7 @@ bool DeviceQueueOffloadingWorker::GiveJob(Job& job) {
 
 void DeviceQueueOffloadingWorker::Work() {
   GreeterClient greeter(
-  grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()));
+  grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()), offloading_data_size_);
   // random string; copy-pasted from grpc example
   std::string user("world");
 

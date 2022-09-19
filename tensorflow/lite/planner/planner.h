@@ -120,6 +120,9 @@ class Planner {
 
   void PrepareReenqueue(Job& job);
 
+  long long int GetTemperature(int device_id);
+  long long int GetFrequency(int device_id);
+
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
