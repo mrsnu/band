@@ -39,6 +39,9 @@ limitations under the License.
 #if defined(TFLITE_ENABLE_DEFAULT_PROFILER)
 #include "tensorflow/lite/profiling/platform_profiler.h"
 #endif
+// Temporal usage for debugging
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
 
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)

@@ -14,6 +14,7 @@ from threading import Thread
 
 from tensorflow.python.platform import gfile
 from tensorflow.keras.applications.mobilenet import MobileNet as MN
+
 # CAUTION : Download models from google drive into ./models/
 ICN = {
     "file_path": "./models/ICN.pb",
@@ -89,8 +90,6 @@ class Greeter(helloworld_pb2_grpc.GreeterServicer):
     self.MobileNet = Model(MobileNet)
     self.ResNet = Model(ResNet)
     self.ICN = Model(ICN)
-    with tf.device('/GPU:0'):
-      self.model = MN(input_shape=(224,224,3))
 
     self.workload = list()
 
@@ -108,8 +107,8 @@ class Greeter(helloworld_pb2_grpc.GreeterServicer):
 
   def SayHello(self, request, context):
     start_time = datetime.datetime.now()
-    # for i in range(0, len(self.workload)):
-    #   self.workload[i].Run() # TODO : Multi-Threading
+    for i in range(0, len(self.workload)):
+      self.workload[i].Run() # TODO : Multi-Threading
 
     # threadList = list()
     # for i in range(0, len(self.workload)):
@@ -118,20 +117,16 @@ class Greeter(helloworld_pb2_grpc.GreeterServicer):
     #   threadList[i].start()
     # for i in range(0, len(threadList)):
     #   threadList[i].join()
-    with tf.device('/GPU:0'):
-      x = tf.random.uniform(shape=[1,224,224,3])
-      y = self.model(x)
-    print('[Server] inference done')
 
     end_time = datetime.datetime.now()
     time_diff = (end_time - start_time)
     execution_time = time_diff.total_seconds() * 1000 # in miliseconds
-    return helloworld_pb2.HelloReply(message="Done, input size = {name} / Computation Latency = {time} ms".format(name = len(request.input), time = int(execution_time)))
+    return helloworld_pb2.HelloReply(message="Done, {name}! : {time} ms".format(name = request.name, time = int(execution_time)))
 
 def serve():
   server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
   helloworld_pb2_grpc.add_GreeterServicer_to_server(Greeter(), server)
-  server.add_insecure_port('[::]:50051')
+  server.add_insecure_port('[::]:5005')
   server.start()
   server.wait_for_termination()
 
