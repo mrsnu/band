@@ -41,6 +41,11 @@ limitations under the License.
 #include "tensorflow/lite/profiling/time_profiler.h"
 #include "tensorflow/lite/profiling/time.h"
 
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
+
 // TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
 #include "tensorflow/lite/nnapi/nnapi_util.h"
@@ -929,6 +934,7 @@ void Interpreter::ProfileOnline(int model_id,
                model_id, max_latency, worker_id, device_name,
                key.GetInputOpsString().c_str(),
                key.GetOutputOpsString().c_str());
+    LOGI("Largest Subgraph Profiling result\n model=%d avg=%d us worker=%d device=%s", model_id, max_latency, worker_id, device_name);
 
     // Resume worker
     worker->Resume();
@@ -953,6 +959,7 @@ void Interpreter::ProfileOnline(int model_id,
                    key.model_id, latency, key.worker_id, device_name,
                    key.GetInputOpsString().c_str(),
                    key.GetOutputOpsString().c_str());
+        LOGI("Estimated Latency\n model=%d avg=%d us worker=%d device=%s",key.model_id, latency, key.worker_id, device_name);
       }
     }
   }
@@ -1092,6 +1099,7 @@ void Interpreter::ProfileOffline(int model_id,
                  key.model_id, profiled_latency, key.worker_id, device_name,
                  key.GetInputOpsString().c_str(),
                  key.GetOutputOpsString().c_str());
+      LOGI("Reusing profiled result\n model=%d avg=%d us worker=%d device=%s",key.model_id, profiled_latency, key.worker_id, device_name);
     } else {
       int64_t latency = ProfileSubgraph(subgraph, timer);
       if (latency < 0) {
@@ -1116,6 +1124,7 @@ void Interpreter::ProfileOffline(int model_id,
                  key.model_id, latency, key.worker_id, device_name,
                  key.GetInputOpsString().c_str(),
                  key.GetOutputOpsString().c_str());
+      LOGI("Profiling result\n model=%d avg=%d us worker=%d device=%s",key.model_id, latency, key.worker_id, device_name);
     }
   }
 }

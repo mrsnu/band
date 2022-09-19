@@ -69,6 +69,7 @@ struct WorkerConfig {
   bool allow_worksteal = false;
   int32_t availability_check_interval_ms = 30000;
   std::string offloading_target = "";
+  std::int32_t offloading_data_size = 0; 
 };
 
 struct RuntimeConfig {

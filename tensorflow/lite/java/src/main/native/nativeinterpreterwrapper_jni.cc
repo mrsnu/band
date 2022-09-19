@@ -13,9 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-// Temporal usage for debugging
+#if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#endif // defined(__ANDROID__)
 
 #include <dlfcn.h>
 #include <jni.h>
@@ -380,7 +381,7 @@ Java_org_tensorflow_lite_NativeInterpreterWrapper_createInterpreter(
   const char* path = env->GetStringUTFChars(json_file, nullptr);
 
   tflite::RuntimeConfig runtime_config;
-  if (ParseRuntimeConfigFromJson(error_reporter, path, runtime_config) != kTfLiteOk) {
+  if (ParseRuntimeConfigFromJson(path, runtime_config, error_reporter) != kTfLiteOk) {
     ThrowException(env, kIllegalArgumentException,
                    "Parsing runtime_config json file failed");
     return 0;

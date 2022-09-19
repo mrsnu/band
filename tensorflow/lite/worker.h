@@ -66,6 +66,7 @@ class Worker {
   bool is_paused_ = false;
   int32_t availability_check_interval_ms_;
   std::string offloading_target_;
+  std::int32_t offloading_data_size_;
 
   // GlobalQueueWorker doesn't actually use this for scheduling, but we
   // need this for the return value of GetDeviceRequests()
