@@ -16,6 +16,12 @@ typedef int32_t thermal_t;
 typedef std::string path_t;
 typedef std::string thermal_id_t;
 
+// Thermal info consists of current time and current temperature.
+typedef struct thermal_info {
+  unsigned long time;
+  thermal_t temperature;
+} ThermalInfo;
+
 // A singleton instance for reading the temperature from sysfs.
 // First, you need to set thermal zone paths calling `SetThermalZonePath`.
 class ThermalZoneManager {
@@ -36,23 +42,29 @@ class ThermalZoneManager {
     }
     tz_path_table_.emplace(tid, path);
     // Initialize an empty vector
-    thermal_table_.emplace(tid, std::vector<thermal_t>());
+    thermal_table_.emplace(tid, std::vector<ThermalInfo>());
     return kTfLiteOk;
   }
 
   thermal_t GetTemperature(thermal_id_t);
   
-  std::vector<thermal_t> GetTemperatureHistory(thermal_id_t);
-  thermal_t GetTemperatureHistory(thermal_id_t, int index);
+  std::vector<ThermalInfo> GetTemperatureHistory(thermal_id_t);
+  ThermalInfo GetTemperatureHistory(thermal_id_t, int index);
   
   void ClearHistory(thermal_id_t);
   void ClearHistoryAll();
+
+  void SetLogPath(path_t log_path) {
+    log_path_ = log_path;
+  }
 
  private:
   bool CheckPathSanity(path_t path);
 
   std::unordered_map<thermal_id_t, path_t> tz_path_table_;
-  std::unordered_map<thermal_id_t, std::vector<thermal_t>> thermal_table_;
+  std::unordered_map<thermal_id_t, std::vector<ThermalInfo>> thermal_table_;
+
+  path_t log_path_;
 };
 
 } // namespace impl
