@@ -1,4 +1,4 @@
-#include "tensorflow/lite/thermal_zone.h"
+#include "tensorflow/lite/resource_monitor.h"
 
 #include <vector>
 
@@ -11,8 +11,8 @@ namespace {
 // All the tests in this file is for Pixel 4 XL device.
 // In order to test for other devices, proper sysfs paths should be given.
 
-TEST(ThermalZoneManagerTest, SetPathTest) {
-  impl::ThermalZoneManager& manager = impl::ThermalZoneManager::instance();
+TEST(ResourceMonitorTest, SetPathTest) {
+  impl::ResourceMonitor& manager = impl::ResourceMonitor::instance();
   TfLiteStatus status = manager.SetThermalZonePath(
       "CPU0", 
       "/sys/class/thermal/tz-by-name/cpu-1-0-usr/temp");
@@ -47,8 +47,8 @@ TEST(ThermalZoneManagerTest, SetPathTest) {
   EXPECT_EQ(status, kTfLiteOk);
 }
 
-TEST(ThermalZoneManagerTest, GetPathTest) {
-  impl::ThermalZoneManager& manager = impl::ThermalZoneManager::instance();
+TEST(ResourceMonitorTest, GetPathTest) {
+  impl::ResourceMonitor& manager = impl::ResourceMonitor::instance();
   EXPECT_EQ(manager.GetThermalZonePath("CPU0"),
             "/sys/class/thermal/tz-by-name/cpu-1-0-usr/temp");
 
@@ -74,8 +74,8 @@ TEST(ThermalZoneManagerTest, GetPathTest) {
             "/sys/class/thermal/tz-by-name/cpu-1-7-usr/temp");
 }
 
-TEST(ThermalZoneManagerTest, GetCPUTemperatureTest) {
-  impl::ThermalZoneManager& manager = impl::ThermalZoneManager::instance();
+TEST(ResourceMonitorTest, GetCPUTemperatureTest) {
+  impl::ResourceMonitor& manager = impl::ResourceMonitor::instance();
   impl::thermal_t temp = manager.GetTemperature("CPU0");
   EXPECT_GE(temp, 10000);
 
@@ -101,22 +101,22 @@ TEST(ThermalZoneManagerTest, GetCPUTemperatureTest) {
   EXPECT_GE(temp, 10000);
 }
 
-TEST(ThermalZoneManagerTest, GetTemperatureHistoryAllTest) {
-  impl::ThermalZoneManager& manager = impl::ThermalZoneManager::instance();
+TEST(ResourceMonitorTest, GetTemperatureHistoryAllTest) {
+  impl::ResourceMonitor& manager = impl::ResourceMonitor::instance();
   manager.GetTemperature("CPU0");
   manager.GetTemperature("CPU0");
   manager.GetTemperature("CPU0");
   manager.GetTemperature("CPU0");
 
-  std::vector<impl::thermal_t> temp_history = manager.GetTemperatureHistory("CPU0");
-  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 0), temp_history[0]);
-  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 1), temp_history[1]);
-  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 2), temp_history[2]);
-  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 3), temp_history[3]);
+  std::vector<impl::ThermalInfo> temp_history = manager.GetTemperatureHistory("CPU0");
+  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 0).temperature, temp_history[0].temperature);
+  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 1).temperature, temp_history[1].temperature);
+  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 2).temperature, temp_history[2].temperature);
+  EXPECT_EQ(manager.GetTemperatureHistory("CPU0", 3).temperature, temp_history[3].temperature);
 }
 
-TEST(ThermalZoneManagerTest, ClearHistoryTest) {
-  impl::ThermalZoneManager& manager = impl::ThermalZoneManager::instance();
+TEST(ResourceMonitorTest, ClearHistoryTest) {
+  impl::ResourceMonitor& manager = impl::ResourceMonitor::instance();
   manager.ClearHistory("CPU0");
   EXPECT_TRUE(manager.GetTemperatureHistory("CPU0").empty());
   manager.ClearHistoryAll();

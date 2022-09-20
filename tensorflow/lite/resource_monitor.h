@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_LITE_THERMAL_ZONE_H_
-#define TENSORFLOW_LITE_THERMAL_ZONE_H_
+#ifndef TENSORFLOW_LITE_RESOURCE_MONITOR_H_
+#define TENSORFLOW_LITE_RESOURCE_MONITOR_H_
 
 #include <vector>
 #include <string>
@@ -13,21 +13,27 @@ namespace impl {
 
 typedef int32_t cpu_t;
 typedef int32_t thermal_t;
+typedef int32_t freq_t;
 typedef std::string path_t;
 typedef std::string thermal_id_t;
 
 // Thermal info consists of current time and current temperature.
-typedef struct thermal_info {
-  unsigned long time;
+struct ThermalInfo {
   thermal_t temperature;
-} ThermalInfo;
+  uint64_t time;
+};
 
-// A singleton instance for reading the temperature from sysfs.
+struct FreqInfo {
+  freq_t frequency;
+  uint64_t time;
+};
+
+// A singleton instance for reading the temperature and frequency from sysfs.
 // First, you need to set thermal zone paths calling `SetThermalZonePath`.
-class ThermalZoneManager {
+class ResourceMonitor {
  public:
-  static ThermalZoneManager& instance() {
-    static ThermalZoneManager instance;
+  static ResourceMonitor& instance() {
+    static ResourceMonitor instance;
     return instance;
   }
 
