@@ -15,6 +15,25 @@
 namespace tflite {
 namespace impl {
 
+TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
+  log_path_ = config.temperature_log_path;
+  if (log_path_.size()) {
+    std::ofstream log_file(log_path_);
+    if (!log_file.is_open()) return kTfLiteError;
+    log_file << "current_time\t"
+             << "current_temperature\n";
+    log_file.close();
+  }
+
+  // Set all temp/freq path
+  for (auto tz : config.tz_path) {
+    SetThermalZonePath(tz.first, tz.second);
+  }
+  for (auto freq: config.freq_path) {
+    SetFreqPath(freq.first, freq.second);
+  }
+}
+
 bool ResourceMonitor::CheckPathSanity(std::string path) {
   std::ifstream fin;
   fin.open(path);
@@ -89,6 +108,8 @@ void ResourceMonitor::ClearHistoryAll() {
 void ResourceMonitor::DumpAllHistory(path_t log_path) {
   std::ofstream log_file(log_path, std::ofstream::app);
   if (log_file.is_open()) {
+    log_file << "current_time\t"
+             << "current_temperature\n";
     for (auto& history : thermal_table_) {
       worker_id_t t_id = history.first;
       for (auto t_info : history.second) {

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
@@ -72,10 +73,17 @@ struct WorkerConfig {
   std::int32_t offloading_data_size = 0; 
 };
 
+struct ResourceConfig {
+  std::string temperature_log_path;
+  std::unordered_map<std::string, std::string> tz_path;
+  std::unordered_map<std::string, std::string> freq_path;
+};
+
 struct RuntimeConfig {
   InterpreterConfig interpreter_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  ResourceConfig resource_config;
 };
 
 class ErrorReporter;

@@ -39,6 +39,7 @@ limitations under the License.
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/model_builder.h"
+#include "tensorflow/lite/resource_monitor.h"
 
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
@@ -794,6 +795,7 @@ class Interpreter {
   
   std::shared_ptr<Planner> planner_;
   std::vector<std::unique_ptr<Worker>> workers_;
+  impl::ResourceMonitor& resource_monitor_ = ResourceMonitor::instance();
 
   // Map structure to find subgraph idx with SubgraphKeys
   std::map<SubgraphKey, int> subgraph_idx_map_;

@@ -7,6 +7,7 @@
 #include <cassert>
 
 #include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/config.h"
 
 namespace tflite {
 namespace impl {
@@ -36,6 +37,8 @@ class ResourceMonitor {
     static ResourceMonitor instance;
     return instance;
   }
+
+  TfLiteStatus Init(ResourceConfig& config);
 
   inline std::string GetThermalZonePath(worker_id_t wid) {
     return tz_path_table_[wid];
