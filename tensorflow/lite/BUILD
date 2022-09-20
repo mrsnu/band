@@ -94,53 +94,31 @@ FRAMEWORK_LIB_HDRS = [
     "planner/thermal_aware_scheduler.h",
     "worker.h",
     "safe_bool.h",
-    "thermal_zone.h"
+    "resource_monitor.h"
 ]
 
 cc_library(
-    name = "thermal_zone",
-    srcs = ["thermal_zone.cc"],
-    hdrs = ["thermal_zone.h"],
+    name = "resource_monitor",
+    srcs = ["resource_monitor.cc"],
+    hdrs = ["resource_monitor.h"],
     copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
     deps = [
+        "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/c:common",
     ]
 )
 
 tflite_cc_android_test(
-    name = "thermal_zone_test",
+    name = "resource_monitor_test",
     srcs = [
-        "thermal_zone_test.cc"
+        "resource_monitor_test.cc"
     ],
     deps = [
-        ":thermal_zone",
+        ":resource_monitor",
         "//tensorflow/lite/c:common",
         "@com_google_googletest//:gtest",
     ]
 )
-
-# cc_test(
-#     name = "thermal_zone_test",
-#     srcs = [
-#         "thermal_zone_test.cc"
-#     ],
-#     linkstatic = True,
-#     linkopts = tflite_linkopts() + select({
-#         "//tensorflow:android": [
-#             "-pie",
-#             "-lm",
-#             "-static",
-#             "-Wl,--rpath=/data/local/tmp/",
-#         ],
-#         "//conditions:default": [],
-#     }),
-#     copts = common_copts,
-#     deps = [
-#         ":thermal_zone",
-#         "//tensorflow/lite/c:common",
-#         "@com_google_googletest//:gtest",
-#     ]
-# )
 
 cc_library(
     name = "version",
@@ -340,7 +318,7 @@ cc_library(
         "worker_device_queue.cc",
         "worker_global_queue.cc",
         "worker_device_queue_offloading.cc",
-        "thermal_zone.cc"
+        "resource_monitor.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,
