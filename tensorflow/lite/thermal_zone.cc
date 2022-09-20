@@ -5,6 +5,11 @@
 
 #include "tensorflow/lite/profiling/time.h"
 
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
+
 namespace tflite {
 namespace impl {
 
@@ -53,6 +58,33 @@ void ThermalZoneManager::ClearHistory(thermal_id_t tid) {
 void ThermalZoneManager::ClearHistoryAll() {
   for (auto& history : thermal_table_) {
     history.second.clear();
+  }
+}
+
+void ThermalZoneManager::SetLogPath(path_t log_path) {
+  log_path_ = log_path;
+  if (log_path_.size()) {
+    std::ofstream log_file(log_path_);
+    if (!log_file.is_open()) return kTfLiteError;
+    log_file << "current_time\t"
+             << "current_temperature\n";
+    log_file.close();
+  } else {
+    LOGI("[ThermalManager] Invalid log file path %s", log_path_.c_str());
+  }
+}
+
+void ThermalZoneManager::LogAllHistory() {
+  std::ofstream log_file(log_path_, std::ofstream::app);
+  if (log_file.is_open()) {
+    for (auto& history : thermal_table_) {
+      thermal_id_t t_id = history.first;
+      for (auto t_info : history.second) {
+        log_file << t_info.time << "\t"
+                << t_info.temperature << "\n";
+      }
+    } 
+    log_file.close();
   }
 }
 

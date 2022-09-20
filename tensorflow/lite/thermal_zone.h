@@ -54,9 +54,8 @@ class ThermalZoneManager {
   void ClearHistory(thermal_id_t);
   void ClearHistoryAll();
 
-  void SetLogPath(path_t log_path) {
-    log_path_ = log_path;
-  }
+  void SetLogPath(path_t log_path);
+  void LogAllHistory();
 
  private:
   bool CheckPathSanity(path_t path);
