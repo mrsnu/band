@@ -26,11 +26,10 @@ bool ResourceMonitor::CheckPathSanity(std::string path) {
   return true;
 }
 
-thermal_t ResourceMonitor::GetTemperature(thermal_id_t tid) {
-  //int fp = fopen(GetThermalZonePath(tid).c_str(), O_RDONLY);
+thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
   // Ensure that the path is sanitized.
   std::ifstream fin;
-  fin.open(GetThermalZonePath(tid));
+  fin.open(GetThermalZonePath(wid));
   assert(fin.is_open());
   thermal_t temperature_curr = -1;
   uint64_t time_curr = profiling::time::NowMicros();
@@ -41,20 +40,44 @@ thermal_t ResourceMonitor::GetTemperature(thermal_id_t tid) {
     return -1;
   }
   ThermalInfo info_curr = { temperature_curr, time_curr };
-  thermal_table_[tid].push_back(info_curr);
+  thermal_table_[wid].push_back(info_curr);
   return temperature_curr;
 }
 
-std::vector<ThermalInfo> ResourceMonitor::GetTemperatureHistory(thermal_id_t tid) {
-  return thermal_table_[tid];
+std::vector<ThermalInfo> ResourceMonitor::GetTemperatureHistory(worker_id_t wid) {
+  return thermal_table_[wid];
 }
 
-ThermalInfo ResourceMonitor::GetTemperatureHistory(thermal_id_t tid, int index) {
-  return thermal_table_[tid][index];
+ThermalInfo ResourceMonitor::GetTemperatureHistory(worker_id_t wid, int index) {
+  return thermal_table_[wid][index];
 }
 
-void ResourceMonitor::ClearHistory(thermal_id_t tid) {
-  thermal_table_[tid].clear();
+freq_t ResourceMonitor::GetFrequency(worker_id_t wid) {
+  std::ifstream fin;
+  fin.open(GetFreqPath(wid));
+  assert(fin.is_open());
+  freq_t freq_curr = -1;
+  uint64_t time_curr = profiling::time::NowMicros();
+  fin >> freq_curr;
+  // TODO(widiba03304): figure out how to find availability.
+  if (freq_curr < 0) {
+    return -1;
+  }
+  FreqInfo info_curr = { freq_curr, time_curr };
+  freq_table_[wid].push_back(info_curr);
+  return freq_curr;
+}
+
+std::vector<FreqInfo> ResourceMonitor::GetFrequencyHistory(worker_id_t wid) {
+  return freq_table_[wid];
+}
+
+FreqInfo ResourceMonitor::GetFrequencyHistory(worker_id_t wid, int index) {
+  return freq_table_[wid][index];
+}
+
+void ResourceMonitor::ClearHistory(worker_id_t wid) {
+  thermal_table_[wid].clear();
 }
 
 void ResourceMonitor::ClearHistoryAll() {
@@ -63,24 +86,11 @@ void ResourceMonitor::ClearHistoryAll() {
   }
 }
 
-void ResourceMonitor::SetLogPath(path_t log_path) {
-  log_path_ = log_path;
-  if (log_path_.size()) {
-    std::ofstream log_file(log_path_);
-    if (!log_file.is_open()) return;
-    log_file << "current_time\t"
-             << "current_temperature\n";
-    log_file.close();
-  } else {
-    LOGI("[ThermalManager] Invalid log file path %s", log_path_.c_str());
-  }
-}
-
-void ResourceMonitor::LogAllHistory() {
-  std::ofstream log_file(log_path_, std::ofstream::app);
+void ResourceMonitor::DumpAllHistory(path_t log_path) {
+  std::ofstream log_file(log_path, std::ofstream::app);
   if (log_file.is_open()) {
     for (auto& history : thermal_table_) {
-      thermal_id_t t_id = history.first;
+      worker_id_t t_id = history.first;
       for (auto t_info : history.second) {
         log_file << t_info.time << "\t"
                 << t_info.temperature << "\n";
