@@ -8,7 +8,7 @@ namespace tflite {
 namespace impl {
 class Interpreter;
 
-// assigns requested model to devices in a Round-robin manner.
+// assigns requested model to devices according to the predefined user config.
 class BaselineConfigurableScheduler : public Scheduler {
  public:
   explicit BaselineConfigurableScheduler(Planner* planner) : Scheduler(planner) {

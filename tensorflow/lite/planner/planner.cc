@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/planner/baseline_configurable_scheduler.h"
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
 #include "tensorflow/lite/planner/random_assign_scheduler.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
@@ -11,6 +12,7 @@
 #include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 #include "tensorflow/lite/planner/offloading_scheduler.h"
+#include "tensorflow/lite/planner/thermal_aware_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 
 #if defined(__ANDROID__)
@@ -88,6 +90,10 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new OffloadingScheduler(this));
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
+    } else if (schedulers[i] == kThermalAware) {
+      schedulers_.emplace_back(new ThermalAwareScheduler(this));
+    } else if (schedulers[i] == kBaselineConfigurable) {
+      schedulers_.emplace_back(new BaselineConfigurableScheduler(this));
     } else {
       return kTfLiteError;
     }

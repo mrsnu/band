@@ -79,7 +79,9 @@ typedef enum TfLiteSchedulerType {
   kHeterogeneousEarliestFinishTimeReserved = 6,
   kOffloading = 7,
   kRandomAssign = 8,
-  kNumSchedulerTypes = 9
+  kThermalAware= 9,
+  kBaselineConfigurable = 10,
+  kNumSchedulerTypes = 11
 } TfLiteSchedulerType;
 
 // Forward declare so dependent structs and methods can reference these types

@@ -65,7 +65,7 @@ void ThermalZoneManager::SetLogPath(path_t log_path) {
   log_path_ = log_path;
   if (log_path_.size()) {
     std::ofstream log_file(log_path_);
-    if (!log_file.is_open()) return kTfLiteError;
+    if (!log_file.is_open()) return;
     log_file << "current_time\t"
              << "current_temperature\n";
     log_file.close();

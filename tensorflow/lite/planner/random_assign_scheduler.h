@@ -8,7 +8,7 @@ namespace tflite {
 namespace impl {
 class Interpreter;
 
-// assigns requested model to devices in a Round-robin manner.
+// assigns requested model to devices in a random manner.
 class RandomAssignScheduler : public Scheduler {
  public:
   explicit RandomAssignScheduler(Planner* planner) : Scheduler(planner) {
