@@ -3,13 +3,16 @@
 #include <fstream>
 
 #include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/planner/baseline_configurable_scheduler.h"
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
+#include "tensorflow/lite/planner/random_assign_scheduler.h"
 #include "tensorflow/lite/planner/round_robin_scheduler.h"
 #include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
 #include "tensorflow/lite/planner/least_slack_first_scheduler.h"
 #include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 #include "tensorflow/lite/planner/offloading_scheduler.h"
+#include "tensorflow/lite/planner/thermal_aware_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 
 #if defined(__ANDROID__)
@@ -55,15 +58,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "slo_us\t"
              << "job_status\t"
              << "is_final_subgraph\t"
-             << "prev_subgraphs\t"
-             << "cur_temp_cpu\t"
-             << "cur_temp_gpu\t"
-             << "cur_temp_dsp\t"
-             << "cur_temp_npu\t"
-             << "cur_freq_cpu\t"
-             << "cur_freq_gpu\t"
-             << "cur_freq_dsp\t"
-             << "cur_freq_npu\n";
+             << "prev_subgraphs\n";
     log_file.close();
   }
 
@@ -93,6 +88,12 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeReservedScheduler(this));
     } else if (schedulers[i] == kOffloading) {
       schedulers_.emplace_back(new OffloadingScheduler(this));
+    } else if (schedulers[i] == kRandomAssign) {
+      schedulers_.emplace_back(new RandomAssignScheduler(this));
+    } else if (schedulers[i] == kThermalAware) {
+      schedulers_.emplace_back(new ThermalAwareScheduler(this));
+    } else if (schedulers[i] == kBaselineConfigurable) {
+      schedulers_.emplace_back(new BaselineConfigurableScheduler(this));
     } else {
       return kTfLiteError;
     }
@@ -386,17 +387,6 @@ void Planner::FlushFinishedJobs() {
         prev_subgraphs += std::to_string(i) + " ";
       }
 
-      // get current temp and freq
-      long long int tempCPU = GetTemperature(kTfLiteCPU);
-      long long int tempGPU = GetTemperature(kTfLiteGPU);
-      long long int tempDSP = GetTemperature(kTfLiteDSP);
-      long long int tempNPU = GetTemperature(kTfLiteNPU);
-      long long int frequencyCPU = GetFrequency(kTfLiteCPU);
-      long long int frequencyGPU = GetFrequency(kTfLiteGPU);
-      long long int frequencyDSP = GetFrequency(kTfLiteDSP);
-      long long int frequencyNPU = GetFrequency(kTfLiteNPU);
-      
-
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
                << job.job_id << "\t"
@@ -413,15 +403,7 @@ void Planner::FlushFinishedJobs() {
                << job.slo_us << "\t"
                << job.status << "\t"
                << is_final_subgraph << "\t"
-               << prev_subgraphs << "\t"
-               << tempCPU << "\t"
-               << tempGPU << "\t"
-               << tempDSP << "\t"
-               << tempNPU << "\t"
-               << frequencyCPU << "\t"
-               << frequencyGPU << "\t"
-               << frequencyDSP << "\t"
-               << frequencyNPU << "\n";
+               << prev_subgraphs << "\n";
     }
     log_file.close();
   } else {
@@ -430,69 +412,6 @@ void Planner::FlushFinishedJobs() {
                          log_path_.c_str());
   }
 }
-
-long long int Planner::GetTemperature(int device_id) {
-  return -1;
-  std::ifstream indata;
-  switch(device_id) {
-    case kTfLiteCPU:
-      // Differentiate the file name according to the core type 
-      indata.open("/sys/devices/virtual/thermal/tz-by-name/cpu-1-6-step/temp");
-      break;
-    case kTfLiteGPU:
-      indata.open("/sys/kernel/gpu/gpu_tmu");
-      break;
-    case kTfLiteDSP:
-      indata.open("/sys/devices/virtual/thermal/tz-by-name/disp-therm/temp");
-      break;
-    case kTfLiteNPU:
-      indata.open("/sys/devices/virtual/thermal/tz-by-name/npu-step/temp");
-      break;
-    default:
-      break;
-  }
-  long long int number;
-  if (!indata) {
-    LOGI("Error : file could not be opened");
-    return -1;
-  }
-  indata >> number;
-  indata.close();
-  return number;
-}
-
-long long int Planner::GetFrequency(int device_id) {
-  return -1;
-  std::string file_name;
-  switch(device_id) {
-    case kTfLiteCPU:
-      // Differentiate the file name according to the core type 
-      file_name = "/sys/devices/system/cpu/cpu6/cpufreq/cpuinfo_cur_freq";
-      break;
-    case kTfLiteGPU:
-      file_name = "/sys/class/devfreq/2c00000.qcom,kgsl-3d0/cur_freq";
-      break;
-    case kTfLiteDSP:
-      file_name = "/sys/class/devfreq/soc:qcom,cdsp-cdsp-l3-lat/cur_freq";
-      break;
-    case kTfLiteNPU:
-      file_name = "/sys/class/devfreq/soc:qcom,npu-npu-ddr-bw/cur_freq";
-      break;
-    default:
-      break;
-  }
-  std::ifstream indata;
-  long long int number;
-  indata.open(file_name);
-  if (!indata) {
-    LOGI("Error : file could not be opened");
-    return -1;
-  }
-  indata >> number;
-  indata.close();
-  return number;
-}
-
 
 int Planner::IssueSchedId() { return sched_id_++; }
 
