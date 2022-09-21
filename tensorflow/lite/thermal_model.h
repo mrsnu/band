@@ -6,16 +6,17 @@
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
+#include "tensorflow/lite/resource_monitor.h"
 
 namespace tflite {
 namespace impl {
 
-// 
+// Construct a prediction model for heat generation corresponding to 
+// a target model of inference request, and provides the prediction
+// value to schedulers.
 class ThermalModel {
  public:
-  void ClearHistory();
-  void ClearHistoryAll();
-  void DumpAllHistory();
+  std::vector<ThermalInfo> GetHeatGeneration(SubgraphKey key);
 
  private:
 };

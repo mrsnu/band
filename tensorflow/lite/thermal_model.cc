@@ -15,5 +15,9 @@
 namespace tflite {
 namespace impl {
 
+std::vector<ThermalInfo> ThermalModel::GetHeatGeneration(SubgraphKey key) {
+    return std::vector<ThermalInfo>();
+}
+
 } // namespace impl
 } // namespace tflite

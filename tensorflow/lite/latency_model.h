@@ -10,12 +10,12 @@
 namespace tflite {
 namespace impl {
 
-// 
+// Construct a prediction model for latency corresponding to 
+// a target model of inference request, and provides the prediction
+// value to schedulers. 
 class LatencyModel {
  public:
-  void ClearHistory();
-  void ClearHistoryAll();
-  void DumpAllHistory();
+  std::vector<int32_t> GetExpectedLatency(SubgraphKey key);
 
  private:
 };

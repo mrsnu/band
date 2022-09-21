@@ -15,5 +15,10 @@
 namespace tflite {
 namespace impl {
 
+std::vector<int32_t> LatencyModel::LaGetExpectedLatency(SubgraphKey key) {
+    return std::vector<int32_t>();
+}
+    
+
 } // namespace impl
 } // namespace tflite
