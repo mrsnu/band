@@ -52,15 +52,8 @@ class ErrorReporter {
   do {                                                                  \
     static_cast<tflite::ErrorReporter*>(reporter)->Report(__VA_ARGS__); \
   } while (false)
-#define TF_LITE_MAYBE_REPORT_ERROR(reporter, ...)                         \
-  do {                                                                    \
-    if ((reporter) != nullptr) {                                           \
-      static_cast<tflite::ErrorReporter*>(reporter)->Report(__VA_ARGS__); \
-    }                                                                     \
-  } while (false)
 #else  // TF_LITE_STRIP_ERROR_STRINGS
 #define TF_LITE_REPORT_ERROR(reporter, ...)
-#define TF_LITE_MAYBE_REPORT_ERROR(reporter, ...)
 #endif  // TF_LITE_STRIP_ERROR_STRINGS
 
 #endif  // TENSORFLOW_LITE_CORE_API_ERROR_REPORTER_H_

@@ -40,9 +40,6 @@ TfLiteDelegate* TfLiteXNNPackDelegateCreate(
 // Destroys a delegate created with `TfLiteXNNPackDelegateCreate` call.
 void TfLiteXNNPackDelegateDelete(TfLiteDelegate* delegate);
 
-void TfLiteXNNPackDelegateUpdate(TfLiteDelegate* delegate,
-    const TfLiteXNNPackDelegateOptions* options);
-
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

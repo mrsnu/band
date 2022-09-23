@@ -35,13 +35,6 @@ uint64_t NowMicros() {
           .count());
 }
 
-uint64_t NowNanos() {
-  return static_cast<uint64_t>(
-      std::chrono::duration_cast<std::chrono::nanoseconds>(
-          std::chrono::system_clock::now().time_since_epoch())
-          .count());
-}
-
 void SleepForMicros(uint64_t micros) {
   std::this_thread::sleep_for(std::chrono::microseconds(micros));
 }
@@ -52,12 +45,6 @@ uint64_t NowMicros() {
   struct timeval tv;
   gettimeofday(&tv, nullptr);
   return static_cast<uint64_t>(tv.tv_sec) * 1e6 + tv.tv_usec;
-}
-
-uint64_t NowNanos() {
-  struct timespec ts;
-  clock_gettime(CLOCK_REALTIME, &ts);
-  return static_cast<uint64_t>(ts.tv_sec) * 1e9 + ts.tv_nsec;
 }
 
 void SleepForMicros(uint64_t micros) {

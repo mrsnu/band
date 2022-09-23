@@ -18,15 +18,14 @@ limitations under the License.
 #include <map>
 #include <memory>
 
-// NOTE: flex:delegate is removed for simple testing
-#include "tensorflow/lite/util.h"
-#include "tensorflow/lite/config.h"
+#if !defined(__APPLE__)
+#include "tensorflow/lite/delegates/flex/delegate.h"
+#endif
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/kernels/register_ref.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/testing/test_runner.h"
-#include "tensorflow/lite/tools/logging.h"
 
 namespace tflite {
 namespace testing {
@@ -34,44 +33,43 @@ namespace testing {
 // A test runner that feeds inputs into TF Lite and verifies its outputs.
 class TfLiteDriver : public TestRunner {
  public:
+  enum class DelegateType {
+    kNone,
+    kNnapi,
+    kGpu,
+    kFlex,
+  };
+
   /**
    * Creates a new TfLiteDriver
    * @param  delegate         The (optional) delegate to use.
    * @param  reference_kernel Whether to use the builtin reference kernel ops.
    */
-  explicit TfLiteDriver(bool reference_kernel = false);
+  explicit TfLiteDriver(DelegateType delegate_type = DelegateType::kNone,
+                        bool reference_kernel = false);
   ~TfLiteDriver() override;
 
-  void ResetInterpreter(RuntimeConfig runtime_config) override;
-  int LoadModel(const string& bin_file_path) override;
-  const std::vector<int>& GetInputs(int model_id) override {
-    return interpreter_->inputs(model_id);
+  void LoadModel(const string& bin_file_path) override;
+  const std::vector<int>& GetInputs() override {
+    return interpreter_->inputs();
   }
-  const std::vector<int>& GetOutputs(int model_id) override {
-    return interpreter_->outputs(model_id);
+  const std::vector<int>& GetOutputs() override {
+    return interpreter_->outputs();
   }
-  void ReshapeTensor(int model_id, int id, const string& csv_values) override;
-  void AllocateTensors(int model_id) override;
-  void ResetTensor(TfLiteTensor* tensor) override;
-  void ResetTensor(int model_id, int id) override;
-  void SetInput(int model_id, int id, const string& csv_values) override;
-  void SetExpectation(int model_id, int id, const string& csv_values) override;
-  void SetShapeExpectation(int model_id, int id, const string& csv_values) override;
-  void Invoke(int model_id) override;
-  void InvokeThroughPlanner(int model_id) override;
-  bool CheckResults(int model_id) override;
-  string ReadOutput(TfLiteTensor* tensor) override;
-  string ReadOutput(int model_id, int id) override;
-  void InvokeWithInput(std::vector<Job>& requests, std::vector<Tensors>& inputs, std::vector<Tensors>& outputs) override;
-  void SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) override;
-  TfLiteTensor* AllocateInputTensor(int subgraph_id, int index) override;
-  TfLiteTensor* AllocateOutputTensor(int subgraph_id, int index) override;
-  bool NeedProfile() override {
-    return interpreter_->NeedProfile();
-  }
-
+  void ReshapeTensor(int id, const string& csv_values) override;
+  void AllocateTensors() override;
+  void ResetTensor(int id) override;
+  void SetInput(int id, const string& csv_values) override;
+  void SetExpectation(int id, const string& csv_values) override;
+  void SetShapeExpectation(int id, const string& csv_values) override;
+  void Invoke() override;
+  bool CheckResults() override;
+  string ReadOutput(int id) override;
   void SetThreshold(double relative_threshold, double absolute_threshold);
   void SetQuantizationErrorMultiplier(int quantization_error_multiplier);
+
+ protected:
+  Interpreter::TfLiteDelegatePtr delegate_;
 
  private:
   void DeallocateStringTensor(TfLiteTensor* t) {
@@ -92,11 +90,10 @@ class TfLiteDriver : public TestRunner {
   class ShapeExpectation;
 
   std::unique_ptr<OpResolver> resolver_;
+  std::unique_ptr<FlatBufferModel> model_;
   std::unique_ptr<Interpreter> interpreter_;
-  // (model_id, (tensor_id, DataExpectation))
-  std::map<int, std::map<int, std::unique_ptr<DataExpectation>>> expected_output_;
-  // (model_id, (tensor_id, ShapeExpectation))
-  std::map<int, std::map<int, std::unique_ptr<ShapeExpectation>>> expected_output_shape_;
+  std::map<int, std::unique_ptr<DataExpectation>> expected_output_;
+  std::map<int, std::unique_ptr<ShapeExpectation>> expected_output_shape_;
   bool must_allocate_tensors_ = true;
   std::map<int, TfLiteTensor*> tensors_to_deallocate_;
   double relative_threshold_;

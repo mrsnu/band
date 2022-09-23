@@ -137,42 +137,6 @@ void TfLiteSparsityFree(TfLiteSparsity* sparsity) {
   free(sparsity);
 }
 
-TfLiteTensor* TfLiteTensorCreate() {
-  // Requires zero initialization to avoid invalid free from reset.
-  return (TfLiteTensor*)calloc(1, sizeof(TfLiteTensor));
-}
-
-TfLiteTensor* TfLiteTensorCreateLike(TfLiteTensor* src) {
-  if (!src) return NULL;
-  TfLiteTensor* ret = TfLiteTensorCreate();
-  TfLiteIntArray* dims = TfLiteIntArrayCopy(src->dims);
-  TfLiteTensorReset(src->type, src->name, dims,
-                    src->params, NULL, NULL, kTfLiteDynamic, NULL,
-                    src->is_variable, ret);
-  TfLiteTensorRealloc(src->bytes, ret);
-  return ret;
-}
-
-void TfLiteTensorDelete(TfLiteTensor* t) {
-  if (!t) return;
-  TfLiteTensorFree(t);
-  free(t);
-}
-
-TfLiteStatus TfLiteTensorDataCopy(const TfLiteTensor* src, TfLiteTensor* dst) {
-  if (!src || !dst) return kTfLiteError;
-  if (!TfLiteIntArrayEqual(src->dims, dst->dims)) return kTfLiteError;
-  memcpy(dst->data.raw, src->data.raw, dst->bytes);
-  return kTfLiteOk;
-}
-
-TfLiteTensor* TfLiteTensorCopy(const TfLiteTensor* src) {
-  if (!src) return NULL;
-  TfLiteTensor* ret = TfLiteTensorCreateLike(src);
-  memcpy(ret->data.raw, src->data.raw, src->bytes);
-  return ret;
-}
-
 void TfLiteTensorFree(TfLiteTensor* t) {
   TfLiteTensorDataFree(t);
   if (t->dims) TfLiteIntArrayFree(t->dims);
@@ -251,50 +215,6 @@ const char* TfLiteTypeGetName(TfLiteType type) {
       return "FLOAT64";
   }
   return "Unknown type";
-}
-
-const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag) {
-  switch (flag) {
-  case kTfLiteCPU:
-    return "CPU";
-  case kTfLiteGPU:
-    return "GPU";
-  case kTfLiteDSP:
-    return "DSP";
-  case kTfLiteNPU:
-    return "NPU";
-  }
-  return "Unknown type";  
-}
-
-const TfLiteDeviceFlags TfLiteDeviceGetFlag(const char* name) {
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
-    TfLiteDeviceFlags flag = (TfLiteDeviceFlags)i;
-    if (strcmp(TfLiteDeviceGetName(flag), name) == 0) {
-      return flag;
-    }
-  }
-  return kTfLiteNumDevices;
-}
-
-const char* TfLiteDelegateGetName(TfLiteDelegateFlags flag) {
-  switch (flag) {
-    case kTfLiteDelegateFlagsNone:
-      return "NOTYPE";
-    case kTfLiteDelegateFlagsGPU:
-      return "GPU";
-    case kTfLiteDelegateFlagsNNAPIDSP:
-      return "NNAPI_DSP";
-    case kTfLiteDelegateFlagsNNAPIGPU:
-      return "NNAPI_GPU";
-    case kTfLiteDelegateFlagsNNAPINPU:
-      return "NNAPI_NPU";
-    case kTfLiteDelegateFlagsXNNPACK:
-      return "XNNPACK";
-    case kTfLiteDelegateFlagsFLEX:
-      return "FLEX";
-  }
-  return "Unknown type";  
 }
 
 TfLiteDelegate TfLiteDelegateCreate() {

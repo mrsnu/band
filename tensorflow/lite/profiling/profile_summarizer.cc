@@ -34,21 +34,19 @@ struct OperatorDetails {
 };
 
 std::string GetTensorName(const tflite::Interpreter& interpreter,
-                          int subgraph_index,
                           int tensor_index) {
-  const auto tensor = interpreter.tensor(subgraph_index, tensor_index);
+  const auto tensor = interpreter.tensor(tensor_index);
   if (tensor == nullptr || tensor->name == nullptr) {
     return "Unknown";
   }
   return tensor->name;
 }
 std::vector<std::string> GetTensorNames(const tflite::Interpreter& interpreter,
-                                        int subgraph_index,
                                         const TfLiteIntArray* tensor_indices) {
   std::vector<std::string> tensors;
   tensors.reserve(tensor_indices->size);
   for (int i = 0; i < tensor_indices->size; i++) {
-    tensors.push_back(GetTensorName(interpreter, subgraph_index, tensor_indices->data[i]));
+    tensors.push_back(GetTensorName(interpreter, tensor_indices->data[i]));
   }
   return tensors;
 }
@@ -78,13 +76,13 @@ OperatorDetails GetOperatorDetails(const tflite::Interpreter& interpreter,
   auto inputs = node_reg->first.inputs;
   auto outputs = node_reg->first.outputs;
   const char* profiling_string =
-      interpreter.OpProfilingString(subgraph_index, node_reg->second, &node_reg->first);
+      interpreter.OpProfilingString(node_reg->second, &node_reg->first);
   OperatorDetails details;
   if (profiling_string) {
     details.op_description = std::string(profiling_string);
   }
-  details.inputs = GetTensorNames(interpreter, subgraph_index, inputs);
-  details.outputs = GetTensorNames(interpreter, subgraph_index, outputs);
+  details.inputs = GetTensorNames(interpreter, inputs);
+  details.outputs = GetTensorNames(interpreter, outputs);
   return details;
 }
 

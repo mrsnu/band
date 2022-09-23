@@ -21,7 +21,6 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/lite/core/api/error_reporter.h"
-#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/mutable_op_resolver.h"
@@ -35,25 +34,35 @@ limitations under the License.
 struct TfLiteModel {
   // Sharing is safe as FlatBufferModel is const.
   std::shared_ptr<const tflite::FlatBufferModel> impl;
-  const char* model_path = nullptr;
-  tflite::MutableOpResolver op_resolver;
 };
 
 struct TfLiteInterpreterOptions {
+  enum {
+    kDefaultNumThreads = -1,
+  };
+  int num_threads = kDefaultNumThreads;
+
+  tflite::MutableOpResolver op_resolver;
+
   void (*error_reporter)(void* user_data, const char* format,
                          va_list args) = nullptr;
-  void (*on_end_invoke)(void* user_data, int job_id,
-                        TfLiteStatus status) = nullptr;
   void* error_reporter_user_data = nullptr;
-  void* on_invoke_user_data = nullptr;
-  tflite::RuntimeConfig config;
+
+  std::vector<TfLiteDelegate*> delegates;
+
+  bool use_nnapi = false;
 };
 
 struct TfLiteInterpreter {
+  // Taking a reference to the (const) model data avoids lifetime-related issues
+  // and complexity with the TfLiteModel's existence.
+  std::shared_ptr<const tflite::FlatBufferModel> model;
+
   // The interpreter does not take ownership of the provided ErrorReporter
   // instance, so we ensure its validity here. Note that the interpreter may use
   // the reporter in its destructor, so it should be declared first.
   std::unique_ptr<tflite::ErrorReporter> optional_error_reporter;
+
   std::unique_ptr<tflite::Interpreter> impl;
 };
 

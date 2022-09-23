@@ -43,8 +43,6 @@ limitations under the License.
 #include <unistd.h>
 #endif
 
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_join.h"
 #include "tensorflow/lite/allocation.h"
 #include "tensorflow/lite/builtin_op_data.h"
 #include "tensorflow/lite/builtin_ops.h"
@@ -407,7 +405,7 @@ TfLiteStatus GetTargetSdkVersion(
       // in the list of target devices the devices_sdk_version value will be
       // 1000.
       (devices_sdk_version < nnapi->android_sdk_version)) {
-    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
+    TFLITE_LOG(TFLITE_LOG_INFO,
                "Changing Android NN SDK version %d to version "
                "supported by target devices: %d",
                nnapi->android_sdk_version, devices_sdk_version);
@@ -3356,7 +3354,7 @@ TfLiteStatus NNAPIDelegateKernel::Prepare(TfLiteContext* context,
 
 TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
     TfLiteContext* context, std::vector<int>* supported_nodes,
-    int* nnapi_errno, std::set<std::string>& unsupported_nodes_info) {
+    int* nnapi_errno) {
   if (!nnapi_->ANeuralNetworksModel_getSupportedOperationsForDevices) {
     return kTfLiteError;
   }
@@ -3388,20 +3386,9 @@ TfLiteStatus NNAPIDelegateKernel::GetOperationsSupportedByTargetNnApiDevices(
 
   supported_nodes->clear();
   std::for_each(nodes_.begin(), nodes_.end(),
-                [&supported_nodes, &tflite_ops_support_status, &context, &unsupported_nodes_info](int node_index) {
+                [&supported_nodes, &tflite_ops_support_status](int node_index) {
                   if (tflite_ops_support_status[node_index]) {
                     supported_nodes->push_back(node_index);
-                  } else {
-                    TfLiteNode* node;
-                    TfLiteRegistration* registration;
-                    const TfLiteStatus s = (context->GetNodeAndRegistration(
-                      context, node_index, &node, &registration));
-                    if (s != kTfLiteOk) {
-                      return;
-                    }
-                    std::string node_info = absl::StrCat(
-                      GetOpNameByRegistration(*registration), " (", node_index, ")");
-                    unsupported_nodes_info.insert(node_info);
                   }
                 });
 
@@ -4179,41 +4166,6 @@ NNAPIDelegateKernel* StatefulNnApiDelegate::Data::MaybeGetCachedDelegateKernel(
   }
 }
 
-TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
-  auto contains_keywords = [&name](std::vector<std::string> keywords) {
-    for(auto keyword : keywords) {
-      if (name.find(keyword) != std::string::npos) 
-        return true;
-    }
-    return false;
-  };
-
-  if (contains_keywords({ "gpu" })) {
-    return kTfLiteDelegateFlagsNNAPIGPU;
-  }
-
-  if (contains_keywords({ "dsp" })) {
-    return kTfLiteDelegateFlagsNNAPIDSP;
-  }
-
-  if (contains_keywords({
-    "google-edgetpu",
-    "liteadaptor", // Huawei (DaVinci NPU)
-    "neuron-ann", // Mediatek APU
-    "qti-hta", // Hexagon tensor accelerator
-    "mtk-neuron" // Mediatek APU
-    // "mtk-mdla" #TODO(#139) - Mediatek APU for half float
-    })) {
-    return kTfLiteDelegateFlagsNNAPINPU;
-  }
-
-  // TODO #23 
-  // 1. Add additional NPU / TPU names 
-  // 2. Is 'hta' belongs to dsp or npu?
-
-  return kTfLiteDelegateFlagsNone;
-}
-
 StatefulNnApiDelegate::StatefulNnApiDelegate(const NnApi* nnapi)
     : StatefulNnApiDelegate(nnapi, Options()) {}
 
@@ -4244,7 +4196,6 @@ StatefulNnApiDelegate::StatefulNnApiDelegate(const NnApi* nnapi,
   CopyToBufferHandle = DoCopyToBufferHandle;
   FreeBufferHandle = DoFreeBufferHandle;
   data_ = &delegate_data_;
-  flags = GetNNAPIDeviceFlag(delegate_data_.accelerator_name);
 }
 
 StatefulNnApiDelegate::StatefulNnApiDelegate()
@@ -4339,8 +4290,7 @@ TfLiteStatus StatefulNnApiDelegate::GetNodesSupportedByAccelerator(
     TfLiteContext* context, TfLiteDelegate* delegate, const NnApi* nnapi,
     const std::vector<int>& supported_nodes,
     std::vector<int>* device_supported_nodes, int* num_partitions,
-    TfLiteDelegateParams** params_array, int* nnapi_errno,
-    std::set<std::string>& unsupported_nodes_info) {
+    TfLiteDelegateParams** params_array, int* nnapi_errno) {
   auto* delegate_data = static_cast<Data*>(delegate->data_);
   // The first entry in the array is the element count
 
@@ -4361,7 +4311,7 @@ TfLiteStatus StatefulNnApiDelegate::GetNodesSupportedByAccelerator(
     std::vector<int> supported_partition_nodes;
     TF_LITE_ENSURE_STATUS(
         kernel_state->GetOperationsSupportedByTargetNnApiDevices(
-            context, &supported_partition_nodes, nnapi_errno, unsupported_nodes_info));
+            context, &supported_partition_nodes, nnapi_errno));
     device_supported_nodes->insert(device_supported_nodes->end(),
                                    supported_partition_nodes.begin(),
                                    supported_partition_nodes.end());
@@ -4486,7 +4436,6 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
   }
 
   std::vector<int> supported_nodes;
-  std::set<std::string> unsupported_nodes_info;
   // We don't care about all nodes_, we only care about ones in the
   // current plan.
   TfLiteIntArray* plan;
@@ -4504,10 +4453,6 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                                       registration->version, target_sdk_version,
                                       node, is_accelerator_specified)) {
       supported_nodes.push_back(node_index);
-    } else {
-      std::string node_info = absl::StrCat(
-        GetOpNameByRegistration(*registration), " (", node_index, ")");
-      unsupported_nodes_info.insert(node_info);
     }
   }
 
@@ -4573,7 +4518,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     // Cannot query supported operation before NNAPI 1.2
     TF_LITE_ENSURE_STATUS(GetNodesSupportedByAccelerator(
         context, delegate, nnapi, supported_nodes, &nodes_to_delegate,
-        &num_partitions, &params_array, nnapi_errno, unsupported_nodes_info));
+        &num_partitions, &params_array, nnapi_errno));
   } else {
     nodes_to_delegate = supported_nodes;
     auto supported_nodes_int_array = BuildTfLiteIntArray(supported_nodes);
@@ -4582,48 +4527,14 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
         &num_partitions));
   }
 
-  if (!unsupported_nodes_info.empty()) {
-    const char* accelerator_name = delegate_options.accelerator_name
-                                 ? delegate_options.accelerator_name
-                                 : "Default NNAPI";
-    std::string unsupported = absl::StrJoin(unsupported_nodes_info, "\n");
-    std::string error_message = absl::StrCat(
-        "Following operations are not supported by ", accelerator_name, "\n",
-        unsupported);
-    TF_LITE_KERNEL_LOG(context, error_message.c_str());
-  }
-
   TF_LITE_ENSURE_STATUS(
       LimitDelegatedPartitions(delegate_options.max_number_delegated_partitions,
                                std::vector<TfLiteDelegateParams>(
                                    params_array, params_array + num_partitions),
                                &nodes_to_delegate));
 
-  int num_unsupported = 0, num_supported = 0;
-  for (int node_index : TfLiteIntArrayView(plan)) {
-    if (std::find(nodes_to_delegate.begin(), nodes_to_delegate.end(),
-                  node_index) == nodes_to_delegate.end()) {
-      num_unsupported++;
-    } else {
-      num_supported++;
-    }
-  }
-
-  if (num_unsupported) {
-    std::string error_message;
-    if (num_supported) {
-      absl::StrAppend(&error_message,
-                      num_supported, " operations will run with NNAPI, and the remaining ");
-    } else {
-      absl::StrAppend(&error_message,
-                      "No operations will run with NNAPI, and all ");
-    }
-    absl::StrAppend(&error_message, num_unsupported, " operations will run on the CPU.\n");
-    TF_LITE_KERNEL_LOG(context, error_message.c_str());
-  }
-
   if (nodes_to_delegate.empty()) {
-    return kTfLiteError;
+    return kTfLiteOk;
   } else {
     // Request TFLite to partition the graph and make kernels
     // for each independent node sub set a new nnapi_delegate_kernel.

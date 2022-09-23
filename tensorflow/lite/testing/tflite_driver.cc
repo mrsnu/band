@@ -21,8 +21,9 @@ limitations under the License.
 
 #include "absl/strings/escaping.h"
 #include "tensorflow/lite/builtin_op_data.h"
-
-// NOTE: flex:delegate is removed for simple testing
+#if !defined(__APPLE__)
+#include "tensorflow/lite/delegates/flex/delegate.h"
+#endif
 #include "tensorflow/lite/kernels/custom_ops_register.h"
 #include "tensorflow/lite/kernels/hashtable/hashtable_ops.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -31,7 +32,6 @@ limitations under the License.
 #include "tensorflow/lite/testing/join.h"
 #include "tensorflow/lite/testing/split.h"
 #include "tensorflow/lite/tools/evaluation/utils.h"
-#include "tensorflow/lite/util.h"
 
 namespace tflite {
 namespace testing {
@@ -310,8 +310,9 @@ bool TfLiteDriver::DataExpectation::Check(bool verbose,
   }
 }
 
-TfLiteDriver::TfLiteDriver(bool reference_kernel)
-    : relative_threshold_(kRelativeThreshold),
+TfLiteDriver::TfLiteDriver(DelegateType delegate_type, bool reference_kernel)
+    : delegate_(nullptr, nullptr),
+      relative_threshold_(kRelativeThreshold),
       absolute_threshold_(kAbsoluteThreshold),
       quantization_error_multiplier_(kQuantizationErrorMultiplier) {
   if (reference_kernel) {
@@ -324,6 +325,22 @@ TfLiteDriver::TfLiteDriver(bool reference_kernel)
                                    tflite::ops::custom::Register_RFFT2D());
     tflite::ops::custom::AddHashtableOps(buildinop_resolver_);
   }
+
+  switch (delegate_type) {
+    case DelegateType::kNone:
+      break;
+    case DelegateType::kNnapi:
+      delegate_ = evaluation::CreateNNAPIDelegate();
+      break;
+    case DelegateType::kGpu:
+      delegate_ = evaluation::CreateGPUDelegate();
+      break;
+    case DelegateType::kFlex:
+#if !defined(__APPLE__)
+      delegate_ = FlexDelegate::Create();
+#endif
+      break;
+  }
 }
 
 TfLiteDriver::~TfLiteDriver() {
@@ -332,13 +349,9 @@ TfLiteDriver::~TfLiteDriver() {
   }
 }
 
-void TfLiteDriver::ResetInterpreter(RuntimeConfig runtime_config) {
-  (&interpreter_)->reset(new Interpreter(nullptr, runtime_config));
-}
-
-void TfLiteDriver::AllocateTensors(int model_id) {
+void TfLiteDriver::AllocateTensors() {
   if (must_allocate_tensors_) {
-    if (interpreter_->AllocateTensors(model_id) != kTfLiteOk) {
+    if (interpreter_->AllocateTensors() != kTfLiteOk) {
       Invalidate("Failed to allocate tensors");
       return;
     }
@@ -347,117 +360,48 @@ void TfLiteDriver::AllocateTensors(int model_id) {
   }
 }
 
-int TfLiteDriver::LoadModel(const string& bin_file_path) {
-  if (!IsValid()) return -1;
+void TfLiteDriver::LoadModel(const string& bin_file_path) {
+  if (!IsValid()) return;
 
-  std::unique_ptr<FlatBufferModel> model = FlatBufferModel::BuildFromFile(GetFullPath(bin_file_path).c_str());
-  if (!model) {
+  model_ = FlatBufferModel::BuildFromFile(GetFullPath(bin_file_path).c_str());
+  if (!model_) {
     Invalidate("Failed to mmap model " + bin_file_path);
-    return -1;
+    return;
   }
-
-  int model_id = InterpreterBuilder::RegisterModel(
-      *model, nullptr, *resolver_, &interpreter_, 1);
-
+  InterpreterBuilder(*model_, *resolver_)(&interpreter_);
   if (!interpreter_) {
     Invalidate("Failed build interpreter");
-    return -1;
+    return;
+  }
+  if (delegate_) {
+    if (interpreter_->ModifyGraphWithDelegate(delegate_.get()) != kTfLiteOk) {
+      Invalidate("Unable to the build graph using the delegate");
+      return;
+    }
   }
 
   must_allocate_tensors_ = true;
-
-  return model_id;
 }
 
-void TfLiteDriver::ResetTensor(TfLiteTensor* tensor) {
+void TfLiteDriver::ResetTensor(int id) {
   if (!IsValid()) return;
+  auto* tensor = interpreter_->tensor(id);
   memset(tensor->data.raw, 0, tensor->bytes);
 }
 
-void TfLiteDriver::ResetTensor(int model_id, int id) {
-  ResetTensor(interpreter_->tensor(model_id, id));
-}
-
-void TfLiteDriver::ReshapeTensor(int model_id, int id, const string& csv_values) {
+void TfLiteDriver::ReshapeTensor(int id, const string& csv_values) {
   if (!IsValid()) return;
   if (interpreter_->ResizeInputTensor(
-          model_id, id, testing::Split<int>(csv_values, ",")) != kTfLiteOk) {
+          id, testing::Split<int>(csv_values, ",")) != kTfLiteOk) {
     Invalidate("Failed to resize input tensor " + std::to_string(id));
     return;
   }
   must_allocate_tensors_ = true;
 }
 
-TfLiteTensor* TfLiteDriver::AllocateInputTensor(int model_id, int input_index) {
-  const int worker_id = interpreter_->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, worker_id);
-
-  TfLiteTensor* input = TfLiteTensorCreateLike(
-      interpreter_->tensor(subgraph_index, interpreter_->inputs(subgraph_index)[input_index]));
-
-  return input;
-}
-
-TfLiteTensor* TfLiteDriver::AllocateOutputTensor(int model_id, int output_index) {
-  const int worker_id = interpreter_->GetRepresentativeWorkerId(kTfLiteCPU);
-  size_t subgraph_index = interpreter_->GetSubgraphIdx(model_id, worker_id);
-
-  TfLiteTensor* output = TfLiteTensorCreateLike(
-      interpreter_->tensor(subgraph_index, interpreter_->outputs(subgraph_index)[output_index]));
-
-  return output;
-}
-
-void TfLiteDriver::SetDataToTensor(TfLiteTensor* tensor, const string& csv_values) {
+void TfLiteDriver::SetInput(int id, const string& csv_values) {
   if (!IsValid()) return;
-  switch (tensor->type) {
-    case kTfLiteFloat32: {
-      const auto& values = testing::Split<float>(csv_values, ",");
-      if (!CheckSizes<float>(tensor->bytes, values.size())) return;
-      SetTensorData(values, tensor->data.raw);
-      break;
-    }
-    case kTfLiteInt32: {
-      const auto& values = testing::Split<int32_t>(csv_values, ",");
-      if (!CheckSizes<int32_t>(tensor->bytes, values.size())) return;
-      SetTensorData(values, tensor->data.raw);
-      break;
-    }
-    case kTfLiteInt64: {
-      const auto& values = testing::Split<int64_t>(csv_values, ",");
-      if (!CheckSizes<int64_t>(tensor->bytes, values.size())) return;
-      SetTensorData(values, tensor->data.raw);
-      break;
-    }
-    case kTfLiteUInt8: {
-      const auto& values = testing::Split<uint8_t>(csv_values, ",");
-      if (!CheckSizes<uint8_t>(tensor->bytes, values.size())) return;
-      SetTensorData(values, tensor->data.raw);
-      break;
-    }
-    case kTfLiteInt8: {
-      const auto& values = testing::Split<int8_t>(csv_values, ",");
-      if (!CheckSizes<int8_t>(tensor->bytes, values.size())) return;
-      SetTensorData(values, tensor->data.raw);
-      break;
-    }
-    case kTfLiteBool: {
-      const auto& values = testing::Split<bool>(csv_values, ",");
-      if (!CheckSizes<bool>(tensor->bytes, values.size())) return;
-      SetTensorData(values, tensor->data.raw);
-      break;
-    }
-    default:
-      Invalidate(absl::StrCat("Unsupported tensor type ",
-                              TfLiteTypeGetName(tensor->type),
-                              " in TfLiteDriver::SetInput"));
-      return;
-  }
-}
-
-void TfLiteDriver::SetInput(int model_id, int id, const string& csv_values) {
-  if (!IsValid()) return;
-  auto* tensor = interpreter_->tensor(model_id, id);
+  auto* tensor = interpreter_->tensor(id);
   switch (tensor->type) {
     case kTfLiteFloat32: {
       const auto& values = testing::Split<float>(csv_values, ",");
@@ -523,46 +467,45 @@ void TfLiteDriver::SetQuantizationErrorMultiplier(
   quantization_error_multiplier_ = quantization_error_multiplier;
 }
 
-void TfLiteDriver::SetExpectation(int model_id, int id, const string& csv_values) {
+void TfLiteDriver::SetExpectation(int id, const string& csv_values) {
   if (!IsValid()) return;
-  auto* tensor = interpreter_->tensor(model_id, id);
-  auto& expected_output = expected_output_[model_id];
-  if (expected_output.count(id) != 0) {
+  auto* tensor = interpreter_->tensor(id);
+  if (expected_output_.count(id) != 0) {
     Invalidate(absl::StrCat("Overridden expectation for tensor '", id, "'"));
   }
-  expected_output[id].reset(
+  expected_output_[id].reset(
       new DataExpectation(relative_threshold_, absolute_threshold_,
                           quantization_error_multiplier_));
 
   if (IsQuantized(*tensor)) {
-    expected_output[id]->SetData<float>(csv_values);
+    expected_output_[id]->SetData<float>(csv_values);
     return;
   }
 
   switch (tensor->type) {
     case kTfLiteFloat32:
-      expected_output[id]->SetData<float>(csv_values);
+      expected_output_[id]->SetData<float>(csv_values);
       break;
     case kTfLiteInt32:
-      expected_output[id]->SetData<int32_t>(csv_values);
+      expected_output_[id]->SetData<int32_t>(csv_values);
       break;
     case kTfLiteInt64:
-      expected_output[id]->SetData<int64_t>(csv_values);
+      expected_output_[id]->SetData<int64_t>(csv_values);
       break;
     case kTfLiteUInt8:
-      expected_output[id]->SetData<uint8_t>(csv_values);
+      expected_output_[id]->SetData<uint8_t>(csv_values);
       break;
     case kTfLiteInt8:
-      expected_output[id]->SetData<int8_t>(csv_values);
+      expected_output_[id]->SetData<int8_t>(csv_values);
       break;
     case kTfLiteBool:
-      expected_output[id]->SetData<bool>(csv_values);
+      expected_output_[id]->SetData<bool>(csv_values);
       break;
     case kTfLiteString:
-      expected_output[id]->SetData<string>(csv_values);
+      expected_output_[id]->SetData<string>(csv_values);
       break;
     case kTfLiteComplex64:
-      expected_output[id]->SetData<std::complex<float>>(csv_values);
+      expected_output_[id]->SetData<std::complex<float>>(csv_values);
       break;
     default:
       Invalidate(absl::StrCat("Unsupported tensor type ",
@@ -572,40 +515,28 @@ void TfLiteDriver::SetExpectation(int model_id, int id, const string& csv_values
   }
 }
 
-void TfLiteDriver::SetShapeExpectation(int model_id, int id, const string& csv_values) {
+void TfLiteDriver::SetShapeExpectation(int id, const string& csv_values) {
   if (!IsValid()) return;
-  auto& expected_output_shape = expected_output_shape_[model_id];
-  if (expected_output_shape.count(id) != 0) {
+  if (expected_output_shape_.count(id) != 0) {
     Invalidate(
         absl::StrCat("Overridden shape expectation for tensor '", id, "'"));
   }
-  expected_output_shape[id].reset(new ShapeExpectation(csv_values));
+  expected_output_shape_[id].reset(new ShapeExpectation(csv_values));
 }
 
-void TfLiteDriver::Invoke(int model_id) {
+void TfLiteDriver::Invoke() {
   if (!IsValid()) return;
-  if (interpreter_->Invoke(model_id) != kTfLiteOk) {
+  if (interpreter_->Invoke() != kTfLiteOk) {
     Invalidate("Failed to invoke interpreter");
   }
 }
 
-void TfLiteDriver::InvokeWithInput(std::vector<Job>& requests, std::vector<Tensors>& inputs,
-                                        std::vector<Tensors>& outputs)  {
-  if (!IsValid()) return;
-  interpreter_->InvokeModelsSync(requests, inputs, outputs);
-}
-
-void TfLiteDriver::InvokeThroughPlanner(int model_id) {
-  if (!IsValid()) return;
-  interpreter_->InvokeModelsSync({Job(model_id)});
-}
-
-bool TfLiteDriver::CheckResults(int model_id) {
+bool TfLiteDriver::CheckResults() {
   if (!IsValid()) return false;
   bool success = true;
-  for (const auto& p : expected_output_[model_id]) {
+  for (const auto& p : expected_output_) {
     int id = p.first;
-    auto* tensor = interpreter_->tensor(model_id, id);
+    auto* tensor = interpreter_->tensor(id);
     if (!p.second->Check(/*verbose=*/false, *tensor)) {
       // Do not invalidate anything here. Instead, simply output the
       // differences and return false. Invalidating would prevent all
@@ -617,9 +548,9 @@ bool TfLiteDriver::CheckResults(int model_id) {
       SetOverallSuccess(false);
     }
   }
-  for (const auto& p : expected_output_shape_[model_id]) {
+  for (const auto& p : expected_output_shape_) {
     int id = p.first;
-    auto* tensor = interpreter_->tensor(model_id, id);
+    auto* tensor = interpreter_->tensor(id);
     if (!p.second->CheckShape(/*verbose=*/false, *tensor)) {
       // Do not invalidate anything here. Instead, simply output the
       // differences and return false. Invalidating would prevent all
@@ -631,16 +562,18 @@ bool TfLiteDriver::CheckResults(int model_id) {
       SetOverallSuccess(false);
     }
   }
-  expected_output_[model_id].clear();
+  expected_output_.clear();
   return success;
 }
 
 void TfLiteDriver::ResetLSTMStateTensors() {
-  interpreter_->ResetVariableTensors(0);
+  interpreter_->ResetVariableTensors();
 }
 
-string TfLiteDriver::ReadOutput(TfLiteTensor* tensor) {
+string TfLiteDriver::ReadOutput(int id) {
+  auto* tensor = interpreter_->tensor(id);
   int num_elements = 1;
+
   for (int i = 0; i < tensor->dims->size; ++i) {
     num_elements *= tensor->dims->data[i];
   }
@@ -664,10 +597,6 @@ string TfLiteDriver::ReadOutput(TfLiteTensor* tensor) {
                               " in TfLiteDriver::ReadOutput"));
       return "";
   }
-}
-
-string TfLiteDriver::ReadOutput(int model_id, int id) {
-  return ReadOutput(interpreter_->tensor(model_id, id));
 }
 
 }  // namespace testing

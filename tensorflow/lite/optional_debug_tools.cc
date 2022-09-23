@@ -84,17 +84,17 @@ const char* AllocTypeName(TfLiteAllocationType type) {
 }
 
 // Prints a dump of what tensors and what nodes are in the interpreter.
-void PrintInterpreterState(Interpreter* interpreter, int subgraph_index) {
+void PrintInterpreterState(Interpreter* interpreter) {
   printf("Interpreter has %zu tensors and %zu nodes\n",
-         interpreter->tensors_size(subgraph_index), interpreter->nodes_size(subgraph_index));
+         interpreter->tensors_size(), interpreter->nodes_size());
   printf("Inputs:");
-  PrintIntVector(interpreter->inputs(subgraph_index));
+  PrintIntVector(interpreter->inputs());
   printf("Outputs:");
-  PrintIntVector(interpreter->outputs(subgraph_index));
+  PrintIntVector(interpreter->outputs());
   printf("\n");
-  for (size_t tensor_index = 0; tensor_index < interpreter->tensors_size(subgraph_index);
+  for (size_t tensor_index = 0; tensor_index < interpreter->tensors_size();
        tensor_index++) {
-    TfLiteTensor* tensor = interpreter->tensor(subgraph_index, static_cast<int>(tensor_index));
+    TfLiteTensor* tensor = interpreter->tensor(static_cast<int>(tensor_index));
     printf("Tensor %3zu %-20s %10s %15s %10zu bytes (%4.1f MB) ", tensor_index,
            tensor->name, TensorTypeName(tensor->type),
            AllocTypeName(tensor->allocation_type), tensor->bytes,
@@ -102,10 +102,10 @@ void PrintInterpreterState(Interpreter* interpreter, int subgraph_index) {
     PrintTfLiteIntVector(tensor->dims);
   }
   printf("\n");
-  for (size_t node_index = 0; node_index < interpreter->nodes_size(subgraph_index);
+  for (size_t node_index = 0; node_index < interpreter->nodes_size();
        node_index++) {
     const std::pair<TfLiteNode, TfLiteRegistration>* node_and_reg =
-        interpreter->node_and_registration(subgraph_index, static_cast<int>(node_index));
+        interpreter->node_and_registration(static_cast<int>(node_index));
     const TfLiteNode& node = node_and_reg->first;
     const TfLiteRegistration& reg = node_and_reg->second;
     if (reg.custom_name != nullptr) {
