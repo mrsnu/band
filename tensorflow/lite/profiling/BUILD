@@ -36,27 +36,6 @@ cc_library(
 )
 
 cc_library(
-    name = "time_profiler",
-    srcs = ["time_profiler.cc"],
-    hdrs = ["time_profiler.h"],
-    copts = common_copts,
-    deps = [
-        "//tensorflow/lite/core/api",
-    ],
-)
-
-cc_library(
-    name = "function_profiler",
-    srcs = ["function_profiler.cc"],
-    hdrs = ["function_profiler.h"],
-    copts = common_copts,
-    deps = [
-        "//tensorflow/lite/profiling:time",
-        "//tensorflow/lite:minimal_logging"
-    ],
-)
-
-cc_library(
     name = "platform_profiler",
     srcs = ["platform_profiler.cc"],
     hdrs = ["platform_profiler.h"],
@@ -95,17 +74,6 @@ cc_library(
     srcs = ["time.cc"],
     hdrs = ["time.h"],
     copts = common_copts,
-)
-
-cc_library(
-    name = "util",
-    srcs = ["util.cc"],
-    hdrs = ["util.h"],
-    copts = common_copts,
-    deps = [
-        "//tensorflow/lite:util",
-        "@jsoncpp_git//:jsoncpp",
-    ],
 )
 
 cc_library(

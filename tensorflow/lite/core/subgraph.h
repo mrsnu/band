@@ -15,7 +15,6 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 #define TENSORFLOW_LITE_CORE_SUBGRAPH_H_
 
-#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <map>
@@ -30,7 +29,6 @@ limitations under the License.
 #include "tensorflow/lite/experimental/resource/resource_base.h"
 #include "tensorflow/lite/memory_planner.h"
 #include "tensorflow/lite/util.h"
-#include "tensorflow/lite/planner/planner.h"
 
 #if TFLITE_EXPERIMENTAL_RUNTIME_EAGER
 #include "tensorflow/lite/experimental/tf_runtime/public/subgraph.h"
@@ -42,6 +40,7 @@ namespace impl {
 
 // Forward declare since NNAPIDelegate uses Interpreter.
 class NNAPIDelegate;
+
 class Subgraph {
  public:
   friend class Interpreter;
@@ -169,12 +168,6 @@ class Subgraph {
 
   // Read only access to list of outputs.
   const std::vector<int>& outputs() const { return outputs_; }
-
-  void SetOpIndices(std::set<int> op_indices) { op_indices_ = op_indices; }
-
-  std::set<int> op_indices() const {
-    return op_indices_;
-  }
 
   // Read only access to list of variable tensors.
   std::vector<int>& variables() { return variables_; }
@@ -339,21 +332,6 @@ class Subgraph {
   // Before `AllocateTensors` is called, this will always return true;
   bool HasDynamicTensors() { return has_dynamic_tensors_; }
 
-  void SetKey(SubgraphKey key) { key_ = key; }
-  SubgraphKey& GetKey() { return key_; }
-
-  TfLiteStatus SetPrevSubgraph(Subgraph* prev);
-  const std::set<Subgraph*>& GetNextSubgraphs() const;
-  const std::set<Subgraph*>& GetPrevSubgraphs() const;
-
-  inline bool IsStart() const {
-    return prev_subgraphs_.empty();
-  }
-  
-  inline bool IsEnd() const {
-    return next_subgraphs_.empty();
-  }
-
  private:
   // SubgraphAwareProfiler wraps an actual TFLite profiler, such as a
   // BufferedProfiler instance, and takes care of event profiling/tracing in a
@@ -397,7 +375,7 @@ class Subgraph {
     Profiler* const profiler_;
     const int64_t subgraph_index_;
   };
-  
+
   // Prevent 'context_' from accessing functions that are only available to
   // delegated kernels.
   void SwitchToKernelContext();
@@ -596,24 +574,16 @@ class Subgraph {
 
   // Returns true if cancellation function returns true.
   bool IsCancelled();
-  
-  bool GetHealth() const {
-    return healthy_;
-  }
 
-  void SetHealth(bool healthy) {
-    healthy_ = healthy;
-  }
-
-  // The state of the subgraph.
+  // The state of the Interpreter.
   enum State {
-    // The subgraph isn't ready to be invoked.
+    // The interpreter isn't ready to be invoked.
     // `AllocateTensor` need to be called to enter an invokable state.
     kStateUninvokable = 0,
-    // The subgraph is ready to be invoked.
+    // The interpreter is ready to be invoked.
     kStateInvokable,
-    // The subgraph is ready to be invoked, and graph can't be further
-    // modified. The subgraph will enter this state when calling
+    // The interpreter is ready to be invoked, and graph can't be further
+    // modified. The interpreter will enter this state when calling
     // `ModifyGraphWithDelegate` and the delegate doesn't support dynamic
     // tensors.
     kStateInvokableAndImmutable,
@@ -640,8 +610,6 @@ class Subgraph {
   // of every node and the global inputs and outputs are valid indexes into
   // the tensor array.
   bool consistent_ = true;
-
-  std::set<int> op_indices_;
 
   // Array of indices representing the tensors that are inputs to the
   // interpreter.
@@ -734,11 +702,6 @@ class Subgraph {
 
   // A map of resources. Owned by interpreter and shared by multiple subgraphs.
   resource::ResourceMap* resources_ = nullptr;
-  SubgraphKey key_;
-  bool healthy_ = true;
-
-  std::set<Subgraph*> next_subgraphs_;
-  std::set<Subgraph*> prev_subgraphs_;
 };
 
 }  // namespace impl

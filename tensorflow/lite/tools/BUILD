@@ -217,29 +217,6 @@ cc_library(
 )
 
 cc_library(
-    name = "workload_simulator",
-    srcs = ["workload_simulator.cc"],
-    hdrs = ["workload_simulator.h"],
-    copts = common_copts,
-    deps = [
-        "//tensorflow/lite:framework",
-        "//tensorflow/lite/c:common",
-        "@jsoncpp_git//:jsoncpp",
-    ]
-)
-
-cc_library(
-    name = "logging_reporter",
-    srcs = ["logging_reporter.cc"],
-    hdrs = ["logging_reporter.h"],
-    copts = common_copts,
-    deps = [
-        "//tensorflow/lite/core/api",
-        ":logging"
-    ],
-)
-
-cc_library(
     name = "tool_params",
     srcs = ["tool_params.cc"],
     hdrs = ["tool_params.h"],

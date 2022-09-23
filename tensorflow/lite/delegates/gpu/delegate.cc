@@ -98,7 +98,7 @@ class Delegate {
       .CopyFromBufferHandle = nullptr,
       .CopyToBufferHandle = nullptr,
       .FreeBufferHandle = nullptr,
-      .flags = kTfLiteDelegateFlagsGPU,
+      .flags = kTfLiteDelegateFlagsNone,
   };
 
   TfLiteGpuDelegateOptionsV2 options_;
@@ -199,11 +199,14 @@ class DelegateKernel {
   }
 
   absl::Status Invoke(TfLiteContext* context) {
-    if (thread_id_prepare_ != std::this_thread::get_id() 
-      && enforce_same_thread_) {
-      return absl::FailedPreconditionError(
-          "OpenGL GpuDelegate must run on the same thread where it was "
-          "initialized.");
+    if (thread_id_prepare_ != std::this_thread::get_id()) {
+      TFLITE_LOG(tflite::TFLITE_LOG_WARNING,
+                 "GpuDelegate invoke thread != prepare thread");
+      if (enforce_same_thread_) {
+        return absl::FailedPreconditionError(
+            "GpuDelegate must run on the same thread where it was "
+            "initialized.");
+      }
     }
 
     const bool is_dequant_required = !quant_conversion_map_.empty();
@@ -422,14 +425,6 @@ TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
   TFLITE_LOG_PROD(TFLITE_LOG_INFO, "Created %d GPU delegate kernels.",
                   gpu_delegate->num_delegate_kernels());
   TfLiteIntArrayFree(ops_to_replace);
-
-  // NOTE: When a quantized model is invoked without the delegate option
-  // `TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT`, no GPU Delegate kernel
-  // will be generated.
-  if (gpu_delegate->num_delegate_kernels() == 0) {
-    return kTfLiteError;
-  }
-
   return status;
 }
 

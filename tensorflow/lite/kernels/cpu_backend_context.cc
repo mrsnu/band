@@ -20,8 +20,6 @@ limitations under the License.
 #include "public/gemmlowp.h"
 #include "ruy/context.h"  // from @ruy
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/cpu.h"
-#include "tensorflow/lite/minimal_logging.h"
 #include "tensorflow/lite/external_cpu_backend_context.h"
 #include "tensorflow/lite/kernels/op_macros.h"
 
@@ -58,6 +56,7 @@ CpuBackendContext* CpuBackendContext::GetFromContext(TfLiteContext* context) {
 
 CpuBackendContext::CpuBackendContext()
     : TfLiteInternalBackendContext(),
+      ruy_context_(new ruy::Context),
       gemmlowp_context_(new gemmlowp::GemmContext) {
   SetMaxNumThreads(kDefaultNumThreadpoolThreads);
 // TODO(b/148289189) Remove when clients have transitioned to runtime flag.
@@ -74,44 +73,10 @@ void CpuBackendContext::SetMaxNumThreads(int max_num_threads) {
   const int target_num_threads =
       max_num_threads > -1 ? max_num_threads : kDefaultNumThreadpoolThreads;
   max_num_threads_ = target_num_threads;
-  for (auto& pair : ruy_contexts_) {
-    pair.second->set_max_num_threads(target_num_threads);
-  }
+  ruy_context_->set_max_num_threads(target_num_threads);
   gemmlowp_context_->set_max_num_threads(target_num_threads);
 }
 
-void CpuBackendContext::SetCpuSet(std::thread::id tid, impl::CpuSet cpu_mask) {
-  cpu_masks_.insert(std::make_pair(tid, cpu_mask));
-  UpdateCpuSet(tid);
-}
-
 void CpuBackendContext::SetUseCaching(bool flag) { use_caching_ = flag; }
-
-ruy::Context* CpuBackendContext::ruy_context() {
-  std::thread::id this_id = std::this_thread::get_id();
-  std::lock_guard<std::mutex> lock(ruy_context_lock_);
-  if (ruy_contexts_.find(this_id) == ruy_contexts_.end()) {
-    ruy_contexts_[this_id] = std::make_unique<ruy::Context>();
-    UpdateCpuSet(this_id);
-  }
-  return ruy_contexts_[this_id].get();
-}
-
-void CpuBackendContext::ClearCaches() {
-  for (auto& pair : ruy_contexts_) {
-    pair.second->ClearPrepackedCache();
-  }
-}
-
-void CpuBackendContext::UpdateCpuSet(std::thread::id tid) {
-  if (ruy_contexts_.find(tid) != ruy_contexts_.end() &&
-      cpu_masks_.find(tid) != cpu_masks_.end()) {
-    impl::CpuSet current_set = cpu_masks_[tid];
-    int max_threads = std::min(max_num_threads_, current_set.NumEnabled());
-    ruy_contexts_[tid]->set_max_num_threads(max_threads);
-    ruy_contexts_[tid]->set_cpu_mask(current_set.GetMaskBits());
-    TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Ruy tid %d number of threads %d.", tid, max_threads);
-  }
-}
 
 }  // namespace tflite

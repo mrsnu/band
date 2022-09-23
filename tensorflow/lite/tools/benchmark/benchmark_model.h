@@ -25,13 +25,10 @@ limitations under the License.
 #include <vector>
 
 #include "tensorflow/core/util/stats_calculator.h"
-#include "tensorflow/lite/cpu.h"
-#include "tensorflow/lite/config.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/profiling/memory_info.h"
 #include "tensorflow/lite/tools/benchmark/benchmark_params.h"
 #include "tensorflow/lite/tools/command_line_flags.h"
-#include "tensorflow/lite/tools/benchmark/benchmark_utils.h"
 
 namespace tflite {
 namespace benchmark {
@@ -213,16 +210,10 @@ class BenchmarkModel {
   // data that has non-trivial cost.
   virtual TfLiteStatus PrepareInputData();
 
-  virtual TfLiteStatus RunImpl(int i) = 0;
-  virtual TfLiteStatus RunAll() = 0;
-  virtual TfLiteStatus RunPeriodic() = 0;
-  virtual TfLiteStatus RunPeriodicSingleThread() = 0;
-  virtual TfLiteStatus RunStream() = 0;
-  virtual TfLiteStatus RunWorkload() = 0;
+  virtual TfLiteStatus ResetInputsAndOutputs();
+  virtual TfLiteStatus RunImpl() = 0;
   BenchmarkParams params_;
   BenchmarkListeners listeners_;
-  RuntimeConfig runtime_config_;
-  util::BenchmarkConfig benchmark_config_;
 };
 
 }  // namespace benchmark

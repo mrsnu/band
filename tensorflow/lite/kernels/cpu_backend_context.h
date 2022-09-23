@@ -17,9 +17,6 @@ limitations under the License.
 #define TENSORFLOW_LITE_KERNELS_CPU_BACKEND_CONTEXT_H_
 
 #include <memory>
-#include <thread>
-#include <unordered_map>
-#include <mutex>
 
 #include "public/gemmlowp.h"
 #include "ruy/context.h"  // from @ruy
@@ -35,7 +32,7 @@ class CpuBackendContext final : public TfLiteInternalBackendContext {
   CpuBackendContext();
   ~CpuBackendContext() override;
 
-  ruy::Context* ruy_context();
+  ruy::Context* ruy_context() const { return ruy_context_.get(); }
 
   gemmlowp::GemmContext* gemmlowp_context() const {
     return gemmlowp_context_.get();
@@ -44,7 +41,6 @@ class CpuBackendContext final : public TfLiteInternalBackendContext {
   // Sets the maximum-number-of-threads-to-use parameter, only as a means of
   // passing around this information.
   void SetMaxNumThreads(int max_num_threads) override;
-  void SetCpuSet(std::thread::id tid, impl::CpuSet cpu_mask) override;
 
   int max_num_threads() const { return max_num_threads_; }
 
@@ -52,20 +48,16 @@ class CpuBackendContext final : public TfLiteInternalBackendContext {
 
   bool use_caching() const { return use_caching_; }
 
-  void ClearCaches() override;
+  void ClearCaches() override { ruy_context_->ClearPrepackedCache(); }
 
  private:
-  void UpdateCpuSet(std::thread::id tid);
   // To enable a smooth transition from the current direct usage
   // of the underlying gemmlowp context to going through abstractions
   // (see :cpu_backend_gemm), for now a CpuBackendContext always
   // stores both a gemmlowp context and a ruy context.
   // TODO(b/131416458): Once call sites all go through abstractions,
   // elide what can be elided based on TFLITE_WITH_RUY.
-  std::unordered_map<
-    std::thread::id, std::unique_ptr<ruy::Context>> ruy_contexts_;
-  std::unordered_map<std::thread::id, impl::CpuSet> cpu_masks_;
-  std::mutex ruy_context_lock_;
+  const std::unique_ptr<ruy::Context> ruy_context_;
   const std::unique_ptr<gemmlowp::GemmContext> gemmlowp_context_;
 
   // The maximum of threads used for parallelizing TfLite ops. However,

@@ -24,7 +24,6 @@ cc_library(
     deps = [
         ":benchmark_tflite_model_lib",
         "//tensorflow/lite/tools:logging",
-        "//tensorflow/lite/tools:logging_reporter",
     ],
 )
 
@@ -121,6 +120,7 @@ cc_test(
         "//tensorflow/lite/tools/delegates:delegate_provider_hdr",
         "@com_google_absl//absl/algorithm",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -162,7 +162,6 @@ cc_library(
         "//tensorflow/lite/profiling:profile_summary_formatter",
         "//tensorflow/lite/profiling:profiler",
         "//tensorflow/lite/tools:logging",
-        "//tensorflow/lite/tools:logging_reporter",
         "//tensorflow/lite/tools/delegates:delegate_provider_hdr",
         "//tensorflow/lite/tools/delegates:tflite_execution_providers",
         "@com_google_absl//absl/base:core_headers",
@@ -217,7 +216,6 @@ cc_library(
         "//tensorflow/core/util:stats_calculator_portable",
         "//tensorflow/lite:framework",
         "//tensorflow/lite/c:common",
-        "//tensorflow/lite:config",
         "//tensorflow/lite/profiling:memory_info",
         "//tensorflow/lite/profiling:time",
         "//tensorflow/lite/tools:command_line_flags",
@@ -232,17 +230,7 @@ cc_library(
     ],
     hdrs = ["benchmark_utils.h"],
     copts = common_copts,
-    deps = [
-        "//tensorflow/lite:cpu",
-        "//tensorflow/lite:util",
-        "//tensorflow/lite/c:common",
-        "//tensorflow/lite:config",
-        "//tensorflow/lite/profiling:time",
-        "//tensorflow/lite/tools:logging",
-        "//tensorflow/lite/tools:workload_simulator",
-        "@com_google_absl//absl/strings:str_format",
-        "@jsoncpp_git//:jsoncpp",
-    ],
+    deps = ["//tensorflow/lite/profiling:time"],
 )
 
 cc_test(

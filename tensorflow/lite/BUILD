@@ -13,7 +13,6 @@ exports_files(glob([
     "testdata/*.pb",
     "testdata/*.tflite",
     "testdata/*.csv",
-    "testdata/*.json",
     "models/testdata/*",
 ]))
 
@@ -69,6 +68,7 @@ FRAMEWORK_LIB_HDRS = [
     "context_util.h",
     "core/macros.h",
     "core/subgraph.h",
+    "error_reporter.h",
     "graph_info.h",
     "interpreter.h",
     "model.h",
@@ -77,17 +77,7 @@ FRAMEWORK_LIB_HDRS = [
     "mutable_op_resolver.h",
     "op_resolver.h",
     "optional_debug_tools.h",
-    "tensor_ring_buffer.h",
-    "planner/util.h",
-    "planner/planner.h",
-    "planner/fixed_device_scheduler.h",
-    "planner/round_robin_scheduler.h",
-    "planner/shortest_expected_latency_scheduler.h",
-    "planner/heterogeneous_earliest_finish_time_scheduler.h",
-    "planner/least_slack_first_scheduler.h",
-    "planner/heterogeneous_earliest_finish_time_reserved_scheduler.h",
-    "worker.h",
-    "safe_bool.h"
+    "stderr_reporter.h",
 ]
 
 cc_library(
@@ -152,7 +142,6 @@ cc_library(
     copts = TFLITE_DEFAULT_COPTS,
     deps = [
         "//tensorflow/lite/c:common",
-        "//tensorflow/lite:cpu"
     ],
 )
 
@@ -234,34 +223,6 @@ cc_library(
 )
 
 cc_library(
-    name = "cpu",
-    srcs = [
-        "cpu.cc",
-    ],
-    hdrs = [
-        "cpu.h",
-    ],
-    deps = [
-        "//tensorflow/lite/c:common",
-    ],
-)
-
-cc_library(
-    name = "error_reporter",
-    srcs = [
-        "stderr_reporter.cc",
-    ],
-    hdrs = [
-        "error_reporter.h",
-        "stderr_reporter.h",
-    ],
-    deps = [
-        ":minimal_logging",
-        "//tensorflow/lite/core/api",
-    ],
-)
-
-cc_library(
     name = "framework_lib",
     srcs = [
         "core/subgraph.cc",
@@ -271,18 +232,7 @@ cc_library(
         "model_builder.cc",
         "mutable_op_resolver.cc",
         "optional_debug_tools.cc",
-        "tensor_ring_buffer.cc",
-        "planner/planner.cc",
-        "planner/fixed_device_scheduler.cc",
-        "planner/fixed_device_global_queue_scheduler.cc",
-        "planner/round_robin_scheduler.cc",
-        "planner/shortest_expected_latency_scheduler.cc",
-        "planner/heterogeneous_earliest_finish_time_scheduler.cc",
-        "planner/least_slack_first_scheduler.cc",
-        "planner/heterogeneous_earliest_finish_time_reserved_scheduler.cc",
-        "worker.cc",
-        "worker_device_queue.cc",
-        "worker_global_queue.cc"
+        "stderr_reporter.cc",
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,
@@ -292,8 +242,6 @@ cc_library(
     deps = [
         ":allocation",
         ":arena_planner",
-        ":cpu",
-        ":error_reporter",
         ":external_cpu_backend_context",
         ":graph_info",
         ":memory_planner",
@@ -303,7 +251,6 @@ cc_library(
         ":tflite_with_xnnpack_optional",
         ":type_to_tflitetype",
         ":util",
-        ":config",
         ":version",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/core/api",
@@ -311,21 +258,11 @@ cc_library(
         "//tensorflow/lite/delegates/nnapi:nnapi_delegate",
         "//tensorflow/lite/experimental/resource",
         "//tensorflow/lite/kernels/internal:compatibility",
-        "//tensorflow/lite/kernels:cpu_backend_context", 
         "//tensorflow/lite/nnapi:nnapi_implementation",
-        "//tensorflow/lite/profiling:function_profiler",
-        "//tensorflow/lite/profiling:time_profiler",
         "//tensorflow/lite/schema:schema_fbs",
-        "//tensorflow/lite/profiling:time",
-        "//tensorflow/lite/profiling:util",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",
-        ],
-        "//conditions:default": [],
-    }) + select({
-        "//tensorflow:android": [
-            "//tensorflow/lite/delegates/gpu:delegate",
         ],
         "//conditions:default": [],
     }),
@@ -622,31 +559,14 @@ cc_test(
 )
 
 cc_library(
-    name = "config",
-    srcs = ["config.cc"],
-    hdrs = ["config.h"],
-    copts = TFLITE_DEFAULT_COPTS,
-    deps = [
-        "//tensorflow/lite:cpu",
-        "//tensorflow/lite:error_reporter",
-        "//tensorflow/lite:minimal_logging",
-        "//tensorflow/lite/c:common",
-        "//tensorflow/lite:util",
-        "@jsoncpp_git//:jsoncpp",
-    ],
-)
-
-cc_library(
     name = "util",
     srcs = ["util.cc"],
     hdrs = ["util.h"],
     copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
     deps = [
         ":kernel_api",
-        "//tensorflow/lite:minimal_logging",
         "//tensorflow/lite/c:common",
         "//tensorflow/lite/schema:schema_fbs",
-        "@jsoncpp_git//:jsoncpp",
     ],
 )
 

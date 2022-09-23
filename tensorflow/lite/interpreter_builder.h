@@ -20,7 +20,6 @@ limitations under the License.
 #define TENSORFLOW_LITE_INTERPRETER_BUILDER_H_
 
 #include <memory>
-#include <set>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
@@ -55,84 +54,48 @@ namespace impl {
 /// reporter, if provided) is at least as long as interpreter's lifetime.
 class InterpreterBuilder {
  public:
-  static void SetErrorReporter(ErrorReporter* error_reporter);
-
-  static std::unique_ptr<Subgraph> CreateSubgraph(
-      const FlatBufferModel& model, 
-      const OpResolver& op_resolver,
-      std::unique_ptr<Interpreter>* interpreter,
-      int model_id,
-      int worker_id,
-      std::set<int> op_indices = {},
-      int num_threads = -1);
-
-  static std::unique_ptr<Subgraph> CreateSubgraph(
-      const ::tflite::Model* model, 
-      const OpResolver& op_resolver,
-      std::unique_ptr<Interpreter>* interpreter,
-      int model_id,
-      int worker_id,
-      std::set<int> op_indices = {},
-      int num_threads = -1);
-
-  // Adds a Subgraph to the interpreter and adds the subgraph index to
-  // various internal data structures.
-  // Uses `model_fname` in `model_config` to check if the model has already
-  // been profiled in the past or not. `model_config` is ignored if null.
-  // Returns the model id.
-  // Returns -1 if any error occurs.
-  static int RegisterModel(const FlatBufferModel& model,
-                        ModelConfig* model_config,
-                        const OpResolver& op_resolver,
-                        std::unique_ptr<Interpreter>* interpreter,
-                        int num_threads = -1);
-  static int RegisterModel(const ::tflite::Model* model,
-                        ModelConfig* model_config,
-                        const OpResolver& op_resolver,
-                        std::unique_ptr<Interpreter>* interpreter,
-                        int num_threads = -1);
+  InterpreterBuilder(const FlatBufferModel& model,
+                     const OpResolver& op_resolver);
+  /// Builds an interpreter given only the raw flatbuffer Model object (instead
+  /// of a FlatBufferModel). Mostly used for testing.
+  /// If `error_reporter` is null, then DefaultErrorReporter() is used.
+  InterpreterBuilder(const ::tflite::Model* model,
+                     const OpResolver& op_resolver,
+                     ErrorReporter* error_reporter = DefaultErrorReporter());
+  ~InterpreterBuilder();
+  InterpreterBuilder(const InterpreterBuilder&) = delete;
+  InterpreterBuilder& operator=(const InterpreterBuilder&) = delete;
+  TfLiteStatus operator()(std::unique_ptr<Interpreter>* interpreter);
+  TfLiteStatus operator()(std::unique_ptr<Interpreter>* interpreter,
+                          int num_threads);
 
  private:
-  InterpreterBuilder() = default;
-  ~InterpreterBuilder() = default;
-
-  static int AddSubgraph(
-      const ::tflite::Model* model, const OpResolver& op_resolver,
-      std::unique_ptr<Interpreter>* interpreter, int model_id, int worker_id,
-      const std::pair<TfLiteDeviceFlags, std::set<int>>& device_op_indices);
-  static TfLiteStatus CreateMergedUnitSubgraphs(
-      const int model_id,
-      std::map<int, DeviceOpIndices>& subgraph_idx_to_device_ops,
-      const ::tflite::Model*& model, const OpResolver& op_resolver,
-      std::unique_ptr<Interpreter>* interpreter);
-  TfLiteStatus BuildLocalIndexToRegistrationMapping(
-      const ::tflite::Model* model, const OpResolver& op_resolver);
+  TfLiteStatus BuildLocalIndexToRegistrationMapping();
   TfLiteStatus ParseNodes(
-      const ::tflite::Model* model,
-      const OpResolver& op_resolver,
       const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
-      Subgraph* subgraph,
-      std::set<int> op_indices);
+      Subgraph* subgraph);
   TfLiteStatus ParseTensors(
       const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
       const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-      Subgraph* subgraph,
-      std::set<int> tensor_indices);
+      Subgraph* subgraph);
+  TfLiteStatus ApplyDelegates(Interpreter* interpreter, int num_threads);
   TfLiteStatus ParseQuantization(const QuantizationParameters* src_quantization,
                                  TfLiteQuantization* quantization,
                                  const std::vector<int>& dims);
   TfLiteStatus ParseSparsity(const SparsityParameters* src_sparsity,
                              TfLiteSparsity** sparsity);
 
-  static ErrorReporter* error_reporter_;
-  static int num_registered_model;
+  const ::tflite::Model* model_;
+  const OpResolver& op_resolver_;
+  ErrorReporter* error_reporter_;
 
   std::vector<const TfLiteRegistration*> flatbuffer_op_index_to_registration_;
   std::vector<TfLiteRegistration> unresolved_custom_ops_;
   std::vector<BuiltinOperator> flatbuffer_op_index_to_registration_types_;
   const Allocation* allocation_ = nullptr;
+
   bool has_flex_op_ = false;
-  std::set<TfLiteType> tensor_types_;
+  int num_fp32_tensors_ = 0;
 };
 
 }  // namespace impl

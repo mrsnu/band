@@ -19,7 +19,6 @@ limitations under the License.
 #include <jni.h>
 
 #include "tensorflow/lite/error_reporter.h"
-#include "tensorflow/lite/util.h"
 
 extern const char kIllegalArgumentException[];
 extern const char kIllegalStateException[];
@@ -29,17 +28,6 @@ extern const char kUnsupportedOperationException[];
 
 namespace tflite {
 namespace jni {
-class TensorHandle {
- public:
-  TensorHandle(TfLiteTensor* tensor);
-
-  TfLiteTensor* tensor() const;
-
- private:
-  TfLiteTensor* tensor_;
-};
-
-TfLiteTensor* GetTensorFromHandle(JNIEnv* env, jlong handle);
 
 void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...);
 
@@ -48,11 +36,12 @@ class BufferErrorReporter : public ErrorReporter {
   BufferErrorReporter(JNIEnv* env, int limit);
   virtual ~BufferErrorReporter();
   int Report(const char* format, va_list args) override;
-  const char* CachedLastErrorMessage();
+  const char* CachedErrorMessage();
 
  private:
   char* buffer_;
-  int limit_;
+  int start_idx_ = 0;
+  int end_idx_ = 0;
 };
 
 }  // namespace jni

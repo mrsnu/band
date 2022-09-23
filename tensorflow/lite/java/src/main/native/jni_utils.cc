@@ -28,19 +28,6 @@ const char kUnsupportedOperationException[] =
 
 namespace tflite {
 namespace jni {
-TensorHandle::TensorHandle(TfLiteTensor* tensor)
-  : tensor_(tensor) {}
-
-TfLiteTensor* TensorHandle::tensor() const { return tensor_; }
-
-TfLiteTensor* GetTensorFromHandle(JNIEnv* env, jlong handle) {
-  if (handle == 0) {
-    ThrowException(env, kIllegalArgumentException,
-                   "Internal error: Invalid handle to TfLiteTensor.");
-    return nullptr;
-  }
-  return reinterpret_cast<TensorHandle*>(handle)->tensor();
-}
 
 void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...) {
   va_list args;
@@ -68,16 +55,27 @@ BufferErrorReporter::BufferErrorReporter(JNIEnv* env, int limit) {
     return;
   }
   buffer_[0] = '\0';
-  limit_ = limit;
+  start_idx_ = 0;
+  end_idx_ = limit - 1;
 }
 
 BufferErrorReporter::~BufferErrorReporter() { delete[] buffer_; }
 
 int BufferErrorReporter::Report(const char* format, va_list args) {
-  return vsnprintf(buffer_, limit_, format, args);
+  int size = 0;
+  // If an error has already been logged, insert a newline.
+  if (start_idx_ > 0 && start_idx_ < end_idx_) {
+    buffer_[start_idx_++] = '\n';
+    ++size;
+  }
+  if (start_idx_ < end_idx_) {
+    size = vsnprintf(buffer_ + start_idx_, end_idx_ - start_idx_, format, args);
+  }
+  start_idx_ += size;
+  return size;
 }
 
-const char* BufferErrorReporter::CachedLastErrorMessage() { return buffer_; }
+const char* BufferErrorReporter::CachedErrorMessage() { return buffer_; }
 
 }  // namespace jni
 }  // namespace tflite

@@ -61,16 +61,6 @@ TfLiteStatus ReportOpError(TfLiteContext* context, const TfLiteNode& node,
           : EnumNameBuiltinOperator(
                 static_cast<BuiltinOperator>(registration.builtin_code)),
       message);
-  static const int NNAPI_flag_mask = kTfLiteDelegateFlagsNNAPIGPU |
-                                     kTfLiteDelegateFlagsNNAPIDSP |
-                                     kTfLiteDelegateFlagsNNAPINPU;
-  if (node.delegate->flags & NNAPI_flag_mask) {
-    int nnapi_errno = static_cast<tflite::StatefulNnApiDelegate*>(node.delegate)
-                          ->GetNnApiErrno();
-    if (nnapi_errno == ANEURALNETWORKS_UNAVAILABLE_DEVICE) {
-      return kTfLiteDelegateError;
-    }
-  }
   return kTfLiteError;
 }
 
@@ -368,7 +358,7 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
   PartitionGraphIntoIndependentNodeSubsets(&info, nodes_to_replace,
                                            &node_subsets);
 
-  TFLITE_LOG_INTERNAL(
+  TFLITE_LOG(
       tflite::TFLITE_LOG_INFO,
       "Replacing %d node(s) with delegate (%s) node, yielding %zu partitions.",
       nodes_to_replace->size,
@@ -400,13 +390,8 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
         // Initialize the output tensors's delegate-related fields.
         for (int tensor_index : node_subset.output_tensors) {
           TfLiteTensor* tensor = &tensors_[tensor_index];
-          if(tensor->delegate != nullptr && tensor->delegate != delegate) {
-            // TODO #13 : Print name of the delegate 
-            // Expected output : Overwriting delegate from %s to %s.
-            TFLITE_LOG_INTERNAL(
-              tflite::TFLITE_LOG_WARNING,
-              "Overwriting delegate.");
-          }
+          TF_LITE_ENSURE(&context_, tensor->delegate == nullptr ||
+                                        tensor->delegate == delegate);
           tensor->delegate = delegate;
         }
 
@@ -684,23 +669,6 @@ TfLiteStatus Subgraph::ResetVariableTensors() {
   return kTfLiteOk;
 }
 
-TfLiteStatus Subgraph::SetPrevSubgraph(Subgraph* prev) {
-  if (!prev) {
-    return kTfLiteError;
-  }
-  prev_subgraphs_.insert(prev);
-  prev->next_subgraphs_.insert(this);
-  return kTfLiteOk;
-}
-
-const std::set<Subgraph*>& Subgraph::GetNextSubgraphs() const {
-  return next_subgraphs_;
-}
-
-const std::set<Subgraph*>& Subgraph::GetPrevSubgraphs() const {
-  return prev_subgraphs_;
-}
-
 TfLiteStatus Subgraph::AddNodeWithParameters(
     const std::vector<int>& inputs, const std::vector<int>& outputs,
     const std::vector<int>& intermediates, const char* init_data,
@@ -911,7 +879,6 @@ TfLiteStatus Subgraph::PrepareOpsAndTensors() {
 }
 
 TfLiteStatus Subgraph::Invoke() {
-  TFLITE_SCOPED_TAGGED_DEFAULT_PROFILE(profiler_.get(), "invoke_subgraph");
   if (!consistent_) {
     ReportError("Invoke called on model that is not consistent.");
     return kTfLiteError;
@@ -1331,9 +1298,6 @@ TfLiteStatus Subgraph::UndoAllDelegates() {
   state_ = kStateUninvokable;
 
   delegates_undone_ = true;
-
-  // Delete applied delegates from the subgraph.
-  delegates_applied_.clear();
   return kTfLiteOk;
 }
 

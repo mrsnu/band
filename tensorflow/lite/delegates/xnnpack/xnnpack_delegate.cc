@@ -29,7 +29,6 @@ limitations under the License.
 
 #include <fp16.h>
 #include <xnnpack.h>
-#include <xnnpack/subgraph.h>
 #include "tensorflow/lite/builtin_ops.h"
 #include "tensorflow/lite/c/builtin_op_data.h"
 #include "tensorflow/lite/c/common.h"
@@ -58,15 +57,6 @@ class Delegate {
                          "Created TensorFlow Lite XNNPACK delegate for CPU.");
   }
 
-  void SetNumThreads(int num_threads) {
-    // This code block has a dependency to pthread.
-#if !defined(__EMSCRIPTEN__) || defined(__EMSCRIPTEN_PTHREADS__)
-    if (num_threads > 1) {
-      threadpool_.reset(
-          pthreadpool_create(static_cast<size_t>(num_threads)));
-    }
-#endif
-  }
   TfLiteIntArray* PrepareOpsToDelegate(TfLiteContext* context);
   TfLiteDelegate* tflite_delegate() { return &delegate_; }
 
@@ -85,7 +75,7 @@ class Delegate {
       nullptr,                        // .CopyFromBufferHandle
       nullptr,                        // .CopyToBufferHandle
       nullptr,                        // .FreeBufferHandle
-      kTfLiteDelegateFlagsXNNPACK,       // .flags
+      kTfLiteDelegateFlagsNone,       // .flags
   };
 
   // Unpacked data for quasi-static tensors, i.e. tensors produced by
@@ -275,7 +265,7 @@ class Subgraph {
       return nullptr;
     }
 
-    return new Subgraph(runtime_ptr, std::move(externals), delegate);
+    return new Subgraph(runtime_ptr, std::move(externals));
   }
 
   TfLiteStatus Prepare(TfLiteContext* context) { return kTfLiteOk; }
@@ -298,11 +288,6 @@ class Subgraph {
       }
 
       first_run_ = false;
-    }
-
-    // Lazily update the threadpool
-    if (runtime_->threadpool != delegate_->threadpool()) {
-      runtime_->threadpool = delegate_->threadpool();
     }
 
     const xnn_status status = xnn_invoke_runtime(runtime_.get());
@@ -2554,8 +2539,8 @@ class Subgraph {
   }
 
  private:
-  Subgraph(xnn_runtime_t runtime, std::unordered_set<int>&& externals, const Delegate* delegate)
-      : runtime_(runtime, &xnn_delete_runtime), externals_(externals), delegate_(delegate) {}
+  Subgraph(xnn_runtime_t runtime, std::unordered_set<int>&& externals)
+      : runtime_(runtime, &xnn_delete_runtime), externals_(externals) {}
 
   // XNNPACK Runtime (subgraph + workspace) with smart-pointer for lifetime
   // management.
@@ -2564,7 +2549,6 @@ class Subgraph {
   // TFLite Tensor IDs == XNNPACK Value IDs of input/output tensors for the
   // delegated subgraph.
   std::unordered_set<int> externals_;
-  const Delegate* delegate_;
   bool first_run_{true};
 };
 
@@ -2906,12 +2890,5 @@ TfLiteDelegate* TfLiteXNNPackDelegateCreate(
 void TfLiteXNNPackDelegateDelete(TfLiteDelegate* delegate) {
   if (delegate != nullptr) {
     delete static_cast<::tflite::xnnpack::Delegate*>(delegate->data_);
-  }
-}
-
-void TfLiteXNNPackDelegateUpdate(TfLiteDelegate* delegate,
-    const TfLiteXNNPackDelegateOptions* options) {
-  if (delegate != nullptr) {
-    reinterpret_cast<tflite::xnnpack::Delegate*>(delegate->data_)->SetNumThreads(options->num_threads);
   }
 }
