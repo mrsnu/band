@@ -199,6 +199,11 @@ cc_library(
         ],
 )
 
+exports_files(glob([
+    "testdata/*.bin",
+    "testdata/*.json",
+]))
+
 cc_test(
     name = "planner_test",
     size = "small",
