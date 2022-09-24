@@ -49,3 +49,5 @@ gradleBuild
 Podfile.lock
 Pods
 xcuserdata
+
+log.csv
