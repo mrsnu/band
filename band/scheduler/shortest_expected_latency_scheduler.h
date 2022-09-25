@@ -10,7 +10,7 @@ public:
   ScheduleAction Schedule(const Context &context) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
-  BandWorkerType GetWorkerType() override { return kDeviceQueue; }
+  BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }
 };
 
 } // namespace Band

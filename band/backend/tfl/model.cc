@@ -6,7 +6,7 @@ namespace Band {
 namespace TfLite {
 TfLiteModel::TfLiteModel(ModelId id) : Interface::IModel(id) {}
 
-BandBackendType TfLiteModel::GetBackendType() const { return kTfLite; }
+BandBackendType TfLiteModel::GetBackendType() const { return kBandTfLite; }
 
 BandStatus TfLiteModel::FromPath(const char *filename) {
   // TODO: Add Band TFLBackend error reporter

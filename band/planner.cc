@@ -67,23 +67,23 @@ BandStatus Planner::Init(const PlannerConfig &config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == kFixedDevice) {
+    if (schedulers[i] == kBandFixedDevice) {
       schedulers_.emplace_back(new FixedDeviceScheduler());
-    } else if (schedulers[i] == kFixedDeviceGlobalQueue) {
+    } else if (schedulers[i] == kBandFixedDeviceGlobalQueue) {
       schedulers_.emplace_back(new FixedDeviceGlobalQueueScheduler());
-    } else if (schedulers[i] == kRoundRobin) {
+    } else if (schedulers[i] == kBandRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler());
-    } else if (schedulers[i] == kShortestExpectedLatency) {
+    } else if (schedulers[i] == kBandShortestExpectedLatency) {
       BAND_NOT_IMPLEMENTED;
       // schedulers_.emplace_back(new ShortestExpectedLatencyScheduler());
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTime) {
+    } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTime) {
       BAND_NOT_IMPLEMENTED;
       // schedulers_.emplace_back(new
       // HeterogeneousEarliestFinishTimeScheduler());
-    } else if (schedulers[i] == kLSF) {
+    } else if (schedulers[i] == kBandLeastSlackTimeFirst) {
       BAND_NOT_IMPLEMENTED;
       // schedulers_.emplace_back(new LeastSlackFirstScheduler());
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTimeReserved) {
+    } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTimeReserved) {
       BAND_NOT_IMPLEMENTED;
       // schedulers_.emplace_back(
       //    new HeterogeneousEarliestFinishTimeReservedScheduler());
@@ -103,7 +103,7 @@ BandStatus Planner::Init(const PlannerConfig &config) {
   }
 
   // All schedulers must have the same worker type.
-  if (GetWorkerType() == (kDeviceQueue | kGlobalQueue)) {
+  if (GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue)) {
     return kBandError;
   }
 
@@ -118,8 +118,8 @@ BandStatus Planner::Init(const PlannerConfig &config) {
 BandStatus Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
   schedulers_.emplace_back(std::move(scheduler));
   local_queues_.resize(schedulers_.size());
-  return GetWorkerType() == (kDeviceQueue | kGlobalQueue) ? kBandError
-                                                          : kBandOk;
+  return GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue) ? kBandError
+                                                                  : kBandOk;
 }
 
 JobId Planner::EnqueueRequest(Job job, bool push_front) {

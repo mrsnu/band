@@ -143,18 +143,18 @@ const BandDeviceFlags BandDeviceGetFlag(const char *name) {
 
 const char *BandBackendGetName(BandBackendType flag) {
   switch (flag) {
-  case kTfLite:
+  case kBandTfLite:
     return "Tensorflow Lite";
   }
   return "Unknown type";
 }
 
 const BandBackendType BandBackendGetType(const char *name) {
-  for (int i = 0; i < kNumBackends; i++) {
+  for (int i = 0; i < kBandNumBackendTypes; i++) {
     BandBackendType flag = (BandBackendType)i;
     if (strcmp(BandBackendGetName(flag), name) == 0) {
       return flag;
     }
   }
-  return kNumBackends;
+  return kBandNumBackendTypes;
 }

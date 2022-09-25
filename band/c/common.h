@@ -9,7 +9,10 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef enum BandBackendType { kTfLite = 0, kNumBackends = 1 } BandBackendType;
+typedef enum BandBackendType {
+  kBandTfLite = 0,
+  kBandNumBackendTypes = 1
+} BandBackendType;
 
 const char *BandBackendGetName(BandBackendType flag);
 const BandBackendType BandBackendGetType(const char *name);
@@ -21,18 +24,18 @@ typedef enum BandStatus {
 } BandStatus;
 
 typedef enum BandWorkerType {
-  kDeviceQueue = 1 << 0,
-  kGlobalQueue = 1 << 1,
+  kBandDeviceQueue = 1 << 0,
+  kBandGlobalQueue = 1 << 1,
 } BandWorkerType;
 
 typedef enum BandSchedulerType {
-  kFixedDevice = 0,
-  kRoundRobin = 1,
-  kShortestExpectedLatency = 2,
-  kFixedDeviceGlobalQueue = 3,
-  kHeterogeneousEarliestFinishTime = 4,
-  kLSF = 5,
-  kHeterogeneousEarliestFinishTimeReserved = 6,
+  kBandFixedDevice = 0,
+  kBandRoundRobin = 1,
+  kBandShortestExpectedLatency = 2,
+  kBandFixedDeviceGlobalQueue = 3,
+  kBandHeterogeneousEarliestFinishTime = 4,
+  kBandLeastSlackTimeFirst = 5,
+  kBandHeterogeneousEarliestFinishTimeReserved = 6,
   kNumSchedulerTypes = 7
 } BandSchedulerType;
 

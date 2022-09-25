@@ -143,7 +143,9 @@ BandStatus TfLiteInterpreter::FromModel(Interface::IModel *model,
   return GetBandStatus(status);
 }
 
-BandBackendType TfLiteInterpreter::GetBackendType() const { return kTfLite; }
+BandBackendType TfLiteInterpreter::GetBackendType() const {
+  return kBandTfLite;
+}
 
 const std::vector<int> &
 TfLiteInterpreter::GetInputs(const SubgraphKey &key) const {

@@ -11,7 +11,7 @@ public:
   ScheduleAction Schedule(const Context &context, JobQueue &requests) override;
   bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
-  BandWorkerType GetWorkerType() override { return kDeviceQueue; }
+  BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }
 };
 
 class FixedDeviceGlobalQueueScheduler : public IScheduler {
@@ -22,7 +22,7 @@ public:
   // in which case this function can return false.
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return false; }
-  BandWorkerType GetWorkerType() override { return kGlobalQueue; }
+  BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
 };
 
 } // namespace Band

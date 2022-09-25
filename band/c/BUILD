@@ -25,7 +25,40 @@ cc_library(
     ],
     copts = band_copts(),
     deps = [
+        ":c_api_type",
         "//band:common",
         "//band:framework",
     ],
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "c_api_type",
+    hdrs = ["c_api_type.h"],
+    copts = band_copts(),
+    visibility = ["//visibility:private"],
+    deps = [
+        ":common",
+        "//band:common",
+        "//band:framework",
+    ],
+)
+
+cc_test(
+    name = "c_api_test",
+    size = "small",
+    srcs = ["test/c_api_test.cc"],
+    data = [
+        "//band:testdata/add.bin",
+        "//band:testdata/config.json",
+    ],
+    deps = [
+        "//band:framework",
+        ":c_api",
+        "@com_google_googletest//:gtest",
+    ] + select({
+        "//band:tflite": [
+            "//band/backend/tfl:tfl_backend",
+        ],
+    }),
 )

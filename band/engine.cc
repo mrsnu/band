@@ -280,7 +280,7 @@ BandStatus Engine::Init(const RuntimeConfig &config) {
     BandDeviceFlags device_flag = potential_workers[i];
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
-      if (planner_->GetWorkerType() == kGlobalQueue) {
+      if (planner_->GetWorkerType() == kBandGlobalQueue) {
         worker = std::make_unique<GlobalQueueWorker>(this, device_flag);
       } else {
         worker = std::make_unique<DeviceQueueWorker>(this, device_flag);

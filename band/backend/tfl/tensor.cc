@@ -8,7 +8,7 @@ namespace Band {
 namespace TfLite {
 TfLiteTensorView::TfLiteTensorView(TfLiteTensor *tensor) : tensor_(tensor) {}
 
-BandBackendType TfLiteTensorView::GetBackendType() const { return kTfLite; }
+BandBackendType TfLiteTensorView::GetBackendType() const { return kBandTfLite; }
 
 BandType TfLiteTensorView::GetType() const { return BandType(tensor_->type); }
 
@@ -57,11 +57,13 @@ void TfLiteTensorView::SetQuantization(BandQuantization quantization) {
         (TfLiteAffineQuantization *)(tensor_->quantization.params);
 
     q_params->quantized_dimension = input_q_params->quantized_dimension;
-    
+
     memcpy(q_params->scale, input_q_params->scale->data,
-           sizeof(input_q_params->scale->data[0])* input_q_params->scale->size);
+           sizeof(input_q_params->scale->data[0]) *
+               input_q_params->scale->size);
     memcpy(q_params->zero_point, input_q_params->zero_point->data,
-           sizeof(input_q_params->zero_point->data[0])* input_q_params->zero_point->size);
+           sizeof(input_q_params->zero_point->data[0]) *
+               input_q_params->zero_point->size);
   }
 }
 } // namespace TfLite

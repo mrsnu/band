@@ -12,12 +12,12 @@ public:
   ScheduleAction Schedule(const Context &context) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return false; }
-  BandWorkerType GetWorkerType() override { return kGlobalQueue; }
+  BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
 
 private:
   int64_t GetSlackTime(int64_t current_time, const Job &job);
-  void SortBySlackTime(const Context &context, JobQueue &requests_, int window_size,
-                       int64_t current_time);
+  void SortBySlackTime(const Context &context, JobQueue &requests_,
+                       int window_size, int64_t current_time);
   void UpdateExpectedLatency(const Context &context, JobQueue &requests_,
                              int window_size);
   const int window_size_;

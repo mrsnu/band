@@ -80,7 +80,7 @@ BandStatus ParseRuntimeConfigFromJsonObject(const Json::Value &root,
   for (int i = 0; i < root["schedulers"].size(); ++i) {
     int scheduler_id = root["schedulers"][i].asInt();
     BAND_ENSURE_MSG(error_reporter,
-                    scheduler_id >= kFixedDevice &&
+                    scheduler_id >= kBandFixedDevice &&
                         scheduler_id < kNumSchedulerTypes,
                     "Wrong `schedulers` argument is given.");
     planner_config.schedulers.push_back(

@@ -48,10 +48,10 @@ TEST(TFLiteBackend, Registration) {
 
 TEST(TFLiteBackend, InterfaceInvoke) {
   auto backends = BackendFactory::GetAvailableBackends();
-  IModel *bin_model = BackendFactory::CreateModel(kTfLite, 0);
+  IModel *bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
   bin_model->FromPath("band/testdata/add.bin");
 
-  IInterpreter *interpreter = BackendFactory::CreateInterpreter(kTfLite);
+  IInterpreter *interpreter = BackendFactory::CreateInterpreter(kBandTfLite);
   EXPECT_EQ(interpreter->FromModel(bin_model, 0, kBandCPU), kBandOk);
 
   SubgraphKey key = interpreter->GetModelSubgraphKey(bin_model->GetId());
@@ -84,7 +84,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kTfLite, "band/testdata/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   Tensor *input_tensor = engine->CreateTensor(
@@ -116,7 +116,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kTfLite, "band/testdata/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   Tensor *input_tensor = engine->CreateTensor(

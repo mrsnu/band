@@ -35,7 +35,7 @@ typedef std::vector<Interface::ITensor *> Tensors;
  * std::unique_ptr<Band::Engine> engine = Band::Engine::Create(config);
  *
  * Band::Model model;
- * model.FromPath(kTfLite, "band/testdata/add.bin");
+ * model.FromPath(kBandTfLite, "band/testdata/add.bin");
  * engine->RegisterModel(&model);
  *
  * Band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),

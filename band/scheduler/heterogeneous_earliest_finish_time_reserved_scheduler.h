@@ -10,7 +10,7 @@ public:
   ScheduleAction Schedule(const Context &context) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
-  BandWorkerType GetWorkerType() override { return kGlobalQueue; }
+  BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
 
 private:
   // job_id --> subgraph_idx
