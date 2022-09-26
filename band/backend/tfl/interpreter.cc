@@ -6,6 +6,11 @@
 #include "band/logger.h"
 
 #include "tensorflow/lite/context_util.h"
+#if defined(__ANDROID__)
+#include "tensorflow/lite/delegates/gpu/delegate.h"
+#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
+#include "tensorflow/lite/nnapi/nnapi_util.h"
+#endif
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 
@@ -210,6 +215,56 @@ TfLiteInterpreter::GetInterpreter(const SubgraphKey &key) const {
   return it != interpreters_.end() ? it->second.get() : nullptr;
 }
 
+// Discard nnapi backend for devices that has direct support
+bool IsNNAPIDeviceUseful(std::string name) {
+  static const char *const filter_keywords[] = {
+      "nnapi-reference", // CPU
+      "gpu",             // Inefficient than GPUDelegate
+      "default"};
+
+  for (auto keyword : filter_keywords) {
+    if (name.find(keyword) != std::string::npos)
+      return false;
+  }
+
+  return true;
+}
+
+BandDeviceFlags GetNNAPIDeviceFlag(std::string name) {
+  auto contains_keywords = [&name](std::vector<std::string> keywords) {
+    for (auto keyword : keywords) {
+      if (name.find(keyword) != std::string::npos)
+        return true;
+    }
+    return false;
+  };
+
+  if (contains_keywords({"gpu"})) {
+    return kBandGPU;
+  }
+
+  if (contains_keywords({"dsp"})) {
+    return kBandDSP;
+  }
+
+  if (contains_keywords({
+          "google-edgetpu",
+          "liteadaptor", // Huawei (DaVinci NPU)
+          "neuron-ann",  // Mediatek APU
+          "qti-hta",     // Hexagon tensor accelerator
+          "mtk-neuron"   // Mediatek APU
+                         // "mtk-mdla" #TODO(#139) - Mediatek APU for half float
+      })) {
+    return kBandNPU;
+  }
+
+  // TODO #23
+  // 1. Add additional NPU / TPU names
+  // 2. Is 'hta' belongs to dsp or npu?
+
+  return kBandNumDevices;
+}
+
 std::unique_ptr<tflite::Interpreter>
 TfLiteInterpreter::CreateTfLiteInterpreter(Interface::IModel *model,
                                            BandDeviceFlags device,
@@ -255,15 +310,18 @@ TfLiteInterpreter::GetDeviceDelegate(BandDeviceFlags device) {
     tflite::Interpreter::TfLiteDelegatePtr target_delegate =
         tflite::Interpreter::TfLiteDelegatePtr(nullptr,
                                                [](TfLiteDelegate *) {});
+
+    std::vector<const char *> string_device_names_list;
     switch (device) {
-    case kBandCPU:
+    case kBandCPU: {
       // TODO #23: XNNPACK seems inefficient than default CPU
       // Only valid case to return Ok with nullptr
       return {kBandOk, nullptr};
       break;
+    }
 
 #if defined(__ANDROID__)
-    case kBandGPU:
+    case kBandGPU: {
       TfLiteGpuDelegateOptionsV2 gpu_opts = TfLiteGpuDelegateOptionsV2Default();
       gpu_opts.inference_priority1 = TFLITE_GPU_INFERENCE_PRIORITY_MIN_LATENCY;
       gpu_opts.inference_priority2 =
@@ -275,15 +333,14 @@ TfLiteInterpreter::GetDeviceDelegate(BandDeviceFlags device) {
       // set this to a large number so that we can prevent this from getting
       // defaulted to 1 (cf. #34)
       gpu_opts.max_delegated_partitions = 100;
-      target_delegate = TfLiteDelegatePtr(TfLiteGpuDelegateV2Create(&gpu_opts),
-                                          &TfLiteGpuDelegateV2Delete);
+      target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
+          TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
       break;
+    }
 
     case kBandDSP:
-    case kBandNPU:
-
-      std::vector<const char *> string_device_names_list =
-          nnapi::GetDeviceNamesList();
+    case kBandNPU: {
+      string_device_names_list = tflite::nnapi::GetDeviceNamesList();
 
       // TODO #23 : Add more nnapi names
       // Possible device runtime names
@@ -295,43 +352,52 @@ TfLiteInterpreter::GetDeviceDelegate(BandDeviceFlags device) {
       // huawei npu : liteadaptor
       for (const char *device_name : string_device_names_list) {
         if (IsNNAPIDeviceUseful(device_name)) {
-          TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Available NNAPI device name %s",
-                              device_name);
-          StatefulNnApiDelegate::Options nnapi_options =
-              StatefulNnApiDelegate::Options();
+          BAND_LOG_INTERNAL(BAND_LOG_INFO, "Available NNAPI device name %s",
+                            device_name);
+          tflite::StatefulNnApiDelegate::Options nnapi_options =
+              tflite::StatefulNnApiDelegate::Options();
           // Unlimited partition : 0
           nnapi_options.max_number_delegated_partitions = 0;
           nnapi_options.accelerator_name = device_name;
 
-          TfLiteDelegatePtr nnapi_delegate = TfLiteDelegatePtr(
-              new StatefulNnApiDelegate(nnapi_options),
-              [](TfLiteDelegate *delegate) {
-                delete reinterpret_cast<StatefulNnApiDelegate *>(delegate);
-              });
+          tflite::Interpreter::TfLiteDelegatePtr nnapi_delegate =
+              tflite::Interpreter::TfLiteDelegatePtr(
+                  new tflite::StatefulNnApiDelegate(nnapi_options),
+                  [](TfLiteDelegate *delegate) {
+                    delete reinterpret_cast<tflite::StatefulNnApiDelegate *>(
+                        delegate);
+                  });
 
           if (nnapi_delegate.get()) {
             TfLiteDelegateFlags delegate_flag =
                 static_cast<TfLiteDelegateFlags>(nnapi_delegate->flags);
+            auto nnapi_options =
+                tflite::StatefulNnApiDelegate::GetOptions(nnapi_delegate.get());
 
             if (device == kBandDSP &&
-                delegate_flag == kTfLiteDelegateFlagsNNAPIDSP) {
-              target_delegate = nnapi_delegate;
+                GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
+                    kBandDSP) {
+              target_delegate = std::move(nnapi_delegate);
             }
 
             if (device == kBandNPU &&
-                delegate_flag == kTfLiteDelegateFlagsNNAPINPU) {
-              target_delegate = nnapi_delegate;
+                GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
+                    kBandNPU) {
+              target_delegate = std::move(nnapi_delegate);
             }
           }
         }
       }
 
       break;
+    }
+
 #endif // defined(__ANDROID__)
 
-    default:
+    default: {
       return {kBandError, nullptr};
       break;
+    }
     }
 
     bool success = target_delegate != nullptr;
