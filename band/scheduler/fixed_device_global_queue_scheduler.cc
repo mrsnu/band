@@ -4,8 +4,8 @@
 
 namespace Band {
 
-ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(const Context &context,
-                                                         JobQueue &requests) {
+ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(const Context& context,
+                                                         JobQueue& requests) {
   ScheduleAction action;
   // TODO: fallback subgraphs for FixedDevicePlanner?
   std::set<int> idle_workers = context.GetIdleWorkers();
@@ -18,7 +18,7 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(const Context &context,
   return action;
   // for (auto it = context.requests_.begin(); it != context.requests_.end();) {
   //   Job &to_execute = *it;
-  //   int model_id = to_execute.model_id;
+  //   int model_id = subgraph_key.GetModelId();
 
   //   int worker_id;
   //   if (worker_id >= 0 && GetInterpreter()->GetNumWorkers()) {
@@ -53,4 +53,4 @@ ScheduleAction FixedDeviceGlobalQueueScheduler::Schedule(const Context &context,
   // }
 }
 
-} // namespace Band
+}  // namespace Band

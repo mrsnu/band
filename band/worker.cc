@@ -174,8 +174,8 @@ void Worker::Work() {
                         "enqueue time %d, invoke time %d, end time %d)",
                         BandDeviceGetName(device_flag_), current_job->model_id,
                         current_job->subgraph_key.IsValid(),
-                        current_job->subgraph_key.model_id,
-                        current_job->subgraph_key.worker_id,
+                        current_job->subgraph_key.GetModelId(),
+                        current_job->subgraph_key.GetWorkerId(),
                         current_job->enqueue_time, current_job->invoke_time,
                         current_job->end_time);
       break;

@@ -1,9 +1,10 @@
 #include "band/scheduler/fixed_device_scheduler.h"
+
 #include "band/error_reporter.h"
 
 namespace Band {
-ScheduleAction FixedDeviceScheduler::Schedule(const Context &context,
-                                              JobQueue &requests) {
+ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
+                                              JobQueue& requests) {
   ScheduleAction action;
 
   // TODO: fallback subgraphs for FixedDevicePlanner?
@@ -12,7 +13,7 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context &context,
     requests.pop_front();
 
     int model_id = to_execute.model_id;
-    int worker_id = to_execute.subgraph_key.worker_id;
+    int worker_id = to_execute.subgraph_key.GetWorkerId();
 
     BAND_NOT_IMPLEMENTED;
 
@@ -30,11 +31,10 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context &context,
     //   continue;
     // }
 
-    SubgraphKey key =
-        context.GetModelSubgraphKey(to_execute.model_id, worker_id);
+    SubgraphKey key = context.GetModelSubgraphKey(model_id, worker_id);
     action[worker_id].push_back({to_execute, key});
   }
   return action;
 }
 
-} // namespace Band
+}  // namespace Band
