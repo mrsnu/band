@@ -1,77 +1,64 @@
 #include "band/c/common.h"
-#ifndef BAND_STATIC_MEMORY
+
 #include <stdlib.h>
 #include <string.h>
-#endif // BAND_STATIC_MEMORY
 
 int BandIntArrayGetSizeInBytes(int size) {
   static BandIntArray dummy;
   return sizeof(dummy) + sizeof(dummy.data[0]) * size;
 }
 
-int BandIntArrayEqual(const BandIntArray *a, const BandIntArray *b) {
-  if (a == b)
-    return 1;
-  if (a == NULL || b == NULL)
-    return 0;
+int BandIntArrayEqual(const BandIntArray* a, const BandIntArray* b) {
+  if (a == b) return 1;
+  if (a == NULL || b == NULL) return 0;
   return BandIntArrayEqualsArray(a, b->size, b->data);
 }
 
-int BandIntArrayEqualsArray(const BandIntArray *a, int b_size,
+int BandIntArrayEqualsArray(const BandIntArray* a, int b_size,
                             const int b_data[]) {
-  if (a == NULL)
-    return (b_size == 0);
-  if (a->size != b_size)
-    return 0;
+  if (a == NULL) return (b_size == 0);
+  if (a->size != b_size) return 0;
   int i = 0;
   for (; i < a->size; i++)
-    if (a->data[i] != b_data[i])
-      return 0;
+    if (a->data[i] != b_data[i]) return 0;
   return 1;
 }
 
-#ifndef BAND_STATIC_MEMORY
-
-BandIntArray *BandIntArrayCreate(int size) {
-  BandIntArray *ret = (BandIntArray *)malloc(BandIntArrayGetSizeInBytes(size));
+BandIntArray* BandIntArrayCreate(int size) {
+  BandIntArray* ret = (BandIntArray*)malloc(BandIntArrayGetSizeInBytes(size));
   ret->size = size;
   return ret;
 }
 
-BandIntArray *BandIntArrayCopy(const BandIntArray *src) {
-  if (!src)
-    return NULL;
-  BandIntArray *ret = BandIntArrayCreate(src->size);
+BandIntArray* BandIntArrayCopy(const BandIntArray* src) {
+  if (!src) return NULL;
+  BandIntArray* ret = BandIntArrayCreate(src->size);
   if (ret) {
     memcpy(ret->data, src->data, src->size * sizeof(int));
   }
   return ret;
 }
 
-void BandIntArrayFree(BandIntArray *a) { free(a); }
-
-#endif // BAND_STATIC_MEMORY
+void BandIntArrayFree(BandIntArray* a) { free(a); }
 
 int BandFloatArrayGetSizeInBytes(int size) {
   static BandFloatArray dummy;
   return sizeof(dummy) + sizeof(dummy.data[0]) * size;
 }
 
-#ifndef BAND_STATIC_MEMORY
-
-BandFloatArray *BandFloatArrayCreate(int size) {
-  BandFloatArray *ret =
-      (BandFloatArray *)malloc(BandFloatArrayGetSizeInBytes(size));
+BandFloatArray* BandFloatArrayCreate(int size) {
+  BandFloatArray* ret =
+      (BandFloatArray*)malloc(BandFloatArrayGetSizeInBytes(size));
   ret->size = size;
   return ret;
 }
 
-void BandFloatArrayFree(BandFloatArray *a) { free(a); }
+void BandFloatArrayFree(BandFloatArray* a) { free(a); }
 
-void BandQuantizationFree(BandQuantization *quantization) {
+void BandQuantizationFree(BandQuantization* quantization) {
   if (quantization->type == kBandAffineQuantization) {
-    BandAffineQuantization *q_params =
-        (BandAffineQuantization *)(quantization->params);
+    BandAffineQuantization* q_params =
+        (BandAffineQuantization*)(quantization->params);
     if (q_params->scale) {
       BandFloatArrayFree(q_params->scale);
       q_params->scale = NULL;
@@ -85,53 +72,52 @@ void BandQuantizationFree(BandQuantization *quantization) {
   quantization->params = NULL;
   quantization->type = kBandNoQuantization;
 }
-#endif // BAND_STATIC_MEMORY
 
-const char *BandTypeGetName(BandType type) {
+const char* BandTypeGetName(BandType type) {
   switch (type) {
-  case kBandNoType:
-    return "NOTYPE";
-  case kBandFloat32:
-    return "FLOAT32";
-  case kBandInt16:
-    return "INT16";
-  case kBandInt32:
-    return "INT32";
-  case kBandUInt8:
-    return "UINT8";
-  case kBandInt8:
-    return "INT8";
-  case kBandInt64:
-    return "INT64";
-  case kBandBool:
-    return "BOOL";
-  case kBandComplex64:
-    return "COMPLEX64";
-  case kBandString:
-    return "STRING";
-  case kBandFloat16:
-    return "FLOAT16";
-  case kBandFloat64:
-    return "FLOAT64";
+    case kBandNoType:
+      return "NOTYPE";
+    case kBandFloat32:
+      return "FLOAT32";
+    case kBandInt16:
+      return "INT16";
+    case kBandInt32:
+      return "INT32";
+    case kBandUInt8:
+      return "UINT8";
+    case kBandInt8:
+      return "INT8";
+    case kBandInt64:
+      return "INT64";
+    case kBandBool:
+      return "BOOL";
+    case kBandComplex64:
+      return "COMPLEX64";
+    case kBandString:
+      return "STRING";
+    case kBandFloat16:
+      return "FLOAT16";
+    case kBandFloat64:
+      return "FLOAT64";
   }
   return "Unknown type";
 }
 
-const char *BandDeviceGetName(BandDeviceFlags flag) {
+const char* BandDeviceGetName(BandDeviceFlags flag) {
   switch (flag) {
-  case kBandCPU:
-    return "CPU";
-  case kBandGPU:
-    return "GPU";
-  case kBandDSP:
-    return "DSP";
-  case kBandNPU:
-    return "NPU";
+    case kBandCPU:
+      return "CPU";
+    case kBandGPU:
+      return "GPU";
+    case kBandDSP:
+      return "DSP";
+    case kBandNPU:
+      return "NPU";
   }
   return "Unknown type";
 }
 
-const BandDeviceFlags BandDeviceGetFlag(const char *name) {
+const BandDeviceFlags BandDeviceGetFlag(const char* name) {
   for (int i = 0; i < kBandNumDevices; i++) {
     BandDeviceFlags flag = (BandDeviceFlags)i;
     if (strcmp(BandDeviceGetName(flag), name) == 0) {
@@ -141,15 +127,15 @@ const BandDeviceFlags BandDeviceGetFlag(const char *name) {
   return kBandNumDevices;
 }
 
-const char *BandBackendGetName(BandBackendType flag) {
+const char* BandBackendGetName(BandBackendType flag) {
   switch (flag) {
-  case kBandTfLite:
-    return "Tensorflow Lite";
+    case kBandTfLite:
+      return "Tensorflow Lite";
   }
   return "Unknown type";
 }
 
-const BandBackendType BandBackendGetType(const char *name) {
+const BandBackendType BandBackendGetType(const char* name) {
   for (int i = 0; i < kBandNumBackendTypes; i++) {
     BandBackendType flag = (BandBackendType)i;
     if (strcmp(BandBackendGetName(flag), name) == 0) {

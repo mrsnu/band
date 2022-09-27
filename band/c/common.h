@@ -7,15 +7,15 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif  // __cplusplus
 
 typedef enum BandBackendType {
   kBandTfLite = 0,
   kBandNumBackendTypes = 1
 } BandBackendType;
 
-const char *BandBackendGetName(BandBackendType flag);
-const BandBackendType BandBackendGetType(const char *name);
+const char* BandBackendGetName(BandBackendType flag);
+const BandBackendType BandBackendGetType(const char* name);
 
 typedef enum BandStatus {
   kBandOk = 0,
@@ -45,8 +45,8 @@ typedef struct BandIntArray {
   int size;
 // gcc 6.1+ have a bug where flexible members aren't properly handled
 // https://github.com/google/re2/commit/b94b7cd42e9f02673cd748c1ac1d16db4052514c
-#if (!defined(__clang__) && defined(__GNUC__) && __GNUC__ == 6 &&              \
-     __GNUC_MINOR__ >= 1) ||                                                   \
+#if (!defined(__clang__) && defined(__GNUC__) && __GNUC__ == 6 && \
+     __GNUC_MINOR__ >= 1) ||                                      \
     defined(HEXAGON)
   int data[0];
 #else
@@ -58,27 +58,23 @@ typedef struct BandIntArray {
 // in bytes.
 int BandIntArrayGetSizeInBytes(int size);
 
-#ifndef BAND_STATIC_MEMORY
 // Create a array of a given `size` (uninitialized entries).
 // This returns a pointer, that you must free using BandIntArrayFree().
-BandIntArray *BandIntArrayCreate(int size);
-#endif
+BandIntArray* BandIntArrayCreate(int size);
 
 // Check if two intarrays are equal. Returns 1 if they are equal, 0 otherwise.
-int BandIntArrayEqual(const BandIntArray *a, const BandIntArray *b);
+int BandIntArrayEqual(const BandIntArray* a, const BandIntArray* b);
 
 // Check if an intarray equals an array. Returns 1 if equals, 0 otherwise.
-int BandIntArrayEqualsArray(const BandIntArray *a, int b_size,
+int BandIntArrayEqualsArray(const BandIntArray* a, int b_size,
                             const int b_data[]);
 
-#ifndef BAND_STATIC_MEMORY
 // Create a copy of an array passed as `src`.
 // You are expected to free memory with BandIntArrayFree
-BandIntArray *BandIntArrayCopy(const BandIntArray *src);
+BandIntArray* BandIntArrayCopy(const BandIntArray* src);
 
 // Free memory of array `a`.
-void BandIntArrayFree(BandIntArray *a);
-#endif // BAND_STATIC_MEMORY
+void BandIntArrayFree(BandIntArray* a);
 
 // Fixed size list of floats. Used for per-channel quantization.
 typedef struct BandFloatArray {
@@ -86,7 +82,7 @@ typedef struct BandFloatArray {
 // gcc 6.1+ have a bug where flexible members aren't properly handled
 // https://github.com/google/re2/commit/b94b7cd42e9f02673cd748c1ac1d16db4052514c
 // This also applies to the toolchain used for Qualcomm Hexagon DSPs.
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ == 6 &&               \
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ == 6 && \
     __GNUC_MINOR__ >= 1
   float data[0];
 #else
@@ -98,14 +94,12 @@ typedef struct BandFloatArray {
 // in bytes.
 int BandFloatArrayGetSizeInBytes(int size);
 
-#ifndef BAND_STATIC_MEMORY
 // Create a array of a given `size` (uninitialized entries).
 // This returns a pointer, that you must free using BandFloatArrayFree().
-BandFloatArray *BandFloatArrayCreate(int size);
+BandFloatArray* BandFloatArrayCreate(int size);
 
 // Free memory of array `a`.
-void BandFloatArrayFree(BandFloatArray *a);
-#endif // BAND_STATIC_MEMORY
+void BandFloatArrayFree(BandFloatArray* a);
 
 // Since we must not depend on any libraries, define a minimal subset of
 // error macros while avoiding names that have pre-conceived meanings like
@@ -115,38 +109,38 @@ void BandFloatArrayFree(BandFloatArray *a);
 // calling the context->ReportError function directly, so that message strings
 // can be stripped out if the binary size needs to be severely optimized.
 #ifndef BAND_STRIP_ERROR_STRINGS
-#define BAND_KERNEL_LOG(context, ...)                                          \
-  do {                                                                         \
-    (context)->ReportError((context), __VA_ARGS__);                            \
+#define BAND_KERNEL_LOG(context, ...)               \
+  do {                                              \
+    (context)->ReportError((context), __VA_ARGS__); \
   } while (false)
 
-#define BAND_MAYBE_KERNEL_LOG(context, ...)                                    \
-  do {                                                                         \
-    if ((context) != nullptr) {                                                \
-      (context)->ReportError((context), __VA_ARGS__);                          \
-    }                                                                          \
+#define BAND_MAYBE_KERNEL_LOG(context, ...)           \
+  do {                                                \
+    if ((context) != nullptr) {                       \
+      (context)->ReportError((context), __VA_ARGS__); \
+    }                                                 \
   } while (false)
-#else // BAND_STRIP_ERROR_STRINGS
+#else  // BAND_STRIP_ERROR_STRINGS
 #define BAND_KERNEL_LOG(context, ...)
 #define BAND_MAYBE_KERNEL_LOG(context, ...)
-#endif // BAND_STRIP_ERROR_STRINGS
+#endif  // BAND_STRIP_ERROR_STRINGS
 
-#define BAND_ENSURE_FORMATTED_MSG(context, value, ...)                         \
-  do {                                                                         \
-    if (!(value)) {                                                            \
-      BAND_KERNEL_LOG((context), __VA_ARGS__);                                 \
-      return kBandError;                                                       \
-    }                                                                          \
+#define BAND_ENSURE_FORMATTED_MSG(context, value, ...) \
+  do {                                                 \
+    if (!(value)) {                                    \
+      BAND_KERNEL_LOG((context), __VA_ARGS__);         \
+      return kBandError;                               \
+    }                                                  \
   } while (0)
 
 // Check whether value is true, and if not return kBandError from
 // the current function (and report the error string msg).
-#define BAND_ENSURE_MSG(context, value, msg)                                   \
-  do {                                                                         \
-    if (!(value)) {                                                            \
-      BAND_KERNEL_LOG((context), __FILE__ " " msg);                            \
-      return kBandError;                                                       \
-    }                                                                          \
+#define BAND_ENSURE_MSG(context, value, msg)        \
+  do {                                              \
+    if (!(value)) {                                 \
+      BAND_KERNEL_LOG((context), __FILE__ " " msg); \
+      return kBandError;                            \
+    }                                               \
   } while (0)
 
 // Check whether the value `a` is true, and if not return kBandError from
@@ -160,12 +154,12 @@ void BandFloatArrayFree(BandFloatArray *a);
     }                                                                          \
   } while (0)
 
-#define BAND_ENSURE_STATUS(a)                                                  \
-  do {                                                                         \
-    const BandStatus s = (a);                                                  \
-    if (s != kBandOk) {                                                        \
-      return s;                                                                \
-    }                                                                          \
+#define BAND_ENSURE_STATUS(a) \
+  do {                        \
+    const BandStatus s = (a); \
+    if (s != kBandOk) {       \
+      return s;               \
+    }                         \
   } while (0)
 
 // Check whether the value `a == b` is true, and if not return kBandError from
@@ -173,36 +167,36 @@ void BandFloatArrayFree(BandFloatArray *a);
 // `a` and `b` may be evaluated more than once, so no side effects or
 // extremely expensive computations should be done.
 // NOTE: Use BAND_ENSURE_TYPES_EQ if comparing BandTypes.
-#define BAND_ENSURE_EQ(context, a, b)                                          \
-  do {                                                                         \
-    if ((a) != (b)) {                                                          \
-      BAND_KERNEL_LOG((context), "%s:%d %s != %s (%d != %d)", __FILE__,        \
-                      __LINE__, #a, #b, (a), (b));                             \
-      return kBandError;                                                       \
-    }                                                                          \
+#define BAND_ENSURE_EQ(context, a, b)                                   \
+  do {                                                                  \
+    if ((a) != (b)) {                                                   \
+      BAND_KERNEL_LOG((context), "%s:%d %s != %s (%d != %d)", __FILE__, \
+                      __LINE__, #a, #b, (a), (b));                      \
+      return kBandError;                                                \
+    }                                                                   \
   } while (0)
 
-#define BAND_ENSURE_TYPES_EQ(context, a, b)                                    \
-  do {                                                                         \
-    if ((a) != (b)) {                                                          \
-      BAND_KERNEL_LOG((context), "%s:%d %s != %s (%s != %s)", __FILE__,        \
-                      __LINE__, #a, #b, BandTypeGetName(a),                    \
-                      BandTypeGetName(b));                                     \
-      return kBandError;                                                       \
-    }                                                                          \
+#define BAND_ENSURE_TYPES_EQ(context, a, b)                             \
+  do {                                                                  \
+    if ((a) != (b)) {                                                   \
+      BAND_KERNEL_LOG((context), "%s:%d %s != %s (%s != %s)", __FILE__, \
+                      __LINE__, #a, #b, BandTypeGetName(a),             \
+                      BandTypeGetName(b));                              \
+      return kBandError;                                                \
+    }                                                                   \
   } while (0)
 
-#define BAND_ENSURE_OK(context, status)                                        \
-  do {                                                                         \
-    const BandStatus s = (status);                                             \
-    if ((s) != kBandOk) {                                                      \
-      return s;                                                                \
-    }                                                                          \
+#define BAND_ENSURE_OK(context, status) \
+  do {                                  \
+    const BandStatus s = (status);      \
+    if ((s) != kBandOk) {               \
+      return s;                         \
+    }                                   \
   } while (0)
 
 // Single-precision complex data type compatible with the C99 definition.
 typedef struct BandComplex64 {
-  float re, im; // real and imaginary parts, respectively.
+  float re, im;  // real and imaginary parts, respectively.
 } BandComplex64;
 
 // Half precision data type compatible with the C99 definition.
@@ -227,7 +221,7 @@ typedef enum {
 } BandType;
 
 // Return the name of a given type, for error reporting purposes.
-const char *BandTypeGetName(BandType type);
+const char* BandTypeGetName(BandType type);
 
 // SupportedQuantizationTypes.
 typedef enum BandQuantizationType {
@@ -244,7 +238,7 @@ typedef struct BandQuantization {
   BandQuantizationType type;
   // Holds a reference to one of the quantization param structures specified
   // below.
-  void *params;
+  void* params;
 } BandQuantization;
 
 // Legacy. Will be deprecated in favor of BandAffineQuantization.
@@ -266,8 +260,8 @@ typedef struct BandQuantizationParams {
 // converted back to float using:
 //     real_value = scale * (quantized_value - zero_point)
 typedef struct BandAffineQuantization {
-  BandFloatArray *scale;
-  BandIntArray *zero_point;
+  BandFloatArray* scale;
+  BandIntArray* zero_point;
   int32_t quantized_dimension;
 } BandAffineQuantization;
 
@@ -281,10 +275,10 @@ typedef enum {
   kBandNumDevices = 4,
 } BandDeviceFlags;
 
-const char *BandDeviceGetName(BandDeviceFlags flag);
-const BandDeviceFlags BandDeviceGetFlag(const char *name);
+const char* BandDeviceGetName(BandDeviceFlags flag);
+const BandDeviceFlags BandDeviceGetFlag(const char* name);
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
-#endif // BAND_C_COMMON_H
+}  // extern "C"
+#endif  // __cplusplus
+#endif  // BAND_C_COMMON_H
