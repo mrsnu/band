@@ -1,11 +1,11 @@
-#include <algorithm>
-
 #include "band/scheduler/round_robin_scheduler.h"
+
+#include <algorithm>
 
 namespace Band {
 
-ScheduleAction RoundRobinScheduler::Schedule(const Context &context,
-                                             JobQueue &requests) {
+ScheduleAction RoundRobinScheduler::Schedule(const Context& context,
+                                             JobQueue& requests) {
   ScheduleAction action;
   std::set<WorkerId> idle_workers = context.GetIdleWorkers();
 
@@ -13,7 +13,7 @@ ScheduleAction RoundRobinScheduler::Schedule(const Context &context,
     if (!requests.empty()) {
       auto available_job = std::find_if(
           requests.begin(), requests.end(),
-          [this, &context, worker_id](const Job &job) {
+          [this, &context, worker_id](const Job& job) {
             return context.GetModelSubgraphKey(job.model_id, worker_id)
                 .IsValid();
           });
@@ -30,4 +30,4 @@ ScheduleAction RoundRobinScheduler::Schedule(const Context &context,
   return action;
 }
 
-} // namespace Band
+}  // namespace Band

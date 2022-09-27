@@ -543,14 +543,14 @@ WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
   return -1;
 }
 
-Interface::IInterpreter *Engine::GetInterpreter(const SubgraphKey &key) {
-  auto it = interpreters_.find({key.worker_id, key.model_id});
+Interface::IInterpreter* Engine::GetInterpreter(const SubgraphKey& key) {
+  auto it = interpreters_.find({key.GetWorkerId(), key.GetModelId()});
   return it != interpreters_.end() ? it->second.get() : nullptr;
 }
 
-const Interface::IInterpreter *
-Engine::GetInterpreter(const SubgraphKey &key) const {
-  auto it = interpreters_.find({key.worker_id, key.model_id});
+const Interface::IInterpreter* Engine::GetInterpreter(
+    const SubgraphKey& key) const {
+  auto it = interpreters_.find({key.GetWorkerId(), key.GetModelId()});
   return it != interpreters_.end() ? it->second.get() : nullptr;
 }
 } // namespace Band

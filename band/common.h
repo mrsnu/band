@@ -1,13 +1,13 @@
 #ifndef BAND_COMMON_H_
 #define BAND_COMMON_H_
 
-#include "band/c/common.h"
-
 #include <list>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
+
+#include "band/c/common.h"
 
 namespace Band {
 typedef int WorkerId;
@@ -15,23 +15,26 @@ typedef int ModelId;
 typedef int JobId;
 
 // data structure for identifying subgraphs within whole models
-struct SubgraphKey {
+class SubgraphKey {
+ public:
   SubgraphKey() {}
   // special case - entire model subgraph
   SubgraphKey(ModelId model_id, WorkerId worker_id)
       : model_id(model_id), worker_id(worker_id) {}
   SubgraphKey(ModelId model_id, WorkerId worker_id, std::set<int> input_ops,
               std::set<int> output_ops)
-      : model_id(model_id), worker_id(worker_id), input_ops(input_ops),
+      : model_id(model_id),
+        worker_id(worker_id),
+        input_ops(input_ops),
         output_ops(output_ops) {}
 
-  bool operator<(const SubgraphKey &key) const {
-    if (model_id != key.model_id) {
-      return model_id < key.model_id;
+  bool operator<(const SubgraphKey& key) const {
+    if (model_id != key.GetModelId()) {
+      return model_id < key.GetModelId();
     }
 
-    if (worker_id != key.worker_id) {
-      return worker_id < key.worker_id;
+    if (worker_id != key.GetWorkerId()) {
+      return worker_id < key.GetWorkerId();
     }
 
     if (input_ops != key.input_ops) {
@@ -41,16 +44,22 @@ struct SubgraphKey {
     return output_ops < key.output_ops;
   }
 
-  bool operator==(const SubgraphKey &key) const {
-    return (model_id == key.model_id) && (worker_id == key.worker_id) &&
+  bool operator==(const SubgraphKey& key) const {
+    return (model_id == key.GetModelId()) && (worker_id == key.GetWorkerId()) &&
            (input_ops == key.input_ops) && (output_ops == key.output_ops);
   }
 
   std::string GetInputOpsString() const;
   std::string GetOutputOpsString() const;
 
+  ModelId GetModelId() const { return model_id; }
+  WorkerId GetWorkerId() const { return worker_id; }
+  const std::set<int>& GetInputOps() const { return input_ops; }
+  const std::set<int>& GetOutputOps() const { return output_ops; }
+
   bool IsValid() const { return (model_id != -1) && (worker_id != -1); }
 
+ private:
   ModelId model_id = -1;
   WorkerId worker_id = -1;
   std::set<int> input_ops;
@@ -63,17 +72,16 @@ struct SubgraphKey {
 // hash function to use SubgraphKey as a key
 // https://stackoverflow.com/a/32685618
 struct SubgraphHash {
-  std::size_t operator()(const SubgraphKey &p) const {
+  std::size_t operator()(const SubgraphKey& p) const {
     auto hash_func = std::hash<int>();
-    std::size_t hash = hash_func(p.model_id) ^ hash_func(p.worker_id);
+    std::size_t hash = hash_func(p.GetModelId()) ^ hash_func(p.GetWorkerId());
 
-    auto hash_set = [hash_func, &hash](const std::set<int> &set) {
-      for (int e : set)
-        hash ^= hash_func(e);
+    auto hash_set = [hash_func, &hash](const std::set<int>& set) {
+      for (int e : set) hash ^= hash_func(e);
     };
 
-    hash_set(p.input_ops);
-    hash_set(p.output_ops);
+    hash_set(p.GetInputOps());
+    hash_set(p.GetOutputOps());
 
     return hash;
   }
@@ -158,7 +166,7 @@ struct ModelConfig {
 // hash function to use pair<int, set<int>> as map key in cache_
 // https://stackoverflow.com/a/32685618
 struct PairHash {
-  std::size_t operator()(const std::pair<int, std::set<int>> &p) const {
+  std::size_t operator()(const std::pair<int, std::set<int>>& p) const {
     auto hash_func = std::hash<int>();
     std::size_t hash = hash_func(p.first);
     for (int e : p.second) {
@@ -168,6 +176,6 @@ struct PairHash {
   }
 };
 
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_COMMON_H_
+#endif  // BAND_COMMON_H_

@@ -325,7 +325,7 @@ void Planner::FlushFinishedJobs() {
 
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t" << job.job_id << "\t" << job.model_fname
-               << "\t" << job.model_id << "\t" << job.subgraph_key.worker_id
+               << "\t" << job.model_id << "\t" << job.subgraph_key.GetWorkerId()
                << "\t" << job.enqueue_time << "\t" << job.invoke_time << "\t"
                << job.end_time << "\t" << job.profiled_execution_time << "\t"
                << job.expected_execution_time << "\t" << job.slo_us << "\t"
@@ -403,7 +403,7 @@ bool Planner::IsSLOViolated(Job &job) {
   if (job.slo_us > 0) {
     int64_t current_time = Time::NowMicros();
     int64_t expected_latency =
-        context_->GetWorkerWaitingTime().at(job.subgraph_key.worker_id) +
+        context_->GetWorkerWaitingTime().at(job.subgraph_key.GetWorkerId()) +
         job.expected_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
