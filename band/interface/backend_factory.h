@@ -15,25 +15,25 @@
 
 namespace Band {
 namespace Interface {
-template <typename Base, class... Args> struct Creator {
-public:
-  virtual Base *Create(Args...) const { return nullptr; };
+template <typename Base, class... Args>
+struct Creator {
+ public:
+  virtual Base* Create(Args...) const { return nullptr; };
 };
 
 class BackendFactory {
-public:
-  static IInterpreter *CreateInterpreter(BandBackendType backend);
-  static IModel *CreateModel(BandBackendType backend, ModelId id);
-  static IBackendUtil *GetBackendUtil(BandBackendType backend);
+ public:
+  static IInterpreter* CreateInterpreter(BandBackendType backend);
+  static IModel* CreateModel(BandBackendType backend, ModelId id);
+  static IBackendUtil* GetBackendUtil(BandBackendType backend);
   static std::vector<BandBackendType> GetAvailableBackends();
 
-  static void
-  RegisterBackendCreators(BandBackendType backend,
-                          Creator<IInterpreter> *interpreter_creator,
-                          Creator<IModel, ModelId> *model_creator,
-                          Creator<IBackendUtil> *util_creator);
+  static void RegisterBackendCreators(
+      BandBackendType backend, Creator<IInterpreter>* interpreter_creator,
+      Creator<IModel, ModelId>* model_creator,
+      Creator<IBackendUtil>* util_creator);
 
-private:
+ private:
   BackendFactory() = default;
 
   static std::map<BandBackendType, std::shared_ptr<Creator<IInterpreter>>>
@@ -43,7 +43,7 @@ private:
   static std::map<BandBackendType, std::shared_ptr<Creator<IBackendUtil>>>
       util_creators_;
 };
-} // namespace Interface
-} // namespace Band
+}  // namespace Interface
+}  // namespace Band
 
 #endif

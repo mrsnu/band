@@ -3,7 +3,7 @@
 namespace Band {
 
 void HeterogeneousEarliestFinishTimeScheduler::Schedule(
-    JobQueue &context.requests_) {
+    JobQueue& context.requests_) {
   int window_size =
       std::min(planner_->GetWindowSize(), (int)context.requests_.size());
   // stop if there are no idle devices OR there's nothing in `context.requests_`
@@ -34,7 +34,7 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(
       std::set<std::pair<int, int>> searched_jobs;
       for (auto it = context.requests_.begin();
            it != context.requests_.begin() + window_size; ++it) {
-        Job &job = *it;
+        Job& job = *it;
 
         if (jobs_to_yield.find(job.job_id) != jobs_to_yield.end()) {
           continue;
@@ -52,7 +52,7 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(
             GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
 
         if (largest_shortest_latency < best_subgraph.second) {
-          Subgraph *target_subgraph =
+          Subgraph* target_subgraph =
               GetInterpreter()->subgraph(best_subgraph.first.front());
 
           largest_shortest_latency = best_subgraph.second;
@@ -68,7 +68,7 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(
 
       // skip this job if we can't schedule it immediately,
       // even if this job is the "most urgent" one
-      Subgraph *target_subgraph =
+      Subgraph* target_subgraph =
           GetInterpreter()->subgraph(target_subgraph_idx);
       int worker_id = target_subgraph->GetKey().worker_id;
       if (idle_workers.find(worker_id) == idle_workers.end()) {
@@ -90,7 +90,7 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(
     context.requests_.erase(context.requests__it);
     window_size--;
 
-    Subgraph *target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
     if (target_subgraph->IsStart()) {
@@ -101,5 +101,5 @@ void HeterogeneousEarliestFinishTimeScheduler::Schedule(
   }
 }
 
-} // namespace Band
-} // namespace Band
+}  // namespace Band
+}  // namespace Band

@@ -1,9 +1,10 @@
 #include "band/backend/tfl/util.h"
-#include "band/backend/tfl/interpreter.h"
-#include "band/logger.h"
 
 #include <mutex>
 #include <set>
+
+#include "band/backend/tfl/interpreter.h"
+#include "band/logger.h"
 
 namespace Band {
 namespace TfLite {
@@ -26,5 +27,5 @@ std::set<BandDeviceFlags> TfLiteUtil::GetAvailableDevices() const {
 
   return valid_devices;
 }
-} // namespace TfLite
-} // namespace Band
+}  // namespace TfLite
+}  // namespace Band

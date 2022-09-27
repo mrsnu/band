@@ -1,11 +1,11 @@
 #ifndef BAND_TENSOR_H_
 #define BAND_TENSOR_H_
 
-#include "band/c/common.h"
-#include "band/interface/tensor.h"
-
 #include <string>
 #include <vector>
+
+#include "band/c/common.h"
+#include "band/interface/tensor.h"
 
 namespace Band {
 /*
@@ -13,29 +13,29 @@ namespace Band {
 */
 
 class Tensor : public Interface::ITensor {
-public:
-  explicit Tensor(Interface::ITensor *tensor_view);
+ public:
+  explicit Tensor(Interface::ITensor* tensor_view);
   ~Tensor();
 
   BandType GetType() const override;
   void SetType(BandType type) override;
-  const char *GetData() const override;
-  char *GetData() override;
+  const char* GetData() const override;
+  char* GetData() override;
   std::vector<int> GetDims() const override;
-  void SetDims(const std::vector<int> &dims) override;
+  void SetDims(const std::vector<int>& dims) override;
   size_t GetBytes() const override;
-  const char *GetName() const override;
+  const char* GetName() const override;
   BandQuantization GetQuantization() const override;
   void SetQuantization(BandQuantization quantization) override;
 
-private:
+ private:
   BandType type_;
   BandQuantization quantization_;
   size_t num_bytes_;
   std::vector<int> dims_;
-  char *data_;
+  char* data_;
   std::string name_;
 };
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_TENSOR_H_
+#endif  // BAND_TENSOR_H_

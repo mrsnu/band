@@ -7,7 +7,7 @@
 namespace Band {
 LogSeverity Logger::verbosity = BAND_LOG_INFO;
 
-void Logger::Log(LogSeverity severity, const char *format, ...) {
+void Logger::Log(LogSeverity severity, const char* format, ...) {
   if (verbosity <= severity) {
     va_list args;
     va_start(args, format);
@@ -16,9 +16,8 @@ void Logger::Log(LogSeverity severity, const char *format, ...) {
   }
 }
 
-void Logger::LogFormatted(LogSeverity severity, const char *format,
-                           va_list args)
-{
+void Logger::LogFormatted(LogSeverity severity, const char* format,
+                          va_list args) {
   fprintf(stderr, "%s: ", GetSeverityName(severity));
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
@@ -31,16 +30,16 @@ void Logger::SetVerbosity(int severity) {
   verbosity = static_cast<LogSeverity>(severity);
 }
 
-const char *Logger::GetSeverityName(LogSeverity severity) {
+const char* Logger::GetSeverityName(LogSeverity severity) {
   switch (severity) {
-  case BAND_LOG_INFO:
-    return "INFO";
-  case BAND_LOG_WARNING:
-    return "WARNING";
-  case BAND_LOG_ERROR:
-    return "ERROR";
+    case BAND_LOG_INFO:
+      return "INFO";
+    case BAND_LOG_WARNING:
+      return "WARNING";
+    case BAND_LOG_ERROR:
+      return "ERROR";
   }
   return "<Unknown severity>";
 }
 
-} // namespace Band
+}  // namespace Band

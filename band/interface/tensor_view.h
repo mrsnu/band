@@ -20,7 +20,7 @@ namespace Interface {
 */
 struct ITensorView : public IBackendSpecific, public ITensor {};
 
-} // namespace Interface
-} // namespace Band
+}  // namespace Interface
+}  // namespace Band
 
 #endif

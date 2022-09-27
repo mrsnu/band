@@ -1,11 +1,12 @@
 #include "band/worker.h"
+
 #include "band/c/common.h"
 #include "band/common.h"
 #include "band/logger.h"
 #include "band/time.h"
 
 namespace Band {
-Worker::Worker(Context *context, BandDeviceFlags device_flag)
+Worker::Worker(Context* context, BandDeviceFlags device_flag)
     : device_flag_(device_flag), context_(context) {}
 
 Worker::~Worker() {
@@ -16,7 +17,7 @@ Worker::~Worker() {
   }
 }
 
-BandStatus Worker::Init(const WorkerConfig &config, int worker_id) {
+BandStatus Worker::Init(const WorkerConfig& config, int worker_id) {
   if (config.allow_worksteal) {
     AllowWorkSteal();
   }
@@ -58,7 +59,7 @@ BandStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
   return kBandOk;
 }
 
-void Worker::WaitUntilDeviceAvailable(SubgraphKey &subgraph) {
+void Worker::WaitUntilDeviceAvailable(SubgraphKey& subgraph) {
   while (true) {
     Time::SleepForMicros(1000 * availability_check_interval_ms_);
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Availability check at %d ms.",
@@ -104,11 +105,11 @@ void Worker::Wait() {
   wait_cv_.wait(lock, [&]() { return !HasJob(); });
 }
 
-const CpuSet &Worker::GetWorkerThreadAffinity() const { return cpu_set_; }
+const CpuSet& Worker::GetWorkerThreadAffinity() const { return cpu_set_; }
 
 int Worker::GetNumThreads() const { return num_threads_; }
 
-JobQueue &Worker::GetDeviceRequests() {
+JobQueue& Worker::GetDeviceRequests() {
   JobQueue queue;
   BAND_NOT_IMPLEMENTED;
   return queue;
@@ -116,12 +117,12 @@ JobQueue &Worker::GetDeviceRequests() {
 
 void Worker::AllowWorkSteal() { BAND_NOT_IMPLEMENTED; }
 
-ErrorReporter *Worker::GetErrorReporter() {
+ErrorReporter* Worker::GetErrorReporter() {
   // TODO(dostos): return from context
   return context_->GetErrorReporter();
 }
 
-bool Worker::IsValid(Job &job) {
+bool Worker::IsValid(Job& job) {
   return job.model_id >= 0 && job.subgraph_key.IsValid() &&
          job.enqueue_time > 0 && job.invoke_time == 0 && job.end_time == 0;
 }
@@ -164,7 +165,7 @@ void Worker::Work() {
       break;
     }
 
-    Job *current_job = GetCurrentJob();
+    Job* current_job = GetCurrentJob();
     lock.unlock();
 
     if (!current_job || !IsValid(*current_job)) {
@@ -232,4 +233,4 @@ void Worker::Work() {
   }
 }
 
-} // namespace Band
+}  // namespace Band

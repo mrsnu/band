@@ -1,4 +1,5 @@
 #include "band/model.h"
+
 #include "band/interface/backend_factory.h"
 #include "band/interface/model.h"
 #include "band/logger.h"
@@ -14,7 +15,7 @@ Model::~Model() {
 }
 ModelId Model::GetId() const { return model_id_; }
 
-BandStatus Model::FromPath(BandBackendType backend_type, const char *filename) {
+BandStatus Model::FromPath(BandBackendType backend_type, const char* filename) {
   if (GetBackendModel(backend_type)) {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                       "Tried to create %s model again for model id %d",
@@ -23,7 +24,7 @@ BandStatus Model::FromPath(BandBackendType backend_type, const char *filename) {
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
-  Interface::IModel *backend_model =
+  Interface::IModel* backend_model =
       Interface::BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model->FromPath(filename) == kBandOk) {
     backend_models_[backend_type] = backend_model;
@@ -35,7 +36,7 @@ BandStatus Model::FromPath(BandBackendType backend_type, const char *filename) {
   }
 }
 
-BandStatus Model::FromBuffer(BandBackendType backend_type, const char *buffer,
+BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
                              size_t buffer_size) {
   if (GetBackendModel(backend_type)) {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR,
@@ -45,7 +46,7 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char *buffer,
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
-  Interface::IModel *backend_model =
+  Interface::IModel* backend_model =
       Interface::BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model->FromBuffer(buffer, buffer_size) == kBandOk) {
     backend_models_[backend_type] = backend_model;
@@ -57,7 +58,7 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char *buffer,
   }
 }
 
-Interface::IModel *Model::GetBackendModel(BandBackendType backend_type) {
+Interface::IModel* Model::GetBackendModel(BandBackendType backend_type) {
   if (backend_models_.find(backend_type) != backend_models_.end()) {
     return backend_models_[backend_type];
   } else {
@@ -72,4 +73,4 @@ std::set<BandBackendType> Model::GetSupportedBackends() const {
   }
   return backends;
 }
-} // namespace Band
+}  // namespace Band

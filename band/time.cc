@@ -1,8 +1,8 @@
 #include "band/time.h"
 
 #if defined(_MSC_VER)
-#include <chrono> // NOLINT(build/c++11)
-#include <thread> // NOLINT(build/c++11)
+#include <chrono>  // NOLINT(build/c++11)
+#include <thread>  // NOLINT(build/c++11)
 #else
 #include <sys/time.h>
 #include <time.h>
@@ -53,7 +53,7 @@ void SleepForMicros(uint64_t micros) {
   nanosleep(&sleep_time, nullptr);
 }
 
-#endif // defined(_MSC_VER)
+#endif  // defined(_MSC_VER)
 
-} // namespace Time
-} // namespace Band
+}  // namespace Time
+}  // namespace Band

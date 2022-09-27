@@ -7,5 +7,5 @@ void TfLiteRegisterCreators() {
       kBandTfLite, new TfLite::InterpreterCreator, new TfLite::ModelCreator,
       new TfLite::UtilCreator);
 }
-} // namespace Interface
-} // namespace Band
+}  // namespace Interface
+}  // namespace Band

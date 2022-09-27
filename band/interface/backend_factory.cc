@@ -1,6 +1,8 @@
 #include "band/interface/backend_factory.h"
-#include "band/logger.h"
+
 #include <mutex>
+
+#include "band/logger.h"
 
 namespace Band {
 namespace Interface {
@@ -24,19 +26,19 @@ std::map<BandBackendType, std::shared_ptr<Creator<IModel, ModelId>>>
 std::map<BandBackendType, std::shared_ptr<Creator<IBackendUtil>>>
     BackendFactory::util_creators_ = {};
 
-IInterpreter *BackendFactory::CreateInterpreter(BandBackendType backend) {
+IInterpreter* BackendFactory::CreateInterpreter(BandBackendType backend) {
   RegisterBackendInternal();
   auto it = interpreter_creators_.find(backend);
   return it != interpreter_creators_.end() ? it->second->Create() : nullptr;
 }
 
-IModel *BackendFactory::CreateModel(BandBackendType backend, ModelId id) {
+IModel* BackendFactory::CreateModel(BandBackendType backend, ModelId id) {
   RegisterBackendInternal();
   auto it = model_creators_.find(backend);
   return it != model_creators_.end() ? it->second->Create(id) : nullptr;
 }
 
-IBackendUtil *BackendFactory::GetBackendUtil(BandBackendType backend) {
+IBackendUtil* BackendFactory::GetBackendUtil(BandBackendType backend) {
   RegisterBackendInternal();
   auto it = util_creators_.find(backend);
   return it != util_creators_.end() ? it->second->Create() : nullptr;
@@ -55,9 +57,9 @@ std::vector<BandBackendType> BackendFactory::GetAvailableBackends() {
 }
 
 void BackendFactory::RegisterBackendCreators(
-    BandBackendType backend, Creator<IInterpreter> *interpreter_creator,
-    Creator<IModel, ModelId> *model_creator,
-    Creator<IBackendUtil> *util_creator) {
+    BandBackendType backend, Creator<IInterpreter>* interpreter_creator,
+    Creator<IModel, ModelId>* model_creator,
+    Creator<IBackendUtil>* util_creator) {
   interpreter_creators_[backend] =
       std::shared_ptr<Creator<IInterpreter>>(interpreter_creator);
   model_creators_[backend] =
@@ -65,5 +67,5 @@ void BackendFactory::RegisterBackendCreators(
   util_creators_[backend] =
       std::shared_ptr<Creator<IBackendUtil>>(util_creator);
 }
-} // namespace Interface
-} // namespace Band
+}  // namespace Interface
+}  // namespace Band

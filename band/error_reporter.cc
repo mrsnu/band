@@ -1,11 +1,13 @@
 
 #include "band/error_reporter.h"
-#include "band/logger.h"
+
 #include <cstdarg>
+
+#include "band/logger.h"
 
 namespace Band {
 
-int ErrorReporter::Report(const char *format, ...) {
+int ErrorReporter::Report(const char* format, ...) {
   va_list args;
   va_start(args, format);
   int code = Report(format, args);
@@ -15,7 +17,7 @@ int ErrorReporter::Report(const char *format, ...) {
 
 // TODO(aselle): Make the name of ReportError on context the same, so
 // we can use the ensure functions w/o a context and w/ a reporter.
-int ErrorReporter::ReportError(void *, const char *format, ...) {
+int ErrorReporter::ReportError(void*, const char* format, ...) {
   va_list args;
   va_start(args, format);
   int code = Report(format, args);
@@ -23,14 +25,14 @@ int ErrorReporter::ReportError(void *, const char *format, ...) {
   return code;
 }
 
-int StderrReporter::Report(const char *format, va_list args) {
+int StderrReporter::Report(const char* format, va_list args) {
   Logger::LogFormatted(LogSeverity::BAND_LOG_ERROR, format, args);
   return 0;
 }
 
-ErrorReporter *DefaultErrorReporter() {
-  static StderrReporter *error_reporter = new StderrReporter;
+ErrorReporter* DefaultErrorReporter() {
+  static StderrReporter* error_reporter = new StderrReporter;
   return error_reporter;
 }
 
-} // namespace Band
+}  // namespace Band
