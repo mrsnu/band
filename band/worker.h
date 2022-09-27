@@ -23,17 +23,17 @@ to vtable during class construction / destruction
 */
 
 class Worker {
-public:
-  explicit Worker(Context *context, BandDeviceFlags device_flag);
+ public:
+  explicit Worker(Context* context, BandDeviceFlags device_flag);
   virtual ~Worker();
 
-  BandStatus Init(const WorkerConfig &config, int worker_id);
+  BandStatus Init(const WorkerConfig& config, int worker_id);
   BandDeviceFlags GetDeviceFlag() const { return device_flag_; }
-  std::mutex &GetDeviceMtx() { return device_mtx_; }
-  std::condition_variable &GetRequestCv() { return request_cv_; }
+  std::mutex& GetDeviceMtx() { return device_mtx_; }
+  std::condition_variable& GetRequestCv() { return request_cv_; }
   BandStatus UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                 int num_threads);
-  void WaitUntilDeviceAvailable(SubgraphKey &subgraph);
+  void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
   bool IsAvailable();
 
   void Start();
@@ -45,31 +45,31 @@ public:
   // Wait until the end of current requests
   void Wait();
 
-  const CpuSet &GetWorkerThreadAffinity() const;
+  const CpuSet& GetWorkerThreadAffinity() const;
   int GetNumThreads() const;
   virtual int GetCurrentJobId() = 0;
   virtual int64_t GetWaitingTime() = 0;
   // Make sure the worker lock is acquired before calling the function.
   // Currently, `Planner::Plan()` is the only user of the method, and `Plan()`
   // calls `GiveJob` with the lock.
-  virtual bool GiveJob(Job &job) = 0;
+  virtual bool GiveJob(Job& job) = 0;
   virtual bool HasJob() = 0;
 
   // DeviceQueueWorker methods
-  virtual JobQueue &GetDeviceRequests();
+  virtual JobQueue& GetDeviceRequests();
   virtual void AllowWorkSteal();
 
-protected:
-  ErrorReporter *GetErrorReporter();
-  bool IsValid(Job &job);
+ protected:
+  ErrorReporter* GetErrorReporter();
+  bool IsValid(Job& job);
   BandStatus TryUpdateWorkerThread();
   void Work();
   // Helper functions that work utilizes
-  virtual Job *GetCurrentJob() = 0;
+  virtual Job* GetCurrentJob() = 0;
   virtual void EndEnqueue() = 0;
-  virtual void HandleDeviceError(Job &current_job) = 0;
+  virtual void HandleDeviceError(Job& current_job) = 0;
 
-  Context *const context_;
+  Context* const context_;
 
   std::once_flag device_cpu_start_flag_;
   std::thread device_cpu_thread_;
@@ -93,23 +93,23 @@ protected:
 };
 
 class DeviceQueueWorker : public Worker {
-public:
-  explicit DeviceQueueWorker(Context *context, BandDeviceFlags device_flag)
+ public:
+  explicit DeviceQueueWorker(Context* context, BandDeviceFlags device_flag)
       : Worker(context, device_flag) {}
 
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
-  bool GiveJob(Job &job) override;
+  bool GiveJob(Job& job) override;
   bool HasJob() override;
-  JobQueue &GetDeviceRequests() override;
+  JobQueue& GetDeviceRequests() override;
   void AllowWorkSteal() override;
 
-protected:
-  Job *GetCurrentJob() override;
+ protected:
+  Job* GetCurrentJob() override;
   void EndEnqueue() override;
-  void HandleDeviceError(Job &current_job) override;
+  void HandleDeviceError(Job& current_job) override;
 
-private:
+ private:
   void TryWorkSteal();
 
   JobQueue requests_;
@@ -117,25 +117,25 @@ private:
 };
 
 class GlobalQueueWorker : public Worker {
-public:
-  explicit GlobalQueueWorker(Context *context, BandDeviceFlags device_flag)
+ public:
+  explicit GlobalQueueWorker(Context* context, BandDeviceFlags device_flag)
       : Worker(context, device_flag) {}
 
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
-  bool GiveJob(Job &job) override;
+  bool GiveJob(Job& job) override;
   bool HasJob() override;
 
-protected:
-  Job *GetCurrentJob() override;
+ protected:
+  Job* GetCurrentJob() override;
   void EndEnqueue() override;
-  void HandleDeviceError(Job &current_job) override;
+  void HandleDeviceError(Job& current_job) override;
 
-private:
+ private:
   Job current_job_{-1};
   bool is_busy_ = false;
 };
 
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_WORKER_H_
+#endif  // BAND_WORKER_H_

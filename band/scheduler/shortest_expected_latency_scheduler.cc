@@ -4,7 +4,7 @@
 
 namespace Band {
 
-void ShortestExpectedLatencyScheduler::Schedule(JobQueue &context.requests_) {
+void ShortestExpectedLatencyScheduler::Schedule(JobQueue& context.requests_) {
   JobQueue local_jobs;
   int window_size =
       std::min(planner_->GetWindowSize(), (int)context.requests_.size());
@@ -35,7 +35,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue &context.requests_) {
 
     std::set<std::pair<int, int>> searched_jobs;
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
-      Job &next_job = *it;
+      Job& next_job = *it;
       std::pair<int, int> job_to_search =
           std::make_pair(next_job.model_id, next_job.start_unit_idx);
       if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
@@ -64,7 +64,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue &context.requests_) {
 
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
-    Subgraph *target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     if (target_subgraph->IsStart()) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
@@ -73,5 +73,5 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue &context.requests_) {
   }
 }
 
-} // namespace Band
-} // namespace Band
+}  // namespace Band
+}  // namespace Band

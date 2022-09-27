@@ -19,7 +19,7 @@ struct BandModel {
 };
 
 struct BandTensor {
-  BandTensor(Band::Tensor *tensor)
+  BandTensor(Band::Tensor* tensor)
       : impl(std::make_unique<Band::Tensor>(tensor)) {}
   std::unique_ptr<Band::Tensor> impl;
 };
@@ -34,7 +34,7 @@ struct BandEngine {
 
 struct BandRequestHandle {
   int request_id;
-  BandModel *target_model;
+  BandModel* target_model;
 };
 
 #endif

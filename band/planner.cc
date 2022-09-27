@@ -14,7 +14,7 @@
 #include "band/time.h"
 
 namespace Band {
-Planner::Planner(Context *context) : num_submitted_jobs_(0), context_(context) {
+Planner::Planner(Context* context) : num_submitted_jobs_(0), context_(context) {
   planner_thread_ = std::thread([this] { this->Plan(); });
 }
 
@@ -24,7 +24,7 @@ Planner::~Planner() {
   planner_thread_.join();
 }
 
-BandStatus Planner::Init(const PlannerConfig &config) {
+BandStatus Planner::Init(const PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
   if (log_path_.size()) {
@@ -55,7 +55,7 @@ BandStatus Planner::Init(const PlannerConfig &config) {
     log_file.close();
   }
 
-  auto &schedulers = config.schedulers;
+  auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
     BAND_REPORT_ERROR(context_->GetErrorReporter(),
                       "[Planner] Not supported for %d schedulers",
@@ -131,7 +131,7 @@ std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
   std::vector<JobId> job_ids(jobs.size());
   auto enqueue_time = Time::NowMicros();
   for (int i = 0; i < jobs.size(); i++) {
-    Job &job = jobs[i];
+    Job& job = jobs[i];
     if (job.enqueue_time == 0) {
       // job.enqueue_time may already be set if this model contains a fallback
       // op, in which case we do not overwrite the set value
@@ -189,7 +189,7 @@ void Planner::WaitAll() {
   FlushFinishedJobs();
 }
 
-void Planner::EnqueueFinishedJob(Job &job) {
+void Planner::EnqueueFinishedJob(Job& job) {
   std::unique_lock<std::mutex> lock(jobs_finished_.mtx);
   jobs_finished_.queue.push_back(job);
   lock.unlock();
@@ -211,7 +211,7 @@ void Planner::EnqueueFinishedJob(Job &job) {
   }
 }
 
-void Planner::PrepareReenqueue(Job &job) {
+void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
   job.following_jobs.clear();
@@ -219,16 +219,14 @@ void Planner::PrepareReenqueue(Job &job) {
 
 bool Planner::NeedProfile() {
   for (int i = 0; i < schedulers_.size(); ++i) {
-    if (schedulers_[i]->NeedProfile())
-      return true;
+    if (schedulers_[i]->NeedProfile()) return true;
   }
   return false;
 }
 
 bool Planner::NeedFallbackSubgraphs() const {
   for (int i = 0; i < schedulers_.size(); ++i) {
-    if (schedulers_[i]->NeedFallbackSubgraphs())
-      return true;
+    if (schedulers_[i]->NeedFallbackSubgraphs()) return true;
   }
   return false;
 }
@@ -283,8 +281,8 @@ void Planner::Plan() {
         auto workers_actions =
             schedulers_[i]->Schedule(*context_, local_queues_[i]);
         //
-        for (auto &actions : workers_actions) {
-          for (auto &action : actions.second) {
+        for (auto& actions : workers_actions) {
+          for (auto& action : actions.second) {
             UpdateJobScheduleStatus(action.first, action.second);
           }
         }
@@ -341,42 +339,41 @@ void Planner::FlushFinishedJobs() {
 
 void Planner::CopyToLocalQueues() {
   std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
-  JobQueue &requests = GetRequests();
+  JobQueue& requests = GetRequests();
   if (!requests.empty()) {
     if (schedulers_.size() == 1) {
       // Gets jobs from requests and removes those jobs from the requests.
-      auto &local_jobs = local_queues_[0];
+      auto& local_jobs = local_queues_[0];
       local_jobs.insert(local_jobs.end(),
                         std::make_move_iterator(requests.begin()),
                         std::make_move_iterator(requests.end()));
     } else if (schedulers_.size() == 2) {
       // TODO: general method for assigning SLO/non-SLO requests
-      for (Job &job : requests) {
+      for (Job& job : requests) {
         if (job.slo_us > 0) {
           local_queues_[0].push_back(std::move(job));
         } else {
           local_queues_[1].push_back(std::move(job));
         }
       }
-    } // other else cases should have been caught in Init()
+    }  // other else cases should have been caught in Init()
 
     requests.clear();
   }
   request_lock.unlock();
 }
 
-void Planner::EnqueueToWorkers(ScheduleAction &action) {
-  for (auto &queue : action) {
+void Planner::EnqueueToWorkers(ScheduleAction& action) {
+  for (auto& queue : action) {
     auto worker_id = queue.first;
-    auto &requests = queue.second;
+    auto& requests = queue.second;
 
     if (requests.empty()) {
       continue;
     }
 
-    Worker *worker = context_->GetWorker(worker_id);
-    if (worker == nullptr)
-      return;
+    Worker* worker = context_->GetWorker(worker_id);
+    if (worker == nullptr) return;
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
       for (auto request : requests) {
@@ -395,7 +392,7 @@ void Planner::EnqueueToWorkers(ScheduleAction &action) {
   }
 }
 
-bool Planner::IsSLOViolated(Job &job) {
+bool Planner::IsSLOViolated(Job& job) {
   if (job.status == kBandJobSLOViolation) {
     return true;
   }
@@ -413,7 +410,7 @@ bool Planner::IsSLOViolated(Job &job) {
   return false;
 }
 
-void Planner::HandleSLOViolatedJob(Job &job) {
+void Planner::HandleSLOViolatedJob(Job& job) {
   // no point in running this job anymore
   job.status = kBandJobSLOViolation;
 
@@ -428,7 +425,7 @@ void Planner::HandleSLOViolatedJob(Job &job) {
   need_reschedule_ = true;
 }
 
-void Planner::UpdateJobScheduleStatus(Job &job, const SubgraphKey &target_key) {
+void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = context_->GetProfiled(target_key);
@@ -520,4 +517,4 @@ int Planner::GetJobRecordIndex(int job_id) const {
   return job_id % NUM_FINISHED_RECORDS;
 }
 
-} // namespace Band
+}  // namespace Band

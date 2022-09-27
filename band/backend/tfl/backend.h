@@ -12,21 +12,21 @@ namespace Band {
 using namespace Interface;
 namespace TfLite {
 class InterpreterCreator : public Creator<IInterpreter> {
-public:
-  IInterpreter *Create() const override { return new TfLiteInterpreter(); }
+ public:
+  IInterpreter* Create() const override { return new TfLiteInterpreter(); }
 };
 
 class ModelCreator : public Creator<IModel, ModelId> {
-public:
-  IModel *Create(ModelId id) const override { return new TfLiteModel(id); }
+ public:
+  IModel* Create(ModelId id) const override { return new TfLiteModel(id); }
 };
 
 class UtilCreator : public Creator<IBackendUtil> {
-public:
-  IBackendUtil *Create() const override { return new TfLiteUtil(); }
+ public:
+  IBackendUtil* Create() const override { return new TfLiteUtil(); }
 };
 
-} // namespace TfLite
-} // namespace Band
+}  // namespace TfLite
+}  // namespace Band
 
 #endif

@@ -17,15 +17,16 @@
 #ifndef BAND_CPU_H_
 #define BAND_CPU_H_
 
-#include "band/c/common.h"
-
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
+
 #include <vector>
 
+#include "band/c/common.h"
+
 #if defined __ANDROID__ || defined __linux__
-#include <sched.h> // cpu_set_t
+#include <sched.h>  // cpu_set_t
 #endif
 
 namespace Band {
@@ -39,18 +40,18 @@ typedef enum {
 } BandCPUMaskFlags;
 
 class CpuSet {
-public:
+ public:
   CpuSet();
   void Enable(int cpu);
   void Disable(int cpu);
   void DisableAll();
   bool IsEnabled(int cpu) const;
   int NumEnabled() const;
-  const unsigned long *GetMaskBits() const;
+  const unsigned long* GetMaskBits() const;
 #if defined __ANDROID__ || defined __linux__
-  const cpu_set_t &GetCpuSet() const { return cpu_set_; }
+  const cpu_set_t& GetCpuSet() const { return cpu_set_; }
 
-private:
+ private:
   cpu_set_t cpu_set_;
 #endif
 };
@@ -61,14 +62,14 @@ int GetLittleCPUCount();
 int GetBigCPUCount();
 
 // set explicit thread affinity
-BandStatus SetCPUThreadAffinity(const CpuSet &thread_affinity_mask);
-BandStatus GetCPUThreadAffinity(CpuSet &thread_affinity_mask);
+BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
-const CpuSet &BandCPUMaskGetSet(BandCPUMaskFlags flag);
-const char *BandCPUMaskGetName(BandCPUMaskFlags flag);
-const BandCPUMaskFlags BandCPUMaskGetMask(const char *name);
+const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag);
+const char* BandCPUMaskGetName(BandCPUMaskFlags flag);
+const BandCPUMaskFlags BandCPUMaskGetMask(const char* name);
 
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_CPU_H_
+#endif  // BAND_CPU_H_

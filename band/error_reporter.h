@@ -20,22 +20,22 @@ namespace Band {
 /// For example, if you have a GUI program, you might redirect to a buffer
 /// that drives a GUI error log box.
 class ErrorReporter {
-public:
+ public:
   virtual ~ErrorReporter() {}
-  virtual int Report(const char *format, va_list args) = 0;
-  int Report(const char *format, ...);
-  int ReportError(void *, const char *format, ...);
+  virtual int Report(const char* format, va_list args) = 0;
+  int Report(const char* format, ...);
+  int ReportError(void*, const char* format, ...);
 };
 
 // An error reporter that simply writes the message to stderr.
 struct StderrReporter : public ErrorReporter {
-  int Report(const char *format, va_list args) override;
+  int Report(const char* format, va_list args) override;
 };
 
 // Return the default error reporter (output to stderr).
-ErrorReporter *DefaultErrorReporter();
+ErrorReporter* DefaultErrorReporter();
 
-} // namespace Band
+}  // namespace Band
 
 // You should not make bare calls to the error reporter, instead use the
 // BAND_REPORT_ERROR macro, since this allows message strings to be
@@ -43,18 +43,18 @@ ErrorReporter *DefaultErrorReporter();
 // reduce binary size, define BAND_STRIP_ERROR_STRINGS when compiling and
 // every call will be stubbed out, taking no memory.
 #ifndef BAND_STRIP_ERROR_STRINGS
-#define BAND_REPORT_ERROR(reporter, ...)                                       \
-  do {                                                                         \
-    static_cast<Band::ErrorReporter *>(reporter)->Report(__VA_ARGS__);         \
+#define BAND_REPORT_ERROR(reporter, ...)                              \
+  do {                                                                \
+    static_cast<Band::ErrorReporter*>(reporter)->Report(__VA_ARGS__); \
   } while (false)
-#else // BAND_STRIP_ERROR_STRINGS
+#else  // BAND_STRIP_ERROR_STRINGS
 #define BAND_REPORT_ERROR(reporter, ...)
-#endif // BAND_STRIP_ERROR_STRINGS
+#endif  // BAND_STRIP_ERROR_STRINGS
 
-#define BAND_NOT_IMPLEMENTED                                                   \
-  BAND_REPORT_ERROR(                                                           \
-      DefaultErrorReporter(),                                                  \
-      "%s at \n line number %d in file %s is not implemented yet.",            \
+#define BAND_NOT_IMPLEMENTED                                        \
+  BAND_REPORT_ERROR(                                                \
+      DefaultErrorReporter(),                                       \
+      "%s at \n line number %d in file %s is not implemented yet.", \
       __PRETTY_FUNCTION__, __LINE__, __FILE__)
 
-#endif // BAND_ERROR_REPORTER_H_
+#endif  // BAND_ERROR_REPORTER_H_

@@ -1,4 +1,5 @@
 #include "band/engine.h"
+
 #include "band/context.h"
 #include "band/interface/backend_factory.h"
 #include "band/interface/interpreter.h"
@@ -13,33 +14,32 @@
 
 namespace Band {
 Engine::~Engine() {
-  for (auto &worker : workers_) {
+  for (auto& worker : workers_) {
     worker.second->End();
   }
 
-  for (auto &interpreter : interpreters_) {
+  for (auto& interpreter : interpreters_) {
     interpreter.second.reset();
   }
 
-  for (auto &worker : workers_) {
+  for (auto& worker : workers_) {
     worker.second.reset();
   }
 
   planner_.reset();
 }
 
-std::unique_ptr<Engine> Engine::Create(const RuntimeConfig &config,
-                                       ErrorReporter *error_reporter) {
+std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
+                                       ErrorReporter* error_reporter) {
   std::unique_ptr<Engine> engine_ptr(new Engine(error_reporter));
   return engine_ptr->Init(config) == kBandOk ? std::move(engine_ptr) : nullptr;
 }
 
-BandStatus Engine::RegisterModel(Model *model) {
+BandStatus Engine::RegisterModel(Model* model) {
   const ModelId model_id = model->GetId();
 
   // Create internal interpreter per each supported backends
   for (BandBackendType backend_type : model->GetSupportedBackends()) {
-
     // Analyze model spec
     {
       std::unique_ptr<Interface::IInterpreter> interpreter(
@@ -49,7 +49,7 @@ BandStatus Engine::RegisterModel(Model *model) {
     }
 
     // Add whole-model subgraphs
-    for (auto &id_worker : workers_) {
+    for (auto& id_worker : workers_) {
       std::unique_ptr<Interface::IInterpreter> interpreter(
           Interface::BackendFactory::CreateInterpreter(backend_type));
       if (interpreter->FromModel(
@@ -77,7 +77,7 @@ BandStatus Engine::RegisterModel(Model *model) {
 
       auto model_subgraph_key =
           GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
-      Interface::IInterpreter *primary_interpreter =
+      Interface::IInterpreter* primary_interpreter =
           GetInterpreter(model_subgraph_key);
 
       for (int input_tensor :
@@ -107,12 +107,12 @@ BandStatus Engine::RegisterModel(Model *model) {
   return kBandOk;
 }
 
-Tensor *Engine::CreateTensor(ModelId model_id, int tensor_index) {
+Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
   // TODO: What if there are multiple backends?
   SubgraphKey model_subgraph_key =
       GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
 
-  if (Interface::IInterpreter *interpreter =
+  if (Interface::IInterpreter* interpreter =
           GetInterpreter(model_subgraph_key)) {
     return new Tensor(
         interpreter->GetTensorView(model_subgraph_key, tensor_index).get());
@@ -124,7 +124,7 @@ Tensor *Engine::CreateTensor(ModelId model_id, int tensor_index) {
 std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
       GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
-  const Interface::IInterpreter *interpreter =
+  const Interface::IInterpreter* interpreter =
       GetInterpreter(model_subgraph_key);
   return interpreter ? interpreter->GetOutputs(model_subgraph_key)
                      : std::vector<int>();
@@ -133,7 +133,7 @@ std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
 std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
       GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
-  const Interface::IInterpreter *interpreter =
+  const Interface::IInterpreter* interpreter =
       GetInterpreter(model_subgraph_key);
   return interpreter ? interpreter->GetInputs(model_subgraph_key)
                      : std::vector<int>();
@@ -202,7 +202,6 @@ BandStatus Engine::Wait(std::vector<JobId> job_ids,
 }
 
 BandStatus Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
-
   Job job = planner_->GetFinishedJob(job_id);
 
   if (outputs.empty() || job_id == -1) {
@@ -238,7 +237,7 @@ void Engine::SetEndInvokeFunction(
   planner_->SetEndInvokeFunction(on_end_invoke);
 }
 
-BandStatus Engine::Init(const RuntimeConfig &config) {
+BandStatus Engine::Init(const RuntimeConfig& config) {
   planner_ = std::make_unique<Planner>(this);
 
   BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
@@ -275,7 +274,7 @@ BandStatus Engine::Init(const RuntimeConfig &config) {
     valid_devices.insert(backend_devices.begin(), backend_devices.end());
   }
 
-  auto &potential_workers = config.worker_config.workers;
+  auto& potential_workers = config.worker_config.workers;
   for (int i = 0; i < potential_workers.size(); i++) {
     BandDeviceFlags device_flag = potential_workers[i];
     if (valid_devices.find(device_flag) != valid_devices.end()) {
@@ -305,7 +304,7 @@ BandStatus Engine::Init(const RuntimeConfig &config) {
   return kBandOk;
 }
 
-Engine::Engine(ErrorReporter *error_reporeter) : Context(error_reporeter) {}
+Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
 
 void Engine::UpdateWorkerWaitingTime() const {
   for (auto worker_it = workers_.begin(); worker_it != workers_.end();
@@ -314,7 +313,7 @@ void Engine::UpdateWorkerWaitingTime() const {
   }
 }
 
-const WorkerWaitingTime &Engine::GetWorkerWaitingTime() const {
+const WorkerWaitingTime& Engine::GetWorkerWaitingTime() const {
   return workers_waiting_;
 }
 
@@ -341,13 +340,14 @@ SubgraphKey Engine::GetModelSubgraphKey(ModelId model_id,
   }
 }
 
-bool Engine::IsEnd(const SubgraphKey &key) const {
+bool Engine::IsEnd(const SubgraphKey& key) const {
   // TODO: subgraph support
   return true;
 }
 
-BandStatus Engine::Invoke(const SubgraphKey &key) {
-  auto interpreter_it = interpreters_.find({key.worker_id, key.model_id});
+BandStatus Engine::Invoke(const SubgraphKey& key) {
+  auto interpreter_it =
+      interpreters_.find({key.GetWorkerId(), key.GetModelId()});
   if (interpreter_it != interpreters_.end()) {
     return interpreter_it->second->InvokeSubgraph(key);
   } else {
@@ -356,11 +356,10 @@ BandStatus Engine::Invoke(const SubgraphKey &key) {
   }
 }
 
-std::pair<SubgraphKey, int64_t>
-Engine::GetShortestLatency(int model_id, std::set<int> resolved_tensors,
-                           int64_t start_time,
-                           const std::map<WorkerId, int64_t> &worker_waiting,
-                           SubgraphKey preceded_subgraph_index) const {
+std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
+    int model_id, std::set<int> resolved_tensors, int64_t start_time,
+    const std::map<WorkerId, int64_t>& worker_waiting,
+    SubgraphKey preceded_subgraph_index) const {
   BAND_NOT_IMPLEMENTED;
   return {};
 }
@@ -368,7 +367,7 @@ Engine::GetShortestLatency(int model_id, std::set<int> resolved_tensors,
 std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx,
-    const std::map<WorkerId, int64_t> &worker_waiting) const {
+    const std::map<WorkerId, int64_t>& worker_waiting) const {
   std::pair<std::vector<SubgraphKey>, int64_t> result;
   BAND_NOT_IMPLEMENTED;
   return result;
@@ -376,29 +375,28 @@ Engine::GetShortestLatencyWithUnitSubgraph(
 
 std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetSubgraphWithShortestLatency(
-    Job &job, const std::map<WorkerId, int64_t> &worker_waiting) const {
+    Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
   std::pair<std::vector<SubgraphKey>, int64_t> result;
   BAND_NOT_IMPLEMENTED;
   return result;
 }
 
 SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
-    Job &job, const std::map<WorkerId, int64_t> &worker_waiting,
-    const std::set<WorkerId> &idle_workers) const {
+    Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+    const std::set<WorkerId>& idle_workers) const {
   BAND_NOT_IMPLEMENTED;
   return {};
 }
 
-void Engine::UpdateLatency(const SubgraphKey &key, int64_t latency) {
-  if (profiler_)
-    profiler_->UpdateLatency(key, latency);
+void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
+  if (profiler_) profiler_->UpdateLatency(key, latency);
 }
 
-int64_t Engine::GetProfiled(const SubgraphKey &key) const {
+int64_t Engine::GetProfiled(const SubgraphKey& key) const {
   return profiler_ ? profiler_->GetProfiled(key) : 0;
 }
 
-int64_t Engine::GetExpected(const SubgraphKey &key) const {
+int64_t Engine::GetExpected(const SubgraphKey& key) const {
   return profiler_ ? profiler_->GetExpected(key) : 0;
 }
 
@@ -412,23 +410,23 @@ std::vector<int> Engine::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
   return planner_->EnqueueBatch(jobs, push_front);
 }
 
-void Engine::PrepareReenqueue(Job &job) { planner_->PrepareReenqueue(job); }
+void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
-void Engine::EnqueueFinishedJob(Job &job) { planner_->EnqueueFinishedJob(job); }
+void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
-Worker *Engine::GetWorker(WorkerId id) {
+Worker* Engine::GetWorker(WorkerId id) {
   auto it = workers_.find(id);
   return it != workers_.end() ? it->second.get() : nullptr;
 }
 
-BandStatus Engine::TryCopyInputTensors(const Job &job) {
+BandStatus Engine::TryCopyInputTensors(const Job& job) {
   // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {
     return kBandOk;
   }
 
   // TODO: Subgraph execution
-  const SubgraphKey &key = job.subgraph_key;
+  const SubgraphKey& key = job.subgraph_key;
   auto interpeter = GetInterpreter(job.subgraph_key);
   std::set<int> unresolved_tensors(interpeter->GetInputs(key).begin(),
                                    interpeter->GetInputs(key).end());
@@ -497,7 +495,7 @@ BandStatus Engine::TryCopyInputTensors(const Job &job) {
   return kBandOk;
 }
 
-BandStatus Engine::TryCopyOutputTensors(const Job &job) {
+BandStatus Engine::TryCopyOutputTensors(const Job& job) {
   // TODO: Subgraph execution
 
   // Compute only.
@@ -505,7 +503,7 @@ BandStatus Engine::TryCopyOutputTensors(const Job &job) {
     return kBandOk;
   }
 
-  const SubgraphKey &key = job.subgraph_key;
+  const SubgraphKey& key = job.subgraph_key;
   auto interpeter = GetInterpreter(job.subgraph_key);
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
@@ -533,7 +531,7 @@ BandStatus Engine::TryCopyOutputTensors(const Job &job) {
 }
 
 WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
-  for (auto &it : workers_) {
+  for (auto& it : workers_) {
     if (it.second->GetDeviceFlag() == flag) {
       return it.first;
     }
@@ -553,4 +551,4 @@ const Interface::IInterpreter* Engine::GetInterpreter(
   auto it = interpreters_.find({key.GetWorkerId(), key.GetModelId()});
   return it != interpreters_.end() ? it->second.get() : nullptr;
 }
-} // namespace Band
+}  // namespace Band

@@ -22,21 +22,21 @@ using ScheduleAction =
     std::map<WorkerId, std::vector<std::pair<Job, SubgraphKey>>>;
 
 class IScheduler {
-public:
+ public:
   IScheduler() = default;
   virtual ~IScheduler() = default;
   // A Schedule() function is expected to do the followings:
   // For the given requests, selected requests to schedule and
   // find the appropriate devices. The selected requests should be
   // enqueued in the `action` and removed from original queue.
-  virtual ScheduleAction Schedule(const Context &context,
-                                  JobQueue &requests) = 0;
+  virtual ScheduleAction Schedule(const Context& context,
+                                  JobQueue& requests) = 0;
   virtual bool NeedProfile() = 0;
   virtual bool NeedFallbackSubgraphs() = 0;
   virtual BandWorkerType GetWorkerType() = 0;
 
-protected:
+ protected:
 };
-} // namespace Band
+}  // namespace Band
 
 #endif

@@ -1,25 +1,26 @@
 
 #include "band/config.h"
-#include "band/error_reporter.h"
-#include "band/logger.h"
 
 #include <fstream>
+
+#include "band/error_reporter.h"
+#include "band/logger.h"
 
 namespace Band {
 
 // Note : program aborts when asX fails below
 // e.g., asInt, asCString, ...
-BandStatus ParseRuntimeConfigFromJsonObject(const Json::Value &root,
-                                            RuntimeConfig &runtime_config,
-                                            ErrorReporter *error_reporter) {
+BandStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
+                                            RuntimeConfig& runtime_config,
+                                            ErrorReporter* error_reporter) {
   if (ValidateJsonConfig(root, {"log_path", "schedulers"}, error_reporter) !=
       kBandOk) {
     return kBandError;
   }
 
-  auto &interpreter_config = runtime_config.interpreter_config;
-  auto &planner_config = runtime_config.planner_config;
-  auto &worker_config = runtime_config.worker_config;
+  auto& interpreter_config = runtime_config.interpreter_config;
+  auto& planner_config = runtime_config.planner_config;
+  auto& worker_config = runtime_config.worker_config;
 
   // Set Interpreter Configs
   // 1. CPU mask
@@ -79,10 +80,10 @@ BandStatus ParseRuntimeConfigFromJsonObject(const Json::Value &root,
   // 3. Planner type
   for (int i = 0; i < root["schedulers"].size(); ++i) {
     int scheduler_id = root["schedulers"][i].asInt();
-    BAND_ENSURE_MSG(error_reporter,
-                    scheduler_id >= kBandFixedDevice &&
-                        scheduler_id < kNumSchedulerTypes,
-                    "Wrong `schedulers` argument is given.");
+    BAND_ENSURE_MSG(
+        error_reporter,
+        scheduler_id >= kBandFixedDevice && scheduler_id < kNumSchedulerTypes,
+        "Wrong `schedulers` argument is given.");
     planner_config.schedulers.push_back(
         static_cast<BandSchedulerType>(scheduler_id));
   }
@@ -173,9 +174,9 @@ BandStatus ParseRuntimeConfigFromJsonObject(const Json::Value &root,
   return kBandOk;
 }
 
-BandStatus ValidateJsonConfig(const Json::Value &json_config,
+BandStatus ValidateJsonConfig(const Json::Value& json_config,
                               std::vector<std::string> keys,
-                              ErrorReporter *error_reporter) {
+                              ErrorReporter* error_reporter) {
   for (auto key : keys) {
     BAND_ENSURE_FORMATTED_MSG(
         error_reporter, !json_config[key].isNull(),
@@ -186,8 +187,8 @@ BandStatus ValidateJsonConfig(const Json::Value &json_config,
 }
 
 BandStatus ParseRuntimeConfigFromJson(std::string json_fname,
-                                      RuntimeConfig &runtime_config,
-                                      ErrorReporter *error_reporter) {
+                                      RuntimeConfig& runtime_config,
+                                      ErrorReporter* error_reporter) {
   std::ifstream config(json_fname, std::ifstream::binary);
   BAND_ENSURE(error_reporter, config.is_open());
 
@@ -201,19 +202,19 @@ BandStatus ParseRuntimeConfigFromJson(std::string json_fname,
   return ParseRuntimeConfigFromJsonObject(root, runtime_config, error_reporter);
 }
 
-BandStatus ParseRuntimeConfigFromJson(const void *buffer, size_t buffer_length,
-                                      RuntimeConfig &runtime_config,
-                                      ErrorReporter *error_reporter) {
+BandStatus ParseRuntimeConfigFromJson(const void* buffer, size_t buffer_length,
+                                      RuntimeConfig& runtime_config,
+                                      ErrorReporter* error_reporter) {
   Json::Reader reader;
   Json::Value root;
 
-  BAND_ENSURE(error_reporter,
-              reader.parse(static_cast<const char *>(buffer),
-                           static_cast<const char *>(buffer) + buffer_length,
-                           root));
+  BAND_ENSURE(
+      error_reporter,
+      reader.parse(static_cast<const char*>(buffer),
+                   static_cast<const char*>(buffer) + buffer_length, root));
   BAND_ENSURE(error_reporter, root.isObject());
 
   return ParseRuntimeConfigFromJsonObject(root, runtime_config, error_reporter);
 }
 
-} // namespace Band
+}  // namespace Band

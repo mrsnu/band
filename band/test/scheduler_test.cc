@@ -1,9 +1,10 @@
+#include "band/scheduler/scheduler.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "band/context.h"
 #include "band/scheduler/round_robin_scheduler.h"
-#include "band/scheduler/scheduler.h"
 
 namespace Band {
 namespace Test {
@@ -56,10 +57,10 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(std::deque<int>{0, 1, 2}, std::set<int>{0, 1, 2}),
         std::make_tuple(std::deque<int>{0, 1}, std::set<int>{0, 1, 2}),
         std::make_tuple(std::deque<int>{0, 1, 2}, std::set<int>{0, 1})));
-} // namespace Test
-} // namespace Band
+}  // namespace Test
+}  // namespace Band
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

@@ -1,8 +1,9 @@
 #ifndef BAND_MODEL_H_
 #define BAND_MODEL_H_
 
-#include "band/common.h"
 #include <map>
+
+#include "band/common.h"
 
 namespace Band {
 namespace Interface {
@@ -10,24 +11,24 @@ class IModel;
 }
 
 class Model {
-public:
+ public:
   Model();
   ~Model();
   ModelId GetId() const;
 
-  BandStatus FromPath(BandBackendType backend_type, const char *filename);
-  BandStatus FromBuffer(BandBackendType backend_type, const char *buffer,
+  BandStatus FromPath(BandBackendType backend_type, const char* filename);
+  BandStatus FromBuffer(BandBackendType backend_type, const char* buffer,
                         size_t buffer_size);
 
-  Interface::IModel *GetBackendModel(BandBackendType backend_type);
+  Interface::IModel* GetBackendModel(BandBackendType backend_type);
   std::set<BandBackendType> GetSupportedBackends() const;
 
-private:
+ private:
   static ModelId next_model_id_;
   const ModelId model_id_;
 
-  std::map<BandBackendType, Interface::IModel *> backend_models_;
+  std::map<BandBackendType, Interface::IModel*> backend_models_;
 };
-} // namespace Band
+}  // namespace Band
 
 #endif

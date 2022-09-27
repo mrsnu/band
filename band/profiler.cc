@@ -1,9 +1,9 @@
 #include "band/profiler.h"
+
 #include "band/json_util.h"
 
 namespace Band {
-BandStatus Profiler::Init(const ProfileConfig &config) {
-
+BandStatus Profiler::Init(const ProfileConfig& config) {
   profile_data_path_ = config.profile_data_path;
   profile_database_json_ = LoadJsonObjectFromFile(config.profile_data_path);
   // we cannot convert the model name strings to integer ids yet,
@@ -17,7 +17,7 @@ BandStatus Profiler::Init(const ProfileConfig &config) {
   profile_copy_computation_ratio_ = config.copy_computation_ratio;
 }
 
-void Profiler::UpdateLatency(const SubgraphKey &key, int64_t latency) {
+void Profiler::UpdateLatency(const SubgraphKey& key, int64_t latency) {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
     int64_t prev_latency = it->second.moving_averaged;
@@ -27,7 +27,7 @@ void Profiler::UpdateLatency(const SubgraphKey &key, int64_t latency) {
   }
 }
 
-int64_t Profiler::GetProfiled(const SubgraphKey &key) const {
+int64_t Profiler::GetProfiled(const SubgraphKey& key) const {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
     return it->second.profiled;
@@ -36,7 +36,7 @@ int64_t Profiler::GetProfiled(const SubgraphKey &key) const {
   }
 }
 
-int64_t Profiler::GetExpected(const SubgraphKey &key) const {
+int64_t Profiler::GetExpected(const SubgraphKey& key) const {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
     return it->second.moving_averaged;
@@ -44,4 +44,4 @@ int64_t Profiler::GetExpected(const SubgraphKey &key) const {
     return -1;
   }
 }
-} // namespace Band
+}  // namespace Band

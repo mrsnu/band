@@ -10,9 +10,9 @@ namespace Band {
 Json::Value LoadJsonObjectFromFile(std::string file_path);
 
 // Write json object.
-void WriteJsonObjectToFile(const Json::Value &json_object,
+void WriteJsonObjectToFile(const Json::Value& json_object,
                            std::string file_path);
 
-} // namespace Band
+}  // namespace Band
 
 #endif

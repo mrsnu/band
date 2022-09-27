@@ -1,10 +1,12 @@
-#include <future>
+#include "band/worker.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <future>
+
 #include "band/context.h"
 #include "band/time.h"
-#include "band/worker.h"
 
 namespace Band {
 namespace Test {
@@ -13,11 +15,11 @@ struct MockContext : public Context {
   MOCK_METHOD(std::vector<JobId>, EnqueueBatch, (std::vector<Job>, bool),
               (override));
 
-  MOCK_METHOD(void, UpdateLatency, (const SubgraphKey &, int64_t), (override));
-  void EnqueueFinishedJob(Job &job) override { finished.insert(job.job_id); }
+  MOCK_METHOD(void, UpdateLatency, (const SubgraphKey&, int64_t), (override));
+  void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
   MOCK_METHOD(void, Trigger, (), (override));
 
-  BandStatus Invoke(const SubgraphKey &key) override {
+  BandStatus Invoke(const SubgraphKey& key) override {
     Time::SleepForMicros(50);
     return kBandOk;
   }
@@ -26,7 +28,8 @@ struct MockContext : public Context {
 };
 
 using WorkerTypeList = testing::Types<DeviceQueueWorker, GlobalQueueWorker>;
-template <class> struct WokrerSuite : testing::Test {};
+template <class>
+struct WokrerSuite : testing::Test {};
 TYPED_TEST_SUITE(WokrerSuite, WorkerTypeList);
 
 Job GetEmptyJob() {
@@ -77,10 +80,10 @@ TYPED_TEST(WokrerSuite, Wait) {
 }
 
 // TODO: throttling test
-} // namespace Test
-} // namespace Band
+}  // namespace Test
+}  // namespace Band
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

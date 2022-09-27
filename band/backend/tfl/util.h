@@ -12,11 +12,11 @@ BandStatus GetBandStatus(TfLiteStatus status);
 BandType GetBandType(TfLiteType type);
 
 class TfLiteUtil : public Interface::IBackendUtil {
-public:
+ public:
   std::set<BandDeviceFlags> GetAvailableDevices() const override;
 };
 
-} // namespace TfLite
-} // namespace Band
+}  // namespace TfLite
+}  // namespace Band
 
 #endif

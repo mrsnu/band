@@ -26,11 +26,11 @@ struct ConcurrentJobQueue {
 };
 
 class Planner {
-public:
-  explicit Planner(Context *context);
+ public:
+  explicit Planner(Context* context);
   ~Planner();
 
-  BandStatus Init(const PlannerConfig &config);
+  BandStatus Init(const PlannerConfig& config);
   BandStatus AddScheduler(std::unique_ptr<IScheduler> scheduler);
 
   // Enqueues a job to a worker request queue.
@@ -45,8 +45,8 @@ public:
   void WaitAll();
   // Enqueues a finised job to the queue.
   // A worker calls the method.
-  void EnqueueFinishedJob(Job &job);
-  void PrepareReenqueue(Job &job);
+  void EnqueueFinishedJob(Job& job);
+  void PrepareReenqueue(Job& job);
   void Trigger() { planner_safe_bool_.notify(); }
   int IssueSchedId() { return sched_id_++; }
 
@@ -58,11 +58,11 @@ public:
   // may lead to unexpected results.
   bool NeedFallbackSubgraphs() const;
 
-  std::mutex &GetRequestsMtx() { return requests_.mtx; }
-  JobQueue &GetRequests() { return requests_.queue; }
+  std::mutex& GetRequestsMtx() { return requests_.mtx; }
+  JobQueue& GetRequests() { return requests_.queue; }
   int GetWindowSize() const { return schedule_window_size_; }
   void SetWindowSize(int schedule_window_size);
-  const std::map<int, int> &GetModelExecutionCounts() const {
+  const std::map<int, int>& GetModelExecutionCounts() const {
     return model_execution_count_;
   }
   // Sets the callback function pointer to report the end of invoke.
@@ -71,9 +71,9 @@ public:
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
-  std::map<int, int> &GetModelWorkerMap() { return model_worker_map_; }
+  std::map<int, int>& GetModelWorkerMap() { return model_worker_map_; }
 
-private:
+ private:
   // Main loop for planner_thread_
   void Plan();
   // Write job logs and delete the job from the finished queue.
@@ -82,15 +82,15 @@ private:
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueues();
   // Enqueue the request to the worker.
-  void EnqueueToWorkers(ScheduleAction &action);
+  void EnqueueToWorkers(ScheduleAction& action);
   // Check if the job violated the specified SLO.
   // This func assumes that workers_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.
-  bool IsSLOViolated(Job &job);
+  bool IsSLOViolated(Job& job);
   // Set the job status and enqueue to the finished queue.
-  void HandleSLOViolatedJob(Job &job);
+  void HandleSLOViolatedJob(Job& job);
   // Update the job information based on next target key
-  void UpdateJobScheduleStatus(Job &job, const SubgraphKey &target_key);
+  void UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key);
   // Update `model_worker_map_`.
   void TryUpdateModelWorkerMapping();
   bool IsJobIdValid(int job_id);
@@ -128,10 +128,10 @@ private:
   std::thread planner_thread_;
   // Map structure to find assigned device of model idx (model_id, device flag)
   std::map<int, int> model_worker_map_;
-  Context *const context_;
+  Context* const context_;
   bool need_reschedule_ = false;
 };
 
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_PLANNER_H_
+#endif  // BAND_PLANNER_H_

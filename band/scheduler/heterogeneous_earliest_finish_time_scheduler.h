@@ -6,13 +6,13 @@
 namespace Band {
 
 class HeterogeneousEarliestFinishTimeScheduler : public IScheduler {
-public:
-  ScheduleAction Schedule(const Context &context) override;
+ public:
+  ScheduleAction Schedule(const Context& context) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
 };
 
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_SCHEDULER_HETEROGENEOUS_EARLIEST_FINISH_TIME_SCHEDULER_H_
+#endif  // BAND_SCHEDULER_HETEROGENEOUS_EARLIEST_FINISH_TIME_SCHEDULER_H_

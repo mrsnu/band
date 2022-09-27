@@ -1,12 +1,12 @@
-#include "band/common.h"
-#include "band/worker.h"
-
-#include "band/time.h"
 #include <algorithm>
+
+#include "band/common.h"
+#include "band/time.h"
+#include "band/worker.h"
 
 namespace Band {
 
-bool GlobalQueueWorker::GiveJob(Job &job) {
+bool GlobalQueueWorker::GiveJob(Job& job) {
   if (is_busy_ || !IsAvailable()) {
     return false;
   }
@@ -21,13 +21,13 @@ bool GlobalQueueWorker::HasJob() { return is_busy_; }
 
 int GlobalQueueWorker::GetCurrentJobId() { return current_job_.job_id; }
 
-Job *GlobalQueueWorker::GetCurrentJob() {
+Job* GlobalQueueWorker::GetCurrentJob() {
   return HasJob() ? &current_job_ : nullptr;
 }
 
 void GlobalQueueWorker::EndEnqueue() { is_busy_ = false; }
 
-void GlobalQueueWorker::HandleDeviceError(Job &current_job) {
+void GlobalQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
@@ -92,4 +92,4 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   return std::max((long)(profiled_latency - progress), 0L);
 }
 
-} // namespace Band
+}  // namespace Band

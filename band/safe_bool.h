@@ -5,7 +5,7 @@
 #include <mutex>
 namespace Band {
 class SafeBool {
-public:
+ public:
   SafeBool() = default;
   ~SafeBool() = default;
 
@@ -13,13 +13,13 @@ public:
   bool wait();
   void terminate();
 
-private:
+ private:
   mutable std::mutex m;
   bool flag = false;
   bool exit = false;
   std::condition_variable c;
 };
 
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_SAFE_BOOL_H_
+#endif  // BAND_SAFE_BOOL_H_

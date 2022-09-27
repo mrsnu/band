@@ -1,5 +1,11 @@
 #ifndef BAND_ENGINE_H
 
+#include <deque>
+#include <functional>
+#include <memory>
+#include <set>
+#include <vector>
+
 #include "band/c/common.h"
 #include "band/common.h"
 #include "band/config.h"
@@ -7,20 +13,14 @@
 #include "band/error_reporter.h"
 #include "band/tensor_ring_buffer.h"
 
-#include <deque>
-#include <functional>
-#include <memory>
-#include <set>
-#include <vector>
-
 namespace Band {
 namespace Interface {
 class IInterpreter;
 class ITensor;
-} // namespace Interface
+}  // namespace Interface
 class Model;
 
-typedef std::vector<Interface::ITensor *> Tensors;
+typedef std::vector<Interface::ITensor*> Tensors;
 
 /**
  * @brief The main entry point of the `Band`.
@@ -48,14 +48,14 @@ typedef std::vector<Interface::ITensor *> Tensors;
  * // Copy result from output_tensor->GetData()
  */
 class Engine : public Context {
-public:
+ public:
   ~Engine() override;
-  static std::unique_ptr<Engine>
-  Create(const RuntimeConfig &config,
-         ErrorReporter *error_reporter = DefaultErrorReporter());
+  static std::unique_ptr<Engine> Create(
+      const RuntimeConfig& config,
+      ErrorReporter* error_reporter = DefaultErrorReporter());
 
-  BandStatus RegisterModel(Model *model);
-  Tensor *CreateTensor(ModelId model_id, int tensor_index);
+  BandStatus RegisterModel(Model* model);
+  Tensor* CreateTensor(ModelId model_id, int tensor_index);
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
@@ -75,64 +75,63 @@ public:
   // Sets the callback function pointer to report the end of invoke.
   void SetEndInvokeFunction(std::function<void(int, BandStatus)> on_end_invoke);
 
-private:
+ private:
   /* context */
-  BandStatus Init(const RuntimeConfig &config) override;
+  BandStatus Init(const RuntimeConfig& config) override;
   void UpdateWorkerWaitingTime() const override;
-  const WorkerWaitingTime &GetWorkerWaitingTime() const override;
+  const WorkerWaitingTime& GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
   SubgraphKey GetModelSubgraphKey(ModelId model_id,
                                   WorkerId worker_id) const override;
-  bool IsEnd(const SubgraphKey &key) const override;
-  BandStatus Invoke(const SubgraphKey &key) override;
-  ModelSpec *GetModelSpec(ModelId model_id) { return &model_specs_[model_id]; }
+  bool IsEnd(const SubgraphKey& key) const override;
+  BandStatus Invoke(const SubgraphKey& key) override;
+  ModelSpec* GetModelSpec(ModelId model_id) { return &model_specs_[model_id]; }
 
-  std::pair<SubgraphKey, int64_t>
-  GetShortestLatency(int model_id, std::set<int> resolved_tensors,
-                     int64_t start_time,
-                     const std::map<WorkerId, int64_t> &worker_waiting,
-                     SubgraphKey preceded_subgraph_index = {}) const override;
+  std::pair<SubgraphKey, int64_t> GetShortestLatency(
+      int model_id, std::set<int> resolved_tensors, int64_t start_time,
+      const std::map<WorkerId, int64_t>& worker_waiting,
+      SubgraphKey preceded_subgraph_index = {}) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
-      const std::map<WorkerId, int64_t> &worker_waiting) const override;
+      const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
-      Job &job,
-      const std::map<WorkerId, int64_t> &worker_waiting) const override;
+      Job& job,
+      const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
-      Job &job, const std::map<WorkerId, int64_t> &worker_waiting,
-      const std::set<WorkerId> &idle_workers) const override;
+      Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+      const std::set<WorkerId>& idle_workers) const override;
   /* profiler */
-  void UpdateLatency(const SubgraphKey &key, int64_t latency) override;
-  int64_t GetProfiled(const SubgraphKey &key) const override;
-  int64_t GetExpected(const SubgraphKey &key) const override;
+  void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
+  int64_t GetProfiled(const SubgraphKey& key) const override;
+  int64_t GetExpected(const SubgraphKey& key) const override;
   /* planner */
   void Trigger() override;
   JobId EnqueueRequest(Job job, bool push_front = false) override;
   std::vector<JobId> EnqueueBatch(std::vector<Job> jobs,
                                   bool push_front = false) override;
-  void PrepareReenqueue(Job &job) override;
-  void EnqueueFinishedJob(Job &job) override;
+  void PrepareReenqueue(Job& job) override;
+  void EnqueueFinishedJob(Job& job) override;
   /* getters */
-  Worker *GetWorker(WorkerId id) override;
+  Worker* GetWorker(WorkerId id) override;
   /* tensor communication */
-  BandStatus TryCopyInputTensors(const Job &job) override;
-  BandStatus TryCopyOutputTensors(const Job &job) override;
+  BandStatus TryCopyInputTensors(const Job& job) override;
+  BandStatus TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
   WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const;
-  Interface::IInterpreter *GetInterpreter(const SubgraphKey &key);
-  const Interface::IInterpreter *GetInterpreter(const SubgraphKey &key) const;
+  Interface::IInterpreter* GetInterpreter(const SubgraphKey& key);
+  const Interface::IInterpreter* GetInterpreter(const SubgraphKey& key) const;
 
   Engine() = delete;
-  Engine(ErrorReporter *error_reporeter);
-  Engine(const Engine &) = delete;
-  Engine(const Engine &&) = delete;
-  Engine &operator=(const Engine &) = delete;
-  Engine &operator=(const Engine &&) = delete;
+  Engine(ErrorReporter* error_reporeter);
+  Engine(const Engine&) = delete;
+  Engine(const Engine&&) = delete;
+  Engine& operator=(const Engine&) = delete;
+  Engine& operator=(const Engine&&) = delete;
 
   struct ModelOption {
     // Minimum subgraph size.
@@ -171,7 +170,7 @@ private:
   // continuous unit subgraph indices.
   std::map<int, std::map<int, std::map<int, std::vector<int>>>>
       unit_subgraphs_to_subgraph_indices_;
-}; // namespace Band
-} // namespace Band
+};  // namespace Band
+}  // namespace Band
 
-#endif // BAND_ENGINE_H
+#endif  // BAND_ENGINE_H

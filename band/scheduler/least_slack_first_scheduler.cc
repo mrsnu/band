@@ -1,13 +1,14 @@
 #include "band/scheduler/least_slack_first_scheduler.h"
-#include "band/time.h"
 
 #include <algorithm>
+
+#include "band/time.h"
 
 namespace Band {
 LeastSlackFirstScheduler::LeastSlackFirstScheduler(int window_size)
     : window_size_(window_size) {}
 
-ScheduleAction LeastSlackFirstScheduler::Schedule(const Context &context) {
+ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context) {
   int window_size = std::min(window_size_, (int)context.requests_.size());
   if (window_size <= 0) {
     return;
@@ -34,7 +35,7 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context &context) {
         GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
 
     int target_subgraph_idx = best_subgraph.first.front();
-    Subgraph *target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     if (job.slo_us > 0 &&
         current_time + best_subgraph.second > job.enqueue_time + job.slo_us) {
       job.status = kBandJobSLOViolation;
@@ -59,7 +60,7 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context &context) {
 }
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
-                                               const Job &job) {
+                                               const Job& job) {
   if (job.slo_us > 0) {
     int64_t deadline = job.enqueue_time + job.slo_us;
     int64_t remaining_execution_time = job.expected_latency;
@@ -69,20 +70,20 @@ int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
   }
 }
 
-void LeastSlackFirstScheduler::SortBySlackTime(const Context &context,
-                                               JobQueue &requests,
+void LeastSlackFirstScheduler::SortBySlackTime(const Context& context,
+                                               JobQueue& requests,
                                                int window_size,
                                                int64_t current_time) {
   UpdateExpectedLatency(context, requests, window_size);
   std::sort(requests.begin(), requests.begin() + window_size,
-            [&](const Job &first, const Job &second) -> bool {
+            [&](const Job& first, const Job& second) -> bool {
               return GetSlackTime(current_time, first) <
                      GetSlackTime(current_time, second);
             });
 }
 
-void LeastSlackFirstScheduler::UpdateExpectedLatency(const Context &context,
-                                                     JobQueue &requests,
+void LeastSlackFirstScheduler::UpdateExpectedLatency(const Context& context,
+                                                     JobQueue& requests,
                                                      int window_size) {
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
     it->expected_latency =
@@ -92,4 +93,4 @@ void LeastSlackFirstScheduler::UpdateExpectedLatency(const Context &context,
   }
 }
 
-} // namespace Band
+}  // namespace Band

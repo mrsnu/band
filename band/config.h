@@ -1,6 +1,8 @@
 #ifndef BAND_CONFIG_H_
 #define BAND_CONFIG_H_
 
+#include <json/json.h>
+
 #include <string>
 #include <vector>
 
@@ -8,8 +10,6 @@
 #include "band/common.h"
 #include "band/cpu.h"
 #include "band/error_reporter.h"
-
-#include <json/json.h>
 
 namespace Band {
 struct ProfileConfig {
@@ -68,21 +68,20 @@ struct RuntimeConfig {
 class ErrorReporter;
 // Parse runtime config from a json file path
 BandStatus ParseRuntimeConfigFromJsonObject(
-    const Json::Value &root, RuntimeConfig &runtime_config,
-    ErrorReporter *error_reporter = DefaultErrorReporter());
+    const Json::Value& root, RuntimeConfig& runtime_config,
+    ErrorReporter* error_reporter = DefaultErrorReporter());
 
 BandStatus ParseRuntimeConfigFromJson(
-    std::string json_fname, RuntimeConfig &runtime_config,
-    ErrorReporter *error_reporter = DefaultErrorReporter());
+    std::string json_fname, RuntimeConfig& runtime_config,
+    ErrorReporter* error_reporter = DefaultErrorReporter());
 
 BandStatus ParseRuntimeConfigFromJson(
-    const void *buffer, size_t buffer_length, RuntimeConfig &runtime_config,
-    ErrorReporter *error_reporter = DefaultErrorReporter());
+    const void* buffer, size_t buffer_length, RuntimeConfig& runtime_config,
+    ErrorReporter* error_reporter = DefaultErrorReporter());
 
 // Check if the keys exist in the config
-BandStatus
-ValidateJsonConfig(const Json::Value &json_config,
-                   std::vector<std::string> keys,
-                   ErrorReporter *error_reporter = DefaultErrorReporter());
-} // namespace Band
-#endif // BAND_CONFIG_H_
+BandStatus ValidateJsonConfig(
+    const Json::Value& json_config, std::vector<std::string> keys,
+    ErrorReporter* error_reporter = DefaultErrorReporter());
+}  // namespace Band
+#endif  // BAND_CONFIG_H_

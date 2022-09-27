@@ -1,13 +1,12 @@
-#include "band/worker.h"
-
 #include <algorithm>
 
 #include "band/logger.h"
 #include "band/time.h"
+#include "band/worker.h"
 
 namespace Band {
 
-JobQueue &DeviceQueueWorker::GetDeviceRequests() { return requests_; }
+JobQueue& DeviceQueueWorker::GetDeviceRequests() { return requests_; }
 
 void DeviceQueueWorker::AllowWorkSteal() { allow_work_steal_ = true; }
 
@@ -47,7 +46,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   return total;
 }
 
-bool DeviceQueueWorker::GiveJob(Job &job) {
+bool DeviceQueueWorker::GiveJob(Job& job) {
   if (!IsAvailable()) {
     return false;
   }
@@ -57,7 +56,7 @@ bool DeviceQueueWorker::GiveJob(Job &job) {
   return true;
 }
 
-Job *DeviceQueueWorker::GetCurrentJob() {
+Job* DeviceQueueWorker::GetCurrentJob() {
   return HasJob() ? &requests_.front() : nullptr;
 }
 
@@ -69,7 +68,7 @@ void DeviceQueueWorker::EndEnqueue() {
   }
 }
 
-void DeviceQueueWorker::HandleDeviceError(Job &current_job) {
+void DeviceQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
@@ -182,4 +181,4 @@ void DeviceQueueWorker::TryWorkSteal() {
   */
 }
 
-} // namespace Band
+}  // namespace Band

@@ -1,5 +1,6 @@
 
 #include "band/time.h"
+
 #include <gtest/gtest.h>
 
 namespace Band {
@@ -30,11 +31,11 @@ TEST(TimeTest, SleepForMicros) {
   EXPECT_GE(now1, now0 + 1e6 + 50);
 }
 
-} // namespace Test
-} // namespace Time
-} // namespace Band
+}  // namespace Test
+}  // namespace Time
+}  // namespace Band
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

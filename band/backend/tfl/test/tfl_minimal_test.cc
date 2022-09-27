@@ -48,10 +48,10 @@ TEST(TFLiteBackend, Registration) {
 
 TEST(TFLiteBackend, InterfaceInvoke) {
   auto backends = BackendFactory::GetAvailableBackends();
-  IModel *bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
+  IModel* bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
   bin_model->FromPath("band/testdata/add.bin");
 
-  IInterpreter *interpreter = BackendFactory::CreateInterpreter(kBandTfLite);
+  IInterpreter* interpreter = BackendFactory::CreateInterpreter(kBandTfLite);
   EXPECT_EQ(interpreter->FromModel(bin_model, 0, kBandCPU), kBandOk);
 
   SubgraphKey key = interpreter->GetModelSubgraphKey(bin_model->GetId());
@@ -68,8 +68,8 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 
   auto output_tensor =
       interpreter->GetTensorView(key, interpreter->GetOutputs(key)[0]);
-  EXPECT_EQ(reinterpret_cast<float *>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float *>(output_tensor->GetData())[1], 9.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
   delete bin_model;
   delete interpreter;
@@ -87,9 +87,9 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
-  Tensor *input_tensor = engine->CreateTensor(
+  Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor *output_tensor = engine->CreateTensor(
+  Tensor* output_tensor = engine->CreateTensor(
       model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
 
   EXPECT_TRUE(input_tensor && output_tensor);
@@ -100,8 +100,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_EQ(
       engine->InvokeSyncModel(model.GetId(), {input_tensor}, {output_tensor}),
       kBandOk);
-  EXPECT_EQ(reinterpret_cast<float *>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float *>(output_tensor->GetData())[1], 9.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
   delete input_tensor;
   delete output_tensor;
@@ -119,9 +119,9 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
-  Tensor *input_tensor = engine->CreateTensor(
+  Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor *output_tensor = engine->CreateTensor(
+  Tensor* output_tensor = engine->CreateTensor(
       model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
 
   EXPECT_TRUE(input_tensor && output_tensor);
@@ -131,15 +131,15 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 
   JobId job_id = engine->InvokeAsyncModel(model.GetId(), {input_tensor});
   EXPECT_EQ(engine->Wait(job_id, {output_tensor}), kBandOk);
-  EXPECT_EQ(reinterpret_cast<float *>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float *>(output_tensor->GetData())[1], 9.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
   delete input_tensor;
   delete output_tensor;
-} // namespace
-} // namespace Band
+}  // namespace
+}  // namespace Band
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

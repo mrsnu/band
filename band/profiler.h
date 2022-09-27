@@ -8,15 +8,15 @@
 
 namespace Band {
 class Profiler {
-public:
+ public:
   Profiler() = default;
-  BandStatus Init(const ProfileConfig &config);
-  void UpdateLatency(const SubgraphKey &key, int64_t latency);
+  BandStatus Init(const ProfileConfig& config);
+  void UpdateLatency(const SubgraphKey& key, int64_t latency);
 
-  int64_t GetProfiled(const SubgraphKey &key) const;
-  int64_t GetExpected(const SubgraphKey &key) const;
+  int64_t GetProfiled(const SubgraphKey& key) const;
+  int64_t GetExpected(const SubgraphKey& key) const;
 
-private:
+ private:
   // latency in microseconds
   struct Latency {
     int64_t profiled;
@@ -42,6 +42,6 @@ private:
   int profile_num_runs_;
   std::vector<int> profile_copy_computation_ratio_;
 };
-} // namespace Band
+}  // namespace Band
 
-#endif // BAND_PROFILER_H_
+#endif  // BAND_PROFILER_H_

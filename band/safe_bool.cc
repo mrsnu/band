@@ -21,4 +21,4 @@ void SafeBool::terminate() {
   exit = true;
   c.notify_all();
 }
-} // namespace Band
+}  // namespace Band
