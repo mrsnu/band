@@ -33,12 +33,10 @@ cc_library(
 cc_library(
     name = "interface",
     srcs = [
-        "interface/backend_factory.cc",
         "interface/tensor.cc",
     ],
     hdrs = [
         "interface/backend.h",
-        "interface/backend_factory.h",
         "interface/interpreter.h",
         "interface/model.h",
         "interface/tensor.h",
@@ -47,6 +45,21 @@ cc_library(
     copts = band_copts(),
     deps = [
         ":common",
+    ],
+)
+
+cc_library(
+    name = "backend_factory",
+    srcs = [
+        "backend_factory.cc",
+    ],
+    hdrs = [
+        "backend_factory.h",
+    ],
+    copts = band_copts(),
+    deps = [
+        ":common",
+        ":interface",
     ],
 )
 
@@ -99,6 +112,7 @@ cc_library(
         "model.h",
     ],
     deps = [
+        ":backend_factory",
         ":interface",
     ],
 )
@@ -187,6 +201,7 @@ cc_library(
     ],
     deps =
         [
+            ":backend_factory",
             ":common",
             ":config",
             ":interface",

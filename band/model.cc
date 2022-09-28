@@ -1,6 +1,6 @@
 #include "band/model.h"
 
-#include "band/interface/backend_factory.h"
+#include "band/backend_factory.h"
 #include "band/interface/model.h"
 #include "band/logger.h"
 
@@ -13,6 +13,7 @@ Model::~Model() {
     delete it.second;
   }
 }
+
 ModelId Model::GetId() const { return model_id_; }
 
 BandStatus Model::FromPath(BandBackendType backend_type, const char* filename) {
@@ -25,7 +26,7 @@ BandStatus Model::FromPath(BandBackendType backend_type, const char* filename) {
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
   Interface::IModel* backend_model =
-      Interface::BackendFactory::CreateModel(backend_type, model_id_);
+      BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model->FromPath(filename) == kBandOk) {
     backend_models_[backend_type] = backend_model;
     return kBandOk;
@@ -47,7 +48,7 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
   Interface::IModel* backend_model =
-      Interface::BackendFactory::CreateModel(backend_type, model_id_);
+      BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model->FromBuffer(buffer, buffer_size) == kBandOk) {
     backend_models_[backend_type] = backend_model;
     return kBandOk;

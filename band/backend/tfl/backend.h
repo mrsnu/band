@@ -5,8 +5,8 @@
 #include "band/backend/tfl/model.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend/tfl/util.h"
+#include "band/backend_factory.h"
 #include "band/interface/backend.h"
-#include "band/interface/backend_factory.h"
 
 namespace Band {
 using namespace Interface;

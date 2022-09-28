@@ -1,11 +1,11 @@
-#include "band/interface/backend_factory.h"
+#include "band/backend_factory.h"
 
 #include <mutex>
 
 #include "band/logger.h"
 
 namespace Band {
-namespace Interface {
+using namespace Interface;
 
 __attribute__((weak)) extern void TfLiteRegisterCreators() {}
 
@@ -67,5 +67,4 @@ void BackendFactory::RegisterBackendCreators(
   util_creators_[backend] =
       std::shared_ptr<Creator<IBackendUtil>>(util_creator);
 }
-}  // namespace Interface
 }  // namespace Band
