@@ -9,8 +9,8 @@
 #include "band/backend/tfl/interpreter.h"
 #include "band/backend/tfl/model.h"
 #include "band/backend/tfl/tensor.h"
+#include "band/backend_factory.h"
 #include "band/engine.h"
-#include "band/interface/backend_factory.h"
 #include "band/model.h"
 #include "band/tensor.h"
 

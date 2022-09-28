@@ -1,7 +1,7 @@
 #include "band/engine.h"
 
+#include "band/backend_factory.h"
 #include "band/context.h"
-#include "band/interface/backend_factory.h"
 #include "band/interface/interpreter.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
@@ -43,7 +43,7 @@ BandStatus Engine::RegisterModel(Model* model) {
     // Analyze model spec
     {
       std::unique_ptr<Interface::IInterpreter> interpreter(
-          Interface::BackendFactory::CreateInterpreter(backend_type));
+          BackendFactory::CreateInterpreter(backend_type));
       model_specs_[model_id] = interpreter->InvestigateModelSpec(
           model->GetBackendModel(backend_type));
     }
@@ -51,7 +51,7 @@ BandStatus Engine::RegisterModel(Model* model) {
     // Add whole-model subgraphs
     for (auto& id_worker : workers_) {
       std::unique_ptr<Interface::IInterpreter> interpreter(
-          Interface::BackendFactory::CreateInterpreter(backend_type));
+          BackendFactory::CreateInterpreter(backend_type));
       if (interpreter->FromModel(
               model->GetBackendModel(backend_type), id_worker.first,
               id_worker.second->GetDeviceFlag()) == kBandOk) {
@@ -267,10 +267,10 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
   // Search for all available backends, devices
   std::set<BandDeviceFlags> valid_devices;
-  auto valid_backends = Interface::BackendFactory::GetAvailableBackends();
+  auto valid_backends = BackendFactory::GetAvailableBackends();
   for (auto backend : valid_backends) {
-    auto backend_devices = Interface::BackendFactory::GetBackendUtil(backend)
-                               ->GetAvailableDevices();
+    auto backend_devices =
+        BackendFactory::GetBackendUtil(backend)->GetAvailableDevices();
     valid_devices.insert(backend_devices.begin(), backend_devices.end());
   }
 
