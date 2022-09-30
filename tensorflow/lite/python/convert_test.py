@@ -13,14 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 """TensorFlow Lite Python Interface: Sanity check."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 
 from tensorflow.lite.python import convert
-from tensorflow.lite.python import lite_constants
 from tensorflow.lite.python import op_hint
 from tensorflow.lite.python.interpreter import Interpreter
 from tensorflow.python.client import session
@@ -45,8 +40,8 @@ class ConvertTest(test_util.TensorFlowTestCase):
       sess = session.Session()
 
     # Try running on valid graph
-    tflite_model = convert.toco_convert(sess.graph_def, [in_tensor],
-                                        [out_tensor])
+    tflite_model = convert.convert_graphdef(
+        sess.graph_def, input_tensors=[in_tensor], output_tensors=[out_tensor])
     self.assertTrue(tflite_model)
 
   def testQuantization(self):
@@ -57,9 +52,11 @@ class ConvertTest(test_util.TensorFlowTestCase):
           in_tensor + in_tensor, min=0., max=1.)
       sess = session.Session()
 
-    tflite_model = convert.toco_convert(
-        sess.graph_def, [in_tensor], [out_tensor],
-        inference_type=lite_constants.QUANTIZED_UINT8,
+    tflite_model = convert.convert_graphdef(
+        sess.graph_def,
+        input_tensors=[in_tensor],
+        output_tensors=[out_tensor],
+        inference_type=dtypes.uint8,
         quantized_input_stats=[(0., 1.)])
     self.assertTrue(tflite_model)
 
@@ -70,10 +67,13 @@ class ConvertTest(test_util.TensorFlowTestCase):
       _ = in_tensor + in_tensor
       sess = session.Session()
 
-    tflite_model = convert.toco_convert_graph_def(
-        sess.graph_def, [("input", [1, 16, 16, 3])], ["add"],
-        enable_mlir_converter=False,
-        inference_type=lite_constants.FLOAT)
+    tflite_model = convert.convert_graphdef_with_arrays(
+        sess.graph_def,
+        input_arrays_with_shape=[("input", [1, 16, 16, 3])],
+        output_arrays=["add"],
+        control_output_arrays=None,
+        inference_type=dtypes.float32,
+        enable_mlir_converter=False)
     self.assertTrue(tflite_model)
 
     # Check values from converted model.
@@ -104,15 +104,16 @@ class ConvertTest(test_util.TensorFlowTestCase):
           in_tensor_1 + in_tensor_2, min=0., max=1., name="output")
       sess = session.Session()
 
-    input_arrays_map = [("inputA", [1, 16, 16, 3]), ("inputB", [1, 16, 16, 3])]
-    output_arrays = ["output"]
-    tflite_model = convert.toco_convert_graph_def(
+    tflite_model = convert.convert_graphdef_with_arrays(
         sess.graph_def,
-        input_arrays_map,
-        output_arrays,
+        input_arrays_with_shape=[("inputA", [1, 16, 16, 3]),
+                                 ("inputB", [1, 16, 16, 3])],
+        output_arrays=["output"],
+        control_output_arrays=None,
+        inference_type=dtypes.uint8,
+        quantized_input_stats=[(0., 1.), (0., 1.)],
         enable_mlir_converter=False,
-        inference_type=lite_constants.QUANTIZED_UINT8,
-        quantized_input_stats=[(0., 1.), (0., 1.)])
+    )
     self.assertTrue(tflite_model)
 
     # Check values from converted model.
@@ -138,7 +139,7 @@ class ConvertTest(test_util.TensorFlowTestCase):
     self.assertEqual("output", output_details[0]["name"])
     self.assertEqual(np.uint8, output_details[0]["dtype"])
     self.assertTrue(([1, 16, 16, 3] == output_details[0]["shape"]).all())
-    self.assertTrue(output_details[0]["quantization"][0] > 0)  # scale
+    self.assertGreater(output_details[0]["quantization"][0], 0)  # scale
 
   def testGraphDefQuantizationInvalid(self):
     with ops.Graph().as_default():
@@ -150,19 +151,19 @@ class ConvertTest(test_util.TensorFlowTestCase):
           in_tensor_1 + in_tensor_2, min=0., max=1., name="output")
       sess = session.Session()
 
-    input_arrays_map = [("inputA", [1, 16, 16, 3]), ("inputB", [1, 16, 16, 3])]
-    output_arrays = ["output"]
     with self.assertRaises(ValueError) as error:
-      convert.toco_convert_graph_def(
+      convert.convert_graphdef_with_arrays(
           sess.graph_def,
-          input_arrays_map,
-          output_arrays,
-          enable_mlir_converter=False,
-          inference_type=lite_constants.QUANTIZED_UINT8)
+          input_arrays_with_shape=[("inputA", [1, 16, 16, 3]),
+                                   ("inputB", [1, 16, 16, 3])],
+          output_arrays=["output"],
+          control_output_arrays=None,
+          inference_type=dtypes.uint8,
+          enable_mlir_converter=False)
     self.assertEqual(
-        "std_dev and mean must be defined when inference_type or "
-        "inference_input_type is QUANTIZED_UINT8 or INT8.",
-        str(error.exception))
+        "The `quantized_input_stats` flag must be defined when either "
+        "`inference_type` flag or `inference_input_type` flag is set to "
+        "tf.int8 or tf.uint8.", str(error.exception))
 
 
 class ConvertTestOpHint(test_util.TensorFlowTestCase):
@@ -287,7 +288,7 @@ class ConvertTestOpHint(test_util.TensorFlowTestCase):
             self._getGraphOpTypes(
                 stubbed_graphdef,
                 output_nodes=[op_hint._tensor_name_base(output.name)]),
-            set(["add_test", "Const", "Identity", "Add"]))
+            set(["add_test", "Const", "Identity", "AddV2"]))
 
   def _get_input_index(self, x):
     return x.op.node_def.attr[op_hint.OpHint.FUNCTION_INPUT_INDEX_ATTR].i

@@ -143,9 +143,8 @@ class BaseSVDFOpModel : public SingleOpModel {
     weights_time_ = AddInput(weights_time_type);
     bias_ = AddNullInput();
     const int num_filters = units * rank;
-    activation_state_ = AddInput(
-        TensorData{TensorType_FLOAT32, {batches, memory_size * num_filters}},
-        /*is_variable=*/true);
+    activation_state_ = AddVariableInput(
+        TensorData{TensorType_FLOAT32, {batches, memory_size * num_filters}});
     output_ = AddOutput(TensorType_FLOAT32);
     SetBuiltinOp(BuiltinOperator_SVDF, BuiltinOptions_SVDFOptions,
                  CreateSVDFOptions(builder_, rank, ActivationFunctionType_NONE,
@@ -250,7 +249,7 @@ class SVDFOpTest : public ::testing::TestWithParam<bool> {
       float* batch_end = batch_start + svdf_input_size * svdf_num_batches;
       svdf->SetInput(0, batch_start, batch_end);
 
-      svdf->Invoke();
+      ASSERT_EQ(svdf->InvokeUnchecked(), kTfLiteOk);
 
       const float* golden_start =
           golden_output + i * svdf_num_units * svdf_num_batches;
@@ -482,9 +481,8 @@ class IntegerSVDFOpModel : public SingleOpModel {
     weights_time_ =
         AddInput({TensorType_INT16, {num_filters, memory_size}, -1, 1});
     bias_ = AddInput({TensorType_INT32, {units}, -512, 512});
-    activation_state_ = AddInput(
-        {TensorType_INT16, {batches, memory_size * num_filters}, -16, 16},
-        /*is_variable=*/true);
+    activation_state_ = AddVariableInput(
+        {TensorType_INT16, {batches, memory_size * num_filters}, -16, 16});
     output_ = AddOutput({TensorType_INT8, {batches, units}, -0.5, 0.5});
     SetBuiltinOp(
         BuiltinOperator_SVDF, BuiltinOptions_SVDFOptions,
@@ -596,7 +594,7 @@ TEST_F(SVDFOpTest, BlackBoxTestInteger) {
 
   for (int sequence_index = 0; sequence_index < 12; ++sequence_index) {
     svdf.SetInput(input_sequences[sequence_index]);
-    svdf.Invoke();
+    ASSERT_EQ(svdf.InvokeUnchecked(), kTfLiteOk);
     const std::vector<int8_t> res = svdf.GetOutput();
     EXPECT_THAT(res, ElementsAreArray(expected_output[sequence_index]));
   }

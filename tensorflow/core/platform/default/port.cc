@@ -14,11 +14,11 @@ limitations under the License.
 ==============================================================================*/
 
 #include "absl/base/internal/sysinfo.h"
-
 #include "tensorflow/core/platform/cpu_info.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/mem.h"
 #include "tensorflow/core/platform/numa.h"
+#include "tensorflow/core/platform/profile_utils/cpu_utils.h"
 #include "tensorflow/core/platform/snappy.h"
 #include "tensorflow/core/platform/types.h"
 
@@ -49,6 +49,21 @@ limitations under the License.
 #include "hwloc.h"  // from @hwloc
 #endif
 
+#if defined(__ANDROID__) && (defined(__i386__) || defined(__x86_64__))
+#define TENSORFLOW_HAS_CXA_DEMANGLE 0
+#elif (__GNUC__ >= 4 || (__GNUC__ >= 3 && __GNUC_MINOR__ >= 4)) && \
+    !defined(__mips__)
+#define TENSORFLOW_HAS_CXA_DEMANGLE 1
+#elif defined(__clang__) && !defined(_MSC_VER)
+#define TENSORFLOW_HAS_CXA_DEMANGLE 1
+#else
+#define TENSORFLOW_HAS_CXA_DEMANGLE 0
+#endif
+
+#if TENSORFLOW_HAS_CXA_DEMANGLE
+#include <cxxabi.h>
+#endif
+
 namespace tensorflow {
 namespace port {
 
@@ -60,6 +75,16 @@ string Hostname() {
   hostname[sizeof hostname - 1] = 0;
   return string(hostname);
 }
+
+string JobName() {
+  const char* job_name_cs = std::getenv("TF_JOB_NAME");
+  if (job_name_cs != nullptr) {
+    return string(job_name_cs);
+  }
+  return "";
+}
+
+int64_t JobUid() { return -1; }
 
 int NumSchedulableCPUs() {
 #if defined(__linux__) && !defined(__ANDROID__)
@@ -301,7 +326,13 @@ void MallocExtension_ReleaseToSystem(std::size_t num_bytes) {
   // No-op.
 }
 
-std::size_t MallocExtension_GetAllocatedSize(const void* p) { return 0; }
+std::size_t MallocExtension_GetAllocatedSize(const void* p) {
+#if !defined(__ANDROID__)
+  return 0;
+#else
+  return malloc_usable_size(p);
+#endif
+}
 
 bool Snappy_Compress(const char* input, size_t length, string* output) {
 #ifdef TF_USE_SNAPPY
@@ -342,21 +373,46 @@ bool Snappy_UncompressToIOVec(const char* compressed, size_t compressed_length,
 #endif
 }
 
-string Demangle(const char* mangled) { return mangled; }
-
-double NominalCPUFrequency() {
-  return absl::base_internal::NominalCPUFrequency();
+static void DemangleToString(const char* mangled, string* out) {
+  int status = 0;
+  char* demangled = nullptr;
+#if TENSORFLOW_HAS_CXA_DEMANGLE
+  demangled = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
+#endif
+  if (status == 0 && demangled != nullptr) {  // Demangling succeeded.
+    out->append(demangled);
+    free(demangled);
+  } else {
+    out->append(mangled);
+  }
 }
 
-int64 AvailableRam() {
+string Demangle(const char* mangled) {
+  string demangled;
+  DemangleToString(mangled, &demangled);
+  return demangled;
+}
+
+double NominalCPUFrequency() {
+  return tensorflow::profile_utils::CpuUtils::GetCycleCounterFrequency();
+}
+
+MemoryInfo GetMemoryInfo() {
+  MemoryInfo mem_info = {INT64_MAX, INT64_MAX};
 #if defined(__linux__) && !defined(__ANDROID__)
   struct sysinfo info;
   int err = sysinfo(&info);
   if (err == 0) {
-    return info.freeram;
+    mem_info.free = info.freeram;
+    mem_info.total = info.totalram;
   }
 #endif
-  return INT64_MAX;
+  return mem_info;
+}
+
+MemoryBandwidthInfo GetMemoryBandwidthInfo() {
+  MemoryBandwidthInfo membw_info = {INT64_MAX};
+  return membw_info;
 }
 
 }  // namespace port

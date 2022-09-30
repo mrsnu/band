@@ -74,9 +74,12 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE_EQ(context, NumInputs(node), 3);
   TF_LITE_ENSURE_EQ(context, NumOutputs(node), 1);
 
-  const TfLiteTensor* indices = GetInput(context, node, kIndices);
-  const TfLiteTensor* updates = GetInput(context, node, kUpdates);
-  const TfLiteTensor* shape = GetInput(context, node, kShape);
+  const TfLiteTensor* indices;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kIndices, &indices));
+  const TfLiteTensor* updates;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kUpdates, &updates));
+  const TfLiteTensor* shape;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kShape, &shape));
 
   switch (updates->type) {
     case kTfLiteFloat32:
@@ -96,7 +99,9 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
     return kTfLiteError;
   }
 
-  TfLiteTensor* output = GetOutput(context, node, kOutputTensor);
+  TfLiteTensor* output;
+  TF_LITE_ENSURE_OK(context,
+                    GetOutputSafe(context, node, kOutputTensor, &output));
   output->type = updates->type;
 
   if (IsConstantTensor(shape)) {
@@ -123,11 +128,10 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 template <typename IndicesT, typename UpdatesT>
 TfLiteStatus ScatterNd(const TfLiteTensor* indices, const TfLiteTensor* updates,
                        TfLiteTensor* output) {
-  reference_ops::ScatterNd(
+  return reference_ops::ScatterNd(
       GetTensorShape(indices), GetTensorData<IndicesT>(indices),
       GetTensorShape(updates), GetTensorData<UpdatesT>(updates),
       GetTensorShape(output), GetTensorData<UpdatesT>(output));
-  return kTfLiteOk;
 }
 
 template <typename IndicesT>
@@ -143,30 +147,48 @@ TfLiteStatus EvalScatterNd(TfLiteContext* context, const TfLiteTensor* indices,
                       ResizeOutputTensor<IndicesT>(context, shape, output));
   }
 
+  TfLiteStatus status = kTfLiteError;
   switch (updates->type) {
     case kTfLiteFloat32:
-      return ScatterNd<IndicesT, float>(indices, updates, output);
+      status = ScatterNd<IndicesT, float>(indices, updates, output);
+      break;
     case kTfLiteUInt8:
-      return ScatterNd<IndicesT, uint8_t>(indices, updates, output);
+      status = ScatterNd<IndicesT, uint8_t>(indices, updates, output);
+      break;
+    case kTfLiteBool:
+      status = ScatterNd<IndicesT, bool>(indices, updates, output);
+      break;
     case kTfLiteInt8:
-      return ScatterNd<IndicesT, int8_t>(indices, updates, output);
+      status = ScatterNd<IndicesT, int8_t>(indices, updates, output);
+      break;
     case kTfLiteInt32:
-      return ScatterNd<IndicesT, int32_t>(indices, updates, output);
+      status = ScatterNd<IndicesT, int32_t>(indices, updates, output);
+      break;
     case kTfLiteInt64:
-      return ScatterNd<IndicesT, int64_t>(indices, updates, output);
+      status = ScatterNd<IndicesT, int64_t>(indices, updates, output);
+      break;
     default:
       context->ReportError(
           context, "Updates of type '%s' are not supported by scatter_nd.",
           TfLiteTypeGetName(updates->type));
       return kTfLiteError;
   }
+  if (status != kTfLiteOk) {
+    context->ReportError(context, "scatter_nd index out of bounds");
+  }
+  return status;
 }
 
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
-  const TfLiteTensor* indices = GetInput(context, node, kIndices);
-  const TfLiteTensor* updates = GetInput(context, node, kUpdates);
-  const TfLiteTensor* shape = GetInput(context, node, kShape);
-  TfLiteTensor* output = GetOutput(context, node, kOutputTensor);
+  const TfLiteTensor* indices;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kIndices, &indices));
+  const TfLiteTensor* updates;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kUpdates, &updates));
+  const TfLiteTensor* shape;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kShape, &shape));
+  TfLiteTensor* output;
+  TF_LITE_ENSURE_OK(context,
+                    GetOutputSafe(context, node, kOutputTensor, &output));
 
   switch (indices->type) {
     case kTfLiteInt32:

@@ -43,7 +43,7 @@ class TableBuilder : public TensorSliceWriter::Builder {
   void Add(StringPiece key, StringPiece val) override {
     builder_->Add(key, val);
   }
-  Status Finish(int64* file_size) override {
+  Status Finish(int64_t* file_size) override {
     *file_size = -1;
     Status s = builder_->Finish();
     if (s.ok()) {
@@ -54,7 +54,7 @@ class TableBuilder : public TensorSliceWriter::Builder {
     }
     if (!s.ok()) {
       s = errors::Internal("Error writing (tmp) checkpoint file: ", name_, ": ",
-                           s.ToString());
+                           s.error_message());
     }
     builder_.reset();
     file_.reset();
@@ -111,7 +111,7 @@ Status TensorSliceWriter::Finish() {
     builder->Add(x.first, x.second);
   }
 
-  int64 file_size;
+  int64_t file_size;
   s = builder->Finish(&file_size);
   // We need to rename the file to the proper name
   if (s.ok()) {
@@ -131,6 +131,16 @@ Status TensorSliceWriter::Finish() {
 
 /* static */
 size_t TensorSliceWriter::MaxBytesPerElement(DataType dt) {
+  size_t max_bytes_per_element =
+      TensorSliceWriter::MaxBytesPerElementOrZero(dt);
+  if (max_bytes_per_element == 0) {
+    LOG(FATAL) << "MaxBytesPerElement not implemented for dtype: " << dt;
+  }
+  return max_bytes_per_element;
+}
+
+/* static */
+size_t TensorSliceWriter::MaxBytesPerElementOrZero(DataType dt) {
   switch (dt) {
     case DT_FLOAT:
       return 4;
@@ -170,17 +180,16 @@ size_t TensorSliceWriter::MaxBytesPerElement(DataType dt) {
     case DT_STRING:
     case DT_BFLOAT16:
     default:
-      LOG(FATAL) << "MaxBytesPerElement not implemented for dtype: " << dt;
+      return 0;
   }
-  return 0;
 }
 
 template <>
-Status TensorSliceWriter::SaveData(const tstring* data, int64 num_elements,
+Status TensorSliceWriter::SaveData(const tstring* data, int64_t num_elements,
                                    SavedSlice* ss) {
   size_t size_bound = ss->ByteSize() + kTensorProtoHeaderBytes +
                       (num_elements * MaxBytesPerElement(DT_INT32));
-  for (int64 i = 0; i < num_elements; ++i) {
+  for (int64_t i = 0; i < num_elements; ++i) {
     size_bound += data[i].size();
   }
   if (size_bound > kMaxMessageBytes) {

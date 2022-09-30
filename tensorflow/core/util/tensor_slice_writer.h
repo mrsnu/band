@@ -46,7 +46,7 @@ class TensorSliceWriter {
    public:
     virtual ~Builder() {}
     virtual void Add(StringPiece key, StringPiece value) = 0;
-    virtual Status Finish(int64* file_size) = 0;
+    virtual Status Finish(int64_t* file_size) = 0;
   };
   typedef std::function<Status(const string&, Builder**)> CreateBuilderFunction;
 
@@ -63,11 +63,13 @@ class TensorSliceWriter {
   // Allocate "num_elements" elements in "ss" and save the data in "data"
   // there.
   template <typename T>
-  static Status SaveData(const T* data, int64 num_elements, SavedSlice* ss);
+  static Status SaveData(const T* data, int64_t num_elements, SavedSlice* ss);
 
   static size_t MaxBytesPerElement(DataType dt);
 
  private:
+  static size_t MaxBytesPerElementOrZero(DataType dt);
+
   static constexpr size_t kMaxMessageBytes = 1LL << 31;
   // Filling in the TensorProto in a SavedSlice will add the following
   // header bytes, in addition to the data:
@@ -160,11 +162,17 @@ Status TensorSliceWriter::Add(const string& name, const TensorShape& shape,
 }
 
 template <typename T>
-Status TensorSliceWriter::SaveData(const T* data, int64 num_elements,
+Status TensorSliceWriter::SaveData(const T* data, int64_t num_elements,
                                    SavedSlice* ss) {
-  size_t size_bound =
-      ss->ByteSize() + kTensorProtoHeaderBytes +
-      (MaxBytesPerElement(DataTypeToEnum<T>::value) * num_elements);
+  size_t max_bytes_per_element =
+      MaxBytesPerElementOrZero(DataTypeToEnum<T>::value);
+  if (max_bytes_per_element == 0) {
+    return errors::InvalidArgument(
+        "Tensor slice serialization not implemented for dtype ",
+        DataTypeToEnum<T>::value);
+  }
+  size_t size_bound = ss->ByteSize() + kTensorProtoHeaderBytes +
+                      (max_bytes_per_element * num_elements);
   if (size_bound > kMaxMessageBytes) {
     return errors::InvalidArgument(
         "Tensor slice is too large to serialize (conservative estimate: ",
@@ -177,7 +185,7 @@ Status TensorSliceWriter::SaveData(const T* data, int64 num_elements,
 }
 
 template <>
-Status TensorSliceWriter::SaveData(const tstring* data, int64 num_elements,
+Status TensorSliceWriter::SaveData(const tstring* data, int64_t num_elements,
                                    SavedSlice* ss);
 
 // Create a table builder that will write to "filename" in

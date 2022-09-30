@@ -35,7 +35,7 @@ TEST(TFLiteBackend, ModelSpec) {
   ModelSpec model_spec;
   model_spec = interpreter.InvestigateModelSpec(&bin_model);
 
-  EXPECT_EQ(model_spec.num_ops, 2);
+  EXPECT_EQ(model_spec.num_ops, 1);
   EXPECT_EQ(model_spec.input_tensors.size(), 1);
   EXPECT_EQ(model_spec.output_tensors.size(), 1);
 }

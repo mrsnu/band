@@ -21,6 +21,9 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_UTIL_H_
 #define TENSORFLOW_LITE_UTIL_H_
 
+#include <stddef.h>
+
+#include <initializer_list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -28,6 +31,12 @@ limitations under the License.
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
+
+// Memory allocation parameter used by ArenaPlanner.
+// Clients (such as delegates) might look at this to ensure interop between
+// TFLite memory & hardware buffers.
+// NOTE: This only holds for tensors allocated on the arena.
+constexpr int kDefaultTensorAlignment = 64;
 
 // The prefix of Flex op custom code.
 // This will be matched agains the `custom_code` field in `OperatorCode`
@@ -82,6 +91,20 @@ bool IsUnresolvedCustomOp(const TfLiteRegistration& registration);
 
 // Returns a descriptive name with the given op TfLiteRegistration.
 std::string GetOpNameByRegistration(const TfLiteRegistration& registration);
+
+// The prefix of a validation subgraph name.
+// WARNING: This is an experimental API and subject to change.
+constexpr char kValidationSubgraphNamePrefix[] = "VALIDATION:";
+
+// Checks whether the prefix of the subgraph name indicates the subgraph is a
+// validation subgraph.
+bool IsValidationSubgraph(const char* name);
+
+// Multiply two sizes and return true if overflow occurred;
+// This is based off tensorflow/overflow.h but is simpler as we already
+// have unsigned numbers. It is also generalized to work where sizeof(size_t)
+// is not 8.
+TfLiteStatus MultiplyAndCheckOverflow(size_t a, size_t b, size_t* product);
 }  // namespace tflite
 
 #endif  // TENSORFLOW_LITE_UTIL_H_
