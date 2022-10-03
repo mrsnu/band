@@ -235,7 +235,10 @@ cc_test(
     srcs = ["test/scheduler_test.cc"],
     deps = [
         ":scheduler",
+        ":model",
+        ":config",
         "@com_google_googletest//:gtest",
+        "@jsoncpp_git//:jsoncpp"
     ],
 )
 
