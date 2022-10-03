@@ -33,6 +33,14 @@ class ProfileConfigBuilder {
     copy_computation_ratio_ = copy_computation_ratio;
     return *this;
   }
+  ProfileConfigBuilder& AddProfileDataPath(std::string profile_data_path) {
+    profile_data_path_ = profile_data_path;
+    return *this;
+  }
+  ProfileConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
+    smoothing_factor_ = smoothing_factor;
+    return *this;
+  }
 
   ProfileConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
@@ -42,51 +50,8 @@ class ProfileConfigBuilder {
   int num_warmups_ = 1;
   int num_runs_ = 1;
   std::vector<int> copy_computation_ratio_;
-};
-
-// Builder for creating InterpreterConfig, and delegates ProfileConfigBuilder.
-class InterpreterConfigBuilder {
- public:
-  InterpreterConfigBuilder() {}
-  // Delegation on ProfileConfigBuilder.
-  InterpreterConfigBuilder& AddOnline(bool online) {
-    profile_config_builder_.AddOnline(online);
-    return *this;
-  }
-  InterpreterConfigBuilder& AddNumWarmups(int num_warmups) {
-    profile_config_builder_.AddNumWarmups(num_warmups);
-    return *this;
-  }
-  InterpreterConfigBuilder& AddNumRuns(int num_runs) {
-    profile_config_builder_.AddNumRuns(num_runs);
-    return *this;
-  }
-  InterpreterConfigBuilder& AddCopyComputationRatio(
-      std::vector<int> copy_computation_ratio) {
-    profile_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
-    return *this;
-  }
-  InterpreterConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
-    smoothing_factor_ = smoothing_factor;
-    return *this;
-  }
-  InterpreterConfigBuilder& AddProfileDataPath(std::string profile_data_path) {
-    profile_data_path_ = profile_data_path;
-    return *this;
-  }
-
-  InterpreterConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
-
- private:
-  // Profile config
-  ProfileConfigBuilder profile_config_builder_;
+  std::string profile_data_path_ = "";
   float smoothing_factor_ = 0.1;
-  std::string profile_data_path_;
-  // Interpreter config
-  int minimum_subgraph_size_ = 7;
-  BandSubgraphPreparationType subgraph_preparation_type_ =
-      kBandMergeUnitSubgraph;
 };
 
 // Builder for creating PlannerConfig
@@ -189,30 +154,30 @@ class RuntimeConfigBuilder {
  public:
   // Add ProfileConfig
   RuntimeConfigBuilder& AddOnline(bool online) {
-    interpreter_config_builder_.AddOnline(online);
+    profile_config_builder_.AddOnline(online);
     return *this;
   }
   RuntimeConfigBuilder& AddNumWarmups(int num_warmups) {
-    interpreter_config_builder_.AddNumWarmups(num_warmups);
+    profile_config_builder_.AddNumWarmups(num_warmups);
     return *this;
   }
   RuntimeConfigBuilder& AddNumRuns(int num_runs) {
-    interpreter_config_builder_.AddNumRuns(num_runs);
+    profile_config_builder_.AddNumRuns(num_runs);
     return *this;
   }
   RuntimeConfigBuilder& AddCopyComputationRatio(
       std::vector<int> copy_computation_ratio) {
-    interpreter_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
+    profile_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
     return *this;
   }
 
   // Add InterpreterConfig
   RuntimeConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
-    interpreter_config_builder_.AddSmoothingFactor(smoothing_factor);
+    profile_config_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;
   }
   RuntimeConfigBuilder& AddProfileDataPath(std::string profile_log_path) {
-    interpreter_config_builder_.AddProfileDataPath(profile_log_path);
+    profile_config_builder_.AddProfileDataPath(profile_log_path);
     return *this;
   }
 
@@ -274,7 +239,7 @@ class RuntimeConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  InterpreterConfigBuilder interpreter_config_builder_;
+  ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
   int minimum_subgraph_size_ = 7;

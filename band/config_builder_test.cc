@@ -18,21 +18,6 @@ TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   EXPECT_FALSE(b.IsValid());
 }
 
-TEST(ConfigBuilderTest, InterpreterConfigBuilderTest) {
-  InterpreterConfigBuilder b;
-  InterpreterConfig config_ok = b.AddOnline(true)
-                                    .AddNumWarmups(3)
-                                    .AddProfileDataPath("band/testdata/config.json")
-                                    .Build();
-
-  EXPECT_EQ(config_ok.profile_config.online, true);
-  EXPECT_EQ(config_ok.profile_config.num_warmups, 3);
-  EXPECT_EQ(config_ok.profile_data_path, "band/testdata/config.json");
-
-  b.AddSmoothingFactor(-1);
-  EXPECT_FALSE(b.IsValid());
-}
-
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
   PlannerConfigBuilder b;
   PlannerConfig config_ok = b.AddLogPath("band/testdata/config.json")
@@ -88,19 +73,19 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(100)
           .Build();
-  EXPECT_EQ(config_ok.interpreter_config.profile_config.online, true);
-  EXPECT_EQ(config_ok.interpreter_config.profile_config.num_warmups, 1);
-  EXPECT_EQ(config_ok.interpreter_config.profile_config.num_runs, 1);
+  EXPECT_EQ(config_ok.profile_config.online, true);
+  EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
+  EXPECT_EQ(config_ok.profile_config.num_runs, 1);
   EXPECT_EQ(
-      config_ok.interpreter_config.profile_config.copy_computation_ratio[0], 1);
+      config_ok.profile_config.copy_computation_ratio[0], 1);
   EXPECT_EQ(
-      config_ok.interpreter_config.profile_config.copy_computation_ratio[1], 2);
+      config_ok.profile_config.copy_computation_ratio[1], 2);
   EXPECT_EQ(
-      config_ok.interpreter_config.profile_config.copy_computation_ratio[2], 3);
+      config_ok.profile_config.copy_computation_ratio[2], 3);
   EXPECT_EQ(
-      config_ok.interpreter_config.profile_config.copy_computation_ratio[3], 4);
-  EXPECT_EQ(config_ok.interpreter_config.smoothing_factor, 0.1f);
-  EXPECT_EQ(config_ok.interpreter_config.profile_data_path, "band/testdata/config.json");
+      config_ok.profile_config.copy_computation_ratio[3], 4);
+  EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
+  EXPECT_EQ(config_ok.profile_config.profile_data_path, "band/testdata/config.json");
   EXPECT_EQ(config_ok.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_preparation_type, kBandMergeUnitSubgraph);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/testdata/config.json");
@@ -117,14 +102,14 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
 TEST(ConfigBuilderTest, DefaultValueTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config_ok = b.AddSchedulers({kBandFixedDevice}).Build();
-  EXPECT_EQ(config_ok.interpreter_config.profile_config.online, true);
-  EXPECT_EQ(config_ok.interpreter_config.profile_config.num_warmups, 1);
-  EXPECT_EQ(config_ok.interpreter_config.profile_config.num_runs, 1);
+  EXPECT_EQ(config_ok.profile_config.online, true);
+  EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
+  EXPECT_EQ(config_ok.profile_config.num_runs, 1);
   EXPECT_EQ(
-      config_ok.interpreter_config.profile_config.copy_computation_ratio[0],
+      config_ok.profile_config.copy_computation_ratio[0],
       30000);
-  EXPECT_EQ(config_ok.interpreter_config.profile_data_path, "");
-  EXPECT_EQ(config_ok.interpreter_config.smoothing_factor, 0.1f);
+  EXPECT_EQ(config_ok.profile_config.profile_data_path, "");
+  EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");
   EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedDevice);
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);

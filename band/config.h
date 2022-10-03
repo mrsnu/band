@@ -19,12 +19,8 @@ struct ProfileConfig {
   int num_warmups = 1;
   int num_runs = 1;
   std::vector<int> copy_computation_ratio;
-};
-
-struct InterpreterConfig {
-  ProfileConfig profile_config;
-  float smoothing_factor = 0.1;
   std::string profile_data_path = "";
+  float smoothing_factor = 0.1;
 };
 
 struct PlannerConfig {
@@ -54,7 +50,7 @@ struct WorkerConfig {
 struct RuntimeConfig {
   int minimum_subgraph_size;
   BandSubgraphPreparationType subgraph_preparation_type;
-  InterpreterConfig interpreter_config;
+  ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
  private:

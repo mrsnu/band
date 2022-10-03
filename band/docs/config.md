@@ -37,11 +37,8 @@ Each configuration field is optional or required. If a field is optional, then i
 - `num_warmups` [type: `int`, default: `1`]: The number of warmup runs before profile.
 - `num_runs` [type: `int`, default: `1`]: The number of runs for profile
 - `copy_computation_ratio` [type: `std::vector<int>`, default: `[30000, ...]`]: The ratio of computation to input-output copy. Used for latency estimation. The size of the list should be the same as the number of devices.
-
-## `InterpreterConfig`
-- `InterpreterConfig` contains `ProfileConfig`.
-- `profile_smoothing_factor` [type: `float`, default: `0.1`]: The momentum to reflect current profiled data. `<updateed_profile> = <smoothing_factor> * <curr_profile> + (1. - <smoothing_factor>) * <prev_profile>`.
-- `data_path` [type: `std::string`, default: `""`]: The input path to the file for offline profile results. If not specified, this will be ignored and will not generate the result file. 
+- `smoothing_factor` [type: `float`, default: `0.1`]: The momentum to reflect current profiled data. `<updateed_profile> = <smoothing_factor> * <curr_profile> + (1. - <smoothing_factor>) * <prev_profile>`.
+- `profile_data_path` [type: `std::string`, default: `""`]: The input path to the file for offline profile results. If not specified, this will be ignored and will not generate the result file. 
 
 ## `PlannerConfig`
 - `schedule_window_size` [type: `int`, default: `INT_MAX`]: The size of window that scheduler will use.
@@ -57,7 +54,7 @@ Each configuration field is optional or required. If a field is optional, then i
 - `availability_check_interval_ms` [type: `int`, default: `30_000`]: The interval for checking availability of devices. Used for detecting thermal throttling.
 
 ## `RuntimeConfig`
-- `RuntimeConfig` contains `InterpreterConfig`, `PlannerConfig` and `WorkerConfig`.
+- `RuntimeConfig` contains `ProfileConfig`, `PlannerConfig` and `WorkerConfig`.
 - `minimum_subgraph_size` [type: `int`, default: `7`]: The minimum subgraph size. If candidate subgraph size is smaller than this, the subgraph will not be created.
 - `subgraph_preparation_type` [type: `BandSubgraphPreparationType`, default: `kBandMergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
 
