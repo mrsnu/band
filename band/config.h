@@ -24,7 +24,7 @@ struct ProfileConfig {
 struct InterpreterConfig {
   ProfileConfig profile_config;
   float smoothing_factor = 0.1;
-  std::string log_path = "";
+  std::string profile_data_path = "";
 };
 
 struct PlannerConfig {

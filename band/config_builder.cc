@@ -114,7 +114,7 @@ InterpreterConfig InterpreterConfigBuilder::Build(
   ProfileConfig profile_config = profile_config_builder_.Build();
   InterpreterConfig interpreter_config;
   interpreter_config.smoothing_factor = smoothing_factor_;
-  interpreter_config.log_path = log_path_;
+  interpreter_config.profile_data_path = profile_data_path_;
   interpreter_config.profile_config = profile_config;
   return interpreter_config;
 }

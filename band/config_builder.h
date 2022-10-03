@@ -70,8 +70,8 @@ class InterpreterConfigBuilder {
     smoothing_factor_ = smoothing_factor;
     return *this;
   }
-  InterpreterConfigBuilder& AddLogPath(std::string log_path) {
-    log_path_ = log_path;
+  InterpreterConfigBuilder& AddProfileDataPath(std::string profile_data_path) {
+    profile_data_path_ = profile_data_path;
     return *this;
   }
 
@@ -82,7 +82,7 @@ class InterpreterConfigBuilder {
   // Profile config
   ProfileConfigBuilder profile_config_builder_;
   float smoothing_factor_ = 0.1;
-  std::string log_path_;
+  std::string profile_data_path_;
   // Interpreter config
   int minimum_subgraph_size_ = 7;
   BandSubgraphPreparationType subgraph_preparation_type_ =
@@ -211,8 +211,8 @@ class RuntimeConfigBuilder {
     interpreter_config_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;
   }
-  RuntimeConfigBuilder& AddProfileLogPath(std::string profile_log_path) {
-    interpreter_config_builder_.AddLogPath(profile_log_path);
+  RuntimeConfigBuilder& AddProfileDataPath(std::string profile_log_path) {
+    interpreter_config_builder_.AddProfileDataPath(profile_log_path);
     return *this;
   }
 

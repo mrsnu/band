@@ -41,7 +41,7 @@ Each configuration field is optional or required. If a field is optional, then i
 ## `InterpreterConfig`
 - `InterpreterConfig` contains `ProfileConfig`.
 - `profile_smoothing_factor` [type: `float`, default: `0.1`]: The momentum to reflect current profiled data. `<updateed_profile> = <smoothing_factor> * <curr_profile> + (1. - <smoothing_factor>) * <prev_profile>`.
-- `log_path` [type: `std::string`, default: `""`]: The output path to the file for profile results. If not specified, this will be ignored and will not generate the result file. 
+- `data_path` [type: `std::string`, default: `""`]: The input path to the file for offline profile results. If not specified, this will be ignored and will not generate the result file. 
 
 ## `PlannerConfig`
 - `schedule_window_size` [type: `int`, default: `INT_MAX`]: The size of window that scheduler will use.
@@ -79,7 +79,7 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddNumRuns(int num_runs)`
 - `AddCopyComputationRatio(std::vector<int> copy_computation_ratio)`
 - `AddSmoothingFactor(float smoothing_factor)`
-- `AddProfileLogPath(std::string profile_log_path)`
+- `AddProfileLogPath(std::string profile_data_path)`
 - `AddPlannerLogPath(std::string planner_log_path)`
 - `AddScheduleWindowSize(int schedule_window_size)`
 - `AddSchedulers(std::vector<BandSchedulerType> schedulers)`

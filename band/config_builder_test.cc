@@ -22,12 +22,12 @@ TEST(ConfigBuilderTest, InterpreterConfigBuilderTest) {
   InterpreterConfigBuilder b;
   InterpreterConfig config_ok = b.AddOnline(true)
                                     .AddNumWarmups(3)
-                                    .AddLogPath("band/testdata/config.json")
+                                    .AddProfileDataPath("band/testdata/config.json")
                                     .Build();
 
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 3);
-  EXPECT_EQ(config_ok.log_path, "band/testdata/config.json");
+  EXPECT_EQ(config_ok.profile_data_path, "band/testdata/config.json");
 
   b.AddSmoothingFactor(-1);
   EXPECT_FALSE(b.IsValid());
@@ -75,7 +75,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddNumRuns(1)
           .AddCopyComputationRatio({1, 2, 3, 4})
           .AddSmoothingFactor(0.1)
-          .AddProfileLogPath("band/testdata/config.json")
+          .AddProfileDataPath("band/testdata/config.json")
           .AddMinimumSubgraphSize(5)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
           .AddPlannerLogPath("band/testdata/config.json")
@@ -100,7 +100,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(
       config_ok.interpreter_config.profile_config.copy_computation_ratio[3], 4);
   EXPECT_EQ(config_ok.interpreter_config.smoothing_factor, 0.1f);
-  EXPECT_EQ(config_ok.interpreter_config.log_path, "band/testdata/config.json");
+  EXPECT_EQ(config_ok.interpreter_config.profile_data_path, "band/testdata/config.json");
   EXPECT_EQ(config_ok.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_preparation_type, kBandMergeUnitSubgraph);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/testdata/config.json");
@@ -123,7 +123,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(
       config_ok.interpreter_config.profile_config.copy_computation_ratio[0],
       30000);
-  EXPECT_EQ(config_ok.interpreter_config.log_path, "");
+  EXPECT_EQ(config_ok.interpreter_config.profile_data_path, "");
   EXPECT_EQ(config_ok.interpreter_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");
   EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedDevice);
