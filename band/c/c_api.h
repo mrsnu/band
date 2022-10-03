@@ -31,7 +31,7 @@ typedef struct BandConfig BandConfig;
 typedef struct BandModel BandModel;
 typedef struct BandTensor BandTensor;
 typedef struct BandEngine BandEngine;
-typedef struct BandRequestHandle BandRequestHandle;
+typedef int BandRequestHandle;
 
 /* config */
 BAND_CAPI_EXPORT extern BandConfig* BandConfigCreate(const void* config_data,
@@ -72,10 +72,10 @@ BAND_CAPI_EXPORT extern int BandEngineGetNumOutputTensors(BandEngine* engine,
                                                           BandModel* model);
 // Create a input tensor for given model's n'th index
 BAND_CAPI_EXPORT extern BandTensor* BandEngineCreateInputTensor(
-    BandEngine* engine, BandModel* model, int index);
+    BandEngine* engine, BandModel* model, size_t index);
 // Create a output tensor for given model's n'th index
 BAND_CAPI_EXPORT extern BandTensor* BandEngineCreateOutputTensor(
-    BandEngine* engine, BandModel* model, int index);
+    BandEngine* engine, BandModel* model, size_t index);
 BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSync(
     BandEngine* engine, BandModel* model, BandTensor** input_tensors,
     BandTensor** output_tensors);
@@ -83,7 +83,7 @@ BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsync(
     BandEngine* engine, BandModel* model, BandTensor** input_tensors);
 BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandRequestHandle handle,
-                                                  BandTensor** output_tensors);
+                                                  BandTensor** output_tensors, size_t num_outputs);
 
 #ifdef __cplusplus
 }  // extern "C"

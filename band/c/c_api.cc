@@ -1,7 +1,18 @@
 #include "band/c/c_api.h"
 
 #include "band/c/c_api_type.h"
+#include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
+
+std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
+    BandTensor** tensors, int num_tensors) {
+  std::vector<Band::Interface::ITensor*> vec(num_tensors);
+  for (int i = 0; i < vec.size(); ++i) {
+    vec[i] = tensors[i]->impl.get();
+  }
+  return vec;
+}
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,7 +106,7 @@ int BandEngineGetNumOutputTensors(BandEngine* engine, BandModel* model) {
 }
 
 BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,
-                                        int index) {
+                                        size_t index) {
   auto input_indices =
       engine->impl->GetInputTensorIndices(model->impl->GetId());
   return new BandTensor(
@@ -103,20 +114,11 @@ BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,
 }
 
 BandTensor* BandEngineCreateOutputTensor(BandEngine* engine, BandModel* model,
-                                         int index) {
+                                         size_t index) {
   auto output_indices =
       engine->impl->GetOutputTensorIndices(model->impl->GetId());
   return new BandTensor(
       engine->impl->CreateTensor(model->impl->GetId(), output_indices[index]));
-}
-
-std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
-    BandTensor** tensors, int num_tensors) {
-  std::vector<Band::Interface::ITensor*> vec(num_tensors);
-  for (int i = 0; i < vec.size(); ++i) {
-    vec[i] = tensors[i]->impl.get();
-  }
-  return vec;
 }
 
 BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
@@ -132,19 +134,17 @@ BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
 
 BandRequestHandle BandEngineRequestAsync(BandEngine* engine, BandModel* model,
                                          BandTensor** input_tensors) {
-  return {engine->impl->InvokeAsyncModel(
+  return engine->impl->InvokeAsyncModel(
               model->impl->GetId(),
               BandTensorArrayToVec(
-                  input_tensors, BandEngineGetNumInputTensors(engine, model))),
-          model};
+                  input_tensors, BandEngineGetNumInputTensors(engine, model)));
 }
 
 BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
-                          BandTensor** output_tensors) {
+                          BandTensor** output_tensors, size_t num_outputs) {
   return engine->impl->Wait(
-      {handle.request_id},
-      BandTensorArrayToVec(output_tensors, BandEngineGetNumOutputTensors(
-                                               engine, handle.target_model)));
+      handle,
+      BandTensorArrayToVec(output_tensors, num_outputs));
 }
 
 #ifdef __cplusplus

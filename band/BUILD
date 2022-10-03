@@ -86,6 +86,13 @@ cc_library(
         "config.h",
         "json_util.h",
     ],
+    linkopts = select({
+        "//tensorflow:windows": [],
+        "//conditions:default": [
+            "-lm",
+            "-ldl",
+        ],
+    }),
     deps = [
         ":common",
         ":cpu",
