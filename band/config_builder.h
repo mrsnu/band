@@ -121,8 +121,7 @@ class WorkerConfigBuilder {
   }
   WorkerConfigBuilder& AddNumThreads(std::vector<int> num_threads) {
     std::vector<int> temp_num_threads;
-    // TODO(widiba03304): #205
-    temp_num_threads = std::vector<int>(kBandNumDevices, 1 /*or 0?*/);
+    temp_num_threads = std::vector<int>(kBandNumDevices, 1);
     temp_num_threads.insert(temp_num_threads.end(), num_threads.begin(),
                             num_threads.end());
     num_threads_ = temp_num_threads;
@@ -234,6 +233,10 @@ class RuntimeConfigBuilder {
     subgraph_preparation_type_ = subgraph_preparation_type;
     return *this;
   }
+  RuntimeConfigBuilder& AddCPUMask(BandCPUMaskFlags cpu_mask) {
+    cpu_mask_ = cpu_mask;
+    return *this;
+  }
 
   RuntimeConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
@@ -245,6 +248,7 @@ class RuntimeConfigBuilder {
   int minimum_subgraph_size_ = 7;
   BandSubgraphPreparationType subgraph_preparation_type_ =
       kBandMergeUnitSubgraph;
+  BandCPUMaskFlags cpu_mask_ = kBandAll;
 };
 
 }  // namespace Band

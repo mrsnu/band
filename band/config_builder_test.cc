@@ -72,6 +72,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddWorkerNumThreads({})
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(100)
+          .AddCPUMask(kBandPrimary)
           .Build();
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
@@ -88,6 +89,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.profile_config.profile_data_path, "band/testdata/config.json");
   EXPECT_EQ(config_ok.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_preparation_type, kBandMergeUnitSubgraph);
+  EXPECT_EQ(config_ok.cpu_mask, kBandPrimary);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/testdata/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
   EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedDevice);
@@ -130,6 +132,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.worker_config.availability_check_interval_ms, 30000);
   EXPECT_EQ(config_ok.minimum_subgraph_size, 7);
   EXPECT_EQ(config_ok.subgraph_preparation_type, kBandMergeUnitSubgraph);
+  EXPECT_EQ(config_ok.cpu_mask, kBandAll);
 }
 
 }  // namespace Test

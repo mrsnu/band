@@ -198,6 +198,7 @@ cc_library(
             ":backend_factory",
             ":common",
             ":config",
+            ":json_util",
             ":interface",
             ":model",
             ":planner",
@@ -205,7 +206,18 @@ cc_library(
             ":tensor",
             ":time",
             ":worker",
+            "@jsoncpp_git//:jsoncpp",
         ],
+)
+
+cc_library(
+    name = "json_util",
+    srcs = ["json_util.cc"],
+    hdrs = ["json_util.h"],
+    deps = [
+        ":common",
+        "@jsoncpp_git//:jsoncpp",
+    ]
 )
 
 cc_library(
@@ -217,6 +229,9 @@ cc_library(
     name = "config_builder",
     srcs = ["config_builder.cc"],
     hdrs = ["config_builder.h"],
+    visibility = [
+        "//band:__subpackages__",
+    ],
     deps = [
         ":common",
         ":cpu",

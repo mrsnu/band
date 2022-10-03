@@ -70,6 +70,15 @@ bool WorkerConfigBuilder::IsValid(
 bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
+  REPORT_IF_FALSE(RuntimeConfigBuilder, minimum_subgraph_size_ > 0);
+  REPORT_IF_FALSE(RuntimeConfigBuilder, 
+                  subgraph_preparation_type_ == kBandNoFallbackSubgraph ||
+                  subgraph_preparation_type_ == kBandFallbackPerDevice ||
+                  subgraph_preparation_type_ == kBandUnitSubgraph || 
+                  subgraph_preparation_type_ == kBandMergeUnitSubgraph);
+  REPORT_IF_FALSE(RuntimeConfigBuilder,
+                  cpu_mask_ == kBandAll || cpu_mask_ == kBandLittle ||
+                      cpu_mask_ == kBandBig || cpu_mask_ == kBandPrimary);
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, planner_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, worker_config_builder_.IsValid());
@@ -139,6 +148,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   WorkerConfig worker_config = worker_config_builder_.Build();
   runtime_config.minimum_subgraph_size = minimum_subgraph_size_;
   runtime_config.subgraph_preparation_type = subgraph_preparation_type_;
+  runtime_config.cpu_mask = cpu_mask_;
   runtime_config.profile_config = profile_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;

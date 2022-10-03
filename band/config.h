@@ -50,6 +50,7 @@ struct WorkerConfig {
 struct RuntimeConfig {
   int minimum_subgraph_size;
   BandSubgraphPreparationType subgraph_preparation_type;
+  BandCPUMaskFlags cpu_mask;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
@@ -58,6 +59,7 @@ struct RuntimeConfig {
   RuntimeConfig() {
     minimum_subgraph_size = 7;
     subgraph_preparation_type = kBandMergeUnitSubgraph;
+    cpu_mask = kBandAll;
   };
 };
 
