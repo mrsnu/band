@@ -4,7 +4,8 @@
             "graph": "band/testdata/add.bin",
             "period_ms": 30,
             "batch_size": 3,
-            "slo_us": 30000
+            "slo_us": 30000,
+            "device": "CPU"
         }
     ],
     "log_path": "band/testdata/log.csv",

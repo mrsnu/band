@@ -33,6 +33,7 @@ struct InterpreterConfig {
   std::string subgraph_preparation_type = "merge_unit_subgraph";
   BandCPUMaskFlags cpu_masks = kBandAll;
   int num_threads = -1;
+  std::vector<ModelConfig> models_config;
 };
 
 struct PlannerConfig {
