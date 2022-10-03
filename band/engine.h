@@ -86,6 +86,8 @@ class Engine : public Context {
   bool IsEnd(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
   ModelSpec* GetModelSpec(ModelId model_id) { return &model_specs_[model_id]; }
+  ModelConfig* GetModelConfig(ModelId model_id) const { return &model_configs_[model_id];}
+  WorkerId GetModelWorker(ModelId model_id) const { return planner_->GetModelWorkerMap()[model_id];}
 
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,
@@ -122,7 +124,7 @@ class Engine : public Context {
   BandStatus TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
-  WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const;
+  WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const; // use
   Interface::IInterpreter* GetInterpreter(const SubgraphKey& key);
   const Interface::IInterpreter* GetInterpreter(const SubgraphKey& key) const;
 
@@ -152,6 +154,8 @@ class Engine : public Context {
   std::unique_ptr<Planner> planner_;
 
   // Models
+  // Model instances (used only for benchmark tools)
+  std::map<ModelId, Model> models_; // index is ModelId
   // Maps to each model's configuration.
   std::map<ModelId, ModelConfig> model_configs_;
   // Maps to model spec

@@ -301,6 +301,34 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     }
   }
 
+  // Instantiate and register a model for each model_config
+  std::vector<int> assigned_workers(workers_.size());
+  for(int i=0; i<assigned_workers.size(); i++) assigned_workers[i] = 0;
+  for(auto model_config : config.interpreter_config.models_config){
+    Band::Model model;
+    ModelId model_id;
+    // TODO: selectively support a single backend (based on config)
+    for(auto backend: valid_backends){
+      if(model.FromPath(backend, model_config.model_fname) != kBandOk){
+        error_reporter_->Report("Model %s could not be instantiated for %s.",
+        model_config.model_fname, BandBackendGetName(backend));
+      }
+    }
+    model_id = model.GetId();
+    model_configs_[model_id] = model_config;
+    // In case # of models > # of workers, Planner::TryUpdateModelWorkerMapping will reassign later
+    for(int i=0; i<assigned_workers.size(); i++){ 
+      if (workers_[i]->GetDeviceFlag() == model_config.device && assigned_workers[i] == 0){
+        planner_->GetModelWorkerMap[model_id] = i;
+        assigned_workers[i] = 1;
+      }
+    }
+    models_[model_id] = model;
+
+    if(RegisterModel(model) != kBandOk){
+      error_reporter_->Report("Model %s could not be registered.", model_config.model_fname);
+    }
+  }
   return kBandOk;
 }
 
