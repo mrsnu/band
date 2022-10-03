@@ -169,8 +169,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 
   delete input_tensor;
   delete output_tensor;
-}  // namespace
-}  // namespace Band
+}   // namespace
+}   // namespace Band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

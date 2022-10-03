@@ -1,4 +1,5 @@
 #include "band/c/c_api.h"
+
 #include "band/c/c_api_type.h"
 #include "band/cpu.h"
 #include "band/interface/tensor.h"
@@ -16,7 +17,7 @@ std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
 
 #ifdef __cplusplus
 extern "C" {
-#endif  // __cplusplus
+#endif   // __cplusplus
 
 BandConfigBuilder* BandConfigBuilderCreate() { return new BandConfigBuilder; }
 

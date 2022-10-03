@@ -93,7 +93,7 @@ TEST(CApi, EngineSimpleInvoke) {
   BandModelDelete(model);
 }
 
-}  // namespace Band
+}   // namespace Band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

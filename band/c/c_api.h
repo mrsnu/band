@@ -17,15 +17,15 @@
 #define BAND_CAPI_EXPORT __declspec(dllexport)
 #else
 #define BAND_CAPI_EXPORT __declspec(dllimport)
-#endif  // BAND_COMPILE_LIBRARY
+#endif   // BAND_COMPILE_LIBRARY
 #else
 #define BAND_CAPI_EXPORT __attribute__((visibility("default")))
-#endif  // _WIN32
-#endif  // SWIG
+#endif   // _WIN32
+#endif   // SWIG
 
 #ifdef __cplusplus
 extern "C" {
-#endif  // __cplusplus
+#endif   // __cplusplus
 
 // Forward decl of internal types - details are in `c_api_type.h`
 typedef struct BandConfigBuilder BandConfigBuilder;
@@ -90,6 +90,6 @@ BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandTensor** output_tensors, size_t num_outputs);
 
 #ifdef __cplusplus
-}  // extern "C"
-#endif  // __cplusplus
+}   // extern "C"
+#endif   // __cplusplus
 #endif

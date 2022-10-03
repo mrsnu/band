@@ -18,23 +18,21 @@ def band_copts():
 def band_cc_android_test(
         name,
         copts = ["-Wall"] + tflite_copts(),
-        linkopts = [],
+        linkopts = tflite_linkopts() + select({
+            clean_dep("//tensorflow:android"): [
+                "-pie",
+                "-lm",
+                "-static",
+                "-Wl,--rpath=/data/local/tmp/",
+            ],
+            "//conditions:default": [],
+        }),
         linkstatic = select({
             clean_dep("//tensorflow:android"): 1,
             "//conditions:default": 0,
         }),
         **kwargs):
     """Builds a standalone test for android device when android config is on."""
-    linkopts = linkopts + tflite_linkopts() + select({
-        clean_dep("//tensorflow:android"): [
-            "-pie",
-            "-lm",
-            "-static",
-            "-Wl,--rpath=/data/local/tmp/",
-        ],
-        "//conditions:default": [],
-    })
-    print(linkopts)
     native.cc_test(
         name = name,
         copts = copts,
