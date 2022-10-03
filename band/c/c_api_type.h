@@ -38,11 +38,6 @@ struct BandEngine {
   std::unique_ptr<Band::Engine> impl;
 };
 
-struct BandRequestHandle {
-  int request_id;
-  BandModel* target_model;
-};
-
 typedef enum BandConfigField {
   BAND_PROFILE_ONLINE = 0,
   BAND_PROFILE_NUM_WARMUPS = 1,

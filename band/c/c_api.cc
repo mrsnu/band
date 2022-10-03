@@ -1,7 +1,4 @@
 #include "band/c/c_api.h"
-
-#include <json/json.h>
-
 #include "band/c/c_api_type.h"
 #include "band/cpu.h"
 #include "band/interface/tensor.h"
