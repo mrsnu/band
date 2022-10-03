@@ -81,6 +81,13 @@ cc_library(
     hdrs = [
         "config.h",
     ],
+    linkopts = select({
+        "//tensorflow:windows": [],
+        "//conditions:default": [
+            "-lm",
+            "-ldl",
+        ],
+    }),
     deps = [
         ":common",
         ":cpu",
