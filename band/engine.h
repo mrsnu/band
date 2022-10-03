@@ -86,8 +86,8 @@ class Engine : public Context {
   bool IsEnd(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
   ModelSpec* GetModelSpec(ModelId model_id) { return &model_specs_[model_id]; }
-  ModelConfig* GetModelConfig(ModelId model_id) const { return &model_configs_[model_id];}
-  WorkerId GetModelWorker(ModelId model_id) const { return planner_->GetModelWorkerMap()[model_id];}
+  ModelConfig GetModelConfig(ModelId model_id) const override { return model_configs_.at(model_id);}
+  WorkerId GetModelWorker(ModelId model_id) const override;
 
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,

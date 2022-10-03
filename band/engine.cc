@@ -309,7 +309,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     ModelId model_id;
     // TODO: selectively support a single backend (based on config)
     for(auto backend: valid_backends){
-      if(model.FromPath(backend, model_config.model_fname) != kBandOk){
+      if(model.FromPath(backend, model_config.model_fname.c_str()) != kBandOk){
         error_reporter_->Report("Model %s could not be instantiated for %s.",
         model_config.model_fname, BandBackendGetName(backend));
       }
@@ -319,13 +319,13 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     // In case # of models > # of workers, Planner::TryUpdateModelWorkerMapping will reassign later
     for(int i=0; i<assigned_workers.size(); i++){ 
       if (workers_[i]->GetDeviceFlag() == model_config.device && assigned_workers[i] == 0){
-        planner_->GetModelWorkerMap[model_id] = i;
+        planner_->GetModelWorkerMap()[model_id] = i;
         assigned_workers[i] = 1;
       }
     }
-    models_[model_id] = model;
+    models_.emplace(model_id, model);
 
-    if(RegisterModel(model) != kBandOk){
+    if(RegisterModel(&model) != kBandOk){
       error_reporter_->Report("Model %s could not be registered.", model_config.model_fname);
     }
   }
@@ -366,6 +366,10 @@ SubgraphKey Engine::GetModelSubgraphKey(ModelId model_id,
     // TODO: report error
     return SubgraphKey();
   }
+}
+
+WorkerId Engine::GetModelWorker(ModelId model_id) const {
+   return planner_->GetModelWorkerMap()[model_id];
 }
 
 bool Engine::IsEnd(const SubgraphKey& key) const {

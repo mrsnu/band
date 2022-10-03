@@ -71,7 +71,7 @@ class Planner {
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
-  std::map<int, int>& GetModelWorkerMap() { return model_worker_map_; }
+  std::map<ModelId, WorkerId>& GetModelWorkerMap() { return model_worker_map_; }
 
  private:
   // Main loop for planner_thread_
