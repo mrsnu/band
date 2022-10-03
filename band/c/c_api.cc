@@ -1,37 +1,127 @@
 #include "band/c/c_api.h"
 
+#include <json/json.h>
+
 #include "band/c/c_api_type.h"
+#include "band/cpu.h"
 #include "band/interface/tensor_view.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
 
-BandConfig* BandConfigCreate(const void* config_data, size_t config_size) {
-  BandConfig* config = new BandConfig;
-  Json::Value root;
-  Json::Reader reader;
-  if (reader.parse((const char*)config_data,
-                   (const char*)config_data + config_size, root) &&
-      Band::ParseRuntimeConfigFromJsonObject(root, config->impl) == kBandOk) {
-    return config;
-  } else {
-    delete config;
-    return nullptr;
+BandConfigBuilder* BandConfigBuilderCreate() { return new BandConfigBuilder; }
+
+void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
+  // TODO(widiba03304): Error handling should be properly done.
+  va_list vl;
+  va_start(vl, count);
+  BandConfigField new_field = static_cast<BandConfigField>(field);
+  switch (field) {
+    case BAND_PROFILE_ONLINE: {
+      bool arg = va_arg(vl, int);
+      b->impl.AddOnline(arg);
+    } break;
+    case BAND_PROFILE_NUM_WARMUPS: {
+      int arg = va_arg(vl, int);
+      b->impl.AddNumWarmups(arg);
+    } break;
+    case BAND_PROFILE_NUM_RUNS: {
+      int arg = va_arg(vl, int);
+      b->impl.AddNumRuns(arg);
+    } break;
+    case BAND_PROFILE_COPY_COMPUTATION_RATIO: {
+      std::vector<int> copy_computation_ratio(count);
+      for (int i = 0; i < count; i++) {
+        copy_computation_ratio[i] = va_arg(vl, int);
+      }
+      b->impl.AddCopyComputationRatio(copy_computation_ratio);
+    } break;
+    case BAND_PROFILE_SMOOTHING_FACTOR: {
+      float arg = va_arg(vl, double);
+      b->impl.AddSmoothingFactor(arg);
+    } break;
+    case BAND_PROFILE_DATA_PATH: {
+      char* arg = va_arg(vl, char*);
+      b->impl.AddProfileDataPath(arg);
+    } break;
+    case BAND_PLANNER_SCHEDULE_WINDOW_SIZE: {
+      int arg = va_arg(vl, int);
+      b->impl.AddScheduleWindowSize(arg);
+    } break;
+    case BAND_PLANNER_SCHEDULERS: {
+      std::vector<BandSchedulerType> schedulers(count);
+      for (int i = 0; i < count; i++) {
+        schedulers[i] = static_cast<BandSchedulerType>(va_arg(vl, int));
+      }
+      b->impl.AddSchedulers(schedulers);
+    } break;
+    case BAND_PLANNER_CPU_MASK: {
+      int arg = va_arg(vl, int);
+      b->impl.AddPlannerCPUMask(static_cast<Band::BandCPUMaskFlags>(arg));
+    } break;
+    case BAND_PLANNER_LOG_PATH: {
+      char* arg = va_arg(vl, char*);
+      b->impl.AddPlannerLogPath(arg);
+    } break;
+    case BAND_WORKER_ADDITIONAL_WORKERS: {
+      std::vector<BandDeviceFlags> workers(count);
+      for (int i = 0; i < count; i++) {
+        int temp = va_arg(vl, int);
+        workers[i] = static_cast<BandDeviceFlags>(temp);
+      }
+      b->impl.AddAdditionalWorkers(workers);
+    } break;
+    case BAND_WORKER_CPU_MASKS: {
+      std::vector<Band::BandCPUMaskFlags> cpu_masks(count);
+      for (int i = 0; i < count; i++) {
+        cpu_masks[i] = static_cast<Band::BandCPUMaskFlags>(va_arg(vl, int));
+      }
+      b->impl.AddWorkerCPUMasks(cpu_masks);
+    } break;
+    case BAND_WORKER_NUM_THREADS: {
+      std::vector<int> num_threads(count);
+      for (int i = 0; i < count; i++) {
+        num_threads[i] = va_arg(vl, int);
+      }
+      b->impl.AddWorkerNumThreads(num_threads);
+    } break;
+    case BAND_WORKER_ALLOW_WORKSTEAL: {
+      bool arg = va_arg(vl, int);
+      b->impl.AddAllowWorkSteal(arg);
+    } break;
+    case BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS: {
+      int arg = va_arg(vl, int);
+      b->impl.AddAvailabilityCheckIntervalMs(arg);
+    } break;
+    case BAND_MINIMUM_SUBGRAPH_SIZE: {
+      int arg = va_arg(vl, int);
+      b->impl.AddMinimumSubgraphSize(arg);
+    } break;
+    case BAND_SUBGRAPH_PREPARATION_TYPE: {
+      int arg = va_arg(vl, int);
+      b->impl.AddSubgraphPreparationType(
+          static_cast<BandSubgraphPreparationType>(arg));
+    } break;
+    case BAND_CPU_MASK: {
+      int arg = va_arg(vl, int);
+      b->impl.AddCPUMask(static_cast<Band::BandCPUMaskFlags>(arg));
+    } break;
   }
+  va_end(vl);
 }
 
-BandConfig* BandConfigCreateFromFile(const char* config_path) {
-  BandConfig* config = new BandConfig;
-  if (Band::ParseRuntimeConfigFromJson(config_path, config->impl) == kBandOk) {
-    return config;
-  } else {
-    delete config;
-    return nullptr;
-  }
+void BandConfigBuilderDelete(BandConfigBuilder* b) { delete b; }
+
+BandConfig* BandConfigCreate(BandConfigBuilder* b) {
+  // TODO(widiba03304): Error handling is not properly done here.
+  BandConfig* config = new BandConfig(b->impl.Build());
+  return config;
 }
 
-void BandConfigDelete(BandConfig* config) { delete config; }
+void BandConfigDelete(BandConfig* config) {
+  delete config;
+}
 
 BandModel* BandModelCreate() { return new BandModel; }
 
