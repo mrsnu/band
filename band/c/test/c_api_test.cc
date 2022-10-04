@@ -31,7 +31,7 @@ TEST(CApi, EngineSimpleInvoke) {
   EXPECT_NE(model, nullptr);
   EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/testdata/add.bin"),
             kBandOk);
-
+            
   BandEngine* engine = BandEngineCreate(config);
   EXPECT_NE(engine, nullptr);
   EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
@@ -55,6 +55,17 @@ TEST(CApi, EngineSimpleInvoke) {
   BandTensorDelete(output_tensor);
   BandConfigDelete(config);
   BandModelDelete(model);
+}
+
+TEST(CApi, EngineFixedDeviceInvoke){
+  BandConfig* config = BandConfigCreateFromFile("band/testdata/config_fixed_device.json");
+  EXPECT_NE(config, nullptr);
+  
+  BandEngine* engine = BandEngineCreate(config);
+  EXPECT_NE(engine, nullptr);
+
+  BandEngineDelete(engine);
+  BandConfigDelete(config);
 }
 
 }  // namespace Band
