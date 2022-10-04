@@ -284,8 +284,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       } else {
         worker = std::make_unique<DeviceQueueWorker>(this, device_flag);
       }
-
-      if (worker->Init(config.worker_config, workers_.size()) != kBandOk) {
+      WorkerId worker_id = workers_.size();
+      if (worker->Init(config.worker_config, worker_id) != kBandOk) {
         error_reporter_->Report("Worker::Init() failed for worker : %s.",
                                 BandDeviceGetName(device_flag));
         exit(-1);
@@ -294,7 +294,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         BandDeviceGetName(device_flag));
       worker->Start();
-      workers_[i] = std::move(worker);
+      workers_[worker_id] = std::move(worker);
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         BandDeviceGetName(device_flag));
@@ -305,27 +305,34 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
   std::vector<int> assigned_workers(workers_.size());
   for(int i=0; i<assigned_workers.size(); i++) assigned_workers[i] = 0;
   for(auto model_config : config.interpreter_config.models_config){
-    Band::Model model;
+    std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
     ModelId model_id;
-    // TODO: selectively support a single backend (based on config)
+    // Create a model for each valid backend
+    // TODO(juimdpp): selectively support a single backend (based on config)
     for(auto backend: valid_backends){
-      if(model.FromPath(backend, model_config.model_fname.c_str()) != kBandOk){
+      if(model_ptr->FromPath(backend, model_config.model_fname.c_str()) != kBandOk){
         error_reporter_->Report("Model %s could not be instantiated for %s.",
         model_config.model_fname, BandBackendGetName(backend));
       }
     }
-    model_id = model.GetId();
+    
+    // Save model and its config
+    model_id = model_ptr->GetId();
     model_configs_[model_id] = model_config;
+    models_.emplace(model_id, model_ptr);
+
+    // For each unassigned worker whose device matches the model's requested device, assign it to the model
     // In case # of models > # of workers, Planner::TryUpdateModelWorkerMapping will reassign later
-    for(int i=0; i<assigned_workers.size(); i++){ 
-      if (workers_[i]->GetDeviceFlag() == model_config.device && assigned_workers[i] == 0){
+    int i=0;
+    for(auto worker_it = workers_.begin(); worker_it != workers_.end(); worker_it++, i++){
+      if(assigned_workers[i] == 0 && worker_it->second->GetDeviceFlag() == model_config.device){
         planner_->GetModelWorkerMap()[model_id] = i;
         assigned_workers[i] = 1;
       }
-    }
-    models_.emplace(model_id, model);
+    }   
 
-    if(RegisterModel(&model) != kBandOk){
+    // Register model
+    if(RegisterModel(model_ptr.get()) != kBandOk){
       error_reporter_->Report("Model %s could not be registered.", model_config.model_fname);
     }
   }

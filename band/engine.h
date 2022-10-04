@@ -155,7 +155,7 @@ class Engine : public Context {
 
   // Models
   // Model instances (used only for benchmark tools)
-  std::map<ModelId, Model> models_; // index is ModelId
+  std::map<ModelId, std::shared_ptr<Model>> models_; // index is ModelId
   // Maps to each model's configuration.
   std::map<ModelId, ModelConfig> model_configs_;
   // Maps to model spec
