@@ -14,10 +14,6 @@
 # ==============================================================================
 """Testing for updating TensorFlow lite schema."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import json
 import tempfile
 from tensorflow.lite.schema import upgrade_schema as upgrade_schema_lib
@@ -254,18 +250,18 @@ class TestSchemaUpgrade(test_util.TensorFlowTestCase):
 
   def testNonExistentFile(self):
     converter = upgrade_schema_lib.Converter()
-    non_existent = tempfile.mktemp(suffix=".json")
-    with self.assertRaisesRegexp(IOError, "No such file or directory"):
+    _, non_existent = tempfile.mkstemp(suffix=".json")  # safe to ignore fd
+    with self.assertRaisesRegex(IOError, "No such file or directory"):
       converter.Convert(non_existent, non_existent)
 
   def testInvalidExtension(self):
     converter = upgrade_schema_lib.Converter()
-    invalid_extension = tempfile.mktemp(suffix=".foo")
-    with self.assertRaisesRegexp(ValueError, "Invalid extension on input"):
+    _, invalid_extension = tempfile.mkstemp(suffix=".foo")  # safe to ignore fd
+    with self.assertRaisesRegex(ValueError, "Invalid extension on input"):
       converter.Convert(invalid_extension, invalid_extension)
     with tempfile.NamedTemporaryFile(suffix=".json", mode="w+") as in_json:
       JsonDumpAndFlush(EMPTY_TEST_SCHEMA_V1, in_json)
-      with self.assertRaisesRegexp(ValueError, "Invalid extension on output"):
+      with self.assertRaisesRegex(ValueError, "Invalid extension on output"):
         converter.Convert(in_json.name, invalid_extension)
 
   def CheckConversion(self, data_old, data_expected):

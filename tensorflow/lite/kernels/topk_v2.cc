@@ -35,14 +35,16 @@ constexpr int kOutputIndexes = 1;
 
 namespace {
 TfLiteStatus ResizeOutput(TfLiteContext* context, TfLiteNode* node) {
-  const TfLiteTensor* top_k = GetInput(context, node, kInputTopK);
+  const TfLiteTensor* top_k;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kInputTopK, &top_k));
   // INT32 number of top results is supported.
   TF_LITE_ENSURE_TYPES_EQ(context, top_k->type, kTfLiteInt32);
   // Check that the tensor contains only one value.
   TF_LITE_ENSURE_EQ(context, NumElements(top_k), 1);
   const int32 k = *GetTensorData<int32_t>(top_k);
 
-  const TfLiteTensor* input = GetInput(context, node, kInputTensor);
+  const TfLiteTensor* input;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kInputTensor, &input));
   const int num_dimensions = NumDimensions(input);
   // Check that input has one or more dimensions.
   TF_LITE_ENSURE_MSG(context, input->dims->size >= 1,
@@ -59,8 +61,12 @@ TfLiteStatus ResizeOutput(TfLiteContext* context, TfLiteNode* node) {
   }
   output_indexes_shape->data[num_dimensions - 1] = k;
   output_values_shape->data[num_dimensions - 1] = k;
-  TfLiteTensor* output_indexes = GetOutput(context, node, kOutputIndexes);
-  TfLiteTensor* output_values = GetOutput(context, node, kOutputValues);
+  TfLiteTensor* output_indexes;
+  TF_LITE_ENSURE_OK(
+      context, GetOutputSafe(context, node, kOutputIndexes, &output_indexes));
+  TfLiteTensor* output_values;
+  TF_LITE_ENSURE_OK(
+      context, GetOutputSafe(context, node, kOutputValues, &output_values));
   // Force output types.
   output_indexes->type = kTfLiteInt32;
   output_values->type = input->type;
@@ -94,14 +100,18 @@ class TopContainer {
   void start_collecting(const T* values) {
     values_ = values;
     container_.clear();
+    is_heap_ = false;
   }
+
   void push(int32 a) {
     auto comparator = [this](int32 a, int32 b) { return compare_fun(a, b); };
-    if (container_.size() <= k_) {
+    if (!is_heap_) {
       container_.push_back(a);
       if (container_.size() == k_ + 1) {
         std::make_heap(container_.begin(), container_.end(), comparator);
         std::pop_heap(container_.begin(), container_.end(), comparator);
+        container_.pop_back();
+        is_heap_ = true;
       }
     } else if (comparator(a, container_.front())) {
       // Due to how we defined comparator / compare_fun, container_.front()
@@ -112,27 +122,21 @@ class TopContainer {
       // top-k elements seen so far.  Hence, we have to update the indices of
       // the top-k elements, by removing the index of the smallest top-k
       // element, adding a, and making sure container_[0:k] is still a heap.
-
-      // Store index a into container_[k].
-      container_.back() = a;
-
-      // Swap container_[0] and container_[k], and rearrange elements from
-      // container_[0,k) such that they are a heap according to comparator.  For
-      // more info, see https://en.cppreference.com/w/cpp/algorithm/pop_heap.
       std::pop_heap(container_.begin(), container_.end(), comparator);
+      container_.back() = a;
+      std::push_heap(container_.begin(), container_.end(), comparator);
     }
   }
 
   const std::vector<int32>& sorted_result() {
     auto comparator = [this](int32 a, int32 b) { return compare_fun(a, b); };
-    if (container_.size() <= k_) {
+    if (!is_heap_) {
       // Note: due to the way we defined compare_fun (see comments for that
       // function) std::sort puts the indices from container_ in decreasing
       // order of the corresponding elements.
       std::sort(container_.begin(), container_.end(), comparator);
     } else {
-      std::sort_heap(container_.begin(), container_.end() - 1, comparator);
-      container_.resize(k_);
+      std::sort_heap(container_.begin(), container_.end(), comparator);
     }
     return container_;
   }
@@ -141,11 +145,14 @@ class TopContainer {
   const int32 k_;
 
   // container_[0,k) holds the indices of the largest k elements from values_
-  // seen so far and are maintained in a min-heap order: container_.front() is
+  // seen so far.  If more than k elements are pushed, then elements are
+  // maintained in a min-heap order: container_.front() is
   // the index of the smallest of the top-k elements see so far.
-  //
-  // container_[k] is used as temporary space (not part of the min-heap).
   std::vector<int32> container_;
+
+  // Once more than k elements are pushed, the container becomes a min heap,
+  // and is_heap_ becomes true.
+  bool is_heap_ = false;
 
   const T* values_ = nullptr;
 
@@ -195,19 +202,28 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
   TF_LITE_ENSURE_EQ(context, NumInputs(node), 2);
   TF_LITE_ENSURE_EQ(context, NumOutputs(node), 2);
 
-  const TfLiteTensor* input = GetInput(context, node, kInputTensor);
-  TfLiteTensor* output_values = GetOutput(context, node, kOutputValues);
+  const TfLiteTensor* input;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kInputTensor, &input));
+  TfLiteTensor* output_values;
+  TF_LITE_ENSURE_OK(
+      context, GetOutputSafe(context, node, kOutputValues, &output_values));
   TF_LITE_ENSURE_TYPES_EQ(context, input->type, output_values->type);
 
-  const TfLiteTensor* top_k = GetInput(context, node, kInputTopK);
+  const TfLiteTensor* top_k;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kInputTopK, &top_k));
   TF_LITE_ENSURE_TYPES_EQ(context, top_k->type, kTfLiteInt32);
 
-  // Set output dynamic if the input is not const.
-  if (IsConstantTensor(top_k)) {
+  // Set output dynamic if the `top_k` tensor is not constant, or the input has
+  // dynamic dimensions (indicated by dims signature).
+  if (IsConstantTensor(top_k) && !HasUnspecifiedDimension(input)) {
     TF_LITE_ENSURE_OK(context, ResizeOutput(context, node));
   } else {
-    TfLiteTensor* output_indexes = GetOutput(context, node, kOutputIndexes);
-    TfLiteTensor* output_values = GetOutput(context, node, kOutputValues);
+    TfLiteTensor* output_indexes;
+    TF_LITE_ENSURE_OK(
+        context, GetOutputSafe(context, node, kOutputIndexes, &output_indexes));
+    TfLiteTensor* output_values;
+    TF_LITE_ENSURE_OK(
+        context, GetOutputSafe(context, node, kOutputValues, &output_values));
     SetTensorToDynamic(output_indexes);
     SetTensorToDynamic(output_values);
   }
@@ -215,16 +231,22 @@ TfLiteStatus Prepare(TfLiteContext* context, TfLiteNode* node) {
 }
 
 TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
-  TfLiteTensor* output_values = GetOutput(context, node, kOutputValues);
-  TfLiteTensor* output_indexes = GetOutput(context, node, kOutputIndexes);
+  TfLiteTensor* output_values;
+  TF_LITE_ENSURE_OK(
+      context, GetOutputSafe(context, node, kOutputValues, &output_values));
+  TfLiteTensor* output_indexes;
+  TF_LITE_ENSURE_OK(
+      context, GetOutputSafe(context, node, kOutputIndexes, &output_indexes));
   if (IsDynamicTensor(output_values)) {
     TF_LITE_ENSURE_OK(context, ResizeOutput(context, node));
   }
-  const TfLiteTensor* top_k = GetInput(context, node, kInputTopK);
+  const TfLiteTensor* top_k;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kInputTopK, &top_k));
   const int32 k = top_k->data.i32[0];
   // The tensor can have more than 2 dimensions or even be a vector, the code
   // anyway calls the internal dimension as row;
-  const TfLiteTensor* input = GetInput(context, node, kInputTensor);
+  const TfLiteTensor* input;
+  TF_LITE_ENSURE_OK(context, GetInputSafe(context, node, kInputTensor, &input));
   const int32 row_size = input->dims->data[input->dims->size - 1];
   int32 num_rows = 1;
   for (int i = 0; i < input->dims->size - 1; ++i) {

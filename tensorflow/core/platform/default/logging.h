@@ -13,6 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#if defined(_WIN32)
+// prevent compile error because MSVC doesn't realize in debug build that
+// LOG(FATAL) finally invokes abort()
+#pragma warning(disable : 4716)
+#endif  // _WIN32
+
 #ifndef TENSORFLOW_CORE_PLATFORM_DEFAULT_LOGGING_H_
 #define TENSORFLOW_CORE_PLATFORM_DEFAULT_LOGGING_H_
 
@@ -23,6 +29,7 @@ limitations under the License.
 #include <limits>
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #include "absl/base/log_severity.h"
 #include "absl/strings/string_view.h"
@@ -49,16 +56,16 @@ class LogMessage : public std::basic_ostringstream<char> {
   // Change the location of the log message.
   LogMessage& AtLocation(const char* fname, int line);
 
-  // Returns the minimum log level for VLOG statements.
-  // E.g., if MinVLogLevel() is 2, then VLOG(2) statements will produce output,
+  // Returns the maximum log level for VLOG statements.
+  // E.g., if MaxVLogLevel() is 2, then VLOG(2) statements will produce output,
   // but VLOG(3) will not. Defaults to 0.
-  static int64 MinVLogLevel();
+  static int64_t MaxVLogLevel();
 
   // Returns whether VLOG level lvl is activated for the file fname.
   //
   // E.g. if the environment variable TF_CPP_VMODULE contains foo=3 and fname is
   // foo.cc and lvl is <= 3, this will return true. It will also return true if
-  // the level is lower or equal to TF_CPP_MIN_VLOG_LEVEL (default zero).
+  // the level is lower or equal to TF_CPP_MAX_VLOG_LEVEL (default zero).
   //
   // It is expected that the result of this query will be cached in the VLOG-ing
   // call site to avoid repeated lookups. This routine performs a hash-map
@@ -78,7 +85,7 @@ class LogMessage : public std::basic_ostringstream<char> {
 // that the ternary VLOG() implementation is balanced, type wise.
 struct Voidifier {
   template <typename T>
-  void operator&(const T&)const {}
+  void operator&(const T&) const {}
 };
 
 // LogMessageFatal ensures the process will exit in failure after
@@ -116,7 +123,7 @@ class LogMessageNull : public std::basic_ostringstream<char> {
 
 #else
 
-// Otherwise, set TF_CPP_MIN_VLOG_LEVEL environment to update minimum log level
+// Otherwise, set TF_CPP_MAX_VLOG_LEVEL environment to update minimum log level
 // of VLOG, or TF_CPP_VMODULE to set the minimum log level for individual
 // translation units.
 #define VLOG_IS_ON(lvl)                                                     \
@@ -179,7 +186,7 @@ class LogEveryNSecState {
  private:
   std::atomic<uint32> counter_{0};
   // Cycle count according to CycleClock that we should next log at.
-  std::atomic<int64> next_log_time_cycles_{0};
+  std::atomic<int64_t> next_log_time_cycles_{0};
 };
 
 // This macro has a lot going on!
@@ -265,11 +272,11 @@ inline const T& GetReferenceableValue(const T& t) {
 inline char GetReferenceableValue(char t) { return t; }
 inline unsigned char GetReferenceableValue(unsigned char t) { return t; }
 inline signed char GetReferenceableValue(signed char t) { return t; }
-inline int16 GetReferenceableValue(int16 t) { return t; }
+inline int16 GetReferenceableValue(int16_t t) { return t; }
 inline uint16 GetReferenceableValue(uint16 t) { return t; }
 inline int GetReferenceableValue(int t) { return t; }
 inline unsigned int GetReferenceableValue(unsigned int t) { return t; }
-inline int64 GetReferenceableValue(int64 t) { return t; }
+inline int64_t GetReferenceableValue(int64_t t) { return t; }
 inline uint64 GetReferenceableValue(uint64 t) { return t; }
 
 // This formats a value for a failing CHECK_XX statement.  Ordinarily,
@@ -341,11 +348,13 @@ string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
 }
 
 // Helper functions for CHECK_OP macro.
-// The (int, int) specialization works around the issue that the compiler
+// We use the full name Check_EQ, Check_NE, etc. in case the file including
+// base/logging.h provides its own #defines for the simpler names EQ, NE, etc.
+// This happens if, for example, those are used as token names in a
+// yacc grammar.
+// The (int, int) overload works around the issue that the compiler
 // will not instantiate the template version of the function on values of
 // unnamed enum type - see comment below.
-// The (size_t, int) and (int, size_t) specialization are to handle unsigned
-// comparison errors while still being thorough with the comparison.
 #define TF_DEFINE_CHECK_OP_IMPL(name, op)                                 \
   template <typename T1, typename T2>                                     \
   inline string* name##Impl(const T1& v1, const T2& v2,                   \
@@ -357,34 +366,77 @@ string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
   }                                                                       \
   inline string* name##Impl(int v1, int v2, const char* exprtext) {       \
     return name##Impl<int, int>(v1, v2, exprtext);                        \
-  }                                                                       \
-  inline string* name##Impl(const size_t v1, const int v2,                \
-                            const char* exprtext) {                       \
-    if (TF_PREDICT_FALSE(v2 < 0)) {                                       \
-      return ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext); \
-    }                                                                     \
-    return name##Impl<size_t, size_t>(v1, v2, exprtext);                  \
-  }                                                                       \
-  inline string* name##Impl(const int v1, const size_t v2,                \
-                            const char* exprtext) {                       \
-    if (TF_PREDICT_FALSE(v2 >= std::numeric_limits<int>::max())) {        \
-      return ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext); \
-    }                                                                     \
-    const size_t uval = (size_t)((unsigned)v2);                           \
-    return name##Impl<size_t, size_t>(v1, uval, exprtext);                \
   }
 
-// We use the full name Check_EQ, Check_NE, etc. in case the file including
-// base/logging.h provides its own #defines for the simpler names EQ, NE, etc.
-// This happens if, for example, those are used as token names in a
-// yacc grammar.
-TF_DEFINE_CHECK_OP_IMPL(Check_EQ,
-                        ==)  // Compilation error with CHECK_EQ(NULL, x)?
-TF_DEFINE_CHECK_OP_IMPL(Check_NE, !=)  // Use CHECK(x == NULL) instead.
+// The (size_t, int) and (int, size_t) specialization are to handle unsigned
+// comparison errors while still being thorough with the comparison.
+
+TF_DEFINE_CHECK_OP_IMPL(Check_EQ, ==)
+// Compilation error with CHECK_EQ(NULL, x)?
+// Use CHECK(x == NULL) instead.
+
+inline string* Check_EQImpl(int v1, size_t v2, const char* exprtext) {
+  if (TF_PREDICT_FALSE(v1 < 0))
+    ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext);
+
+  return Check_EQImpl(size_t(v1), v2, exprtext);
+}
+
+inline string* Check_EQImpl(size_t v1, int v2, const char* exprtext) {
+  return Check_EQImpl(v2, v1, exprtext);
+}
+
+TF_DEFINE_CHECK_OP_IMPL(Check_NE, !=)
+
+inline string* Check_NEImpl(int v1, size_t v2, const char* exprtext) {
+  if (v1 < 0) return NULL;
+
+  return Check_NEImpl(size_t(v1), v2, exprtext);
+}
+
+inline string* Check_NEImpl(size_t v1, int v2, const char* exprtext) {
+  return Check_NEImpl(v2, v1, exprtext);
+}
+
 TF_DEFINE_CHECK_OP_IMPL(Check_LE, <=)
+
+inline string* Check_LEImpl(int v1, size_t v2, const char* exprtext) {
+  if (v1 <= 0) return NULL;
+
+  return Check_LEImpl(size_t(v1), v2, exprtext);
+}
+
+inline string* Check_LEImpl(size_t v1, int v2, const char* exprtext) {
+  if (TF_PREDICT_FALSE(v2 < 0))
+    return ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext);
+  return Check_LEImpl(v1, size_t(v2), exprtext);
+}
+
 TF_DEFINE_CHECK_OP_IMPL(Check_LT, <)
-TF_DEFINE_CHECK_OP_IMPL(Check_GE, >=)
-TF_DEFINE_CHECK_OP_IMPL(Check_GT, >)
+
+inline string* Check_LTImpl(int v1, size_t v2, const char* exprtext) {
+  if (v1 < 0) return NULL;
+
+  return Check_LTImpl(size_t(v1), v2, exprtext);
+}
+
+inline string* Check_LTImpl(size_t v1, int v2, const char* exprtext) {
+  if (v2 < 0)
+    return ::tensorflow::internal::MakeCheckOpString(v1, v2, exprtext);
+  return Check_LTImpl(v1, size_t(v2), exprtext);
+}
+
+// Implement GE,GT in terms of LE,LT
+template <typename T1, typename T2>
+inline string* Check_GEImpl(const T1& v1, const T2& v2, const char* exprtext) {
+  return Check_LEImpl(v2, v1, exprtext);
+}
+
+template <typename T1, typename T2>
+inline string* Check_GTImpl(const T1& v1, const T2& v2, const char* exprtext) {
+  return Check_LTImpl(v2, v1, exprtext);
+}
+
 #undef TF_DEFINE_CHECK_OP_IMPL
 
 // In optimized mode, use CheckOpString to hint to compiler that
@@ -459,9 +511,9 @@ T&& CheckNotNull(const char* file, int line, const char* exprtext, T&& t) {
   return std::forward<T>(t);
 }
 
-int64 MinLogLevelFromEnv();
+int64_t MinLogLevelFromEnv();
 
-int64 MinVLogLevelFromEnv();
+int64_t MaxVLogLevelFromEnv();
 
 }  // namespace internal
 
@@ -477,15 +529,27 @@ class TFLogEntry {
   }
 
  public:
-  explicit TFLogEntry(int severity, absl::string_view log_line)
-      : severity_(AsAbslLogSeverity(severity)), log_line_(log_line) {}
+  explicit TFLogEntry(int severity, absl::string_view message)
+      : severity_(AsAbslLogSeverity(severity)), message_(message) {}
+
+  explicit TFLogEntry(int severity, absl::string_view fname, int line,
+                      absl::string_view message)
+      : severity_(AsAbslLogSeverity(severity)),
+        fname_(fname),
+        line_(line),
+        message_(message) {}
 
   absl::LogSeverity log_severity() const { return severity_; }
-  std::string ToString() const { return std::string(log_line_); }
+  std::string FName() const { return fname_; }
+  int Line() const { return line_; }
+  std::string ToString() const { return message_; }
+  absl::string_view text_message() const { return message_; }
 
  private:
   const absl::LogSeverity severity_;
-  const absl::string_view log_line_;
+  const std::string fname_;
+  int line_ = -1;
+  const std::string message_;
 };
 
 class TFLogSink {
@@ -513,9 +577,26 @@ class TFLogSink {
   virtual void WaitTillSent() {}
 };
 
+// This is the default log sink. This log sink is used if there are no other
+// log sinks registered. To disable the default log sink, set the
+// "no_default_logger" Bazel config setting to true or define a
+// NO_DEFAULT_LOGGER preprocessor symbol. This log sink will always log to
+// stderr.
+class TFDefaultLogSink : public TFLogSink {
+ public:
+  void Send(const TFLogEntry& entry) override;
+};
+
 // Add or remove a `LogSink` as a consumer of logging data.  Thread-safe.
 void TFAddLogSink(TFLogSink* sink);
 void TFRemoveLogSink(TFLogSink* sink);
+
+// Get all the log sinks.  Thread-safe.
+std::vector<TFLogSink*> TFGetLogSinks();
+
+// Change verbose level of pre-defined files if envorionment
+// variable `env_var` is defined. This is currently a no op.
+void UpdateLogVerbosityIfDefined(const char* env_var);
 
 }  // namespace tensorflow
 

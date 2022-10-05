@@ -40,7 +40,8 @@ namespace tensorflow {
 // {1, Numelements} and reshape the result matrix to have shape
 // {1, N * NumElements} before passing it to this functor.
 
-// Assumes all inputs are nonempty
+// Assumes all elements of inputs are nonempty.
+// Assumes output is nonempty.
 template <typename T>
 void ConcatCPU(
     DeviceBase* d,
@@ -64,23 +65,12 @@ void ConcatGPU(
           inputs_flat,                                                        \
       Tensor* output, typename TTypes<T, 2>::Tensor* output_flat);
 
-TF_CALL_int32(REGISTER);  // Needed for TensorLists.
-TF_CALL_int64(REGISTER);
-TF_CALL_int16(REGISTER);
+TF_CALL_INTEGRAL_TYPES(REGISTER);  // int32 Needed for TensorLists.
 TF_CALL_bfloat16(REGISTER);
-TF_CALL_uint8(REGISTER);
 TF_CALL_GPU_ALL_TYPES(REGISTER);
 #undef REGISTER
 #endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
 
-#ifdef TENSORFLOW_USE_SYCL
-template <typename T>
-void ConcatSYCL(
-    const Eigen::SyclDevice& d,
-    const std::vector<std::unique_ptr<typename TTypes<T, 2>::ConstMatrix>>&
-        inputs,
-    typename TTypes<T, 2>::Matrix* output);
-#endif  // TENSORFLOW_USE_SYCL
 }  // namespace tensorflow
 
 #endif  // TENSORFLOW_CORE_KERNELS_CONCAT_LIB_H_

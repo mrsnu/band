@@ -36,7 +36,7 @@ struct HistogramFixedWidthFunctor<CPUDevice, T, Tout> {
   static Status Compute(OpKernelContext* context,
                         const typename TTypes<T, 1>::ConstTensor& values,
                         const typename TTypes<T, 1>::ConstTensor& value_range,
-                        int32 nbins, typename TTypes<Tout, 1>::Tensor& out) {
+                        int32_t nbins, typename TTypes<Tout, 1>::Tensor& out) {
     const CPUDevice& d = context->eigen_device<CPUDevice>();
 
     Tensor index_to_bin_tensor;
@@ -49,6 +49,15 @@ struct HistogramFixedWidthFunctor<CPUDevice, T, Tout> {
     const double step = static_cast<double>(value_range(1) - value_range(0)) /
                         static_cast<double>(nbins);
     const double nbins_minus_1 = static_cast<double>(nbins - 1);
+
+    // We cannot handle NANs in the algorithm below (due to the case to int32)
+    const Eigen::Tensor<int32, 1, 1> nans_tensor =
+        values.isnan().template cast<int32>();
+    const Eigen::Tensor<int32, 0, 1> reduced_tensor = nans_tensor.sum();
+    const int num_nans = reduced_tensor(0);
+    if (num_nans > 0) {
+      return errors::InvalidArgument("Histogram values must not contain NaN");
+    }
 
     // The calculation is done by finding the slot of each value in `values`.
     // With [a, b]:
@@ -66,7 +75,7 @@ struct HistogramFixedWidthFunctor<CPUDevice, T, Tout> {
             .template cast<int32>();
 
     out.setZero();
-    for (int32 i = 0; i < index_to_bin.size(); i++) {
+    for (int32_t i = 0; i < index_to_bin.size(); i++) {
       out(index_to_bin(i)) += Tout(1);
     }
     return Status::OK();
@@ -98,12 +107,12 @@ class HistogramFixedWidthOp : public OpKernel {
     const auto nbins = nbins_tensor.scalar<int32>()();
 
     OP_REQUIRES(
-        ctx, (value_range(0) < value_range(1)),
+        ctx, value_range(0) < value_range(1),
         errors::InvalidArgument("value_range should satisfy value_range[0] < "
                                 "value_range[1], but got '[",
                                 value_range(0), ", ", value_range(1), "]'"));
     OP_REQUIRES(
-        ctx, (nbins > 0),
+        ctx, nbins > 0,
         errors::InvalidArgument("nbins should be a positive number, but got '",
                                 nbins, "'"));
 
@@ -127,7 +136,7 @@ class HistogramFixedWidthOp : public OpKernel {
   REGISTER_KERNEL_BUILDER(Name("HistogramFixedWidth")                    \
                               .Device(DEVICE_CPU)                        \
                               .TypeConstraint<type>("T")                 \
-                              .TypeConstraint<int64>("dtype"),           \
+                              .TypeConstraint<int64_t>("dtype"),         \
                           HistogramFixedWidthOp<CPUDevice, type, int64>)
 
 TF_CALL_REAL_NUMBER_TYPES(REGISTER_KERNELS);

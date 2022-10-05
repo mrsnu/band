@@ -6,6 +6,7 @@
 #include "band/error_reporter.h"
 #include "band/logger.h"
 #include "tensorflow/lite/context_util.h"
+#include "tensorflow/lite/core/subgraph.h"
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
@@ -31,7 +32,7 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
     std::unique_ptr<tflite::Interpreter> interpreter =
         CreateTfLiteInterpreter(model, kBandCPU);
 
-    tflite::impl::Subgraph& primary_subgraph = interpreter->primary_subgraph();
+    tflite::Subgraph& primary_subgraph = interpreter->primary_subgraph();
     std::vector<int>& execution_plan = primary_subgraph.execution_plan();
     model_spec.num_ops = execution_plan.size();
 
@@ -95,7 +96,7 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
       continue;
     }
 
-    tflite::impl::Subgraph& primary_subgraph = interpreter->primary_subgraph();
+    tflite::Subgraph& primary_subgraph = interpreter->primary_subgraph();
     std::vector<int>& execution_plan = primary_subgraph.execution_plan();
 
     for (auto node_index : execution_plan) {
@@ -275,7 +276,7 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
   }
 
   tflite::ops::builtin::BuiltinOpResolver resolver;
-  tflite::impl::InterpreterBuilder builder(*tf_model->GetFlatBufferModel(),
+  tflite::InterpreterBuilder builder(*tf_model->GetFlatBufferModel(),
                                            resolver);
   TfLiteStatus status = builder(&interpreter);
 

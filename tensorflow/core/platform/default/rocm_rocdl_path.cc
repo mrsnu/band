@@ -36,7 +36,7 @@ string RocmRoot() {
 }
 
 string RocdlRoot() {
-  return tensorflow::io::JoinPath(tensorflow::RocmRoot(), "hcc/lib");
+  return tensorflow::io::JoinPath(tensorflow::RocmRoot(), "amdgcn/bitcode");
 }
 
 }  // namespace tensorflow

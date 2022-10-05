@@ -21,6 +21,7 @@ cc_library(
         ".",
         "rocm/include",
         "rocm/include/rocrand",
+        "rocm/include/roctracer",
     ],
     visibility = ["//visibility:public"],
 )
@@ -50,9 +51,9 @@ cc_library(
 )
 
 cc_library(
-    name = "rocfft",
-    srcs = ["rocm/lib/%{rocfft_lib}"],
-    data = ["rocm/lib/%{rocfft_lib}"],
+    name = "%{hipfft_or_rocfft}",
+    srcs = ["rocm/lib/%{hipfft_or_rocfft_lib}"],
+    data = ["rocm/lib/%{hipfft_or_rocfft_lib}"],
     includes = [
         ".",
         "rocm/include",
@@ -105,9 +106,14 @@ cc_library(
         ":rocm_headers",
         ":hip",
         ":rocblas",
-        ":rocfft",
+        ":hipblas",
+        ":%{hipfft_or_rocfft}",
         ":hiprand",
         ":miopen",
+        ":hipsparse",
+        ":roctracer",
+        ":rocsolver",
+        ":hipsolver",
     ],
 )
 
@@ -137,11 +143,40 @@ cc_library(
     ],
 )
 
-cc_import(
+cc_library(
     name = "hipsparse",
-    hdrs = glob(["rocm/include/hipsparse/**",]),
-    shared_library = "rocm/lib/%{hipsparse_lib}",
-    visibility = ["//visibility:public"],
+    srcs = ["rocm/lib/%{hipsparse_lib}"],
+    data = ["rocm/lib/%{hipsparse_lib}"],
+)
+
+cc_library(
+    name = "roctracer",
+    data = ["rocm/lib/%{roctracer_lib}"],
+)
+
+cc_library(
+    name = "rocsolver",
+    srcs = ["rocm/lib/%{rocsolver_lib}"],
+    data = ["rocm/lib/%{rocsolver_lib}"],
+)
+
+cc_library(
+    name = "hipsolver",
+    srcs = ["rocm/lib/%{hipsolver_lib}"],
+    data = ["rocm/lib/%{hipsolver_lib}"],
+)
+
+cc_library(
+    name = "hipblas",
+    srcs = ["rocm/lib/%{hipblas_lib}"],
+    data = ["rocm/lib/%{hipblas_lib}"],
+)
+
+filegroup(
+    name = "rocm_root",
+    srcs = [
+        "rocm/bin/clang-offload-bundler",
+    ],
 )
 
 %{copy_rules}
