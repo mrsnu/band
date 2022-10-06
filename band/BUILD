@@ -213,7 +213,6 @@ cc_library(
             ":tensor",
             ":time",
             ":worker",
-            "@jsoncpp_git//:jsoncpp",
         ],
 )
 
@@ -221,6 +220,13 @@ cc_library(
     name = "json_util",
     srcs = ["json_util.cc"],
     hdrs = ["json_util.h"],
+    linkopts = select({
+        "//tensorflow:windows": [],
+        "//conditions:default": [
+            "-lm",
+            "-ldl",
+        ],
+    }),
     deps = [
         ":common",
         "@jsoncpp_git//:jsoncpp",
