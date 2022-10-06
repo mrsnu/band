@@ -10,6 +10,7 @@
 #include "band/backend/tfl/model.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend_factory.h"
+#include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/model.h"
 #include "band/tensor.h"
@@ -76,10 +77,26 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
-  RuntimeConfig config;
-  EXPECT_EQ(ParseRuntimeConfigFromJson("band/testdata/config.json", config),
-            kBandOk);
-
+  RuntimeConfigBuilder b;
+  RuntimeConfig config = b.AddPlannerLogPath("band/testdata/log.csv")
+                          .AddSchedulers({kBandRoundRobin})
+                          .AddMinimumSubgraphSize(7)
+                          .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
+                          .AddCPUMask(kBandAll)
+                          .AddPlannerCPUMask(kBandPrimary)
+                          .AddWorkers({kBandCPU, kBandCPU})
+                          .AddWorkerNumThreads({3, 4})
+                          .AddWorkerCPUMasks({kBandBig, kBandLittle})
+                          .AddSmoothingFactor(0.1)
+                          .AddProfileDataPath("band/testdata/profile.json")
+                          .AddOnline(true)
+                          .AddNumWarmups(1)
+                          .AddNumRuns(1)
+                          .AddAllowWorkSteal(true)
+                          .AddAvailabilityCheckIntervalMs(30000)
+                          .AddScheduleWindowSize(10)
+                          .Build();
+  
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
 
@@ -108,9 +125,25 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
-  RuntimeConfig config;
-  EXPECT_EQ(ParseRuntimeConfigFromJson("band/testdata/config.json", config),
-            kBandOk);
+  RuntimeConfigBuilder b;
+  RuntimeConfig config = b.AddPlannerLogPath("band/testdata/log.csv")
+                          .AddSchedulers({kBandRoundRobin})
+                          .AddMinimumSubgraphSize(7)
+                          .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
+                          .AddCPUMask(kBandAll)
+                          .AddPlannerCPUMask(kBandPrimary)
+                          .AddWorkers({kBandCPU, kBandCPU})
+                          .AddWorkerNumThreads({3, 4})
+                          .AddWorkerCPUMasks({kBandBig, kBandLittle})
+                          .AddSmoothingFactor(0.1)
+                          .AddProfileDataPath("band/testdata/profile.json")
+                          .AddOnline(true)
+                          .AddNumWarmups(1)
+                          .AddNumRuns(1)
+                          .AddAllowWorkSteal(true)
+                          .AddAvailabilityCheckIntervalMs(30000)
+                          .AddScheduleWindowSize(10)
+                          .Build();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
@@ -136,8 +169,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 
   delete input_tensor;
   delete output_tensor;
-}  // namespace
-}  // namespace Band
+}   // namespace
+}   // namespace Band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

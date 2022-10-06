@@ -61,6 +61,7 @@ band_cc_android_test(
     }),
     deps = [
         ":tfl_backend",
+        "//band:config_builder",
         "@com_google_googletest//:gtest",
     ],
 )

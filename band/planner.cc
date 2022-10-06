@@ -107,8 +107,8 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     return kBandError;
   }
 
-  if (config.cpu_masks != kBandAll) {
-    cpu_set_ = BandCPUMaskGetSet(config.cpu_masks);
+  if (config.cpu_mask != kBandAll) {
+    cpu_set_ = BandCPUMaskGetSet(config.cpu_mask);
     need_cpu_update_ = true;
   }
 
