@@ -36,19 +36,19 @@ TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   WorkerConfigBuilder b;
   WorkerConfig config_ok = b.AddAllowWorkSteal(false)
                                .AddAvailabilityCheckIntervalMs(1000)
-                               .AddAdditionalWorkers({kBandCPU, kBandDSP})
+                               .AddWorkers({kBandCPU, kBandDSP})
                                .AddCPUMasks({kBandAll, kBandAll})
                                .AddNumThreads({1, 1})
                                .Build();
   EXPECT_EQ(config_ok.allow_worksteal, false);
   EXPECT_EQ(config_ok.availability_check_interval_ms, 1000);
-  EXPECT_EQ(config_ok.workers.size(), 6);
+  EXPECT_EQ(config_ok.workers.size(), 2);
   EXPECT_EQ(config_ok.cpu_masks.size(), config_ok.workers.size());
   EXPECT_EQ(config_ok.num_threads.size(), config_ok.workers.size());
 
-  b.AddAdditionalWorkers({kBandCPU});
+  b.AddWorkers({kBandCPU});
   EXPECT_FALSE(b.IsValid());
-  b.AddAdditionalWorkers({kBandCPU, kBandGPU});
+  b.AddWorkers({kBandCPU, kBandGPU});
   EXPECT_TRUE(b.IsValid());
 }
 
@@ -67,7 +67,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddScheduleWindowSize(1)
           .AddSchedulers({kBandFixedDevice})
           .AddPlannerCPUMask(kBandBig)
-          .AddAdditionalWorkers({})
+          .AddWorkers({})
           .AddWorkerCPUMasks({})
           .AddWorkerNumThreads({})
           .AddAllowWorkSteal(true)

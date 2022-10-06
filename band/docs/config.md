@@ -57,6 +57,7 @@ Each configuration field is optional or required. If a field is optional, then i
 - `RuntimeConfig` contains `ProfileConfig`, `PlannerConfig` and `WorkerConfig`.
 - `minimum_subgraph_size` [type: `int`, default: `7`]: The minimum subgraph size. If candidate subgraph size is smaller than this, the subgraph will not be created.
 - `subgraph_preparation_type` [type: `BandSubgraphPreparationType`, default: `kBandMergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
+- `cpu_mask` [type: `BandCPUMaskFlags`, default: `kBandAll`]: The CPU mask for Band Engine.
 
 ## `RuntimeConfigBuilder` API
 `RuntimeConfigBuilder` delegates all builder that inherits `ConfigBuilder`.
@@ -81,13 +82,11 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddScheduleWindowSize(int schedule_window_size)`
 - `AddSchedulers(std::vector<BandSchedulerType> schedulers)`
 - `AddPlannerCPUMask(BandCPUMaskFlags cpu_masks)`
-- `AddAdditionalWorkers(std::vector<BandDeviceFlags> workers)`
-  **Note: Only additional workers should be specified.**
+- `AddWorkers(std::vector<BandDeviceFlags> workers)`
 - `AddWorkerCPUMasks(std::vector<BandCPUMaskFlags> cpu_masks)`
-  **Note: Only additional workers should be specified.**
 - `AddWorkerNumThreads(std::vector<int> num_threads)`
-  **Note: Only additional workers should be specified.**
 - `AddAllowWorkSteal(bool allow_worksteal)`
 - `AddAvailabilityCheckIntervalMs(int32_t availability_check_interval_ms)`
 - `AddMinimumSubgraphSize(int minimum_subgraph_size)`
 - `AddSubgraphPreparationType(BandSubgraphPreparationType subgraph_preparation_type)`
+- `AddCPUMask(BandCPUMaskFlags cpu_mask)`

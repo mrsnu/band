@@ -93,38 +93,19 @@ class WorkerConfigBuilder {
       workers_.push_back(static_cast<BandDeviceFlags>(i));
     }
     cpu_masks_ = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
-    num_threads_ = std::vector<int>(kBandNumDevices, 1 /*or 0?*/);
+    num_threads_ = std::vector<int>(kBandNumDevices, 1);
   }
-  // To keep idempotency, `AddAdditionalWorkers` create a default workers
-  // and add the given workers to the default.
-  WorkerConfigBuilder& AddAdditionalWorkers(
-      std::vector<BandDeviceFlags> additional_workers) {
-    std::vector<BandDeviceFlags> temp_workers;
-    // Default workers
-    for (int i = 0; i < kBandNumDevices; i++) {
-      temp_workers.push_back(static_cast<BandDeviceFlags>(i));
-    }
-    temp_workers.insert(temp_workers.end(), additional_workers.begin(),
-                        additional_workers.end());
-    workers_ = temp_workers;
+  WorkerConfigBuilder& AddWorkers(
+      std::vector<BandDeviceFlags> workers) {
+    workers_ = workers;
     return *this;
   }
-  // To keep idempotency, `AddCPUMasks` create a default cpu_masks
-  // and add the given cpu_masks to the default.
   WorkerConfigBuilder& AddCPUMasks(std::vector<BandCPUMaskFlags> cpu_masks) {
-    std::vector<BandCPUMaskFlags> temp_cpu_masks;
-    temp_cpu_masks = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
-    temp_cpu_masks.insert(temp_cpu_masks.end(), cpu_masks.begin(),
-                          cpu_masks.end());
-    cpu_masks_ = temp_cpu_masks;
+    cpu_masks_ = cpu_masks;
     return *this;
   }
   WorkerConfigBuilder& AddNumThreads(std::vector<int> num_threads) {
-    std::vector<int> temp_num_threads;
-    temp_num_threads = std::vector<int>(kBandNumDevices, 1);
-    temp_num_threads.insert(temp_num_threads.end(), num_threads.begin(),
-                            num_threads.end());
-    num_threads_ = temp_num_threads;
+    num_threads_ = num_threads;
     return *this;
   }
   WorkerConfigBuilder& AddAllowWorkSteal(bool allow_worksteal) {
@@ -200,9 +181,9 @@ class RuntimeConfigBuilder {
   }
 
   // Add WorkerConfig
-  RuntimeConfigBuilder& AddAdditionalWorkers(
+  RuntimeConfigBuilder& AddWorkers(
       std::vector<BandDeviceFlags> workers) {
-    worker_config_builder_.AddAdditionalWorkers(workers);
+    worker_config_builder_.AddWorkers(workers);
     return *this;
   }
   RuntimeConfigBuilder& AddWorkerCPUMasks(

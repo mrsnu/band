@@ -73,13 +73,13 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       char* arg = va_arg(vl, char*);
       b->impl.AddPlannerLogPath(arg);
     } break;
-    case BAND_WORKER_ADDITIONAL_WORKERS: {
+    case BAND_WORKER_WORKERS: {
       std::vector<BandDeviceFlags> workers(count);
       for (int i = 0; i < count; i++) {
         int temp = va_arg(vl, int);
         workers[i] = static_cast<BandDeviceFlags>(temp);
       }
-      b->impl.AddAdditionalWorkers(workers);
+      b->impl.AddWorkers(workers);
     } break;
     case BAND_WORKER_CPU_MASKS: {
       std::vector<Band::BandCPUMaskFlags> cpu_masks(count);
