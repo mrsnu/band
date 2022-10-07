@@ -34,9 +34,6 @@ typedef Eigen::ThreadPoolDevice CPUDevice;
 #if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
 typedef Eigen::GpuDevice GPUDevice;
 #endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
-#ifdef TENSORFLOW_USE_SYCL
-typedef Eigen::SyclDevice SYCLDevice;
-#endif  // TENSORFLOW_USE_SYCL
 
 // --------------------------------------------------------------------------
 template <typename Device, typename T>
@@ -77,50 +74,43 @@ class PackOp : public OpKernel {
     Tensor* output;
     OP_REQUIRES_OK(c, c->allocate_output(0, output_shape, &output));
 
-    int64 before_dim = 1;
+    int64_t before_dim = 1;
     for (int i = 0; i < axis; ++i) {
       before_dim *= output_shape.dim_size(i);
     }
 
-    int64 after_dim = 1;
+    int64_t after_dim = 1;
     for (int i = axis + 1; i < output_shape.dims(); ++i) {
       after_dim *= output_shape.dim_size(i);
     }
 
-    const int64 axis_dim = output_shape.dim_size(axis);
+    const int64_t axis_dim = output_shape.dim_size(axis);
 
-    const int64 output_size = output->NumElements();
+    const int64_t output_size = output->NumElements();
+    auto output_flat = output->shaped<T, 2>({before_dim, after_dim * axis_dim});
+
+    // Except for shapes, pack is a special case of concat, so we reuse the
+    // same computational kernels.
+    ConstMatrixVector inputs_flat;
+    inputs_flat.reserve(num);
+    for (int i = 0; i < num; ++i) {
+      const Tensor& input = c->input(i);
+      OP_REQUIRES(c, first_input.shape().IsSameSize(input.shape()),
+                  errors::InvalidArgument(
+                      "Shapes of all inputs must match: values[0].shape = ",
+                      first_input.shape().DebugString(), " != values[", i,
+                      "].shape = ", input.shape().DebugString()));
+
+      inputs_flat.emplace_back(new typename TTypes<T, 2>::ConstMatrix(
+          input.shaped<T, 2>({before_dim, after_dim})));
+    }
     if (output_size > 0) {
-      auto output_flat =
-          output->shaped<T, 2>({before_dim, after_dim * axis_dim});
-
-      // Except for shapes, pack is a special case of concat, so we reuse the
-      // same computational kernels.
-      ConstMatrixVector inputs_flat;
-      inputs_flat.reserve(num);
-      for (int i = 0; i < num; ++i) {
-        const Tensor& input = c->input(i);
-        OP_REQUIRES(c, first_input.shape().IsSameSize(input.shape()),
-                    errors::InvalidArgument(
-                        "Shapes of all inputs must match: values[0].shape = ",
-                        first_input.shape().DebugString(), " != values[", i,
-                        "].shape = ", input.shape().DebugString()));
-
-        inputs_flat.emplace_back(new typename TTypes<T, 2>::ConstMatrix(
-            input.shaped<T, 2>({before_dim, after_dim})));
-      }
 #if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
       if (std::is_same<Device, GPUDevice>::value) {
         ConcatGPU<T>(c, inputs_flat, output, &output_flat);
         return;
       }
 #endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
-#ifdef TENSORFLOW_USE_SYCL
-      if (std::is_same<Device, SYCLDevice>::value) {
-        ConcatSYCL<T>(c->eigen_sycl_device(), inputs_flat, &output_flat);
-        return;
-      }
-#endif  // TENSORFLOW_USE_SYCL
       ConcatCPU<T>(c->device(), inputs_flat, &output_flat);
     }
   }
@@ -155,6 +145,8 @@ REGISTER_PACK(tstring);
 TF_CALL_bfloat16(REGISTER_GPU);
 TF_CALL_int64(REGISTER_GPU);
 TF_CALL_int16(REGISTER_GPU);
+TF_CALL_uint32(REGISTER_GPU);
+TF_CALL_uint64(REGISTER_GPU);
 TF_CALL_GPU_ALL_TYPES(REGISTER_GPU);
 #undef REGISTER_GPU
 
@@ -170,19 +162,4 @@ REGISTER_KERNEL_BUILDER(Name("Pack")
 
 #endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
 
-#ifdef TENSORFLOW_USE_SYCL
-#define REGISTER_SYCL(type)                                       \
-  REGISTER_KERNEL_BUILDER(                                        \
-      Name("Pack").Device(DEVICE_SYCL).TypeConstraint<type>("T"), \
-      PackOp<SYCLDevice, type>)
-
-TF_CALL_GPU_NUMBER_TYPES_NO_HALF(REGISTER_SYCL);
-REGISTER_KERNEL_BUILDER(Name("Pack")
-                            .Device(DEVICE_SYCL)
-                            .HostMemory("values")
-                            .HostMemory("output")
-                            .TypeConstraint<int32>("T"),
-                        PackOp<CPUDevice, int32>);
-#undef REGISTER_SYCL
-#endif  // TENSORFLOW_USE_SYCL
 }  // namespace tensorflow

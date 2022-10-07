@@ -21,8 +21,6 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "tensorflow/core/kernels/spacetobatch_functor.h"
-
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
@@ -31,8 +29,10 @@ limitations under the License.
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/framework/tensor_types.h"
 #include "tensorflow/core/framework/types.h"
+#include "tensorflow/core/kernels/spacetobatch_functor.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/util/overflow.h"
 
 namespace tensorflow {
 
@@ -68,8 +68,8 @@ Status SpaceToBatchOpCompute(OpKernelContext* context,
 
   // To avoid out-of-bounds access in the case that the block_shape and/or
   // paddings tensors are concurrently modified, we must copy the values.
-  gtl::InlinedVector<int64, 4> block_shape;
-  gtl::InlinedVector<int64, 8> paddings;
+  gtl::InlinedVector<int64_t, 4> block_shape;
+  gtl::InlinedVector<int64_t, 8> paddings;
   internal::spacetobatch::SubtleMustCopyFlat(orig_block_shape, &block_shape);
   internal::spacetobatch::SubtleMustCopyFlat(orig_paddings, &paddings);
 
@@ -97,9 +97,15 @@ Status SpaceToBatchOpCompute(OpKernelContext* context,
   }
 
   // Compute the product of the block_shape values.
-  int64 block_shape_product = 1;
+  int64_t block_shape_product = 1;
   for (int block_dim = 0; block_dim < block_dims; ++block_dim) {
-    block_shape_product *= block_shape[block_dim];
+    if (block_shape[block_dim] < 1) {
+      return errors::InvalidArgument(
+          "All values in block_shape must be positive, got value, ",
+          block_shape[block_dim], " at index ", block_dim, ".");
+    }
+    block_shape_product =
+        MultiplyWithoutOverflow(block_shape_product, block_shape[block_dim]);
   }
   if (block_shape_product <= 0) {
     return errors::InvalidArgument(
@@ -131,12 +137,18 @@ Status SpaceToBatchOpCompute(OpKernelContext* context,
   // The actual output shape exposed to callers.
   TensorShape external_output_shape;
 
-  external_output_shape.AddDim(orig_input_tensor.dim_size(0) *
-                               block_shape_product);
+  const int64_t output_shape = MultiplyWithoutOverflow(
+      orig_input_tensor.dim_size(0), block_shape_product);
+  if (output_shape < 0) {
+    return errors::InvalidArgument(
+        "Negative output dimension size caused by overflow when multiplying ",
+        orig_input_tensor.dim_size(0), " and ", block_shape_product);
+  }
+  external_output_shape.AddDim(output_shape);
 
-  int64 input_batch_size = orig_input_tensor.dim_size(0);
+  int64_t input_batch_size = orig_input_tensor.dim_size(0);
   for (int block_dim = 0; block_dim < removed_prefix_block_dims; ++block_dim) {
-    const int64 size = orig_input_tensor.dim_size(block_dim + 1);
+    const int64_t size = orig_input_tensor.dim_size(block_dim + 1);
     input_batch_size *= size;
     external_output_shape.AddDim(size);
   }
@@ -145,14 +157,14 @@ Status SpaceToBatchOpCompute(OpKernelContext* context,
 
   for (int block_dim = removed_prefix_block_dims;
        block_dim < block_dims - removed_suffix_block_dims; ++block_dim) {
-    const int64 pad_start = paddings[2 * block_dim],
-                pad_end = paddings[2 * block_dim + 1];
+    const int64_t pad_start = paddings[2 * block_dim],
+                  pad_end = paddings[2 * block_dim + 1];
     if (pad_start < 0 || pad_end < 0) {
       return errors::InvalidArgument("Paddings must be non-negative");
     }
-    const int64 input_size = orig_input_tensor.dim_size(block_dim + 1);
-    const int64 block_shape_value = block_shape[block_dim];
-    const int64 padded_size = input_size + pad_start + pad_end;
+    const int64_t input_size = orig_input_tensor.dim_size(block_dim + 1);
+    const int64_t block_shape_value = block_shape[block_dim];
+    const int64_t padded_size = input_size + pad_start + pad_end;
     if (padded_size % block_shape_value != 0) {
       return errors::InvalidArgument("padded_shape[", block_dim,
                                      "]=", padded_size,
@@ -160,15 +172,15 @@ Status SpaceToBatchOpCompute(OpKernelContext* context,
                                      block_dim, "]=", block_shape_value);
     }
     internal_input_shape.AddDim(input_size);
-    const int64 output_size = padded_size / block_shape_value;
+    const int64_t output_size = padded_size / block_shape_value;
     internal_output_shape.AddDim(output_size);
     external_output_shape.AddDim(output_size);
   }
 
-  int64 depth = 1;
+  int64_t depth = 1;
   for (int dim = block_dims - removed_suffix_block_dims + 1; dim < input_dims;
        ++dim) {
-    const int64 size = orig_input_tensor.dim_size(dim);
+    const int64_t size = orig_input_tensor.dim_size(dim);
     external_output_shape.AddDim(size);
     depth *= size;
   }
@@ -180,8 +192,8 @@ Status SpaceToBatchOpCompute(OpKernelContext* context,
   TF_RETURN_IF_ERROR(
       context->allocate_output(0, external_output_shape, &output_tensor));
 
-  const int64* internal_paddings = &paddings[2 * removed_prefix_block_dims];
-  const int64* internal_block_shape = &block_shape[removed_prefix_block_dims];
+  const int64_t* internal_paddings = &paddings[2 * removed_prefix_block_dims];
+  const int64_t* internal_block_shape = &block_shape[removed_prefix_block_dims];
 
   switch (internal_block_dims) {
 #define TF_SPACETOBATCH_BLOCK_DIMS_CASE(NUM_BLOCK_DIMS)                   \
@@ -228,10 +240,8 @@ class SpaceToBatchOp : public OpKernel {
     OP_REQUIRES(
         context, block_size_ > 1,
         errors::InvalidArgument("Block size should be > 1: ", block_size_));
-    // We don't use context->allocate_persistent because the allocation must
-    // happen on the CPU regardless of Device.
     block_shape_ = Tensor(tensorflow::DT_INT64, TensorShape({2}));
-    auto block_shape_vec = block_shape_.vec<int64>();
+    auto block_shape_vec = block_shape_.vec<int64_t>();
     block_shape_vec(0) = block_size_;
     block_shape_vec(1) = block_size_;
   }

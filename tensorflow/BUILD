@@ -3,7 +3,15 @@
 # learning applications.
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
-load("//tensorflow:tensorflow.bzl", "VERSION", "tf_cc_shared_object", "tf_custom_op_library_additional_deps_impl", "tf_native_cc_binary")
+load(
+    "//tensorflow:tensorflow.bzl",
+    "VERSION",
+    "if_google",
+    "if_oss",
+    "tf_cc_shared_object",
+    "tf_custom_op_library_additional_deps_impl",
+    "tf_native_cc_binary",
+)
 package(
     default_visibility = [":internal"],
     licenses = ["notice"],  # Apache 2.0
@@ -24,47 +32,110 @@ exports_files([
 # which requires restricted licenses to be avoided.
 config_setting(
     name = "no_lgpl_deps",
-    values = {"define": "__TENSORFLOW_NO_LGPL_DEPS__=1"},
+    define_values = {"__TENSORFLOW_NO_LGPL_DEPS__": "1"},
+    visibility = ["//visibility:public"],
+)
+
+# Config setting that disables the default logger, only logging
+# to registered TFLogSinks
+config_setting(
+    name = "no_default_logger",
+    define_values = {"no_default_logger": "true"},
     visibility = ["//visibility:public"],
 )
 
 # Config setting for determining if we are building for Android.
 config_setting(
     name = "android",
-    values = {"crosstool_top": "//external:android/crosstool"},
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "android"},
+        {},
+    ),
+    values = if_oss(
+        {"crosstool_top": "//external:android/crosstool"},
+        {},
+    ),
     visibility = ["//visibility:public"],
 )
 
 config_setting(
     name = "android_x86",
-    values = {
-        "crosstool_top": "//external:android/crosstool",
-        "cpu": "x86",
-    },
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "android"},
+        {},
+    ),
+    values = dict(
+        if_oss(
+            {"crosstool_top": "//external:android/crosstool"},
+        ),
+        cpu = "x86",
+    ),
     visibility = ["//visibility:public"],
 )
 
 config_setting(
     name = "android_x86_64",
-    values = {
-        "crosstool_top": "//external:android/crosstool",
-        "cpu": "x86_64",
-    },
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "android"},
+        {},
+    ),
+    values = dict(
+        if_oss(
+            {"crosstool_top": "//external:android/crosstool"},
+        ),
+        cpu = "x86_64",
+    ),
     visibility = ["//visibility:public"],
 )
 
 config_setting(
     name = "android_armeabi",
-    values = {
-        "crosstool_top": "//external:android/crosstool",
-        "cpu": "armeabi",
-    },
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "android"},
+        {},
+    ),
+    values = dict(
+        if_oss(
+            {"crosstool_top": "//external:android/crosstool"},
+        ),
+        cpu = "armeabi",
+    ),
     visibility = ["//visibility:public"],
 )
 
+# copybara:uncomment_begin(google-only)
+# config_setting(
+#     name = "chromiumos_x86_64",
+#     flag_values = {"//tools/cpp:cc_target_os": "chromiumos"},
+#     values = {"cpu": "k8"},
+#     visibility = ["//visibility:public"],
+# )
+#
+# config_setting(
+#     name = "chromiumos_arm64",
+#     flag_values = {"//tools/cpp:cc_target_os": "chromiumos"},
+#     values = {"cpu": "arm"},
+#     visibility = ["//visibility:public"],
+# )
+#
+# config_setting(
+#     name = "chromiumos_armv7",
+#     flag_values = {"//tools/cpp:cc_target_os": "chromiumos"},
+#     values = {"cpu": "armeabi-v7a"},
+#     visibility = ["//visibility:public"],
+# )
+# copybara:uncomment_end
+
 config_setting(
     name = "emscripten",
-    values = {"crosstool_top": "//external:android/emscripten"},
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "emscripten"},
+        {},
+    ),
+    values = if_oss(
+        {"crosstool_top": "//external:android/emscripten"},
+        {},
+    ),
     visibility = ["//visibility:public"],
 )
 
@@ -79,19 +150,31 @@ config_setting(
 
 config_setting(
     name = "android_arm",
-    values = {
-        "crosstool_top": "//external:android/crosstool",
-        "cpu": "armeabi-v7a",
-    },
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "android"},
+        {},
+    ),
+    values = dict(
+        if_oss(
+            {"crosstool_top": "//external:android/crosstool"},
+        ),
+        cpu = "armeabi-v7a",
+    ),
     visibility = ["//visibility:public"],
 )
 
 config_setting(
     name = "android_arm64",
-    values = {
-        "crosstool_top": "//external:android/crosstool",
-        "cpu": "arm64-v8a",
-    },
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "android"},
+        {},
+    ),
+    values = dict(
+        if_oss(
+            {"crosstool_top": "//external:android/crosstool"},
+        ),
+        cpu = "arm64-v8a",
+    ),
     visibility = ["//visibility:public"],
 )
 
@@ -115,7 +198,16 @@ config_setting(
 
 config_setting(
     name = "windows",
-    values = {"cpu": "x64_windows"},
+    # Internal builds query the target OS.
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "windows"},
+        {},
+    ),
+    # OSS builds query the CPU type.
+    values = if_oss(
+        {"cpu": "x64_windows"},
+        {},
+    ),
     visibility = ["//visibility:public"],
 )
 
@@ -126,38 +218,104 @@ config_setting(
 )
 
 config_setting(
-    name = "macos",
+    name = "macos_x86_64",
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "apple"},
+        {},
+    ),
     values = {
         "apple_platform_type": "macos",
-        "cpu": "darwin",
+        "cpu": if_google("darwin_x86_64", "darwin"),
     },
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "macos_arm64",
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "apple"},
+        {},
+    ),
+    values = {
+        "apple_platform_type": "macos",
+        "cpu": "darwin_arm64",
+    },
+    visibility = ["//visibility:public"],
+)
+
+selects.config_setting_group(
+    name = "macos",
+    match_any = [
+        ":macos_x86_64",
+        ":macos_arm64",
+    ],
     visibility = ["//visibility:public"],
 )
 
 config_setting(
     name = "ios",
-    values = {"apple_platform_type": "ios"},
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "apple"},
+        {},
+    ),
+    values = if_oss(
+        {"apple_platform_type": "ios"},
+        {},
+    ),
     visibility = ["//visibility:public"],
 )
 
 config_setting(
     name = "fuchsia",
-    values = {"cpu": "fuchsia"},
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "fuchsia"},
+        {},
+    ),
+    values = if_oss(
+        # TODO(b/149248802) When we have a Fuchsia Bazel SDK update to use the values it sets.
+        {"cpu": "fuchsia"},
+        {},
+    ),
     visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name = "ios_x86_64",
+    name = "fuchsia_x86_64",
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "fuchsia"},
+        {},
+    ),
     values = {
-        "crosstool_top": "//tools/osx/crosstool:crosstool",
-        "cpu": "ios_x86_64",
+        "cpu": "x86_64",
     },
     visibility = ["//visibility:public"],
 )
 
 config_setting(
+    name = "ios_x86_64",
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "apple"},
+        {},
+    ),
+    values = dict(
+        if_oss(
+            {"crosstool_top": "//tools/osx/crosstool:crosstool"},
+        ),
+        cpu = "ios_x86_64",
+    ),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
     name = "chromiumos",
-    values = {"crosstool_top": "//external:android/chromiumos"},
+    flag_values = if_google(
+        {"//tools/cpp:cc_target_os": "chromiumos"},
+        {},
+    ),
+    values = if_oss(
+        {"crosstool_top": "//external:android/chromiumos"},
+        {},
+    ),
     visibility = ["//visibility:public"],
 )
 
@@ -192,6 +350,18 @@ config_setting(
 )
 
 config_setting(
+    name = "linux_mips64",
+    values = {"cpu": "mips64"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_riscv64",
+    values = {"cpu": "riscv64"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
     name = "debug",
     values = {
         "compilation_mode": "dbg",
@@ -214,14 +384,38 @@ config_setting(
 )
 
 config_setting(
-    name = "freebsd",
-    values = {"cpu": "freebsd"},
+    name = "armeabi",
+    values = {"cpu": "armeabi"},
     visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name = "with_default_optimizations",
-    define_values = {"with_default_optimizations": "true"},
+    name = "armeabi-v7a",
+    values = {"cpu": "armeabi-v7a"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "arm64-v8a",
+    values = {"cpu": "arm64-v8a"},
+    visibility = ["//visibility:public"],
+)
+
+selects.config_setting_group(
+    name = "arm_any",
+    match_any = [
+        ":arm",
+        ":armeabi",
+        ":armeabi-v7a",
+        ":arm64-v8a",
+        ":linux_aarch64",
+        ":linux_armhf",
+    ],
+)
+
+config_setting(
+    name = "freebsd",
+    values = {"cpu": "freebsd"},
     visibility = ["//visibility:public"],
 )
 

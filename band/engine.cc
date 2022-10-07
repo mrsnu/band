@@ -244,19 +244,16 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
   // TODO: Update interpreter config to something
   {
-    model_option_.minimum_subgraph_size_ =
-        config.interpreter_config.minimum_subgraph_size;
-    model_option_.subgraph_preparation_type_ =
-        config.interpreter_config.subgraph_preparation_type;
+    model_option_.minimum_subgraph_size_ = config.minimum_subgraph_size;
+    model_option_.subgraph_preparation_type_ = config.subgraph_preparation_type;
 
     if (planner_->NeedProfile()) {
       profiler_ = std::make_unique<Profiler>();
-      BAND_ENSURE_STATUS(
-          profiler_->Init(config.interpreter_config.profile_config));
+      BAND_ENSURE_STATUS(profiler_->Init(config.profile_config));
     }
 
     const BandCPUMaskFlags cpu_mask =
-        static_cast<BandCPUMaskFlags>(config.interpreter_config.cpu_masks);
+        static_cast<BandCPUMaskFlags>(config.cpu_mask);
     auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
 
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",

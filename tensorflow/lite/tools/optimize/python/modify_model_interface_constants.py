@@ -1,4 +1,3 @@
-# Lint as: python3
 # Copyright 2020 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +14,12 @@
 # ==============================================================================
 """Constants for modify_model_interface."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from tensorflow.lite.python import lite_constants
+from tensorflow.python.framework import dtypes
 
 STR_TO_TFLITE_TYPES = {
-    'INT8': lite_constants.INT8,
-    'UINT8': lite_constants.QUANTIZED_UINT8
+    'INT8': dtypes.int8,
+    'UINT8': dtypes.uint8,
+    'INT16': dtypes.int16,
 }
 TFLITE_TO_STR_TYPES = {v: k for k, v in STR_TO_TFLITE_TYPES.items()}
 

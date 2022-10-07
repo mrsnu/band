@@ -1,6 +1,8 @@
 #ifndef BAND_PROFILER_H_
 #define BAND_PROFILER_H_
 
+#include <json/json.h>
+
 #include <map>
 
 #include "band/common.h"

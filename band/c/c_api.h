@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "c_api_type.h"
 #include "common.h"
 
 #ifdef SWIG
@@ -27,17 +28,21 @@ extern "C" {
 #endif  // __cplusplus
 
 // Forward decl of internal types - details are in `c_api_type.h`
+typedef struct BandConfigBuilder BandConfigBuilder;
 typedef struct BandConfig BandConfig;
 typedef struct BandModel BandModel;
 typedef struct BandTensor BandTensor;
 typedef struct BandEngine BandEngine;
-typedef struct BandRequestHandle BandRequestHandle;
+typedef int BandRequestHandle;
+
+/* config builder */
+BAND_CAPI_EXPORT extern BandConfigBuilder* BandConfigBuilderCreate();
+BAND_CAPI_EXPORT extern void BandAddConfig(BandConfigBuilder* b, int field,
+                                           int count, ...);
+BAND_CAPI_EXPORT extern void BandConfigBuilderDelete(BandConfigBuilder* b);
 
 /* config */
-BAND_CAPI_EXPORT extern BandConfig* BandConfigCreate(const void* config_data,
-                                                     size_t config_size);
-BAND_CAPI_EXPORT extern BandConfig* BandConfigCreateFromFile(
-    const char* config_path);
+BAND_CAPI_EXPORT extern BandConfig* BandConfigCreate(BandConfigBuilder* b);
 BAND_CAPI_EXPORT extern void BandConfigDelete(BandConfig* config);
 
 /* model */
@@ -72,10 +77,10 @@ BAND_CAPI_EXPORT extern int BandEngineGetNumOutputTensors(BandEngine* engine,
                                                           BandModel* model);
 // Create a input tensor for given model's n'th index
 BAND_CAPI_EXPORT extern BandTensor* BandEngineCreateInputTensor(
-    BandEngine* engine, BandModel* model, int index);
+    BandEngine* engine, BandModel* model, size_t index);
 // Create a output tensor for given model's n'th index
 BAND_CAPI_EXPORT extern BandTensor* BandEngineCreateOutputTensor(
-    BandEngine* engine, BandModel* model, int index);
+    BandEngine* engine, BandModel* model, size_t index);
 BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSync(
     BandEngine* engine, BandModel* model, BandTensor** input_tensors,
     BandTensor** output_tensors);
@@ -83,7 +88,8 @@ BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsync(
     BandEngine* engine, BandModel* model, BandTensor** input_tensors);
 BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandRequestHandle handle,
-                                                  BandTensor** output_tensors);
+                                                  BandTensor** output_tensors,
+                                                  size_t num_outputs);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -14,13 +14,13 @@ limitations under the License.
 ==============================================================================*/
 #include "tensorflow/lite/profiling/profile_buffer.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "tensorflow/lite/testing/util.h"
 
 namespace tflite {
 namespace profiling {
@@ -102,6 +102,26 @@ TEST(ProfileBufferTest, OverFlow) {
   }
 }
 
+TEST(ProfileBufferTest, DynamicIncrease) {
+  const int max_initial_size = 4;
+  ProfileBuffer buffer{max_initial_size, true,
+                       true /*allow_dynamic_buffer_increase*/};
+  std::vector<std::string> eventNames = {"first", "second", "third", "fourth"};
+  for (int i = 0; i < 2 * max_initial_size; i++) {
+    buffer.BeginEvent(eventNames[i % 4].c_str(),
+                      ProfileEvent::EventType::DEFAULT, i, 0);
+    const size_t expected_size = i + 1;
+    EXPECT_EQ(expected_size, buffer.Size());
+  }
+  EXPECT_EQ(2 * max_initial_size, buffer.Size());
+  for (size_t j = 0; j < buffer.Size(); ++j) {
+    auto event = buffer.At(j);
+    EXPECT_EQ(eventNames[j % 4], event->tag);
+    EXPECT_EQ(ProfileEvent::EventType::DEFAULT, event->event_type);
+    EXPECT_EQ(j, event->event_metadata);
+  }
+}
+
 TEST(ProfileBufferTest, Enable) {
   ProfileBuffer buffer(/*max_size*/ 10, /*enabled*/ false);
   EXPECT_EQ(0, buffer.Size());
@@ -121,9 +141,3 @@ TEST(ProfileBufferTest, Enable) {
 }  // namespace
 }  // namespace profiling
 }  // namespace tflite
-
-int main(int argc, char** argv) {
-  ::tflite::LogToStderr();
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

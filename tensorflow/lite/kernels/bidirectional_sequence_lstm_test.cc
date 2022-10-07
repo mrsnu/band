@@ -160,20 +160,16 @@ class BidirectionalLSTMOpModel : public SingleOpModel {
     }
 
     // Adding the 2 input state tensors.
-    fw_input_activation_state_ =
-        AddInput(TensorData{TensorType_FLOAT32, {n_fw_output_ * n_batch_}},
-                 /*is_variable=*/true);
-    fw_input_cell_state_ =
-        AddInput(TensorData{TensorType_FLOAT32, {n_fw_cell_ * n_batch_}},
-                 /*is_variable=*/true);
+    fw_input_activation_state_ = AddVariableInput(
+        TensorData{TensorType_FLOAT32, {n_fw_output_ * n_batch_}});
+    fw_input_cell_state_ = AddVariableInput(
+        TensorData{TensorType_FLOAT32, {n_fw_cell_ * n_batch_}});
 
     // Adding the 2 input state tensors.
-    bw_input_activation_state_ =
-        AddInput(TensorData{TensorType_FLOAT32, {n_bw_output_ * n_batch_}},
-                 /*is_variable=*/true);
-    bw_input_cell_state_ =
-        AddInput(TensorData{TensorType_FLOAT32, {n_bw_cell_ * n_batch_}},
-                 /*is_variable=*/true);
+    bw_input_activation_state_ = AddVariableInput(
+        TensorData{TensorType_FLOAT32, {n_bw_output_ * n_batch_}});
+    bw_input_cell_state_ = AddVariableInput(
+        TensorData{TensorType_FLOAT32, {n_bw_cell_ * n_batch_}});
 
     fw_output_ = AddOutput(TensorType_FLOAT32);
 
@@ -573,7 +569,7 @@ TEST_P(LSTMOpTest, BlackBoxTestNoCifgNoPeepholeNoProjectionNoClipping) {
 
   lstm.SetInput(0, batch0_start, batch0_end);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   float* fw_golden_start = lstm_fw_golden_output;
   float* fw_golden_end =
@@ -744,7 +740,7 @@ TEST_P(LSTMOpTest, BlackBoxTestMergedOutput) {
 
   lstm.SetInput(0, batch0_start, batch0_end);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   std::vector<float> merged_expected;
   for (int k = 0; k < lstm.sequence_length() * lstm.num_batches(); k++) {
@@ -902,7 +898,7 @@ TEST(LSTMOpTest, BlackBoxTestNoCifgNoPeepholeNoProjectionNoClippingReverse) {
 
   lstm.SetInput(0, batch0_start, batch0_end);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   std::vector<float> fw_expected;
   for (int s = 0; s < lstm.sequence_length(); s++) {
@@ -1054,7 +1050,7 @@ TEST(LSTMOpTest, BlackBoxTestWithCifgWithPeepholeNoProjectionNoClipping) {
 
   lstm.SetInput(0, batch0_start, batch0_end);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   float* fw_golden_start = lstm_fw_golden_output;
   float* fw_golden_end =
@@ -1205,7 +1201,7 @@ TEST(LSTMOpTest,
 
   lstm.SetInput(0, batch0_start, batch0_end);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   std::vector<float> fw_expected;
   for (int s = 0; s < lstm.sequence_length(); s++) {
@@ -1893,7 +1889,7 @@ TEST(LSTMOpTest, BlackBoxTestWithPeepholeWithProjectionNoClipping) {
     lstm.SetInput((2 * i + 1) * lstm.num_inputs(), batch1_start, batch1_end);
   }
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   std::vector<float> expected;
   for (int i = 0; i < lstm.sequence_length(); i++) {
@@ -2595,7 +2591,7 @@ TEST(LSTMOpTest, BlackBoxTestWithPeepholeWithProjectionNoClippingBatchMajor) {
   float* batch1_end = batch1_start + input_sequence_size;
   lstm.SetInput(input_sequence_size, batch1_start, batch1_end);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   const int output_sequence_size =
       lstm.sequence_length() * lstm.num_fw_outputs();
@@ -2781,7 +2777,7 @@ TEST_P(LSTMOpTest, BlackBoxTestWithAuxInputZeroAuxWeight) {
   lstm.SetAuxInputToCellWeights(dummy_weights);
   lstm.SetAuxInputToOutputWeights(dummy_weights);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   float* fw_golden_start = lstm_fw_golden_output;
   float* fw_golden_end =
@@ -2952,7 +2948,7 @@ TEST_P(LSTMOpTest, BlackBoxTestWithAuxInput) {
   lstm.SetInput(0, batch0_start, batch0_end);
   lstm.SetAuxInput(0, batch0_start, batch0_end);
 
-  lstm.Invoke();
+  ASSERT_EQ(lstm.InvokeUnchecked(), kTfLiteOk);
 
   float* fw_golden_start = lstm_fw_golden_output;
   float* fw_golden_end =

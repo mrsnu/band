@@ -32,11 +32,11 @@
 namespace Band {
 
 typedef enum {
-  kBandAll,
-  kBandLittle,
-  kBandBig,
-  kBandPrimary,
-  kBandNumCpuMasks
+  kBandAll = 0,
+  kBandLittle = 1,
+  kBandBig = 2,
+  kBandPrimary = 3,
+  kBandNumCpuMasks = 4
 } BandCPUMaskFlags;
 
 class CpuSet {

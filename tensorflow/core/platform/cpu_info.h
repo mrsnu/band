@@ -44,7 +44,7 @@ int NumSchedulableCPUs();
 // This value is either the number of schedulable CPUs, or a value specific to
 // the underlying cluster management. Applications should assume this value can
 // change throughout the lifetime of the process. This function must not be
-// called during initialization, i.e., before before main() has started.
+// called during initialization, i.e., before main() has started.
 int MaxParallelism();
 
 // Returns an estimate for the maximum parallelism for this process on the
@@ -107,10 +107,8 @@ enum CPUFeature {
   PREFETCHW = 26,
 
   // AVX-512: 512-bit vectors (plus masking, etc.) in Knights Landing,
-  // Skylake
-  // Xeon, etc.; each of these entries is a different subset of
-  // instructions,
-  // various combinations of which occur on various CPU types.
+  // Skylake, Xeon, etc. Each of these entries is a different subset of
+  // instructions, various combinations of which occur on various CPU types.
   AVX512F = 27,        // Foundation
   AVX512CD = 28,       // Conflict detection
   AVX512ER = 29,       // Exponential and reciprocal
@@ -120,8 +118,20 @@ enum CPUFeature {
   AVX512DQ = 33,       // Dword and qword
   AVX512VBMI = 34,     // Bit manipulation
   AVX512IFMA = 35,     // Integer multiply-add
-  AVX512_4VNNIW = 36,  // Integer neural network
-  AVX512_4FMAPS = 37,  // Floating point neural network
+  AVX512_4VNNIW = 36,  // Integer neural network (Intel Xeon Phi only)
+  AVX512_4FMAPS = 37,  // Floating point neural network (Intel Xeon Phi only)
+  AVX512_VNNI = 38,    // Integer neural network
+  AVX512_BF16 = 39,    // Bfloat16 neural network
+
+  // AVX version of AVX512_VNNI in CPUs such as Alder Lake and Sapphire Rapids.
+  AVX_VNNI = 40,  // Integer neural network
+
+  // AMX: Advanced Matrix Extension in Sapphire Rapids.
+  // Perform matrix multiplication on the Tile Matrix Multiply (TMUL) unit,
+  // supporting two popular data types in neural networks, int8 and bfloat16.
+  AMX_TILE = 41,  // Tile configuration and load/store
+  AMX_INT8 = 42,  // Int8 tile matrix multiplication
+  AMX_BF16 = 43,  // Bfloat16 tile matrix multiplication
 };
 
 // Checks whether the current processor supports one of the features above.

@@ -66,10 +66,10 @@ struct MultinomialFunctor<GPUDevice, T, OutputType> {
                   typename TTypes<OutputType>::Matrix output) {
     // Uniform, [0, 1).
     typedef random::UniformDistribution<random::PhiloxRandom, float> Dist;
-    functor::FillPhiloxRandom<GPUDevice, Dist>()(ctx, d, gen, noises.data(),
-                                                 noises.size(), Dist());
+    functor::FillPhiloxRandom<GPUDevice, Dist>()(
+        ctx, d, /*key=*/nullptr, /*counter=*/nullptr, gen, noises.data(),
+        noises.size(), Dist());
 
-#if defined(EIGEN_HAS_INDEX_LIST)
     Eigen::IndexList<int, int, int> bsc;
     bsc.set(0, batch_size);
     bsc.set(1, num_samples);
@@ -81,11 +81,6 @@ struct MultinomialFunctor<GPUDevice, T, OutputType> {
 
     Eigen::IndexList<Eigen::type2index<1>, int, Eigen::type2index<1>> oso;
     oso.set(1, num_samples);
-#else
-    Eigen::array<int, 3> bsc{batch_size, num_samples, num_classes};
-    Eigen::array<int, 3> boc{batch_size, 1, num_classes};
-    Eigen::array<int, 3> oso{1, num_samples, 1};
-#endif
 
     // Calculates "scores = logits - log(-log(noises))"; B*C*S elements.
     // NOTE: we don't store back to "noises" because having it appear on both
