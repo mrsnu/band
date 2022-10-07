@@ -36,8 +36,7 @@ struct WorkerConfig {
     for (int i = 0; i < kBandNumDevices; i++) {
       workers.push_back(static_cast<BandDeviceFlags>(i));
     }
-    cpu_masks =
-        std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
+    cpu_masks = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
     num_threads = std::vector<int>(kBandNumDevices, 1);
   }
   std::vector<BandDeviceFlags> workers;
@@ -54,6 +53,7 @@ struct RuntimeConfig {
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+
  private:
   friend class RuntimeConfigBuilder;
   RuntimeConfig() {

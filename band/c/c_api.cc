@@ -14,10 +14,9 @@ std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
   return vec;
 }
 
-
 #ifdef __cplusplus
 extern "C" {
-#endif   // __cplusplus
+#endif  // __cplusplus
 
 BandConfigBuilder* BandConfigBuilderCreate() { return new BandConfigBuilder; }
 
@@ -128,9 +127,7 @@ BandConfig* BandConfigCreate(BandConfigBuilder* b) {
   return config;
 }
 
-void BandConfigDelete(BandConfig* config) {
-  delete config;
-}
+void BandConfigDelete(BandConfig* config) { delete config; }
 
 BandModel* BandModelCreate() { return new BandModel; }
 
@@ -223,16 +220,15 @@ BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
 BandRequestHandle BandEngineRequestAsync(BandEngine* engine, BandModel* model,
                                          BandTensor** input_tensors) {
   return engine->impl->InvokeAsyncModel(
-              model->impl->GetId(),
-              BandTensorArrayToVec(
-                  input_tensors, BandEngineGetNumInputTensors(engine, model)));
+      model->impl->GetId(),
+      BandTensorArrayToVec(input_tensors,
+                           BandEngineGetNumInputTensors(engine, model)));
 }
 
 BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
                           BandTensor** output_tensors, size_t num_outputs) {
-  return engine->impl->Wait(
-      handle,
-      BandTensorArrayToVec(output_tensors, num_outputs));
+  return engine->impl->Wait(handle,
+                            BandTensorArrayToVec(output_tensors, num_outputs));
 }
 
 #ifdef __cplusplus

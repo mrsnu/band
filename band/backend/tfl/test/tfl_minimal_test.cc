@@ -79,24 +79,24 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config = b.AddPlannerLogPath("band/testdata/log.csv")
-                          .AddSchedulers({kBandRoundRobin})
-                          .AddMinimumSubgraphSize(7)
-                          .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
-                          .AddCPUMask(kBandAll)
-                          .AddPlannerCPUMask(kBandPrimary)
-                          .AddWorkers({kBandCPU, kBandCPU})
-                          .AddWorkerNumThreads({3, 4})
-                          .AddWorkerCPUMasks({kBandBig, kBandLittle})
-                          .AddSmoothingFactor(0.1)
-                          .AddProfileDataPath("band/testdata/profile.json")
-                          .AddOnline(true)
-                          .AddNumWarmups(1)
-                          .AddNumRuns(1)
-                          .AddAllowWorkSteal(true)
-                          .AddAvailabilityCheckIntervalMs(30000)
-                          .AddScheduleWindowSize(10)
-                          .Build();
-  
+                             .AddSchedulers({kBandRoundRobin})
+                             .AddMinimumSubgraphSize(7)
+                             .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
+                             .AddCPUMask(kBandAll)
+                             .AddPlannerCPUMask(kBandPrimary)
+                             .AddWorkers({kBandCPU, kBandCPU})
+                             .AddWorkerNumThreads({3, 4})
+                             .AddWorkerCPUMasks({kBandBig, kBandLittle})
+                             .AddSmoothingFactor(0.1)
+                             .AddProfileDataPath("band/testdata/profile.json")
+                             .AddOnline(true)
+                             .AddNumWarmups(1)
+                             .AddNumRuns(1)
+                             .AddAllowWorkSteal(true)
+                             .AddAvailabilityCheckIntervalMs(30000)
+                             .AddScheduleWindowSize(10)
+                             .Build();
+
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
 
@@ -127,23 +127,23 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config = b.AddPlannerLogPath("band/testdata/log.csv")
-                          .AddSchedulers({kBandRoundRobin})
-                          .AddMinimumSubgraphSize(7)
-                          .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
-                          .AddCPUMask(kBandAll)
-                          .AddPlannerCPUMask(kBandPrimary)
-                          .AddWorkers({kBandCPU, kBandCPU})
-                          .AddWorkerNumThreads({3, 4})
-                          .AddWorkerCPUMasks({kBandBig, kBandLittle})
-                          .AddSmoothingFactor(0.1)
-                          .AddProfileDataPath("band/testdata/profile.json")
-                          .AddOnline(true)
-                          .AddNumWarmups(1)
-                          .AddNumRuns(1)
-                          .AddAllowWorkSteal(true)
-                          .AddAvailabilityCheckIntervalMs(30000)
-                          .AddScheduleWindowSize(10)
-                          .Build();
+                             .AddSchedulers({kBandRoundRobin})
+                             .AddMinimumSubgraphSize(7)
+                             .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
+                             .AddCPUMask(kBandAll)
+                             .AddPlannerCPUMask(kBandPrimary)
+                             .AddWorkers({kBandCPU, kBandCPU})
+                             .AddWorkerNumThreads({3, 4})
+                             .AddWorkerCPUMasks({kBandBig, kBandLittle})
+                             .AddSmoothingFactor(0.1)
+                             .AddProfileDataPath("band/testdata/profile.json")
+                             .AddOnline(true)
+                             .AddNumWarmups(1)
+                             .AddNumRuns(1)
+                             .AddAllowWorkSteal(true)
+                             .AddAvailabilityCheckIntervalMs(30000)
+                             .AddScheduleWindowSize(10)
+                             .Build();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
@@ -169,8 +169,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 
   delete input_tensor;
   delete output_tensor;
-}   // namespace
-}   // namespace Band
+}  // namespace
+}  // namespace Band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

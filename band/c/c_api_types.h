@@ -4,8 +4,8 @@
 #include <list>
 #include <memory>
 
-#include "band/config_builder.h"
 #include "band/config.h"
+#include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/model.h"
 #include "band/tensor.h"
@@ -54,7 +54,7 @@ typedef enum BandConfigField {
   BAND_WORKER_NUM_THREADS = 12,
   BAND_WORKER_ALLOW_WORKSTEAL = 13,
   BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS = 14,
-  BAND_MINIMUM_SUBGRAPH_SIZE =15,
+  BAND_MINIMUM_SUBGRAPH_SIZE = 15,
   BAND_SUBGRAPH_PREPARATION_TYPE = 16,
   BAND_CPU_MASK = 17,
 } BandConfigField;

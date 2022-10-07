@@ -95,8 +95,7 @@ class WorkerConfigBuilder {
     cpu_masks_ = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
     num_threads_ = std::vector<int>(kBandNumDevices, 1);
   }
-  WorkerConfigBuilder& AddWorkers(
-      std::vector<BandDeviceFlags> workers) {
+  WorkerConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
     workers_ = workers;
     return *this;
   }
@@ -181,8 +180,7 @@ class RuntimeConfigBuilder {
   }
 
   // Add WorkerConfig
-  RuntimeConfigBuilder& AddWorkers(
-      std::vector<BandDeviceFlags> workers) {
+  RuntimeConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
     worker_config_builder_.AddWorkers(workers);
     return *this;
   }
