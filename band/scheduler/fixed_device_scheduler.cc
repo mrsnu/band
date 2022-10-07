@@ -13,8 +13,8 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
     requests.pop_front(); // erase job
 
     int model_id = to_execute.model_id;
-    ModelConfig model_config = context.GetModelConfig(model_id);
-    int device_id = model_config.device;
+    const ModelConfig* model_config = context.GetModelConfig(model_id);
+    int device_id = model_config->device;
 
     if (0 <= device_id && device_id < kBandNumDevices)
     {
@@ -23,7 +23,7 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
       action[worker_id].push_back({to_execute, key});
     } else {
       BAND_REPORT_ERROR(DefaultErrorReporter(), "Invalid device for model %s", 
-          model_config.model_fname);
+          model_config->model_fname);
     }
   }
   return action;

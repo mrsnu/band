@@ -127,7 +127,7 @@ class Planner {
 
   std::thread planner_thread_;
   // Map structure to find assigned worker of model idx (model_id, worker_id)
-  std::map<int, int> model_worker_map_;
+  std::map<ModelId, WorkerId> model_worker_map_;
   Context* const context_;
   bool need_reschedule_ = false;
 };

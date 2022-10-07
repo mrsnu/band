@@ -305,7 +305,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
   std::vector<int> assigned_workers(workers_.size());
   for(int i=0; i<assigned_workers.size(); i++) assigned_workers[i] = 0;
   for(auto model_config : config.interpreter_config.models_config){
-    std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
+    std::unique_ptr<Model> model_ptr = std::make_unique<Model>();
     ModelId model_id;
     // Create a model for each valid backend
     // TODO(juimdpp): selectively support a single backend (based on config)
@@ -319,7 +319,6 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     // Save model and its config
     model_id = model_ptr->GetId();
     model_configs_[model_id] = model_config;
-    models_.emplace(model_id, model_ptr);
 
     // For each unassigned worker whose device matches the model's requested device, assign it to the model
     // In case # of models > # of workers, Planner::TryUpdateModelWorkerMapping will reassign later
@@ -335,6 +334,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     if(RegisterModel(model_ptr.get()) != kBandOk){
       error_reporter_->Report("Model %s could not be registered.", model_config.model_fname);
     }
+    models_.emplace(model_id, std::move(model_ptr));
   }
   return kBandOk;
 }

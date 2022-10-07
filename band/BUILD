@@ -237,8 +237,7 @@ cc_test(
         ":scheduler",
         ":model",
         ":config",
-        "@com_google_googletest//:gtest",
-        "@jsoncpp_git//:jsoncpp"
+        "@com_google_googletest//:gtest"
     ],
 )
 

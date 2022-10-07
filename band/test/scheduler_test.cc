@@ -44,10 +44,8 @@ struct MockContext : public Context {
     return kBandOk;
   }
 
-  // GetModelConfig
-  ModelConfig GetModelConfig(ModelId model_id) const override { return model_configs_.at(model_id);}
+  const ModelConfig* GetModelConfig(ModelId model_id) const override { return &(model_configs_.at(model_id));}
 
-  // GetModelWorker
   WorkerId GetModelWorker(ModelId model_id) const override{
    return model_worker_map_.at(model_id);
   }
