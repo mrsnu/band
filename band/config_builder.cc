@@ -69,34 +69,40 @@ bool WorkerConfigBuilder::IsValid(
 }
 
 bool ModelConfigBuilder::IsValid(
-  ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-    bool result = true;
-    if(models_.size()>0){
-      if(models_period_ms_.size() > 0) {
-        REPORT_IF_FALSE(ModelConfigBuilder, models_.size() == models_period_ms_.size());
-      } 
-      if(models_assigned_worker_.size() > 0) {
-        REPORT_IF_FALSE(ModelConfigBuilder, models_.size() == models_assigned_worker_.size());
-        for(int i=0; i<models_.size(); i++){
-          REPORT_IF_FALSE(ModelConfigBuilder, models_assigned_worker_[i].device == kBandCPU || 
-                                          models_assigned_worker_[i].device == kBandGPU || 
-                                          models_assigned_worker_[i].device == kBandNPU || 
-                                          models_assigned_worker_[i].device == kBandDSP);
-        }
-      } 
-      if(models_batch_size_.size() > 0) {
-        REPORT_IF_FALSE(ModelConfigBuilder, models_.size() == models_batch_size_.size());
-      } 
-      if(models_slo_us_.size() > 0) {
-        REPORT_IF_FALSE(ModelConfigBuilder, models_.size() == models_slo_us_.size());
-      } 
-      if(models_slo_scale_.size() > 0) {
-        REPORT_IF_FALSE(ModelConfigBuilder, models_.size() == models_slo_scale_.size());
-      } 
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  bool result = true;
+  if (models_.size() > 0) {
+    if (models_period_ms_.size() > 0) {
+      REPORT_IF_FALSE(ModelConfigBuilder,
+                      models_.size() == models_period_ms_.size());
     }
-    
-    return result;
+    if (models_assigned_worker_.size() > 0) {
+      REPORT_IF_FALSE(ModelConfigBuilder,
+                      models_.size() == models_assigned_worker_.size());
+      for (int i = 0; i < models_.size(); i++) {
+        REPORT_IF_FALSE(ModelConfigBuilder,
+                        models_assigned_worker_[i].device == kBandCPU ||
+                            models_assigned_worker_[i].device == kBandGPU ||
+                            models_assigned_worker_[i].device == kBandNPU ||
+                            models_assigned_worker_[i].device == kBandDSP);
+      }
+    }
+    if (models_batch_size_.size() > 0) {
+      REPORT_IF_FALSE(ModelConfigBuilder,
+                      models_.size() == models_batch_size_.size());
+    }
+    if (models_slo_us_.size() > 0) {
+      REPORT_IF_FALSE(ModelConfigBuilder,
+                      models_.size() == models_slo_us_.size());
+    }
+    if (models_slo_scale_.size() > 0) {
+      REPORT_IF_FALSE(ModelConfigBuilder,
+                      models_.size() == models_slo_scale_.size());
+    }
   }
+
+  return result;
+}
 
 bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
@@ -120,22 +126,24 @@ bool RuntimeConfigBuilder::IsValid(
   // Interdependent validation
   // Check that worker affinity matches the number of workers defined
   std::map<BandDeviceFlags, int> NumWorkersPerDevice;
-  for(int device=kBandCPU; device != kBandNumDevices; device++){
+  for (int device = kBandCPU; device != kBandNumDevices; device++) {
     NumWorkersPerDevice.emplace(static_cast<BandDeviceFlags>(device), 0);
   }
-  for(int i=0; i<worker_config_builder_.workers_.size(); i++){
-    NumWorkersPerDevice[worker_config_builder_.workers_[i]] ++;
+  for (int i = 0; i < worker_config_builder_.workers_.size(); i++) {
+    NumWorkersPerDevice[worker_config_builder_.workers_[i]]++;
   }
-  for(int i=0; i<model_config_builder_.models_assigned_worker_.size(); i++){
-    DeviceWorkerAffinityPair pair = model_config_builder_.models_assigned_worker_[i];
-    if(pair.worker < NumWorkersPerDevice[pair.device]) {
+  for (int i = 0; i < model_config_builder_.models_assigned_worker_.size();
+       i++) {
+    DeviceWorkerAffinityPair pair =
+        model_config_builder_.models_assigned_worker_[i];
+    if (pair.worker < NumWorkersPerDevice[pair.device]) {
       NumWorkersPerDevice[pair.device]--;
-    } else{
+    } else {
       result = false;
       break;
     }
   }
-  
+
   return result;
 }
 
@@ -189,7 +197,7 @@ WorkerConfig WorkerConfigBuilder::Build(
 }
 
 ModelConfig ModelConfigBuilder::Build(
-  ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   if (!IsValid(error_reporter)) {
     abort();
   }

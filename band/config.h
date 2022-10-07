@@ -46,10 +46,10 @@ struct WorkerConfig {
   int availability_check_interval_ms = 30000;
 };
 
-typedef struct DeviceWorkerAffinityPair{
-        BandDeviceFlags device;
-        int worker;
-      } DeviceWorkerAffinityPair;
+typedef struct DeviceWorkerAffinityPair {
+  BandDeviceFlags device;
+  int worker;
+} DeviceWorkerAffinityPair;
 
 struct ModelConfig {
   std::vector<std::string> models;
@@ -65,7 +65,6 @@ struct ModelConfig {
   // int64_t slo_us = -1;
   // float slo_scale = -1.f;
 };
-
 
 struct RuntimeConfig {
   int minimum_subgraph_size;

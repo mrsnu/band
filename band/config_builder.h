@@ -12,7 +12,9 @@
 namespace Band {
 
 class ProfileConfigBuilder {
-  friend class RuntimeConfigBuilder; // TODO: Find a safer way for RuntimeConfigBuilder to access variables
+  friend class RuntimeConfigBuilder;  // TODO: Find a safer way for
+                                      // RuntimeConfigBuilder to access
+                                      // variables
  public:
   ProfileConfigBuilder() {
     copy_computation_ratio_ = std::vector<int>(kBandNumDevices, 30000);
@@ -58,6 +60,7 @@ class ProfileConfigBuilder {
 // Builder for creating PlannerConfig
 class PlannerConfigBuilder {
   friend class RuntimeConfigBuilder;
+
  public:
   PlannerConfigBuilder& AddScheduleWindowSize(int schedule_window_size) {
     schedule_window_size_ = schedule_window_size;
@@ -90,6 +93,7 @@ class PlannerConfigBuilder {
 // Builder for creating WorkerConfig.
 class WorkerConfigBuilder {
   friend class RuntimeConfigBuilder;
+
  public:
   WorkerConfigBuilder() {
     for (int i = 0; i < kBandNumDevices; i++) {
@@ -133,46 +137,49 @@ class WorkerConfigBuilder {
 // Builder for creating ModelConfig. By default, no models are specified.
 class ModelConfigBuilder {
   friend class RuntimeConfigBuilder;
-  public:
-    ModelConfigBuilder& AddModels(std::vector<std::string> models){
-      models_ = models;
-      return *this;
-    }
-    ModelConfigBuilder& AddPeriodsMs(std::vector<int> models_period_ms){
-      models_period_ms_ = models_period_ms;
-      return *this;
-    }
-    ModelConfigBuilder& AddBatchSizes(std::vector<int> models_batch_size){
-      models_batch_size_ = models_batch_size;
-      return *this;
-    }
-    ModelConfigBuilder& AddAssignedWorkers(std::vector<DeviceWorkerAffinityPair> models_assigned_worker){
-      models_assigned_worker_ = models_assigned_worker;
-      return *this;
-    }
-    ModelConfigBuilder& AddWorkersAffinity(std::vector<WorkerId> models_worker_affinity){
-      models_worker_affinity_ = models_worker_affinity;
-      return *this;
-    }
-    ModelConfigBuilder& AddSlosUs(std::vector<int64_t> models_slo_us){
-      models_slo_us_ = models_slo_us;
-      return *this;
-    }
-    ModelConfigBuilder& AddSlosScale(std::vector<float> models_slo_scale){
-      models_slo_scale_ = models_slo_scale;
-      return *this;
-    }
-    ModelConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-    bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
-  private:
-    std::vector<std::string> models_;
-    std::vector<int> models_period_ms_;
-    std::vector<int> models_batch_size_;
-    std::vector<DeviceWorkerAffinityPair> models_assigned_worker_;
-    std::vector<int> models_worker_affinity_;
-    std::vector<int64_t> models_slo_us_;
-    std::vector<float> models_slo_scale_;
+ public:
+  ModelConfigBuilder& AddModels(std::vector<std::string> models) {
+    models_ = models;
+    return *this;
+  }
+  ModelConfigBuilder& AddPeriodsMs(std::vector<int> models_period_ms) {
+    models_period_ms_ = models_period_ms;
+    return *this;
+  }
+  ModelConfigBuilder& AddBatchSizes(std::vector<int> models_batch_size) {
+    models_batch_size_ = models_batch_size;
+    return *this;
+  }
+  ModelConfigBuilder& AddAssignedWorkers(
+      std::vector<DeviceWorkerAffinityPair> models_assigned_worker) {
+    models_assigned_worker_ = models_assigned_worker;
+    return *this;
+  }
+  ModelConfigBuilder& AddWorkersAffinity(
+      std::vector<WorkerId> models_worker_affinity) {
+    models_worker_affinity_ = models_worker_affinity;
+    return *this;
+  }
+  ModelConfigBuilder& AddSlosUs(std::vector<int64_t> models_slo_us) {
+    models_slo_us_ = models_slo_us;
+    return *this;
+  }
+  ModelConfigBuilder& AddSlosScale(std::vector<float> models_slo_scale) {
+    models_slo_scale_ = models_slo_scale;
+    return *this;
+  }
+  ModelConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+
+ private:
+  std::vector<std::string> models_;
+  std::vector<int> models_period_ms_;
+  std::vector<int> models_batch_size_;
+  std::vector<DeviceWorkerAffinityPair> models_assigned_worker_;
+  std::vector<int> models_worker_affinity_;
+  std::vector<int64_t> models_slo_us_;
+  std::vector<float> models_slo_scale_;
 };
 
 // Delegate for InterpreterConfigBuilder, PlannerConfigBuilder,
@@ -266,27 +273,28 @@ class RuntimeConfigBuilder {
   }
 
   // Add ModelConfig
-  RuntimeConfigBuilder& AddModels(std::vector<std::string> models){
+  RuntimeConfigBuilder& AddModels(std::vector<std::string> models) {
     model_config_builder_.AddModels(models);
     return *this;
   }
-  RuntimeConfigBuilder& AddPeriodsMs(std::vector<int> models_period_ms){
+  RuntimeConfigBuilder& AddPeriodsMs(std::vector<int> models_period_ms) {
     model_config_builder_.AddPeriodsMs(models_period_ms);
     return *this;
   }
-  RuntimeConfigBuilder& AddBatchSizes(std::vector<int> models_batch_size){
+  RuntimeConfigBuilder& AddBatchSizes(std::vector<int> models_batch_size) {
     model_config_builder_.AddBatchSizes(models_batch_size);
     return *this;
   }
-  RuntimeConfigBuilder& AddAssignedWorkers(std::vector<DeviceWorkerAffinityPair> models_assigned_worker){
+  RuntimeConfigBuilder& AddAssignedWorkers(
+      std::vector<DeviceWorkerAffinityPair> models_assigned_worker) {
     model_config_builder_.AddAssignedWorkers(models_assigned_worker);
     return *this;
   }
-  RuntimeConfigBuilder& AddSlosUs(std::vector<int64_t> models_slo_us){
+  RuntimeConfigBuilder& AddSlosUs(std::vector<int64_t> models_slo_us) {
     model_config_builder_.AddSlosUs(models_slo_us);
     return *this;
   }
-  RuntimeConfigBuilder& AddSlosScale(std::vector<float> models_slo_scale){
+  RuntimeConfigBuilder& AddSlosScale(std::vector<float> models_slo_scale) {
     model_config_builder_.AddSlosScale(models_slo_scale);
     return *this;
   }

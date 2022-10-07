@@ -302,15 +302,17 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
   ModelConfig model_config = config.model_configs;
   std::vector<int> assigned_workers(workers_.size());
   for(int i=0; i<assigned_workers.size(); i++) assigned_workers[i] = 0;
-  for(int i=0; i<model_config.models.size(); i++){
+  for (int i = 0; i < model_config.models.size(); i++) {
     std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
     ModelId model_id;
     // Create a model for each valid backend
     // TODO(juimdpp): selectively support a single backend (based on config)
     for(auto backend: valid_backends){
-      if(model_ptr->FromPath(backend, model_config.models[i].c_str()) != kBandOk){
+      if (model_ptr->FromPath(backend, model_config.models[i].c_str()) !=
+          kBandOk) {
         error_reporter_->Report("Model %s could not be instantiated for %s.",
-        model_config.models[i], BandBackendGetName(backend));
+                                model_config.models[i],
+                                BandBackendGetName(backend));
       }
     }
 
@@ -320,21 +322,23 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     models_.emplace(model_id, model_ptr);
 
     // Translate device - affinity to WorkerId
-    if(model_config.models_assigned_worker.size() > 0){
-      int j=0; 
-      for(auto worker_it = workers_.begin(); worker_it != workers_.end(); worker_it++, j++){
+    if (model_config.models_assigned_worker.size() > 0) {
+      int j = 0;
+      for (auto worker_it = workers_.begin(); worker_it != workers_.end();
+           worker_it++, j++) {
         DeviceWorkerAffinityPair pair = model_config.models_assigned_worker[i];
-        if(worker_it->second->GetDeviceFlag() == pair.device && j==pair.worker){
+        if (worker_it->second->GetDeviceFlag() == pair.device &&
+            j == pair.worker) {
           planner_->GetModelWorkerMap()[model_id] = worker_it->first;
         }
-      }  
-    }
-     
-    // Register model
-    if(RegisterModel(model_ptr.get()) != kBandOk){
-      error_reporter_->Report("Model %s could not be registered.", model_config.models[i]);
+      }
     }
 
+    // Register model
+    if(RegisterModel(model_ptr.get()) != kBandOk){
+      error_reporter_->Report("Model %s could not be registered.",
+                              model_config.models[i]);
+    }
   }
   return kBandOk;
 }

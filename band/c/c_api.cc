@@ -104,47 +104,48 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_MODEL_MODELS: {
       std::vector<std::string> models(count);
-      for(int i=0; i<count; i++){
+      for (int i = 0; i < count; i++) {
         models[i] = va_arg(vl, char*);
       }
       b->impl.AddModels(models);
-    }break;
+    } break;
     case BAND_MODEL_PERIODS: {
       std::vector<int> periods(count);
-      for(int i=0; i<count; i++){
+      for (int i = 0; i < count; i++) {
         periods[i] = va_arg(vl, int);
       }
       b->impl.AddPeriodsMs(periods);
-    }break;
+    } break;
     case BAND_MODEL_BATCH_SIZES: {
       std::vector<int> batch_sizes(count);
-      for(int i=0; i<count; i++){
+      for (int i = 0; i < count; i++) {
         batch_sizes[i] = va_arg(vl, int);
       }
       b->impl.AddBatchSizes(batch_sizes);
-    }break;
+    } break;
     case BAND_MODEL_ASSIGNED_WORKERS: {
       std::vector<Band::DeviceWorkerAffinityPair> assigned_workers(count);
-      for(int i=0; i<count; i++){
-        Band::DeviceWorkerAffinityPair temp = va_arg(vl, Band::DeviceWorkerAffinityPair);
+      for (int i = 0; i < count; i++) {
+        Band::DeviceWorkerAffinityPair temp =
+            va_arg(vl, Band::DeviceWorkerAffinityPair);
         assigned_workers[i] = temp;
       }
       b->impl.AddAssignedWorkers(assigned_workers);
-    }break;
+    } break;
     case BAND_MODEL_SLOS_US: {
       std::vector<int64_t> slo_us(count);
-      for(int i=0; i<count; i++){
+      for (int i = 0; i < count; i++) {
         slo_us[i] = va_arg(vl, int64_t);
       }
       b->impl.AddSlosUs(slo_us);
-    }break;
+    } break;
     case BAND_MODEL_SLOS_SCALE: {
       std::vector<float> slo_scale(count);
-      for(int i=0; i<count; i++){
+      for (int i = 0; i < count; i++) {
         slo_scale[i] = va_arg(vl, float);
       }
       b->impl.AddSlosScale(slo_scale);
-    }break;
+    } break;
     case BAND_MINIMUM_SUBGRAPH_SIZE: {
       int arg = va_arg(vl, int);
       b->impl.AddMinimumSubgraphSize(arg);

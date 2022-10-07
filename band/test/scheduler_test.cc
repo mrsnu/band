@@ -17,7 +17,7 @@ struct MockContext : public Context {
   std::vector<WorkerId> list_idle_workers_;
   std::map<ModelId, WorkerId> model_worker_map_;
   mutable int w;
-  
+
   MockContext(std::set<WorkerId> idle_workers) : idle_workers_(idle_workers) {
     w = 0;
     list_idle_workers_.assign(idle_workers.begin(), idle_workers.end());
@@ -31,10 +31,11 @@ struct MockContext : public Context {
   }
 
   WorkerId GetModelWorker(ModelId model_id) const override{
-    if(w > list_idle_workers_.size()) return -1;
-    else return list_idle_workers_[w++];
+    if (w > list_idle_workers_.size())
+      return -1;
+    else
+      return list_idle_workers_[w++];
   }
-
 };
 
 // <request model ids, available workers>
@@ -74,7 +75,7 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
 TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
   // Set configs in context
   std::deque<int> request_models = std::get<0>(GetParam());
-  std::set<int> available_workers = std::get<1>(GetParam());  
+  std::set<int> available_workers = std::get<1>(GetParam());
 
   std::deque<Job> requests;
   for (auto it = request_models.begin(); it != request_models.end(); it++) {
@@ -85,18 +86,17 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
   MockContext context(available_workers);
   FixedDeviceScheduler fd_scheduler;
   auto action = fd_scheduler.Schedule(context, requests);
-  
+
   int count_scheduled = 0;
   for(auto scheduled_jobs: action){
     count_scheduled += scheduled_jobs.second.size();
   }
-  
+
   // Each model made a single request and should be scheduled once
   EXPECT_EQ(count_scheduled, count_requests);
   // requests should be deleted
   EXPECT_EQ(requests.size(), 0);
-  
-  
+
   std::set<ModelId> scheduled_models;
   // each worker should have a single model scheduled
   for(auto scheduled_model: action){
@@ -106,7 +106,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
     }
   }
   // Each requested model should be scheduled
-  for(auto it = request_models.begin(); it != request_models.end(); it++){
+  for (auto it = request_models.begin(); it != request_models.end(); it++) {
     EXPECT_NE(scheduled_models.find((*it)), scheduled_models.end());
   }
 }
@@ -119,11 +119,9 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(std::deque<int>{0, 1, 2}, std::set<int>{0, 1})));
 
 INSTANTIATE_TEST_SUITE_P(
-  FixedDeviceTests, ConfigLevelTestsFixture,
-  testing::Values(
-    std::make_tuple(std::deque<int>{0, 1, 2}, std::set<int>{0, 1, 2})
-  )
-);
+    FixedDeviceTests, ConfigLevelTestsFixture,
+    testing::Values(std::make_tuple(std::deque<int>{0, 1, 2},
+                                    std::set<int>{0, 1, 2})));
 
 }  // namespace Test
 }  // namespace Band
