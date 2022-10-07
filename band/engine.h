@@ -126,7 +126,7 @@ class Engine : public Context {
   BandStatus TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
-  WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const; // use
+  WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const;
   Interface::IInterpreter* GetInterpreter(const SubgraphKey& key);
   const Interface::IInterpreter* GetInterpreter(const SubgraphKey& key) const;
 

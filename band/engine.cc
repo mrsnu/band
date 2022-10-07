@@ -339,6 +339,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       error_reporter_->Report("Model %s could not be registered.",
                               model_config.models[i]);
     }
+    models_.emplace(model_id, std::move(model_ptr));
   }
   return kBandOk;
 }
