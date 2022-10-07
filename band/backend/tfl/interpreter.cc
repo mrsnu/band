@@ -276,8 +276,7 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
   }
 
   tflite::ops::builtin::BuiltinOpResolver resolver;
-  tflite::InterpreterBuilder builder(*tf_model->GetFlatBufferModel(),
-                                           resolver);
+  tflite::InterpreterBuilder builder(*tf_model->GetFlatBufferModel(), resolver);
   TfLiteStatus status = builder(&interpreter);
 
   auto delegate = GetDeviceDelegate(device);
