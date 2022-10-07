@@ -19,7 +19,7 @@ BandStatus Context::Invoke(const SubgraphKey& key) {}
 
 const ModelSpec* Context::GetModelSpec(ModelId model_id) {}
 
-ModelConfig Context::GetModelConfig(ModelId model_id) const {}
+int Context::GetModelConfigIdx(ModelId model_id) const {}
 WorkerId Context::GetModelWorker(ModelId model_id) const {}
 
 std::pair<SubgraphKey, int64_t> Context::GetShortestLatency(

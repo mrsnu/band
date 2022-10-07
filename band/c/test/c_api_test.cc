@@ -100,7 +100,11 @@ TEST(CApi, EngineSimpleInvoke) {
 }
 
 TEST(CApi, EngineFixedDeviceInvoke){
-  BandConfig* config = BandConfigCreateFromFile("band/testdata/config_fixed_device.json");
+  BandConfigBuilder* b = BandConfigBuilderCreate();
+  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1, "band/testdata/log.csv");
+  BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandFixedDevice);
+  BandAddConfig(b, BAND_MODEL_MODELS, 1, "band/testdata/add.bin");
+  BandConfig* config = BandConfigCreate(b);
   EXPECT_NE(config, nullptr);
   
   BandEngine* engine = BandEngineCreate(config);

@@ -18,6 +18,8 @@ cc_library(
     hdrs = [
         "common.h",
         "context.h",
+        "config.h",
+        "cpu.h",
         "error_reporter.h",
         "logger.h",
     ],

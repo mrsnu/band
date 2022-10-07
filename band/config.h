@@ -46,6 +46,27 @@ struct WorkerConfig {
   int availability_check_interval_ms = 30000;
 };
 
+typedef struct DeviceWorkerAffinityPair{
+        BandDeviceFlags device;
+        int worker;
+      } DeviceWorkerAffinityPair;
+
+struct ModelConfig {
+  std::vector<std::string> models;
+  std::vector<int> models_period_ms;
+  std::vector<DeviceWorkerAffinityPair> models_assigned_worker;
+  std::vector<int> models_batch_size;
+  std::vector<int64_t> models_slo_us;
+  std::vector<float> models_slo_scale;
+
+  // BandDeviceFlags worker = kBandCPU;
+  // WorkerId affinity = 0;
+  // int batch_size = 1;
+  // int64_t slo_us = -1;
+  // float slo_scale = -1.f;
+};
+
+
 struct RuntimeConfig {
   int minimum_subgraph_size;
   BandSubgraphPreparationType subgraph_preparation_type;
@@ -53,6 +74,7 @@ struct RuntimeConfig {
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  ModelConfig model_configs;
 
  private:
   friend class RuntimeConfigBuilder;

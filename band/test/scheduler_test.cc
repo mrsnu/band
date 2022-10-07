@@ -14,11 +14,14 @@ namespace Test {
 
 struct MockContext : public Context {
   std::set<WorkerId> idle_workers_;
-  std::map<ModelId, ModelConfig> model_configs_;
+  std::vector<WorkerId> list_idle_workers_;
   std::map<ModelId, WorkerId> model_worker_map_;
-  std::deque<Job> requests;
+  mutable int w;
   
-  MockContext(std::set<WorkerId> idle_workers) : idle_workers_(idle_workers) {}
+  MockContext(std::set<WorkerId> idle_workers) : idle_workers_(idle_workers) {
+    w = 0;
+    list_idle_workers_.assign(idle_workers.begin(), idle_workers.end());
+  }
 
   std::set<WorkerId> GetIdleWorkers() const override { return idle_workers_; }
 
@@ -27,30 +30,11 @@ struct MockContext : public Context {
     return SubgraphKey(model_id, worker_id, {0}, {0});
   }
 
-  BandStatus Init(const RuntimeConfig& config) override {
-    WorkerId worker_id = *idle_workers_.begin();
-    for(auto model_config: config.interpreter_config.models_config){
-      Model model;
-      ModelId model_id;
-      if(model.FromPath(kBandTfLite, model_config.model_fname.c_str()) != kBandOk){
-        error_reporter_->Report("Model %s could not be instantiated for %s.",
-        model_config.model_fname, BandBackendGetName(kBandTfLite));
-      }
-      model_id = model.GetId();
-      model_configs_[model_id] = model_config;
-      model_worker_map_[model_id] = worker_id++;
-      requests.emplace_back(Job(model_id));
-    }
-    return kBandOk;
-  }
-
-  // GetModelConfig
-  ModelConfig GetModelConfig(ModelId model_id) const override { return model_configs_.at(model_id);}
-
-  // GetModelWorker
   WorkerId GetModelWorker(ModelId model_id) const override{
-   return model_worker_map_.at(model_id);
+    if(w > list_idle_workers_.size()) return -1;
+    else return list_idle_workers_[w++];
   }
+
 };
 
 // <request model ids, available workers>
@@ -61,7 +45,7 @@ struct ModelLevelTestsFixture
 // <request config path string, available workers>
 struct ConfigLevelTestsFixture
     : public testing::TestWithParam<
-          std::tuple<std::string, std::set<int>>> {};
+          std::tuple<std::deque<int>, std::set<int>>> {};
 
 TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
   std::deque<int> request_models = std::get<0>(GetParam());
@@ -89,33 +73,31 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
 
 TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
   // Set configs in context
-  std::string request_config_string = std::get<0>(GetParam());
-  std::set<int> available_workers = std::get<1>(GetParam());
+  std::deque<int> request_models = std::get<0>(GetParam());
+  std::set<int> available_workers = std::get<1>(GetParam());  
 
-  RuntimeConfig request_config;
-  ParseRuntimeConfigFromJson(request_config_string, request_config);
+  std::deque<Job> requests;
+  for (auto it = request_models.begin(); it != request_models.end(); it++) {
+    requests.emplace_back(Job(*it));
+  }
+  const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  context.Init(request_config);
   FixedDeviceScheduler fd_scheduler;
-  auto requests = context.requests;
-  auto action = fd_scheduler.Schedule(context, context.requests);
+  auto action = fd_scheduler.Schedule(context, requests);
   
   int count_scheduled = 0;
   for(auto scheduled_jobs: action){
     count_scheduled += scheduled_jobs.second.size();
   }
   
-  // Each model should be scheduled
-  EXPECT_EQ(count_scheduled, requests.size());
+  // Each model made a single request and should be scheduled once
+  EXPECT_EQ(count_scheduled, count_requests);
   // requests should be deleted
-  EXPECT_EQ(context.requests.size(), 0);
+  EXPECT_EQ(requests.size(), 0);
   
-  std::set<ModelId> requested_models;
+  
   std::set<ModelId> scheduled_models;
-  for(auto it = requests.begin(); it != requests.end(); it++){
-    requested_models.insert((*it).model_id);
-  }
   // each worker should have a single model scheduled
   for(auto scheduled_model: action){
     EXPECT_EQ(scheduled_model.second.size(), 1);
@@ -124,7 +106,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
     }
   }
   // Each requested model should be scheduled
-  for(auto it = requested_models.begin(); it != requested_models.end(); it++){
+  for(auto it = request_models.begin(); it != request_models.end(); it++){
     EXPECT_NE(scheduled_models.find((*it)), scheduled_models.end());
   }
 }
@@ -139,7 +121,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
   FixedDeviceTests, ConfigLevelTestsFixture,
   testing::Values(
-    std::make_tuple("band/testdata/config.json", std::set<int>{0, 1, 2})
+    std::make_tuple(std::deque<int>{0, 1, 2}, std::set<int>{0, 1, 2})
   )
 );
 
