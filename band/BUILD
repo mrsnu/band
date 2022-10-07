@@ -141,13 +141,8 @@ cc_library(
 
 cc_library(
     name = "config",
-    srcs = [
-        "config.cc",
-        "json_util.cc",
-    ],
     hdrs = [
         "config.h",
-        "json_util.h",
     ],
     linkopts = select({
         "//tensorflow:windows": [],
@@ -159,7 +154,6 @@ cc_library(
     deps = [
         ":common",
         ":cpu",
-        "@jsoncpp_git//:jsoncpp",
     ],
 )
 
@@ -274,6 +268,7 @@ cc_library(
             ":backend_factory",
             ":common",
             ":config",
+            ":json_util",
             ":interface",
             ":model",
             ":planner",
@@ -282,6 +277,43 @@ cc_library(
             ":time",
             ":worker",
         ],
+)
+
+cc_library(
+    name = "json_util",
+    srcs = ["json_util.cc"],
+    hdrs = ["json_util.h"],
+    linkopts = select({
+        "//tensorflow:windows": [],
+        "//conditions:default": [
+            "-lm",
+            "-ldl",
+        ],
+    }),
+    deps = [
+        ":common",
+        "@jsoncpp_git//:jsoncpp",
+    ]
+)
+
+cc_library(
+    name = "macros",
+    hdrs = ["macros.h"],
+)
+
+cc_library(
+    name = "config_builder",
+    srcs = ["config_builder.cc"],
+    hdrs = ["config_builder.h"],
+    visibility = [
+        "//band:__subpackages__",
+    ],
+    deps = [
+        ":common",
+        ":cpu",
+        ":config",
+        ":macros"
+    ],
 )
 
 exports_files(glob([
@@ -325,6 +357,16 @@ cc_test(
     srcs = ["test/time_test.cc"],
     deps = [
         ":time",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "config_builder_test",
+    srcs = ["config_builder_test.cc"],
+    data = ["//band:testdata/config.json"],
+    deps = [
+        ":config_builder",
         "@com_google_googletest//:gtest",
     ],
 )

@@ -6,6 +6,8 @@
 #include "band/common.h"
 #include "band/config.h"
 
+#include <json/json.h>
+
 namespace Band {
 class Profiler {
  public:

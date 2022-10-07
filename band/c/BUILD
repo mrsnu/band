@@ -46,6 +46,7 @@ cc_library(
     copts = band_copts(),
     deps = [
         ":c_api_type",
+        "//band:config_builder",
         "//band:common",
         "//band:framework",
     ],
@@ -59,6 +60,7 @@ cc_library(
     visibility = ["//visibility:private"],
     deps = [
         ":common",
+        "//band:config_builder",
         "//band:common",
         "//band:framework",
     ],

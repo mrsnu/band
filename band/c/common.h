@@ -39,6 +39,14 @@ typedef enum BandSchedulerType {
   kNumSchedulerTypes = 7
 } BandSchedulerType;
 
+typedef enum BandSubgraphPreparationType {
+  kBandNoFallbackSubgraph = 0,
+  kBandFallbackPerDevice = 1,
+  kBandUnitSubgraph = 2,
+  kBandMergeUnitSubgraph = 3,
+  kBandNumSubgraphPreparationType = 4,
+} BandSubgraphPreparationType;
+
 // Fixed size list of integers. Used for dimensions and inputs/outputs tensor
 // indices
 typedef struct BandIntArray {
