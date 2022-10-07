@@ -1,8 +1,28 @@
-load("//band:band.bzl", "band_copts")
+load(
+    "//band:band.bzl", 
+    "band_cc_shared_object",
+    "band_copts",
+)
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
+)
+
+band_cc_shared_object(
+    name = "band_c",
+    linkopts = select({
+        "//tensorflow:windows": [],
+        "//conditions:default": [
+            "-z defs",
+            "-Wl,--version-script,$(location //band/c:version_scripts.lds)",
+        ],
+    }),
+    per_os_targets = True,
+    deps = [
+      ":c_api",
+      ":version_scripts.lds",
+    ]
 )
 
 cc_library(

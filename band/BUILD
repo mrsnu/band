@@ -1,10 +1,73 @@
 load("//band:band.bzl", "band_copts")
 
-# TODO: Find a way to automatically add `--define tflite=true`
-# to band/backend/tfl
+config_setting(
+    name = "debug",
+    values = {
+        "compilation_mode": "dbg",
+    },
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "optimized",
+    values = {
+        "compilation_mode": "opt",
+    },
+    visibility = ["//visibility:public"],
+)
+
+# TFLite backend setting.
 config_setting(
     name = "tflite",
     define_values = {"tflite": "true"},
+    visibility = ["//visibility:public"],
+)
+
+# MNN backend setting.
+config_setting(
+    name = "mnn",
+    define_values = {"tflite": "true"},
+    visibility = ["//visibility:public"],
+)
+
+# Android config settings
+config_setting(
+    name = "android",
+    flag_values = {},
+    values = {
+        "crosstool_top": "//external:android/crosstool"
+    },
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "android_arm64",
+    flag_values = {},
+    values = dict(
+        {"crosstool_top": "//external:android/crosstool"},
+        cpu = "arm64-v8a",
+    ),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "android_arm64_tflite",
+    flag_values = {},
+    define_values = {
+        "tflite": "true",
+        "mnn": "false"
+    },
+    values = dict(
+        {"crosstool_top": "//external:android/crosstool"},
+        cpu = "arm64-v8a",
+    ),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "windows",
+    flag_values = {},
+    values = {"cpu": "x64_windows"},
     visibility = ["//visibility:public"],
 )
 
