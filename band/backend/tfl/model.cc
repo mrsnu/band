@@ -10,17 +10,21 @@ TfLiteModel::TfLiteModel(ModelId id) : Interface::IModel(id) {}
 
 BandBackendType TfLiteModel::GetBackendType() const { return kBandTfLite; }
 
-BandStatus TfLiteModel::FromPath(const char* filename) {
+absl::Status TfLiteModel::FromPath(const char* filename) {
   // TODO: Add Band TFLBackend error reporter
   flat_buffer_model_ = tflite::FlatBufferModel::BuildFromFile(filename);
-  return flat_buffer_model_ ? kBandOk : kBandError;
+  return flat_buffer_model_
+             ? absl::OkStatus()
+             : absl::InternalError("Converting model from a file failed.");
 }
 
-BandStatus TfLiteModel::FromBuffer(const char* buffer, size_t buffer_size) {
+absl::Status TfLiteModel::FromBuffer(const char* buffer, size_t buffer_size) {
   // TODO: Add Band TFLBackend error reporter
   flat_buffer_model_ =
       tflite::FlatBufferModel::BuildFromBuffer(buffer, buffer_size);
-  return flat_buffer_model_ ? kBandOk : kBandError;
+  return flat_buffer_model_
+             ? absl::OkStatus()
+             : absl::InternalError("Converting model from a buffer failed.");
 }
 
 bool TfLiteModel::IsInitialized() const {

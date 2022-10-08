@@ -30,8 +30,8 @@ class Planner {
   explicit Planner(Context* context);
   ~Planner();
 
-  BandStatus Init(const PlannerConfig& config);
-  BandStatus AddScheduler(std::unique_ptr<IScheduler> scheduler);
+  absl::Status Init(const PlannerConfig& config);
+  absl::Status AddScheduler(std::unique_ptr<IScheduler> scheduler);
 
   // Enqueues a job to a worker request queue.
   JobId EnqueueRequest(Job job, bool push_front = false);
@@ -66,7 +66,7 @@ class Planner {
     return model_execution_count_;
   }
   // Sets the callback function pointer to report the end of invoke.
-  void SetEndInvokeFunction(std::function<void(int, BandStatus)> on_end_invoke);
+  void SetEndInvokeFunction(std::function<void(int, absl::Status)> on_end_invoke);
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
@@ -90,7 +90,7 @@ class Planner {
   // Set the job status and enqueue to the finished queue.
   void HandleSLOViolatedJob(Job& job);
   // Update the job information based on next target key
-  void UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key);
+  void UpdateJobScheduleStatus(Job& job, SubgraphKey& target_key);
   // Update `model_worker_map_`.
   void TryUpdateModelWorkerMapping();
   bool IsJobIdValid(int job_id);
@@ -105,7 +105,7 @@ class Planner {
   ConcurrentJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
-  std::function<void(int, BandStatus)> on_end_invoke_;
+  std::function<void(int, absl::Status)> on_end_invoke_;
 
   // Request Queue
   ConcurrentJobQueue requests_;

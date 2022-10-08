@@ -10,30 +10,36 @@ const WorkerWaitingTime& Context::GetWorkerWaitingTime() const {}
 
 std::set<WorkerId> Context::GetIdleWorkers() const {}
 
-SubgraphKey Context::GetModelSubgraphKey(ModelId model_id,
-                                         WorkerId worker_id) const {}
+absl::StatusOr<SubgraphKey> Context::GetModelSubgraphKey(
+    ModelId model_id, WorkerId worker_id) const {
+  return absl::UnimplementedError("Not implemented.");
+}
 
 bool Context::IsEnd(const SubgraphKey& key) const {}
 
-BandStatus Context::Invoke(const SubgraphKey& key) {}
+absl::Status Context::Invoke(const SubgraphKey& key) {}
 
 const ModelSpec* Context::GetModelSpec(ModelId model_id) {}
 
-std::pair<SubgraphKey, int64_t> Context::GetShortestLatency(
+// TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+std::pair<int, int64_t> Context::GetShortestLatency(
     int model_id, std::set<int> resolved_tensors, int64_t start_time,
     const std::map<WorkerId, int64_t>& worker_waiting,
     SubgraphKey preceded_subgraph_index) const {}
 
-std::pair<std::vector<SubgraphKey>, int64_t>
+// TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+std::pair<std::vector<int>, int64_t>
 Context::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx,
     const std::map<WorkerId, int64_t>& worker_waiting) const {}
 
-std::pair<std::vector<SubgraphKey>, int64_t>
+// TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+std::pair<std::vector<int>, int64_t>
 Context::GetSubgraphWithShortestLatency(
     Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {}
 
-SubgraphKey Context::GetSubgraphIdxSatisfyingSLO(
+// TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+int Context::GetSubgraphIdxSatisfyingSLO(
     Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
     const std::set<WorkerId>& idle_workers) const {}
 
@@ -54,9 +60,13 @@ void Context::PrepareReenqueue(Job& job) {}
 
 void Context::EnqueueFinishedJob(Job& job) {}
 
-Worker* Context::GetWorker(WorkerId id) {}
+absl::StatusOr<Worker*> Context::GetWorker(WorkerId id) {}
 
-BandStatus Context::TryCopyInputTensors(const Job& job) { return kBandOk; }
+absl::Status Context::TryCopyInputTensors(const Job& job) {
+  return absl::OkStatus();
+}
 
-BandStatus Context::TryCopyOutputTensors(const Job& job) { return kBandOk; }
+absl::Status Context::TryCopyOutputTensors(const Job& job) {
+  return absl::OkStatus();
+}
 }  // namespace Band

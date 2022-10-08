@@ -113,16 +113,14 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
   return model_spec;
 }
 
-BandStatus TfLiteInterpreter::FromModel(Interface::IModel* model,
-                                        WorkerId worker_id,
-                                        BandDeviceFlags device,
-                                        std::set<int> ops) {
-  TfLiteStatus status = kTfLiteOk;
+absl::StatusOr<SubgraphKey> TfLiteInterpreter::FromModel(
+    Interface::IModel* model, WorkerId worker_id, BandDeviceFlags device,
+    std::set<int> ops) {
   std::unique_ptr<tflite::Interpreter> interpreter =
       CreateTfLiteInterpreter(model, device, ops);
 
   if (!interpreter) {
-    return kBandError;
+    return absl::InternalError("Failed to load interpreter.");
   }
 
   if (worker_id_ == -1) {
@@ -130,23 +128,27 @@ BandStatus TfLiteInterpreter::FromModel(Interface::IModel* model,
   }
 
   if (worker_id != worker_id_) {
-    return kBandError;
+    return absl::InvalidArgumentError(
+        "worker_id must be the same as the interpreter's worker.");
   }
 
   // model-level subgraph
   if (ops.size() == 0) {
-    interpreters_[SubgraphKey(model->GetId(), worker_id)] =
-        std::move(interpreter);
+    auto subgraph_key =
+        IInterpreter::CreateSubgraphKey(model->GetId(), worker_id);
+    interpreters_[subgraph_key] = std::move(interpreter);
+    return subgraph_key;
   } else {
     auto vec2set = [](std::vector<int> vec) {
       return std::set<int>(vec.begin(), vec.end());
     };
-    interpreters_[SubgraphKey(
+    auto subgraph_key = IInterpreter::CreateSubgraphKey(
         model->GetId(), worker_id, vec2set(interpreter->inputs()),
-        vec2set(interpreter->outputs()))] = std::move(interpreter);
+        vec2set(interpreter->outputs()));
+    interpreters_.emplace(subgraph_key, std::move(interpreter));
+    subgraph_keys_.emplace(model->GetId(), subgraph_key);
+    return subgraph_key;
   }
-
-  return GetBandStatus(status);
 }
 
 BandBackendType TfLiteInterpreter::GetBackendType() const {
@@ -155,65 +157,76 @@ BandBackendType TfLiteInterpreter::GetBackendType() const {
 
 const std::vector<int>& TfLiteInterpreter::GetInputs(
     const SubgraphKey& key) const {
-  return GetInterpreter(key)->inputs();
+  auto interpreter = GetInterpreter(key);
+  return interpreter->inputs();
 }
 
 const std::vector<int>& TfLiteInterpreter::GetOutputs(
     const SubgraphKey& key) const {
-  return GetInterpreter(key)->outputs();
+  auto interpreter = GetInterpreter(key);
+  return interpreter->outputs();
 }
 
 const char* TfLiteInterpreter::GetInputName(const SubgraphKey& key,
                                             int index) const {
-  return GetInterpreter(key)->GetInputName(index);
+  auto interpreter = GetInterpreter(key);
+  return interpreter->GetInputName(index);
 }
 
 const char* TfLiteInterpreter::GetOutputName(const SubgraphKey& key,
                                              int index) const {
-  return GetInterpreter(key)->GetOutputName(index);
+  auto interpreter = GetInterpreter(key);
+  return interpreter->GetOutputName(index);
 }
 
 size_t TfLiteInterpreter::GetNumTensors(const SubgraphKey& key) const {
-  return GetInterpreter(key)->tensors_size();
+  auto interpreter = GetInterpreter(key);
+  return interpreter->tensors_size();
 }
 
 size_t TfLiteInterpreter::GetNumNodes(const SubgraphKey& key) const {
-  return GetInterpreter(key)->nodes_size();
+  auto interpreter = GetInterpreter(key);
+  return interpreter->nodes_size();
 }
 
 std::shared_ptr<Interface::ITensorView> TfLiteInterpreter::GetTensorView(
     const SubgraphKey& key, int index) {
-  return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
+  auto interpreter = GetInterpreter(key);
+  return std::make_shared<TfLiteTensorView>(interpreter->tensor(index));
 }
 
-SubgraphKey TfLiteInterpreter::GetModelSubgraphKey(ModelId model_id) const {
-  // doesn't need to validate worker id
-  // since it creates invalid subgraph key
-  return SubgraphKey(model_id, worker_id_);
+absl::StatusOr<SubgraphKey> TfLiteInterpreter::GetModelSubgraphKey(
+    ModelId model_id) const {
+  auto subgraph_key_it = subgraph_keys_.find(model_id);
+  if (subgraph_key_it == subgraph_keys_.end()) {
+    return absl::NotFoundError(
+        "There is no registered subgraph for the given model_id");
+  }
+  return subgraph_key_it->second;
 }
 
 bool TfLiteInterpreter::HasSubgraph(const SubgraphKey& key) const {
   return interpreters_.find(key) != interpreters_.end();
 }
 
-BandStatus TfLiteInterpreter::InvokeSubgraph(const SubgraphKey& key) {
+absl::Status TfLiteInterpreter::InvokeSubgraph(const SubgraphKey& key) {
   if (!HasSubgraph(key)) {
-    return kBandError;
+    return absl::UnavailableError("Subgraph is not available.");
   }
-  BandStatus status = GetBandStatus(interpreters_[key]->Invoke());
+  absl::Status status = GetBandStatus(interpreters_[key]->Invoke());
   BAND_LOG_INTERNAL(BAND_LOG_INFO, "Invoke %d", status);
   return status;
 }
 
 tflite::Interpreter* TfLiteInterpreter::GetInterpreter(const SubgraphKey& key) {
   auto it = interpreters_.find(key);
-  return it != interpreters_.end() ? it->second.get() : nullptr;
+  return it->second.get();
 }
 
 const tflite::Interpreter* TfLiteInterpreter::GetInterpreter(
     const SubgraphKey& key) const {
   auto it = interpreters_.find(key);
-  return it != interpreters_.end() ? it->second.get() : nullptr;
+  return it->second.get();
 }
 
 // Discard nnapi backend for devices that has direct support
@@ -281,28 +294,29 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
 
   auto delegate = GetDeviceDelegate(device);
 
-  if (delegate.first == kBandError || !interpreter) {
+  if (!delegate.ok() || !interpreter) {
     return nullptr;
   } else {
   }
 
-  if (device != kBandCPU && GetBandStatus(interpreter->ModifyGraphWithDelegate(
-                                delegate.second)) != kBandOk) {
+  if (device != kBandCPU &&
+      !GetBandStatus(interpreter->ModifyGraphWithDelegate(delegate.value()))
+           .ok()) {
     return nullptr;
   }
 
-  if (GetBandStatus(interpreter->AllocateTensors()) != kBandOk) {
+  if (!GetBandStatus(interpreter->AllocateTensors()).ok()) {
     return nullptr;
   }
 
   return interpreter;
 }
 
-std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
+absl::StatusOr<TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
     BandDeviceFlags device) {
   auto delegate_it = delegates_.find(device);
   if (delegate_it != delegates_.end()) {
-    return {kBandOk, delegate_it->second.get()};
+    return delegate_it->second.get();
   } else {
     tflite::Interpreter::TfLiteDelegatePtr target_delegate =
         tflite::Interpreter::TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
@@ -312,10 +326,9 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
       case kBandCPU: {
         // TODO #23: XNNPACK seems inefficient than default CPU
         // Only valid case to return Ok with nullptr
-        return {kBandOk, nullptr};
+        return nullptr;
         break;
       }
-
 #if defined(__ANDROID__)
       case kBandGPU: {
         TfLiteGpuDelegateOptionsV2 gpu_opts =
@@ -336,11 +349,9 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
             TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
         break;
       }
-
       case kBandDSP:
       case kBandNPU: {
         string_device_names_list = tflite::nnapi::GetDeviceNamesList();
-
         // TODO #23 : Add more nnapi names
         // Possible device runtime names
         // nnapi : nnapi-default, nnapi-reference
@@ -387,25 +398,23 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
             }
           }
         }
-
         break;
       }
-
 #endif  // defined(__ANDROID__)
-
       default: {
-        return {kBandError, nullptr};
+        return absl::InvalidArgumentError("The given device flag is invalid.");
         break;
       }
     }
-
     bool success = target_delegate != nullptr;
-
     if (success) {
       delegates_.insert({device, std::move(target_delegate)});
     }
 
-    return {success ? kBandOk : kBandError, target_delegate.get()};
+    if (!success) {
+      return absl::NotFoundError("Target delegate cannot be found.");
+    }
+    return target_delegate.get();
   }
 }  // namespace TfLite
 

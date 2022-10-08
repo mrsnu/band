@@ -33,9 +33,9 @@ class Context {
   Context(ErrorReporter* error_reporeter = DefaultErrorReporter());
   virtual ~Context() = default;
 
-  virtual BandStatus Init(const RuntimeConfig& config) {
+  virtual absl::Status Init(const RuntimeConfig& config) {
     BAND_NOT_IMPLEMENTED;
-    return kBandOk;
+    return absl::OkStatus();
   };
 
   /* worker */
@@ -44,10 +44,10 @@ class Context {
   virtual std::set<WorkerId> GetIdleWorkers() const;
 
   /* subgraph */
-  virtual SubgraphKey GetModelSubgraphKey(ModelId model_id,
+  virtual absl::StatusOr<SubgraphKey> GetModelSubgraphKey(ModelId model_id,
                                           WorkerId worker_id) const;
   virtual bool IsEnd(const SubgraphKey& key) const;
-  virtual BandStatus Invoke(const SubgraphKey& key);
+  virtual absl::Status Invoke(const SubgraphKey& key);
 
   /* model */
   virtual const ModelSpec* GetModelSpec(ModelId model_id);
@@ -61,21 +61,25 @@ class Context {
   // the final op (of the model) in mind.
 
   // TODO: replace subgraph idx to subgraph key in below functions
-  virtual std::pair<SubgraphKey, int64_t> GetShortestLatency(
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  virtual std::pair<int, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting,
-      SubgraphKey preceded_subgraph_index = {}) const;
+      SubgraphKey preceded_subgraph_index) const;
 
-  virtual std::pair<std::vector<SubgraphKey>, int64_t>
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  virtual std::pair<std::vector<int>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
       const std::map<WorkerId, int64_t>& worker_waiting) const;
 
-  virtual std::pair<std::vector<SubgraphKey>, int64_t>
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  virtual std::pair<std::vector<int>, int64_t>
   GetSubgraphWithShortestLatency(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const;
 
-  virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  virtual int GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const;
 
@@ -94,11 +98,11 @@ class Context {
 
   /* getters */
   virtual ErrorReporter* GetErrorReporter() { return error_reporter_; }
-  virtual Worker* GetWorker(WorkerId id);
+  virtual absl::StatusOr<Worker*> GetWorker(WorkerId id);
 
   /* tensor communication */
-  virtual BandStatus TryCopyInputTensors(const Job& job);
-  virtual BandStatus TryCopyOutputTensors(const Job& job);
+  virtual absl::Status TryCopyInputTensors(const Job& job);
+  virtual absl::Status TryCopyOutputTensors(const Job& job);
 
  protected:
   ErrorReporter* error_reporter_;

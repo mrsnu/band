@@ -50,60 +50,68 @@ typedef std::vector<Interface::ITensor*> Tensors;
 class Engine : public Context {
  public:
   ~Engine() override;
-  static std::unique_ptr<Engine> Create(
+  static absl::StatusOr<std::unique_ptr<Engine>> Create(
       const RuntimeConfig& config,
       ErrorReporter* error_reporter = DefaultErrorReporter());
 
-  BandStatus RegisterModel(Model* model);
-  Tensor* CreateTensor(ModelId model_id, int tensor_index);
-  std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
-  std::vector<int> GetInputTensorIndices(ModelId model_id) const;
+  absl::Status RegisterModel(Model* model);
+  absl::StatusOr<Tensor*> CreateTensor(ModelId model_id, int tensor_index);
+  absl::StatusOr<std::vector<int>> GetOutputTensorIndices(
+      ModelId model_id) const;
+  absl::StatusOr<std::vector<int>> GetInputTensorIndices(
+      ModelId model_id) const;
 
-  BandStatus InvokeSyncModel(ModelId model_id, Tensors inputs = {},
-                             Tensors outputs = {});
-  BandStatus InvokeSyncModels(std::vector<ModelId> model_ids,
-                              std::vector<Tensors> inputs = {},
-                              std::vector<Tensors> outputs = {});
+  absl::Status InvokeSyncModel(ModelId model_id, Tensors inputs = {},
+                               Tensors outputs = {});
+  absl::Status InvokeSyncModels(std::vector<ModelId> model_ids,
+                                std::vector<Tensors> inputs = {},
+                                std::vector<Tensors> outputs = {});
   JobId InvokeAsyncModel(ModelId model_id, Tensors inputs = {});
   std::vector<JobId> InvokeAsyncModels(std::vector<ModelId> model_ids,
                                        std::vector<Tensors> inputs = {});
-  BandStatus Wait(JobId job_id, Tensors outputs = {});
-  BandStatus Wait(std::vector<JobId> job_ids,
-                  std::vector<Tensors> outputs = {});
-  BandStatus GetOutputTensors(JobId job_id, Tensors outputs = {});
+  absl::Status Wait(JobId job_id, Tensors outputs = {});
+  absl::Status Wait(std::vector<JobId> job_ids,
+                    std::vector<Tensors> outputs = {});
+  absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetEndInvokeFunction(std::function<void(int, BandStatus)> on_end_invoke);
+  void SetEndInvokeFunction(
+      std::function<void(int, absl::Status)> on_end_invoke);
 
  private:
   /* context */
-  BandStatus Init(const RuntimeConfig& config) override;
+  absl::Status Init(const RuntimeConfig& config) override;
   void UpdateWorkerWaitingTime() const override;
   const WorkerWaitingTime& GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
-  SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                  WorkerId worker_id) const override;
+  absl::StatusOr<SubgraphKey> GetModelSubgraphKey(
+      ModelId model_id, WorkerId worker_id) const override;
   bool IsEnd(const SubgraphKey& key) const override;
-  BandStatus Invoke(const SubgraphKey& key) override;
+  absl::Status Invoke(const SubgraphKey& key) override;
   ModelSpec* GetModelSpec(ModelId model_id) { return &model_specs_[model_id]; }
 
-  std::pair<SubgraphKey, int64_t> GetShortestLatency(
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  std::pair<int, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting,
-      SubgraphKey preceded_subgraph_index = {}) const override;
+      SubgraphKey preceded_subgraph_index) const override;
 
-  std::pair<std::vector<SubgraphKey>, int64_t>
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  std::pair<std::vector<int>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
-  std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  std::pair<std::vector<int>, int64_t> GetSubgraphWithShortestLatency(
       Job& job,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
-  SubgraphKey GetSubgraphIdxSatisfyingSLO(
+  // TODO(widiba03304): replace `int` into `SubgraphKey` when ready.
+  int GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
+      
   /* profiler */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
@@ -116,15 +124,17 @@ class Engine : public Context {
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
   /* getters */
-  Worker* GetWorker(WorkerId id) override;
+  absl::StatusOr<Worker*> GetWorker(WorkerId id) override;
   /* tensor communication */
-  BandStatus TryCopyInputTensors(const Job& job) override;
-  BandStatus TryCopyOutputTensors(const Job& job) override;
+  absl::Status TryCopyInputTensors(const Job& job) override;
+  absl::Status TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
   WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const;
   Interface::IInterpreter* GetInterpreter(const SubgraphKey& key);
   const Interface::IInterpreter* GetInterpreter(const SubgraphKey& key) const;
+  // TODO(widiba03304): subgraph level?
+  SubgraphKey GetSubgraphKey(ModelId model_id, WorkerId worker_id);
 
   Engine() = delete;
   Engine(ErrorReporter* error_reporeter);
@@ -146,6 +156,7 @@ class Engine : public Context {
   std::map<std::pair<WorkerId, ModelId>,
            std::unique_ptr<Interface::IInterpreter>>
       interpreters_;
+  std::map<std::pair<WorkerId, ModelId>, SubgraphKey> subgraph_keys_;
   std::map<WorkerId, std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
   std::unique_ptr<Profiler> profiler_;

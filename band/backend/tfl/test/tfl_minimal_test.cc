@@ -22,10 +22,9 @@ TEST(TFLiteBackend, BackendInvoke) {
   bin_model.FromPath("band/testdata/add.bin");
 
   TfLite::TfLiteInterpreter interpreter;
-  EXPECT_EQ(interpreter.FromModel(&bin_model, 0, kBandCPU), kBandOk);
-
-  SubgraphKey key(bin_model.GetId(), 0);
-  EXPECT_EQ(interpreter.InvokeSubgraph(key), kBandOk);
+  auto key = interpreter.FromModel(&bin_model, 0, kBandCPU);
+  EXPECT_TRUE(key.ok());
+  EXPECT_TRUE(interpreter.InvokeSubgraph(key.value()).ok());
 }
 
 TEST(TFLiteBackend, ModelSpec) {
@@ -49,26 +48,31 @@ TEST(TFLiteBackend, Registration) {
 
 TEST(TFLiteBackend, InterfaceInvoke) {
   auto backends = BackendFactory::GetAvailableBackends();
-  IModel* bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
+  auto bin_model_status = BackendFactory::CreateModel(kBandTfLite, 0);
+  EXPECT_TRUE(bin_model_status.ok());
+  auto bin_model = bin_model_status.value();
   bin_model->FromPath("band/testdata/add.bin");
 
-  IInterpreter* interpreter = BackendFactory::CreateInterpreter(kBandTfLite);
-  EXPECT_EQ(interpreter->FromModel(bin_model, 0, kBandCPU), kBandOk);
+  auto interpreter_status = BackendFactory::CreateInterpreter(kBandTfLite);
+  EXPECT_TRUE(interpreter_status.ok());
+  auto interpreter = interpreter_status.value();
 
-  SubgraphKey key = interpreter->GetModelSubgraphKey(bin_model->GetId());
-
-  EXPECT_EQ(interpreter->GetInputs(key).size(), 1);
-  EXPECT_EQ(interpreter->GetOutputs(key).size(), 1);
+  auto key = interpreter->FromModel(bin_model, 0, kBandCPU);
+  EXPECT_TRUE(key.ok());
+  EXPECT_EQ(interpreter->GetInputs(key.value()).size(), 1);
+  EXPECT_EQ(interpreter->GetOutputs(key.value()).size(), 1);
 
   std::array<float, 2> input = {1.f, 3.f};
-  memcpy(interpreter->GetTensorView(key, interpreter->GetInputs(key)[0])
-             ->GetData(),
-         input.data(), input.size() * sizeof(float));
+  memcpy(
+      interpreter
+          ->GetTensorView(key.value(), interpreter->GetInputs(key.value())[0])
+          ->GetData(),
+      input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(interpreter->InvokeSubgraph(key), kBandOk);
+  EXPECT_TRUE(interpreter->InvokeSubgraph(key.value()).ok());
 
-  auto output_tensor =
-      interpreter->GetTensorView(key, interpreter->GetOutputs(key)[0]);
+  auto output_tensor = interpreter->GetTensorView(
+      key.value(), interpreter->GetOutputs(key.value())[0]);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
@@ -97,31 +101,35 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
                              .AddScheduleWindowSize(10)
                              .Build();
 
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  auto engine_status = Engine::Create(config);
+  EXPECT_TRUE(engine_status.ok());
+  auto engine = std::move(engine_status.value());
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_TRUE(model.FromPath(kBandTfLite, "band/testdata/add.bin").ok());
+  EXPECT_TRUE(engine->RegisterModel(&model).ok());
 
-  Tensor* input_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor* output_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-
-  EXPECT_TRUE(input_tensor && output_tensor);
+  auto input_idx = engine->GetInputTensorIndices(model.GetId());
+  auto output_idx = engine->GetOutputTensorIndices(model.GetId());
+  EXPECT_TRUE(input_idx.ok() && output_idx.ok());
+  auto input_tensor = engine->CreateTensor(model.GetId(), input_idx.value()[0]);
+  auto output_tensor =
+      engine->CreateTensor(model.GetId(), output_idx.value()[0]);
+  EXPECT_TRUE(input_tensor.ok() && output_tensor.ok());
 
   std::array<float, 2> input = {1.f, 3.f};
-  memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
+  memcpy(input_tensor.value()->GetData(), input.data(),
+         input.size() * sizeof(float));
 
-  EXPECT_EQ(
-      engine->InvokeSyncModel(model.GetId(), {input_tensor}, {output_tensor}),
-      kBandOk);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
+  EXPECT_TRUE(engine
+                  ->InvokeSyncModel(model.GetId(), {input_tensor.value()},
+                                    {output_tensor.value()})
+                  .ok());
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor.value()->GetData())[0], 3.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor.value()->GetData())[1], 9.f);
 
-  delete input_tensor;
-  delete output_tensor;
+  delete input_tensor.value();
+  delete output_tensor.value();
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
@@ -145,30 +153,32 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
                              .AddScheduleWindowSize(10)
                              .Build();
 
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  auto engine_status = Engine::Create(config);
+  EXPECT_TRUE(engine_status.ok());
+  auto engine = std::move(engine_status.value());
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_TRUE(model.FromPath(kBandTfLite, "band/testdata/add.bin").ok());
+  EXPECT_TRUE(engine->RegisterModel(&model).ok());
 
-  Tensor* input_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor* output_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-
-  EXPECT_TRUE(input_tensor && output_tensor);
+  auto input_idx = engine->GetInputTensorIndices(model.GetId());
+  auto output_idx = engine->GetOutputTensorIndices(model.GetId());
+  EXPECT_TRUE(input_idx.ok() && output_idx.ok());
+  auto input_tensor = engine->CreateTensor(model.GetId(), input_idx.value()[0]);
+  auto output_tensor =
+      engine->CreateTensor(model.GetId(), output_idx.value()[0]);
+  EXPECT_TRUE(input_tensor.ok() && output_tensor.ok());
 
   std::array<float, 2> input = {1.f, 3.f};
-  memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
+  memcpy(input_tensor.value()->GetData(), input.data(), input.size() * sizeof(float));
 
-  JobId job_id = engine->InvokeAsyncModel(model.GetId(), {input_tensor});
-  EXPECT_EQ(engine->Wait(job_id, {output_tensor}), kBandOk);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
+  JobId job_id = engine->InvokeAsyncModel(model.GetId(), {input_tensor.value()});
+  EXPECT_TRUE(engine->Wait(job_id, {output_tensor.value()}).ok());
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor.value()->GetData())[0], 3.f);
+  EXPECT_EQ(reinterpret_cast<float*>(output_tensor.value()->GetData())[1], 9.f);
 
-  delete input_tensor;
-  delete output_tensor;
+  delete input_tensor.value();
+  delete output_tensor.value();
 }  // namespace
 }  // namespace Band
 

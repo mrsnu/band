@@ -17,7 +17,7 @@ Worker::~Worker() {
   }
 }
 
-BandStatus Worker::Init(const WorkerConfig& config, int worker_id) {
+absl::Status Worker::Init(const WorkerConfig& config, int worker_id) {
   if (config.allow_worksteal) {
     AllowWorkSteal();
   }
@@ -36,10 +36,10 @@ BandStatus Worker::Init(const WorkerConfig& config, int worker_id) {
   return UpdateWorkerThread(worker_mask_set, config.num_threads[worker_id]);
 }
 
-BandStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
+absl::Status Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                       int num_threads) {
   if (thread_affinity_mask.NumEnabled() == 0) {
-    return kBandError;
+    return absl::InvalidArgumentError("Thread affinity should be enabled.");
   }
 
   std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
@@ -53,10 +53,10 @@ BandStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
     if (cpu_set_.IsEnabled(cpu) != thread_affinity_mask.IsEnabled(cpu)) {
       cpu_set_ = thread_affinity_mask;
       need_cpu_update_ = true;
-      return kBandOk;
+      return absl::OkStatus();
     }
   }
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 void Worker::WaitUntilDeviceAvailable(SubgraphKey& subgraph) {
@@ -64,7 +64,7 @@ void Worker::WaitUntilDeviceAvailable(SubgraphKey& subgraph) {
     Time::SleepForMicros(1000 * availability_check_interval_ms_);
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Availability check at %d ms.",
                       Time::NowMicros());
-    if (context_->Invoke(subgraph) == kBandOk) {
+    if (context_->Invoke(subgraph).ok()) {
       return;
     }
   }
@@ -123,11 +123,11 @@ ErrorReporter* Worker::GetErrorReporter() {
 }
 
 bool Worker::IsValid(Job& job) {
-  return job.model_id >= 0 && job.subgraph_key.IsValid() &&
+  return job.model_id >= 0 && job.subgraph_key->IsValid() &&
          job.enqueue_time > 0 && job.invoke_time == 0 && job.end_time == 0;
 }
 
-BandStatus Worker::TryUpdateWorkerThread() {
+absl::Status Worker::TryUpdateWorkerThread() {
   std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
   if (need_cpu_update_) {
     need_cpu_update_ = false;
@@ -139,18 +139,18 @@ BandStatus Worker::TryUpdateWorkerThread() {
     //     interpreter_ptr->GetCpuBackendContext()->internal_backend_context();
     // internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
     // internal_backend->SetMaxNumThreads(num_threads_);
-
-    if (SetCPUThreadAffinity(cpu_set_) != kBandOk) {
+    auto status = SetCPUThreadAffinity(cpu_set_);
+    if (!status.ok()) {
       BAND_REPORT_ERROR(GetErrorReporter(),
                         "Worker (%d, %s) failed to set cpu thread affinity",
                         worker_id_, BandDeviceGetName(device_flag_));
-      return kBandError;
+      return status;
     }
   }
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-void Worker::Work() {
+absl::Status Worker::Work() {
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
 
@@ -165,65 +165,71 @@ void Worker::Work() {
       break;
     }
 
-    Job* current_job = GetCurrentJob();
-    lock.unlock();
+    auto current_job = GetCurrentJob();
+    if (!current_job.ok()) {
+      lock.unlock();
+      return current_job.status();
+    }
 
-    if (!current_job || !IsValid(*current_job)) {
-      BAND_REPORT_ERROR(GetErrorReporter(),
-                        "%s worker spotted an invalid job (model id %d, "
-                        "subgraph valid %d (%d, %d), "
-                        "enqueue time %d, invoke time %d, end time %d)",
-                        BandDeviceGetName(device_flag_), current_job->model_id,
-                        current_job->subgraph_key.IsValid(),
-                        current_job->subgraph_key.GetModelId(),
-                        current_job->subgraph_key.GetWorkerId(),
-                        current_job->enqueue_time, current_job->invoke_time,
-                        current_job->end_time);
+    lock.unlock();
+    if (!IsValid(*current_job.value())) {
+      BAND_REPORT_ERROR(
+          GetErrorReporter(),
+          "%s worker spotted an invalid job (model id %d, "
+          "subgraph valid %d (%d, %d), "
+          "enqueue time %d, invoke time %d, end time %d)",
+          BandDeviceGetName(device_flag_), current_job.value()->model_id,
+          current_job.value()->subgraph_key->IsValid(),
+          current_job.value()->subgraph_key->GetModelId(),
+          current_job.value()->subgraph_key->GetWorkerId(),
+          current_job.value()->enqueue_time, current_job.value()->invoke_time,
+          current_job.value()->end_time);
       break;
     }
 
-    SubgraphKey subgraph_key = current_job->subgraph_key;
+    SubgraphKey subgraph_key = *current_job.value()->subgraph_key;
 
-    if (TryUpdateWorkerThread() != kBandOk) {
+    if (!TryUpdateWorkerThread().ok()) {
       // TODO #21: Handle errors in multi-thread environment
       break;
     }
 
-    if (context_->TryCopyInputTensors(*current_job) == kBandOk) {
+    if (context_->TryCopyInputTensors(*current_job.value()).ok()) {
       lock.lock();
-      current_job->invoke_time = Time::NowMicros();
+      current_job.value()->invoke_time = Time::NowMicros();
       lock.unlock();
 
-      BandStatus status = context_->Invoke(subgraph_key);
-      if (status == kBandOk) {
+      absl::Status status = context_->Invoke(subgraph_key);
+      if (status.ok()) {
         // end_time is never read/written by any other thread as long as
         // is_busy == true, so it's safe to update it w/o grabbing the lock
-        current_job->end_time = Time::NowMicros();
+        current_job.value()->end_time = Time::NowMicros();
         context_->UpdateLatency(
-            subgraph_key, (current_job->end_time - current_job->invoke_time));
-        if (current_job->following_jobs.size() != 0) {
-          context_->EnqueueBatch(current_job->following_jobs);
+            subgraph_key,
+            (current_job.value()->end_time - current_job.value()->invoke_time));
+        if (current_job.value()->following_jobs.size() != 0) {
+          context_->EnqueueBatch(current_job.value()->following_jobs);
         }
-        context_->TryCopyOutputTensors(*current_job);
-        current_job->status = kBandJobSuccess;
-      } else if (status == kBandDelegateError) {
-        HandleDeviceError(*current_job);
+        context_->TryCopyOutputTensors(*current_job.value());
+        current_job.value()->status = kBandJobSuccess;
+      } else if (absl::IsResourceExhausted(status)) {
+        HandleDeviceError(*current_job.value());
         context_->Trigger();
         continue;
       } else {
         // end_time is never read/written by any other thread as long as
         // !requests_.empty(), so it's safe to update it w/o grabbing the lock
-        current_job->end_time = Time::NowMicros();
+        current_job.value()->end_time = Time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
-        current_job->status = kBandJobInvokeFailure;
+        current_job.value()->status = kBandJobInvokeFailure;
       }
     } else {
       BAND_REPORT_ERROR(GetErrorReporter(), "%s worker failed to copy input",
                         BandDeviceGetName(device_flag_));
       // TODO #21: Handle errors in multi-thread environment
-      current_job->status = kBandJobInputCopyFailure;
+      current_job.value()->status = kBandJobInputCopyFailure;
     }
-    context_->EnqueueFinishedJob(*current_job);
+    context_->EnqueueFinishedJob(*current_job.value());
 
     lock.lock();
     EndEnqueue();

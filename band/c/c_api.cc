@@ -136,13 +136,15 @@ void BandModelDelete(BandModel* model) { delete model; }
 BandStatus BandModelAddFromBuffer(BandModel* model,
                                   BandBackendType backend_type,
                                   const void* model_data, size_t model_size) {
-  return model->impl->FromBuffer(backend_type, (const char*)model_data,
+  auto status = model->impl->FromBuffer(backend_type, (const char*)model_data,
                                  model_size);
+  return status.ok() ? kBandOk : kBandError;
 }
 
 BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
                                 const char* model_path) {
-  return model->impl->FromPath(backend_type, model_path);
+  auto status = model->impl->FromPath(backend_type, model_path);
+  return status.ok() ? kBandOk : kBandError;
 }
 
 void BandTensorDelete(BandTensor* tensor) { delete tensor; }
@@ -170,7 +172,11 @@ BandQuantization BandTensorGetQuantization(BandTensor* tensor) {
 }
 
 BandEngine* BandEngineCreate(BandConfig* config) {
-  return new BandEngine(std::move(Band::Engine::Create(config->impl)));
+  auto engine = Band::Engine::Create(config->impl);
+  if (!engine.ok()) {
+    return nullptr;
+  }
+  return new BandEngine(std::move(engine.value()));
 }
 void BandEngineDelete(BandEngine* engine) { delete engine; }
 

@@ -20,4 +20,10 @@
 #define BAND_PREDICT_TRUE(x) (x)
 #endif
 
+#define RETURN_IF_ERROR(s) \
+  do {                     \
+    auto c = (s);          \
+    if (!c.ok()) return c; \
+  } while (0);
+
 #endif  // BAND_MACROS_H_

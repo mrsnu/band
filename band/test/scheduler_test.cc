@@ -14,10 +14,10 @@ struct MockContext : public Context {
 
   std::set<WorkerId> GetIdleWorkers() const override { return idle_workers_; }
 
-  SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                  WorkerId worker_id) const override {
-    return SubgraphKey(model_id, worker_id, {0}, {0});
-  }
+  // absl::StatusOr<SubgraphKey> GetModelSubgraphKey(ModelId model_id,
+  //                                 WorkerId worker_id) const override {
+  //   return SubgraphKey(model_id, worker_id, {0}, {0});
+  // }
 
   std::set<WorkerId> idle_workers_;
 };

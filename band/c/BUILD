@@ -62,5 +62,8 @@ cc_test(
         "//band:tflite": [
             "//band/backend/tfl:tfl_backend",
         ],
+        "//conditions:default": [
+            "//band/backend/tfl:tfl_backend",
+        ],
     }),
 )

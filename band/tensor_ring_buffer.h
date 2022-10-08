@@ -7,6 +7,8 @@
 #include <mutex>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "band/c/common.h"
 
 namespace Band {
@@ -30,20 +32,20 @@ class TensorRingBuffer {
   int Alloc();
   bool IsTensorIndexValid(int tensor_index) const;
   bool IsHandleValid(int handle) const;
-  BandStatus GetTensorFromHandle(Interface::ITensor* dst, int tensor_index,
+  absl::Status GetTensorFromHandle(Interface::ITensor* dst, int tensor_index,
                                  int handle) const;
-  BandStatus PutTensorToHandle(const Interface::ITensor* src, int tensor_index,
+  absl::Status PutTensorToHandle(const Interface::ITensor* src, int tensor_index,
                                int handle);
-  BandStatus GetTensorsFromHandle(std::vector<Interface::ITensor*>& dst_tensors,
+  absl::Status GetTensorsFromHandle(std::vector<Interface::ITensor*>& dst_tensors,
                                   int handle) const;
-  BandStatus PutTensorsToHandle(
+  absl::Status PutTensorsToHandle(
       const std::vector<Interface::ITensor*>& src_tensors, int handle);
 
  private:
   int GetIndex(int handle) const;
-  BandStatus CopyTensors(const std::vector<Interface::ITensor*>& src_tensors,
+  absl::Status CopyTensors(const std::vector<Interface::ITensor*>& src_tensors,
                          std::vector<Interface::ITensor*>& dst_tensors) const;
-  BandStatus CopyTensor(const Interface::ITensor* src,
+  absl::Status CopyTensor(const Interface::ITensor* src,
                         Interface::ITensor* dst) const;
 
   mutable std::mutex head_mtx_;

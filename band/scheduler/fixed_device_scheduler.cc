@@ -13,7 +13,7 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
     requests.pop_front();
 
     int model_id = to_execute.model_id;
-    int worker_id = to_execute.subgraph_key.GetWorkerId();
+    int worker_id = to_execute.subgraph_key->GetWorkerId();
 
     BAND_NOT_IMPLEMENTED;
 
@@ -31,7 +31,7 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
     //   continue;
     // }
 
-    SubgraphKey key = context.GetModelSubgraphKey(model_id, worker_id);
+    SubgraphKey key = context.GetModelSubgraphKey(model_id, worker_id).value();
     action[worker_id].push_back({to_execute, key});
   }
   return action;

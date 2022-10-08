@@ -3,7 +3,7 @@
 #include "band/json_util.h"
 
 namespace Band {
-BandStatus Profiler::Init(const ProfileConfig& config) {
+absl::Status Profiler::Init(const ProfileConfig& config) {
   profile_data_path_ = config.profile_data_path;
   profile_database_json_ = LoadJsonObjectFromFile(config.profile_data_path);
   // we cannot convert the model name strings to integer ids yet,

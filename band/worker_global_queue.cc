@@ -10,7 +10,6 @@ bool GlobalQueueWorker::GiveJob(Job& job) {
   if (is_busy_ || !IsAvailable()) {
     return false;
   }
-
   current_job_ = job;
   is_busy_ = true;
   request_cv_.notify_one();
@@ -19,10 +18,14 @@ bool GlobalQueueWorker::GiveJob(Job& job) {
 
 bool GlobalQueueWorker::HasJob() { return is_busy_; }
 
-int GlobalQueueWorker::GetCurrentJobId() { return current_job_.job_id; }
+int GlobalQueueWorker::GetCurrentJobId() { current_job_.value().job_id; }
 
-Job* GlobalQueueWorker::GetCurrentJob() {
-  return HasJob() ? &current_job_ : nullptr;
+absl::StatusOr<Job*> GlobalQueueWorker::GetCurrentJob() {
+  if (HasJob()) {
+    return &current_job_.value();
+  } else {
+    absl::NotFoundError("There is no current job in the global queue.");
+  }
 }
 
 void GlobalQueueWorker::EndEnqueue() { is_busy_ = false; }
@@ -35,7 +38,7 @@ void GlobalQueueWorker::HandleDeviceError(Job& current_job) {
   lock.unlock();
 
   context_->EnqueueRequest(current_job, true);
-  WaitUntilDeviceAvailable(current_job.subgraph_key);
+  WaitUntilDeviceAvailable(*current_job.subgraph_key);
 
   lock.lock();
   is_throttling_ = false;
@@ -67,7 +70,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
     return 0;
   }
 
-  int64_t invoke_time = current_job_.invoke_time;
+  int64_t invoke_time = current_job_.value().invoke_time;
 
   // if this thread is the same thread that updates is_busy_ (false --> true)
   // and there are no other threads that call this function, then it is
@@ -80,7 +83,8 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // no need to hold on to the lock anymore
   lock.unlock();
 
-  int64_t profiled_latency = context_->GetExpected(current_job_.subgraph_key);
+  int64_t profiled_latency =
+      context_->GetExpected(*current_job_.value().subgraph_key);
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet

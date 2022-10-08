@@ -164,8 +164,8 @@ void BandFloatArrayFree(BandFloatArray* a);
 
 #define BAND_ENSURE_STATUS(a) \
   do {                        \
-    const BandStatus s = (a); \
-    if (s != kBandOk) {       \
+    const auto s = (a);       \
+    if (!s.ok()) {            \
       return s;               \
     }                         \
   } while (0)

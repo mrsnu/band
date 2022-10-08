@@ -12,7 +12,7 @@ namespace Band {
 class Profiler {
  public:
   Profiler() = default;
-  BandStatus Init(const ProfileConfig& config);
+  absl::Status Init(const ProfileConfig& config);
   void UpdateLatency(const SubgraphKey& key, int64_t latency);
 
   int64_t GetProfiled(const SubgraphKey& key) const;

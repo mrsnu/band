@@ -27,11 +27,11 @@ class Worker {
   explicit Worker(Context* context, BandDeviceFlags device_flag);
   virtual ~Worker();
 
-  BandStatus Init(const WorkerConfig& config, int worker_id);
+  absl::Status Init(const WorkerConfig& config, int worker_id);
   BandDeviceFlags GetDeviceFlag() const { return device_flag_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
-  BandStatus UpdateWorkerThread(const CpuSet thread_affinity_mask,
+  absl::Status UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                 int num_threads);
   void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
   bool IsAvailable();
@@ -62,10 +62,10 @@ class Worker {
  protected:
   ErrorReporter* GetErrorReporter();
   bool IsValid(Job& job);
-  BandStatus TryUpdateWorkerThread();
-  void Work();
+  absl::Status TryUpdateWorkerThread();
+  absl::Status Work();
   // Helper functions that work utilizes
-  virtual Job* GetCurrentJob() = 0;
+  virtual absl::StatusOr<Job*> GetCurrentJob() = 0;
   virtual void EndEnqueue() = 0;
   virtual void HandleDeviceError(Job& current_job) = 0;
 
@@ -105,7 +105,7 @@ class DeviceQueueWorker : public Worker {
   void AllowWorkSteal() override;
 
  protected:
-  Job* GetCurrentJob() override;
+  absl::StatusOr<Job*> GetCurrentJob() override;
   void EndEnqueue() override;
   void HandleDeviceError(Job& current_job) override;
 
@@ -127,12 +127,12 @@ class GlobalQueueWorker : public Worker {
   bool HasJob() override;
 
  protected:
-  Job* GetCurrentJob() override;
+  absl::StatusOr<Job*> GetCurrentJob() override;
   void EndEnqueue() override;
   void HandleDeviceError(Job& current_job) override;
 
  private:
-  Job current_job_{-1};
+  absl::optional<Job> current_job_ = absl::nullopt;
   bool is_busy_ = false;
 };
 

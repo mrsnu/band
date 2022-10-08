@@ -15,8 +15,10 @@ class TfLiteInterpreter : public Interface::IInterpreter {
 
   ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
   // TODO: add a set of ops
-  BandStatus FromModel(Interface::IModel* model, WorkerId worker_id,
-                       BandDeviceFlags device, std::set<int> ops = {}) override;
+  absl::StatusOr<SubgraphKey> FromModel(Interface::IModel* model,
+                                        WorkerId worker_id,
+                                        BandDeviceFlags device,
+                                        std::set<int> ops = {}) override;
 
   BandBackendType GetBackendType() const override;
   const std::vector<int>& GetInputs(const SubgraphKey& key) const override;
@@ -29,10 +31,10 @@ class TfLiteInterpreter : public Interface::IInterpreter {
   std::shared_ptr<Interface::ITensorView> GetTensorView(const SubgraphKey& key,
                                                         int index) override;
 
-  SubgraphKey GetModelSubgraphKey(ModelId model_id) const override;
+  absl::StatusOr<SubgraphKey> GetModelSubgraphKey(ModelId model_id) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
 
-  BandStatus InvokeSubgraph(const SubgraphKey& key) override;
+  absl::Status InvokeSubgraph(const SubgraphKey& key) override;
 
  private:
   friend class TfLiteUtil;
@@ -45,12 +47,13 @@ class TfLiteInterpreter : public Interface::IInterpreter {
   std::unique_ptr<tflite::Interpreter> CreateTfLiteInterpreter(
       Interface::IModel* model, BandDeviceFlags device,
       std::set<int> op_indices = {});
-  std::pair<BandStatus, TfLiteDelegate*> GetDeviceDelegate(
-      BandDeviceFlags device);
+  absl::StatusOr<TfLiteDelegate*> GetDeviceDelegate(BandDeviceFlags device);
 
   std::unordered_map<SubgraphKey, std::unique_ptr<tflite::Interpreter>,
                      SubgraphHash>
       interpreters_;
+  // TODO(widiba03304): subgraph level?
+  std::map<ModelId, SubgraphKey> subgraph_keys_;
   std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr> delegates_;
 };
 }  // namespace TfLite

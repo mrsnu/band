@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "absl/status/status.h"
 #include "band/c/common.h"
 
 namespace Band {
@@ -22,8 +23,8 @@ struct ITensor {
   virtual BandQuantization GetQuantization() const = 0;
   virtual void SetQuantization(BandQuantization quantization) = 0;
 
-  BandStatus CopyDataFrom(const ITensor& rhs);
-  BandStatus CopyDataFrom(const ITensor* rhs);
+  absl::Status CopyDataFrom(const ITensor& rhs);
+  absl::Status CopyDataFrom(const ITensor* rhs);
 };
 }  // namespace Interface
 }  // namespace Band

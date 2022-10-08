@@ -8,7 +8,7 @@
 
 namespace Band {
 namespace TfLite {
-BandStatus GetBandStatus(TfLiteStatus status);
+absl::Status GetBandStatus(TfLiteStatus status);
 BandType GetBandType(TfLiteType type);
 
 class TfLiteUtil : public Interface::IBackendUtil {

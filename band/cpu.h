@@ -23,6 +23,7 @@
 
 #include <vector>
 
+#include "absl/status/status.h"
 #include "band/c/common.h"
 
 #if defined __ANDROID__ || defined __linux__
@@ -62,8 +63,8 @@ int GetLittleCPUCount();
 int GetBigCPUCount();
 
 // set explicit thread affinity
-BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
-BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
+absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag);

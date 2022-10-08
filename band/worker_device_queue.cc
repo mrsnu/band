@@ -27,7 +27,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
-    int64_t expected_latency = context_->GetExpected(it->subgraph_key);
+    int64_t expected_latency = context_->GetExpected(*it->subgraph_key);
 
     total += expected_latency;
     if (it == requests_.begin()) {
@@ -56,8 +56,11 @@ bool DeviceQueueWorker::GiveJob(Job& job) {
   return true;
 }
 
-Job* DeviceQueueWorker::GetCurrentJob() {
-  return HasJob() ? &requests_.front() : nullptr;
+absl::StatusOr<Job*> DeviceQueueWorker::GetCurrentJob() {
+  if (!HasJob()) {
+    return absl::NotFoundError("There is no job in this device queue.");
+  }
+  return &requests_.front();
 }
 
 void DeviceQueueWorker::EndEnqueue() {
@@ -78,7 +81,7 @@ void DeviceQueueWorker::HandleDeviceError(Job& current_job) {
   lock.unlock();
 
   context_->EnqueueBatch(jobs, true);
-  WaitUntilDeviceAvailable(current_job.subgraph_key);
+  WaitUntilDeviceAvailable(*current_job.subgraph_key);
 
   lock.lock();
   is_throttling_ = false;

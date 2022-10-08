@@ -23,9 +23,12 @@ struct Creator {
 
 class BackendFactory {
  public:
-  static Interface::IInterpreter* CreateInterpreter(BandBackendType backend);
-  static Interface::IModel* CreateModel(BandBackendType backend, ModelId id);
-  static Interface::IBackendUtil* GetBackendUtil(BandBackendType backend);
+  static absl::StatusOr<Interface::IInterpreter*> CreateInterpreter(
+      BandBackendType backend);
+  static absl::StatusOr<Interface::IModel*> CreateModel(BandBackendType backend,
+                                                        ModelId id);
+  static absl::StatusOr<Interface::IBackendUtil*> GetBackendUtil(
+      BandBackendType backend);
   static std::vector<BandBackendType> GetAvailableBackends();
 
   static void RegisterBackendCreators(

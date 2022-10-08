@@ -7,9 +7,15 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/str_format.h"
 #include "band/c/common.h"
 
 namespace Band {
+namespace Interface {
+class IInterpreter;
+}
 typedef int WorkerId;
 typedef int ModelId;
 typedef int JobId;
@@ -17,17 +23,6 @@ typedef int JobId;
 // data structure for identifying subgraphs within whole models
 class SubgraphKey {
  public:
-  SubgraphKey() {}
-  // special case - entire model subgraph
-  SubgraphKey(ModelId model_id, WorkerId worker_id)
-      : model_id(model_id), worker_id(worker_id) {}
-  SubgraphKey(ModelId model_id, WorkerId worker_id, std::set<int> input_ops,
-              std::set<int> output_ops)
-      : model_id(model_id),
-        worker_id(worker_id),
-        input_ops(input_ops),
-        output_ops(output_ops) {}
-
   bool operator<(const SubgraphKey& key) const {
     if (model_id != key.GetModelId()) {
       return model_id < key.GetModelId();
@@ -60,6 +55,17 @@ class SubgraphKey {
   bool IsValid() const { return (model_id != -1) && (worker_id != -1); }
 
  private:
+  // special case - entire model subgraph
+  friend class Interface::IInterpreter;
+  SubgraphKey(ModelId model_id, WorkerId worker_id)
+      : model_id(model_id), worker_id(worker_id) {}
+  SubgraphKey(ModelId model_id, WorkerId worker_id, std::set<int> input_ops,
+              std::set<int> output_ops)
+      : model_id(model_id),
+        worker_id(worker_id),
+        input_ops(input_ops),
+        output_ops(output_ops) {}
+
   ModelId model_id = -1;
   WorkerId worker_id = -1;
   std::set<int> input_ops;
@@ -127,7 +133,7 @@ struct Job {
 
   // Current status for execution (Valid after planning)
   JobStatus status = kBandJobQueued;
-  SubgraphKey subgraph_key;
+  SubgraphKey* subgraph_key;
   int start_unit_idx = 0;
   std::vector<Job> following_jobs;
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field

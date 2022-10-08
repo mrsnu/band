@@ -212,23 +212,23 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
 }
 #endif  // defined __ANDROID__
 
-BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
+absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if defined __ANDROID__
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
-  if (ssaret != 0) return kBandError;
+  if (ssaret != 0) return absl::InternalErroor("Set affinity failed.");
 #endif
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
+absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #if defined __ANDROID__
   int gsaret = GetSchedAffinity(thread_affinity_mask);
-  if (gsaret != 0) return kBandError;
+  if (gsaret != 0) return absl::InternalError("Get affinity failed.");
 #endif
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 int SetupThreadAffinityMasks() {

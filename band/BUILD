@@ -27,6 +27,9 @@ cc_library(
     ],
     deps = [
         "//band/c:common",
+        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )
 

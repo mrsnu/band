@@ -16,11 +16,11 @@ class Model {
   ~Model();
   ModelId GetId() const;
 
-  BandStatus FromPath(BandBackendType backend_type, const char* filename);
-  BandStatus FromBuffer(BandBackendType backend_type, const char* buffer,
+  absl::Status FromPath(BandBackendType backend_type, const char* filename);
+  absl::Status FromBuffer(BandBackendType backend_type, const char* buffer,
                         size_t buffer_size);
 
-  Interface::IModel* GetBackendModel(BandBackendType backend_type);
+  absl::StatusOr<Interface::IModel*> GetBackendModel(BandBackendType backend_type);
   std::set<BandBackendType> GetSupportedBackends() const;
 
  private:

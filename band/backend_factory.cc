@@ -26,22 +26,34 @@ std::map<BandBackendType, std::shared_ptr<Creator<IModel, ModelId>>>
 std::map<BandBackendType, std::shared_ptr<Creator<IBackendUtil>>>
     BackendFactory::util_creators_ = {};
 
-IInterpreter* BackendFactory::CreateInterpreter(BandBackendType backend) {
+absl::StatusOr<IInterpreter*> BackendFactory::CreateInterpreter(
+    BandBackendType backend) {
   RegisterBackendInternal();
   auto it = interpreter_creators_.find(backend);
-  return it != interpreter_creators_.end() ? it->second->Create() : nullptr;
+  if (it == interpreter_creators_.end()) {
+    return absl::InternalError("Failed to create interpreter.");
+  }
+  return it->second->Create();
 }
 
-IModel* BackendFactory::CreateModel(BandBackendType backend, ModelId id) {
+absl::StatusOr<IModel*> BackendFactory::CreateModel(BandBackendType backend,
+                                                    ModelId id) {
   RegisterBackendInternal();
   auto it = model_creators_.find(backend);
-  return it != model_creators_.end() ? it->second->Create(id) : nullptr;
+  if (it == model_creators_.end()) {
+    absl::InternalError("Failed to create model.");  
+  }
+  return it->second->Create(id);
 }
 
-IBackendUtil* BackendFactory::GetBackendUtil(BandBackendType backend) {
+absl::StatusOr<IBackendUtil*> BackendFactory::GetBackendUtil(
+    BandBackendType backend) {
   RegisterBackendInternal();
   auto it = util_creators_.find(backend);
-  return it != util_creators_.end() ? it->second->Create() : nullptr;
+  if (it == util_creators_.end()) {
+    return absl::InternalError("Failed to create backend util.");
+  }
+  return it->second->Create();
 }
 
 std::vector<BandBackendType> BackendFactory::GetAvailableBackends() {
