@@ -47,6 +47,7 @@ band_cc_android_test(
     data = [
         "//band:testdata/add.bin",
         "//band:testdata/config.json",
+        "//band:testdata/config_fixed_device.json"
     ],
     # TODO: Remove below linkopts
     # it's a duplicate with `band_cc_android_test`

@@ -18,6 +18,8 @@ cc_library(
     hdrs = [
         "common.h",
         "context.h",
+        "config.h",
+        "cpu.h",
         "error_reporter.h",
         "logger.h",
     ],
@@ -274,7 +276,9 @@ cc_test(
     srcs = ["test/scheduler_test.cc"],
     deps = [
         ":scheduler",
-        "@com_google_googletest//:gtest",
+        ":model",
+        ":config",
+        "@com_google_googletest//:gtest"
     ],
 )
 
