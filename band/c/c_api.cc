@@ -1,7 +1,6 @@
 #include "band/c/c_api.h"
 
-#include "band/c/c_api_type.h"
-#include "band/cpu.h"
+#include "band/c/c_api_internal.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 
@@ -66,7 +65,7 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_PLANNER_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddPlannerCPUMask(static_cast<Band::BandCPUMaskFlags>(arg));
+      b->impl.AddPlannerCPUMask(static_cast<BandCPUMaskFlags>(arg));
     } break;
     case BAND_PLANNER_LOG_PATH: {
       char* arg = va_arg(vl, char*);
@@ -81,9 +80,9 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       b->impl.AddWorkers(workers);
     } break;
     case BAND_WORKER_CPU_MASKS: {
-      std::vector<Band::BandCPUMaskFlags> cpu_masks(count);
+      std::vector<BandCPUMaskFlags> cpu_masks(count);
       for (int i = 0; i < count; i++) {
-        cpu_masks[i] = static_cast<Band::BandCPUMaskFlags>(va_arg(vl, int));
+        cpu_masks[i] = static_cast<BandCPUMaskFlags>(va_arg(vl, int));
       }
       b->impl.AddWorkerCPUMasks(cpu_masks);
     } break;
@@ -113,7 +112,7 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddCPUMask(static_cast<Band::BandCPUMaskFlags>(arg));
+      b->impl.AddCPUMask(static_cast<BandCPUMaskFlags>(arg));
     } break;
   }
   va_end(vl);

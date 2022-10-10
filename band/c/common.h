@@ -23,6 +23,14 @@ typedef enum BandStatus {
   kBandDelegateError = 2
 } BandStatus;
 
+typedef enum {
+  kBandAll = 0,
+  kBandLittle = 1,
+  kBandBig = 2,
+  kBandPrimary = 3,
+  kBandNumCpuMasks = 4
+} BandCPUMaskFlags;
+
 typedef enum BandWorkerType {
   kBandDeviceQueue = 1 << 0,
   kBandGlobalQueue = 1 << 1,

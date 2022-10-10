@@ -7,6 +7,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "band/c/common.h"
 #include "band/config.h"

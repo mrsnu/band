@@ -22,6 +22,23 @@ band_cc_shared_object(
     deps = [
       ":c_api",
       ":version_scripts.lds",
+    ] + select({
+        "//band:tflite": [
+            "//band/backend/tfl:tfl_backend",
+        ],
+    }),
+)
+
+cc_library(
+    name = "bandc_wrapper",
+    srcs = [
+        "test/bandc_wrapper.cc",
+    ],
+    hdrs = [
+        "test/bandc_wrapper.h",
+    ],
+    deps = [
+        ":c_api",
     ]
 )
 
@@ -45,7 +62,8 @@ cc_library(
     ],
     copts = band_copts(),
     deps = [
-        ":c_api_type",
+        ":c_api_types",
+        ":c_api_internal",
         "//band:config_builder",
         "//band:common",
         "//band:framework",
@@ -54,16 +72,21 @@ cc_library(
 )
 
 cc_library(
-    name = "c_api_type",
-    hdrs = ["c_api_type.h"],
-    copts = band_copts(),
+    name = "c_api_internal",
+    hdrs = ["c_api_internal.h"],
     visibility = ["//visibility:private"],
     deps = [
         ":common",
-        "//band:config_builder",
-        "//band:common",
         "//band:framework",
+        "//band:common",
+        "//band:config_builder",
     ],
+)
+
+cc_library(
+    name = "c_api_types",
+    hdrs = ["c_api_types.h"],
+    copts = band_copts(),
 )
 
 cc_test(
