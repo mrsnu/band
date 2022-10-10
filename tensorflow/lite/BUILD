@@ -94,13 +94,16 @@ FRAMEWORK_LIB_HDRS = [
     "planner/thermal_aware_scheduler.h",
     "worker.h",
     "safe_bool.h",
-    "resource_monitor.h"
+    "splash/resource_monitor.h",
+    "splash/thermal_model.h",
+    "splash/cloud_thermal_model.h",
+    "splash/processor_thermal_model.h"
 ]
 
 cc_library(
     name = "resource_monitor",
-    srcs = ["resource_monitor.cc"],
-    hdrs = ["resource_monitor.h"],
+    srcs = ["splash/resource_monitor.cc"],
+    hdrs = ["splash/resource_monitor.h"],
     copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
     deps = [
         "//tensorflow/lite/profiling:time",
@@ -111,7 +114,7 @@ cc_library(
 tflite_cc_android_test(
     name = "resource_monitor_test",
     srcs = [
-        "resource_monitor_test.cc"
+        "splash/resource_monitor_test.cc"
     ],
     deps = [
         ":resource_monitor",
@@ -318,7 +321,10 @@ cc_library(
         "worker_device_queue.cc",
         "worker_global_queue.cc",
         "worker_device_queue_offloading.cc",
-        "resource_monitor.cc"
+        "splash/resource_monitor.cc",
+        "splash/thermal_model.cc",
+        "splash/cloud_thermal_model.cc",
+        "splash/processor_thermal_model.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,

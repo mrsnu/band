@@ -39,7 +39,7 @@ limitations under the License.
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/model_builder.h"
-#include "tensorflow/lite/resource_monitor.h"
+#include "tensorflow/lite/splash/resource_monitor.h"
 
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"

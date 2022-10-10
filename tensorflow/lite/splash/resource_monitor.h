@@ -69,6 +69,7 @@ class ResourceMonitor {
   }
 
   thermal_t GetTemperature(worker_id_t);
+  thermal_t GetThrottlingThreshold(worker_id_t);
   std::vector<ThermalInfo> GetTemperatureHistory(worker_id_t);
   ThermalInfo GetTemperatureHistory(worker_id_t, int index);
 

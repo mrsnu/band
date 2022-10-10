@@ -1,4 +1,4 @@
-#include "tensorflow/lite/resource_monitor.h"
+#include "tensorflow/lite/splash/resource_monitor.h"
 
 #include <vector>
 

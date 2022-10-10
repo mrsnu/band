@@ -1,16 +1,9 @@
-#include "tensorflow/lite/resource_monitor.h"
+#include "tensorflow/lite/splash/resource_monitor.h"
 #include <cerrno>
 #include <cassert>
 #include <fstream>
 
 #include "tensorflow/lite/profiling/time.h"
-
-#if defined(__ANDROID__)
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
-#include <android/log.h>
-#else
-#define LOGI(...) printf(__VA_ARGS__)
-#endif // defined(__ANDROID__)
 
 namespace tflite {
 namespace impl {
@@ -61,6 +54,11 @@ thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
   ThermalInfo info_curr = { temperature_curr, time_curr };
   thermal_table_[wid].push_back(info_curr);
   return temperature_curr;
+}
+
+thermal_t ResourceMonitor::GetThrottlingThreshold(worker_id_t wid) {
+  // TODO(chang-jin): calculate threshold from sysfs
+  return 80000;
 }
 
 std::vector<ThermalInfo> ResourceMonitor::GetTemperatureHistory(worker_id_t wid) {
