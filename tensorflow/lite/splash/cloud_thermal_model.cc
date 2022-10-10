@@ -12,7 +12,7 @@ TfLiteStatus CloudThermalModel::Init() {
     return kTfLiteOk;
 }
 
-std::unordered_map<worker_id_t, ThermalInfo> CloudThermalModel::GetFutureTemperature(SubgraphKey key) {
+std::unordered_map<worker_id_t, ThermalInfo> CloudThermalModel::Predict(SubgraphKey key) {
   std::unordered_map<worker_id_t, ThermalInfo> future_temperature;
   return future_temperature;
 }

@@ -12,13 +12,28 @@
 namespace tflite {
 namespace impl {
 
-class ProcessorThermalModel : IThermalModel {
+class ProcessorThermalModel : public IThermalModel {
  public:
+
   TfLiteStatus Init() override;
-  std::unordered_map<worker_id_t, ThermalInfo> GetFutureTemperature(SubgraphKey key) override;
+
+  std::unordered_map<worker_id_t, ThermalInfo> Predict(SubgraphKey key) override;
+
   TfLiteStatus Update(std::vector<ThermalInfo> error) override;
   
  private:
+  // Linear regressor
+  std::vector<int32_t> temperature; // Get from resource monitor
+  std::vector<int32_t> frequency;
+  std::int64_t flops;
+  std::int64_t membytes;
+  
+  // Model parameter
+  std::vector<std::vector<double>> temp_param;
+  std::vector<std::vector<double>> freq_param;
+  std::vector<double> flops_param;
+  std::vector<double> membytes_param;
+  std::vector<double> error_param;
 };
 
 } // namespace impl

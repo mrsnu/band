@@ -18,24 +18,13 @@ class IThermalModel {
 
   // Get an estimation value of future temperature 
   // after executing inference of the input model
-  virtual std::unordered_map<worker_id_t, ThermalInfo> GetFutureTemperature(SubgraphKey key);
+  virtual std::unordered_map<worker_id_t, ThermalInfo> Predict(SubgraphKey key);
 
   // Update model parameters with the prediction error
   virtual TfLiteStatus Update(std::vector<ThermalInfo> error);
 
  private:
-  // Linear regressor
-  std::vector<int32_t> temperature; // Get from resource monitor
-  std::vector<int32_t> frequency;
-  std::int64_t flops;
-  std::int64_t membytes;
-  
-  // Model parameter
-  std::vector<std::vector<double>> temp_param;
-  std::vector<std::vector<double>> freq_param;
-  std::vector<double> flops_param;
-  std::vector<double> membytes_param;
-  std::vector<double> error_param;
+
 };
 
 // Construct a prediction model for heat generation corresponding to 
@@ -47,7 +36,7 @@ class ThermalModel {
 
   ~ThermalModel();
 
-  // init model parameters with default values
+  // Initialize model parameters with default values
   TfLiteStatus Init();
 
   // Get an estimation value of future temperature 
@@ -58,7 +47,7 @@ class ThermalModel {
   TfLiteStatus Update(std::vector<ThermalInfo> error, worker_id_t wid);
 
  private:
-  std::unordered_map<worker_id_t, IThermalModel> models_;
+  std::unordered_map<worker_id_t, IThermalModel *> models_;
   ResourceMonitor& resource_monitor_;
   
 };

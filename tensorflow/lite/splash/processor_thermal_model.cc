@@ -12,7 +12,7 @@ TfLiteStatus ProcessorThermalModel::Init() {
     return kTfLiteOk;
 }
 
-std::unordered_map<worker_id_t, ThermalInfo> ProcessorThermalModel::GetFutureTemperature(SubgraphKey key) {
+std::unordered_map<worker_id_t, ThermalInfo> ProcessorThermalModel::Predict(SubgraphKey key) {
   std::unordered_map<worker_id_t, ThermalInfo> future_temperature;
   return future_temperature;
 }
