@@ -3,6 +3,9 @@
 #include <android/log.h>
 #endif // defined(__ANDROID__)
 
+#define MAX_FILE_SIZE 102400
+#define SLEEP_DELAY_MILLISECONDS 100 
+
 #include "tensorflow/lite/worker.h"
 
 #include <algorithm>
@@ -25,9 +28,16 @@
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
+using grpc::ClientWriter;
+using grpc::ClientReader;
+using grpc::WriteOptions;
 using helloworld::Greeter;
 using helloworld::HelloReply;
 using helloworld::HelloRequest;
+using helloworld::StringResponse;
+using helloworld::FileResponse;
+using helloworld::MetaData;
+using helloworld::UploadFileRequest;
 
 
 /*
@@ -54,19 +64,14 @@ class GreeterClient {
     }
     request.set_input(buffer);
 
-    // Container for the data we expect from the server.
     HelloReply reply;
-
-    // Context for the client. It could be used to convey extra information to
-    // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    // The actual RPC.
     Status status = stub_->SayHello(&context, request, &reply);
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-    LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000 );
+    LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000);
 
     // Act upon its status.
     if (status.ok()) {
@@ -78,6 +83,79 @@ class GreeterClient {
                 << std::endl;
       LOGI("RPC failed: %d, : %s", status.error_code(), status.error_message().c_str());
       alloc.deallocate(buffer, dataSize);
+      return "RPC failed";
+    }
+  }
+
+  std::string UploadFile(const std::string& filename) {
+    StringResponse response;
+    ClientContext context;
+    std::unique_ptr<ClientWriter<UploadFileRequest>> writer(stub_->UploadFile(&context, &response));
+
+    UploadFileRequest request;
+    request.mutable_metadata()->set_filename("1GB");
+    request.mutable_metadata()->set_extension(".bin");
+
+    char buffer[MAX_FILE_SIZE];
+    LOGI("UploadFile: file transfer %s", filename.c_str());
+    std::fstream fileStream = std::fstream(filename, std::ios::in | std::ios::binary);
+    if (!fileStream.is_open()) {
+      LOGI("File not exists");
+      return "File not exists"; 
+    }
+    std::chrono::steady_clock::time_point total_begin = std::chrono::steady_clock::now();
+    while (!fileStream.eof()) {
+      // std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_DELAY_MILLISECONDS));
+      request.clear_chunk_data();
+      fileStream.read(buffer, MAX_FILE_SIZE);
+      request.set_chunk_data(std::string(buffer, MAX_FILE_SIZE));
+      std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+      writer->Write(request, WriteOptions().set_buffer_hint());
+      std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+      LOGI("UploadFile RPC time : %d ms", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000);
+    }
+    std::chrono::steady_clock::time_point total_end = std::chrono::steady_clock::now();
+    LOGI("UploadFile total time : %d ms", std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_begin).count() / 1000);
+    writer->WritesDone();
+    fileStream.close();
+    LOGI("UploadFile: file transfer %s done", filename.c_str());
+    Status status = writer->Finish();
+    if (status.ok()) {
+      return "RPC success";
+    } else {
+      LOGI("RPC failed: %d, : %s", status.error_code(), status.error_message().c_str());
+      return "RPC failed";
+    }
+  }
+
+  std::string DownloadFile(const std::string& filename) {
+    FileResponse response;
+    ClientContext context;
+    MetaData metadata;
+    metadata.set_filename("1GB");
+    metadata.set_extension(".bin");
+
+    std::unique_ptr<ClientReader<FileResponse>> reader(stub_->DownloadFile(&context, metadata));
+
+    LOGI("DownloadFile: file transfer %s", filename.c_str());
+    std::fstream fileStream = std::fstream(filename, std::ios::out | std::ios::binary);
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point total_begin = std::chrono::steady_clock::now();
+    while (reader->Read(&response)) {
+      std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+      LOGI("DownloadFile RPC time : %d ms", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000);
+      fileStream.write(response.chunk_data().c_str(), MAX_FILE_SIZE);
+      response.clear_chunk_data();
+      begin = std::chrono::steady_clock::now();
+    }
+    fileStream.close();
+    Status status = reader->Finish();
+    std::chrono::steady_clock::time_point total_end = std::chrono::steady_clock::now();
+    LOGI("DownloadFile total time : %d ms", std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_begin).count() / 1000);
+    if (status.ok()) {
+      return "RPC success";
+    } else {
+      LOGI("RPC failed: %d, : %s", status.error_code(), status.error_message().c_str());
       return "RPC failed";
     }
   }
@@ -172,7 +250,9 @@ void DeviceQueueOffloadingWorker::Work() {
       lock.unlock();
 
       // TODO: Need to send and receive input/output tensors
-      std::string reply = greeter.SayHello(user);
+      // std::string reply = greeter.SayHello(user);
+      std::string reply = greeter.UploadFile("/data/data/com.aaa.cj.offloading/1GB.bin");
+      std::string reply2 = greeter.DownloadFile("/data/data/com.aaa.cj.offloading/1GB_download.bin");
       // std::cout << "Greeter received: " << reply << std::endl;
 
       current_job.end_time = profiling::time::NowMicros();

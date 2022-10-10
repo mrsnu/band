@@ -145,11 +145,11 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     exit(-1);
   }
 
-  // Init a ResourceMonitor instance
-  if (resource_monitor_.Init(runtime_config.resource_config) != kTfLiteOk) {
-    error_reporter_->Report("ResourceMonitor::Init() failed.");
-    exit(-1);
-  }
+  // // Init a ResourceMonitor instance
+  // if (resource_monitor_.Init(runtime_config.resource_config) != kTfLiteOk) {
+  //   error_reporter_->Report("ResourceMonitor::Init() failed.");
+  //   exit(-1);
+  // }
 
   // Initialize configurations.
   if (Init(runtime_config.interpreter_config) != kTfLiteOk) {

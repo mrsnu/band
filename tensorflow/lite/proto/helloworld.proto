@@ -7,6 +7,8 @@ package helloworld;
 service Greeter {
   // Sends a greeting
   rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc UploadFile(stream UploadFileRequest) returns (StringResponse) {}
+  rpc DownloadFile(MetaData) returns (stream FileResponse) {}
 }
 
 // The request message containing the user's name.
@@ -17,4 +19,22 @@ message HelloRequest {
 // The response message containing the greetings
 message HelloReply {
   string message = 1;
+}
+
+message StringResponse {
+  string message = 1;
+}
+
+message FileResponse {
+  bytes chunk_data = 1;
+}
+
+message MetaData {
+  string filename = 1;
+  string extension = 2;
+}
+
+message UploadFileRequest {
+  MetaData metadata = 1;
+  bytes chunk_data = 2;
 }
