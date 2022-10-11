@@ -63,6 +63,8 @@ class Worker {
   bool kill_worker_ = false;
   bool is_throttling_ = false;
   bool is_paused_ = false;
+  
+  // Configs
   int32_t availability_check_interval_ms_;
   std::string offloading_target_;
   std::int32_t offloading_data_size_;

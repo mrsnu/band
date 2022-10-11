@@ -103,7 +103,7 @@ void DeviceQueueWorker::Work() {
       if (TryCopyInputTensors(current_job) == kTfLiteOk) {
         lock.lock();
         current_job.invoke_time = profiling::time::NowMicros();
-        // current_job.estimated_temp = thermal_model_.GetPredictedTemperature();
+        current_job.estimated_temp = planner_ptr->GetThermalModel()->GetPredictedTemperature(current_job.worker_id, interpreter_ptr->subgraph(subgraph_idx));
         lock.unlock();
 
         TfLiteStatus status = subgraph.Invoke();
@@ -111,7 +111,7 @@ void DeviceQueueWorker::Work() {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job.end_time = profiling::time::NowMicros();
-          // current_job.real_temp = resource_monitor_.GetAllTemperature();
+          current_job.real_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
           interpreter_ptr->UpdateExpectedLatency(
               subgraph_idx,
               (current_job.end_time - current_job.invoke_time));
@@ -139,7 +139,6 @@ void DeviceQueueWorker::Work() {
 
           planner_ptr->GetSafeBool().notify();
           continue;
-
         } else {
           // end_time is never read/written by any other thread as long as
           // !requests_.empty(), so it's safe to update it w/o grabbing the lock

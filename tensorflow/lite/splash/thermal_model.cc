@@ -62,6 +62,10 @@ std::vector<worker_id_t> ThermalModel::GetPossibleWorkers(Subgraph* subgraph) {
   return possible_workers;
 }
 
+std::vector<thermal_t> ThermalModel::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
+  return models_[wid]->Predict(subgraph);
+}
+
 TfLiteStatus ThermalModel::Update(std::vector<thermal_t> error, worker_id_t wid) {
   return models_[wid]->Update(error);
 }

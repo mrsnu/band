@@ -18,9 +18,11 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter) : num_submitted_jobs_(0) {
+Planner::Planner(Interpreter* interpreter, ResourceMonitor& resource_monitor) : num_submitted_jobs_(0), resource_monitor_(resource_monitor) {
   interpreter_ = interpreter;
   planner_thread_ = std::thread([this] { this->Plan(); });
+  thermal_model_ = new ThermalModel(resource_monitor);
+  // TODO: Init latency model
 }
 
 Planner::~Planner() {

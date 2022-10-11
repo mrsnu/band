@@ -11,7 +11,7 @@ class ThermalAwareScheduler : public Scheduler {
  public:
   explicit ThermalAwareScheduler(Planner* planner) : Scheduler(planner) {
     need_profile_ = true;
-    worker_type_ = kGlobalQueue;
+    worker_type_ = kDeviceQueue;
   }
   void Schedule(JobQueue& requests) override;
 

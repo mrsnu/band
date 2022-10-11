@@ -12,8 +12,6 @@
 namespace tflite {
 namespace impl {
 
-
-
 class IThermalModel {
  public:
   IThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor): wid_(wid), resource_monitor_(resource_monitor) {}
@@ -90,6 +88,8 @@ class ThermalModel {
   // Get an estimation value of future temperature 
   // after executing inference of the input model
   std::vector<worker_id_t> GetPossibleWorkers(Subgraph* subgraph);
+
+  std::vector<thermal_t> GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph);
 
   // Update model parameters with the prediction error
   TfLiteStatus Update(std::vector<thermal_t> error, worker_id_t wid);

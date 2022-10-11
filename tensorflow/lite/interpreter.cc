@@ -145,7 +145,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   }
 
   // Create a Planner instance.
-  planner_.reset(new Planner(this));
+  planner_.reset(new Planner(this, resource_monitor_));
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
     exit(-1);
