@@ -75,8 +75,8 @@ struct WorkerConfig {
 
 struct ResourceConfig {
   std::string temperature_log_path;
-  std::unordered_map<std::string, std::string> tz_path;
-  std::unordered_map<std::string, std::string> freq_path;
+  std::vector<std::string> tz_path;
+  std::vector<std::string> freq_path;
 };
 
 struct RuntimeConfig {

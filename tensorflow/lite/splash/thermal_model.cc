@@ -13,20 +13,10 @@ namespace impl {
 
 TfLiteStatus ThermalModel::Init() {
   for (int i = 0; i < kTfLiteNumDevices; i++) {
-    if (i == kTfLiteOffloading) {
-      models_["Cloud"] = new CloudThermalModel();
-    } else if (i == kTfLiteCPU) {
-      models_["CPU"] = new ProcessorThermalModel();
-    } else if (i == kTfLiteGPU) {
-      models_["GPU"] = new ProcessorThermalModel();
-    } else if (i == kTfLiteDSP) {
-      models_["DSP"] = new ProcessorThermalModel();
-    } else if (i == kTfLiteNPU) {
-      models_["NPU"] = new ProcessorThermalModel();
-    }
+    models_.push_back(BuildModel(i));
   }
   for (auto& model : models_) {
-    auto status = model.second->Init();
+    auto status = model->Init(models_.size());
     if (status == kTfLiteError) {
       return kTfLiteError;
     }
@@ -34,27 +24,45 @@ TfLiteStatus ThermalModel::Init() {
   return kTfLiteOk;
 }
 
-std::vector<worker_id_t> ThermalModel::GetPossibleWorkers(SubgraphKey key) {
+IThermalModel * ThermalModel::BuildModel(worker_id_t wid) {
+  switch (wid) {
+    case kTfLiteCPU:
+      return new ProcessorThermalModel(wid, resource_monitor_);
+    case kTfLiteGPU:
+      return new ProcessorThermalModel(wid, resource_monitor_);
+    case kTfLiteDSP:
+      return new ProcessorThermalModel(wid, resource_monitor_);
+    case kTfLiteNPU:
+      return new ProcessorThermalModel(wid, resource_monitor_);
+    case kTfLiteOffloading:
+      return new CloudThermalModel(wid, resource_monitor_);
+    default:
+      return new ProcessorThermalModel(wid, resource_monitor_);
+  }
+}
+
+std::vector<worker_id_t> ThermalModel::GetPossibleWorkers(Subgraph* subgraph) {
   std::vector<worker_id_t> possible_workers;
   for (auto& model : models_) {
-    auto temperature = model.second->Predict(key);
+    auto temperature = model->Predict(subgraph);
     bool throttled = false;
-    for (auto& temp : temperature) {
+    for (int i = 0; i < temperature.size(); i++) {
+      thermal_t temp = temperature[i];
       // Checks if throttled
-      auto threshold = resource_monitor_.GetTemperature(temp.first);
-      if (temp.second.temperature > threshold) {
+      auto threshold = resource_monitor_.GetThrottlingThreshold(i);
+      if (temp > threshold) {
         throttled = true;
         break;
       }
     }
     if (!throttled) {
-      possible_workers.push_back(model.first);
+      possible_workers.push_back(model->GetWorkerId());
     }
   }
   return possible_workers;
 }
 
-TfLiteStatus ThermalModel::Update(std::vector<ThermalInfo> error, worker_id_t wid) {
+TfLiteStatus ThermalModel::Update(std::vector<thermal_t> error, worker_id_t wid) {
   return models_[wid]->Update(error);
 }
 

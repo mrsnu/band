@@ -12,22 +12,10 @@
 namespace tflite {
 namespace impl {
 
-typedef int32_t cpu_t;
+typedef int32_t worker_id_t;
 typedef int32_t thermal_t;
 typedef int32_t freq_t;
 typedef std::string path_t;
-typedef std::string worker_id_t;
-
-// Thermal info consists of current time and current temperature.
-struct ThermalInfo {
-  thermal_t temperature;
-  uint64_t time;
-};
-
-struct FreqInfo {
-  freq_t frequency;
-  uint64_t time;
-};
 
 // A singleton instance for reading the temperature and frequency from sysfs.
 // First, you need to set thermal zone paths calling `SetThermalZonePath`.
@@ -49,9 +37,7 @@ class ResourceMonitor {
     if (!CheckPathSanity(path)) {
       return kTfLiteError;
     }
-    tz_path_table_.emplace(wid, path);
-    // Initialize an empty vector
-    thermal_table_.emplace(wid, std::vector<ThermalInfo>());
+    tz_path_table_[wid] = path;
     return kTfLiteOk;
   }
 
@@ -63,33 +49,23 @@ class ResourceMonitor {
     if (!CheckPathSanity(path)) {
       return kTfLiteError;
     }
-    freq_path_table_.emplace(wid, path);
-    freq_table_.emplace(wid, std::vector<FreqInfo>());
+    freq_path_table_[wid] = path;
     return kTfLiteOk;
   }
 
-  thermal_t GetTemperature(worker_id_t);
-  thermal_t GetThrottlingThreshold(worker_id_t);
-  std::vector<ThermalInfo> GetTemperatureHistory(worker_id_t);
-  ThermalInfo GetTemperatureHistory(worker_id_t, int index);
+  std::vector<thermal_t> GetAllTemperature();
+  thermal_t GetThrottlingThreshold(worker_id_t wid);
 
-  freq_t GetFrequency(worker_id_t);
-  std::vector<FreqInfo> GetFrequencyHistory(worker_id_t);
-  FreqInfo GetFrequencyHistory(worker_id_t, int index);
-  
-  void ClearHistory(worker_id_t);
-  void ClearHistoryAll();
-  void DumpAllHistory(path_t log_path);
+  std::vector<freq_t> GetAllFrequency();
 
  private:
+  thermal_t GetTemperature(worker_id_t wid);
+  freq_t GetFrequency(worker_id_t wid);
+
   bool CheckPathSanity(path_t path);
 
-  std::unordered_map<worker_id_t, path_t> tz_path_table_;
-  std::unordered_map<worker_id_t, path_t> freq_path_table_;
-  std::unordered_map<worker_id_t, std::vector<ThermalInfo>> thermal_table_;
-  std::unordered_map<worker_id_t, std::vector<FreqInfo>> freq_table_;
-
-  path_t log_path_;
+  std::vector<path_t> tz_path_table_;
+  std::vector<path_t> freq_path_table_;
 };
 
 } // namespace impl

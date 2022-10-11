@@ -194,7 +194,6 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
 
   // Set Resource configs
   // 1. Temperature log path
-  resource_config.temperature_log_path = root["temperature_log_path"].asString();
   if (!root["resources"].isNull()) {
     for (int i = 0; i < root["resources"].size(); ++i) {
       auto resource_config_json = root["resources"][i];
@@ -204,11 +203,11 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
       std::string device = resource_config_json["device"].asCString();
       // 1. worker temperature zone path 
       if (!resource_config_json["tz_path"].isNull()) {
-        resource_config.tz_path.emplace(device, resource_config_json["tz_path"].asCString());
+        resource_config.tz_path[i] = resource_config_json["tz_path"].asCString();
       }
       // 2. worker frequency path
       if (!resource_config_json["freq_path"].isNull()) {
-        resource_config.freq_path.emplace(device, resource_config_json["freq_path"].asCString());
+        resource_config.freq_path[i] = resource_config_json["freq_path"].asCString();
       }
     }
   }
