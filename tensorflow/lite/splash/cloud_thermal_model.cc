@@ -40,12 +40,15 @@ vector<thermal_t> CloudThermalModel::Predict(const Subgraph* subgraph) {
 }
 
 vector<thermal_t> CloudThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,
-                                                                   const int64_t input_size,
-                                                                   const int64_t output_size,
-                                                                   const int64_t rssi,
-                                                                   const int64_t waiting_time) {
+                                                               const int64_t input_size,
+                                                               const int64_t output_size,
+                                                               const int64_t rssi,
+                                                               const int64_t waiting_time) {
   vector<thermal_t> future_temperature;
-  // future_temperature = temp * temp_param_ + input_size * input_param_ + output_size * output_param_ + rssi * rssi_param_ + waiting_time * waiting_param_ + 1 * error_param_;
+  // TODO: Refactor this calculation
+  future_temperature = Plus(Plus(Multiply(temp_param_, temp), Multiply(input_param_, input_size)),
+    Plus(Plus(Multiply(output_param_, output_size), Multiply(rssi_param_, rssi)),
+    Plus(Multiply(waiting_param_, waiting_time), Multiply(error_param_, 1))));
   return future_temperature;
 }
 

@@ -37,6 +37,11 @@ class ProcessorThermalModel : public IThermalModel {
   std::vector<double> membytes_param_;
   std::vector<double> error_param_;
 
+  std::vector<thermal_t> Plus(const std::vector<thermal_t>& a, const std::vector<thermal_t>& b);
+  std::vector<thermal_t> EstimateFutureTemperature(const std::vector<thermal_t> temp,
+                                                   const std::vector<freq_t> freq,
+                                                   const int64_t flops,
+                                                   const int64_t membytes);
   int64_t EstimateFLOPS(const Subgraph* subgraph,
                         const Subgraph* primary_subgraph);
   int64_t EstimateInputOutputSize(const Subgraph* subgraph);

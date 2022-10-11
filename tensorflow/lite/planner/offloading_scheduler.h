@@ -12,7 +12,6 @@ class OffloadingScheduler : public Scheduler {
   explicit OffloadingScheduler(Planner* planner)
       : Scheduler(planner) {
     need_profile_ = true;
-    need_fallback_subgraphs_ = true;
     worker_type_ = kDeviceQueue;
   }
   void Schedule(JobQueue& requests) override;

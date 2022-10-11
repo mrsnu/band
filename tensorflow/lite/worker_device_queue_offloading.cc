@@ -39,12 +39,6 @@ using helloworld::FileResponse;
 using helloworld::MetaData;
 using helloworld::UploadFileRequest;
 
-
-/*
- *******************************************************************
- * Copy-pasted from grpc/examples/cpp/helloworld/greeter_client.cc *
- *******************************************************************
- */
 class GreeterClient {
  public:
   GreeterClient(std::shared_ptr<Channel> channel, int data_size)
@@ -172,10 +166,6 @@ JobQueue& DeviceQueueOffloadingWorker::GetDeviceRequests() {
   return requests_;
 }
 
-void DeviceQueueOffloadingWorker::AllowWorkSteal() {
-  allow_work_steal_ = true;
-}
-
 int DeviceQueueOffloadingWorker::GetCurrentJobId() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (requests_.empty()) {
@@ -185,6 +175,22 @@ int DeviceQueueOffloadingWorker::GetCurrentJobId() {
 }
 
 int64_t DeviceQueueOffloadingWorker::GetWaitingTime() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  if (!IsAvailable()) {
+    return LARGE_WAITING_TIME;
+  }
+
+  std::shared_ptr<Planner> planner = planner_.lock();
+  if (!planner) {
+    return -1;
+  }
+  Interpreter* interpreter = planner->GetInterpreter();
+
+  // assume 100 ms per job (currently, does not check for profiling)
+  return 1000000 * requests_.size();
+}
+
+int64_t DeviceQueueOffloadingWorker::GetBandwidthMeasurement() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
@@ -240,11 +246,6 @@ void DeviceQueueOffloadingWorker::Work() {
 
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
-      if (TryUpdateWorkerThread() != kTfLiteOk) {
-        // TODO #21: Handle errors in multi-thread environment
-        break;
-      }
-
       lock.lock();
       current_job.invoke_time = profiling::time::NowMicros();
       lock.unlock();
@@ -269,8 +270,6 @@ void DeviceQueueOffloadingWorker::Work() {
       lock.unlock();
 
       planner_ptr->GetSafeBool().notify();
-
-
     } else {
       // TODO #21: Handle errors in multi-thread environment
       TF_LITE_MAYBE_REPORT_ERROR(
@@ -280,10 +279,6 @@ void DeviceQueueOffloadingWorker::Work() {
       return;
     }
   }
-}
-
-void DeviceQueueOffloadingWorker::TryWorkSteal() {
-  // not supported
 }
 
 }  // namespace impl

@@ -44,7 +44,6 @@ class Worker {
 
   // DeviceQueueWorker methods
   virtual JobQueue& GetDeviceRequests();
-  virtual void AllowWorkSteal();
 
   // GlobalQueueWorker methods
   virtual bool IsBusy();
@@ -94,15 +93,11 @@ class DeviceQueueWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
-  void AllowWorkSteal() override;
 
  protected:
   void Work() override;
 
  private:
-  void TryWorkSteal();
-
-  bool allow_work_steal_ = false;
 };
 
 class GlobalQueueWorker : public Worker {
@@ -136,17 +131,12 @@ class DeviceQueueOffloadingWorker : public Worker {
 
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
+  int64_t GetBandwidthMeasurement();
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
-  void AllowWorkSteal() override;
 
  protected:
   void Work() override;
-
- private:
-  void TryWorkSteal();
-
-  bool allow_work_steal_ = false;
 };
 
 }  // namespace impl

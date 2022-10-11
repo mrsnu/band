@@ -15,7 +15,7 @@ void OffloadingScheduler::Schedule(JobQueue& requests) {
   // schedule all jobs to offloading
   for (auto job : local_jobs) {
     int model_id = job.model_id;
-    int worker_id = GetInterpreter()->GetRepresentativeWorkerId(kTfLiteOffloading);
+    int worker_id = GetInterpreter()->GetRepresentativeWorkerId(kTfLiteCLOUD);
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker_id);
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
     EnqueueAction(job, subgraph);

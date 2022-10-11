@@ -812,7 +812,7 @@ typedef enum {
   kTfLiteGPU = 1,
   kTfLiteDSP = 2,
   kTfLiteNPU = 3,
-  kTfLiteOffloading = 4,
+  kTfLiteCLOUD = 4,
   kTfLiteNumDevices = 5,
 } TfLiteDeviceFlags;
 

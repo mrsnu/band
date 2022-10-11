@@ -14,7 +14,6 @@ class FixedDeviceScheduler : public Scheduler {
  public:
   explicit FixedDeviceScheduler(Planner* planner) : Scheduler(planner) {
     need_profile_ = false;
-    need_fallback_subgraphs_ = false;
     worker_type_ = kDeviceQueue;
   }
   void Schedule(JobQueue& requests) override;
@@ -28,7 +27,6 @@ class FixedDeviceGlobalQueueScheduler : public Scheduler {
     // We could add an option to this planner for skipping the SLO check,
     // in which case this function can return false.
     need_profile_ = true;
-    need_fallback_subgraphs_ = false;
     worker_type_ = kGlobalQueue;
   }
   void Schedule(JobQueue& requests) override;

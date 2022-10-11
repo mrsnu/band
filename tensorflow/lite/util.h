@@ -36,6 +36,12 @@ limitations under the License.
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
+
+typedef int32_t worker_id_t;
+typedef int32_t thermal_t;
+typedef int32_t freq_t;
+typedef std::string path_t;
+
 // data structure for identifying subgraphs within whole models
 struct SubgraphKey {
   SubgraphKey() {}
@@ -121,6 +127,9 @@ struct Job {
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
   std::set<int> resolved_tensors;
   std::list<int> previous_subgraph_indices;
+
+  std::vector<thermal_t> real_temp;
+  std::vector<thermal_t> estimated_temp;
 };
 
 // Model configuration struct.

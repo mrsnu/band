@@ -21,9 +21,11 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size) {
 }
 
 vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph) {
-  // Get temperature
+  // Get temperature from resource monitor
+  vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
 
   // Get frequency 
+  vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
 
   // Get flops 
   int64_t flops = EstimateFLOPS(subgraph, subgraph);
@@ -31,7 +33,17 @@ vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph) {
   // Get membytes 
   int64_t memBytes = EstimateInputOutputSize(subgraph);
 
+  return EstimateFutureTemperature(temp, freq, flops, membytes);
+}
+
+vector<thermal_t> ProcessorThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,
+                                                                   const vector<freq_t> freq,
+                                                                   const int64_t flops,
+                                                                   const int64_t membytes) {
   vector<thermal_t> future_temperature;
+  // TODO: Refactor this calculation
+  future_temperature = Plus(Plus(Multiply(temp_param_, temp), Multiply(freq_param_, freq)), 
+    Plus(Plus(Multiply(flops_param_, flops), Multiply(membytes_param_, membytes)), Multiply(error_param_, 1)));
   return future_temperature;
 }
 
@@ -121,11 +133,9 @@ int64_t ProcessorThermalModel::EstimateInputOutputSize(const Subgraph* subgraph)
   return subgraph_input_output_size;
 }
 
-
 TfLiteStatus ProcessorThermalModel::Update(vector<thermal_t> error) {
   return kTfLiteOk;
 }
-
 
 } // namespace impl
 } // namespace tflite

@@ -175,14 +175,12 @@ class Scheduler {
     return planner_->GetWorkerWaitingTime();
   }
   bool NeedProfile() { return need_profile_; }
-  bool NeedFallbackSubgraphs() { return need_fallback_subgraphs_; }
   TfLiteWorkerType GetWorkerType() { return worker_type_; }
   ScheduleAction& GetAction() { return action_; }
   void EnqueueAction(Job job, Subgraph* subgraph);
 
  protected:
   bool need_profile_;
-  bool need_fallback_subgraphs_;
   TfLiteWorkerType worker_type_;
   Planner* planner_;
   ScheduleAction action_;

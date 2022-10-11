@@ -23,10 +23,6 @@ Worker::~Worker() {
 }
 
 TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
-  if (config.allow_worksteal) {
-    AllowWorkSteal();
-  }
-  
   availability_check_interval_ms_ = config.availability_check_interval_ms;
   offloading_target_ = config.offloading_target;
   offloading_data_size_ = config.offloading_data_size;
@@ -104,10 +100,6 @@ JobQueue& Worker::GetDeviceRequests() {
   TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING,
                       "GetDeviceRequests() Not implemented");
   return requests_;
-}
-
-void Worker::AllowWorkSteal() {
-  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "AllowWorkSteal() Not implemented");
 }
 
 bool Worker::IsBusy() {

@@ -13,7 +13,6 @@ class RandomAssignScheduler : public Scheduler {
  public:
   explicit RandomAssignScheduler(Planner* planner) : Scheduler(planner) {
     need_profile_ = false;
-    need_fallback_subgraphs_ = false;
     worker_type_ = kDeviceQueue;
   }
   void Schedule(JobQueue& requests) override;

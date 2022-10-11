@@ -4,25 +4,33 @@
 #include <fstream>
 
 #include "tensorflow/lite/profiling/time.h"
-
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 namespace tflite {
 namespace impl {
 
 TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
+  LOGI("Init starts: %d", config.tz_path.size());
   // Set all temp/freq path
   for (int i = 0; i < config.tz_path.size(); i++) {
+    LOGI("tz_path : %s", config.tz_path[i].c_str());
     SetThermalZonePath(i, config.tz_path[i]);
   }
   for (int i = 0; i < config.freq_path.size(); i++) {
+    LOGI("freq_path : %s", config.freq_path[i].c_str());
     SetFreqPath(i, config.freq_path[i]);
   }
+  LOGI("Init ends");
+  return kTfLiteOk;
 }
 
 bool ResourceMonitor::CheckPathSanity(std::string path) {
   std::ifstream fin;
   fin.open(path);
   if (!fin.is_open()) {
-    printf("File did not open.\n");
+    LOGI("File did not open.\n");
     return false;
   }
   fin.close();

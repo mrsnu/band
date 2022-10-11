@@ -40,10 +40,10 @@ class CloudThermalModel : public IThermalModel {
   std::vector<double> error_param_;
 
   std::vector<thermal_t> EstimateFutureTemperature(const std::vector<thermal_t> temp,
-                                              const int64_t input_size,
-                                              const int64_t output_size,
-                                              const int64_t rssi,
-                                              const int64_t waiting_time);
+                                                   const int64_t input_size,
+                                                   const int64_t output_size,
+                                                   const int64_t rssi,
+                                                   const int64_t waiting_time);
   int64_t EstimateInputSize(const Subgraph* subgraph);
   int64_t EstimateOutputSize(const Subgraph* subgraph);
 };

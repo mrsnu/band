@@ -37,7 +37,7 @@ class ResourceMonitor {
     if (!CheckPathSanity(path)) {
       return kTfLiteError;
     }
-    tz_path_table_[wid] = path;
+    tz_path_table_.push_back(path);
     return kTfLiteOk;
   }
 
@@ -49,7 +49,7 @@ class ResourceMonitor {
     if (!CheckPathSanity(path)) {
       return kTfLiteError;
     }
-    freq_path_table_[wid] = path;
+    freq_path_table_.push_back(path);
     return kTfLiteOk;
   }
 

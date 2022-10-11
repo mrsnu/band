@@ -34,7 +34,7 @@ IThermalModel * ThermalModel::BuildModel(worker_id_t wid) {
       return new ProcessorThermalModel(wid, resource_monitor_);
     case kTfLiteNPU:
       return new ProcessorThermalModel(wid, resource_monitor_);
-    case kTfLiteOffloading:
+    case kTfLiteCLOUD:
       return new CloudThermalModel(wid, resource_monitor_);
     default:
       return new ProcessorThermalModel(wid, resource_monitor_);

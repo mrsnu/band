@@ -19,6 +19,10 @@ limitations under the License.
 #include <json/json.h>
 
 #include <fstream>
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 
 namespace tflite {
 
@@ -37,60 +41,15 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   auto& worker_config = runtime_config.worker_config;
   auto& resource_config = runtime_config.resource_config;
 
-  // Set Interpreter Configs
   // 1. CPU mask
   if (!root["cpu_masks"].isNull()) {
     interpreter_config.cpu_masks =
         impl::TfLiteCPUMaskGetMask(root["cpu_masks"].asCString());
   }
-  // 2. Dynamic profile config
-  if (!root["profile_smoothing_factor"].isNull()) {
-    interpreter_config.profile_smoothing_factor =
-        root["profile_smoothing_factor"].asFloat();
-  }
-  // 3. File path to profile data
-  if (!root["model_profile"].isNull()) {
-    interpreter_config.profile_data_path = root["model_profile"].asString();
-  }
-  // 4. Number of threads
-  if (!root["num_threads"].isNull()) {
-    interpreter_config.num_threads = root["num_threads"].asInt();
-  }
-  // 5. Profile config
-  if (!root["profile_online"].isNull()) {
-    interpreter_config.profile_config.online = root["profile_online"].asBool();
-  }
-  if (!root["profile_warmup_runs"].isNull()) {
-    interpreter_config.profile_config.num_warmups =
-        root["profile_warmup_runs"].asInt();
-  }
-  if (!root["profile_num_runs"].isNull()) {
-    interpreter_config.profile_config.num_runs =
-        root["profile_num_runs"].asInt();
-  }
-  if (!root["profile_copy_computation_ratio"].isNull()) {
-    interpreter_config.copy_computation_ratio =
-        root["profile_copy_computation_ratio"].asInt();
-  }
-  // 6. Subgraph preparation type
-  if (!root["subgraph_preparation_type"].isNull()) {
-    interpreter_config.subgraph_preparation_type =
-        root["subgraph_preparation_type"].asString();
-  }
-  // 7. Minimum subgraph size
-  if (!root["minimum_subgraph_size"].isNull()) {
-    interpreter_config.minimum_subgraph_size =
-        root["minimum_subgraph_size"].asInt();
-  }
 
-  // Set Planner configs
-  // 1. Log path
+  // 2. Log path
   planner_config.log_path = root["log_path"].asString();
-  // 2. Scheduling window size
-  if (!root["schedule_window_size"].isNull()) {
-    planner_config.schedule_window_size = root["schedule_window_size"].asInt();
-    TF_LITE_ENSURE(error_reporter, planner_config.schedule_window_size > 0);
-  }
+
   // 3. Planner type
   for (int i = 0; i < root["schedulers"].size(); ++i) {
     int scheduler_id = root["schedulers"][i].asInt();
@@ -101,6 +60,7 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     planner_config.schedulers.push_back(
         static_cast<TfLiteSchedulerType>(scheduler_id));
   }
+
   // 4. Planner CPU masks
   if (!root["planner_cpu_masks"].isNull()) {
     planner_config.cpu_masks =
@@ -175,15 +135,6 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     }
   }
 
-  // 3. Allow worksteal
-  if (!root["allow_work_steal"].isNull()) {
-    worker_config.allow_worksteal = root["allow_work_steal"].asBool();
-  }
-  // 3. availability_check_interval_ms
-  if (!root["availability_check_interval_ms"].isNull()) {
-    worker_config.availability_check_interval_ms =
-        root["availability_check_interval_ms"].asInt();
-  }
   if (!root["offloading_target"].isNull()) {
     worker_config.offloading_target = root["offloading_target"].asCString();
   }
@@ -197,17 +148,13 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   if (!root["resources"].isNull()) {
     for (int i = 0; i < root["resources"].size(); ++i) {
       auto resource_config_json = root["resources"][i];
-      TF_LITE_ENSURE_MSG(
-          error_reporter, !resource_config_json["device"].isNull(),
-          "Please check if argument `device` is given in the resource configs.");
-      std::string device = resource_config_json["device"].asCString();
       // 1. worker temperature zone path 
       if (!resource_config_json["tz_path"].isNull()) {
-        resource_config.tz_path[i] = resource_config_json["tz_path"].asCString();
+        resource_config.tz_path.push_back(resource_config_json["tz_path"].asCString());
       }
       // 2. worker frequency path
       if (!resource_config_json["freq_path"].isNull()) {
-        resource_config.freq_path[i] = resource_config_json["freq_path"].asCString();
+        resource_config.freq_path.push_back(resource_config_json["freq_path"].asCString());
       }
     }
   }
