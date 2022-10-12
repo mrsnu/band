@@ -1,13 +1,13 @@
 #ifndef BAND_PLANNER_H_
 #define BAND_PLANNER_H_
 
+#include <array>
 #include <atomic>
 #include <functional>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
-#include <array>
 
 #include "band/c/common.h"
 #include "band/config.h"

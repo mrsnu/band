@@ -17,7 +17,9 @@ std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
 extern "C" {
 #endif  // __cplusplus
 
-BandConfigBuilder* BandConfigBuilderCreate() { return new BandConfigBuilder; }
+BandConfigBuilder* BandConfigBuilderCreate() {
+  return new BandConfigBuilder; 
+}
 
 void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
   // TODO(widiba03304): Error handling should be properly done.

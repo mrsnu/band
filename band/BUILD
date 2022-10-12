@@ -19,14 +19,18 @@ config_setting(
 # TFLite backend setting.
 config_setting(
     name = "tflite",
-    define_values = {"tflite": "true"},
+    define_values = {
+        "tflite": "true"
+    },
     visibility = ["//visibility:public"],
 )
 
 # MNN backend setting.
 config_setting(
     name = "mnn",
-    define_values = {"tflite": "true"},
+    define_values = {
+        "mnn": "true"
+    },
     visibility = ["//visibility:public"],
 )
 
@@ -43,10 +47,6 @@ config_setting(
 config_setting(
     name = "android_arm64",
     flag_values = {},
-    define_values = {
-        "tflite": "true",
-        "mnn": "false",
-    },
     values = dict(
         {"crosstool_top": "//external:android/crosstool"},
         cpu = "arm64-v8a",
@@ -59,7 +59,6 @@ config_setting(
     flag_values = {},
     define_values = {
         "tflite": "true",
-        "mnn": "false"
     },
     values = dict(
         {"crosstool_top": "//external:android/crosstool"},
@@ -72,7 +71,6 @@ config_setting(
     name = "android_arm64_mnn",
     flag_values = {},
     define_values = {
-        "tflite": "false",
         "mnn": "true"
     },
     values = dict(

@@ -1,5 +1,6 @@
 load(
     "//band:band.bzl", 
+    "clean_dep",
     "band_cc_shared_object",
     "band_copts",
 )
@@ -29,17 +30,21 @@ band_cc_shared_object(
     }),
 )
 
-cc_library(
-    name = "bandc_wrapper",
+cc_binary(
+    name = "bandc_main",
     srcs = [
-        "test/bandc_wrapper.cc",
+        "test/bandc_main.c",
     ],
-    hdrs = [
-        "test/bandc_wrapper.h",
-    ],
+    linkopts = select({
+        clean_dep("//band:android"): [],
+        "//conditions:default": [
+            "-lpthread",
+        ],
+    }),
     deps = [
+        ":common",
         ":c_api",
-    ]
+    ],
 )
 
 cc_library(
