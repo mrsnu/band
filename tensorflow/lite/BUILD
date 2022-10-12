@@ -90,6 +90,7 @@ FRAMEWORK_LIB_HDRS = [
     "worker.h",
     "safe_bool.h",
     "splash/resource_monitor.h",
+    "splash/thermal_model_manager.h",
     "splash/thermal_model.h",
     "splash/cloud_thermal_model.h",
     "splash/processor_thermal_model.h"
@@ -312,7 +313,7 @@ cc_library(
         "worker_global_queue.cc",
         "worker_device_queue_offloading.cc",
         "splash/resource_monitor.cc",
-        "splash/thermal_model.cc",
+        "splash/thermal_model_manager.cc",
         "splash/cloud_thermal_model.cc",
         "splash/processor_thermal_model.cc"
     ],

@@ -174,6 +174,11 @@ int DeviceQueueOffloadingWorker::GetCurrentJobId() {
   return requests_.front().job_id;
 }
 
+bool DeviceQueueOffloadingWorker::IsBusy() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  return true;
+}
+
 int64_t DeviceQueueOffloadingWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {

@@ -6,6 +6,11 @@
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/builtin_ops.h"
 
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
+
 namespace tflite {
 namespace impl {
 
@@ -21,18 +26,23 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size) {
 }
 
 vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph) {
+  LOGI("ProcessorThermalModel::Predict starts");
   // Get temperature from resource monitor
   vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
 
+  LOGI("Temp done");
   // Get frequency 
   vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
 
+  LOGI("Freq done");
   // Get flops 
   int64_t flops = EstimateFLOPS(subgraph, subgraph);
 
+  LOGI("Flops done");
   // Get membytes 
   int64_t memBytes = EstimateInputOutputSize(subgraph);
 
+  LOGI("Membytes done");
   return EstimateFutureTemperature(temp, freq, flops, membytes);
 }
 

@@ -136,6 +136,7 @@ class DeviceQueueOffloadingWorker : public Worker {
   int64_t GetBandwidthMeasurement();
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
+  bool IsBusy() override;
 
  protected:
   void Work() override;

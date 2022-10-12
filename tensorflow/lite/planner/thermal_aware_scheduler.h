@@ -10,7 +10,7 @@ namespace impl {
 class ThermalAwareScheduler : public Scheduler {
  public:
   explicit ThermalAwareScheduler(Planner* planner) : Scheduler(planner) {
-    need_profile_ = true;
+    need_profile_ = false;
     worker_type_ = kDeviceQueue;
   }
   void Schedule(JobQueue& requests) override;

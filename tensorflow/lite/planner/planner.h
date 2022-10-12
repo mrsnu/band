@@ -13,7 +13,7 @@
 #include "tensorflow/lite/planner/util.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/worker.h"
-#include "tensorflow/lite/splash/thermal_model.h"
+#include "tensorflow/lite/splash/thermal_model_manager.h"
 #include "tensorflow/lite/splash/resource_monitor.h"
 
 namespace tflite {
@@ -21,7 +21,7 @@ namespace impl {
 
 class Interpreter;
 class Scheduler;
-class ThermalModel;
+class ThermalModelManager;
 
 // The interpreter manages a `Planner`.
 class Planner {
@@ -122,7 +122,7 @@ class Planner {
 
   void PrepareReenqueue(Job& job);
 
-  ThermalModel * GetThermalModel() { return thermal_model_; }
+  ThermalModelManager * GetThermalModel() { return thermal_model_manager_; }
 
   ResourceMonitor& GetResourceMonitor() { return resource_monitor_; }
 
@@ -130,7 +130,7 @@ class Planner {
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
-  ThermalModel * thermal_model_;
+  ThermalModelManager * thermal_model_manager_;
   ResourceMonitor& resource_monitor_;
   CpuSet cpu_set_;
   bool need_cpu_update_ = false;

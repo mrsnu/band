@@ -5,6 +5,10 @@
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 
 namespace tflite {
 namespace impl {
@@ -103,7 +107,9 @@ void DeviceQueueWorker::Work() {
       if (TryCopyInputTensors(current_job) == kTfLiteOk) {
         lock.lock();
         current_job.invoke_time = profiling::time::NowMicros();
+        LOGI("getting thermal here");
         current_job.estimated_temp = planner_ptr->GetThermalModel()->GetPredictedTemperature(current_job.worker_id, interpreter_ptr->subgraph(subgraph_idx));
+        LOGI("getting thermal done");
         lock.unlock();
 
         TfLiteStatus status = subgraph.Invoke();

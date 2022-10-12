@@ -21,7 +21,7 @@ namespace impl {
 Planner::Planner(Interpreter* interpreter, ResourceMonitor& resource_monitor) : num_submitted_jobs_(0), resource_monitor_(resource_monitor) {
   interpreter_ = interpreter;
   planner_thread_ = std::thread([this] { this->Plan(); });
-  thermal_model_ = new ThermalModel(resource_monitor);
+  thermal_model_manager_ = new ThermalModelManager(resource_monitor);
   // TODO: Init latency model
 }
 
@@ -95,6 +95,12 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   if (config.cpu_masks != impl::kTfLiteAll) {
     cpu_set_ = impl::TfLiteCPUMaskGetSet(config.cpu_masks);
     need_cpu_update_ = true;
+  }
+
+  LOGI("thermal model init starts");
+  if (thermal_model_manager_->Init() != kTfLiteOk) {
+    LOGI("thermal model init failed");
+    return kTfLiteError; 
   }
 
   return kTfLiteOk;
@@ -203,6 +209,7 @@ void Planner::UpdateWorkerWaitingTime() {
 
 std::set<int> Planner::GetIdleWorkers() {
   std::set<int> idle_workers;
+  LOGI("Total worker number : %d", GetInterpreter()->GetNumWorkers());
   for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
     if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
       idle_workers.insert(i);
