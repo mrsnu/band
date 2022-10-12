@@ -40,11 +40,10 @@ bool ResourceMonitor::CheckPathSanity(std::string path) {
 std::vector<thermal_t> ResourceMonitor::GetAllTemperature() {
   std::vector<thermal_t> ret(kTfLiteNumDevices);
   for (int i = 0; i < kTfLiteNumDevices; i++) {
-    ret.push_back(GetTemperature(i));
+    ret[i] = GetTemperature(i);
   }
   return ret;
 }
-
 
 thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
   // Ensure that the path is sanitized.
@@ -52,7 +51,6 @@ thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
   fin.open(GetThermalZonePath(wid));
   assert(fin.is_open());
   thermal_t temperature_curr = -1;
-  uint64_t time_curr = profiling::time::NowMicros();
   fin >> temperature_curr;
   return temperature_curr;
 }
@@ -65,7 +63,7 @@ thermal_t ResourceMonitor::GetThrottlingThreshold(worker_id_t wid) {
 std::vector<freq_t> ResourceMonitor::GetAllFrequency() {
   std::vector<freq_t> ret(kTfLiteNumDevices);
   for (int i = 0; i < kTfLiteNumDevices; i++) {
-    ret.push_back(GetFrequency(i));
+    ret[i] = GetFrequency(i);
   }
   return ret;
 }
@@ -75,7 +73,6 @@ freq_t ResourceMonitor::GetFrequency(worker_id_t wid) {
   fin.open(GetFreqPath(wid));
   assert(fin.is_open());
   freq_t freq_curr = -1;
-  uint64_t time_curr = profiling::time::NowMicros();
   fin >> freq_curr;
   return freq_curr;
 }

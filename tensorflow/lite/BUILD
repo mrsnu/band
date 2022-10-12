@@ -91,9 +91,10 @@ FRAMEWORK_LIB_HDRS = [
     "safe_bool.h",
     "splash/resource_monitor.h",
     "splash/thermal_model_manager.h",
-    "splash/thermal_model.h",
-    "splash/cloud_thermal_model.h",
-    "splash/processor_thermal_model.h"
+    # "splash/thermal_model.h",
+    "splash/common_thermal_model.h",
+    # "splash/cloud_thermal_model.h",
+    # "splash/processor_thermal_model.h"
 ]
 
 cc_library(
@@ -314,8 +315,9 @@ cc_library(
         "worker_device_queue_offloading.cc",
         "splash/resource_monitor.cc",
         "splash/thermal_model_manager.cc",
-        "splash/cloud_thermal_model.cc",
-        "splash/processor_thermal_model.cc"
+        "splash/common_thermal_model.cc",
+        # "splash/cloud_thermal_model.cc",
+        # "splash/processor_thermal_model.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,

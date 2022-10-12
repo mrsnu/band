@@ -46,7 +46,6 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "end_time\t"
              << "estimated_latency\t"
              << "real_latency\t"
-             << "job_status\t"
              << "estimated_temp_cpu\t"
              << "real_temp_cpu\t"
              << "estimated_temp_gpu\t"
@@ -56,7 +55,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "estimated_temp_npu\t"
              << "real_temp_npu\t"
              << "estimated_temp_cloud\t"
-             << "real_temp_cloud\n";
+             << "real_temp_cloud\t"
+             << "job_status\n";
     log_file.close();
   }
 
