@@ -3,6 +3,7 @@ VERS_1.0 {
     *TfLite*;
     *tflite*;
     *TFL_*;
+    *IThermalModel*;
   local:
     *;
 };

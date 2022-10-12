@@ -1,9 +1,8 @@
 #include "tensorflow/lite/splash/thermal_model_manager.h"
 
-#include "tensorflow/lite/splash/common_thermal_model.h"
-// #include "tensorflow/lite/splash/thermal_model.h"
-// #include "tensorflow/lite/splash/cloud_thermal_model.h"
-// #include "tensorflow/lite/splash/processor_thermal_model.h"
+#include "tensorflow/lite/splash/thermal_model.h"
+#include "tensorflow/lite/splash/cloud_thermal_model.h"
+#include "tensorflow/lite/splash/processor_thermal_model.h"
 #include "tensorflow/lite/profiling/time.h"
 
 #if defined(__ANDROID__)
@@ -14,33 +13,11 @@
 namespace tflite {
 namespace impl {
 
-// std::unique_ptr<IThermalModel> ThermalModelManager::BuildModel(worker_id_t wid) {
-//   switch (wid) {
-//     case kTfLiteCPU:
-//       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
-//     case kTfLiteGPU:
-//       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
-//     case kTfLiteDSP:
-//       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
-//     case kTfLiteNPU:
-//       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
-//     case kTfLiteCLOUD:
-//       return std::make_unique<CloudThermalModel>(wid, resource_monitor_);
-//     default:
-//       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
-//   }
-// }
 
 TfLiteStatus ThermalModelManager::Init() {
   LOGI("ThermalModelManager:: init");
-  // cpu_model_ = BuildModel(0);
-  // check_thermal_ = 10;
-  // std::unique_ptr<CommonThermalModel> model = std::make_unique<CommonThermalModel>(0, resource_monitor_);
-  // auto model1 = BuildModel(1);
-  // std::unique_ptr<CommonThermalModel> model2 = BuildModel(2);
-  // model->Init(3);
   for (int wid = 0; wid < kTfLiteNumDevices; wid++) {
-    std::unique_ptr<CommonThermalModel> model = std::make_unique<CommonThermalModel>(wid, resource_monitor_);
+    std::unique_ptr<IThermalModel> model = BuildModel(wid);
     models_.emplace_back(std::move(model));
   }
   for (auto& model : models_) {
@@ -51,6 +28,23 @@ TfLiteStatus ThermalModelManager::Init() {
   }
   LOGI("ThermalModelManager:: finish");
   return kTfLiteOk;
+}
+
+std::unique_ptr<IThermalModel> ThermalModelManager::BuildModel(worker_id_t wid) {
+  switch (wid) {
+    case kTfLiteCPU:
+      return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
+    case kTfLiteGPU:
+      return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
+    case kTfLiteDSP:
+      return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
+    case kTfLiteNPU:
+      return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
+    case kTfLiteCLOUD:
+      return std::make_unique<CloudThermalModel>(wid, resource_monitor_);
+    default:
+      return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
+  }
 }
 
 std::vector<worker_id_t> ThermalModelManager::GetPossibleWorkers(Subgraph* subgraph) {

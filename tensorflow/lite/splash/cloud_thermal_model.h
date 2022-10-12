@@ -15,7 +15,7 @@ namespace impl {
 
 class CloudThermalModel : public IThermalModel {
  public:
-  explicit CloudThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
+  CloudThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
   : IThermalModel(wid, resource_monitor) {}
 
   TfLiteStatus Init(int32_t worker_size) override;

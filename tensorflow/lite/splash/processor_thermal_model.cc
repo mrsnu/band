@@ -17,10 +17,10 @@ namespace impl {
 using namespace std;
 
 TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size) {
-  temp_param_.assign(worker_size, vector<double>(worker_size, 1.0));
-  freq_param_.assign(worker_size, vector<double>(worker_size, 1.0));
-  flops_param_.assign(worker_size, 1.0);
-  membytes_param_.assign(worker_size, 1.0);
+  temp_param_.assign(worker_size, vector<double>(worker_size, 0.2));
+  freq_param_.assign(worker_size, vector<double>(worker_size, 0.000001));
+  flops_param_.assign(worker_size, 0.01);
+  membytes_param_.assign(worker_size, 0.00001);
   error_param_.assign(worker_size, 1.0);
   return kTfLiteOk;
 }
@@ -28,22 +28,20 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size) {
 vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph) {
   LOGI("ProcessorThermalModel::Predict starts");
   // Get temperature from resource monitor
-  vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
+  const vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
 
-  LOGI("Temp done");
   // Get frequency 
-  vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
+  const vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
 
-  LOGI("Freq done");
   // Get flops 
-  int64_t flops = EstimateFLOPS(subgraph, subgraph);
+  const int64_t mFlops = EstimateFLOPS(subgraph, subgraph) / 100000;
 
-  LOGI("Flops done");
+  LOGI("Flops : %lld", mFlops);
   // Get membytes 
-  int64_t memBytes = EstimateInputOutputSize(subgraph);
+  const int64_t memBytes = EstimateInputOutputSize(subgraph);
 
-  LOGI("Membytes done");
-  return EstimateFutureTemperature(temp, freq, flops, membytes);
+  LOGI("memBytes : %lld", memBytes);
+  return EstimateFutureTemperature(temp, freq, mFlops, membytes);
 }
 
 vector<thermal_t> ProcessorThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,

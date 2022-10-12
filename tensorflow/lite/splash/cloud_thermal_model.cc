@@ -11,11 +11,11 @@ namespace impl {
 using namespace std;
 
 TfLiteStatus CloudThermalModel::Init(int32_t worker_size) {
-  temp_param_.assign(worker_size, vector<double>(worker_size, 1.0));
-  input_param_.assign(worker_size, 1.0);
-  output_param_.assign(worker_size, 1.0);
+  temp_param_.assign(worker_size, vector<double>(worker_size, 0.2));
+  input_param_.assign(worker_size, 0.1);
+  output_param_.assign(worker_size, 0.1);
   rssi_param_.assign(worker_size, 1.0);
-  waiting_param_.assign(worker_size, 1.0);
+  waiting_param_.assign(worker_size, 0.1);
   error_param_.assign(worker_size, 1.0);
   return kTfLiteOk;
 }

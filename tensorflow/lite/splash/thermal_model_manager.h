@@ -7,7 +7,7 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/core/subgraph.h"
-#include "tensorflow/lite/splash/common_thermal_model.h"
+#include "tensorflow/lite/splash/thermal_model.h"
 #include "tensorflow/lite/splash/resource_monitor.h"
 
 namespace tflite {
@@ -38,12 +38,10 @@ class ThermalModelManager {
   TfLiteStatus Update(std::vector<thermal_t> error, worker_id_t wid);
 
  private:
-  thermal_t check_thermal_;
-  std::vector<std::unique_ptr<CommonThermalModel>> models_;
-  std::unique_ptr<CommonThermalModel> cpu_model_;
+  std::vector<std::unique_ptr<IThermalModel>> models_;
   ResourceMonitor& resource_monitor_;
 
-  // std::unique_ptr<CommonThermalModel> BuildModel(worker_id_t wid);
+  std::unique_ptr<IThermalModel> BuildModel(worker_id_t wid);
 };
 
 } // namespace impl
