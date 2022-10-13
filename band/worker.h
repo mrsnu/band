@@ -39,7 +39,6 @@ class Worker {
   void Start();
   void End();
 
-  // TODO: below requires test with profiler
   void Pause();
   void Resume();
   // Wait until the end of current requests

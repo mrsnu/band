@@ -38,8 +38,17 @@ BandStatus Worker::Init(const WorkerConfig& config, int worker_id) {
 
 BandStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                       int num_threads) {
-  if (thread_affinity_mask.NumEnabled() == 0) {
-    return kBandError;
+  CpuSet current_cpu_set;
+  if (GetCPUThreadAffinity(current_cpu_set) != kBandOk) {
+    // skip if not supports
+    BAND_LOG_INTERNAL(BAND_LOG_WARNING,
+                      "Set affinity failed - not supported by the platform");
+    return kBandOk;
+  }
+
+  if (current_cpu_set == thread_affinity_mask ||
+      thread_affinity_mask.NumEnabled() == 0) {
+    return kBandOk;
   }
 
   std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
