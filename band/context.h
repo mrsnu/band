@@ -30,7 +30,9 @@ using JobQueue = std::deque<Job>;
 // Minimal interfaces for Band framework
 class Context {
  public:
-  Context(ErrorReporter* error_reporeter = DefaultErrorReporter());
+  Context(ErrorReporter* error_reporeter)
+    : error_reporter_(error_reporeter) {}
+
   virtual ~Context() = default;
 
   virtual BandStatus Init(const RuntimeConfig& config) {
@@ -39,18 +41,18 @@ class Context {
   };
 
   /* worker */
-  virtual void UpdateWorkerWaitingTime() const;
-  virtual const WorkerWaitingTime& GetWorkerWaitingTime() const;
-  virtual std::set<WorkerId> GetIdleWorkers() const;
+  virtual void UpdateWorkerWaitingTime() const = 0;
+  virtual const WorkerWaitingTime& GetWorkerWaitingTime() const = 0;
+  virtual std::set<WorkerId> GetIdleWorkers() const = 0;
 
   /* subgraph */
   virtual SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                          WorkerId worker_id) const;
-  virtual bool IsEnd(const SubgraphKey& key) const;
-  virtual BandStatus Invoke(const SubgraphKey& key);
+                                          WorkerId worker_id) const = 0;
+  virtual bool IsEnd(const SubgraphKey& key) const = 0;
+  virtual BandStatus Invoke(const SubgraphKey& key) = 0;
 
   /* model */
-  virtual const ModelSpec* GetModelSpec(ModelId model_id);
+  virtual const ModelSpec* GetModelSpec(ModelId model_id) = 0;
 
   /* scheduling */
 
@@ -64,41 +66,41 @@ class Context {
   virtual std::pair<SubgraphKey, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting,
-      SubgraphKey preceded_subgraph_index = {}) const;
+      SubgraphKey preceded_subgraph_index = {}) const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
-      const std::map<WorkerId, int64_t>& worker_waiting) const;
+      const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, int64_t>
   GetSubgraphWithShortestLatency(
-      Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const;
+      Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
-      const std::set<WorkerId>& idle_workers) const;
+      const std::set<WorkerId>& idle_workers) const = 0;
 
   /* profiler */
-  virtual void UpdateLatency(const SubgraphKey& key, int64_t latency);
-  virtual int64_t GetProfiled(const SubgraphKey& key) const;
-  virtual int64_t GetExpected(const SubgraphKey& key) const;
+  virtual void UpdateLatency(const SubgraphKey& key, int64_t latency) = 0;
+  virtual int64_t GetProfiled(const SubgraphKey& key) const = 0;
+  virtual int64_t GetExpected(const SubgraphKey& key) const = 0;
 
   /* planner */
-  virtual void Trigger();
-  virtual JobId EnqueueRequest(Job job, bool push_front = false);
+  virtual void Trigger() = 0;
+  virtual JobId EnqueueRequest(Job job, bool push_front = false) = 0;
   virtual std::vector<JobId> EnqueueBatch(std::vector<Job> jobs,
-                                          bool push_front = false);
-  virtual void PrepareReenqueue(Job& job);
-  virtual void EnqueueFinishedJob(Job& job);
+                                          bool push_front = false) = 0;
+  virtual void PrepareReenqueue(Job& job) = 0;
+  virtual void EnqueueFinishedJob(Job& job) = 0;
 
   /* getters */
   virtual ErrorReporter* GetErrorReporter() { return error_reporter_; }
-  virtual Worker* GetWorker(WorkerId id);
+  virtual Worker* GetWorker(WorkerId id) = 0;
 
   /* tensor communication */
-  virtual BandStatus TryCopyInputTensors(const Job& job);
-  virtual BandStatus TryCopyOutputTensors(const Job& job);
+  virtual BandStatus TryCopyInputTensors(const Job& job) = 0;
+  virtual BandStatus TryCopyOutputTensors(const Job& job) = 0;
 
  protected:
   ErrorReporter* error_reporter_;

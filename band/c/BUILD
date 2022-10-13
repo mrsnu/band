@@ -37,6 +37,7 @@ cc_binary(
     ],
     linkopts = select({
         clean_dep("//band:android"): [],
+        clean_dep("//band:windows"): [],
         "//conditions:default": [
             "-lpthread",
         ],

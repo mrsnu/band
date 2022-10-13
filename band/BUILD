@@ -90,7 +90,6 @@ config_setting(
 cc_library(
     name = "common",
     srcs = [
-        "context.cc",
         "error_reporter.cc",
         "logger.cc",
     ],

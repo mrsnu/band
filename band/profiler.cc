@@ -15,6 +15,7 @@ BandStatus Profiler::Init(const ProfileConfig& config) {
   profile_num_warmups_ = config.num_warmups;
   profile_num_runs_ = config.num_runs;
   profile_copy_computation_ratio_ = config.copy_computation_ratio;
+  return kBandOk;
 }
 
 void Profiler::UpdateLatency(const SubgraphKey& key, int64_t latency) {

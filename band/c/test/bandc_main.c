@@ -116,6 +116,7 @@ PFN_BandTypeGetName pBandTypeGetName;
 void LoadBandLibraryFunctions(HMODULE libbandc) {
 #else
 void LoadBandLibraryFunctions(void* libbandc) {
+#endif
   LoadFunction(BandAddConfig);
   LoadFunction(BandBackendGetName);
   LoadFunction(BandBackendGetType);
@@ -157,7 +158,6 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandTensorGetType);
   LoadFunction(BandTypeGetName);
 }
-#endif
 
   bool LoadBandLibrary() {
 #ifdef __WINDOWS__
