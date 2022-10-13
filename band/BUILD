@@ -1,4 +1,4 @@
-load("//band:band.bzl", "band_copts")
+load("//band:band.bzl", "band_cc_android_test", "band_copts")
 
 config_setting(
     name = "debug",
@@ -400,6 +400,16 @@ cc_test(
     deps = [
         ":test_util",
         ":config_builder",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
+    name = "cpu_test",
+    srcs = ["test/cpu_test.cc"],
+    data = [],
+    deps = [
+        ":cpu",
         "@com_google_googletest//:gtest",
     ],
 )
