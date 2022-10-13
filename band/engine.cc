@@ -3,10 +3,10 @@
 #include "band/backend_factory.h"
 #include "band/context.h"
 #include "band/interface/tensor_view.h"
+#include "band/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/planner.h"
-#include "band/profiler.h"
 #include "band/tensor.h"
 #include "band/worker.h"
 
@@ -34,6 +34,11 @@ std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
 }
 
 BandStatus Engine::RegisterModel(Model* model) {
+  if (!model || model->GetSupportedBackends().size() == 0) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register model.");
+    return kBandError;
+  }
+
   const ModelId model_id = model->GetId();
 
   // Create internal interpreter per each supported backends
@@ -47,7 +52,7 @@ BandStatus Engine::RegisterModel(Model* model) {
     }
 
     // Add whole-model subgraphs
-    for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
       std::unique_ptr<Interface::IInterpreter> interpreter(
           BackendFactory::CreateInterpreter(backend_type));
       if (interpreter->FromModel(
@@ -100,6 +105,10 @@ BandStatus Engine::RegisterModel(Model* model) {
                         error_reporter_, output_tensors,
                         primary_interpreter->GetOutputs(model_subgraph_key)));
     }
+  }
+
+  if (planner_->NeedProfile()) {
+    latency_estimator_->ProfileModel(model_id);
   }
 
   return kBandOk;
@@ -311,8 +320,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     model_option_.subgraph_preparation_type_ = config.subgraph_preparation_type;
 
     if (planner_->NeedProfile()) {
-      profiler_ = std::make_unique<Profiler>();
-      BAND_ENSURE_STATUS(profiler_->Init(config.profile_config));
+      latency_estimator_ = std::make_unique<LatencyEstimator>(this);
+      BAND_ENSURE_STATUS(latency_estimator_->Init(config.profile_config));
     }
 
     const BandCPUMaskFlags cpu_mask =
@@ -367,7 +376,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
 
 void Engine::UpdateWorkerWaitingTime() const {
-  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+  for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
     workers_waiting_[worker_id] = workers_[worker_id]->GetWaitingTime();
   }
 }
@@ -379,7 +388,7 @@ const WorkerWaitingTime& Engine::GetWorkerWaitingTime() const {
 std::set<int> Engine::GetIdleWorkers() const {
   std::set<int> idle_workers;
 
-  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+  for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
     if (!workers_[worker_id]->HasJob()) {
       idle_workers.insert(worker_id);
     }
@@ -451,23 +460,20 @@ SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
 }
 
 void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
-  // requires nullity check for schedulers without profile
-  if (profiler_) profiler_->UpdateLatency(key, latency);
+  if (latency_estimator_) latency_estimator_->UpdateLatency(key, latency);
 }
 
 int64_t Engine::GetProfiled(const SubgraphKey& key) const {
-  // requires nullity check for schedulers without profile
-  return profiler_ ? profiler_->GetProfiled(key) : 0;
+  return latency_estimator_ ? latency_estimator_->GetProfiled(key) : 0;
 }
 
 int64_t Engine::GetExpected(const SubgraphKey& key) const {
-  // requires nullity check for schedulers without profile
-  return profiler_ ? profiler_->GetExpected(key) : 0;
+  return latency_estimator_ ? latency_estimator_->GetExpected(key) : 0;
 }
 
 int64_t Engine::GetWorst(ModelId model_id) const {
   // requires nullity check for schedulers without profile
-  return profiler_ ? profiler_->GetWorst(model_id) : 0;
+  return latency_estimator_ ? latency_estimator_->GetWorst(model_id) : 0;
 }
 
 void Engine::Trigger() { planner_->Trigger(); }
@@ -604,7 +610,7 @@ BandStatus Engine::TryCopyOutputTensors(const Job& job) {
 }
 
 WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
-  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+  for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
     if (workers_[worker_id]->GetDeviceFlag() == flag) {
       return worker_id;
     }

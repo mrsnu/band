@@ -127,9 +127,7 @@ BandDeviceFlags BandDeviceGetFlag(const char* name) {
   return kBandNumDevices;
 }
 
-BandRequestOption BandGetDefaultRequestOption() {
-  return {-1, true, -1.f, -1.f};
-}
+BandRequestOption BandGetDefaultRequestOption() { return {-1, true, -1, -1.f}; }
 
 const char* BandBackendGetName(BandBackendType flag) {
   switch (flag) {

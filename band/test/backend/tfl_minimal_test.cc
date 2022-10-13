@@ -138,6 +138,40 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   delete output_tensor;
 }
 
+TEST(TFLiteBackend, SimpleEngineProfile) {
+  RuntimeConfigBuilder b;
+  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
+                             .AddSchedulers({kBandFixedWorkerGlobalQueue})
+                             .AddMinimumSubgraphSize(7)
+                             .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
+                             .AddCPUMask(kBandAll)
+                             .AddPlannerCPUMask(kBandPrimary)
+                             .AddWorkers({kBandCPU, kBandCPU})
+                             .AddWorkerNumThreads({3, 4})
+                             .AddWorkerCPUMasks({kBandBig, kBandLittle})
+                             .AddSmoothingFactor(0.1)
+                             .AddProfileDataPath("band/test/data/profile.json")
+                             .AddOnline(true)
+                             .AddNumWarmups(1)
+                             .AddNumRuns(1)
+                             .AddAllowWorkSteal(true)
+                             .AddAvailabilityCheckIntervalMs(30000)
+                             .AddScheduleWindowSize(10)
+                             .Build();
+
+  auto engine = Engine::Create(config);
+  EXPECT_TRUE(engine);
+
+  Model model;
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
+  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+
+  EXPECT_GT(engine->GetProfiled(engine->GetModelSubgraphKey(model.GetId(), 0)),
+            0);
+  EXPECT_GT(engine->GetExpected(engine->GetModelSubgraphKey(model.GetId(), 0)),
+            0);
+}
+
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")

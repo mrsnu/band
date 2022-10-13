@@ -59,6 +59,7 @@ struct MockContextBase : public Context {
   /* getters */
   ErrorReporter* GetErrorReporter() { return DefaultErrorReporter(); }
   MOCK_METHOD1(GetWorker, Worker*(WorkerId));
+  MOCK_CONST_METHOD0(GetNumWorkers, size_t());
 
   /* tensor communication */
   MOCK_METHOD1(TryCopyInputTensors, BandStatus(const Job&));

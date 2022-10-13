@@ -16,7 +16,6 @@ class IModel;
 class IInterpreter;
 }  // namespace Interface
 class Worker;
-class Profiler;
 class Planner;
 class RuntimeConfig;
 class Tensor;
@@ -99,6 +98,7 @@ class Context {
   /* getters */
   virtual ErrorReporter* GetErrorReporter() { return error_reporter_; }
   virtual Worker* GetWorker(WorkerId id) = 0;
+  virtual size_t GetNumWorkers() const = 0;
 
   /* tensor communication */
   virtual BandStatus TryCopyInputTensors(const Job& job) = 0;

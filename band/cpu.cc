@@ -17,6 +17,7 @@
 #include "band/cpu.h"
 
 #include <cstring>
+#include <mutex>  // call_once
 
 #include "band/logger.h"
 
@@ -55,6 +56,7 @@ int CpuSet::NumEnabled() const {
 
   return NumEnabled;
 }
+
 #else   // defined _BAND_SUPPORT_THREAD_AFFINITY
 CpuSet::CpuSet() {}
 
@@ -72,6 +74,16 @@ bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
 int CpuSet::NumEnabled() const { return GetCPUCount(); }
 #endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
+
+BandCPUMaskFlags CpuSet::GetCPUMaskFlag() const {
+  for (int i = 0; i < kBandNumCpuMasks; i++) {
+    const BandCPUMaskFlags flag = static_cast<BandCPUMaskFlags>(i);
+    if (BandCPUMaskGetSet(flag) == *this) {
+      return flag;
+    }
+  }
+  return kBandNumCpuMasks;
+}
 
 static CpuSet g_thread_affinity_mask_all;
 static CpuSet g_thread_affinity_mask_little;
@@ -296,7 +308,8 @@ int SetupThreadAffinityMasks() {
 }
 
 const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag) {
-  SetupThreadAffinityMasks();
+  static std::once_flag once_flag;
+  std::call_once(once_flag, []() { SetupThreadAffinityMasks(); });
 
   switch (flag) {
     case kBandAll:

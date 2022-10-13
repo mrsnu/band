@@ -294,7 +294,7 @@ typedef struct BandRequestOption {
   int target_worker;
   bool require_callback;
   int slo_us;
-  int slo_scale;
+  float slo_scale;
 } BandRequestOption;
 
 BandRequestOption BandGetDefaultRequestOption();

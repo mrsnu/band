@@ -25,14 +25,16 @@ Json::Value LoadJsonObjectFromFile(std::string file_path) {
   return json_object;
 }
 
-void WriteJsonObjectToFile(const Json::Value& json_object,
-                           std::string file_path) {
+BandStatus WriteJsonObjectToFile(const Json::Value& json_object,
+                                 std::string file_path) {
   std::ofstream out_file(file_path, std::ios::out);
   if (out_file.is_open()) {
     out_file << json_object;
+    return kBandOk;
   } else {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Cannot save profiled results to  %s",
                   file_path.c_str());
+    return kBandError;
   }
 }
 }  // namespace Band

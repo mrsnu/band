@@ -38,6 +38,13 @@ BandStatus Worker::Init(const WorkerConfig& config, int worker_id) {
 
 BandStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                       int num_threads) {
+  std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
+
+  if (num_threads_ != num_threads) {
+    num_threads_ = num_threads;
+    need_cpu_update_ = true;
+  }
+
   CpuSet current_cpu_set;
   if (GetCPUThreadAffinity(current_cpu_set) != kBandOk) {
     // skip if not supports
@@ -49,13 +56,6 @@ BandStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
   if (current_cpu_set == thread_affinity_mask ||
       thread_affinity_mask.NumEnabled() == 0) {
     return kBandOk;
-  }
-
-  std::lock_guard<std::mutex> cpu_lock(cpu_mtx_);
-
-  if (num_threads_ != num_threads) {
-    num_threads_ = num_threads;
-    need_cpu_update_ = true;
   }
 
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
@@ -148,6 +148,10 @@ BandStatus Worker::TryUpdateWorkerThread() {
     //     interpreter_ptr->GetCpuBackendContext()->internal_backend_context();
     // internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
     // internal_backend->SetMaxNumThreads(num_threads_);
+
+    if (cpu_set_.NumEnabled() == 0) {
+      return kBandOk;
+    }
 
     if (SetCPUThreadAffinity(cpu_set_) != kBandOk) {
       BAND_REPORT_ERROR(GetErrorReporter(),

@@ -17,37 +17,13 @@ typedef int JobId;
 // data structure for identifying subgraphs within whole models
 class SubgraphKey {
  public:
-  SubgraphKey() {}
+  SubgraphKey();
   // special case - entire model subgraph
-  SubgraphKey(ModelId model_id, WorkerId worker_id)
-      : model_id(model_id), worker_id(worker_id) {}
+  SubgraphKey(ModelId model_id, WorkerId worker_id);
   SubgraphKey(ModelId model_id, WorkerId worker_id, std::set<int> input_ops,
-              std::set<int> output_ops)
-      : model_id(model_id),
-        worker_id(worker_id),
-        input_ops(input_ops),
-        output_ops(output_ops) {}
-
-  bool operator<(const SubgraphKey& key) const {
-    if (model_id != key.GetModelId()) {
-      return model_id < key.GetModelId();
-    }
-
-    if (worker_id != key.GetWorkerId()) {
-      return worker_id < key.GetWorkerId();
-    }
-
-    if (input_ops != key.input_ops) {
-      return input_ops < key.input_ops;
-    }
-
-    return output_ops < key.output_ops;
-  }
-
-  bool operator==(const SubgraphKey& key) const {
-    return (model_id == key.GetModelId()) && (worker_id == key.GetWorkerId()) &&
-           (input_ops == key.input_ops) && (output_ops == key.output_ops);
-  }
+              std::set<int> output_ops);
+  bool operator<(const SubgraphKey& key) const;
+  bool operator==(const SubgraphKey& key) const;
 
   std::string GetInputOpsString() const;
   std::string GetOutputOpsString() const;
@@ -57,7 +33,7 @@ class SubgraphKey {
   const std::set<int>& GetInputOps() const { return input_ops; }
   const std::set<int>& GetOutputOps() const { return output_ops; }
 
-  bool IsValid() const { return (model_id != -1) && (worker_id != -1); }
+  bool IsValid() const;
 
  private:
   ModelId model_id = -1;
@@ -72,19 +48,7 @@ class SubgraphKey {
 // hash function to use SubgraphKey as a key
 // https://stackoverflow.com/a/32685618
 struct SubgraphHash {
-  std::size_t operator()(const SubgraphKey& p) const {
-    auto hash_func = std::hash<int>();
-    std::size_t hash = hash_func(p.GetModelId()) ^ hash_func(p.GetWorkerId());
-
-    auto hash_set = [hash_func, &hash](const std::set<int>& set) {
-      for (int e : set) hash ^= hash_func(e);
-    };
-
-    hash_set(p.GetInputOps());
-    hash_set(p.GetOutputOps());
-
-    return hash;
-  }
+  std::size_t operator()(const SubgraphKey& p) const;
 };
 
 enum JobStatus {
@@ -154,19 +118,13 @@ struct ModelSpec {
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
   std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
+  std::string path;
 };
 
 // hash function to use pair<int, set<int>> as map key in cache_
 // https://stackoverflow.com/a/32685618
 struct PairHash {
-  std::size_t operator()(const std::pair<int, std::set<int>>& p) const {
-    auto hash_func = std::hash<int>();
-    std::size_t hash = hash_func(p.first);
-    for (int e : p.second) {
-      hash ^= hash_func(e);
-    }
-    return hash;
-  }
+  std::size_t operator()(const std::pair<int, std::set<int>>& p) const;
 };
 
 }  // namespace Band
