@@ -19,6 +19,7 @@
 namespace Band {
 
 class Model;
+class LatencyEstimator;
 
 typedef std::vector<Interface::ITensor*> Tensors;
 
@@ -108,7 +109,7 @@ class Engine : public Context {
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
-  /* profiler */
+  /* latency estimator */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
@@ -121,6 +122,7 @@ class Engine : public Context {
   void EnqueueFinishedJob(Job& job) override;
   /* getters */
   Worker* GetWorker(WorkerId id) override;
+  size_t GetNumWorkers() const override;
   /* tensor communication */
   BandStatus TryCopyInputTensors(const Job& job) override;
   BandStatus TryCopyOutputTensors(const Job& job) override;
@@ -150,9 +152,9 @@ class Engine : public Context {
   std::map<std::pair<WorkerId, ModelId>,
            std::unique_ptr<Interface::IInterpreter>>
       interpreters_;
-  std::map<WorkerId, std::unique_ptr<Worker>> workers_;
+  std::vector<std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
-  std::unique_ptr<Profiler> profiler_;
+  std::unique_ptr<LatencyEstimator> latency_estimator_;
   std::unique_ptr<Planner> planner_;
 
   // Models

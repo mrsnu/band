@@ -90,6 +90,7 @@ config_setting(
 cc_library(
     name = "common",
     srcs = [
+        "common.cc",
         "error_reporter.cc",
         "logger.cc",
     ],
@@ -266,34 +267,51 @@ cc_library(
 )
 
 cc_library(
+    name = "latency_estimator",
+    srcs = [
+        "latency_estimator.cc",
+        "profiler.cc",
+    ],
+    hdrs = [
+        "latency_estimator.h",
+        "profiler.h",
+    ],
+    deps = [
+        ":common",
+        ":config",
+        ":cpu",
+        ":json_util",
+        ":worker",
+    ],
+)
+
+cc_library(
     name = "framework",
     srcs = [
         "engine.cc",
-        "profiler.cc",
         "tensor_ring_buffer.cc",
     ],
     hdrs = [
         "engine.h",
-        "profiler.h",
         "tensor_ring_buffer.h",
     ],
     visibility = [
         "//band:__subpackages__",
     ],
-    deps =
-        [
-            ":backend_factory",
-            ":common",
-            ":config",
-            ":json_util",
-            ":interface",
-            ":model",
-            ":planner",
-            ":scheduler",
-            ":tensor",
-            ":time",
-            ":worker",
-        ],
+    deps = [
+        ":backend_factory",
+        ":common",
+        ":config",
+        ":interface",
+        ":json_util",
+        ":latency_estimator",
+        ":model",
+        ":planner",
+        ":scheduler",
+        ":tensor",
+        ":time",
+        ":worker",
+    ],
 )
 
 cc_library(
@@ -310,7 +328,7 @@ cc_library(
     deps = [
         ":common",
         "@jsoncpp_git//:jsoncpp",
-    ]
+    ],
 )
 
 cc_library(
@@ -327,9 +345,9 @@ cc_library(
     ],
     deps = [
         ":common",
-        ":cpu",
         ":config",
-        ":macros"
+        ":cpu",
+        ":macros",
     ],
 )
 
@@ -389,6 +407,17 @@ cc_test(
     deps = [
         ":test_util",
         ":time",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
+    name = "latency_estimator_test",
+    size = "small",
+    srcs = ["test/latency_estimator_test.cc"],
+    deps = [
+        ":latency_estimator",
+        ":worker",
         "@com_google_googletest//:gtest",
     ],
 )

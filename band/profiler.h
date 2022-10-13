@@ -1,49 +1,56 @@
 #ifndef BAND_PROFILER_H_
 #define BAND_PROFILER_H_
 
-#include <json/json.h>
-
-#include <map>
-
-#include "band/common.h"
-#include "band/config.h"
+#include <chrono>
+#include <vector>
 
 namespace Band {
+
 class Profiler {
  public:
-  Profiler() = default;
-  BandStatus Init(const ProfileConfig& config);
-  void UpdateLatency(const SubgraphKey& key, int64_t latency);
+  size_t BeginEvent();
+  void EndEvent(size_t event_handle);
+  size_t GetNumEvents() const;
 
-  int64_t GetProfiled(const SubgraphKey& key) const;
-  int64_t GetExpected(const SubgraphKey& key) const;
+  template <typename T>
+  uint64_t GetElapsedTimeAt(size_t index) {
+    static_assert(is_chrono_duration<T>::value,
+                  "T must be a std::chrono::duration");
+    if (timeline_vector_.size() > index) {
+      return std::chrono::duration_cast<T>(timeline_vector_[index].second -
+                                           timeline_vector_[index].first)
+          .count();
+    } else
+      return 0;
+  }
+
+  template <typename T>
+  uint64_t GetAverageElapsedTime() {
+    static_assert(is_chrono_duration<T>::value,
+                  "T must be a std::chrono::duration");
+
+    uint64_t accumulated_time = 0;
+    for (size_t i = 0; i < timeline_vector_.size(); i++) {
+      accumulated_time += GetElapsedTimeAt<T>(i);
+    }
+
+    return accumulated_time / timeline_vector_.size();
+  }
 
  private:
-  // latency in microseconds
-  struct Latency {
-    int64_t profiled;
-    int64_t moving_averaged;
+  template <typename T>
+  struct is_chrono_duration {
+    static constexpr bool value = false;
   };
 
-  // Path to the profile data.
-  // The data in the path will be read during initial phase, and also
-  // will be updated at the end of the run.
-  std::string profile_data_path_;
+  template <typename Rep, typename Period>
+  struct is_chrono_duration<std::chrono::duration<Rep, Period>> {
+    static constexpr bool value = true;
+  };
 
-  // The contents of the file at `profile_data_path_`.
-  // We keep this separately from `profile_database_`, since we cannot
-  // immediately put `profile_data_path_`'s contents into `profile_database_`
-  // because the model name --> int mapping is not available at init time.
-  Json::Value profile_database_json_;
-
-  std::map<SubgraphKey, Latency> profile_database_;
-  float profile_smoothing_factor_;
-
-  bool profile_online_;
-  int profile_num_warmups_;
-  int profile_num_runs_;
-  std::vector<int> profile_copy_computation_ratio_;
+  std::vector<std::pair<std::chrono::system_clock::time_point,
+                        std::chrono::system_clock::time_point>>
+      timeline_vector_;
 };
 }  // namespace Band
-
-#endif  // BAND_PROFILER_H_
+#endif

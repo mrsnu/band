@@ -3,17 +3,17 @@
 #include "band/backend_factory.h"
 #include "band/context.h"
 #include "band/interface/tensor_view.h"
+#include "band/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/planner.h"
-#include "band/profiler.h"
 #include "band/tensor.h"
 #include "band/worker.h"
 
 namespace Band {
 Engine::~Engine() {
   for (auto& worker : workers_) {
-    worker.second->End();
+    worker->End();
   }
 
   for (auto& interpreter : interpreters_) {
@@ -21,7 +21,7 @@ Engine::~Engine() {
   }
 
   for (auto& worker : workers_) {
-    worker.second.reset();
+    worker.reset();
   }
 
   planner_.reset();
@@ -34,6 +34,11 @@ std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
 }
 
 BandStatus Engine::RegisterModel(Model* model) {
+  if (!model || model->GetSupportedBackends().size() == 0) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register model.");
+    return kBandError;
+  }
+
   const ModelId model_id = model->GetId();
 
   // Create internal interpreter per each supported backends
@@ -47,16 +52,16 @@ BandStatus Engine::RegisterModel(Model* model) {
     }
 
     // Add whole-model subgraphs
-    for (auto& id_worker : workers_) {
+    for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
       std::unique_ptr<Interface::IInterpreter> interpreter(
           BackendFactory::CreateInterpreter(backend_type));
       if (interpreter->FromModel(
-              model->GetBackendModel(backend_type), id_worker.first,
-              id_worker.second->GetDeviceFlag()) == kBandOk) {
-        BAND_LOG_INTERNAL(BAND_LOG_INFO,
-                          "Create interpreter for model %d worker %s", model_id,
-                          BandDeviceGetName(id_worker.second->GetDeviceFlag()));
-        interpreters_[{id_worker.first, model_id}] = std::move(interpreter);
+              model->GetBackendModel(backend_type), worker_id,
+              workers_[worker_id]->GetDeviceFlag()) == kBandOk) {
+        BAND_LOG_INTERNAL(
+            BAND_LOG_INFO, "Create interpreter for model %d worker %s",
+            model_id, BandDeviceGetName(workers_[worker_id]->GetDeviceFlag()));
+        interpreters_[{worker_id, model_id}] = std::move(interpreter);
       }
     }
 
@@ -100,6 +105,10 @@ BandStatus Engine::RegisterModel(Model* model) {
                         error_reporter_, output_tensors,
                         primary_interpreter->GetOutputs(model_subgraph_key)));
     }
+  }
+
+  if (planner_->NeedProfile()) {
+    latency_estimator_->ProfileModel(model_id);
   }
 
   return kBandOk;
@@ -246,8 +255,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     model_option_.subgraph_preparation_type_ = config.subgraph_preparation_type;
 
     if (planner_->NeedProfile()) {
-      profiler_ = std::make_unique<Profiler>();
-      BAND_ENSURE_STATUS(profiler_->Init(config.profile_config));
+      latency_estimator_ = std::make_unique<LatencyEstimator>(this);
+      BAND_ENSURE_STATUS(latency_estimator_->Init(config.profile_config));
     }
 
     const BandCPUMaskFlags cpu_mask =
@@ -289,7 +298,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         BandDeviceGetName(device_flag));
       worker->Start();
-      workers_[worker_id] = std::move(worker);
+      workers_.push_back(std::move(worker));
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         BandDeviceGetName(device_flag));
@@ -322,12 +331,11 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     // Translate device - affinity to WorkerId
     if (model_config.models_assigned_worker.size() > 0) {
       int j = 0;
-      for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-           worker_it++, j++) {
+      for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
         DeviceWorkerAffinityPair pair = model_config.models_assigned_worker[i];
-        if (worker_it->second->GetDeviceFlag() == pair.device &&
+        if (workers_[worker_id]->GetDeviceFlag() == pair.device &&
             j == pair.worker) {
-          planner_->GetModelWorkerMap()[model_id] = worker_it->first;
+          planner_->GetModelWorkerMap()[model_id] = worker_id;
         }
       }
     }
@@ -345,9 +353,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
 
 void Engine::UpdateWorkerWaitingTime() const {
-  for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-       worker_it++) {
-    workers_waiting_[worker_it->first] = worker_it->second->GetWaitingTime();
+  for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    workers_waiting_[worker_id] = workers_[worker_id]->GetWaitingTime();
   }
 }
 
@@ -358,10 +365,9 @@ const WorkerWaitingTime& Engine::GetWorkerWaitingTime() const {
 std::set<int> Engine::GetIdleWorkers() const {
   std::set<int> idle_workers;
 
-  for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-       worker_it++) {
-    if (!worker_it->second->HasJob()) {
-      idle_workers.insert(worker_it->first);
+  for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (!workers_[worker_id]->HasJob()) {
+      idle_workers.insert(worker_id);
     }
   }
   return idle_workers;
@@ -431,15 +437,15 @@ SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
 }
 
 void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
-  if (profiler_) profiler_->UpdateLatency(key, latency);
+  if (latency_estimator_) latency_estimator_->UpdateLatency(key, latency);
 }
 
 int64_t Engine::GetProfiled(const SubgraphKey& key) const {
-  return profiler_ ? profiler_->GetProfiled(key) : 0;
+  return latency_estimator_ ? latency_estimator_->GetProfiled(key) : 0;
 }
 
 int64_t Engine::GetExpected(const SubgraphKey& key) const {
-  return profiler_ ? profiler_->GetExpected(key) : 0;
+  return latency_estimator_ ? latency_estimator_->GetExpected(key) : 0;
 }
 
 void Engine::Trigger() { planner_->Trigger(); }
@@ -457,9 +463,10 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
 Worker* Engine::GetWorker(WorkerId id) {
-  auto it = workers_.find(id);
-  return it != workers_.end() ? it->second.get() : nullptr;
+  return id < workers_.size() ? workers_[id].get() : nullptr;
 }
+
+size_t Engine::GetNumWorkers() const { return workers_.size(); }
 
 BandStatus Engine::TryCopyInputTensors(const Job& job) {
   // Skip all tensor communication for compute only case.
@@ -573,9 +580,9 @@ BandStatus Engine::TryCopyOutputTensors(const Job& job) {
 }
 
 WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
-  for (auto& it : workers_) {
-    if (it.second->GetDeviceFlag() == flag) {
-      return it.first;
+  for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (workers_[worker_id]->GetDeviceFlag() == flag) {
+      return worker_id;
     }
   }
   BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a worker for %s",
