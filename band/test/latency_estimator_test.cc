@@ -96,6 +96,36 @@ INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
                          testing::Values(kBandAll, kBandLittle, kBandBig,
                                          kBandPrimary));
 
+TEST(LatencyEstimatorSuite, ProfiledLatency) {
+  MockContext context;
+
+  ON_CALL(context, Invoke)
+      .WillByDefault(testing::Invoke([](const Band::SubgraphKey& subgraph_key) {
+        std::this_thread::sleep_for(std::chrono::microseconds(5000));
+        std::cout << "Wait for invoke" << std::endl;
+        return kBandOk;
+      }));
+
+  EXPECT_CALL(context, Invoke).WillRepeatedly(testing::Return(kBandOk));
+
+  DeviceQueueWorker worker(&context, kBandCPU);
+  // Explicitly assign worker to mock context
+  context.worker = &worker;
+  worker.Start();
+
+  LatencyEstimator latency_estimator(&context);
+  ProfileConfig config;
+  config.num_runs = 3;
+  config.num_warmups = 3;
+  config.online = true;
+
+  EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+  EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+  EXPECT_GT(latency_estimator.GetProfiled(SubgraphKey(0, 0)), 5000);
+
+  worker.End();
+}
+
 }  // namespace Test
 }  // namespace Band
 
