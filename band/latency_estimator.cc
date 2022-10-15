@@ -55,12 +55,14 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
       Profiler average_profiler;
       // invoke target subgraph in an isolated thread
       std::thread profile_thread([&]() {
-        if (SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
-            kBandOk) {
+        if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
+            SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
+                kBandOk) {
           BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                             "Failed to propagate thread affinity of worker id "
                             "%d to profile thread",
                             worker_id);
+          return;
         }
 
         // TODO(BAND-20): propagate affinity to CPU backend if necessary
@@ -113,6 +115,10 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
           subgraph_key.GetInputOpsString().c_str(),
           subgraph_key.GetOutputOpsString().c_str());
     }
+  } else {
+    // TODO: Profiler offline option(BAND-48)
+    BAND_NOT_IMPLEMENTED;
+    return kBandError;
   }
   return kBandOk;
 }
