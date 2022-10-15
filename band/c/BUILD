@@ -31,9 +31,9 @@ band_cc_shared_object(
 )
 
 cc_binary(
-    name = "bandc_main",
+    name = "band_c_main",
     srcs = [
-        "test/bandc_main.c",
+        "test/band_c_main.c",
     ],
     linkopts = select({
         clean_dep("//band:android"): [],
