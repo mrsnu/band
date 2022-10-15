@@ -7,15 +7,19 @@
 namespace Band {
 using namespace Interface;
 
-__attribute__((weak)) extern void TfLiteRegisterCreators() {}
+#if defined(BAND_TFLITE)
+extern void TfLiteRegisterCreators();
+#endif
 
 // Expected process
 
 void RegisterBackendInternal() {
   static std::once_flag g_flag;
   std::call_once(g_flag, [] {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Register TFL backend");
+#if defined(BAND_TFLITE)
     TfLiteRegisterCreators();
+#else
+#endif 
   });
 }
 

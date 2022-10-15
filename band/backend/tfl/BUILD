@@ -28,11 +28,11 @@ cc_library(
         "//tensorflow/lite/c:c_api",
         "//tensorflow/lite/c:c_api_experimental",
     ] + select({
-        "//tensorflow:android": [
+        "//band:android": [
             "//tensorflow/lite/delegates/gpu:delegate",
             "//tensorflow/lite/delegates/hexagon:hexagon_delegate",
         ],
-        "//tensorflow:android_arm64": [
+        "//band:android_arm64": [
             "//tensorflow/lite/delegates/gpu:delegate",
             "//tensorflow/lite/delegates/hexagon:hexagon_delegate",
         ],
@@ -42,23 +42,11 @@ cc_library(
 
 band_cc_android_test(
     name = "tfl_minimal_test",
-    size = "small",
     srcs = ["test/tfl_minimal_test.cc"],
     data = [
         "//band:testdata/add.bin",
         "//band:testdata/config.json",
     ],
-    # TODO: Remove below linkopts
-    # it's a duplicate with `band_cc_android_test`
-    # but somehow required for build
-    linkopts = tflite_linkopts() + select({
-        "//tensorflow:android": [
-            "-pie",  # Android 5.0 and later supports only PIE
-            "-lm",  # some builtin ops, e.g., tanh, need -lm
-            "-Wl,-rpath=/data/local/tmp",  # for hexagon delegate
-        ],
-        "//conditions:default": [],
-    }),
     deps = [
         ":tfl_backend",
         "//band:config_builder",

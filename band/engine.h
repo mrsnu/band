@@ -1,4 +1,5 @@
-#ifndef BAND_ENGINE_H
+#ifndef BAND_ENGINE_H_
+#define BAND_ENGINE_H_
 
 #include <deque>
 #include <functional>
@@ -12,12 +13,11 @@
 #include "band/context.h"
 #include "band/error_reporter.h"
 #include "band/tensor_ring_buffer.h"
+#include "band/interface/interpreter.h"
+#include "band/interface/tensor.h"
 
 namespace Band {
-namespace Interface {
-class IInterpreter;
-class ITensor;
-}  // namespace Interface
+    
 class Model;
 
 typedef std::vector<Interface::ITensor*> Tensors;

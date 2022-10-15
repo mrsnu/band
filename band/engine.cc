@@ -2,8 +2,6 @@
 
 #include "band/backend_factory.h"
 #include "band/context.h"
-#include "band/interface/interpreter.h"
-#include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 #include "band/logger.h"
 #include "band/model.h"

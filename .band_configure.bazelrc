@@ -1,6 +1,10 @@
 # Band build config for backend setting.
 build:tflite --define tflite=true
+build:tflite --copt=-DBAND_TFLITE
+build:tflite --cxxopt=-DBAND_TFLITE
 build:mnn --define mnn=true
+build:mnn --copt=-DBAND_MNN
+build:mnn --cxxopt=DBAND_MNN
 
 # Band test config for backend setting.
 test:tflite --define tflite=true
@@ -25,3 +29,34 @@ test:android_arm64_tflite --config=android_arm64
 test:android_arm64_tflite --config=tflite
 test:android_arm64_mnn --config=android_arm64
 test:android_arm64_mnn --config=mnn
+
+# Windows build config for Band Engine
+build:windows --copt=/W0
+build:windows --copt=/D_USE_MATH_DEFINES
+build:windows --host_copt=/D_USE_MATH_DEFINES
+# TF_SYSTEM_LIBS do not work on windows.
+build:windows --cxxopt=/std:c++14
+build:windows --host_cxxopt=/std:c++14
+# On windows, we still link everything into a single DLL.
+build:windows --config=monolithic
+# Make sure to include as little of windows.h as possible
+build:windows --copt=-DWIN32_LEAN_AND_MEAN
+build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
+build:windows --copt=-DNOGDI
+build:windows --host_copt=-DNOGDI
+# MSVC (Windows): Standards-conformant preprocessor mode
+build:windows --copt=/Zc:preprocessor
+build:windows --host_copt=/Zc:preprocessor
+# Misc build options we need for windows.
+build:windows --linkopt=/OPT:REF
+build:windows --host_linkopt=/OPT:REF
+build:windows --linkopt=/OPT:ICF
+build:windows --host_linkopt=/OPT:ICF
+build:windows --verbose_failures
+# Work around potential issues with large command lines on windows.
+build:windows --features=compiler_param_file
+# On windows, we never cross compile
+build:windows --distinct_host_configuration=false
+# Work around .pdb errors
+
+test:windows --enable_runfiles

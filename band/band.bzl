@@ -3,7 +3,7 @@ def clean_dep(dep):
 
 def band_copts():
     copts = select({
-        clean_dep("//tensorflow:windows"): [
+        clean_dep("//band:windows"): [
             "/DBAND_COMPILE_LIBRARY",
             "/wd4018",
         ],
@@ -11,13 +11,13 @@ def band_copts():
             "-Wno-sign-compare",
         ],
     }) + select({
-        clean_dep("//tensorflow:android"): [
+        clean_dep("//band:android"): [
             "-ffunction-sections",
             "-fdata-sections",
         ],
         "//conditions:default": [],
     }) + select({
-        clean_dep("//tensorflow:windows"): [],
+        clean_dep("//band:windows"): [],
         "//conditions:default": [
             "-fno-exceptions",
         ],
@@ -48,13 +48,6 @@ def _rpath_linkopts(name):
         ],
     })
 
-def lrt_if_needed():
-    lrt = ["-lrt"]
-    return select({
-        clean_dep("//band:linux_x86_64"): lrt,
-        "//conditions:default": [],
-    })
-
 # Shared libraries have different name pattern on different platforms,
 # but cc_binary cannot output correct artifact name yet,
 # so we generate multiple cc_binary targets with all name patterns when necessary.
@@ -62,7 +55,6 @@ def lrt_if_needed():
 # is done and cc_shared_library is available.
 SHARED_LIBRARY_NAME_PATTERNS = [
     "lib%s.so%s",  # On Linux, shared libraries are usually named as libfoo.so
-    "lib%s%s.dylib",  # On macos, shared libraries are usually named as libfoo.dylib
     "%s%s.dll",  # On Windows, shared libraries are usually named as foo.dll
 ]
 
@@ -113,7 +105,7 @@ def band_symbol_opts():
     """Defines linker flags whether to include symbols or not."""
     return select({
         clean_dep("//band:debug"): [],
-        clean_dep("//band/lite:tflite_keep_symbols"): [],
+        clean_dep("//band:windows"): [],
         "//conditions:default": [
             "-s",  # Omit symbol table, for all non debug builds
         ],
@@ -127,10 +119,9 @@ def band_jni_linkopts():
     """Defines linker flags for linking Band binary with JNI."""
     return band_jni_linkopts_unstripped() + band_symbol_opts()
 
-
 def band_cc_android_test(
         name,
-        copts = ["-Wall"] + band_copts(),
+        # copts = ["-Wall"] + band_copts(),
         linkopts = band_linkopts() + select({
             clean_dep("//band:android"): [
                 "-pie",
@@ -141,14 +132,16 @@ def band_cc_android_test(
             "//conditions:default": [],
         }),
         linkstatic = select({
-            clean_dep("//band:android"): 1,
-            "//conditions:default": 0,
+            clean_dep("//band:android"): True,
+            # linkstatic in cc_test is true for window by default.
+            clean_dep("//band:windows"): True,
+            "//conditions:default": False,
         }),
         **kwargs):
     """Builds a standalone test for android device when android config is on."""
     native.cc_test(
         name = name,
-        copts = copts,
+        # copts = copts,
         linkopts = linkopts,
         linkstatic = linkstatic,
         **kwargs
@@ -224,9 +217,7 @@ def band_cc_shared_object(
             linkshared = 1,
             data = data + data_extra,
             linkopts = linkopts + _rpath_linkopts(name_os_full) + select({
-                clean_dep("//band:windows"): [
-                    "-Wl,-install_name,@rpath/" + soname,
-                ],
+                clean_dep("//band:windows"): [],
                 clean_dep("//band:android"): [
                     "-Wl,-soname," + soname,
                 ],

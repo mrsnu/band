@@ -3,13 +3,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "band/context.h"
+#include "band/test/test_util.h"
 #include "band/scheduler/round_robin_scheduler.h"
 
 namespace Band {
 namespace Test {
 
-struct MockContext : public Context {
+struct MockContext : public MockContextBase {
   MockContext(std::set<WorkerId> idle_workers) : idle_workers_(idle_workers) {}
 
   std::set<WorkerId> GetIdleWorkers() const override { return idle_workers_; }

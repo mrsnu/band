@@ -13,7 +13,7 @@ package(
 band_cc_shared_object(
     name = "band_c",
     linkopts = select({
-        "//tensorflow:windows": [],
+        "//band:windows": [],
         "//conditions:default": [
             "-z defs",
             "-Wl,--version-script,$(location //band/c:version_scripts.lds)",
@@ -45,7 +45,11 @@ cc_binary(
     deps = [
         ":common",
         ":c_api",
-    ],
+    ] + select({
+        clean_dep("//band:tflite"): [
+            "//band/backend/tfl:tfl_backend",
+        ],
+    }),
 )
 
 cc_library(

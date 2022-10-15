@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "band/common.h"
+#include "band/interface/model.h"
 #include "band/interface/backend.h"
 
 namespace Band {
@@ -13,7 +14,6 @@ namespace Interface {
   Interpreter for specific <IModel, processor>
 */
 
-class IModel;
 class ITensorView;
 
 class IInterpreter : public IBackendSpecific {

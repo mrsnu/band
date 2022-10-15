@@ -15,6 +15,9 @@
 #include "band/model.h"
 #include "band/tensor.h"
 
+#include "band/interface/interpreter.h"
+#include "band/interface/tensor.h"
+
 namespace Band {
 using namespace Interface;
 TEST(TFLiteBackend, BackendInvoke) {

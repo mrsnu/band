@@ -30,7 +30,7 @@ using JobQueue = std::deque<Job>;
 // Minimal interfaces for Band framework
 class Context {
  public:
-  Context(ErrorReporter* error_reporeter)
+  Context(ErrorReporter* error_reporeter = DefaultErrorReporter())
     : error_reporter_(error_reporeter) {}
 
   virtual ~Context() = default;

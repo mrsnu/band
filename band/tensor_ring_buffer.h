@@ -8,13 +8,10 @@
 #include <vector>
 
 #include "band/c/common.h"
+#include "band/interface/tensor.h"
+#include "band/interface/tensor_view.h"
 
 namespace Band {
-
-namespace Interface {
-class ITensorView;
-class ITensor;
-}  // namespace Interface
 
 class ErrorReporter;
 class Tensor;

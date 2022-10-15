@@ -160,7 +160,7 @@ cc_library(
         "config.h",
     ],
     linkopts = select({
-        "//tensorflow:windows": [],
+        "//band:windows": [],
         "//conditions:default": [
             "-lm",
             "-ldl",
@@ -336,11 +336,21 @@ exports_files(glob([
     "testdata/*.json",
 ]))
 
+cc_library(
+    name = "test_util",
+    hdrs = ["test/test_util.h"],
+    deps = [
+        ":common",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_test(
     name = "planner_test",
     size = "small",
     srcs = ["test/planner_test.cc"],
     deps = [
+        ":test_util",
         ":planner",
         "@com_google_googletest//:gtest",
     ],
@@ -351,6 +361,7 @@ cc_test(
     size = "small",
     srcs = ["test/scheduler_test.cc"],
     deps = [
+        ":test_util",
         ":scheduler",
         "@com_google_googletest//:gtest",
     ],
@@ -361,6 +372,7 @@ cc_test(
     size = "small",
     srcs = ["test/worker_test.cc"],
     deps = [
+        ":test_util",
         ":worker",
         "@com_google_googletest//:gtest",
     ],
@@ -371,6 +383,7 @@ cc_test(
     size = "small",
     srcs = ["test/time_test.cc"],
     deps = [
+        ":test_util",
         ":time",
         "@com_google_googletest//:gtest",
     ],
@@ -381,6 +394,7 @@ cc_test(
     srcs = ["config_builder_test.cc"],
     data = ["//band:testdata/config.json"],
     deps = [
+        ":test_util",
         ":config_builder",
         "@com_google_googletest//:gtest",
     ],
