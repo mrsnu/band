@@ -416,6 +416,7 @@ band_cc_android_test(
     size = "small",
     srcs = ["test/latency_estimator_test.cc"],
     deps = [
+        ":config_builder",
         ":latency_estimator",
         ":worker",
         "@com_google_googletest//:gtest",
