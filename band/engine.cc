@@ -279,8 +279,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       } else {
         worker = std::make_unique<DeviceQueueWorker>(this, device_flag);
       }
-
-      if (worker->Init(config.worker_config, workers_.size()) != kBandOk) {
+      WorkerId worker_id = workers_.size();
+      if (worker->Init(config.worker_config, worker_id) != kBandOk) {
         error_reporter_->Report("Worker::Init() failed for worker : %s.",
                                 BandDeviceGetName(device_flag));
         exit(-1);
@@ -289,13 +289,56 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         BandDeviceGetName(device_flag));
       worker->Start();
-      workers_[i] = std::move(worker);
+      workers_[worker_id] = std::move(worker);
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         BandDeviceGetName(device_flag));
     }
   }
 
+  // Instantiate and register a model for each model_config
+  ModelConfig model_config = config.model_configs;
+  std::vector<int> assigned_workers(workers_.size());
+  for(int i=0; i<assigned_workers.size(); i++) assigned_workers[i] = 0;
+  for (int i = 0; i < model_config.models.size(); i++) {
+    std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
+    ModelId model_id;
+    // Create a model for each valid backend
+    // TODO(juimdpp): selectively support a single backend (based on config)
+    for(auto backend: valid_backends){
+      if (model_ptr->FromPath(backend, model_config.models[i].c_str()) !=
+          kBandOk) {
+        error_reporter_->Report("Model %s could not be instantiated for %s.",
+                                model_config.models[i],
+                                BandBackendGetName(backend));
+      }
+    }
+
+    // Save model and its config
+    model_id = model_ptr->GetId();
+    model_configs_idx_[model_id] = i;
+    models_.emplace(model_id, model_ptr);
+
+    // Translate device - affinity to WorkerId
+    if (model_config.models_assigned_worker.size() > 0) {
+      int j = 0;
+      for (auto worker_it = workers_.begin(); worker_it != workers_.end();
+           worker_it++, j++) {
+        DeviceWorkerAffinityPair pair = model_config.models_assigned_worker[i];
+        if (worker_it->second->GetDeviceFlag() == pair.device &&
+            j == pair.worker) {
+          planner_->GetModelWorkerMap()[model_id] = worker_it->first;
+        }
+      }
+    }
+
+    // Register model
+    if(RegisterModel(model_ptr.get()) != kBandOk){
+      error_reporter_->Report("Model %s could not be registered.",
+                              model_config.models[i]);
+    }
+    models_.emplace(model_id, std::move(model_ptr));
+  }
   return kBandOk;
 }
 
@@ -333,6 +376,10 @@ SubgraphKey Engine::GetModelSubgraphKey(ModelId model_id,
     // TODO: report error
     return SubgraphKey();
   }
+}
+
+WorkerId Engine::GetModelWorker(ModelId model_id) const {
+   return planner_->GetModelWorkerMap()[model_id];
 }
 
 bool Engine::IsEnd(const SubgraphKey& key) const {

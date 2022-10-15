@@ -72,7 +72,7 @@ class Planner {
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
-  std::map<int, int>& GetModelWorkerMap() { return model_worker_map_; }
+  std::map<ModelId, WorkerId>& GetModelWorkerMap() { return model_worker_map_; }
 
  private:
   // Main loop for planner_thread_
@@ -127,8 +127,8 @@ class Planner {
   int sched_id_ = 0;
 
   std::thread planner_thread_;
-  // Map structure to find assigned device of model idx (model_id, device flag)
-  std::map<int, int> model_worker_map_;
+  // Map structure to find assigned worker of model idx (model_id, worker_id)
+  std::map<ModelId, WorkerId> model_worker_map_;
   Context* const context_;
   bool need_reschedule_ = false;
 };

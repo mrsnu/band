@@ -7,6 +7,7 @@
 
 #include "band/c/common.h"
 #include "band/common.h"
+#include "band/config.h"
 #include "band/error_reporter.h"
 
 namespace Band {
@@ -53,6 +54,8 @@ class Context {
 
   /* model */
   virtual const ModelSpec* GetModelSpec(ModelId model_id) = 0;
+  virtual int GetModelConfigIdx(ModelId model_id) const = 0;
+  virtual WorkerId GetModelWorker(ModelId model_id) const = 0;
 
   /* scheduling */
 

@@ -152,17 +152,6 @@ struct ModelSpec {
   std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
 };
 
-// Model configuration struct.
-// The configuration is given when registering the model.
-struct ModelConfig {
-  std::string model_fname;
-  int period_ms;
-  int device = -1;
-  int batch_size = 1;
-  int64_t slo_us = -1;
-  float slo_scale = -1.f;
-};
-
 // hash function to use pair<int, set<int>> as map key in cache_
 // https://stackoverflow.com/a/32685618
 struct PairHash {
