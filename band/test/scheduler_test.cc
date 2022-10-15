@@ -3,8 +3,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "band/test/test_util.h"
 #include "band/scheduler/round_robin_scheduler.h"
+#include "band/test/test_util.h"
 
 namespace Band {
 namespace Test {

@@ -3,8 +3,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "band/test/test_util.h"
 #include "band/scheduler/scheduler.h"
+#include "band/test/test_util.h"
 #include "band/time.h"
 #include "band/worker.h"
 
@@ -30,9 +30,7 @@ class MockScheduler : public IScheduler {
   MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
   // MOCK_METHOD0(GetWorkerType, BandWorkerType());
-  BandWorkerType GetWorkerType() {
-    return kBandDeviceQueue;
-  }
+  BandWorkerType GetWorkerType() { return kBandDeviceQueue; }
 };
 
 /*

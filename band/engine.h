@@ -12,12 +12,12 @@
 #include "band/config.h"
 #include "band/context.h"
 #include "band/error_reporter.h"
-#include "band/tensor_ring_buffer.h"
 #include "band/interface/interpreter.h"
 #include "band/interface/tensor.h"
+#include "band/tensor_ring_buffer.h"
 
 namespace Band {
-    
+
 class Model;
 
 typedef std::vector<Interface::ITensor*> Tensors;

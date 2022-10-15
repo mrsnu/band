@@ -19,7 +19,7 @@ void RegisterBackendInternal() {
 #if defined(BAND_TFLITE)
     TfLiteRegisterCreators();
 #else
-#endif 
+#endif
   });
 }
 

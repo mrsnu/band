@@ -31,7 +31,7 @@ using JobQueue = std::deque<Job>;
 class Context {
  public:
   Context(ErrorReporter* error_reporeter = DefaultErrorReporter())
-    : error_reporter_(error_reporeter) {}
+      : error_reporter_(error_reporeter) {}
 
   virtual ~Context() = default;
 

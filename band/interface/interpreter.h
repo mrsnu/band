@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "band/common.h"
-#include "band/interface/model.h"
 #include "band/interface/backend.h"
+#include "band/interface/model.h"
 
 namespace Band {
 namespace Interface {
