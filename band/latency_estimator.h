@@ -21,12 +21,23 @@ class LatencyEstimator {
   int64_t GetProfiled(const SubgraphKey& key) const;
   int64_t GetExpected(const SubgraphKey& key) const;
 
- private:
+  BandStatus DumpProfile();
+
   // latency in microseconds
   struct Latency {
     int64_t profiled;
     int64_t moving_averaged;
   };
+
+ private:
+  // Convert entries in the json value to ModelDeviceToLatency format,
+  // for the given model name and target model id.
+  std::map<SubgraphKey, Latency> JsonToModelProfile(
+      const std::string& model_fname, const int model_id);
+
+  // Convert model integer ids back to string-type names for model profiles,
+  // and returns the json format identical to `profile_database_json_`.
+  Json::Value ProfileToJson();
 
   // Path to the profile data.
   // The data in the path will be read during initial phase, and also

@@ -13,6 +13,8 @@ namespace Band {
 namespace Test {
 
 struct MockContext : public Context {
+  MockContext() : mock_config({"dummy", 0, 0, 0, 0, 0.f}) {}
+
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
   MOCK_METHOD1(PrepareReenqueue, void(Job&));
   MOCK_METHOD2(UpdateLatency, void(const SubgraphKey&, int64_t));
@@ -22,8 +24,10 @@ struct MockContext : public Context {
 
   Worker* GetWorker(WorkerId id) override { return worker; }
   size_t GetNumWorkers() const { return 1; }
+  const ModelConfig* GetModelConfig(ModelId model_id) { return &mock_config; }
 
   Worker* worker;
+  ModelConfig mock_config;
 };
 
 struct CustomInvokeMockContext : public MockContext {
@@ -108,7 +112,7 @@ INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
                          testing::Values(kBandAll, kBandLittle, kBandBig,
                                          kBandPrimary));
 
-TEST(LatencyEstimatorSuite, ProfiledLatency) {
+TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return kBandOk;
@@ -122,13 +126,64 @@ TEST(LatencyEstimatorSuite, ProfiledLatency) {
   // Explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();
+  SubgraphKey key = context.GetModelSubgraphKey(0, 0);
 
   LatencyEstimator latency_estimator(&context);
 
   EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+  EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
   EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
-  EXPECT_GT(latency_estimator.GetProfiled(SubgraphKey(0, 0)), 5000);
+  EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
 
+  worker.End();
+}
+
+TEST(LatencyEstimatorSuite, OfflineSaveLoad) {
+  CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
+    std::this_thread::sleep_for(std::chrono::microseconds(5000));
+    return kBandOk;
+  });
+
+  DeviceQueueWorker worker(&context, kBandCPU);
+  // explicitly assign worker to mock context
+  context.worker = &worker;
+  worker.Start();
+  SubgraphKey key = context.GetModelSubgraphKey(0, 0);
+
+  {
+    // profile on online estimator
+    LatencyEstimator latency_estimator(&context);
+
+    ProfileConfigBuilder b;
+    ProfileConfig config =
+        b.AddNumRuns(3)
+            .AddNumWarmups(3)
+            .AddOnline(true)
+            .AddProfileDataPath(testing::TempDir() + "log.json")
+            .Build();
+
+    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+    EXPECT_EQ(latency_estimator.DumpProfile(), kBandOk);
+  }
+
+  {
+    // load on offline estimator
+    LatencyEstimator latency_estimator(&context);
+
+    ProfileConfigBuilder b;
+    ProfileConfig config =
+        b.AddNumRuns(3)
+            .AddNumWarmups(3)
+            .AddOnline(false)
+            .AddProfileDataPath(testing::TempDir() + "log.json")
+            .Build();
+
+    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+    EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
+    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+    EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
+  }
   worker.End();
 }
 

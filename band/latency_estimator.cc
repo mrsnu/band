@@ -116,9 +116,21 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
           subgraph_key.GetOutputOpsString().c_str());
     }
   } else {
-    // TODO: Profiler offline option(BAND-48)
-    BAND_NOT_IMPLEMENTED;
-    return kBandError;
+    const std::string model_name =
+        context_->GetModelConfig(model_id)->model_fname;
+    auto model_profile = JsonToModelProfile(model_name, model_id);
+    if (model_profile.size() > 0) {
+      profile_database_.insert(model_profile.begin(), model_profile.end());
+      BAND_LOG_INTERNAL(
+          BAND_LOG_INFO,
+          "Successfully found %d profile entries for model (%s, %d).",
+          model_profile.size(), model_name.c_str(), model_id);
+    } else {
+      BAND_LOG_INTERNAL(
+          BAND_LOG_WARNING,
+          "Failed to find profile entries for given model name %s.",
+          model_name.c_str());
+    }
   }
   return kBandOk;
 }
@@ -140,4 +152,103 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
     return -1;
   }
 }
+
+BandStatus LatencyEstimator::DumpProfile() {
+  return WriteJsonObjectToFile(ProfileToJson(), profile_data_path_);
+}
+
+std::map<SubgraphKey, LatencyEstimator::Latency>
+LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
+                                     const int model_id) {
+  auto string_to_node_indices = [](std::string index_string) {
+    std::set<int> node_indices;
+    std::stringstream ss(index_string);
+
+    for (int i; ss >> i;) {
+      node_indices.insert(i);
+      if (ss.peek() == ',') {
+        ss.ignore();
+      }
+    }
+
+    return node_indices;
+  };
+
+  std::map<SubgraphKey, LatencyEstimator::Latency> id_profile;
+  for (auto profile_it = profile_database_json_.begin();
+       profile_it != profile_database_json_.end(); ++profile_it) {
+    std::string model_name = profile_it.key().asString();
+
+    if (model_name != model_fname) {
+      // We're only interested in `model_fname`.
+      // NOTE: In case a model is using a different string name alias for
+      // some other reason (e.g., two instances of the same model), we won't
+      // be able to detect that the model can indeed reuse this profile.
+      // An ad-hoc fix would be to add yet another "model name" field,
+      // solely for profiling purposes.
+      continue;
+    }
+
+    const Json::Value idx_profile = *profile_it;
+    for (auto idx_profile_it = idx_profile.begin();
+         idx_profile_it != idx_profile.end(); ++idx_profile_it) {
+      std::string idx = idx_profile_it.key().asString();
+
+      // parse the key to retrieve start/end indices
+      // e.g., "25/50" --> delim_pos = 2
+      auto delim_pos = idx.find("/");
+      std::set<int> root_indices =
+          string_to_node_indices(idx.substr(0, delim_pos));
+      std::set<int> leaf_indices = string_to_node_indices(
+          idx.substr(delim_pos + 1, idx.length() - delim_pos - 1));
+
+      const Json::Value device_profile = *idx_profile_it;
+      for (auto device_profile_it = device_profile.begin();
+           device_profile_it != device_profile.end(); ++device_profile_it) {
+        int worker_id = device_profile_it.key().asInt();
+        int64_t profiled_latency = (*device_profile_it).asInt64();
+
+        if (profiled_latency <= 0) {
+          // jsoncpp treats missing values (null) as zero,
+          // so they will be filtered out here
+          continue;
+        }
+
+        SubgraphKey key(model_id, worker_id, root_indices, leaf_indices);
+        id_profile[key] = {profiled_latency, profiled_latency};
+      }
+    }
+  }
+  return id_profile;
+}
+
+Json::Value LatencyEstimator::ProfileToJson() {
+  Json::Value name_profile;
+  for (auto& pair : profile_database_) {
+    SubgraphKey key = pair.first;
+    int model_id = key.GetModelId();
+    std::string start_indices = key.GetInputOpsString();
+    std::string end_indices = key.GetOutputOpsString();
+    int64_t profiled_latency = pair.second.profiled;
+
+    // check the string name of this model id
+    auto model_config = context_->GetModelConfig(model_id);
+    if (model_config && model_config->model_fname.size()) {
+      // copy all entries in id_profile --> database_json
+      // as an ad-hoc method, we simply concat the start/end indices to form
+      // the level-two key in the final json value
+      const std::string index_key = start_indices + "/" + end_indices;
+      name_profile[model_config->model_fname][index_key][key.GetWorkerId()] =
+          profiled_latency;
+    } else {
+      BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                        "Cannot find model %d from "
+                        "model_configs. Will ignore.",
+                        model_id);
+      continue;
+    }
+  }
+  return name_profile;
+}
+
 }  // namespace Band

@@ -54,6 +54,7 @@ class Context {
   /* model */
   virtual const ModelSpec* GetModelSpec(ModelId model_id) = 0;
   virtual int GetModelConfigIdx(ModelId model_id) const = 0;
+  virtual const ModelConfig* GetModelConfig(ModelId model_id) = 0;
   virtual WorkerId GetModelWorker(ModelId model_id) const = 0;
 
   /* scheduling */

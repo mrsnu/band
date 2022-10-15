@@ -37,7 +37,7 @@ std::string IndexSetToString(const std::set<int>& indices) {
   for (const int& index : indices) {
     result += std::to_string(index) + ",";
   }
-  result.pop_back();
+  if (result.size()) result.pop_back();
   return result;
 }
 
