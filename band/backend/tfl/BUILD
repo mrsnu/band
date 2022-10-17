@@ -1,5 +1,4 @@
-load("//band:band.bzl", "band_cc_android_test")
-load("//tensorflow/lite:build_def.bzl", "tflite_linkopts")
+load("//band:band.bzl", "band_cc_android_test", "band_copts", "band_linkopts")
 
 package(
     default_visibility = ["//visibility:public"],

@@ -121,31 +121,44 @@ def band_jni_linkopts():
 
 def band_cc_android_test(
         name,
-        # copts = ["-Wall"] + band_copts(),
+        copts = band_copts(),
         linkopts = band_linkopts() + select({
             clean_dep("//band:android"): [
                 "-pie",
                 "-lm",
-                "-static",
                 "-Wl,--rpath=/data/local/tmp/",
             ],
             "//conditions:default": [],
         }),
         linkstatic = select({
+            # To build standalone test for android not requiring shared object.
             clean_dep("//band:android"): True,
             # linkstatic in cc_test is true for window by default.
             clean_dep("//band:windows"): True,
             "//conditions:default": False,
         }),
+        compile_binary = select({
+            clean_dep("//band:android"): True,
+            "//conditions:default": False,
+        }),
         **kwargs):
     """Builds a standalone test for android device when android config is on."""
-    native.cc_test(
-        name = name,
-        # copts = copts,
-        linkopts = linkopts,
-        linkstatic = linkstatic,
-        **kwargs
-    )
+    if compile_binary == True:
+        native.cc_binary(
+            name = name,
+            copts = copts,
+            linkopts = linkopts,
+            linkstatic = linkstatic,
+            **kwargs
+        )
+    else:
+        native.cc_test(
+            name = name,
+            copts = copts,
+            linkopts = linkopts,
+            linkstatic = linkstatic,
+            **kwargs
+        )
 
 def band_cc_shared_object(
           name,
