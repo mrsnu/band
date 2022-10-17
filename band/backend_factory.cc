@@ -7,8 +7,12 @@
 namespace Band {
 using namespace Interface;
 
-#if defined(BAND_TFLITE)
+#ifdef BAND_TFLITE
+#ifdef _WIN32
 extern void TfLiteRegisterCreators();
+#else
+__attribute__((weak)) extern void TfLiteRegisterCreators();
+#endif
 #endif
 
 // Expected process
@@ -16,9 +20,8 @@ extern void TfLiteRegisterCreators();
 void RegisterBackendInternal() {
   static std::once_flag g_flag;
   std::call_once(g_flag, [] {
-#if defined(BAND_TFLITE)
+#ifdef BAND_TFLITE
     TfLiteRegisterCreators();
-#else
 #endif
   });
 }

@@ -5,8 +5,8 @@
 
 #include "band/config.h"
 #include "band/model.h"
-#include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/fixed_device_scheduler.h"
+#include "band/scheduler/round_robin_scheduler.h"
 #include "band/test/test_util.h"
 
 namespace Band {
@@ -30,7 +30,7 @@ struct MockContext : public MockContextBase {
     return SubgraphKey(model_id, worker_id, {0}, {0});
   }
 
-  WorkerId GetModelWorker(ModelId model_id) const override{
+  WorkerId GetModelWorker(ModelId model_id) const override {
     if (w > list_idle_workers_.size())
       return -1;
     else
@@ -72,7 +72,7 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
   EXPECT_EQ(count_requests, requests.size() + count_scheduled);
 }
 
-TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
+TEST_P(ConfigLevelTestsFixture, FixedDeviceTest) {
   // Set configs in context
   std::deque<int> request_models = std::get<0>(GetParam());
   std::set<int> available_workers = std::get<1>(GetParam());
@@ -88,7 +88,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
   auto action = fd_scheduler.Schedule(context, requests);
 
   int count_scheduled = 0;
-  for(auto scheduled_jobs: action){
+  for (auto scheduled_jobs : action) {
     count_scheduled += scheduled_jobs.second.size();
   }
 
@@ -99,9 +99,9 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest){
 
   std::set<ModelId> scheduled_models;
   // each worker should have a single model scheduled
-  for(auto scheduled_model: action){
+  for (auto scheduled_model : action) {
     EXPECT_EQ(scheduled_model.second.size(), 1);
-    if(scheduled_model.second.size() == 1){
+    if (scheduled_model.second.size() == 1) {
       scheduled_models.insert(scheduled_model.second.at(0).first.model_id);
     }
   }

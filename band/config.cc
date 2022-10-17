@@ -69,43 +69,43 @@ BandStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
         root["minimum_subgraph_size"].asInt();
   }
   // 8. Models
-if(!root["models"].isNull()){
-  for (int i = 0; i < root["models"].size(); ++i) {
-    ModelConfig model_config;
-    auto model_config_json = root["models"][i];
+  if (!root["models"].isNull()) {
+    for (int i = 0; i < root["models"].size(); ++i) {
+      ModelConfig model_config;
+      auto model_config_json = root["models"][i];
 
-    // 1. Model name
-    BAND_ENSURE_MSG(
-        error_reporter, !model_config_json["graph"].isNull(),
-        "Please check if argument `grpah` is given in the model configs.");
-    model_config.model_fname = model_config_json["graph"].asString();
-    // 2. Device
-    BandDeviceFlags device_flag =
-        BandDeviceGetFlag(model_config_json["device"].asCString());
-    BAND_ENSURE_FORMATTED_MSG(error_reporter, device_flag != kBandNumDevices,
-                              "Wrong `device` argument is given. %s",
-                              model_config_json["device"].asCString());
-    // 3. Period (ms)
-    if(!model_config_json["period_ms"].isNull()){
-      model_config.period_ms = model_config_json["period_ms"].asInt();
-    }
-    // 4. Batch Size
-    if(!model_config_json["batch_size"].isNull()){
-      model_config.batch_size = model_config_json["batch_size"].asInt();
-    }
-    // 5. slo (us)
-    if(!model_config_json["slo_us"].isNull()){
-      model_config.slo_us = model_config_json["slo_us"].asInt64();
-    }
-    // 6. slo (scale)
-    if(!model_config_json["slo_scale"].isNull()){
-      model_config.slo_scale = model_config_json["slo_scale"].asFloat();
-    }
+      // 1. Model name
+      BAND_ENSURE_MSG(
+          error_reporter, !model_config_json["graph"].isNull(),
+          "Please check if argument `grpah` is given in the model configs.");
+      model_config.model_fname = model_config_json["graph"].asString();
+      // 2. Device
+      BandDeviceFlags device_flag =
+          BandDeviceGetFlag(model_config_json["device"].asCString());
+      BAND_ENSURE_FORMATTED_MSG(error_reporter, device_flag != kBandNumDevices,
+                                "Wrong `device` argument is given. %s",
+                                model_config_json["device"].asCString());
+      // 3. Period (ms)
+      if (!model_config_json["period_ms"].isNull()) {
+        model_config.period_ms = model_config_json["period_ms"].asInt();
+      }
+      // 4. Batch Size
+      if (!model_config_json["batch_size"].isNull()) {
+        model_config.batch_size = model_config_json["batch_size"].asInt();
+      }
+      // 5. slo (us)
+      if (!model_config_json["slo_us"].isNull()) {
+        model_config.slo_us = model_config_json["slo_us"].asInt64();
+      }
+      // 6. slo (scale)
+      if (!model_config_json["slo_scale"].isNull()) {
+        model_config.slo_scale = model_config_json["slo_scale"].asFloat();
+      }
 
-    // Add to interpreter_config.models_config
-    interpreter_config.models_config.push_back(model_config);
+      // Add to interpreter_config.models_config
+      interpreter_config.models_config.push_back(model_config);
+    }
   }
-}
 
   // Set Planner configs
   // 1. Log path

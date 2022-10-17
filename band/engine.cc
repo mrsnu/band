@@ -299,13 +299,13 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
   // Instantiate and register a model for each model_config
   ModelConfig model_config = config.model_configs;
   std::vector<int> assigned_workers(workers_.size());
-  for(int i=0; i<assigned_workers.size(); i++) assigned_workers[i] = 0;
+  for (int i = 0; i < assigned_workers.size(); i++) assigned_workers[i] = 0;
   for (int i = 0; i < model_config.models.size(); i++) {
     std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
     ModelId model_id;
     // Create a model for each valid backend
     // TODO(juimdpp): selectively support a single backend (based on config)
-    for(auto backend: valid_backends){
+    for (auto backend : valid_backends) {
       if (model_ptr->FromPath(backend, model_config.models[i].c_str()) !=
           kBandOk) {
         error_reporter_->Report("Model %s could not be instantiated for %s.",
@@ -333,7 +333,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     }
 
     // Register model
-    if(RegisterModel(model_ptr.get()) != kBandOk){
+    if (RegisterModel(model_ptr.get()) != kBandOk) {
       error_reporter_->Report("Model %s could not be registered.",
                               model_config.models[i]);
     }
@@ -379,7 +379,7 @@ SubgraphKey Engine::GetModelSubgraphKey(ModelId model_id,
 }
 
 WorkerId Engine::GetModelWorker(ModelId model_id) const {
-   return planner_->GetModelWorkerMap()[model_id];
+  return planner_->GetModelWorkerMap()[model_id];
 }
 
 bool Engine::IsEnd(const SubgraphKey& key) const {
