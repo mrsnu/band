@@ -309,7 +309,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       if (model_ptr->FromPath(backend, model_config.models[i].c_str()) !=
           kBandOk) {
         error_reporter_->Report("Model %s could not be instantiated for %s.",
-                                model_config.models[i],
+                                model_config.models[i].c_str(),
                                 BandBackendGetName(backend));
       }
     }
@@ -335,7 +335,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     // Register model
     if (RegisterModel(model_ptr.get()) != kBandOk) {
       error_reporter_->Report("Model %s could not be registered.",
-                              model_config.models[i]);
+                              model_config.models[i].c_str());
     }
     models_.emplace(model_id, std::move(model_ptr));
   }
