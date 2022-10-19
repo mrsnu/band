@@ -93,7 +93,10 @@ FRAMEWORK_LIB_HDRS = [
     "splash/thermal_model_manager.h",
     "splash/thermal_model.h",
     "splash/cloud_thermal_model.h",
-    "splash/processor_thermal_model.h"
+    "splash/processor_thermal_model.h",
+    "splash/latency_model.h",
+    "splash/cloud_latency_model.h",
+    "splash/processor_latency_model.h"
 ]
 
 cc_library(
@@ -315,7 +318,9 @@ cc_library(
         "splash/resource_monitor.cc",
         "splash/thermal_model_manager.cc",
         "splash/cloud_thermal_model.cc",
-        "splash/processor_thermal_model.cc"
+        "splash/processor_thermal_model.cc",
+        "splash/cloud_latency_model.cc",
+        "splash/processor_latency_model.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,

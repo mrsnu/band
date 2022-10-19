@@ -191,6 +191,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // mediatek : neuron-ann, mtk-gpu, mtk-dsp, mtk-neuron, mtk-mdla
   // google tpu : google-edgetpu
   // huawei npu : liteadaptor
+  // samsung npu : eden-drv
   for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Available NNAPI device name %s", device_name);

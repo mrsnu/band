@@ -100,6 +100,8 @@ struct Job {
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
+  int64_t latency = 0;
+  int64_t estimated_latency = 0;
   // Profiled invoke execution time
   int64_t profiled_execution_time = 0;
   // Expected invoke execution time
@@ -130,6 +132,11 @@ struct Job {
 
   std::vector<thermal_t> real_temp;
   std::vector<thermal_t> estimated_temp;
+  std::vector<thermal_t> before_temp;
+  std::vector<thermal_t> after_temp;
+  std::vector<freq_t> frequency;
+  int64_t flops;
+  int64_t membytes;
 };
 
 // Model configuration struct.

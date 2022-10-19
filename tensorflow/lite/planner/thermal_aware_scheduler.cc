@@ -11,7 +11,7 @@ namespace impl {
 
 void ThermalAwareScheduler::Schedule(JobQueue& requests) {
   std::set<int> idle_workers = planner_->GetIdleWorkers();
-  LOGI("Idle worker size : %d", idle_workers.size());
+  // LOGI("Idle worker size : %d", idle_workers.size());
   while (!requests.empty()) {
     Job to_execute = requests.front();
     requests.pop_front();
@@ -21,7 +21,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     std::set<int>::iterator it = idle_workers.begin();
     std::advance(it, target_idx);
     int worker_id = *it;
-    LOGI("It's selected : %d", worker_id);
+    // LOGI("It's selected : %d", worker_id);
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker_id);
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
     EnqueueAction(to_execute, subgraph);

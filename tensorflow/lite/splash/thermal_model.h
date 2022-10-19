@@ -62,18 +62,41 @@ class IThermalModel {
       return c;
   }
 
-  std::vector<thermal_t> Plus(const std::vector<thermal_t>& a, const std::vector<thermal_t>& b) {
-    std::vector<thermal_t> result;
+  std::vector<thermal_t> Multiply(const std::vector<thermal_t> &a, const int64_t &b)
+  {
+      const int n = a.size();     // a rows
+
+      std::vector<thermal_t> c(n, 0);
+      for (auto i = 0; i < n; ++i) {
+        c[i] += a[i] * b;
+      }
+      return c;
+  }
+
+  // std::vector<thermal_t> Plus(const std::vector<thermal_t>& a, const std::vector<thermal_t>& b) {
+  //   std::vector<thermal_t> result;
+  //   result.reserve(a.size());
+
+  //   std::transform(a.begin(), a.end(), b.begin(), 
+  //                   std::back_inserter(result), std::plus<thermal_t>());
+  //   return result;
+  // }
+
+  template <typename T>
+  std::vector<T> Plus(const std::vector<T>& a, const std::vector<T>& b) {
+    std::vector<T> result;
     result.reserve(a.size());
 
     std::transform(a.begin(), a.end(), b.begin(), 
-                    std::back_inserter(result), std::plus<thermal_t>());
+                    std::back_inserter(result), std::plus<T>());
     return result;
   }
 
  protected:
   worker_id_t wid_;
   ResourceMonitor& resource_monitor_;
+
+  double gain_ = 0.0001;
 };
 
 } // namespace impl

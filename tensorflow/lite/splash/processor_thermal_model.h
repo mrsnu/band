@@ -26,10 +26,10 @@ class ProcessorThermalModel : public IThermalModel {
  
  private:
   // Linear regressor
-  std::vector<int32_t> temperature; // Get from resource monitor
-  std::vector<int32_t> frequency;
-  std::int64_t flops;
-  std::int64_t membytes;
+  std::vector<thermal_t> temp_regressor_; // Get from resource monitor
+  std::vector<freq_t> freq_regressor_;
+  std::int64_t flops_regressor_;
+  std::int64_t membytes_regressor_;
   
   // Model parameter
   std::vector<std::vector<double>> temp_param_;
@@ -37,6 +37,17 @@ class ProcessorThermalModel : public IThermalModel {
   std::vector<double> flops_param_;
   std::vector<double> membytes_param_;
   std::vector<double> error_param_;
+
+
+  void UpdateParameters(std::vector<std::vector<double>>& params, 
+                      std::vector<thermal_t> error, 
+                      std::vector<thermal_t> regressor);
+
+  void UpdateParameters(std::vector<double>& params, 
+                      std::vector<thermal_t> error,
+                      int64_t regressor);
+
+  void PrintParameters();
 
   std::vector<thermal_t> EstimateFutureTemperature(const std::vector<thermal_t> temp,
                                                    const std::vector<freq_t> freq,

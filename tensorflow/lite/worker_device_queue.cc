@@ -106,10 +106,11 @@ void DeviceQueueWorker::Work() {
 
       if (TryCopyInputTensors(current_job) == kTfLiteOk) {
         lock.lock();
+        // LOGI("getting value start");
         current_job.invoke_time = profiling::time::NowMicros();
-        LOGI("getting thermal here");
-        current_job.estimated_temp = planner_ptr->GetThermalModel()->GetPredictedTemperature(current_job.worker_id, interpreter_ptr->subgraph(subgraph_idx));
-        LOGI("getting thermal done");
+        current_job.before_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+        current_job.frequency = planner_ptr->GetResourceMonitor().GetAllFrequency(); 
+        // LOGI("getting value done");
         lock.unlock();
 
         TfLiteStatus status = subgraph.Invoke();
@@ -117,11 +118,13 @@ void DeviceQueueWorker::Work() {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
           current_job.end_time = profiling::time::NowMicros();
-          current_job.real_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
-          interpreter_ptr->UpdateExpectedLatency(
-              subgraph_idx,
-              (current_job.end_time - current_job.invoke_time));
+          current_job.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+          current_job.latency = current_job.end_time - current_job.invoke_time;
+          // interpreter_ptr->UpdateExpectedLatency(
+          //     subgraph_idx,
+          //     (current_job.end_time - current_job.invoke_time));
           // Update thermal model
+          // planner_ptr->GetThermalModel()->Update(current_job);
           if (current_job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job.following_jobs);
           } 

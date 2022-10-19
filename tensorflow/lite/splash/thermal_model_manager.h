@@ -34,8 +34,12 @@ class ThermalModelManager {
 
   std::vector<thermal_t> GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph);
 
+  // TEMP : for data collection
+  int64_t GetFlops(const Subgraph* subgraph);
+  int64_t GetMembytes(const Subgraph* subgraph);
+
   // Update model parameters with the prediction error
-  TfLiteStatus Update(std::vector<thermal_t> error, worker_id_t wid);
+  TfLiteStatus Update(Job& job);
 
  private:
   std::vector<std::unique_ptr<IThermalModel>> models_;

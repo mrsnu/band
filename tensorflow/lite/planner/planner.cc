@@ -45,17 +45,19 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "invoke_time\t"
              << "end_time\t"
              << "estimated_latency\t"
-             << "real_latency\t"
-             << "estimated_temp_cpu\t"
-             << "real_temp_cpu\t"
-             << "estimated_temp_gpu\t"
-             << "real_temp_gpu\t"
-             << "estimated_temp_dsp\t"
-             << "real_temp_dsp\t"
-             << "estimated_temp_npu\t"
-             << "real_temp_npu\t"
-             << "estimated_temp_cloud\t"
-             << "real_temp_cloud\t"
+             << "latency\t"
+             << "before_temp_cpu\t"
+             << "before_temp_gpu\t"
+             << "before_temp_dsp\t"
+             << "before_temp_npu\t"
+             << "after_temp_cpu\t"
+             << "after_temp_gpu\t"
+             << "after_temp_dsp\t"
+             << "after_temp_npu\t"
+             << "freq_cpu\t"
+             << "freq_gpu\t"
+             << "freq_dsp\t"
+             << "freq_npu\t"
              << "job_status\n";
     log_file.close();
   }
@@ -209,7 +211,6 @@ void Planner::UpdateWorkerWaitingTime() {
 
 std::set<int> Planner::GetIdleWorkers() {
   std::set<int> idle_workers;
-  LOGI("Total worker number : %d", GetInterpreter()->GetNumWorkers());
   for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
     if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
       idle_workers.insert(i);
@@ -353,18 +354,22 @@ void Planner::FlushFinishedJobs() {
                << job.enqueue_time << "\t"
                << job.invoke_time << "\t"
                << job.end_time << "\t"
-               << job.profiled_execution_time << "\t" // Figure out difference b/w profiled and expected
-               << job.end_time - job.invoke_time << "\t" // Real latency
-               << job.estimated_temp[kTfLiteCPU] << "\t"
-               << job.real_temp[kTfLiteCPU] << "\t"
-               << job.estimated_temp[kTfLiteGPU] << "\t"
-               << job.real_temp[kTfLiteGPU] << "\t"
-               << job.estimated_temp[kTfLiteDSP] << "\t"
-               << job.real_temp[kTfLiteDSP] << "\t"
-               << job.estimated_temp[kTfLiteNPU] << "\t"
-               << job.real_temp[kTfLiteNPU] << "\t"
-               << job.estimated_temp[kTfLiteCLOUD] << "\t"
-               << job.real_temp[kTfLiteCLOUD] << "\t"
+               << job.estimated_latency << "\t" 
+               << job.latency << "\t" 
+               << job.before_temp[kTfLiteCPU] << "\t"
+               << job.before_temp[kTfLiteGPU] << "\t"
+               << job.before_temp[kTfLiteDSP] << "\t"
+               << job.before_temp[kTfLiteNPU] << "\t"
+              //  << job.before_temp[kTfLiteCLOUD] << "\t"
+               << job.after_temp[kTfLiteCPU] << "\t"
+               << job.after_temp[kTfLiteGPU] << "\t"
+               << job.after_temp[kTfLiteDSP] << "\t"
+               << job.after_temp[kTfLiteNPU] << "\t"
+              //  << job.after_temp[kTfLiteCLOUD] << "\t"
+               << job.frequency[kTfLiteCPU]<< "\t"
+               << job.frequency[kTfLiteGPU]<< "\t"
+              //  << job.frequency[kTfLiteDSP]<< "\t"
+              //  << job.frequency[kTfLiteNPU]<< "\t"
                << job.status << "\n";
     }
     log_file.close();

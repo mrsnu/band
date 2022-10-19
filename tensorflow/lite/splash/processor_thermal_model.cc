@@ -7,7 +7,7 @@
 #include "tensorflow/lite/builtin_ops.h"
 
 #if defined(__ANDROID__)
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "thermal", __VA_ARGS__)
 #include <android/log.h>
 #endif // defined(__ANDROID__)
 
@@ -28,20 +28,20 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size) {
 vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph) {
   LOGI("ProcessorThermalModel::Predict starts");
   // Get temperature from resource monitor
-  const vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
+  temp_regressor_ = GetResourceMonitor().GetAllTemperature();
 
   // Get frequency 
-  const vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
+  freq_regressor_ = GetResourceMonitor().GetAllFrequency();
 
   // Get flops 
-  const int64_t mFlops = EstimateFLOPS(subgraph, subgraph) / 100000;
+  flops_regressor_ = EstimateFLOPS(subgraph, subgraph) / 100000;
 
-  LOGI("Flops : %lld", mFlops);
+  LOGI("Flops : %lld", flops_regressor_);
   // Get membytes 
-  const int64_t memBytes = EstimateInputOutputSize(subgraph);
+  membytes_regressor_ = EstimateInputOutputSize(subgraph);
 
-  LOGI("memBytes : %lld", memBytes);
-  return EstimateFutureTemperature(temp, freq, mFlops, membytes);
+  LOGI("memBytes : %lld", membytes_regressor_);
+  return EstimateFutureTemperature(temp_regressor_, freq_regressor_, flops_regressor_, membytes_regressor_);
 }
 
 vector<thermal_t> ProcessorThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,
@@ -141,7 +141,54 @@ int64_t ProcessorThermalModel::EstimateInputOutputSize(const Subgraph* subgraph)
   return subgraph_input_output_size;
 }
 
+void ProcessorThermalModel::UpdateParameters(vector<vector<double>>& params, 
+                                           vector<thermal_t> error,
+                                           vector<thermal_t> regressor) {
+  const int error_rows = error.size();
+  const int reg_rows = regressor.size();
+
+  for (auto i = 0; i < error_rows; ++i) {
+    for (auto k = 0; k < reg_rows; ++k) {
+        params[i][k] += (double) (error[i] * regressor[k] * gain_);
+    }
+  }
+}
+
+void ProcessorThermalModel::UpdateParameters(vector<double>& params, 
+                                           vector<thermal_t> error,
+                                           int64_t regressor) {
+  const int error_rows = error.size();
+  for (auto i = 0; i < error_rows; ++i) {
+    params[i] += (double) (error[i] * regressor * gain_);
+  }
+}
+
+void ProcessorThermalModel::PrintParameters() {
+  LOGI("================Temp Param(S)================");
+  for (auto i = 0; i < temp_param_.size(); ++i) {
+    LOGI("%.4f\t%.4f\t%.4f\t%.4f\t%.4f", 
+        temp_param_[i][0], temp_param_[i][1], temp_param_[i][2], temp_param_[i][3], temp_param_[i][4]);
+  }
+  LOGI("================Temp Param(E)================");
+}
+
+
 TfLiteStatus ProcessorThermalModel::Update(vector<thermal_t> error) {
+  LOGI("ProcessorThermalModel::Update starts");
+  for (int i = 0; i < kTfLiteNumDevices; i++) {
+    LOGI("Error[%d] = %d", i, error[i]);
+  }
+  PrintParameters();
+
+  // Calculate gain first
+  UpdateParameters(temp_param_, error, temp_regressor_);
+  UpdateParameters(freq_param_, error, freq_regressor_);
+  UpdateParameters(flops_param_, error, flops_regressor_);
+  UpdateParameters(membytes_param_, error, membytes_regressor_);
+  UpdateParameters(error_param_, error, 1);
+  LOGI("ProcessorThermalModel::Update Ends");
+  PrintParameters();
+
   return kTfLiteOk;
 }
 
