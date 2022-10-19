@@ -16,12 +16,13 @@ namespace impl {
 
 using namespace std;
 
-TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size) {
+TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size, int32_t window_size) {
   temp_param_.assign(worker_size, vector<double>(worker_size, 0.2));
   freq_param_.assign(worker_size, vector<double>(worker_size, 0.000001));
   flops_param_.assign(worker_size, 0.01);
   membytes_param_.assign(worker_size, 0.00001);
   error_param_.assign(worker_size, 1.0);
+  window_size_ = window_size;
   return kTfLiteOk;
 }
 
@@ -173,22 +174,34 @@ void ProcessorThermalModel::PrintParameters() {
 }
 
 
-TfLiteStatus ProcessorThermalModel::Update(vector<thermal_t> error) {
+TfLiteStatus ProcessorThermalModel::Update(Job job) {
   LOGI("ProcessorThermalModel::Update starts");
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
-    LOGI("Error[%d] = %d", i, error[i]);
+  // Add job to log table
+  ThermalLog log(job);
+  if (log_.size() > window_size_) {
+    log_.pop_front();
   }
+  log_.push_back(log);
+
   PrintParameters();
 
-  // Calculate gain first
+  std::vector<thermal_t> error(kTfLiteNumDevices, 0);
+
+  for (int i = 0; i < kTfLiteNumDevices; i++) {
+    LOGI("real_temp = %d, estimated_temp = %d", job.real_temp[i], job.estimated_temp[i]);
+    error[i] = job.real_temp[i] - job.estimated_temp[i];
+  }
+
+  // Update parameters via normal equation with log table
   UpdateParameters(temp_param_, error, temp_regressor_);
   UpdateParameters(freq_param_, error, freq_regressor_);
   UpdateParameters(flops_param_, error, flops_regressor_);
   UpdateParameters(membytes_param_, error, membytes_regressor_);
   UpdateParameters(error_param_, error, 1);
-  LOGI("ProcessorThermalModel::Update Ends");
+
   PrintParameters();
 
+  LOGI("ProcessorThermalModel::Update Ends");
   return kTfLiteOk;
 }
 

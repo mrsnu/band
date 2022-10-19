@@ -163,6 +163,11 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
       }
     }
   }
+
+  // 2. thermal model update window size
+  if (!root["model_update_window_size"].isNull()) {
+    resource_config.model_update_window_size = root["model_update_window_size"].asInt();
+  }
   return kTfLiteOk;
 }
 

@@ -13,16 +13,44 @@
 namespace tflite {
 namespace impl {
 
+struct ThermalLog {
+  explicit ThermalLog(Job job) {
+    model_id = job.model_id;
+    subgraph_idx = job.subgraph_idx;
+    worker_id = job.worker_id;
+    
+    latency = job.latency;
+    before_temp = job.before_temp;
+    after_temp = job.after_temp;
+    frequency = job.frequency;
+    flops = job.flops;
+    membytes = job.membytes;
+  }
+
+  int model_id;
+  int subgraph_idx = -1; // For subgraph partitioning support in the future
+  int worker_id = -1;
+
+  int64_t latency = 0;
+  std::vector<thermal_t> before_temp;
+  std::vector<thermal_t> after_temp;
+  std::vector<freq_t> frequency;
+
+  // TODO : Remove these when using latency
+  int64_t flops;
+  int64_t membytes;
+};
+
 class ProcessorThermalModel : public IThermalModel {
  public:
   ProcessorThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
   : IThermalModel(wid, resource_monitor) {}
 
-  TfLiteStatus Init(int32_t worker_size) override;
+  TfLiteStatus Init(int32_t worker_size, int32_t window_size) override;
 
   std::vector<thermal_t> Predict(const Subgraph* subgraph) override;
 
-  TfLiteStatus Update(std::vector<thermal_t> error) override;
+  TfLiteStatus Update(Job job) override;
  
  private:
   // Linear regressor
@@ -30,6 +58,10 @@ class ProcessorThermalModel : public IThermalModel {
   std::vector<freq_t> freq_regressor_;
   std::int64_t flops_regressor_;
   std::int64_t membytes_regressor_;
+
+  // Log buffer
+  std::deque<ThermalLog> log_;
+  int32_t window_size_;
   
   // Model parameter
   std::vector<std::vector<double>> temp_param_;

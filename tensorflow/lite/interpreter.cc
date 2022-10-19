@@ -138,14 +138,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       set_internal_backend_context(
           std::make_unique<CpuBackendContext>());
 
-  // Init a ResourceMonitor instance
-  if (resource_monitor_.Init(runtime_config.resource_config) != kTfLiteOk) {
-    error_reporter_->Report("ResourceMonitor::Init() failed.");
-    exit(-1);
-  }
-
   // Create a Planner instance.
-  planner_.reset(new Planner(this, resource_monitor_));
+  planner_.reset(new Planner(this, runtime_config.resource_config));
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
     exit(-1);

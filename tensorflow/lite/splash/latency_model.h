@@ -34,7 +34,7 @@ class ILatencyModel {
  protected:
   worker_id_t wid_;
 
-  double smoothing_factor_ = 0.0001;
+  double smoothing_factor_ = 0.01;
 };
 
 } // namespace impl

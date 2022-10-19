@@ -18,11 +18,11 @@ class CloudThermalModel : public IThermalModel {
   CloudThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
   : IThermalModel(wid, resource_monitor) {}
 
-  TfLiteStatus Init(int32_t worker_size) override;
+  TfLiteStatus Init(int32_t worker_size, int32_t window_size) override;
 
   std::vector<thermal_t> Predict(const Subgraph* subgraph) override;
 
-  TfLiteStatus Update(std::vector<thermal_t> error) override;
+  TfLiteStatus Update(Job job) override;
 
  private:
   // Linear regressor
@@ -31,6 +31,8 @@ class CloudThermalModel : public IThermalModel {
   std::int64_t output_size;
   std::int64_t rssi;
   std::int64_t waiting_time;
+
+  int32_t window_size_;
   
   // Model parameter
   std::vector<std::vector<double>> temp_param_;

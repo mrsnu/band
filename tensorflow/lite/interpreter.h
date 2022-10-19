@@ -795,7 +795,6 @@ class Interpreter {
   
   std::shared_ptr<Planner> planner_;
   std::vector<std::unique_ptr<Worker>> workers_;
-  impl::ResourceMonitor& resource_monitor_ = ResourceMonitor::instance();
 
   // Map structure to find subgraph idx with SubgraphKeys
   std::map<SubgraphKey, int> subgraph_idx_map_;

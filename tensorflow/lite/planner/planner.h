@@ -26,7 +26,7 @@ class ModelManager;
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter, ResourceMonitor& resource_monitor);
+  explicit Planner(Interpreter* interpreter, ResourceConfig& resource_config);
   ~Planner();
   TfLiteStatus Init(PlannerConfig& config);
 
@@ -122,7 +122,7 @@ class Planner {
 
   void PrepareReenqueue(Job& job);
 
-  ModelManager * GetThermalModel() { return model_manager_; }
+  ModelManager * GetModelManager() { return model_manager_; }
 
   ResourceMonitor& GetResourceMonitor() { return resource_monitor_; }
 
@@ -131,7 +131,7 @@ class Planner {
   int GetJobRecordIndex(int job_id) const;
 
   ModelManager * model_manager_;
-  ResourceMonitor& resource_monitor_;
+  ResourceMonitor& resource_monitor_ = ResourceMonitor::instance();
   CpuSet cpu_set_;
   bool need_cpu_update_ = false;
 

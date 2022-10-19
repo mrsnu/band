@@ -10,13 +10,14 @@ namespace impl {
 
 using namespace std;
 
-TfLiteStatus CloudThermalModel::Init(int32_t worker_size) {
+TfLiteStatus CloudThermalModel::Init(int32_t worker_size, int32_t window_size) {
   temp_param_.assign(worker_size, vector<double>(worker_size, 0.2));
   input_param_.assign(worker_size, 0.1);
   output_param_.assign(worker_size, 0.1);
   rssi_param_.assign(worker_size, 1.0);
   waiting_param_.assign(worker_size, 0.1);
   error_param_.assign(worker_size, 1.0);
+  window_size_ = window_size;
   return kTfLiteOk;
 }
 
@@ -72,7 +73,7 @@ int64_t CloudThermalModel::EstimateOutputSize(const Subgraph* subgraph) {
   return subgraph_output_size;
 }
 
-TfLiteStatus CloudThermalModel::Update(vector<thermal_t> error) {
+TfLiteStatus CloudThermalModel::Update(Job job) {
   return kTfLiteOk;
 }
 
