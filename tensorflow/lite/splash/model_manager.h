@@ -35,10 +35,6 @@ class ModelManager {
   std::vector<thermal_t> GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph);
   int64_t GetPredictedLatency(worker_id_t wid, int32_t model_id);
 
-  // TEMP : for data collection
-  int64_t GetFlops(const Subgraph* subgraph);
-  int64_t GetMembytes(const Subgraph* subgraph);
-
   // Update model parameters with the prediction error
   TfLiteStatus Update(Job& job);
 

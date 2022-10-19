@@ -18,6 +18,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     int model_id = to_execute.model_id;
 
     // Select a worker
+    // std::vector<worker_id_t> possible_workers = model_manager_.GetPossibleWorkers(to_execute);
     int target_idx = rand() % idle_workers.size();
     std::set<int>::iterator it = idle_workers.begin();
     std::advance(it, target_idx);

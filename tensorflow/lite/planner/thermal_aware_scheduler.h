@@ -9,13 +9,15 @@ namespace impl {
 
 class ThermalAwareScheduler : public Scheduler {
  public:
-  explicit ThermalAwareScheduler(Planner* planner) : Scheduler(planner) {
+  explicit ThermalAwareScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner) {
     need_profile_ = false;
     worker_type_ = kDeviceQueue;
+    model_manager_ = model_manager;
   }
   void Schedule(JobQueue& requests) override;
 
  private:
+  ModelManager * model_manager_;
   int64_t GetCurrentTemperature();
   void UpdateExpectedLatency(JobQueue& requests, int window_size);
   void UpdateExpectedHeatGeneration(JobQueue& requests, int window_size);

@@ -64,27 +64,11 @@ class ProcessorThermalModel : public IThermalModel {
   int32_t window_size_;
   
   // Model parameter
-  std::vector<std::vector<double>> temp_param_;
-  std::vector<std::vector<double>> freq_param_;
-  std::vector<double> flops_param_;
-  std::vector<double> membytes_param_;
-  std::vector<double> error_param_;
-
-
-  void UpdateParameters(std::vector<std::vector<double>>& params, 
-                      std::vector<thermal_t> error, 
-                      std::vector<thermal_t> regressor);
-
-  void UpdateParameters(std::vector<double>& params, 
-                      std::vector<thermal_t> error,
-                      int64_t regressor);
+  std::vector<std::vector<double>> model_param_; // worker_size * [temp_c, temp_g, temp_d, temp_n, freq_c, freq_g, latency, error]
 
   void PrintParameters();
 
-  std::vector<thermal_t> EstimateFutureTemperature(const std::vector<thermal_t> temp,
-                                                   const std::vector<freq_t> freq,
-                                                   const int64_t flops,
-                                                   const int64_t membytes);
+  // TODO: Remove these methods
   int64_t EstimateFLOPS(const Subgraph* subgraph,
                         const Subgraph* primary_subgraph);
   int64_t EstimateInputOutputSize(const Subgraph* subgraph);

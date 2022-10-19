@@ -3,6 +3,9 @@
 #include <cassert>
 #include <fstream>
 
+#include "third_party/eigen3/Eigen/Core"
+#include "third_party/eigen3/Eigen/QR"
+#include "third_party/eigen3/Eigen/Cholesky"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/builtin_ops.h"
 
@@ -15,45 +18,52 @@ namespace tflite {
 namespace impl {
 
 using namespace std;
+using namespace Eigen;
 
 TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size, int32_t window_size) {
-  temp_param_.assign(worker_size, vector<double>(worker_size, 0.2));
-  freq_param_.assign(worker_size, vector<double>(worker_size, 0.000001));
-  flops_param_.assign(worker_size, 0.01);
-  membytes_param_.assign(worker_size, 0.00001);
-  error_param_.assign(worker_size, 1.0);
+  model_param_.assign(worker_size, vector<double>(8, 1.));
   window_size_ = window_size;
   return kTfLiteOk;
 }
 
 vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph) {
   LOGI("ProcessorThermalModel::Predict starts");
+  vector<int32_t> regressor;
   // Get temperature from resource monitor
-  temp_regressor_ = GetResourceMonitor().GetAllTemperature();
+  vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
+  regressor.insert(regressor.end(), temp.begin(), temp.end());
 
   // Get frequency 
-  freq_regressor_ = GetResourceMonitor().GetAllFrequency();
+  vector<freq_t> freq = GetResourceMonitor().GetAllTemperature();
+  regressor.insert(regressor.end(), freq.begin(), freq.end());
 
   // Get flops 
-  flops_regressor_ = EstimateFLOPS(subgraph, subgraph) / 100000;
+  // flops_regressor_ = EstimateFLOPS(subgraph, subgraph) / 100000;
 
-  LOGI("Flops : %lld", flops_regressor_);
   // Get membytes 
-  membytes_regressor_ = EstimateInputOutputSize(subgraph);
+  // membytes_regressor_ = EstimateInputOutputSize(subgraph);
 
-  LOGI("memBytes : %lld", membytes_regressor_);
-  return EstimateFutureTemperature(temp_regressor_, freq_regressor_, flops_regressor_, membytes_regressor_);
-}
+  int32_t expected_latency;
+  regressor.push_back(expected_latency);
 
-vector<thermal_t> ProcessorThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,
-                                                                   const vector<freq_t> freq,
-                                                                   const int64_t flops,
-                                                                   const int64_t membytes) {
+  // Push error term
+  regressor.push_back(1);
+
   vector<thermal_t> future_temperature;
-  // TODO: Refactor this calculation
-  future_temperature = Plus(Plus(Multiply(temp_param_, temp), Multiply(freq_param_, freq)), 
-    Plus(Plus(Multiply(flops_param_, flops), Multiply(membytes_param_, membytes)), Multiply(error_param_, 1)));
-  return future_temperature;
+
+  if (regressor.size() != model_param_[0].size()) {
+    LOGI("[ProcessorThermalModel] Error!!: regressor.size() != model_param_.size()");
+    return future_temperature;
+  }
+
+  for (int wid = 0; wid < model_param_.size(); wid++) {
+    thermal_t predicted = 0;
+    for (int i = 0; i < regressor.size(); i++) {
+      predicted += regressor[i] * model_param_[wid][i];
+    }
+    future_temperature[wid] = predicted;
+  }
+  return future_temperature; 
 }
 
 int64_t ProcessorThermalModel::EstimateFLOPS(const Subgraph* subgraph,
@@ -142,37 +152,17 @@ int64_t ProcessorThermalModel::EstimateInputOutputSize(const Subgraph* subgraph)
   return subgraph_input_output_size;
 }
 
-void ProcessorThermalModel::UpdateParameters(vector<vector<double>>& params, 
-                                           vector<thermal_t> error,
-                                           vector<thermal_t> regressor) {
-  const int error_rows = error.size();
-  const int reg_rows = regressor.size();
-
-  for (auto i = 0; i < error_rows; ++i) {
-    for (auto k = 0; k < reg_rows; ++k) {
-        params[i][k] += (double) (error[i] * regressor[k] * gain_);
-    }
-  }
-}
-
-void ProcessorThermalModel::UpdateParameters(vector<double>& params, 
-                                           vector<thermal_t> error,
-                                           int64_t regressor) {
-  const int error_rows = error.size();
-  for (auto i = 0; i < error_rows; ++i) {
-    params[i] += (double) (error[i] * regressor * gain_);
-  }
-}
-
 void ProcessorThermalModel::PrintParameters() {
   LOGI("================Temp Param(S)================");
-  for (auto i = 0; i < temp_param_.size(); ++i) {
-    LOGI("%.4f\t%.4f\t%.4f\t%.4f\t%.4f", 
-        temp_param_[i][0], temp_param_[i][1], temp_param_[i][2], temp_param_[i][3], temp_param_[i][4]);
+  for (auto wid = 0; wid < model_param_.size(); ++wid) {
+    std::stringstream ss;
+    for (auto i = 0; i < model_param_[wid].size(); ++i) {
+      ss << model_param_[wid][i] << '\t';
+    }
+    LOGI("%s", ss.str().c_str());
   }
   LOGI("================Temp Param(E)================");
 }
-
 
 TfLiteStatus ProcessorThermalModel::Update(Job job) {
   LOGI("ProcessorThermalModel::Update starts");
@@ -183,23 +173,37 @@ TfLiteStatus ProcessorThermalModel::Update(Job job) {
   }
   log_.push_back(log);
 
-  PrintParameters();
-
-  std::vector<thermal_t> error(kTfLiteNumDevices, 0);
-
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
-    LOGI("real_temp = %d, estimated_temp = %d", job.real_temp[i], job.estimated_temp[i]);
-    error[i] = job.real_temp[i] - job.estimated_temp[i];
+  if (log_.size() < 50) {
+    LOGI("ProcessorThermalModel::Update Not enough data : %d", log_.size());
+    return kTfLiteOk;
   }
 
-  // Update parameters via normal equation with log table
-  UpdateParameters(temp_param_, error, temp_regressor_);
-  UpdateParameters(freq_param_, error, freq_regressor_);
-  UpdateParameters(flops_param_, error, flops_regressor_);
-  UpdateParameters(membytes_param_, error, membytes_regressor_);
-  UpdateParameters(error_param_, error, 1);
+  // PrintParameters();
 
-  PrintParameters();
+  // Update parameters via normal equation with log table
+  for (auto target_worker = 0; target_worker < model_param_.size(); target_worker++) {
+    Eigen::MatrixXd X;
+    X.resize(log_.size(), 8);
+    Eigen::VectorXd Y;
+    Y.resize(log_.size(), 1);
+    for (auto i = 0; i < log_.size(); i++) {
+      // TODO : init matrix with vector more efficient way
+      X(i, 0) = log_[i].before_temp[0];
+      X(i, 1) = log_[i].before_temp[1];
+      X(i, 2) = log_[i].before_temp[2];
+      X(i, 3) = log_[i].before_temp[3];
+      X(i, 4) = log_[i].frequency[0];
+      X(i, 5) = log_[i].frequency[1];
+      X(i, 6) = log_[i].latency;
+      X(i, 7) = 1.0;
+      Y(i, 0) = log_[i].after_temp[target_worker];
+    }
+    Eigen::Matrix<double, 1, 8> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
+    for (auto i = 0; i < model_param_[target_worker].size(); i++) {
+      model_param_[target_worker][i] = theta(0, i); 
+    }
+  }
+  // PrintParameters();
 
   LOGI("ProcessorThermalModel::Update Ends");
   return kTfLiteOk;

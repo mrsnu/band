@@ -90,7 +90,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
     } else if (schedulers[i] == kThermalAware) {
-      schedulers_.emplace_back(new ThermalAwareScheduler(this));
+      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
     } else if (schedulers[i] == kBaselineConfigurable) {
       schedulers_.emplace_back(new BaselineConfigurableScheduler(this));
     } else {
