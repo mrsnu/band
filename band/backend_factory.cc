@@ -22,6 +22,9 @@ void RegisterBackendInternal() {
   std::call_once(g_flag, [] {
 #ifdef BAND_TFLITE
     TfLiteRegisterCreators();
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Register TFL backend");
+#else
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "TFL backend is disabled.");
 #endif
   });
 }
