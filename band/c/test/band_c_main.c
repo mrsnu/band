@@ -168,7 +168,7 @@ void LoadBandLibraryFunctions(void* libbandc) {
     } else {
       DWORD error_code = GetLastError();
       fprintf(stderr,
-              "Cannnot open Band C Library oon this device, error code - %d\n",
+              "Cannnot open Band C Library on this device, error code - %d\n",
               error_code);
       return false;
     }
