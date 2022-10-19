@@ -28,16 +28,23 @@ class ResourceMonitor {
 
   TfLiteStatus Init(ResourceConfig& config);
 
+  inline void InitTables(int size) {
+    for (int i = 0; i < size ; i++) {
+      tz_path_table_.push_back("");
+      freq_path_table_.push_back("");
+      throttling_threshold_table_.push_back(INT_MAX);
+    }
+  }
+
   inline std::string GetThermalZonePath(worker_id_t wid) {
     return tz_path_table_[wid];
   }
 
   inline TfLiteStatus SetThermalZonePath(worker_id_t wid, path_t path) {
-    // Check if the given path is valid.
     if (!CheckPathSanity(path)) {
       return kTfLiteError;
     }
-    tz_path_table_.push_back(path);
+    tz_path_table_[wid] = path;
     return kTfLiteOk;
   }
 
@@ -49,13 +56,20 @@ class ResourceMonitor {
     if (!CheckPathSanity(path)) {
       return kTfLiteError;
     }
-    freq_path_table_.push_back(path);
+    freq_path_table_[wid] = path;
+    return kTfLiteOk;
+  }
+
+  inline thermal_t GetThrottlingThreshold(worker_id_t wid) {
+    return throttling_threshold_table_[wid];
+  }
+
+  inline TfLiteStatus SetThrottlingThreshold(worker_id_t wid, thermal_t value) {
+    throttling_threshold_table_[wid] = value;
     return kTfLiteOk;
   }
 
   std::vector<thermal_t> GetAllTemperature();
-  thermal_t GetThrottlingThreshold(worker_id_t wid);
-
   std::vector<freq_t> GetAllFrequency();
 
  private:
@@ -66,6 +80,7 @@ class ResourceMonitor {
 
   std::vector<path_t> tz_path_table_;
   std::vector<path_t> freq_path_table_;
+  std::vector<thermal_t> throttling_threshold_table_;
 };
 
 } // namespace impl

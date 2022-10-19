@@ -33,6 +33,10 @@ class IThermalModel {
     return wid_;
   }
 
+  worker_id_t GetThrottlingThrehold() {
+    return throttling_threshold_;
+  }
+
   ResourceMonitor& GetResourceMonitor() {
     return resource_monitor_;
   }
@@ -95,6 +99,8 @@ class IThermalModel {
  protected:
   worker_id_t wid_;
   ResourceMonitor& resource_monitor_;
+
+  thermal_t throttling_threshold_;
 
   double gain_ = 0.0001;
 };

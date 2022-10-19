@@ -1,4 +1,4 @@
-#include "tensorflow/lite/splash/thermal_model_manager.h"
+#include "tensorflow/lite/splash/model_manager.h"
 
 #include "tensorflow/lite/splash/thermal_model.h"
 #include "tensorflow/lite/splash/cloud_thermal_model.h"
@@ -15,30 +15,30 @@ namespace tflite {
 namespace impl {
 
 
-TfLiteStatus ThermalModelManager::Init() {
-  LOGI("ThermalModelManager:: init");
+TfLiteStatus ModelManager::Init() {
+  LOGI("ModelManager:: init");
   for (int wid = 0; wid < kTfLiteNumDevices; wid++) {
-    std::unique_ptr<IThermalModel> model = BuildModel(wid);
-    models_.emplace_back(std::move(model));
+    std::unique_ptr<IThermalModel> model = BuildThermalModel(wid);
+    thermal_models_.emplace_back(std::move(model));
   }
-  for (auto& model : models_) {
-    auto status = model->Init(models_.size());
+  for (auto& model : thermal_models_) {
+    auto status = model->Init(thermal_models_.size());
     if (status == kTfLiteError) {
       return kTfLiteError;
     }
   }
-  LOGI("ThermalModelManager:: finish");
+  LOGI("ModelManager:: finish");
   return kTfLiteOk;
 }
 
-std::unique_ptr<IThermalModel> ThermalModelManager::BuildModel(worker_id_t wid) {
+std::unique_ptr<IThermalModel> ModelManager::BuildThermalModel(worker_id_t wid) {
   switch (wid) {
     case kTfLiteCPU:
       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
     case kTfLiteGPU:
       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
-    // case kTfLiteDSP:
-    //   return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
+    case kTfLiteDSP:
+      return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
     case kTfLiteNPU:
       return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
     case kTfLiteCLOUD:
@@ -48,9 +48,9 @@ std::unique_ptr<IThermalModel> ThermalModelManager::BuildModel(worker_id_t wid) 
   }
 }
 
-std::vector<worker_id_t> ThermalModelManager::GetPossibleWorkers(Subgraph* subgraph) {
+std::vector<worker_id_t> ModelManager::GetPossibleWorkers(Subgraph* subgraph) {
   std::vector<worker_id_t> possible_workers;
-  for (auto& model : models_) {
+  for (auto& model : thermal_models_) {
     auto temperature = model->Predict(subgraph);
     bool throttled = false;
     for (int i = 0; i < temperature.size(); i++) {
@@ -69,21 +69,21 @@ std::vector<worker_id_t> ThermalModelManager::GetPossibleWorkers(Subgraph* subgr
   return possible_workers;
 }
 
-std::vector<thermal_t> ThermalModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
+std::vector<thermal_t> ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
   LOGI("GetPredictedTemperature starts : %d", wid);
-  return models_[wid]->Predict(subgraph);
+  return thermal_models_[wid]->Predict(subgraph);
 }
 
-TfLiteStatus ThermalModelManager::Update(Job& job) {
+TfLiteStatus ModelManager::Update(Job& job) {
   std::vector<thermal_t> error(kTfLiteNumDevices, 0);
   for (int i = 0; i < kTfLiteNumDevices; i++) {
     LOGI("real_temp = %d, estimated_temp = %d", job.real_temp[i], job.estimated_temp[i]);
     error[i] = job.real_temp[i] - job.estimated_temp[i];
   }
-  return models_[job.worker_id]->Update(error);
+  return thermal_models_[job.worker_id]->Update(error);
 }
 
-int64_t ThermalModelManager::GetFlops(const Subgraph* subgraph) {
+int64_t ModelManager::GetFlops(const Subgraph* subgraph) {
   int64_t flops = 0;
   for (int op_index : subgraph->op_indices()) {
     const auto node_registration =
@@ -154,7 +154,7 @@ int64_t ThermalModelManager::GetFlops(const Subgraph* subgraph) {
   return flops;
 }
 
-int64_t ThermalModelManager::GetMembytes(const Subgraph* subgraph) {
+int64_t ModelManager::GetMembytes(const Subgraph* subgraph) {
   // TODO: Add input/output tensors without weights.
   const std::vector<int>& input_tensors = subgraph->inputs();
   const std::vector<int>& output_tensors = subgraph->outputs();

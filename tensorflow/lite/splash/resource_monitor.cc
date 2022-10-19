@@ -13,6 +13,7 @@ namespace impl {
 
 TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
   LOGI("Init starts: %d", config.tz_path.size());
+  InitTables(config.tz_path.size());
   // Set all temp/freq path
   for (int i = 0; i < config.tz_path.size(); i++) {
     LOGI("tz_path : %s", config.tz_path[i].c_str());
@@ -21,6 +22,10 @@ TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
   for (int i = 0; i < config.freq_path.size(); i++) {
     LOGI("freq_path : %s", config.freq_path[i].c_str());
     SetFreqPath(i, config.freq_path[i]);
+  }
+  for (int i = 0; i < config.threshold.size(); i++) {
+    LOGI("threshold value : %d", config.threshold[i]);
+    SetThrottlingThreshold(i, config.threshold[i]);
   }
   LOGI("Init ends");
   return kTfLiteOk;
@@ -48,16 +53,12 @@ std::vector<thermal_t> ResourceMonitor::GetAllTemperature() {
 thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
   // Ensure that the path is sanitized.
   std::ifstream fin;
-  fin.open(GetThermalZonePath(wid));
-  assert(fin.is_open());
   thermal_t temperature_curr = -1;
-  fin >> temperature_curr;
+  fin.open(GetThermalZonePath(wid));
+  if (fin.is_open()) {
+    fin >> temperature_curr;
+  }
   return temperature_curr;
-}
-
-thermal_t ResourceMonitor::GetThrottlingThreshold(worker_id_t wid) {
-  // TODO(chang-jin): calculate threshold from sysfs
-  return 80000;
 }
 
 std::vector<freq_t> ResourceMonitor::GetAllFrequency() {
@@ -70,10 +71,11 @@ std::vector<freq_t> ResourceMonitor::GetAllFrequency() {
 
 freq_t ResourceMonitor::GetFrequency(worker_id_t wid) {
   std::ifstream fin;
-  fin.open(GetFreqPath(wid));
-  assert(fin.is_open());
   freq_t freq_curr = -1;
-  fin >> freq_curr;
+  fin.open(GetFreqPath(wid));
+  if (fin.is_open()) {
+    fin >> freq_curr;
+  }
   return freq_curr;
 }
 

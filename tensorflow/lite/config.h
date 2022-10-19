@@ -77,6 +77,7 @@ struct ResourceConfig {
   std::string temperature_log_path;
   std::vector<std::string> tz_path;
   std::vector<std::string> freq_path;
+  std::vector<thermal_t> threshold;
 };
 
 struct RuntimeConfig {

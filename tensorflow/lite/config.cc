@@ -156,6 +156,11 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
       if (!resource_config_json["freq_path"].isNull()) {
         resource_config.freq_path.push_back(resource_config_json["freq_path"].asCString());
       }
+
+      // 3. worker threshold
+      if (!resource_config_json["threshold"].isNull()) {
+        resource_config.threshold.push_back(resource_config_json["threshold"].asInt());
+      }
     }
   }
   return kTfLiteOk;

@@ -21,7 +21,7 @@ namespace impl {
 Planner::Planner(Interpreter* interpreter, ResourceMonitor& resource_monitor) : num_submitted_jobs_(0), resource_monitor_(resource_monitor) {
   interpreter_ = interpreter;
   planner_thread_ = std::thread([this] { this->Plan(); });
-  thermal_model_manager_ = new ThermalModelManager(resource_monitor);
+  model_manager_ = new ModelManager(resource_monitor);
   // TODO: Init latency model
 }
 
@@ -100,7 +100,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   LOGI("thermal model init starts");
-  if (thermal_model_manager_->Init() != kTfLiteOk) {
+  if (model_manager_->Init() != kTfLiteOk) {
     LOGI("thermal model init failed");
     return kTfLiteError; 
   }

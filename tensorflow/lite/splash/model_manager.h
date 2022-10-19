@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_LITE_THERMAL_MODEL_MANAGER_H_
-#define TENSORFLOW_LITE_THERMAL_MODEL_MANAGER_H_
+#ifndef TENSORFLOW_LITE_MODEL_MANAGER_H_
+#define TENSORFLOW_LITE_MODEL_MANAGER_H_
 
 #include <vector>
 #include <string>
@@ -19,17 +19,16 @@ class CommonThermalModel;
 // Construct a prediction model for heat generation corresponding to 
 // a target model of inference request, and provides the prediction
 // value to schedulers.
-class ThermalModelManager {
+class ModelManager {
  public:
-  ThermalModelManager(ResourceMonitor& resource_monitor) : resource_monitor_(resource_monitor) {}
+  ModelManager(ResourceMonitor& resource_monitor) : resource_monitor_(resource_monitor) {}
 
-  ~ThermalModelManager();
+  ~ModelManager();
 
   // Initialize model parameters with default values
   TfLiteStatus Init();
 
-  // Get an estimation value of future temperature 
-  // after executing inference of the input model
+  // get a list of workers which will not be throttled after the inference
   std::vector<worker_id_t> GetPossibleWorkers(Subgraph* subgraph);
 
   std::vector<thermal_t> GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph);
@@ -42,13 +41,14 @@ class ThermalModelManager {
   TfLiteStatus Update(Job& job);
 
  private:
-  std::vector<std::unique_ptr<IThermalModel>> models_;
+  std::vector<std::unique_ptr<IThermalModel>> thermal_models_;
   ResourceMonitor& resource_monitor_;
 
-  std::unique_ptr<IThermalModel> BuildModel(worker_id_t wid);
+  std::unique_ptr<IThermalModel> BuildThermalModel(worker_id_t wid);
+
 };
 
 } // namespace impl
 } // namespace tflite
 
-#endif // TENSORFLOW_LITE_THERMAL_MODEL_MANAGER_H_
+#endif // TENSORFLOW_LITE_MODEL_MANAGER_H_
