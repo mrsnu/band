@@ -30,35 +30,12 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
   }
+  return 0;
+}
 
-  std::shared_ptr<Planner> planner = planner_.lock();
-  if (!planner) {
-    return -1;
-  }
-  Interpreter* interpreter = planner->GetInterpreter();
-
-  int64_t total = 0;
-  for (JobQueue::iterator it = requests_.begin();
-       it != requests_.end(); ++it) {
-    Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
-    int64_t expected_latency =
-      interpreter->GetExpectedLatency(it->subgraph_idx);
-
-    total += expected_latency;
-    if (it == requests_.begin()) {
-      int64_t current_time = profiling::time::NowMicros();
-      int64_t invoke_time = (*it).invoke_time;
-      if (invoke_time > 0 && current_time > invoke_time) {
-        int64_t progress =
-          (current_time - invoke_time) > expected_latency ? expected_latency
-                                              : (current_time - invoke_time);
-        total -= progress;
-      }
-    }
-  }
-  lock.unlock();
-
-  return total;
+bool DeviceQueueWorker::IsBusy() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  return !requests_.empty();
 }
 
 bool DeviceQueueWorker::GiveJob(Job& job) {
@@ -116,8 +93,10 @@ void DeviceQueueWorker::Work() {
           current_job.end_time = profiling::time::NowMicros();
           current_job.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
           current_job.latency = current_job.end_time - current_job.invoke_time;
+          LOGI("[Worker] job write done");
 
           planner_ptr->GetModelManager()->Update(current_job);
+          LOGI("[Worker] update done");
 
           if (current_job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job.following_jobs);

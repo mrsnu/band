@@ -28,11 +28,13 @@ class ResourceMonitor {
 
   TfLiteStatus Init(ResourceConfig& config);
 
-  inline void InitTables(int size) {
-    for (int i = 0; i < size ; i++) {
+  inline void InitTables(int tz_size, int freq_size) {
+    for (int i = 0; i < tz_size ; i++) {
       tz_path_table_.push_back("");
-      freq_path_table_.push_back("");
       throttling_threshold_table_.push_back(INT_MAX);
+    }
+    for (int i = 0; i < freq_size ; i++) {
+      freq_path_table_.push_back("");
     }
   }
 

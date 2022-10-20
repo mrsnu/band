@@ -184,13 +184,6 @@ int64_t DeviceQueueOffloadingWorker::GetWaitingTime() {
   if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
   }
-
-  std::shared_ptr<Planner> planner = planner_.lock();
-  if (!planner) {
-    return -1;
-  }
-  Interpreter* interpreter = planner->GetInterpreter();
-
   // assume 100 ms per job (currently, does not check for profiling)
   return 1000000 * requests_.size();
 }

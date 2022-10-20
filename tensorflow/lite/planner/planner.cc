@@ -65,8 +65,12 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "after_temp_npu\t"
              << "freq_cpu\t"
              << "freq_gpu\t"
-             << "freq_dsp\t"
-             << "freq_npu\t"
+             << "estimated_temp_cpu\t"
+             << "estimated_temp_gpu\t"
+             << "estimated_temp_dsp\t"
+             << "estimated_temp_npu\t"
+             << "prediction_error_temp\t"
+             << "prediction_error_latency\t"
              << "job_status\n";
     log_file.close();
   }
@@ -358,7 +362,7 @@ void Planner::FlushFinishedJobs() {
                << job.invoke_time << "\t"
                << job.end_time << "\t"
                << job.estimated_latency << "\t" 
-               << job.latency << "\t" 
+               << job.latency << "\t"
                << job.before_temp[kTfLiteCPU] << "\t"
                << job.before_temp[kTfLiteGPU] << "\t"
                << job.before_temp[kTfLiteDSP] << "\t"
@@ -373,6 +377,12 @@ void Planner::FlushFinishedJobs() {
                << job.frequency[kTfLiteGPU]<< "\t"
               //  << job.frequency[kTfLiteDSP]<< "\t"
               //  << job.frequency[kTfLiteNPU]<< "\t"
+               << job.estimated_temp[kTfLiteCPU] << "\t"
+               << job.estimated_temp[kTfLiteGPU] << "\t"
+               << job.estimated_temp[kTfLiteDSP] << "\t"
+               << job.estimated_temp[kTfLiteNPU] << "\t"
+               << job.after_temp[job.worker_id] - job.estimated_temp[job.worker_id] << "\t"
+               << job.latency - job.estimated_latency << "\t"
                << job.status << "\n";
     }
     log_file.close();
@@ -392,7 +402,6 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.device_id = interpreter_->GetWorkerDeviceFlag(target_key.worker_id);
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
-  job.expected_execution_time = interpreter_->GetExpectedLatency(job.subgraph_idx);
 }
 
 void Planner::PrepareReenqueue(Job& job) {

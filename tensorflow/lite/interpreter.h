@@ -712,9 +712,7 @@ class Interpreter {
   // into `profile_database_`.
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
-
   void UpdateExpectedLatency(const int subgraph_idx, int64_t latency);
-  int64_t GetExpectedLatency(const int subgraph_idx);
   int64_t GetProfiledLatency(SubgraphKey& key);
 
   ModelSpec& GetModelSpec(int model_id) { return model_specs_[model_id]; }
@@ -722,11 +720,6 @@ class Interpreter {
   // fill in the ModelSpec for this model
   // TODO: Remove status dependency.
   void InvestigateModelSpec(int model_id);
-
-  int GetSubgraphIdxSatisfyingSLO(Job& job,
-                                  std::map<int, int64_t>& worker_waiting,
-                                  std::set<int>& idle_workers);
-
   // hash function to use pair<int, set<int>> as map key in cache_
   // https://stackoverflow.com/a/32685618
   struct PairHash {

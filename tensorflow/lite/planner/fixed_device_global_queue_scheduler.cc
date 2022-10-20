@@ -32,9 +32,6 @@ void FixedDeviceGlobalQueueScheduler::Schedule(JobQueue& requests) {
 
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker_id);
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
-    to_execute.expected_latency =
-        GetWorkerWaitingTime()[worker_id] +
-        GetInterpreter()->GetExpectedLatency(subgraph_idx);
     EnqueueAction(to_execute, subgraph);
 
     // delete this job from our request queue and

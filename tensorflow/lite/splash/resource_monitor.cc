@@ -13,7 +13,7 @@ namespace impl {
 
 TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
   LOGI("Init starts: %d", config.tz_path.size());
-  InitTables(config.tz_path.size());
+  InitTables(config.tz_path.size(), config.freq_path.size());
   // Set all temp/freq path
   for (int i = 0; i < config.tz_path.size(); i++) {
     LOGI("tz_path : %s", config.tz_path[i].c_str());
@@ -62,8 +62,8 @@ thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
 }
 
 std::vector<freq_t> ResourceMonitor::GetAllFrequency() {
-  std::vector<freq_t> ret(kTfLiteNumDevices);
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
+  std::vector<freq_t> ret(freq_path_table_.size());
+  for (int i = 0; i < freq_path_table_.size(); i++) {
     ret[i] = GetFrequency(i);
   }
   return ret;

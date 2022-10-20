@@ -70,10 +70,10 @@ std::vector<worker_id_t> ModelManager::GetPossibleWorkers(std::vector<Subgraph*>
 
     bool throttled = false;
     for (int i = 0; i < temperature.size(); i++) {
-      thermal_t temp = temperature[i];
+      thermal_t predicted_temp = temperature[i];
       // Checks if throttled
       auto threshold = resource_monitor_.GetThrottlingThreshold(i);
-      if (temp > threshold) {
+      if (predicted_temp > threshold) {
         throttled = true;
         break;
       }
@@ -92,21 +92,20 @@ bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
   for (int i = 0; i < temperature.size(); i++) {
     thermal_t temp = temperature[i];
     auto threshold = resource_monitor_.GetThrottlingThreshold(i);
+    LOGI("Current_temp= %d, threshold = %d", temp, threshold);
     if (temp > threshold) {
-      return true;
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 std::vector<thermal_t> ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
-  LOGI("GetPredictedTemperature starts : %d", wid);
   auto latency = GetPredictedLatency(wid, subgraph->GetKey().model_id);
   return thermal_models_[wid]->Predict(subgraph, latency);
 }
 
 int64_t ModelManager::GetPredictedLatency(worker_id_t wid, int32_t model_id) {
-  LOGI("GetPredictedLatency starts : %d", wid);
   return latency_models_[wid]->Predict(model_id);
 }
 

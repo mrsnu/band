@@ -95,6 +95,8 @@ class DeviceQueueWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
+  // GlobalQueueWorker methods
+  bool IsBusy() override;
 
  protected:
   void Work() override;

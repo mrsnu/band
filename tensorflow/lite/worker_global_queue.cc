@@ -53,43 +53,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   if (!is_busy_) {
     return 0;
   }
-
-  int64_t invoke_time = current_job_.invoke_time;
-
-  // if this thread is the same thread that updates is_busy_ (false --> true)
-  // and there are no other threads that call this function, then it is
-  // technically safe to unlock here because the worker thread does not
-  // update the other fields of current_job_
-  // consider unlocking here if we need that teensy little extra perf boost
-  // lock.unlock();
-
-  // we no longer read from this worker's member variables, so there is
-  // no need to hold on to the lock anymore
-  lock.unlock();
-
-  std::shared_ptr<Planner> planner = planner_.lock();
-  if (!planner) {
-    TF_LITE_MAYBE_REPORT_ERROR(
-        GetErrorReporter(),
-        "%s worker failed to acquire ptr to planner",
-        TfLiteDeviceGetName(device_flag_));
-    return -1;
-  }
-  Interpreter* interpreter = planner->GetInterpreter();
-
-  // TODO #80: Get profiled_latency from current_job_
-  Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
-  int64_t profiled_latency =
-      interpreter->GetExpectedLatency(current_job_.subgraph_idx);
-
-  if (invoke_time == 0) {
-    // the worker has not started on processing the job yet
-    return profiled_latency;
-  }
-
-  int64_t current_time = profiling::time::NowMicros();
-  int64_t progress = current_time - invoke_time;
-  return std::max((long) (profiled_latency - progress), 0L);
+  return 0;
 }
 
 void GlobalQueueWorker::Work() {

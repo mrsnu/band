@@ -20,20 +20,25 @@ using namespace std;
 using namespace Eigen;
 
 TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size, int32_t window_size) {
-  model_param_.assign(worker_size, vector<double>(8, 1.));
+  model_param_.assign(worker_size, vector<double>(9, 1.));
   window_size_ = window_size;
   return kTfLiteOk;
 }
 
 vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const int64_t latency) {
-  LOGI("ProcessorThermalModel::Predict starts");
   vector<int32_t> regressor;
+  if (log_.size() < 50) {
+    // Just return current temp
+    return GetResourceMonitor().GetAllTemperature();
+  }
+  LOGI("ProcessorThermalModel::Predict starts = %d", log_.size());
+
   // Get temperature from resource monitor
   vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
   regressor.insert(regressor.end(), temp.begin(), temp.end());
 
   // Get frequency 
-  vector<freq_t> freq = GetResourceMonitor().GetAllTemperature();
+  vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
   regressor.insert(regressor.end(), freq.begin(), freq.end());
 
   // Get flops 
@@ -42,8 +47,7 @@ vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const
   // Get membytes 
   // membytes_regressor_ = EstimateInputOutputSize(subgraph);
 
-  int32_t expected_latency;
-  regressor.push_back(expected_latency);
+  regressor.push_back(latency);
 
   // Push error term
   regressor.push_back(1);
@@ -51,7 +55,7 @@ vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const
   vector<thermal_t> future_temperature;
 
   if (regressor.size() != model_param_[0].size()) {
-    LOGI("[ProcessorThermalModel] Error!!: regressor.size() != model_param_.size()");
+    LOGI("[ProcessorThermalModel] Error!!: regressor.size()[%d] != model_param_.size()[%d]", regressor.size(), model_param_[0].size());
     return future_temperature;
   }
 
@@ -61,6 +65,7 @@ vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const
       predicted += regressor[i] * model_param_[wid][i];
     }
     future_temperature[wid] = predicted;
+    LOGI("ProcessorThermalModel::Predict result[%d] = %d", wid, predicted); 
   }
   return future_temperature; 
 }
@@ -177,12 +182,13 @@ TfLiteStatus ProcessorThermalModel::Update(Job job) {
     return kTfLiteOk;
   }
 
+  LOGI("ProcessorThermalModel::Update starts [%d]", log_.size());
   // PrintParameters();
 
   // Update parameters via normal equation with log table
   for (auto target_worker = 0; target_worker < model_param_.size(); target_worker++) {
     Eigen::MatrixXd X;
-    X.resize(log_.size(), 8);
+    X.resize(log_.size(), 9);
     Eigen::VectorXd Y;
     Y.resize(log_.size(), 1);
     for (auto i = 0; i < log_.size(); i++) {
@@ -191,13 +197,14 @@ TfLiteStatus ProcessorThermalModel::Update(Job job) {
       X(i, 1) = log_[i].before_temp[1];
       X(i, 2) = log_[i].before_temp[2];
       X(i, 3) = log_[i].before_temp[3];
-      X(i, 4) = log_[i].frequency[0];
-      X(i, 5) = log_[i].frequency[1];
-      X(i, 6) = log_[i].latency;
-      X(i, 7) = 1.0;
+      X(i, 4) = log_[i].before_temp[4];
+      X(i, 5) = log_[i].frequency[0];
+      X(i, 6) = log_[i].frequency[1];
+      X(i, 7) = log_[i].latency;
+      X(i, 8) = 1.0;
       Y(i, 0) = log_[i].after_temp[target_worker];
     }
-    Eigen::Matrix<double, 1, 8> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
+    Eigen::Matrix<double, 1, 9> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
     for (auto i = 0; i < model_param_[target_worker].size(); i++) {
       model_param_[target_worker][i] = theta(0, i); 
     }
