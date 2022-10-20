@@ -22,11 +22,14 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     int64_t shortest_latency = INT_MAX;
     Subgraph * target_subgraph;
     for (auto wid : idle_workers) {
+      LOGI("[Worker %d] Idle", wid);
       int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, wid);
       Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
       if (!model_manager_->IsAvailableWorker(wid, subgraph)) {
+        LOGI("[Worker %d] Throttling predicted!", wid);
         continue;
       }
+      LOGI("[Worker %d] Available", wid);
       int64_t latency = model_manager_->GetPredictedLatency(wid, model_id);
       if (shortest_latency > latency) {
         shortest_latency = latency;
@@ -38,6 +41,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
       // the scheduler should wait until any worker becomes available.
       continue;
     }
+    LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
     requests.pop_front();
     EnqueueAction(to_execute, target_subgraph);
   }
