@@ -723,25 +723,6 @@ class Interpreter {
   // TODO: Remove status dependency.
   void InvestigateModelSpec(int model_id);
 
-  // Return a pair of the subgraph idx that leads to the shortest final
-  // latency, and that final latency value.
-  // Note that the returned subgraph may only cover a subset of the remaining
-  // ops, but the latency value is calculated with all subgraphs leading to
-  // the final op (of the model) in mind.
-  std::pair<int, int64_t> GetShortestLatency(
-      int model_id, std::set<int> resolved_tensors, int64_t start_time,
-      std::map<int, int64_t>& worker_waiting,
-      int preceded_subgraph_index = -1);
-
-  std::pair<std::vector<int>, int64_t> GetShortestLatencyWithUnitSubgraph(
-      int model_id, int start_unit_idx,
-      std::map<int, int64_t>& worker_waiting);
-
-
-  std::pair<std::vector<int>, int64_t>
-  GetSubgraphWithShortestLatency(Job& job,
-                                 std::map<int, int64_t>& worker_waiting);
-
   int GetSubgraphIdxSatisfyingSLO(Job& job,
                                   std::map<int, int64_t>& worker_waiting,
                                   std::set<int>& idle_workers);
@@ -758,9 +739,6 @@ class Interpreter {
       return hash;
     }
   };
-
-  // cache for GetShortestLatency()
-  std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
   // NOTE: we assume every subgraph consists of unit subgraphs with the continuous unit subgraph indices.

@@ -48,7 +48,7 @@ class ProcessorThermalModel : public IThermalModel {
 
   TfLiteStatus Init(int32_t worker_size, int32_t window_size) override;
 
-  std::vector<thermal_t> Predict(const Subgraph* subgraph) override;
+  std::vector<thermal_t> Predict(const Subgraph* subgraph, const int64_t latency) override;
 
   TfLiteStatus Update(Job job) override;
  

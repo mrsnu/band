@@ -21,7 +21,7 @@ TfLiteStatus CloudThermalModel::Init(int32_t worker_size, int32_t window_size) {
   return kTfLiteOk;
 }
 
-vector<thermal_t> CloudThermalModel::Predict(const Subgraph* subgraph) {
+vector<thermal_t> CloudThermalModel::Predict(const Subgraph* subgraph, const int64_t latency) {
   // Get temperature from resource monitor
   vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
 

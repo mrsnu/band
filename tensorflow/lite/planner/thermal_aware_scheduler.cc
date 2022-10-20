@@ -10,42 +10,37 @@ namespace tflite {
 namespace impl {
 
 void ThermalAwareScheduler::Schedule(JobQueue& requests) {
-  std::set<int> idle_workers = planner_->GetIdleWorkers();
-  // LOGI("Idle worker size : %d", idle_workers.size());
   while (!requests.empty()) {
+    planner_->UpdateWorkerWaitingTime();
+    std::set<int> idle_workers = planner_->GetIdleWorkers();
+
     Job to_execute = requests.front();
-    requests.pop_front();
     int model_id = to_execute.model_id;
 
-    // Select a worker
-    // std::vector<worker_id_t> possible_workers = model_manager_.GetPossibleWorkers(to_execute);
-    int target_idx = rand() % idle_workers.size();
-    std::set<int>::iterator it = idle_workers.begin();
-    std::advance(it, target_idx);
-    int worker_id = *it;
-    // LOGI("It's selected : %d", worker_id);
-
-    // Get a subgraph to execute
-    int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker_id);
-    Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
-
-    EnqueueAction(to_execute, subgraph);
+    // Get available workers which is not throttled now and 
+    // will not occur thermal throttling on executing the inference request
+    int64_t shortest_latency = INT_MAX;
+    Subgraph * target_subgraph;
+    for (auto wid : idle_workers) {
+      int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, wid);
+      Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
+      if (!model_manager_->IsAvailableWorker(wid, subgraph)) {
+        continue;
+      }
+      int64_t latency = model_manager_->GetPredictedLatency(wid, model_id);
+      if (shortest_latency > latency) {
+        shortest_latency = latency;
+        target_subgraph = subgraph;
+      }
+    }
+    if (shortest_latency == INT_MAX) {
+      // When all workers are not available, 
+      // the scheduler should wait until any worker becomes available.
+      continue;
+    }
+    requests.pop_front();
+    EnqueueAction(to_execute, target_subgraph);
   }
-}
-
-int64_t ThermalAwareScheduler::GetCurrentTemperature() {
-  // TODO : implement
-  return INT_MAX;
-}
-
-void ThermalAwareScheduler::UpdateExpectedLatency(JobQueue& requests,
-                                                     int window_size) {
-  // TODO : implement
-}
-
-void ThermalAwareScheduler::UpdateExpectedHeatGeneration(JobQueue& requests,
-                                                     int window_size) {
-  // TODO : implement
 }
 
 }  // namespace impl

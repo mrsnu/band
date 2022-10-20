@@ -4,7 +4,6 @@
 #include <fstream>
 
 #include "third_party/eigen3/Eigen/Core"
-#include "third_party/eigen3/Eigen/QR"
 #include "third_party/eigen3/Eigen/Cholesky"
 #include "tensorflow/lite/profiling/time.h"
 #include "tensorflow/lite/builtin_ops.h"
@@ -26,7 +25,7 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size, int32_t window_siz
   return kTfLiteOk;
 }
 
-vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph) {
+vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const int64_t latency) {
   LOGI("ProcessorThermalModel::Predict starts");
   vector<int32_t> regressor;
   // Get temperature from resource monitor

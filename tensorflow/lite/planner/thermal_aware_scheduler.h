@@ -18,9 +18,6 @@ class ThermalAwareScheduler : public Scheduler {
 
  private:
   ModelManager * model_manager_;
-  int64_t GetCurrentTemperature();
-  void UpdateExpectedLatency(JobQueue& requests, int window_size);
-  void UpdateExpectedHeatGeneration(JobQueue& requests, int window_size);
 };
 
 }  // namespace impl
