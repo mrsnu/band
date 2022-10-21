@@ -17,15 +17,20 @@
 #include "band/cpu.h"
 
 #include <cstring>
-#if defined __ANDROID__
+
+#include "band/logger.h"
+
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#include <errno.h>
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+
 #endif
 
 namespace Band {
 
-#if defined __ANDROID__
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
 CpuSet::CpuSet() { DisableAll(); }
 
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
@@ -38,6 +43,10 @@ bool CpuSet::IsEnabled(int cpu) const { return CPU_ISSET(cpu, &cpu_set_); }
 
 const unsigned long* CpuSet::GetMaskBits() const { return cpu_set_.__bits; }
 
+bool CpuSet::operator==(const CpuSet& rhs) const {
+  return CPU_EQUAL(&cpu_set_, &rhs.cpu_set_) != 0;
+}
+
 int CpuSet::NumEnabled() const {
   int NumEnabled = 0;
   for (int i = 0; i < (int)sizeof(cpu_set_t) * 8; i++) {
@@ -46,7 +55,7 @@ int CpuSet::NumEnabled() const {
 
   return NumEnabled;
 }
-#else   // defined __ANDROID__
+#else   // defined _BAND_SUPPORT_THREAD_AFFINITY
 CpuSet::CpuSet() {}
 
 void CpuSet::Enable(int /* cpu */) {}
@@ -57,10 +66,12 @@ void CpuSet::DisableAll() {}
 
 const unsigned long* CpuSet::GetMaskBits() const { return nullptr; }
 
+bool CpuSet::operator==(const CpuSet& rhs) const { return true; }
+
 bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
 int CpuSet::NumEnabled() const { return GetCPUCount(); }
-#endif  // defined __ANDROID__
+#endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
 static CpuSet g_thread_affinity_mask_all;
 static CpuSet g_thread_affinity_mask_little;
@@ -75,7 +86,7 @@ int GetCPUCount() {
     count = emscripten_num_logical_cores();
   else
     count = 1;
-#elif defined __ANDROID__
+#elif defined _BAND_SUPPORT_THREAD_AFFINITY
   // get cpu count from /proc/cpuinfo
   FILE* fp = fopen("/proc/cpuinfo", "rb");
   if (!fp) return 1;
@@ -107,7 +118,7 @@ int GetLittleCPUCount() { return BandCPUMaskGetSet(kBandLittle).NumEnabled(); }
 
 int GetBigCPUCount() { return BandCPUMaskGetSet(kBandBig).NumEnabled(); }
 
-#if defined __ANDROID__
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
 static int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
   char path[256];
@@ -180,10 +191,12 @@ int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
   pid_t pid = gettid();
 #endif
 #endif
-
-  int syscallret = syscall(__NR_sched_setaffinity, pid, sizeof(cpu_set_t),
-                           &thread_affinity_mask.GetCpuSet());
-  if (syscallret) {
+  int syscallret = sched_setaffinity(pid, sizeof(cpu_set_t),
+                                     &thread_affinity_mask.GetCpuSet());
+  int err = errno;
+  if (syscallret != 0) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Set sched affinity error :%s",
+                      strerror(err));
     return -1;
   }
 
@@ -201,19 +214,21 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
   pid_t pid = gettid();
 #endif
 #endif
-
-  int syscallret = syscall(__NR_sched_getaffinity, pid, sizeof(cpu_set_t),
-                           &thread_affinity_mask.GetCpuSet());
-  if (syscallret) {
+  int syscallret = sched_getaffinity(pid, sizeof(cpu_set_t),
+                                     &thread_affinity_mask.GetCpuSet());
+  int err = errno;
+  if (syscallret != 0) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Get sched affinity error :%s",
+                      strerror(err));
     return -1;
   }
 
   return 0;
 }
-#endif  // defined __ANDROID__
+#endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
 BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
-#if defined __ANDROID__
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
   if (ssaret != 0) return kBandError;
@@ -223,7 +238,7 @@ BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 }
 
 BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
-#if defined __ANDROID__
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
   int gsaret = GetSchedAffinity(thread_affinity_mask);
   if (gsaret != 0) return kBandError;
 #endif
@@ -234,7 +249,7 @@ BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 int SetupThreadAffinityMasks() {
   g_thread_affinity_mask_all.DisableAll();
 
-#if defined __ANDROID__
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
   int max_freq_khz_min = INT_MAX;
   int max_freq_khz_max = 0;
   std::vector<int> cpu_max_freq_khz(g_cpucount);

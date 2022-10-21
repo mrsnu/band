@@ -25,7 +25,12 @@
 
 #include "band/c/common.h"
 
+
 #if defined __ANDROID__ || defined __linux__
+#define _BAND_SUPPORT_THREAD_AFFINITY
+#endif
+
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
 #include <sched.h>  // cpu_set_t
 #endif
 
@@ -40,8 +45,11 @@ class CpuSet {
   bool IsEnabled(int cpu) const;
   int NumEnabled() const;
   const unsigned long* GetMaskBits() const;
-#if defined __ANDROID__ || defined __linux__
+  bool operator==(const CpuSet& rhs) const;
+
+#if defined _BAND_SUPPORT_THREAD_AFFINITY
   const cpu_set_t& GetCpuSet() const { return cpu_set_; }
+  cpu_set_t& GetCpuSet() { return cpu_set_; }
 
  private:
   cpu_set_t cpu_set_;
@@ -53,7 +61,7 @@ int GetCPUCount();
 int GetLittleCPUCount();
 int GetBigCPUCount();
 
-// set explicit thread affinity
+// set explicit thread affinity, return kBandError if mask is empty
 BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
