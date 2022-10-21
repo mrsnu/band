@@ -93,10 +93,8 @@ void DeviceQueueWorker::Work() {
           current_job.end_time = profiling::time::NowMicros();
           current_job.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
           current_job.latency = current_job.end_time - current_job.invoke_time;
-          LOGI("[Worker] job write done");
 
           planner_ptr->GetModelManager()->Update(current_job);
-          LOGI("[Worker] update done");
 
           if (current_job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job.following_jobs);

@@ -34,7 +34,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
       }
     }
     if (shortest_latency == INT_MAX) {
-      LOGI("[Worker %d] All workers are throttled!", wid);
+      LOGI("[TAS] All workers are throttled!");
       // When all workers are not available, 
       // the scheduler should wait until any worker becomes available.
       continue;
@@ -43,7 +43,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     to_execute.estimated_latency = shortest_latency;
     auto temp = model_manager_->GetPredictedTemperature(target_subgraph->GetKey().worker_id, target_subgraph);
     for (int i = 0; i < temp.size(); i++) {
-      to_execute.estimated_temp.push_back(temp[i]);
+      to_execute.estimated_temp.emplace_back(temp[i]);
     }
     LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
     requests.pop_front();

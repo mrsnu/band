@@ -352,7 +352,6 @@ void Planner::FlushFinishedJobs() {
         job.status =
             latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
       }
-
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
                << job.model_fname << "\t"

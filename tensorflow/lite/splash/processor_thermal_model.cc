@@ -9,7 +9,7 @@
 #include "tensorflow/lite/builtin_ops.h"
 
 #if defined(__ANDROID__)
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "thermal", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 #endif // defined(__ANDROID__)
 
@@ -27,14 +27,13 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t worker_size, int32_t window_siz
 
 vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const int64_t latency) {
   vector<int32_t> regressor;
+  vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
   if (log_.size() < 50) {
     // Just return current temp
-    return GetResourceMonitor().GetAllTemperature();
+    return temp;
   }
-  LOGI("ProcessorThermalModel::Predict starts = %d", log_.size());
 
   // Get temperature from resource monitor
-  vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
   regressor.insert(regressor.end(), temp.begin(), temp.end());
 
   // Get frequency 
@@ -52,7 +51,7 @@ vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const
   // Push error term
   regressor.push_back(1);
 
-  vector<thermal_t> future_temperature;
+  vector<thermal_t> future_temperature(model_param_.size(), 0);
 
   if (regressor.size() != model_param_[0].size()) {
     LOGI("[ProcessorThermalModel] Error!!: regressor.size()[%d] != model_param_.size()[%d]", regressor.size(), model_param_[0].size());
@@ -65,7 +64,6 @@ vector<thermal_t> ProcessorThermalModel::Predict(const Subgraph* subgraph, const
       predicted += regressor[i] * model_param_[wid][i];
     }
     future_temperature[wid] = predicted;
-    LOGI("ProcessorThermalModel::Predict result[%d] = %d", wid, predicted); 
   }
   return future_temperature; 
 }
@@ -169,7 +167,6 @@ void ProcessorThermalModel::PrintParameters() {
 }
 
 TfLiteStatus ProcessorThermalModel::Update(Job job) {
-  LOGI("ProcessorThermalModel::Update starts");
   // Add job to log table
   ThermalLog log(job);
   if (log_.size() > window_size_) {
@@ -181,9 +178,6 @@ TfLiteStatus ProcessorThermalModel::Update(Job job) {
     LOGI("ProcessorThermalModel::Update Not enough data : %d", log_.size());
     return kTfLiteOk;
   }
-
-  LOGI("ProcessorThermalModel::Update starts [%d]", log_.size());
-  // PrintParameters();
 
   // Update parameters via normal equation with log table
   for (auto target_worker = 0; target_worker < model_param_.size(); target_worker++) {
@@ -209,9 +203,7 @@ TfLiteStatus ProcessorThermalModel::Update(Job job) {
       model_param_[target_worker][i] = theta(0, i); 
     }
   }
-  // PrintParameters();
 
-  LOGI("ProcessorThermalModel::Update Ends");
   return kTfLiteOk;
 }
 
