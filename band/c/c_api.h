@@ -91,20 +91,6 @@ BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandTensor** output_tensors,
                                                   size_t num_outputs);
 
-typedef const char* (*PFN_BandTypeGetName)(BandType);
-typedef int (*PFN_BandIntArrayGetSizeInBytes)(int);
-typedef BandIntArray* (*PFN_BandIntArrayCreate)(int);
-typedef int (*PFN_BandIntArrayEqual)(const BandIntArray*, const BandIntArray*);
-typedef int (*PFN_BandIntArrayEqualsArray)(const BandIntArray*, int, const int);
-typedef BandIntArray* (*PFN_BandIntArrayCopy)(const BandIntArray*);
-typedef void (*PFN_BandIntArrayFree)(BandIntArray*);
-typedef int (*PFN_BandFloatArrayGetSizeInBytes)(int);
-typedef BandFloatArray* (*PFN_BandFloatArrayCreate)(int);
-typedef void (*PFN_BandFloatArrayFree)(BandFloatArray*);
-typedef const char* (*PFN_BandBackendGetName)(BandBackendType);
-typedef const BandBackendType (*PFN_BandBackendGetType)(const char*);
-typedef const char* (*PFN_BandDeviceGetName)(BandDeviceFlags);
-typedef const BandDeviceFlags (*PFN_BandDeviceGetFlag)(const char*);
 typedef BandConfigBuilder* (*PFN_BandConfigBuilderCreate)();
 typedef void (*PFN_BandAddConfig)(BandConfigBuilder*, int, int, ...);
 typedef void (*PFN_BandConfigBuilderDelete)(BandConfigBuilder*);
