@@ -5,10 +5,10 @@
 
 namespace Band {
 namespace Test {
-
 struct AffinityMasksFixture : public testing::TestWithParam<BandCPUMaskFlags> {
 };
 
+#ifdef _BAND_SUPPORT_THREAD_AFFINITY
 TEST_P(AffinityMasksFixture, AffinitySetTest) {
   CpuSet target_set = BandCPUMaskGetSet(GetParam());
   // this fails if target_set is null
@@ -52,6 +52,19 @@ TEST(CPUTest, EnableTest) {
 INSTANTIATE_TEST_SUITE_P(AffinitySetTests, AffinityMasksFixture,
                          testing::Values(kBandAll, kBandLittle, kBandBig,
                                          kBandPrimary));
+#else
+
+TEST_P(AffinityMasksFixture, DummyTest) {
+  CpuSet target_set = BandCPUMaskGetSet(GetParam());
+  // always success, as this platform not supports thread affinity
+  EXPECT_EQ(SetCPUThreadAffinity(target_set), kBandOk);
+  EXPECT_EQ(GetCPUThreadAffinity(target_set), kBandOk);
+}
+
+INSTANTIATE_TEST_SUITE_P(DummyTest, AffinityMasksFixture,
+                         testing::Values(kBandAll, kBandLittle, kBandBig,
+                                         kBandPrimary));
+#endif
 
 }  // namespace Test
 }  // namespace Band
