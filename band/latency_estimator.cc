@@ -33,6 +33,9 @@ void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
         profile_smoothing_factor_ * latency +
         (1 - profile_smoothing_factor_) * prev_latency;
   }
+  BAND_LOG_INTERNAL(BAND_LOG_INFO,
+                    "[LatencyEstimator::UpdateLatency] The given SubgraphKey "
+                    "cannot be found.");
 }
 
 BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {

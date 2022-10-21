@@ -7,8 +7,11 @@ namespace Test {
 
 TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   ProfileConfigBuilder b;
-  ProfileConfig config_ok =
-      b.AddOnline(false).AddNumRuns(3).AddNumWarmups(3).AddProfileDataPath("hello").Build();
+  ProfileConfig config_ok = b.AddOnline(false)
+                                .AddNumRuns(3)
+                                .AddNumWarmups(3)
+                                .AddProfileDataPath("hello")
+                                .Build();
 
   EXPECT_EQ(config_ok.online, false);
   EXPECT_EQ(config_ok.num_runs, 3);
