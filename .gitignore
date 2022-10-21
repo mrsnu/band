@@ -50,6 +50,9 @@ Podfile.lock
 Pods
 xcuserdata
 
+# test
 log.csv
 log.tsv
 
+# build_c_api
+/bin
