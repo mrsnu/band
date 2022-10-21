@@ -8,9 +8,9 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
   ScheduleAction action;
 
   // TODO: fallback subgraphs for FixedDevicePlanner?
-  while (!requests.empty()) { 
+  while (!requests.empty()) {
     Job to_execute = requests.front();
-    requests.pop_front(); // erase job
+    requests.pop_front();  // erase job
 
     int model_id = to_execute.model_id;
     WorkerId worker_id = context.GetModelWorker(model_id);

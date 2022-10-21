@@ -3,18 +3,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "band/context.h"
 #include "band/scheduler/scheduler.h"
+#include "band/test/test_util.h"
 #include "band/time.h"
 #include "band/worker.h"
 
 namespace Band {
 namespace Test {
 
-struct MockContext : public Context {
-  MOCK_METHOD(std::vector<JobId>, EnqueueBatch, (std::vector<Job>, bool),
-              (override));
-
+struct MockContext : public MockContextBase {
   void PrepareReenqueue(Job&) override{};
   void UpdateLatency(const SubgraphKey&, int64_t) override{};
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
@@ -29,12 +26,13 @@ struct MockContext : public Context {
 };
 
 class MockScheduler : public IScheduler {
-  MOCK_METHOD(ScheduleAction, Schedule, (const Context&, JobQueue&),
-              (override));
-  MOCK_METHOD(bool, NeedProfile, (), (override));
-  MOCK_METHOD(bool, NeedFallbackSubgraphs, (), (override));
-  MOCK_METHOD(BandWorkerType, GetWorkerType, (), (override));
+  MOCK_METHOD2(Schedule, ScheduleAction(const Context&, JobQueue&));
+  MOCK_METHOD0(NeedProfile, bool());
+  MOCK_METHOD0(NeedFallbackSubgraphs, bool());
+  // MOCK_METHOD0(GetWorkerType, BandWorkerType());
+  BandWorkerType GetWorkerType() { return kBandDeviceQueue; }
 };
+
 /*
 
 Job cycle
@@ -49,6 +47,7 @@ TEST(PlannerSuite, SingleQueue) {
 
   planner.AddScheduler(std::make_unique<MockScheduler>());
   // TODO: Add tests!
+  EXPECT_TRUE(true);
 }
 }  // namespace Test
 }  // namespace Band

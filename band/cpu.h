@@ -31,14 +31,6 @@
 
 namespace Band {
 
-typedef enum {
-  kBandAll = 0,
-  kBandLittle = 1,
-  kBandBig = 2,
-  kBandPrimary = 3,
-  kBandNumCpuMasks = 4
-} BandCPUMaskFlags;
-
 class CpuSet {
  public:
   CpuSet();

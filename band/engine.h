@@ -1,4 +1,5 @@
-#ifndef BAND_ENGINE_H
+#ifndef BAND_ENGINE_H_
+#define BAND_ENGINE_H_
 
 #include <deque>
 #include <functional>
@@ -11,13 +12,12 @@
 #include "band/config.h"
 #include "band/context.h"
 #include "band/error_reporter.h"
+#include "band/interface/interpreter.h"
+#include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
 
 namespace Band {
-namespace Interface {
-class IInterpreter;
-class ITensor;
-}  // namespace Interface
+
 class Model;
 
 typedef std::vector<Interface::ITensor*> Tensors;
@@ -157,7 +157,7 @@ class Engine : public Context {
 
   // Models
   // Model instances (used only for benchmark tools)
-  std::map<ModelId, std::shared_ptr<Model>> models_; // index is ModelId
+  std::map<ModelId, std::shared_ptr<Model>> models_;  // index is ModelId
   // Maps to each modelid to its index in config.model_config. No usage right
   // now, but might be useful later.
   std::map<ModelId, int> model_configs_idx_;

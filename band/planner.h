@@ -1,6 +1,7 @@
 #ifndef BAND_PLANNER_H_
 #define BAND_PLANNER_H_
 
+#include <array>
 #include <atomic>
 #include <functional>
 #include <memory>

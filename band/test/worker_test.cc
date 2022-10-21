@@ -5,25 +5,18 @@
 
 #include <future>
 
-#include "band/context.h"
+#include "band/test/test_util.h"
 #include "band/time.h"
 
 namespace Band {
 namespace Test {
 
-struct MockContext : public Context {
-  MOCK_METHOD(std::vector<JobId>, EnqueueBatch, (std::vector<Job>, bool),
-              (override));
-
-  MOCK_METHOD(void, UpdateLatency, (const SubgraphKey&, int64_t), (override));
+struct MockContext : public MockContextBase {
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
-  MOCK_METHOD(void, Trigger, (), (override));
-
   BandStatus Invoke(const SubgraphKey& key) override {
     Time::SleepForMicros(50);
     return kBandOk;
   }
-
   std::set<int> finished;
 };
 

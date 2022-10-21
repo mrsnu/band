@@ -1,17 +1,95 @@
 load("//band:band.bzl", "band_copts")
 
-# TODO: Find a way to automatically add `--define tflite=true`
-# to band/backend/tfl
+config_setting(
+    name = "debug",
+    values = {
+        "compilation_mode": "dbg",
+    },
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "optimized",
+    values = {
+        "compilation_mode": "opt",
+    },
+    visibility = ["//visibility:public"],
+)
+
+# TFLite backend setting.
 config_setting(
     name = "tflite",
-    define_values = {"tflite": "true"},
+    define_values = {
+        "tflite": "true"
+    },
+    visibility = ["//visibility:public"],
+)
+
+# MNN backend setting.
+config_setting(
+    name = "mnn",
+    define_values = {
+        "mnn": "true"
+    },
+    visibility = ["//visibility:public"],
+)
+
+# Android config settings
+config_setting(
+    name = "android",
+    flag_values = {},
+    values = {
+        "crosstool_top": "//external:android/crosstool"
+    },
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "android_arm64",
+    flag_values = {},
+    values = dict(
+        {"crosstool_top": "//external:android/crosstool"},
+        cpu = "arm64-v8a",
+    ),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "android_arm64_tflite",
+    flag_values = {},
+    define_values = {
+        "tflite": "true",
+    },
+    values = dict(
+        {"crosstool_top": "//external:android/crosstool"},
+        cpu = "arm64-v8a",
+    ),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "android_arm64_mnn",
+    flag_values = {},
+    define_values = {
+        "mnn": "true"
+    },
+    values = dict(
+        {"crosstool_top": "//external:android/crosstool"},
+        cpu = "arm64-v8a",
+    ),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "windows",
+    flag_values = {},
+    values = {"cpu": "x64_windows"},
     visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "common",
     srcs = [
-        "context.cc",
         "error_reporter.cc",
         "logger.cc",
     ],
@@ -84,7 +162,7 @@ cc_library(
         "config.h",
     ],
     linkopts = select({
-        "//tensorflow:windows": [],
+        "//band:windows": [],
         "//conditions:default": [
             "-lm",
             "-ldl",
@@ -260,11 +338,21 @@ exports_files(glob([
     "testdata/*.json",
 ]))
 
+cc_library(
+    name = "test_util",
+    hdrs = ["test/test_util.h"],
+    deps = [
+        ":common",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_test(
     name = "planner_test",
     size = "small",
     srcs = ["test/planner_test.cc"],
     deps = [
+        ":test_util",
         ":planner",
         "@com_google_googletest//:gtest",
     ],
@@ -275,6 +363,7 @@ cc_test(
     size = "small",
     srcs = ["test/scheduler_test.cc"],
     deps = [
+        ":test_util",
         ":scheduler",
         ":model",
         ":config",
@@ -287,6 +376,7 @@ cc_test(
     size = "small",
     srcs = ["test/worker_test.cc"],
     deps = [
+        ":test_util",
         ":worker",
         "@com_google_googletest//:gtest",
     ],
@@ -297,6 +387,7 @@ cc_test(
     size = "small",
     srcs = ["test/time_test.cc"],
     deps = [
+        ":test_util",
         ":time",
         "@com_google_googletest//:gtest",
     ],
@@ -307,6 +398,7 @@ cc_test(
     srcs = ["config_builder_test.cc"],
     data = ["//band:testdata/config.json"],
     deps = [
+        ":test_util",
         ":config_builder",
         "@com_google_googletest//:gtest",
     ],

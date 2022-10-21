@@ -37,6 +37,10 @@ ErrorReporter* DefaultErrorReporter();
 
 }  // namespace Band
 
+#if !defined(__PRETTY_FUNCTION__) && defined(_WIN32)
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
+
 // You should not make bare calls to the error reporter, instead use the
 // BAND_REPORT_ERROR macro, since this allows message strings to be
 // stripped when the binary size has to be optimized. If you are looking to

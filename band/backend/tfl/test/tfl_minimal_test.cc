@@ -12,6 +12,8 @@
 #include "band/backend_factory.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
+#include "band/interface/interpreter.h"
+#include "band/interface/tensor.h"
 #include "band/model.h"
 #include "band/tensor.h"
 
