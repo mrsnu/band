@@ -139,7 +139,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   worker.End();
 }
 
-TEST(LatencyEstimatorSuite, OfflineSaveLoad) {
+TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
   CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return kBandOk;
@@ -185,6 +185,60 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoad) {
     EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
     EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
   }
+
+  worker.End();
+}
+
+TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
+  CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
+    std::this_thread::sleep_for(std::chrono::microseconds(5000));
+    return kBandOk;
+  });
+
+  DeviceQueueWorker worker(&context, kBandCPU);
+  // explicitly assign worker to mock context
+  context.worker = &worker;
+  worker.Start();
+  SubgraphKey key(0, 0);
+
+  {
+    // profile on online estimator
+    LatencyEstimator latency_estimator(&context);
+
+    ProfileConfigBuilder b;
+    ProfileConfig config =
+        b.AddNumRuns(3)
+            .AddNumWarmups(3)
+            .AddOnline(true)
+            .AddProfileDataPath(testing::TempDir() + "log.json")
+            .Build();
+
+    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+    EXPECT_EQ(latency_estimator.DumpProfile(), kBandOk);
+  }
+
+  {
+    worker.UpdateWorkerThread(worker.GetWorkerThreadAffinity(),
+                              worker.GetNumThreads() + 1);
+    // load on offline estimator
+    LatencyEstimator latency_estimator(&context);
+
+    ProfileConfigBuilder b;
+    ProfileConfig config =
+        b.AddNumRuns(3)
+            .AddNumWarmups(3)
+            .AddOnline(false)
+            .AddProfileDataPath(testing::TempDir() + "log.json")
+            .Build();
+
+    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+    EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
+    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+    // fails to load due to worker update
+    EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
+  }
+
   worker.End();
 }
 
