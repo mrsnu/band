@@ -59,10 +59,6 @@ def build_android(enable_xnnpack=False, debug=False):
         f'bazel build --config=android_arm64 --strip always  {get_options(False, debug)} band/c:band_c')
     copy('bazel-bin/band/c/libband_c.so',
          get_dst_path('armv8-a', debug))
-    run_cmd(
-        f'bazel build --config=android_arm --strip always  {get_options(False, debug)} band/c:band_c')
-    copy('bazel-bin/band/c/libband_c.so',
-         get_dst_path('armeabi-v7a', debug))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
