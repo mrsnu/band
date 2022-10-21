@@ -415,6 +415,12 @@ band_cc_android_test(
     name = "latency_estimator_test",
     size = "small",
     srcs = ["test/latency_estimator_test.cc"],
+    linkopts = select({
+        "//band:windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     deps = [
         ":config_builder",
         ":latency_estimator",
