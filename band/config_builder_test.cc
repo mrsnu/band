@@ -8,7 +8,7 @@ namespace Test {
 TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   ProfileConfigBuilder b;
   ProfileConfig config_ok =
-      b.AddOnline(false).AddNumRuns(3).AddNumWarmups(3).Build();
+      b.AddOnline(false).AddNumRuns(3).AddNumWarmups(3).AddProfileDataPath("hello").Build();
 
   EXPECT_EQ(config_ok.online, false);
   EXPECT_EQ(config_ok.num_runs, 3);
@@ -16,6 +16,9 @@ TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
 
   b.AddNumRuns(-1);
   EXPECT_FALSE(b.IsValid());
+  b.AddNumRuns(1);
+  b.AddOnline(true);
+  EXPECT_TRUE(b.IsValid());
 }
 
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {

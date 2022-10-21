@@ -26,8 +26,9 @@ bool ProfileConfigBuilder::IsValid(
   }
   REPORT_IF_FALSE(ProfileConfigBuilder,
                   smoothing_factor_ >= .0f && smoothing_factor_ <= 1.0f);
-  REPORT_IF_FALSE(ProfileConfigBuilder,
-                  /*profile_data_path_*/ true);  // Always true
+  if (online_ == false) {
+    REPORT_IF_FALSE(ProfileConfigBuilder, profile_data_path_ != "");
+  }
   return result;
 }
 
