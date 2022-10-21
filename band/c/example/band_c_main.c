@@ -16,14 +16,10 @@
 #endif
 
 PFN_BandAddConfig pBandAddConfig;
-PFN_BandBackendGetName pBandBackendGetName;
-PFN_BandBackendGetType pBandBackendGetType;
 PFN_BandConfigBuilderCreate pBandConfigBuilderCreate;
 PFN_BandConfigBuilderDelete pBandConfigBuilderDelete;
 PFN_BandConfigCreate pBandConfigCreate;
 PFN_BandConfigDelete pBandConfigDelete;
-PFN_BandDeviceGetFlag pBandDeviceGetFlag;
-PFN_BandDeviceGetName pBandDeviceGetName;
 PFN_BandEngineCreate pBandEngineCreate;
 PFN_BandEngineCreateInputTensor pBandEngineCreateInputTensor;
 PFN_BandEngineCreateOutputTensor pBandEngineCreateOutputTensor;
@@ -34,15 +30,6 @@ PFN_BandEngineRegisterModel pBandEngineRegisterModel;
 PFN_BandEngineRequestAsync pBandEngineRequestAsync;
 PFN_BandEngineRequestSync pBandEngineRequestSync;
 PFN_BandEngineWait pBandEngineWait;
-PFN_BandFloatArrayCreate pBandFloatArrayCreate;
-PFN_BandFloatArrayFree pBandFloatArrayFree;
-PFN_BandFloatArrayGetSizeInBytes pBandFloatArrayGetSizeInBytes;
-PFN_BandIntArrayCopy pBandIntArrayCopy;
-PFN_BandIntArrayCreate pBandIntArrayCreate;
-PFN_BandIntArrayEqual pBandIntArrayEqual;
-PFN_BandIntArrayEqualsArray pBandIntArrayEqualsArray;
-PFN_BandIntArrayFree pBandIntArrayFree;
-PFN_BandIntArrayGetSizeInBytes pBandIntArrayGetSizeInBytes;
 PFN_BandModelAddFromBuffer pBandModelAddFromBuffer;
 PFN_BandModelAddFromFile pBandModelAddFromFile;
 PFN_BandModelCreate pBandModelCreate;
@@ -54,7 +41,6 @@ PFN_BandTensorGetDims pBandTensorGetDims;
 PFN_BandTensorGetName pBandTensorGetName;
 PFN_BandTensorGetQuantization pBandTensorGetQuantization;
 PFN_BandTensorGetType pBandTensorGetType;
-PFN_BandTypeGetName pBandTypeGetName;
 
 #ifdef __WINDOWS__
 #define LoadFunction(function) \
@@ -70,14 +56,10 @@ void LoadBandLibraryFunctions(HMODULE libbandc) {
 void LoadBandLibraryFunctions(void* libbandc) {
 #endif
   LoadFunction(BandAddConfig);
-  LoadFunction(BandBackendGetName);
-  LoadFunction(BandBackendGetType);
   LoadFunction(BandConfigBuilderCreate);
   LoadFunction(BandConfigBuilderDelete);
   LoadFunction(BandConfigCreate);
   LoadFunction(BandConfigDelete);
-  LoadFunction(BandDeviceGetFlag);
-  LoadFunction(BandDeviceGetName);
   LoadFunction(BandEngineCreate);
   LoadFunction(BandEngineCreateInputTensor);
   LoadFunction(BandEngineCreateOutputTensor);
@@ -88,15 +70,6 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandEngineRequestAsync);
   LoadFunction(BandEngineRequestSync);
   LoadFunction(BandEngineWait);
-  LoadFunction(BandFloatArrayCreate);
-  LoadFunction(BandFloatArrayFree);
-  LoadFunction(BandFloatArrayGetSizeInBytes);
-  LoadFunction(BandIntArrayCopy);
-  LoadFunction(BandIntArrayCreate);
-  LoadFunction(BandIntArrayEqual);
-  LoadFunction(BandIntArrayEqualsArray);
-  LoadFunction(BandIntArrayFree);
-  LoadFunction(BandIntArrayGetSizeInBytes);
   LoadFunction(BandModelAddFromBuffer);
   LoadFunction(BandModelAddFromFile);
   LoadFunction(BandModelCreate);
@@ -108,7 +81,6 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandTensorGetName);
   LoadFunction(BandTensorGetQuantization);
   LoadFunction(BandTensorGetType);
-  LoadFunction(BandTypeGetName);
 }
 
 bool LoadBandLibrary() {
