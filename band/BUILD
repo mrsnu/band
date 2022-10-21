@@ -20,7 +20,7 @@ config_setting(
 config_setting(
     name = "tflite",
     define_values = {
-        "tflite": "true"
+        "tflite": "true",
     },
     visibility = ["//visibility:public"],
 )
@@ -29,7 +29,7 @@ config_setting(
 config_setting(
     name = "mnn",
     define_values = {
-        "mnn": "true"
+        "mnn": "true",
     },
     visibility = ["//visibility:public"],
 )
@@ -39,7 +39,7 @@ config_setting(
     name = "android",
     flag_values = {},
     values = {
-        "crosstool_top": "//external:android/crosstool"
+        "crosstool_top": "//external:android/crosstool",
     },
     visibility = ["//visibility:public"],
 )
@@ -56,10 +56,10 @@ config_setting(
 
 config_setting(
     name = "android_arm64_tflite",
-    flag_values = {},
     define_values = {
         "tflite": "true",
     },
+    flag_values = {},
     values = dict(
         {"crosstool_top": "//external:android/crosstool"},
         cpu = "arm64-v8a",
@@ -69,10 +69,10 @@ config_setting(
 
 config_setting(
     name = "android_arm64_mnn",
-    flag_values = {},
     define_values = {
-        "mnn": "true"
+        "mnn": "true",
     },
+    flag_values = {},
     values = dict(
         {"crosstool_top": "//external:android/crosstool"},
         cpu = "arm64-v8a",
@@ -96,8 +96,8 @@ cc_library(
     ],
     hdrs = [
         "common.h",
-        "context.h",
         "config.h",
+        "context.h",
         "cpu.h",
         "error_reporter.h",
         "logger.h",
@@ -370,8 +370,8 @@ cc_test(
     size = "small",
     srcs = ["test/planner_test.cc"],
     deps = [
-        ":test_util",
         ":planner",
+        ":test_util",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -381,11 +381,11 @@ cc_test(
     size = "small",
     srcs = ["test/scheduler_test.cc"],
     deps = [
-        ":test_util",
-        ":scheduler",
-        ":model",
         ":config",
-        "@com_google_googletest//:gtest"
+        ":model",
+        ":scheduler",
+        ":test_util",
+        "@com_google_googletest//:gtest",
     ],
 )
 
@@ -418,6 +418,7 @@ band_cc_android_test(
     deps = [
         ":config_builder",
         ":latency_estimator",
+        ":test_util",
         ":worker",
         "@com_google_googletest//:gtest",
     ],
@@ -428,8 +429,8 @@ cc_test(
     srcs = ["config_builder_test.cc"],
     data = ["//band:testdata/config.json"],
     deps = [
-        ":test_util",
         ":config_builder",
+        ":test_util",
         "@com_google_googletest//:gtest",
     ],
 )

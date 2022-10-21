@@ -76,14 +76,6 @@ class Engine : public Context {
   // Sets the callback function pointer to report the end of invoke.
   void SetEndInvokeFunction(std::function<void(int, BandStatus)> on_end_invoke);
 
-  const ModelSpec* GetModelSpec(ModelId model_id) {
-    return &model_specs_[model_id];
-  }
-
-  const ModelConfig* GetModelConfig(ModelId model_id) {
-    return &model_configs_[model_id];
-  }
-
  private:
   /* context */
   BandStatus Init(const RuntimeConfig& config) override;
@@ -94,14 +86,13 @@ class Engine : public Context {
                                   WorkerId worker_id) const override;
   bool IsEnd(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
-<<<<<<< HEAD
-  ModelSpec* GetModelSpec(ModelId model_id) { return &model_specs_[model_id]; }
+  const ModelSpec* GetModelSpec(ModelId model_id) {
+    return &model_specs_[model_id];
+  }
   int GetModelConfigIdx(ModelId model_id) const override {
     return model_configs_idx_.at(model_id);
   }
   WorkerId GetModelWorker(ModelId model_id) const override;
-=======
->>>>>>> 3baeae2e... Offline save / log + fname-based model matching
 
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
       int model_id, std::set<int> resolved_tensors, int64_t start_time,

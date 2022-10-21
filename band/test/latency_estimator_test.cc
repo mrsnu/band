@@ -6,14 +6,15 @@
 #include "band/config_builder.h"
 #include "band/context.h"
 #include "band/cpu.h"
+#include "band/test/test_util.h"
 #include "band/time.h"
 #include "band/worker.h"
 
 namespace Band {
 namespace Test {
 
-struct MockContext : public Context {
-  MockContext() : mock_config({"dummy", 0, 0, 0, 0, 0.f}) {}
+struct MockContext : public MockContextBase {
+  MockContext() { model_spec.path = "dummy"; }
 
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
   MOCK_METHOD1(PrepareReenqueue, void(Job&));
@@ -24,10 +25,10 @@ struct MockContext : public Context {
 
   Worker* GetWorker(WorkerId id) override { return worker; }
   size_t GetNumWorkers() const { return 1; }
-  const ModelConfig* GetModelConfig(ModelId model_id) { return &mock_config; }
+  const ModelSpec* GetModelSpec(ModelId model_id) { return &model_spec; }
 
+  ModelSpec model_spec;
   Worker* worker;
-  ModelConfig mock_config;
 };
 
 struct CustomInvokeMockContext : public MockContext {
@@ -126,7 +127,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   // Explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();
-  SubgraphKey key = context.GetModelSubgraphKey(0, 0);
+  SubgraphKey key(0, 0);
 
   LatencyEstimator latency_estimator(&context);
 
@@ -148,7 +149,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoad) {
   // explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();
-  SubgraphKey key = context.GetModelSubgraphKey(0, 0);
+  SubgraphKey key(0, 0);
 
   {
     // profile on online estimator

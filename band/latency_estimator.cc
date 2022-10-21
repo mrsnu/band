@@ -48,8 +48,7 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
       // TODO(dostos): find largest subgraph after subgraph-support (L878-,
       // tensorflow_band/lite/interpreter.cc)
       Job largest_subgraph_job(model_id);
-      SubgraphKey subgraph_key =
-          context_->GetModelSubgraphKey(model_id, worker_id);
+      SubgraphKey subgraph_key(model_id, worker_id);
       largest_subgraph_job.subgraph_key = subgraph_key;
 
       Profiler average_profiler;
@@ -116,8 +115,7 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
           subgraph_key.GetOutputOpsString().c_str());
     }
   } else {
-    const std::string model_name =
-        context_->GetModelConfig(model_id)->model_fname;
+    const std::string model_name = context_->GetModelSpec(model_id)->path;
     auto model_profile = JsonToModelProfile(model_name, model_id);
     if (model_profile.size() > 0) {
       profile_database_.insert(model_profile.begin(), model_profile.end());
@@ -157,6 +155,18 @@ BandStatus LatencyEstimator::DumpProfile() {
   return WriteJsonObjectToFile(ProfileToJson(), profile_data_path_);
 }
 
+size_t LatencyEstimator::GetProfileHash() const {
+  auto hash_func = std::hash<int>();
+  std::size_t hash = hash_func(context_->GetNumWorkers());
+  for (int i = 0; i < context_->GetNumWorkers(); i++) {
+    hash ^= hash_func(context_->GetWorker(i)->GetDeviceFlag());
+    hash ^= hash_func(context_->GetWorker(i)->GetNumThreads());
+    hash ^= hash_func(
+        context_->GetWorker(i)->GetWorkerThreadAffinity().GetCPUMaskFlag());
+  }
+  return hash;
+}
+
 std::map<SubgraphKey, LatencyEstimator::Latency>
 LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
                                      const int model_id) {
@@ -175,6 +185,14 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
   };
 
   std::map<SubgraphKey, LatencyEstimator::Latency> id_profile;
+  if (profile_database_json_["hash"].asUInt64() != GetProfileHash()) {
+    BAND_LOG_INTERNAL(
+        BAND_LOG_WARNING,
+        "Current profile hash does not matches with a file (%s). Will ignore.",
+        profile_data_path_.c_str());
+    return id_profile;
+  }
+
   for (auto profile_it = profile_database_json_.begin();
        profile_it != profile_database_json_.end(); ++profile_it) {
     std::string model_name = profile_it.key().asString();
@@ -224,21 +242,22 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
 
 Json::Value LatencyEstimator::ProfileToJson() {
   Json::Value name_profile;
+  name_profile["hash"] = GetProfileHash();
   for (auto& pair : profile_database_) {
     SubgraphKey key = pair.first;
-    int model_id = key.GetModelId();
-    std::string start_indices = key.GetInputOpsString();
-    std::string end_indices = key.GetOutputOpsString();
-    int64_t profiled_latency = pair.second.profiled;
+    const int model_id = key.GetModelId();
+    const std::string start_indices = key.GetInputOpsString();
+    const std::string end_indices = key.GetOutputOpsString();
+    const int64_t profiled_latency = pair.second.profiled;
 
     // check the string name of this model id
-    auto model_config = context_->GetModelConfig(model_id);
-    if (model_config && model_config->model_fname.size()) {
+    auto model_spec = context_->GetModelSpec(model_id);
+    if (model_spec && !model_spec->path.empty()) {
       // copy all entries in id_profile --> database_json
       // as an ad-hoc method, we simply concat the start/end indices to form
       // the level-two key in the final json value
       const std::string index_key = start_indices + "/" + end_indices;
-      name_profile[model_config->model_fname][index_key][key.GetWorkerId()] =
+      name_profile[model_spec->path][index_key][key.GetWorkerId()] =
           profiled_latency;
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_ERROR,

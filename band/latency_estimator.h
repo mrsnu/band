@@ -30,6 +30,8 @@ class LatencyEstimator {
   };
 
  private:
+  size_t GetProfileHash() const;
+
   // Convert entries in the json value to ModelDeviceToLatency format,
   // for the given model name and target model id.
   std::map<SubgraphKey, Latency> JsonToModelProfile(

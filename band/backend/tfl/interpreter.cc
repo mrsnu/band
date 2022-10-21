@@ -109,7 +109,7 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
       }
     }
   }
-
+  model_spec.path = model->GetPath();
   return model_spec;
 }
 

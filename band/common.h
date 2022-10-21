@@ -114,6 +114,7 @@ struct ModelSpec {
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
   std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
+  std::string path;
 };
 
 // hash function to use pair<int, set<int>> as map key in cache_
