@@ -161,18 +161,18 @@ def band_cc_android_test(
         )
 
 def band_cc_shared_object(
-          name,
-          srcs = [],
-          deps = [],
-          data = [],
-          copts = band_copts(),
-          linkopts = band_jni_linkopts(),
-          soversion = None,
-          kernels = [],
-          linkstatic = 1,
-          per_os_targets = False,
-          visibility = None,
-          **kwargs):
+        name,
+        srcs = [],
+        deps = [],
+        data = [],
+        copts = band_copts(),
+        linkopts = band_jni_linkopts(),
+        soversion = None,
+        kernels = [],
+        linkstatic = 1,
+        per_os_targets = False,
+        visibility = None,
+        **kwargs):
     """Builds a shared object for Band"""
     if soversion != None:
         suffix = "." + str(soversion).split(".")[0]
@@ -194,7 +194,7 @@ def band_cc_shared_object(
         names = [(
             name,
             name + suffix,
-            name + longsuffix
+            name + longsuffix,
         )]
 
     for name_os, name_os_major, name_os_full in names:

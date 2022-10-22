@@ -21,7 +21,7 @@ namespace Band {
 using namespace Interface;
 TEST(TFLiteBackend, BackendInvoke) {
   TfLite::TfLiteModel bin_model(0);
-  bin_model.FromPath("band/testdata/add.bin");
+  bin_model.FromPath("band/test/data/add.bin");
 
   TfLite::TfLiteInterpreter interpreter;
   EXPECT_EQ(interpreter.FromModel(&bin_model, 0, kBandCPU), kBandOk);
@@ -32,7 +32,7 @@ TEST(TFLiteBackend, BackendInvoke) {
 
 TEST(TFLiteBackend, ModelSpec) {
   TfLite::TfLiteModel bin_model(0);
-  bin_model.FromPath("band/testdata/add.bin");
+  bin_model.FromPath("band/test/data/add.bin");
 
   TfLite::TfLiteInterpreter interpreter;
   ModelSpec model_spec;
@@ -49,14 +49,14 @@ TEST(TFLiteBackend, ModelSpec) {
 
 TEST(TFLiteBackend, Registration) {
   auto backends = BackendFactory::GetAvailableBackends();
-
-  EXPECT_EQ(backends.size(), 1);
+  int expected_num_backends = 0;
+  EXPECT_EQ(backends.size(), expected_num_backends);
 }
 
 TEST(TFLiteBackend, InterfaceInvoke) {
   auto backends = BackendFactory::GetAvailableBackends();
   IModel* bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
-  bin_model->FromPath("band/testdata/add.bin");
+  bin_model->FromPath("band/test/data/add.bin");
 
   IInterpreter* interpreter = BackendFactory::CreateInterpreter(kBandTfLite);
   EXPECT_EQ(interpreter->FromModel(bin_model, 0, kBandCPU), kBandOk);
@@ -84,7 +84,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config = b.AddPlannerLogPath("band/testdata/log.csv")
+  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
                              .AddSchedulers({kBandRoundRobin})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
@@ -94,7 +94,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
                              .AddWorkerNumThreads({3, 4})
                              .AddWorkerCPUMasks({kBandBig, kBandLittle})
                              .AddSmoothingFactor(0.1)
-                             .AddProfileDataPath("band/testdata/profile.json")
+                             .AddProfileDataPath("band/test/data/profile.json")
                              .AddOnline(true)
                              .AddNumWarmups(1)
                              .AddNumRuns(1)
@@ -107,7 +107,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -132,7 +132,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config = b.AddPlannerLogPath("band/testdata/log.csv")
+  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
                              .AddSchedulers({kBandRoundRobin})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
@@ -142,7 +142,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
                              .AddWorkerNumThreads({3, 4})
                              .AddWorkerCPUMasks({kBandBig, kBandLittle})
                              .AddSmoothingFactor(0.1)
-                             .AddProfileDataPath("band/testdata/profile.json")
+                             .AddProfileDataPath("band/test/data/profile.json")
                              .AddOnline(true)
                              .AddNumWarmups(1)
                              .AddNumRuns(1)
@@ -155,7 +155,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/testdata/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -179,6 +179,9 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 }  // namespace Band
 
 int main(int argc, char** argv) {
+#ifdef BAND_TFLITE
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
+#endif  // BAND_TFLITE
+  return 0;
 }

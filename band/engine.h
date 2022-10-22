@@ -31,11 +31,11 @@ typedef std::vector<Interface::ITensor*> Tensors;
  * Example usage:
  *
  * Band::RuntimeConfig config;
- * Band::ParseRuntimeConfigFromJson("band/testdata/config.json", config);
+ * Band::ParseRuntimeConfigFromJson("band/test/data/config.json", config);
  * std::unique_ptr<Band::Engine> engine = Band::Engine::Create(config);
  *
  * Band::Model model;
- * model.FromPath(kBandTfLite, "band/testdata/add.bin");
+ * model.FromPath(kBandTfLite, "band/test/data/add.bin");
  * engine->RegisterModel(&model);
  *
  * Band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),

@@ -138,7 +138,7 @@ int main() {
   pBandAddConfig(b, BAND_PROFILE_SMOOTHING_FACTOR, /*count=*/1, 0.1f);
   printf("BandAddConfig, BAND_PROFILE_SMOOTHING_FACTOR\n");
   pBandAddConfig(b, BAND_PROFILE_DATA_PATH, /*count=*/1,
-                 "band/testdata/profile.json");
+                 "band/test/data/profile.json");
   printf("BandAddConfig, BAND_PROFILE_DATA_PATH\n");
   pBandAddConfig(b, BAND_PROFILE_ONLINE, /*count=*/1, true);
   printf("BandAddConfig, BAND_PROFILE_ONLINE\n");
@@ -158,7 +158,7 @@ int main() {
 
   BandModel* model = pBandModelCreate();
   printf("BandModelCreate\n");
-  pBandModelAddFromFile(model, kBandTfLite, "band/testdata/add.bin");
+  pBandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin");
   printf("BandModelAddFromFile\n");
 
   BandEngine* engine = pBandEngineCreate(config);

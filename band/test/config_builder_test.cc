@@ -20,11 +20,11 @@ TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
 
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
   PlannerConfigBuilder b;
-  PlannerConfig config_ok = b.AddLogPath("band/testdata/config.json")
+  PlannerConfig config_ok = b.AddLogPath("band/test/data/config.json")
                                 .AddScheduleWindowSize(5)
                                 .AddSchedulers({kBandFixedDevice})
                                 .Build();
-  EXPECT_EQ(config_ok.log_path, "band/testdata/config.json");
+  EXPECT_EQ(config_ok.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.schedule_window_size, 5);
   EXPECT_EQ(config_ok.cpu_mask, kBandAll);
 
@@ -60,10 +60,10 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddNumRuns(1)
           .AddCopyComputationRatio({1, 2, 3, 4})
           .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/testdata/config.json")
+          .AddProfileDataPath("band/test/data/config.json")
           .AddMinimumSubgraphSize(5)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
-          .AddPlannerLogPath("band/testdata/config.json")
+          .AddPlannerLogPath("band/test/data/config.json")
           .AddScheduleWindowSize(1)
           .AddSchedulers({kBandFixedDevice})
           .AddPlannerCPUMask(kBandBig)
@@ -83,11 +83,11 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[3], 4);
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.profile_config.profile_data_path,
-            "band/testdata/config.json");
+            "band/test/data/config.json");
   EXPECT_EQ(config_ok.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_preparation_type, kBandMergeUnitSubgraph);
   EXPECT_EQ(config_ok.cpu_mask, kBandPrimary);
-  EXPECT_EQ(config_ok.planner_config.log_path, "band/testdata/config.json");
+  EXPECT_EQ(config_ok.planner_config.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
   EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedDevice);
   EXPECT_EQ(config_ok.planner_config.cpu_mask, kBandBig);

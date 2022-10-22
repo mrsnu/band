@@ -1,21 +1,5 @@
 {
-    "models": [
-        {
-            "graph": "band/testdata/add.bin",
-            "period_ms": 30,
-            "batch_size": 3,
-            "slo_us": 30000,
-            "device": "CPU"
-        },
-        {
-            "graph": "band/testdata/add.bin",
-            "period_ms": 30,
-            "batch_size": 3,
-            "slo_us": 30000,
-            "device": "CPU"
-        }
-    ],
-    "log_path": "band/testdata/log.csv",
+    "log_path": "band/test/data/log.csv",
     "schedulers": [
         1
     ],
@@ -41,7 +25,7 @@
     ],
     "running_time_ms": 60000,
     "profile_smoothing_factor": 0.1,
-    "model_profile": "band/testdata/profile.json",
+    "model_profile": "band/test/data/profile.json",
     "profile_online": true,
     "profile_warmup_runs": 1,
     "profile_num_runs": 1,

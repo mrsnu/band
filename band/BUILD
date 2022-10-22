@@ -1,4 +1,11 @@
-load("//band:band.bzl", "band_cc_android_test", "band_copts")
+load("//band:band.bzl", "band_copts")
+
+package(
+    default_visibility = [
+        "//band:__subpackages__",
+    ],
+    licenses = ["notice"],  # Apache 2.0
+)
 
 config_setting(
     name = "debug",
@@ -20,7 +27,7 @@ config_setting(
 config_setting(
     name = "tflite",
     define_values = {
-        "tflite": "true"
+        "tflite": "true",
     },
     visibility = ["//visibility:public"],
 )
@@ -29,7 +36,7 @@ config_setting(
 config_setting(
     name = "mnn",
     define_values = {
-        "mnn": "true"
+        "mnn": "true",
     },
     visibility = ["//visibility:public"],
 )
@@ -39,7 +46,7 @@ config_setting(
     name = "android",
     flag_values = {},
     values = {
-        "crosstool_top": "//external:android/crosstool"
+        "crosstool_top": "//external:android/crosstool",
     },
     visibility = ["//visibility:public"],
 )
@@ -56,10 +63,10 @@ config_setting(
 
 config_setting(
     name = "android_arm64_tflite",
-    flag_values = {},
     define_values = {
         "tflite": "true",
     },
+    flag_values = {},
     values = dict(
         {"crosstool_top": "//external:android/crosstool"},
         cpu = "arm64-v8a",
@@ -69,10 +76,10 @@ config_setting(
 
 config_setting(
     name = "android_arm64_mnn",
-    flag_values = {},
     define_values = {
-        "mnn": "true"
+        "mnn": "true",
     },
+    flag_values = {},
     values = dict(
         {"crosstool_top": "//external:android/crosstool"},
         cpu = "arm64-v8a",
@@ -95,16 +102,13 @@ cc_library(
     ],
     hdrs = [
         "common.h",
-        "context.h",
         "config.h",
+        "context.h",
         "cpu.h",
         "error_reporter.h",
         "logger.h",
     ],
     copts = band_copts(),
-    visibility = [
-        "//band:__subpackages__",
-    ],
     deps = [
         "//band/c:common",
     ],
@@ -277,16 +281,13 @@ cc_library(
         "profiler.h",
         "tensor_ring_buffer.h",
     ],
-    visibility = [
-        "//band:__subpackages__",
-    ],
     deps =
         [
             ":backend_factory",
             ":common",
             ":config",
-            ":json_util",
             ":interface",
+            ":json_util",
             ":model",
             ":planner",
             ":scheduler",
@@ -310,7 +311,7 @@ cc_library(
     deps = [
         ":common",
         "@jsoncpp_git//:jsoncpp",
-    ]
+    ],
 )
 
 cc_library(
@@ -322,94 +323,10 @@ cc_library(
     name = "config_builder",
     srcs = ["config_builder.cc"],
     hdrs = ["config_builder.h"],
-    visibility = [
-        "//band:__subpackages__",
-    ],
     deps = [
         ":common",
-        ":cpu",
         ":config",
-        ":macros"
-    ],
-)
-
-exports_files(glob([
-    "testdata/*.bin",
-    "testdata/*.json",
-]))
-
-cc_library(
-    name = "test_util",
-    hdrs = ["test/test_util.h"],
-    deps = [
-        ":common",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-cc_test(
-    name = "planner_test",
-    size = "small",
-    srcs = ["test/planner_test.cc"],
-    deps = [
-        ":test_util",
-        ":planner",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-cc_test(
-    name = "scheduler_test",
-    size = "small",
-    srcs = ["test/scheduler_test.cc"],
-    deps = [
-        ":test_util",
-        ":scheduler",
-        ":model",
-        ":config",
-        "@com_google_googletest//:gtest"
-    ],
-)
-
-cc_test(
-    name = "worker_test",
-    size = "small",
-    srcs = ["test/worker_test.cc"],
-    deps = [
-        ":test_util",
-        ":worker",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-cc_test(
-    name = "time_test",
-    size = "small",
-    srcs = ["test/time_test.cc"],
-    deps = [
-        ":test_util",
-        ":time",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-cc_test(
-    name = "config_builder_test",
-    srcs = ["config_builder_test.cc"],
-    data = ["//band:testdata/config.json"],
-    deps = [
-        ":test_util",
-        ":config_builder",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-band_cc_android_test(
-    name = "cpu_test",
-    srcs = ["test/cpu_test.cc"],
-    data = [],
-    deps = [
         ":cpu",
-        "@com_google_googletest//:gtest",
+        ":macros",
     ],
 )

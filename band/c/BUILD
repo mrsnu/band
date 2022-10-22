@@ -27,6 +27,8 @@ band_cc_shared_object(
         "//band:tflite": [
             "//band/backend/tfl:tfl_backend",
         ],
+        "//conditions:default": [
+        ],
     }),
 )
 
@@ -48,6 +50,8 @@ cc_binary(
     ] + select({
         clean_dep("//band:tflite"): [
             "//band/backend/tfl:tfl_backend",
+        ],
+        "//conditions:default": [
         ],
     }),
 )
@@ -97,24 +101,4 @@ cc_library(
     name = "c_api_types",
     hdrs = ["c_api_types.h"],
     copts = band_copts(),
-)
-
-cc_test(
-    name = "c_api_test",
-    size = "small",
-    srcs = ["test/c_api_test.cc"],
-    data = [
-        "//band:testdata/add.bin",
-        "//band:testdata/config.json",
-        "//band:testdata/config_fixed_device.json"
-    ],
-    deps = [
-        "//band:framework",
-        ":c_api",
-        "@com_google_googletest//:gtest",
-    ] + select({
-        "//band:tflite": [
-            "//band/backend/tfl:tfl_backend",
-        ],
-    }),
 )

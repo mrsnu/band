@@ -1,5 +1,3 @@
-load("//band:band.bzl", "band_cc_android_test", "band_copts", "band_linkopts")
-
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
@@ -37,19 +35,4 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-)
-
-band_cc_android_test(
-    name = "tfl_minimal_test",
-    srcs = ["test/tfl_minimal_test.cc"],
-    data = [
-        "//band:testdata/add.bin",
-        "//band:testdata/config.json",
-        "//band:testdata/config_fixed_device.json"
-    ],
-    deps = [
-        ":tfl_backend",
-        "//band:config_builder",
-        "@com_google_googletest//:gtest",
-    ],
 )
