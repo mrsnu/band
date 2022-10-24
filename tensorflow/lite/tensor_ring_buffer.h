@@ -13,7 +13,7 @@ class ErrorReporter;
 class TensorRingBuffer {
  public:
   TensorRingBuffer(ErrorReporter* error_reporter, Tensors tensors,
-                   std::vector<int> tensor_indices, int size = 128);
+                   std::vector<int> tensor_indices, int size = 1024);
   ~TensorRingBuffer();
 
   const int GetTensorsLength() const;

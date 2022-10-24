@@ -21,23 +21,26 @@ TfLiteStatus CloudThermalModel::Init(int32_t worker_size, int32_t window_size) {
   return kTfLiteOk;
 }
 
-vector<thermal_t> CloudThermalModel::Predict(const Subgraph* subgraph, const int64_t latency) {
+vector<thermal_t> CloudThermalModel::Predict(const Subgraph* subgraph, 
+                                             const int64_t latency, 
+                                             std::vector<thermal_t> current_temp) {
+  return current_temp;
   // Get temperature from resource monitor
-  vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
+  // vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
 
-  // Get input size
-  int64_t input_size = EstimateInputSize(subgraph);
+  // // Get input size
+  // int64_t input_size = EstimateInputSize(subgraph);
 
-  // Get ouput size
-  int64_t output_size = EstimateOutputSize(subgraph);
+  // // Get ouput size
+  // int64_t output_size = EstimateOutputSize(subgraph);
 
-  // Get rssi value from resource monitor
-  int64_t rssi = -50;
+  // // Get rssi value from resource monitor
+  // int64_t rssi = -50;
 
-  // Get expected latency from server from resource monitor
-  int64_t waiting_time = GetResourceMonitor().GetThrottlingThreshold(GetWorkerId());
+  // // Get expected latency from server from resource monitor
+  // int64_t waiting_time = GetResourceMonitor().GetThrottlingThreshold(GetWorkerId());
 
-  return EstimateFutureTemperature(temp, input_size, output_size, rssi, waiting_time);
+  // return EstimateFutureTemperature(temp, input_size, output_size, rssi, waiting_time);
 }
 
 vector<thermal_t> CloudThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,

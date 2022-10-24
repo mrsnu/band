@@ -20,6 +20,7 @@ class ProcessorLatencyModel : public ILatencyModel {
   TfLiteStatus Init() override;
 
   int64_t Predict(int32_t model_id) override;
+  int64_t PredictThrottled(int32_t model_id) override;
 
   TfLiteStatus Update(int32_t model_id, int64_t latency) override;
  

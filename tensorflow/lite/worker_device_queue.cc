@@ -38,6 +38,30 @@ bool DeviceQueueWorker::IsBusy() {
   return !requests_.empty();
 }
 
+std::vector<thermal_t> DeviceQueueWorker::GetEstimatedEndTemperature() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  std::shared_ptr<Planner> planner_ptr = planner_.lock();
+  if (requests_.empty()) {
+    return planner_ptr->GetResourceMonitor().GetAllTemperature();
+  }
+  // TODO : When preemption is available, this value could be wrong
+  return requests_.back().estimated_temp;
+}
+
+int64_t DeviceQueueWorker::GetEstimatedFinishTime() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  int64_t now = profiling::time::NowMicros();
+  if (requests_.empty()) {
+    return now;
+  }
+  int64_t expected = requests_.back().estimated_finish_time;
+  if (now > expected) {
+    return now;
+  }
+  // TODO : When preemption is available, this value could be wrong
+  return expected;
+}
+
 bool DeviceQueueWorker::GiveJob(Job& job) {
   if (!IsAvailable()) {
     return false;
@@ -86,6 +110,7 @@ void DeviceQueueWorker::Work() {
         current_job.invoke_time = profiling::time::NowMicros();
         current_job.before_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
         current_job.frequency = planner_ptr->GetResourceMonitor().GetAllFrequency(); 
+        current_job.estimated_finish_time = current_job.invoke_time + current_job.estimated_latency; 
         lock.unlock();
 
         TfLiteStatus status = subgraph.Invoke();
@@ -138,7 +163,6 @@ void DeviceQueueWorker::Work() {
       
       lock.lock();
       requests_.pop_front();
-      bool empty = requests_.empty();
       lock.unlock();
       planner_ptr->GetSafeBool().notify();
     } else {

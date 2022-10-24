@@ -61,52 +61,33 @@ std::unique_ptr<ILatencyModel> ModelManager::BuildLatencyModel(worker_id_t wid) 
   return std::make_unique<ProcessorLatencyModel>(wid);
 }
 
-std::vector<worker_id_t> ModelManager::GetPossibleWorkers(std::vector<Subgraph*> subgraphs) {
-  std::vector<worker_id_t> possible_workers;
-  for (int wid = 0; wid < thermal_models_.size(); wid++) {
-    auto& thermal_model = thermal_models_[wid];
-    int64_t latency = GetPredictedLatency(wid, subgraphs[wid]->GetKey().model_id);
-    std::vector<thermal_t> temperature = thermal_model->Predict(subgraphs[wid], latency);
-
-    bool throttled = false;
-    for (int i = 0; i < temperature.size(); i++) {
-      thermal_t predicted_temp = temperature[i];
-      // Checks if throttled
-      auto threshold = resource_monitor_.GetThrottlingThreshold(i);
-      if (predicted_temp > threshold) {
-        throttled = true;
-        break;
-      }
-    }
-    if (!throttled) {
-      possible_workers.push_back(thermal_model->GetWorkerId());
-    }
-  }
-  return possible_workers;
-}
-
-bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
+bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph, 
+                                     std::vector<thermal_t> before_temp) {
   auto& thermal_model = thermal_models_[wid]; 
   int64_t latency = GetPredictedLatency(wid, subgraph->GetKey().model_id);
-  std::vector<thermal_t> temperature = thermal_model->Predict(subgraph, latency); 
+  std::vector<thermal_t> temperature = thermal_model->Predict(subgraph, latency, before_temp); 
   for (int i = 0; i < temperature.size(); i++) {
     thermal_t temp = temperature[i];
     auto threshold = resource_monitor_.GetThrottlingThreshold(i);
-    LOGI("Current_temp= %d, threshold = %d", temp, threshold);
     if (temp > threshold) {
+      LOGI("Throttling predicted : [worker %d]'s temperature[%d] will exceeds threshold[%d] on assigning to worker [%d]", i, temp, threshold, wid);
       return false;
     }
   }
   return true;
 }
 
-std::vector<thermal_t> ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
+std::vector<thermal_t> ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph, std::vector<thermal_t> before_temp) {
   auto latency = GetPredictedLatency(wid, subgraph->GetKey().model_id);
-  return thermal_models_[wid]->Predict(subgraph, latency);
+  return thermal_models_[wid]->Predict(subgraph, latency, before_temp);
 }
 
 int64_t ModelManager::GetPredictedLatency(worker_id_t wid, int32_t model_id) {
   return latency_models_[wid]->Predict(model_id);
+}
+
+int64_t ModelManager::GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id) {
+  return latency_models_[wid]->PredictThrottled(model_id);
 }
 
 TfLiteStatus ModelManager::Update(Job& job) {

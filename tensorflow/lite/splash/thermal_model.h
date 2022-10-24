@@ -24,7 +24,9 @@ class IThermalModel {
 
   // Get an estimation value of future temperature 
   // after executing inference of the input model
-  virtual std::vector<thermal_t> Predict(const Subgraph* subgraph, const int64_t latency) = 0;
+  virtual std::vector<thermal_t> Predict(const Subgraph* subgraph, 
+                                         const int64_t latency, 
+                                         std::vector<thermal_t> current_temp) = 0;
 
   // Update model parameters with the prediction error
   virtual TfLiteStatus Update(Job job) = 0;

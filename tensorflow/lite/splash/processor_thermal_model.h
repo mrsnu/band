@@ -23,8 +23,6 @@ struct ThermalLog {
     before_temp = job.before_temp;
     after_temp = job.after_temp;
     frequency = job.frequency;
-    flops = job.flops;
-    membytes = job.membytes;
   }
 
   int model_id;
@@ -35,10 +33,6 @@ struct ThermalLog {
   std::vector<thermal_t> before_temp;
   std::vector<thermal_t> after_temp;
   std::vector<freq_t> frequency;
-
-  // TODO : Remove these when using latency
-  int64_t flops;
-  int64_t membytes;
 };
 
 class ProcessorThermalModel : public IThermalModel {
@@ -48,7 +42,9 @@ class ProcessorThermalModel : public IThermalModel {
 
   TfLiteStatus Init(int32_t worker_size, int32_t window_size) override;
 
-  std::vector<thermal_t> Predict(const Subgraph* subgraph, const int64_t latency) override;
+  std::vector<thermal_t> Predict(const Subgraph* subgraph, 
+                                 const int64_t latency, 
+                                 std::vector<thermal_t> current_temp) override;
 
   TfLiteStatus Update(Job job) override;
  
@@ -56,8 +52,6 @@ class ProcessorThermalModel : public IThermalModel {
   // Linear regressor
   std::vector<thermal_t> temp_regressor_; // Get from resource monitor
   std::vector<freq_t> freq_regressor_;
-  std::int64_t flops_regressor_;
-  std::int64_t membytes_regressor_;
 
   // Log buffer
   std::deque<ThermalLog> log_;
@@ -67,11 +61,6 @@ class ProcessorThermalModel : public IThermalModel {
   std::vector<std::vector<double>> model_param_; // worker_size * [temp_c, temp_g, temp_d, temp_n, freq_c, freq_g, latency, error]
 
   void PrintParameters();
-
-  // TODO: Remove these methods
-  int64_t EstimateFLOPS(const Subgraph* subgraph,
-                        const Subgraph* primary_subgraph);
-  int64_t EstimateInputOutputSize(const Subgraph* subgraph);
 };
 
 } // namespace impl

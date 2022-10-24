@@ -29,14 +29,12 @@ class ModelManager {
   // Initialize model parameters with default values
   TfLiteStatus Init(ResourceConfig& config);
 
-  // get a list of workers which will not be throttled after the inference
-  std::vector<worker_id_t> GetPossibleWorkers(std::vector<Subgraph*> subgraphs);
-
   // Check if it's throttled or will occur thermal throttling
-  bool IsAvailableWorker(worker_id_t wid, Subgraph* subgraph);
+  bool IsAvailableWorker(worker_id_t wid, Subgraph* subgraph, std::vector<thermal_t> current_temp);
 
-  std::vector<thermal_t> GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph);
+  std::vector<thermal_t> GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph, std::vector<thermal_t> current_temp);
   int64_t GetPredictedLatency(worker_id_t wid, int32_t model_id);
+  int64_t GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id);
 
   // Update model parameters with the prediction error
   TfLiteStatus Update(Job& job);

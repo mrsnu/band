@@ -112,6 +112,8 @@ class Planner {
   // the current WorkerWaitingTime as a parameter.
   std::set<int> GetIdleWorkers();
 
+  std::vector<std::unique_ptr<Worker>>& GetWorkers();
+
   WorkerWaitingTime& GetWorkerWaitingTime() { return workers_waiting_; }
 
   int IssueSchedId();

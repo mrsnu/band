@@ -24,6 +24,10 @@ class ILatencyModel {
   // after executing inference of the input model
   virtual int64_t Predict(int32_t model_id) = 0;
 
+  // Get an estimation value of future latency 
+  // after executing inference of the input model
+  virtual int64_t PredictThrottled(int32_t model_id) = 0;
+
   // Update model parameters with the real latency 
   virtual TfLiteStatus Update(int32_t model_id, int64_t latency) = 0;
 
@@ -34,7 +38,7 @@ class ILatencyModel {
  protected:
   worker_id_t wid_;
 
-  double smoothing_factor_ = 0.01;
+  double smoothing_factor_ = 0.1;
 };
 
 } // namespace impl

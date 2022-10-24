@@ -30,6 +30,15 @@ int64_t ProcessorLatencyModel::Predict(int32_t model_id) {
   }
 }
 
+int64_t ProcessorLatencyModel::PredictThrottled(int32_t model_id) {
+  auto it = model_throttled_latency_table_.find(model_id);
+  if (it != model_throttled_latency_table_.end()) {
+    return it->second;
+  } else {
+    return 0; // Minimum value to be selected
+  }
+}
+
 TfLiteStatus ProcessorLatencyModel::Update(int32_t model_id, int64_t latency) {
   auto it = model_latency_table_.find(model_id);
   if (it != model_latency_table_.end()) {

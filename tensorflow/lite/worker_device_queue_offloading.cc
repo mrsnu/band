@@ -175,8 +175,31 @@ int DeviceQueueOffloadingWorker::GetCurrentJobId() {
 }
 
 bool DeviceQueueOffloadingWorker::IsBusy() {
+  return false;
+}
+
+std::vector<thermal_t> DeviceQueueOffloadingWorker::GetEstimatedEndTemperature() {
   std::unique_lock<std::mutex> lock(device_mtx_);
-  return true;
+  std::shared_ptr<Planner> planner_ptr = planner_.lock();
+  if (requests_.empty()) {
+    return planner_ptr->GetResourceMonitor().GetAllTemperature();
+  }
+  // TODO : When preemption is available, this value could be wrong
+  return requests_.back().estimated_temp;
+}
+
+int64_t DeviceQueueOffloadingWorker::GetEstimatedFinishTime() {
+  std::unique_lock<std::mutex> lock(device_mtx_);
+  int64_t now = profiling::time::NowMicros();
+  if (requests_.empty()) {
+    return now;
+  }
+  int64_t expected = requests_.back().estimated_finish_time;
+  if (now > expected) {
+    return now;
+  }
+  // TODO : When preemption is available, this value could be wrong
+  return expected;
 }
 
 int64_t DeviceQueueOffloadingWorker::GetWaitingTime() {
@@ -246,21 +269,25 @@ void DeviceQueueOffloadingWorker::Work() {
     if (planner_ptr) {
       lock.lock();
       current_job.invoke_time = profiling::time::NowMicros();
+      current_job.before_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+      current_job.frequency = planner_ptr->GetResourceMonitor().GetAllFrequency(); 
       lock.unlock();
 
       // TODO: Need to send and receive input/output tensors
       // std::string reply = greeter.SayHello(user);
-      std::string reply = greeter.UploadFile("/data/data/com.aaa.cj.offloading/1GB.bin");
-      std::string reply2 = greeter.DownloadFile("/data/data/com.aaa.cj.offloading/1GB_download.bin");
+      // std::string reply = greeter.UploadFile("/data/data/com.aaa.cj.offloading/1GB.bin");
+      // std::string reply2 = greeter.DownloadFile("/data/data/com.aaa.cj.offloading/1GB_download.bin");
       // std::cout << "Greeter received: " << reply << std::endl;
+      LOGI("Offloading starts");
+      std::this_thread::sleep_for(std::chrono::milliseconds(40));
 
       current_job.end_time = profiling::time::NowMicros();
-      current_job.status = kTfLiteJobSuccess;
-
+      current_job.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+      current_job.latency = current_job.end_time - current_job.invoke_time;
       if (current_job.following_jobs.size() != 0) {
         planner_ptr->EnqueueBatch(current_job.following_jobs);
       }
-
+      // planner_ptr->GetModelManager()->Update(current_job);
       planner_ptr->EnqueueFinishedJob(current_job);
 
       lock.lock();
@@ -269,7 +296,6 @@ void DeviceQueueOffloadingWorker::Work() {
 
       planner_ptr->GetSafeBool().notify();
     } else {
-      // TODO #21: Handle errors in multi-thread environment
       TF_LITE_MAYBE_REPORT_ERROR(
           GetErrorReporter(),
           "%s worker failed to acquire ptr to planner",

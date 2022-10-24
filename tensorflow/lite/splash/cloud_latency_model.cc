@@ -16,7 +16,12 @@ TfLiteStatus CloudLatencyModel::Init() {
 
 int64_t CloudLatencyModel::Predict(int32_t model_id) {
   // Get network bandwidth measurement 
-  return 0;
+  return 40000;
+}
+
+int64_t CloudLatencyModel::PredictThrottled(int32_t model_id) {
+  // Get network bandwidth measurement 
+  return 40000;
 }
 
 TfLiteStatus CloudLatencyModel::Update(int32_t model_id, int64_t latency) {

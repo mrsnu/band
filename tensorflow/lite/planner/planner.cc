@@ -19,8 +19,7 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter, ResourceConfig& resource_config) : num_submitted_jobs_(0){
-  interpreter_ = interpreter;
+Planner::Planner(Interpreter* interpreter, ResourceConfig& resource_config) : interpreter_(interpreter), num_submitted_jobs_(0){
   planner_thread_ = std::thread([this] { this->Plan(); });
 
   // Init a ResourceMonitor instance
@@ -129,6 +128,10 @@ int Planner::GetWorkerType() const {
   }
   return worker_type;
 }
+
+std::vector<std::unique_ptr<Worker>>& Planner::GetWorkers() {
+    return interpreter_->GetWorkers();
+  }
 
 bool Planner::NeedFallbackSubgraphs() const {
   return false;

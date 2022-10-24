@@ -23,6 +23,7 @@ Worker::~Worker() {
 }
 
 TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
+  worker_id_ = worker_id;
   availability_check_interval_ms_ = config.availability_check_interval_ms;
   offloading_target_ = config.offloading_target;
   offloading_data_size_ = config.offloading_data_size;
