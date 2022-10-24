@@ -50,6 +50,9 @@ TEST(TFLiteBackend, ModelSpec) {
 TEST(TFLiteBackend, Registration) {
   auto backends = BackendFactory::GetAvailableBackends();
   int expected_num_backends = 0;
+#ifdef BAND_TFLITE
+  expected_num_backends++;
+#endif
   EXPECT_EQ(backends.size(), expected_num_backends);
 }
 
