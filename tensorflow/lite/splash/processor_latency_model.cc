@@ -40,27 +40,55 @@ int64_t ProcessorLatencyModel::PredictThrottled(int32_t model_id) {
 }
 
 TfLiteStatus ProcessorLatencyModel::Update(int32_t model_id, int64_t latency) {
+  thermal_t current_temp = GetResourceMonitor().GetTemperature(wid_);
+  thermal_t threshold = GetResourceMonitor().GetThrottlingThreshold(wid_);
+  if (current_temp > threshold) {
+    UpdateThrottledLatency(model_id, latency); 
+    return kTfLiteOk;
+  }
+
   auto it = model_latency_table_.find(model_id);
   if (it != model_latency_table_.end()) {
-    bool throttled = false;
-    // TODO: Thorttling detection
-    if (!throttled) {
+    if (IsThrottled(model_id, latency, current_temp)) { // If new throttling threshold detected
+      LOGI("PLM::Update Newly Throttling detected in worker[%d] on current temp = %d", wid_, current_temp);
+      GetResourceMonitor().SetThrottlingThreshold(wid_, current_temp);
+      UpdateThrottledLatency(model_id, latency);
+    } else {
       int64_t prev_latency = model_latency_table_[model_id];
       model_latency_table_[model_id] =
           smoothing_factor_ * latency +
           (1 - smoothing_factor_) * prev_latency;
-    } else {
-      // TODO: Update threshold value on resource_monitor
-      int64_t prev_latency = model_throttled_latency_table_[model_id];
-      model_throttled_latency_table_[model_id] =
-          smoothing_factor_ * latency +
-          (1 - smoothing_factor_) * prev_latency;
     }
-    return kTfLiteOk;
   } else {
     model_latency_table_[model_id] = latency;
-    return kTfLiteOk;
   }
+  return kTfLiteOk;
+}
+
+bool ProcessorLatencyModel::IsThrottled(int32_t model_id, int64_t latency, thermal_t current_temp) {
+  auto it = model_throttled_latency_table_.find(model_id);
+  if (it != model_throttled_latency_table_.end()) { 
+    // If table has previous throttled_latency value,
+    // the system must have experienced this temp before.
+    return false;
+  }
+  int64_t prev_latency = model_latency_table_[model_id];
+  if (latency - prev_latency > prev_latency * throttled_diff_rate_ && current_temp > throttled_temp_min_) {
+    return true;
+  }
+}
+
+TfLiteStatus ProcessorLatencyModel::UpdateThrottledLatency(int32_t model_id, int64_t latency) {
+  auto it = model_throttled_latency_table_.find(model_id);
+  if (it != model_throttled_latency_table_.end()) { 
+    int64_t prev_latency = model_throttled_latency_table_[model_id];
+    model_throttled_latency_table_[model_id] =
+        smoothing_factor_ * latency +
+        (1 - smoothing_factor_) * prev_latency;
+  } else {
+    model_throttled_latency_table_[model_id] = latency;
+  }
+  return kTfLiteOk;
 }
 
 } // namespace impl

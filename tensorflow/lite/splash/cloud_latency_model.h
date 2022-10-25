@@ -15,7 +15,8 @@ namespace impl {
 
 class CloudLatencyModel : public ILatencyModel {
  public:
-  CloudLatencyModel(worker_id_t wid) : ILatencyModel(wid) {}
+  CloudLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor)
+  : ILatencyModel(wid, resource_monitor) {}
 
   TfLiteStatus Init() override;
 

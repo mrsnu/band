@@ -15,7 +15,9 @@ namespace impl {
 
 class ProcessorLatencyModel : public ILatencyModel {
  public:
-  ProcessorLatencyModel(worker_id_t wid) : ILatencyModel(wid) {}
+ public:
+  ProcessorLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor)
+  : ILatencyModel(wid, resource_monitor) {}
 
   TfLiteStatus Init() override;
 
@@ -27,6 +29,12 @@ class ProcessorLatencyModel : public ILatencyModel {
  private:
   std::unordered_map<int, int64_t> model_latency_table_; // {model_id, latency}
   std::unordered_map<int, int64_t> model_throttled_latency_table_; // {model_id, latency}
+
+  float throttled_diff_rate_ = 0.5;
+  thermal_t throttled_temp_min_ = 40000;
+
+  bool IsThrottled(int32_t model_id, int64_t latency, thermal_t current_temp);
+  TfLiteStatus UpdateThrottledLatency(int32_t model_id, int64_t latency);
 };
 
 } // namespace impl

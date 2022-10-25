@@ -41,11 +41,12 @@ bool DeviceQueueWorker::IsBusy() {
 std::vector<thermal_t> DeviceQueueWorker::GetEstimatedEndTemperature() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   std::shared_ptr<Planner> planner_ptr = planner_.lock();
+  std::vector<thermal_t> temp = planner_ptr->GetResourceMonitor().GetAllTemperature(); 
   if (requests_.empty()) {
-    return planner_ptr->GetResourceMonitor().GetAllTemperature();
+    return temp;
   }
-  // TODO : When preemption is available, this value could be wrong
-  return requests_.back().estimated_temp;
+  temp[worker_id_] = requests_.back().estimated_temp;
+  return temp;
 }
 
 int64_t DeviceQueueWorker::GetEstimatedFinishTime() {

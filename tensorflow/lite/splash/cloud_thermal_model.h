@@ -18,11 +18,11 @@ class CloudThermalModel : public IThermalModel {
   CloudThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
   : IThermalModel(wid, resource_monitor) {}
 
-  TfLiteStatus Init(int32_t worker_size, int32_t window_size) override;
+  TfLiteStatus Init(int32_t window_size) override;
 
-  std::vector<thermal_t> Predict(const Subgraph* subgraph, 
-                                 const int64_t latency, 
-                                 std::vector<thermal_t> current_temp) override;
+  thermal_t Predict(const Subgraph* subgraph, 
+                    const int64_t latency, 
+                    std::vector<thermal_t> current_temp) override;
 
   TfLiteStatus Update(Job job) override;
 

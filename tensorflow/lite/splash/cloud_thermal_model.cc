@@ -10,21 +10,15 @@ namespace impl {
 
 using namespace std;
 
-TfLiteStatus CloudThermalModel::Init(int32_t worker_size, int32_t window_size) {
-  temp_param_.assign(worker_size, vector<double>(worker_size, 0.2));
-  input_param_.assign(worker_size, 0.1);
-  output_param_.assign(worker_size, 0.1);
-  rssi_param_.assign(worker_size, 1.0);
-  waiting_param_.assign(worker_size, 0.1);
-  error_param_.assign(worker_size, 1.0);
+TfLiteStatus CloudThermalModel::Init(int32_t window_size) {
   window_size_ = window_size;
   return kTfLiteOk;
 }
 
-vector<thermal_t> CloudThermalModel::Predict(const Subgraph* subgraph, 
-                                             const int64_t latency, 
-                                             std::vector<thermal_t> current_temp) {
-  return current_temp;
+thermal_t CloudThermalModel::Predict(const Subgraph* subgraph, 
+                                     const int64_t latency, 
+                                     std::vector<thermal_t> current_temp) {
+  return current_temp[wid_];
   // Get temperature from resource monitor
   // vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
 

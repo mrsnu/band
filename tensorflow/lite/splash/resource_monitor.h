@@ -74,10 +74,10 @@ class ResourceMonitor {
   std::vector<thermal_t> GetAllTemperature();
   std::vector<freq_t> GetAllFrequency();
 
- private:
   thermal_t GetTemperature(worker_id_t wid);
   freq_t GetFrequency(worker_id_t wid);
 
+ private:
   bool CheckPathSanity(path_t path);
 
   std::vector<path_t> tz_path_table_;

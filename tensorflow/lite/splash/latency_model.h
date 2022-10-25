@@ -15,7 +15,8 @@ class Subgraph;
 
 class ILatencyModel {
  public:
-  ILatencyModel(worker_id_t wid) : wid_(wid) {}
+  ILatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor) 
+    : wid_(wid), resource_monitor_(resource_monitor) {}
 
   // init model parameters with default values
   virtual TfLiteStatus Init() = 0;
@@ -35,8 +36,13 @@ class ILatencyModel {
     return wid_;
   }
 
+  ResourceMonitor& GetResourceMonitor() {
+    return resource_monitor_;
+  }
+
  protected:
   worker_id_t wid_;
+  ResourceMonitor& resource_monitor_;
 
   double smoothing_factor_ = 0.1;
 };

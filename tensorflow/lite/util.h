@@ -131,7 +131,7 @@ struct Job {
   std::list<int> previous_subgraph_indices;
 
   std::vector<thermal_t> real_temp;
-  std::vector<thermal_t> estimated_temp;
+  thermal_t estimated_temp;
   std::vector<thermal_t> before_temp;
   std::vector<thermal_t> after_temp;
   std::vector<freq_t> frequency;
