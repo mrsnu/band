@@ -1,5 +1,6 @@
 
 import argparse
+from genericpath import isfile
 import os
 import platform
 import shlex
@@ -12,7 +13,7 @@ BASE_DIR = 'test_bin'
 
 
 def run_cmd(cmd):
-    print(cmd)
+    # print(cmd)
     args = shlex.split(cmd)
     subprocess.call(args, cwd=os.getcwd())
 
@@ -53,19 +54,36 @@ def test_local(enable_xnnpack=False, debug=False):
 
 def test_android(enable_xnnpack=False, debug=False, docker=False):
     build_command = f'bazel build --config=android_arm64 --strip always  {get_options(False, debug)} band/test/...'
+    if docker:
+        run_cmd(f'sh script/docker_util.sh -r {build_command}')
+        # create a local path
+        subprocess.call(['mkdir', '-p', f'{get_dst_path("armv8-a", debug)}'])
+        run_cmd(
+            f'sh script/docker_util.sh -d bazel-bin/band/test {get_dst_path("armv8-a", debug)}')
+    elif platform.system() == 'Linux':
+        run_cmd(f'{build_command}')
+        copy('bazel-bin/band/test', {get_dst_path("armv8-a", debug)})
 
-    # todo: push binaries with test data to device through adb
+    # TODO(dostos): filter out tests for android only from above or suppress output from them below
 
     temp_dir_name = next(tempfile._get_candidate_names())
-
+    print("Copy test data to device")
     run_cmd(
-        f'adb -d push {get_dst_path("armv8-a", debug)} /data/local/tmp/{temp_dir_name}')
+        f'adb -d push band/test /data/local/tmp/{temp_dir_name}/band/test')
+    for test_file in os.listdir(f'{get_dst_path("armv8-a", debug)}/test'):
+        # Check whether the given path is binary and file
+        if test_file.find('.') == -1 and os.path.isfile(f'{get_dst_path("armv8-a", debug)}/test/{test_file}'):
+            print(f'-----------TEST : {test_file}-----------')
+            run_cmd(
+                f'adb -d push {get_dst_path("armv8-a", debug)}/test/{test_file} /data/local/tmp/{temp_dir_name}')
+            run_cmd(
+                f'adb -d shell chmod 777 /data/local/tmp/{temp_dir_name}/{test_file}')
+            run_cmd(
+                f'adb -d shell cd /data/local/tmp/{temp_dir_name} && ./{test_file}')
+
+    print("Clean up test directory from device")
     run_cmd(
-        f'adb shell chmod 777 /data/local/tmp/{temp_dir_name}')
-
-    # todo: update execution permissions & run binaries
-
-    # todo: report results
+        f'adb -d shell rm -r /data/local/tmp/{temp_dir_name}')
 
 
 if __name__ == '__main__':
