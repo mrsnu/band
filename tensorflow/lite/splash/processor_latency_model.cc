@@ -7,7 +7,7 @@
 #include "tensorflow/lite/builtin_ops.h"
 
 #if defined(__ANDROID__)
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "thermal", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 #endif // defined(__ANDROID__)
 
@@ -73,9 +73,23 @@ bool ProcessorLatencyModel::IsThrottled(int32_t model_id, int64_t latency, therm
     return false;
   }
   int64_t prev_latency = model_latency_table_[model_id];
-  if (latency - prev_latency > prev_latency * throttled_diff_rate_ && current_temp > throttled_temp_min_) {
-    return true;
+  int64_t diff = latency - prev_latency;
+  int64_t target = (int64_t) (prev_latency * throttled_diff_rate_);
+  if (diff > target) {
+    // LOGI("PLM::Newly Throttling detected (latency) = %lld", latency);
+    // LOGI("PLM::Newly Throttling detected (prev_latency) = %lld", prev_latency);
+    // LOGI("PLM::Newly Throttling detected (diff) = %lld", diff);
+    // LOGI("PLM::Newly Throttling detected (target) = %lld", target);
+    if (current_temp > throttled_temp_min_) {
+      throttle_count_++;
+      if (throttle_count_ > throttle_count_threshold_) {
+        LOGI("PLM::Newly Throttling detected current_temp = %d", current_temp);
+        return true;
+      }
+    }
   }
+  throttle_count_ = 0;
+  return false;
 }
 
 TfLiteStatus ProcessorLatencyModel::UpdateThrottledLatency(int32_t model_id, int64_t latency) {

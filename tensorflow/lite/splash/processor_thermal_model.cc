@@ -28,9 +28,8 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t window_size) {
 thermal_t ProcessorThermalModel::Predict(const Subgraph* subgraph, 
                                          const int64_t latency, 
                                          std::vector<thermal_t> current_temp) {
-  int64_t start_time = profiling::time::NowMicros();
   vector<int32_t> regressor;
-  if (log_.size() < 50) {
+  if (log_size_ < 50) {
     // Just return current temp
     return current_temp[wid_];
   }
@@ -57,7 +56,6 @@ thermal_t ProcessorThermalModel::Predict(const Subgraph* subgraph,
   for (int i = 0; i < regressor.size(); i++) {
     future_temperature += regressor[i] * model_param_[i];
   }
-  LOGI("ProcessorThermalModel::Predict time = %lld", (profiling::time::NowMicros() - start_time));
   return future_temperature; 
 }
 
@@ -72,42 +70,25 @@ void ProcessorThermalModel::PrintParameters() {
 }
 
 TfLiteStatus ProcessorThermalModel::Update(Job job) {
-  int64_t start_time = profiling::time::NowMicros();
-  // Add job to log table
-  ThermalLog log(job);
-  if (log_.size() > window_size_) {
-    log_.pop_front();
+  log_size_++;
+  if (log_size_ <= window_size_) {
+    X.conservativeResize(log_size_, 9);
+    Y.conservativeResize(log_size_, 1);
   }
-  log_.push_back(log);
+  int log_index = (log_size_ - 1) % window_size_;
+  X.row(log_index) << job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], job.frequency[0], job.frequency[1], job.latency, 1.0;
+  Y.row(log_index) << job.after_temp[wid_];
 
-  if (log_.size() < 50) {
-    LOGI("ProcessorThermalModel::Update Not enough data : %d", log_.size());
+  if (log_size_ < 50) {
+    LOGI("ProcessorThermalModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }
 
   // Update parameters via normal equation with log table
-  Eigen::MatrixXd X;
-  X.resize(log_.size(), 9);
-  Eigen::VectorXd Y;
-  Y.resize(log_.size(), 1);
-  for (auto i = 0; i < log_.size(); i++) {
-    // TODO : init matrix with vector more efficient way
-    X(i, 0) = log_[i].before_temp[0];
-    X(i, 1) = log_[i].before_temp[1];
-    X(i, 2) = log_[i].before_temp[2];
-    X(i, 3) = log_[i].before_temp[3];
-    X(i, 4) = log_[i].before_temp[4];
-    X(i, 5) = log_[i].frequency[0];
-    X(i, 6) = log_[i].frequency[1];
-    X(i, 7) = log_[i].latency;
-    X(i, 8) = 1.0;
-    Y(i, 0) = log_[i].after_temp[wid_];
-  }
   Eigen::Matrix<double, 1, 9> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
   for (auto i = 0; i < model_param_.size(); i++) {
     model_param_[i] = theta(0, i); 
   }
-  LOGI("ProcessorThermalModel::Update time = %lld", (profiling::time::NowMicros() - start_time));
   return kTfLiteOk;
 }
 

@@ -57,7 +57,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
       target_subgraph->GetKey().worker_id, target_subgraph, 
       workers[target_subgraph->GetKey().worker_id].get()->GetEstimatedEndTemperature());
 
-    LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
+    // LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
     requests.pop_front();
     EnqueueAction(to_execute, target_subgraph);
   }

@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 
+#include "third_party/eigen3/Eigen/Core"
+#include "third_party/eigen3/Eigen/Cholesky"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/core/subgraph.h"
@@ -50,7 +52,9 @@ class ProcessorThermalModel : public IThermalModel {
  
  private:
   // Log buffer
-  std::deque<ThermalLog> log_;
+  Eigen::MatrixXd X;
+  Eigen::VectorXd Y;
+  uint32_t log_size_ = 0;
   int32_t window_size_;
   
   // Model parameter
