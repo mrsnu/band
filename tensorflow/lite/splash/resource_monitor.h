@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <cassert>
+#include <thread>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
@@ -28,15 +29,21 @@ class ResourceMonitor {
 
   TfLiteStatus Init(ResourceConfig& config);
 
+  void Monitor();
+
   inline void InitTables(int tz_size, int freq_size) {
     for (int i = 0; i < tz_size ; i++) {
       tz_path_table_.push_back("");
       throttling_threshold_table_.push_back(INT_MAX);
       target_tz_path_table_.push_back("");
       target_threshold_table_.push_back(INT_MAX);
+
+      temp_table_.push_back(0);
+      target_temp_table_.push_back(0);
     }
     for (int i = 0; i < freq_size ; i++) {
       freq_path_table_.push_back("");
+      freq_table_.push_back(0);
     }
   }
 
@@ -94,22 +101,49 @@ class ResourceMonitor {
     return kTfLiteOk;
   }
 
-  std::vector<thermal_t> GetAllTemperature();
-  std::vector<thermal_t> GetAllTargetTemperature();
-  std::vector<freq_t> GetAllFrequency();
+  inline std::vector<thermal_t> GetAllTemperature() {
+    return temp_table_;
+  }
 
-  thermal_t GetTemperature(worker_id_t wid);
-  thermal_t GetTargetTemperature(worker_id_t wid);
-  freq_t GetFrequency(worker_id_t wid);
+  inline std::vector<thermal_t> GetAllTargetTemperature() {
+    return target_temp_table_;
+  }
+
+  std::vector<freq_t> GetAllFrequency() {
+    return freq_table_;
+  }
+
+  inline thermal_t GetTemperature(worker_id_t wid) {
+    return temp_table_[wid];
+  }
+
+  inline thermal_t GetTargetTemperature(worker_id_t wid) {
+    return target_temp_table_[wid];
+  }
+
+  inline freq_t GetFrequency(worker_id_t wid) {
+    return freq_table_[wid];
+  }
 
  private:
   bool CheckPathSanity(path_t path);
 
+  thermal_t ParseTemperature(worker_id_t wid);
+  thermal_t ParseTargetTemperature(worker_id_t wid);
+  freq_t ParseFrequency(worker_id_t wid);
+
+  std::thread monitor_thread_;
+
   std::vector<path_t> tz_path_table_;
   std::vector<path_t> freq_path_table_;
-  std::vector<thermal_t> throttling_threshold_table_;
   std::vector<path_t> target_tz_path_table_;
+
+  std::vector<thermal_t> throttling_threshold_table_;
   std::vector<thermal_t> target_threshold_table_;
+
+  std::vector<thermal_t> temp_table_;
+  std::vector<freq_t> freq_table_;
+  std::vector<thermal_t> target_temp_table_;
 };
 
 } // namespace impl

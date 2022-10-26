@@ -36,7 +36,27 @@ TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
     SetTargetThreshold(i, config.target_threshold[i]);
   }
   LOGI("Init ends");
+  monitor_thread_ = std::thread([this] { this->Monitor(); });
   return kTfLiteOk;
+}
+
+void ResourceMonitor::Monitor() {
+  while (true) {
+    // Update temp
+    std::vector<thermal_t> ret(kTfLiteNumDevices);
+    for (int i = 0; i < temp_table_.size(); i++) {
+      temp_table_[i] = ParseTemperature(i);
+    }
+    // Update frequency
+    for (int i = 0; i < freq_table_.size(); i++) {
+      freq_table_[i] = ParseFrequency(i);
+    }
+    // Update target temp
+    for (int i = 0; i < target_temp_table_.size(); i++) {
+      target_temp_table_[i] = ParseTargetTemperature(i);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
 }
 
 bool ResourceMonitor::CheckPathSanity(std::string path) {
@@ -50,15 +70,7 @@ bool ResourceMonitor::CheckPathSanity(std::string path) {
   return true;
 }
 
-std::vector<thermal_t> ResourceMonitor::GetAllTemperature() {
-  std::vector<thermal_t> ret(kTfLiteNumDevices);
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
-    ret[i] = GetTemperature(i);
-  }
-  return ret;
-}
-
-thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
+thermal_t ResourceMonitor::ParseTemperature(worker_id_t wid) {
   std::ifstream fin;
   thermal_t temperature_curr = -1;
   fin.open(GetThermalZonePath(wid));
@@ -68,15 +80,7 @@ thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
   return temperature_curr;
 }
 
-std::vector<thermal_t> ResourceMonitor::GetAllTargetTemperature() {
-  std::vector<thermal_t> ret(kTfLiteNumDevices);
-  for (int i = 0; i < kTfLiteNumDevices; i++) {
-    ret[i] = GetTargetTemperature(i);
-  }
-  return ret;
-}
-
-thermal_t ResourceMonitor::GetTargetTemperature(worker_id_t wid) {
+thermal_t ResourceMonitor::ParseTargetTemperature(worker_id_t wid) {
   std::ifstream fin;
   thermal_t temperature_curr = -1;
   fin.open(GetTargetThermalZonePath(wid));
@@ -86,15 +90,7 @@ thermal_t ResourceMonitor::GetTargetTemperature(worker_id_t wid) {
   return temperature_curr;
 }
 
-std::vector<freq_t> ResourceMonitor::GetAllFrequency() {
-  std::vector<freq_t> ret(freq_path_table_.size());
-  for (int i = 0; i < freq_path_table_.size(); i++) {
-    ret[i] = GetFrequency(i);
-  }
-  return ret;
-}
-
-freq_t ResourceMonitor::GetFrequency(worker_id_t wid) {
+freq_t ResourceMonitor::ParseFrequency(worker_id_t wid) {
   std::ifstream fin;
   freq_t freq_curr = -1;
   fin.open(GetFreqPath(wid));
@@ -103,6 +99,7 @@ freq_t ResourceMonitor::GetFrequency(worker_id_t wid) {
   }
   return freq_curr;
 }
+
 
 } // namespace impl
 } // namespace tflite

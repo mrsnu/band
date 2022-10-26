@@ -28,8 +28,8 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
       }
       int64_t finish_time = worker->GetEstimatedFinishTime();
       int64_t latency = model_manager_->GetPredictedLatency(worker->GetId(), model_id);
-      LOGI("[TAS] worker %d finish_time = [%lld], latency = [%lld]", worker->GetId(), finish_time, latency);
-      LOGI("[TAS] earliest_finish_time = %lld value = %lld", earliest_finish_time, finish_time + latency);
+      // LOGI("[TAS] worker %d finish_time = [%lld], latency = [%lld]", worker->GetId(), finish_time, latency);
+      // LOGI("[TAS] earliest_finish_time = %lld value = %lld", earliest_finish_time, finish_time + latency);
       if (earliest_finish_time > finish_time + latency) {
         earliest_finish_time = finish_time + latency;
         shortest_latency = latency;
@@ -57,7 +57,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     //   target_subgraph->GetKey().worker_id, target_subgraph, 
     //   workers[target_subgraph->GetKey().worker_id].get()->GetEstimatedEndTemperature());
 
-    LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
+    // LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
     requests.pop_front();
     EnqueueAction(to_execute, target_subgraph);
   }
