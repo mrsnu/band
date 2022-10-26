@@ -63,7 +63,7 @@ def build_linux(debug=False):
 
 def build_android(enable_xnnpack=False, debug=False):
     run_cmd(
-        f'bazel build --config=android_arm64 --strip always  {get_options(False, debug)} band/c:band_c')
+        f'bazel build --config=android_arm64 --strip always {get_options(enable_xnnpack, debug)} band/c:band_c')
     copy('bazel-bin/band/c/libband_c.so',
          get_dst_path('armv8-a', debug))
 

@@ -15,7 +15,7 @@ BASE_DIR = 'test_bin'
 def run_cmd(cmd):
     # print(cmd)
     args = shlex.split(cmd)
-    subprocess.call(args, cwd=os.getcwd())
+    subprocess.call(args, cwd=os.getcwd(), stderr=None)
 
 
 def copy(src, dst):
@@ -53,7 +53,8 @@ def test_local(enable_xnnpack=False, debug=False):
 
 
 def test_android(enable_xnnpack=False, debug=False, docker=False):
-    build_command = f'bazel build --config=android_arm64 --strip always  {get_options(False, debug)} band/test/...'
+    # build android targets only (specified in band_cc_android_test tags)
+    build_command = f'bazel build --config=android_arm64 --build_tag_filters=android --strip always  {get_options(False, debug)} band/test/...'
     if docker:
         run_cmd(f'sh script/docker_util.sh -r {build_command}')
         # create a local path
@@ -63,8 +64,6 @@ def test_android(enable_xnnpack=False, debug=False, docker=False):
     elif platform.system() == 'Linux':
         run_cmd(f'{build_command}')
         copy('bazel-bin/band/test', {get_dst_path("armv8-a", debug)})
-
-    # TODO(dostos): filter out tests for android only from above or suppress output from them below
 
     temp_dir_name = next(tempfile._get_candidate_names())
     print("Copy test data to device")

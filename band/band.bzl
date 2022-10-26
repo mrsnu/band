@@ -141,6 +141,9 @@ def band_cc_android_test(
             clean_dep("//band:android"): True,
             "//conditions:default": False,
         }),
+        tags = [
+            "android"
+        ],
         **kwargs):
     """Builds a standalone test for android device when android config is on."""
     if compile_binary == True:
@@ -148,6 +151,7 @@ def band_cc_android_test(
             name = name,
             copts = copts,
             linkopts = linkopts,
+            tags = tags,
             linkstatic = linkstatic,
             **kwargs
         )
@@ -156,6 +160,7 @@ def band_cc_android_test(
             name = name,
             copts = copts,
             linkopts = linkopts,
+            tags = tags,
             linkstatic = linkstatic,
             **kwargs
         )
