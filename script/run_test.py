@@ -52,9 +52,9 @@ def test_local(enable_xnnpack=False, debug=False):
         f'bazel test {get_options(enable_xnnpack, debug)} band/test/...')
 
 
-def test_android(enable_xnnpack=False, debug=False, docker=False):
+def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False):
     # build android targets only (specified in band_cc_android_test tags)
-    build_command = f'bazel clean && bazel build --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
+    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --jobs=`nproc --all` --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
     if docker:
         run_cmd(f'sh script/docker_util.sh -r {build_command}')
         # create a local path
@@ -79,7 +79,6 @@ def test_android(enable_xnnpack=False, debug=False, docker=False):
                 f'adb -d shell chmod 777 /data/local/tmp/{temp_dir_name}/{test_file}')
             run_cmd(
                 f'adb -d shell cd /data/local/tmp/{temp_dir_name} && ./{test_file}')
-
     print("Clean up test directory from device")
     run_cmd(
         f'adb -d shell rm -r /data/local/tmp/{temp_dir_name}')
@@ -99,13 +98,15 @@ if __name__ == '__main__':
                         help='Build with XNNPACK')
     parser.add_argument('-debug', action="store_true", default=False,
                         help='Build debug (default = release)')
+    parser.add_argument('-rebuild', action="store_true", default=False,
+                        help='Re-build test target')
 
     args = parser.parse_args()
 
     if args.android:
         # Need to set Android build option in ./configure
         print('Test Android')
-        test_android(args.xnnpack, args.debug, args.docker)
+        test_android(args.xnnpack, args.debug, args.docker, args.rebuild)
     else:
         print(f'Test {platform_name}')
         test_local(args.xnnpack, args.debug)
