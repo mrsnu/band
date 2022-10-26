@@ -37,6 +37,29 @@ thermal_t CloudThermalModel::Predict(const Subgraph* subgraph,
   // return EstimateFutureTemperature(temp, input_size, output_size, rssi, waiting_time);
 }
 
+thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph, 
+                                     const int64_t latency, 
+                                     std::vector<thermal_t> current_temp) {
+  thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_);
+  return target_temp;
+  // Get temperature from resource monitor
+  // vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
+
+  // // Get input size
+  // int64_t input_size = EstimateInputSize(subgraph);
+
+  // // Get ouput size
+  // int64_t output_size = EstimateOutputSize(subgraph);
+
+  // // Get rssi value from resource monitor
+  // int64_t rssi = -50;
+
+  // // Get expected latency from server from resource monitor
+  // int64_t waiting_time = GetResourceMonitor().GetThrottlingThreshold(GetWorkerId());
+
+  // return EstimateFutureTemperature(temp, input_size, output_size, rssi, waiting_time);
+}
+
 vector<thermal_t> CloudThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,
                                                                const int64_t input_size,
                                                                const int64_t output_size,

@@ -15,28 +15,6 @@
 namespace tflite {
 namespace impl {
 
-struct ThermalLog {
-  explicit ThermalLog(Job job) {
-    model_id = job.model_id;
-    subgraph_idx = job.subgraph_idx;
-    worker_id = job.worker_id;
-    
-    latency = job.latency;
-    before_temp = job.before_temp;
-    after_temp = job.after_temp;
-    frequency = job.frequency;
-  }
-
-  int model_id;
-  int subgraph_idx = -1; // For subgraph partitioning support in the future
-  int worker_id = -1;
-
-  int64_t latency = 0;
-  std::vector<thermal_t> before_temp;
-  std::vector<thermal_t> after_temp;
-  std::vector<freq_t> frequency;
-};
-
 class ProcessorThermalModel : public IThermalModel {
  public:
   ProcessorThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
@@ -48,17 +26,26 @@ class ProcessorThermalModel : public IThermalModel {
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
+  thermal_t PredictTarget(const Subgraph* subgraph, 
+                    const int64_t latency, 
+                    std::vector<thermal_t> current_temp) override;
+
   TfLiteStatus Update(Job job) override;
  
  private:
   // Log buffer
   Eigen::MatrixXd X;
+  Eigen::MatrixXd targetX;
   Eigen::VectorXd Y;
+  Eigen::VectorXd targetY;
   uint32_t log_size_ = 0;
   int32_t window_size_;
   
   // Model parameter
   std::vector<double> model_param_; // [temp_c, temp_g, temp_d, temp_n, freq_c, freq_g, latency, error]
+
+  // Target Model parameter
+  std::vector<double> target_model_param_; // Same structure with model_param_
 
   void PrintParameters();
 };

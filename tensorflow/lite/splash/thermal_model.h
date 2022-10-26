@@ -28,6 +28,12 @@ class IThermalModel {
                             const int64_t latency, 
                             std::vector<thermal_t> current_temp) = 0;
 
+  // Get an estimation value of target future temperature 
+  // after executing inference of the input model
+  virtual thermal_t PredictTarget(const Subgraph* subgraph, 
+                                  const int64_t latency, 
+                                  std::vector<thermal_t> current_temp) = 0;
+
   // Update model parameters with the prediction error
   virtual TfLiteStatus Update(Job job) = 0;
 
@@ -97,8 +103,6 @@ class IThermalModel {
  protected:
   worker_id_t wid_;
   ResourceMonitor& resource_monitor_;
-
-  double gain_ = 0.0001;
 };
 
 } // namespace impl

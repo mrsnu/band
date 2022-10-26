@@ -64,9 +64,17 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "after_temp_npu\t"
              << "freq_cpu\t"
              << "freq_gpu\t"
-             << "estimated_temp\t"
+            //  << "estimated_temp\t"
              << "prediction_error_temp\t"
              << "prediction_error_latency\t"
+             << "before_target_temp_cpu\t"
+             << "before_target_temp_gpu\t"
+             << "before_target_temp_dsp\t"
+             << "before_target_temp_npu\t"
+             << "after_target_temp_cpu\t"
+             << "after_target_temp_gpu\t"
+             << "after_target_temp_dsp\t"
+             << "after_target_temp_npu\t"
              << "job_status\n";
     log_file.close();
   }
@@ -376,9 +384,19 @@ void Planner::FlushFinishedJobs() {
                << job.frequency[kTfLiteGPU]<< "\t"
               //  << job.frequency[kTfLiteDSP]<< "\t"
               //  << job.frequency[kTfLiteNPU]<< "\t"
-               << job.estimated_temp << "\t"
-               << job.after_temp[job.worker_id] - job.estimated_temp << "\t"
+              //  << job.estimated_temp << "\t"
+               << job.after_temp[job.worker_id] - job.before_temp[job.worker_id]<< "\t"
                << job.latency - job.estimated_latency << "\t"
+               << job.before_target_temp[kTfLiteCPU] << "\t"
+               << job.before_target_temp[kTfLiteGPU] << "\t"
+               << job.before_target_temp[kTfLiteDSP] << "\t"
+               << job.before_target_temp[kTfLiteNPU] << "\t"
+              //  << job.before_temp[kTfLiteCLOUD] << "\t"
+               << job.after_target_temp[kTfLiteCPU] << "\t"
+               << job.after_target_temp[kTfLiteGPU] << "\t"
+               << job.after_target_temp[kTfLiteDSP] << "\t"
+               << job.after_target_temp[kTfLiteNPU] << "\t"
+              //  << job.after_temp[kTfLiteCLOUD] << "\t"
                << job.status << "\n";
     }
     log_file.close();

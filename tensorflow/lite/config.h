@@ -77,6 +77,8 @@ struct ResourceConfig {
   std::vector<std::string> tz_path;
   std::vector<std::string> freq_path;
   std::vector<thermal_t> threshold;
+  std::vector<std::string> target_tz_path;
+  std::vector<thermal_t> target_threshold;
   int32_t model_update_window_size = 750;
 };
 

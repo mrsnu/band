@@ -27,6 +27,14 @@ TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
     LOGI("threshold value : %d", config.threshold[i]);
     SetThrottlingThreshold(i, config.threshold[i]);
   }
+  for (int i = 0; i < config.target_tz_path.size(); i++) {
+    LOGI("target_tz_path : %s", config.target_tz_path[i].c_str());
+    SetTargetThermalZonePath(i, config.target_tz_path[i]);
+  }
+  for (int i = 0; i < config.target_threshold.size(); i++) {
+    LOGI("target_threshold value : %d", config.target_threshold[i]);
+    SetTargetThreshold(i, config.target_threshold[i]);
+  }
   LOGI("Init ends");
   return kTfLiteOk;
 }
@@ -51,10 +59,27 @@ std::vector<thermal_t> ResourceMonitor::GetAllTemperature() {
 }
 
 thermal_t ResourceMonitor::GetTemperature(worker_id_t wid) {
-  // Ensure that the path is sanitized.
   std::ifstream fin;
   thermal_t temperature_curr = -1;
   fin.open(GetThermalZonePath(wid));
+  if (fin.is_open()) {
+    fin >> temperature_curr;
+  }
+  return temperature_curr;
+}
+
+std::vector<thermal_t> ResourceMonitor::GetAllTargetTemperature() {
+  std::vector<thermal_t> ret(kTfLiteNumDevices);
+  for (int i = 0; i < kTfLiteNumDevices; i++) {
+    ret[i] = GetTargetTemperature(i);
+  }
+  return ret;
+}
+
+thermal_t ResourceMonitor::GetTargetTemperature(worker_id_t wid) {
+  std::ifstream fin;
+  thermal_t temperature_curr = -1;
+  fin.open(GetTargetThermalZonePath(wid));
   if (fin.is_open()) {
     fin >> temperature_curr;
   }

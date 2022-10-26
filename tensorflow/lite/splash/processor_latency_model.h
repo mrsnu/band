@@ -30,7 +30,7 @@ class ProcessorLatencyModel : public ILatencyModel {
   std::unordered_map<int, int64_t> model_latency_table_; // {model_id, latency}
   std::unordered_map<int, int64_t> model_throttled_latency_table_; // {model_id, latency}
 
-  float throttled_diff_rate_ = 1;
+  float throttled_diff_rate_ = 0.1;
   int throttle_count_ = 0;
   int throttle_count_threshold_ = 5;
   thermal_t throttled_temp_min_ = 40000;

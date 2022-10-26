@@ -22,14 +22,14 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     for (auto& worker : workers) {
       int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker->GetId());
       Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
-      if (!model_manager_->IsAvailableWorker(worker->GetId(), subgraph, worker->GetEstimatedEndTemperature())) {
+      if (!model_manager_->IsAvailableWorker(worker->GetId(), subgraph)) {
         LOGI("[TAS] Throttling predicted! = Worker %d", worker->GetId());
         continue;
       }
       int64_t finish_time = worker->GetEstimatedFinishTime();
       int64_t latency = model_manager_->GetPredictedLatency(worker->GetId(), model_id);
-      // LOGI("[TAS] worker %d finish_time = [%lld], latency = [%lld]", worker->GetId(), finish_time, latency);
-      // LOGI("[TAS] earliest_finish_time = %lld value = %lld", earliest_finish_time, finish_time + latency);
+      LOGI("[TAS] worker %d finish_time = [%lld], latency = [%lld]", worker->GetId(), finish_time, latency);
+      LOGI("[TAS] earliest_finish_time = %lld value = %lld", earliest_finish_time, finish_time + latency);
       if (earliest_finish_time > finish_time + latency) {
         earliest_finish_time = finish_time + latency;
         shortest_latency = latency;
@@ -53,11 +53,11 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     // insert estimated_latency, finish_time, temp 
     to_execute.estimated_latency = shortest_latency;
     to_execute.estimated_finish_time = earliest_finish_time;
-    to_execute.estimated_temp = model_manager_->GetPredictedTemperature(
-      target_subgraph->GetKey().worker_id, target_subgraph, 
-      workers[target_subgraph->GetKey().worker_id].get()->GetEstimatedEndTemperature());
+    // to_execute.estimated_temp = model_manager_->GetPredictedTemperature(
+    //   target_subgraph->GetKey().worker_id, target_subgraph, 
+    //   workers[target_subgraph->GetKey().worker_id].get()->GetEstimatedEndTemperature());
 
-    // LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
+    LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
     requests.pop_front();
     EnqueueAction(to_execute, target_subgraph);
   }

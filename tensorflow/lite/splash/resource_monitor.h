@@ -32,6 +32,8 @@ class ResourceMonitor {
     for (int i = 0; i < tz_size ; i++) {
       tz_path_table_.push_back("");
       throttling_threshold_table_.push_back(INT_MAX);
+      target_tz_path_table_.push_back("");
+      target_threshold_table_.push_back(INT_MAX);
     }
     for (int i = 0; i < freq_size ; i++) {
       freq_path_table_.push_back("");
@@ -47,6 +49,18 @@ class ResourceMonitor {
       return kTfLiteError;
     }
     tz_path_table_[wid] = path;
+    return kTfLiteOk;
+  }
+
+  inline std::string GetTargetThermalZonePath(worker_id_t wid) {
+    return target_tz_path_table_[wid];
+  }
+
+  inline TfLiteStatus SetTargetThermalZonePath(worker_id_t wid, path_t path) {
+    if (!CheckPathSanity(path)) {
+      return kTfLiteError;
+    }
+    target_tz_path_table_[wid] = path;
     return kTfLiteOk;
   }
 
@@ -71,10 +85,21 @@ class ResourceMonitor {
     return kTfLiteOk;
   }
 
+  inline thermal_t GetTargetThreshold(worker_id_t wid) {
+    return target_threshold_table_[wid];
+  }
+
+  inline TfLiteStatus SetTargetThreshold(worker_id_t wid, thermal_t value) {
+    target_threshold_table_[wid] = value;
+    return kTfLiteOk;
+  }
+
   std::vector<thermal_t> GetAllTemperature();
+  std::vector<thermal_t> GetAllTargetTemperature();
   std::vector<freq_t> GetAllFrequency();
 
   thermal_t GetTemperature(worker_id_t wid);
+  thermal_t GetTargetTemperature(worker_id_t wid);
   freq_t GetFrequency(worker_id_t wid);
 
  private:
@@ -83,6 +108,8 @@ class ResourceMonitor {
   std::vector<path_t> tz_path_table_;
   std::vector<path_t> freq_path_table_;
   std::vector<thermal_t> throttling_threshold_table_;
+  std::vector<path_t> target_tz_path_table_;
+  std::vector<thermal_t> target_threshold_table_;
 };
 
 } // namespace impl

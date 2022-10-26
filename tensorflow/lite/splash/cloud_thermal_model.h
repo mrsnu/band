@@ -24,6 +24,10 @@ class CloudThermalModel : public IThermalModel {
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
+  thermal_t PredictTarget(const Subgraph* subgraph, 
+                    const int64_t latency, 
+                    std::vector<thermal_t> current_temp) override;
+
   TfLiteStatus Update(Job job) override;
 
  private:

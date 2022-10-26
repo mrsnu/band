@@ -30,7 +30,7 @@ class ModelManager {
   TfLiteStatus Init(ResourceConfig& config);
 
   // Check if it's throttled or will occur thermal throttling
-  bool IsAvailableWorker(worker_id_t wid, Subgraph* subgraph, std::vector<thermal_t> current_temp);
+  bool IsAvailableWorker(worker_id_t wid, Subgraph* subgraph);
 
   thermal_t GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph, std::vector<thermal_t> current_temp);
   int64_t GetPredictedLatency(worker_id_t wid, int32_t model_id);

@@ -110,6 +110,7 @@ void DeviceQueueWorker::Work() {
         lock.lock();
         current_job.invoke_time = profiling::time::NowMicros();
         current_job.before_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+        current_job.before_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
         current_job.frequency = planner_ptr->GetResourceMonitor().GetAllFrequency(); 
         current_job.estimated_finish_time = current_job.invoke_time + current_job.estimated_latency; 
         lock.unlock();
@@ -118,6 +119,7 @@ void DeviceQueueWorker::Work() {
         if (status == kTfLiteOk) {
           current_job.end_time = profiling::time::NowMicros();
           current_job.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+          current_job.after_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
           current_job.latency = current_job.end_time - current_job.invoke_time;
 
           planner_ptr->GetModelManager()->Update(current_job);

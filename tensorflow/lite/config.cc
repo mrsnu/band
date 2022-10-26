@@ -148,7 +148,7 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   if (!root["resources"].isNull()) {
     for (int i = 0; i < root["resources"].size(); ++i) {
       auto resource_config_json = root["resources"][i];
-      // 1. worker temperature zone path 
+      // 1. worker thermal_zone path 
       if (!resource_config_json["tz_path"].isNull()) {
         resource_config.tz_path.push_back(resource_config_json["tz_path"].asCString());
       }
@@ -161,6 +161,16 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
       if (!resource_config_json["threshold"].isNull()) {
         resource_config.threshold.push_back(resource_config_json["threshold"].asInt());
       }
+
+      // 4. target thermal_zone path
+      if (!resource_config_json["target_tz_path"].isNull()) {
+        resource_config.target_tz_path.push_back(resource_config_json["target_tz_path"].asCString());
+      }
+
+      // 4. target thermal_zone threshold
+      if (!resource_config_json["target_threshold"].isNull()) {
+        resource_config.target_threshold.push_back(resource_config_json["target_threshold"].asInt());
+      }
     }
   }
 
@@ -168,6 +178,8 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   if (!root["model_update_window_size"].isNull()) {
     resource_config.model_update_window_size = root["model_update_window_size"].asInt();
   }
+
+
   return kTfLiteOk;
 }
 
