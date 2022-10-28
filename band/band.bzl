@@ -141,6 +141,9 @@ def band_cc_android_test(
             clean_dep("//band:android"): True,
             "//conditions:default": False,
         }),
+        tags = [
+            "android"
+        ],
         **kwargs):
     """Builds a standalone test for android device when android config is on."""
     if compile_binary == True:
@@ -148,6 +151,7 @@ def band_cc_android_test(
             name = name,
             copts = copts,
             linkopts = linkopts,
+            tags = tags,
             linkstatic = linkstatic,
             **kwargs
         )
@@ -156,23 +160,24 @@ def band_cc_android_test(
             name = name,
             copts = copts,
             linkopts = linkopts,
+            tags = tags,
             linkstatic = linkstatic,
             **kwargs
         )
 
 def band_cc_shared_object(
-          name,
-          srcs = [],
-          deps = [],
-          data = [],
-          copts = band_copts(),
-          linkopts = band_jni_linkopts(),
-          soversion = None,
-          kernels = [],
-          linkstatic = 1,
-          per_os_targets = False,
-          visibility = None,
-          **kwargs):
+        name,
+        srcs = [],
+        deps = [],
+        data = [],
+        copts = band_copts(),
+        linkopts = band_jni_linkopts(),
+        soversion = None,
+        kernels = [],
+        linkstatic = 1,
+        per_os_targets = False,
+        visibility = None,
+        **kwargs):
     """Builds a shared object for Band"""
     if soversion != None:
         suffix = "." + str(soversion).split(".")[0]
@@ -194,7 +199,7 @@ def band_cc_shared_object(
         names = [(
             name,
             name + suffix,
-            name + longsuffix
+            name + longsuffix,
         )]
 
     for name_os, name_os_major, name_os_full in names:

@@ -56,3 +56,4 @@ log.tsv
 
 # build_c_api
 /bin
+/test_bin

@@ -11,7 +11,8 @@
 namespace Band {
 TEST(CApi, ConfigLoad) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
-  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1, "band/testdata/log.csv");
+  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
+                "band/test/data/log.csv");
   BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandRoundRobin);
   BandAddConfig(b, BAND_MINIMUM_SUBGRAPH_SIZE, /*count=*/1, 7);
   BandAddConfig(b, BAND_SUBGRAPH_PREPARATION_TYPE, /*count=*/1,
@@ -23,7 +24,7 @@ TEST(CApi, ConfigLoad) {
   BandAddConfig(b, BAND_WORKER_CPU_MASKS, /*count=*/2, kBandBig, kBandLittle);
   BandAddConfig(b, BAND_PROFILE_SMOOTHING_FACTOR, /*count=*/1, 0.1f);
   BandAddConfig(b, BAND_PROFILE_DATA_PATH, /*count=*/1,
-                "band/testdata/profile.json");
+                "band/test/data/profile.json");
   BandAddConfig(b, BAND_PROFILE_ONLINE, /*count=*/1, true);
   BandAddConfig(b, BAND_PROFILE_NUM_WARMUPS, /*count=*/1, 1);
   BandAddConfig(b, BAND_PROFILE_NUM_RUNS, /*count=*/1, 1);
@@ -39,14 +40,17 @@ TEST(CApi, ConfigLoad) {
 TEST(CApi, ModelLoad) {
   BandModel* model = BandModelCreate();
   EXPECT_NE(model, nullptr);
-  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/testdata/add.bin"),
+#ifdef BAND_TFLITE
+  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin"),
             kBandOk);
+#endif  // BAND_TFLITE
   BandModelDelete(model);
 }
 
 TEST(CApi, EngineSimpleInvoke) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
-  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1, "band/testdata/log.csv");
+  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
+                "band/test/data/log.csv");
   BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandRoundRobin);
   BandAddConfig(b, BAND_MINIMUM_SUBGRAPH_SIZE, /*count=*/1, 7);
   BandAddConfig(b, BAND_SUBGRAPH_PREPARATION_TYPE, /*count=*/1,
@@ -58,7 +62,7 @@ TEST(CApi, EngineSimpleInvoke) {
   BandAddConfig(b, BAND_WORKER_CPU_MASKS, /*count=*/2, kBandBig, kBandLittle);
   BandAddConfig(b, BAND_PROFILE_SMOOTHING_FACTOR, /*count=*/1, 0.1f);
   BandAddConfig(b, BAND_PROFILE_DATA_PATH, /*count=*/1,
-                "band/testdata/profile.json");
+                "band/test/data/profile.json");
   BandAddConfig(b, BAND_PROFILE_ONLINE, /*count=*/1, true);
   BandAddConfig(b, BAND_PROFILE_NUM_WARMUPS, /*count=*/1, 1);
   BandAddConfig(b, BAND_PROFILE_NUM_RUNS, /*count=*/1, 1);
@@ -69,13 +73,14 @@ TEST(CApi, EngineSimpleInvoke) {
   BandConfig* config = BandConfigCreate(b);
   EXPECT_NE(config, nullptr);
 
-  BandModel* model = BandModelCreate();
-  EXPECT_NE(model, nullptr);
-  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/testdata/add.bin"),
-            kBandOk);
-
   BandEngine* engine = BandEngineCreate(config);
   EXPECT_NE(engine, nullptr);
+
+  BandModel* model = BandModelCreate();
+  EXPECT_NE(model, nullptr);
+#ifdef BAND_TFLITE
+  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin"),
+            kBandOk);
   EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
   EXPECT_EQ(BandEngineGetNumInputTensors(engine, model), 1);
   EXPECT_EQ(BandEngineGetNumOutputTensors(engine, model), 1);
@@ -92,25 +97,29 @@ TEST(CApi, EngineSimpleInvoke) {
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[1], 9.f);
 
-  BandEngineDelete(engine);
   BandTensorDelete(input_tensor);
   BandTensorDelete(output_tensor);
+#endif  // BAND_TFLITE
+  BandEngineDelete(engine);
   BandConfigDelete(config);
   BandModelDelete(model);
 }
 
 TEST(CApi, EngineFixedDeviceInvoke) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
-  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1, "band/testdata/log.csv");
+  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
+                "band/test/data/log.csv");
   BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandFixedDevice);
-  BandAddConfig(b, BAND_MODEL_MODELS, 1, "band/testdata/add.bin");
+  BandAddConfig(b, BAND_MODEL_MODELS, 1, "band/test/data/add.bin");
   BandConfig* config = BandConfigCreate(b);
   EXPECT_NE(config, nullptr);
 
+#ifdef BAND_TFLITE
   BandEngine* engine = BandEngineCreate(config);
   EXPECT_NE(engine, nullptr);
-
   BandEngineDelete(engine);
+#endif  // BAND_TFLITE
+
   BandConfigDelete(config);
 }
 
