@@ -22,7 +22,7 @@ def copy(src, dst):
     subprocess.call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
     # append filename to dst directory
     dst = os.path.join(dst, os.path.basename(src))
-    shutil.copyfile(src, dst)
+    shutil.copytree(src, dst)
 
 
 def patch(file_path, target_str, patched_str):
@@ -54,7 +54,7 @@ def test_local(enable_xnnpack=False, debug=False):
 
 def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False):
     # build android targets only (specified in band_cc_android_test tags)
-    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --jobs=\`nproc --all\` --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
+    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
     if docker:
         run_cmd(f'sh script/docker_util.sh -r {build_command}')
         # create a local path
@@ -63,7 +63,7 @@ def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False)
             f'sh script/docker_util.sh -d bazel-bin/band/test {get_dst_path("armv8-a", debug)}')
     elif platform.system() == 'Linux':
         run_cmd(f'{build_command}')
-        copy('bazel-bin/band/test', {get_dst_path("armv8-a", debug)})
+        copy('bazel-bin/band/test', get_dst_path("armv8-a", debug))
 
     temp_dir_name = next(tempfile._get_candidate_names())
     print("Copy test data to device")
