@@ -54,7 +54,7 @@ def test_local(enable_xnnpack=False, debug=False):
 
 def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False):
     # build android targets only (specified in band_cc_android_test tags)
-    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --jobs=`nproc --all` --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
+    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --jobs=\`nproc --all\` --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
     if docker:
         run_cmd(f'sh script/docker_util.sh -r {build_command}')
         # create a local path
