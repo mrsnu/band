@@ -27,6 +27,7 @@ class UtilCreator : public Creator<IBackendUtil> {
 };
 
 }  // namespace TfLite
+extern bool TfLiteRegisterCreators();
 }  // namespace Band
 
 #endif
