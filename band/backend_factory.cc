@@ -11,7 +11,7 @@ using namespace Interface;
 #ifdef _WIN32
 extern bool TfLiteRegisterCreators();
 #else
-__attribute__((weak)) extern bool TfLiteRegisterCreators();
+__attribute__((weak)) extern bool TfLiteRegisterCreators() { return false; }
 #endif
 #endif
 
