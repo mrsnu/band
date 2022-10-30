@@ -75,7 +75,6 @@ band_cc_android_test(
     name = "cpu_test",
     srcs = ["cpu_test.cc"],
     data = [],
-    linkopts = ["-ldl"],
     deps = [
         "//band:cpu",
         "@com_google_googletest//:gtest",

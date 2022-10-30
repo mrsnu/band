@@ -73,6 +73,7 @@ def band_linkopts_unstripped():
     return select({
         clean_dep("//band:android"): [
             "-latomic",  # Required for some uses of ISO C++11 <atomic> in x86.
+            "-ldl", # Required for `dl_iterate_phdr` 
             "-Wl,--no-export-dynamic",  # Only inc syms referenced by dynamic obj.
             "-Wl,--gc-sections",  # Eliminate unused code and data.
             "-Wl,--as-needed",  # Don't link unused libs.
@@ -126,7 +127,6 @@ def band_cc_android_test(
             clean_dep("//band:android"): [
                 "-pie",
                 "-lm",
-                "-ldl",
                 "-Wl,--rpath=/data/local/tmp/",
             ],
             "//conditions:default": [],
