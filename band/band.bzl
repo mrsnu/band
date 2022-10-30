@@ -126,6 +126,7 @@ def band_cc_android_test(
             clean_dep("//band:android"): [
                 "-pie",
                 "-lm",
+                "-ldl",
                 "-Wl,--rpath=/data/local/tmp/",
             ],
             "//conditions:default": [],

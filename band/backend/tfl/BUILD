@@ -19,6 +19,9 @@ cc_library(
         "tensor.h",
         "util.h",
     ],
+    # force to link Band::TfLiteRegisterCreators (in backend.cc)
+    # to override the weak symbol in //band:backend_factory
+    alwayslink = True,
     deps = [
         "//band:framework",
         "//tensorflow/lite:framework",
