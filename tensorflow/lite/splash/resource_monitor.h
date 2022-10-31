@@ -102,26 +102,32 @@ class ResourceMonitor {
   }
 
   inline std::vector<thermal_t> GetAllTemperature() {
+    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return temp_table_;
   }
 
   inline std::vector<thermal_t> GetAllTargetTemperature() {
+    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return target_temp_table_;
   }
 
   std::vector<freq_t> GetAllFrequency() {
+    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return freq_table_;
   }
 
   inline thermal_t GetTemperature(worker_id_t wid) {
+    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return temp_table_[wid];
   }
 
   inline thermal_t GetTargetTemperature(worker_id_t wid) {
+    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return target_temp_table_[wid];
   }
 
   inline freq_t GetFrequency(worker_id_t wid) {
+    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return freq_table_[wid];
   }
 
@@ -133,6 +139,9 @@ class ResourceMonitor {
   freq_t ParseFrequency(worker_id_t wid);
 
   std::thread monitor_thread_;
+  CpuSet cpu_set_;
+  bool need_cpu_update_ = false;
+  std::mutex cpu_mtx_;
 
   std::vector<path_t> tz_path_table_;
   std::vector<path_t> freq_path_table_;

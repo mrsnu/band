@@ -271,6 +271,7 @@ void DeviceQueueOffloadingWorker::Work() {
       lock.lock();
       current_job.invoke_time = profiling::time::NowMicros();
       current_job.before_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+      current_job.before_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
       current_job.frequency = planner_ptr->GetResourceMonitor().GetAllFrequency(); 
       lock.unlock();
 
@@ -279,15 +280,31 @@ void DeviceQueueOffloadingWorker::Work() {
       // std::string reply = greeter.UploadFile("/data/data/com.aaa.cj.offloading/1GB.bin");
       // std::string reply2 = greeter.DownloadFile("/data/data/com.aaa.cj.offloading/1GB_download.bin");
       // std::cout << "Greeter received: " << reply << std::endl;
-      LOGI("Offloading starts");
-      std::this_thread::sleep_for(std::chrono::milliseconds(40));
-
+      switch (current_job.model_id) {
+        case 0://"retinaface_mbv2_quant_160.tflite":
+          std::this_thread::sleep_for(std::chrono::milliseconds(101));
+          break;
+        case 1://"arc_mbv2_quant.tflite":
+          std::this_thread::sleep_for(std::chrono::milliseconds(27));
+          break;
+        case 2://"arc_res50_quant.tflite":
+          std::this_thread::sleep_for(std::chrono::milliseconds(103));
+          break;
+        case 3://"ICN_quant.tflite":
+          std::this_thread::sleep_for(std::chrono::milliseconds(45));
+          break;
+        default:
+          std::this_thread::sleep_for(std::chrono::milliseconds(40));
+          break;
+      }
       current_job.end_time = profiling::time::NowMicros();
       current_job.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
+      current_job.after_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
       current_job.latency = current_job.end_time - current_job.invoke_time;
       if (current_job.following_jobs.size() != 0) {
         planner_ptr->EnqueueBatch(current_job.following_jobs);
       }
+      // TODO: model update with current job 
       // planner_ptr->GetModelManager()->Update(current_job);
       planner_ptr->EnqueueFinishedJob(current_job);
 

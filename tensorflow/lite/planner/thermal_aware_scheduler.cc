@@ -20,10 +20,13 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     int64_t shortest_latency = INT64_MAX;
     Subgraph * target_subgraph;
     for (auto& worker : workers) {
+      if (worker->GetId() != kTfLiteNPU) {
+        continue;
+      }
       int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker->GetId());
       Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
       if (!model_manager_->IsAvailableWorker(worker->GetId(), subgraph)) {
-        LOGI("[TAS] Throttling predicted! = Worker %d", worker->GetId());
+        // LOGI("[TAS] Throttling predicted! = Worker %d", worker->GetId());
         continue;
       }
       int64_t finish_time = worker->GetEstimatedFinishTime();
@@ -38,7 +41,8 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     }
 
     if (earliest_finish_time == INT64_MAX) {
-      LOGI("[TAS] All workers are throttled! => selects minimize throttled latency");
+      continue;
+      // LOGI("[TAS] All workers are throttled! => selects minimize throttled latency");
       for (auto& worker : workers) {
         int64_t finish_time = worker->GetEstimatedFinishTime();
         int64_t latency = model_manager_->GetPredictedThrottledLatency(worker->GetId(), model_id);
@@ -53,9 +57,8 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     // insert estimated_latency, finish_time, temp 
     to_execute.estimated_latency = shortest_latency;
     to_execute.estimated_finish_time = earliest_finish_time;
-    // to_execute.estimated_temp = model_manager_->GetPredictedTemperature(
-    //   target_subgraph->GetKey().worker_id, target_subgraph, 
-    //   workers[target_subgraph->GetKey().worker_id].get()->GetEstimatedEndTemperature());
+    to_execute.estimated_temp = model_manager_->GetPredictedTemperature(
+      target_subgraph->GetKey().worker_id, target_subgraph);
 
     // LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
     requests.pop_front();

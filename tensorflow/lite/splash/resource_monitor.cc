@@ -37,11 +37,20 @@ TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
   }
   LOGI("Init ends");
   monitor_thread_ = std::thread([this] { this->Monitor(); });
+  cpu_set_ = impl::TfLiteCPUMaskGetSet(kTfLiteLittle);
+  need_cpu_update_ = true;
   return kTfLiteOk;
 }
 
 void ResourceMonitor::Monitor() {
   while (true) {
+    if (need_cpu_update_) {
+      if (SetCPUThreadAffinity(cpu_set_) != kTfLiteOk) {
+        LOGI("[ResourceMonitor] Failed to set cpu thread affinity");
+      } 
+      need_cpu_update_ = false;
+    }
+    std::unique_lock<std::mutex> lock(cpu_mtx_);
     // Update temp
     std::vector<thermal_t> ret(kTfLiteNumDevices);
     for (int i = 0; i < temp_table_.size(); i++) {
@@ -55,6 +64,7 @@ void ResourceMonitor::Monitor() {
     for (int i = 0; i < target_temp_table_.size(); i++) {
       target_temp_table_[i] = ParseTargetTemperature(i);
     }
+    lock.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
 }

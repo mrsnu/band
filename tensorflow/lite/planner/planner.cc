@@ -4,6 +4,7 @@
 
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/planner/baseline_configurable_scheduler.h"
+#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 #include "tensorflow/lite/planner/fixed_device_scheduler.h"
 #include "tensorflow/lite/planner/random_assign_scheduler.h"
 #include "tensorflow/lite/planner/offloading_scheduler.h"
@@ -23,14 +24,14 @@ Planner::Planner(Interpreter* interpreter, ResourceConfig& resource_config) : in
   planner_thread_ = std::thread([this] { this->Plan(); });
 
   // Init a ResourceMonitor instance
-  if (resource_monitor_.Init(resource_config) != kTfLiteOk) {
-    LOGI("ResourceMonitor init fails");
-  }
+  // if (resource_monitor_.Init(resource_config) != kTfLiteOk) {
+  //   LOGI("ResourceMonitor init fails");
+  // }
 
-  model_manager_ = new ModelManager(resource_monitor_);
-  if (model_manager_->Init(resource_config) != kTfLiteOk) {
-    LOGI("ModelManager init fails");
-  }
+  // model_manager_ = new ModelManager(resource_monitor_);
+  // if (model_manager_->Init(resource_config) != kTfLiteOk) {
+  //   LOGI("ModelManager init fails");
+  // }
 }
 
 Planner::~Planner() {
@@ -52,29 +53,29 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "enqueue_time\t"
              << "invoke_time\t"
              << "end_time\t"
-             << "estimated_latency\t"
-             << "latency\t"
-             << "before_temp_cpu\t"
-             << "before_temp_gpu\t"
-             << "before_temp_dsp\t"
-             << "before_temp_npu\t"
-             << "after_temp_cpu\t"
-             << "after_temp_gpu\t"
-             << "after_temp_dsp\t"
-             << "after_temp_npu\t"
-             << "freq_cpu\t"
-             << "freq_gpu\t"
+            //  << "estimated_latency\t"
+            //  << "latency\t"
+            //  << "before_temp_cpu\t"
+            //  << "before_temp_gpu\t"
+            //  << "before_temp_dsp\t"
+            //  << "before_temp_npu\t"
+            //  << "after_temp_cpu\t"
+            //  << "after_temp_gpu\t"
+            //  << "after_temp_dsp\t"
+            //  << "after_temp_npu\t"
+            //  << "freq_cpu\t"
+            //  << "freq_gpu\t"
             //  << "estimated_temp\t"
-             << "prediction_error_temp\t"
-             << "prediction_error_latency\t"
-             << "before_target_temp_cpu\t"
-             << "before_target_temp_gpu\t"
-             << "before_target_temp_dsp\t"
-             << "before_target_temp_npu\t"
-             << "after_target_temp_cpu\t"
-             << "after_target_temp_gpu\t"
-             << "after_target_temp_dsp\t"
-             << "after_target_temp_npu\t"
+            //  << "prediction_error_temp\t"
+            //  << "prediction_error_latency\t"
+            //  << "before_target_temp_cpu\t"
+            // //  << "before_target_temp_gpu\t"
+            // //  << "before_target_temp_dsp\t"
+            // //  << "before_target_temp_npu\t"
+            //  << "after_target_temp_cpu\t"
+            // //  << "after_target_temp_gpu\t"
+            // //  << "after_target_temp_dsp\t"
+            // //  << "after_target_temp_npu\t"
              << "job_status\n";
     log_file.close();
   }
@@ -86,6 +87,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
                          schedulers_.size());
     return kTfLiteError;
   }
+
+  LOGI("Planner init");
 
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
@@ -101,6 +104,9 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
     } else if (schedulers[i] == kBaselineConfigurable) {
       schedulers_.emplace_back(new BaselineConfigurableScheduler(this));
+    } else if (schedulers[i] == kHeterogeneousEarliestFinishTimeReserved) {
+      schedulers_.emplace_back(
+          new HeterogeneousEarliestFinishTimeReservedScheduler(this));
     } else {
       return kTfLiteError;
     }
@@ -368,35 +374,35 @@ void Planner::FlushFinishedJobs() {
                << job.enqueue_time << "\t"
                << job.invoke_time << "\t"
                << job.end_time << "\t"
-               << job.estimated_latency << "\t" 
-               << job.latency << "\t"
-               << job.before_temp[kTfLiteCPU] << "\t"
-               << job.before_temp[kTfLiteGPU] << "\t"
-               << job.before_temp[kTfLiteDSP] << "\t"
-               << job.before_temp[kTfLiteNPU] << "\t"
-              //  << job.before_temp[kTfLiteCLOUD] << "\t"
-               << job.after_temp[kTfLiteCPU] << "\t"
-               << job.after_temp[kTfLiteGPU] << "\t"
-               << job.after_temp[kTfLiteDSP] << "\t"
-               << job.after_temp[kTfLiteNPU] << "\t"
-              //  << job.after_temp[kTfLiteCLOUD] << "\t"
-               << job.frequency[kTfLiteCPU]<< "\t"
-               << job.frequency[kTfLiteGPU]<< "\t"
-              //  << job.frequency[kTfLiteDSP]<< "\t"
-              //  << job.frequency[kTfLiteNPU]<< "\t"
-              //  << job.estimated_temp << "\t"
-               << job.after_temp[job.worker_id] - job.before_temp[job.worker_id]<< "\t"
-               << job.latency - job.estimated_latency << "\t"
-              //  << job.before_target_temp[kTfLiteCPU] << "\t"
-              //  << job.before_target_temp[kTfLiteGPU] << "\t"
-              //  << job.before_target_temp[kTfLiteDSP] << "\t"
-              //  << job.before_target_temp[kTfLiteNPU] << "\t"
+              //  << job.estimated_latency << "\t" 
+              //  << job.latency << "\t"
+              //  << job.before_temp[kTfLiteCPU] << "\t"
+              //  << job.before_temp[kTfLiteGPU] << "\t"
+              //  << job.before_temp[kTfLiteDSP] << "\t"
+              //  << job.before_temp[kTfLiteNPU] << "\t"
               // //  << job.before_temp[kTfLiteCLOUD] << "\t"
-              //  << job.after_target_temp[kTfLiteCPU] << "\t"
-              //  << job.after_target_temp[kTfLiteGPU] << "\t"
-              //  << job.after_target_temp[kTfLiteDSP] << "\t"
+              //  << job.after_temp[kTfLiteCPU] << "\t"
+              //  << job.after_temp[kTfLiteGPU] << "\t"
+              //  << job.after_temp[kTfLiteDSP] << "\t"
+              //  << job.after_temp[kTfLiteNPU] << "\t"
+              // //  << job.after_temp[kTfLiteCLOUD] << "\t"
+              //  << job.frequency[kTfLiteCPU]<< "\t"
+              //  << job.frequency[kTfLiteGPU]<< "\t"
+              // //  << job.frequency[kTfLiteDSP]<< "\t"
+              // //  << job.frequency[kTfLiteNPU]<< "\t"
+              //  << job.estimated_temp << "\t"
+              //  << job.after_temp[job.worker_id] - job.estimated_temp<< "\t"
+              //  << job.latency - job.estimated_latency << "\t"
+              //  << job.before_target_temp[kTfLiteNPU] << "\t"
+              // //  << job.before_target_temp[kTfLiteGPU] << "\t"
+              // //  << job.before_target_temp[kTfLiteDSP] << "\t"
+              // //  << job.before_target_temp[kTfLiteNPU] << "\t"
+              // //  << job.before_temp[kTfLiteCLOUD] << "\t"
               //  << job.after_target_temp[kTfLiteNPU] << "\t"
-              //  << job.after_temp[kTfLiteCLOUD] << "\t"
+              // //  << job.after_target_temp[kTfLiteGPU] << "\t"
+              // //  << job.after_target_temp[kTfLiteDSP] << "\t"
+              // //  << job.after_target_temp[kTfLiteNPU] << "\t"
+              // //  << job.after_temp[kTfLiteCLOUD] << "\t"
                << job.status << "\n";
     }
     log_file.close();

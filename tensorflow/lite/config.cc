@@ -47,8 +47,53 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
         impl::TfLiteCPUMaskGetMask(root["cpu_masks"].asCString());
   }
 
+    // 2. Dynamic profile config
+  if (!root["profile_smoothing_factor"].isNull()) {
+    interpreter_config.profile_smoothing_factor =
+        root["profile_smoothing_factor"].asFloat();
+  }
+  // 3. File path to profile data
+  if (!root["model_profile"].isNull()) {
+    interpreter_config.profile_data_path = root["model_profile"].asString();
+  }
+  // 4. Number of threads
+  if (!root["num_threads"].isNull()) {
+    interpreter_config.num_threads = root["num_threads"].asInt();
+  }
+  // 5. Profile config
+  if (!root["profile_online"].isNull()) {
+    interpreter_config.profile_config.online = root["profile_online"].asBool();
+  }
+  if (!root["profile_warmup_runs"].isNull()) {
+    interpreter_config.profile_config.num_warmups =
+        root["profile_warmup_runs"].asInt();
+  }
+  if (!root["profile_num_runs"].isNull()) {
+    interpreter_config.profile_config.num_runs =
+        root["profile_num_runs"].asInt();
+  }
+  if (!root["profile_copy_computation_ratio"].isNull()) {
+    interpreter_config.copy_computation_ratio =
+        root["profile_copy_computation_ratio"].asInt();
+  }
+  // 6. Subgraph preparation type
+  if (!root["subgraph_preparation_type"].isNull()) {
+    interpreter_config.subgraph_preparation_type =
+        root["subgraph_preparation_type"].asString();
+  }
+  // 7. Minimum subgraph size
+  if (!root["minimum_subgraph_size"].isNull()) {
+    interpreter_config.minimum_subgraph_size =
+        root["minimum_subgraph_size"].asInt();
+  }
+
   // 2. Log path
   planner_config.log_path = root["log_path"].asString();
+  // 2. Scheduling window size
+  if (!root["schedule_window_size"].isNull()) {
+    planner_config.schedule_window_size = root["schedule_window_size"].asInt();
+    TF_LITE_ENSURE(error_reporter, planner_config.schedule_window_size > 0);
+  }
 
   // 3. Planner type
   for (int i = 0; i < root["schedulers"].size(); ++i) {
@@ -133,6 +178,16 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
       interpreter_config.profile_config.copy_computation_ratio[worker_id] =
           interpreter_config.copy_computation_ratio;
     }
+  }
+
+  // 3. Allow worksteal
+  if (!root["allow_work_steal"].isNull()) {
+    worker_config.allow_worksteal = root["allow_work_steal"].asBool();
+  }
+  // 3. availability_check_interval_ms
+  if (!root["availability_check_interval_ms"].isNull()) {
+    worker_config.availability_check_interval_ms =
+        root["availability_check_interval_ms"].asInt();
   }
 
   if (!root["offloading_target"].isNull()) {

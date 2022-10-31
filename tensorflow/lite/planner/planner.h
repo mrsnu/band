@@ -191,6 +191,7 @@ class Scheduler {
 
  protected:
   bool need_profile_;
+  bool need_fallback_subgraphs_;
   TfLiteWorkerType worker_type_;
   Planner* planner_;
   ScheduleAction action_;

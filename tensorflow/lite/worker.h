@@ -158,6 +158,29 @@ class DeviceQueueOffloadingWorker : public Worker {
   void Work() override;
 };
 
+class GlobalQueueOffloadingWorker : public Worker {
+ public:
+  explicit GlobalQueueOffloadingWorker(std::shared_ptr<Planner> planner,
+                             TfLiteDeviceFlags device_flag)
+      : Worker(planner, device_flag) {
+    device_cpu_thread_ = std::thread([this]{this->Work();});
+  }
+
+  int GetCurrentJobId() override;
+  int64_t GetWaitingTime() override;
+  bool GiveJob(Job& job) override;
+  bool IsBusy() override;
+  std::vector<thermal_t> GetEstimatedEndTemperature() override;
+  int64_t GetEstimatedFinishTime() override;
+
+ protected:
+  void Work() override;
+
+ private:
+  Job current_job_{-1};
+  bool is_busy_ = false;
+};
+
 }  // namespace impl
 }  // namespace tflite
 

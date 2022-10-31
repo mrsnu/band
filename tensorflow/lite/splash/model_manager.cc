@@ -68,19 +68,20 @@ bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
   thermal_t temp = thermal_model->Predict(subgraph, latency, before_temp); 
   auto threshold = resource_monitor_.GetThrottlingThreshold(wid);
   if (temp > threshold) {
-    LOGI("Throttling predicted : [worker %d]'s temp[%d] will exceeds threshold[%d]", wid, temp, threshold);
+    // LOGI("Throttling predicted : [worker %d]'s temp[%d] will exceeds threshold[%d]", wid, temp, threshold);
     return false;
   }
   thermal_t target_temp = thermal_model->PredictTarget(subgraph, latency, before_temp); 
   auto target_threshold = resource_monitor_.GetTargetThreshold(wid);
   if (target_temp > target_threshold) {
-    LOGI("Target Throttling predicted : [worker %d]'s target temp[%d] will exceeds threshold[%d]", wid, target_temp, target_threshold);
+    // LOGI("Target Throttling predicted : [worker %d]'s target temp[%d] will exceeds threshold[%d]", wid, target_temp, target_threshold);
     return false;
   }
   return true;
 }
 
-thermal_t ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph, std::vector<thermal_t> before_temp) {
+thermal_t ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
+  std::vector<thermal_t> before_temp = resource_monitor_.GetAllTemperature();
   auto latency = GetPredictedLatency(wid, subgraph->GetKey().model_id);
   return thermal_models_[wid]->Predict(subgraph, latency, before_temp);
 }
