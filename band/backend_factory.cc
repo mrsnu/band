@@ -9,9 +9,9 @@ using namespace Interface;
 
 #ifdef BAND_TFLITE
 #ifdef _WIN32
-extern void TfLiteRegisterCreators();
+extern bool TfLiteRegisterCreators();
 #else
-__attribute__((weak)) extern void TfLiteRegisterCreators();
+__attribute__((weak)) extern bool TfLiteRegisterCreators() { return false; }
 #endif
 #endif
 
@@ -21,8 +21,11 @@ void RegisterBackendInternal() {
   static std::once_flag g_flag;
   std::call_once(g_flag, [] {
 #ifdef BAND_TFLITE
-    TfLiteRegisterCreators();
+    if (TfLiteRegisterCreators() ) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Register TFL backend");
+    } else {
+      BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register TFL backend");
+    }
 #else
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "TFL backend is disabled.");
 #endif

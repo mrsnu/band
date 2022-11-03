@@ -14,7 +14,7 @@ cc_library(
     ],
 )
 
-cc_test(
+band_cc_android_test(
     name = "planner_test",
     size = "small",
     srcs = ["planner_test.cc"],
@@ -25,7 +25,7 @@ cc_test(
     ],
 )
 
-cc_test(
+band_cc_android_test(
     name = "scheduler_test",
     size = "small",
     srcs = ["scheduler_test.cc"],
@@ -38,7 +38,7 @@ cc_test(
     ],
 )
 
-cc_test(
+band_cc_android_test(
     name = "worker_test",
     size = "small",
     srcs = ["worker_test.cc"],
@@ -49,7 +49,7 @@ cc_test(
     ],
 )
 
-cc_test(
+band_cc_android_test(
     name = "time_test",
     size = "small",
     srcs = ["time_test.cc"],
@@ -60,7 +60,7 @@ cc_test(
     ],
 )
 
-cc_test(
+band_cc_android_test(
     name = "config_builder_test",
     srcs = ["config_builder_test.cc"],
     data = ["//band/test:data/config.json"],
@@ -75,7 +75,6 @@ band_cc_android_test(
     name = "cpu_test",
     srcs = ["cpu_test.cc"],
     data = [],
-    linkopts = ["-ldl"],
     deps = [
         "//band:cpu",
         "@com_google_googletest//:gtest",
@@ -97,7 +96,7 @@ band_cc_android_test(
     ],
 )
 
-cc_test(
+band_cc_android_test(
     name = "c_api_test",
     size = "small",
     srcs = ["c/c_api_test.cc"],

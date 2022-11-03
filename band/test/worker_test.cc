@@ -53,6 +53,9 @@ TYPED_TEST(WokrerSuite, Wait) {
   MockContext context;
   EXPECT_CALL(context, UpdateLatency).Times(testing::AtLeast(1));
   EXPECT_CALL(context, Trigger).Times(testing::AtLeast(1));
+  EXPECT_CALL(context, TryCopyInputTensors).Times(testing::AtLeast(1));
+  EXPECT_CALL(context, TryCopyOutputTensors).Times(testing::AtLeast(1));
+
 
   TypeParam worker(&context, kBandCPU);
   Job job = GetEmptyJob();

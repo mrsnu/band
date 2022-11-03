@@ -277,19 +277,20 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
 
   tflite::ops::builtin::BuiltinOpResolver resolver;
   tflite::InterpreterBuilder builder(*tf_model->GetFlatBufferModel(), resolver);
-  TfLiteStatus status = builder(&interpreter);
-
   auto delegate = GetDeviceDelegate(device);
 
-  if (delegate.first == kBandError || !interpreter) {
+  if (delegate.first == kBandError) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                      "Failed to create Tensorflow Lite delegate for %s",
+                      BandDeviceGetName(device));
     return nullptr;
-  } else {
   }
 
-  if (device != kBandCPU && GetBandStatus(interpreter->ModifyGraphWithDelegate(
-                                delegate.second)) != kBandOk) {
-    return nullptr;
+  if (delegate.second) {
+    builder.AddDelegate(delegate.second);
   }
+
+  TfLiteStatus status = builder(&interpreter);
 
   if (GetBandStatus(interpreter->AllocateTensors()) != kBandOk) {
     return nullptr;
