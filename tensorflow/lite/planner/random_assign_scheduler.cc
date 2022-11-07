@@ -9,20 +9,25 @@ namespace tflite {
 namespace impl {
 
 void RandomAssignScheduler::Schedule(JobQueue& requests) {
-  std::set<int> idle_workers = planner_->GetIdleWorkers();
   // LOGI("Idle worker size : %d", idle_workers.size());
   while (!requests.empty()) {
+    // std::set<int> idle_workers = planner_->GetIdleWorkers();
+    // Select a worker
+    // std::vector<worker_id_t> possible_workers = model_manager_.GetPossibleWorkers(to_execute);
+    // int target_idx = rand() % idle_workers.size();
+    // std::set<int>::iterator it = idle_workers.begin();
+    // std::advance(it, target_idx);
+    // int worker_id = *it;
+    // LOGI("It's selected : %d", worker_id);
+    int worker_id = kTfLiteCPU;
+
+    // if (worker_id != kTfLiteCPU) {
+      // continue;
+    // }
+
     Job to_execute = requests.front();
     requests.pop_front();
     int model_id = to_execute.model_id;
-
-    // Select a worker
-    // std::vector<worker_id_t> possible_workers = model_manager_.GetPossibleWorkers(to_execute);
-    int target_idx = rand() % idle_workers.size();
-    std::set<int>::iterator it = idle_workers.begin();
-    std::advance(it, target_idx);
-    int worker_id = *it;
-    // LOGI("It's selected : %d", worker_id);
 
     // Get a subgraph to execute
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker_id);

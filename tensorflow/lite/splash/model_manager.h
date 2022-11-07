@@ -39,6 +39,8 @@ class ModelManager {
   // Update model parameters with the prediction error
   TfLiteStatus Update(Job& job);
 
+  TfLiteStatus ProfileLatency(int model_id, int worker_id, int64_t latency);
+
  private:
   std::vector<std::unique_ptr<IThermalModel>> thermal_models_;
   std::vector<std::unique_ptr<ILatencyModel>> latency_models_;

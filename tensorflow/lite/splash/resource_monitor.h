@@ -102,17 +102,25 @@ class ResourceMonitor {
   }
 
   inline std::vector<thermal_t> GetAllTemperature() {
-    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return temp_table_;
   }
 
   inline std::vector<thermal_t> GetAllTargetTemperature() {
-    std::unique_lock<std::mutex> lock(cpu_mtx_);
     return target_temp_table_;
   }
 
-  std::vector<freq_t> GetAllFrequency() {
-    std::unique_lock<std::mutex> lock(cpu_mtx_);
+  inline void FillJobInfoBefore(Job& job) {
+    job.before_temp = GetAllTemperature();
+    job.before_target_temp = GetAllTargetTemperature();
+    job.frequency = GetAllFrequency(); 
+  }
+
+  inline void FillJobInfoAfter(Job& job) {
+    job.after_temp = GetAllTemperature();
+    job.after_target_temp = GetAllTargetTemperature();
+  }
+
+  inline std::vector<freq_t> GetAllFrequency() {
     return freq_table_;
   }
 

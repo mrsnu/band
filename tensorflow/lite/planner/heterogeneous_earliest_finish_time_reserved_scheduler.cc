@@ -67,11 +67,7 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
           largest_shortest_latency = best_subgraph.second;
           target_subgraph_idx = best_subgraph.first.front();
           target_job_idx = it - requests.begin();
-          if (best_subgraph.first.size() > 1) {
-            target_subgraph_idx_next = best_subgraph.first[1];
-          } else {
-            target_subgraph_idx_next = -1;
-          }
+          target_subgraph_idx_next = -1;
         }
       }
 
@@ -109,7 +105,6 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
       // only set these fields if this is the first subgraph of this model
       job.expected_latency = largest_shortest_latency;
       job.estimated_latency = largest_shortest_latency;
-      job.estimated_finish_time = 0;
       job.estimated_temp = 0;
     // }
     EnqueueAction(job, target_subgraph);

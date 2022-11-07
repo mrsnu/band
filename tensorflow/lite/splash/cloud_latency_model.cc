@@ -24,6 +24,11 @@ int64_t CloudLatencyModel::PredictThrottled(int32_t model_id) {
   return 40000;
 }
 
+TfLiteStatus CloudLatencyModel::Profile(int32_t model_id, int64_t latency) {
+  return kTfLiteOk;
+}
+
+
 TfLiteStatus CloudLatencyModel::Update(int32_t model_id, int64_t latency) {
   return kTfLiteOk;
 }

@@ -50,9 +50,8 @@ void ResourceMonitor::Monitor() {
       } 
       need_cpu_update_ = false;
     }
-    std::unique_lock<std::mutex> lock(cpu_mtx_);
+    // std::unique_lock<std::mutex> lock(cpu_mtx_);
     // Update temp
-    std::vector<thermal_t> ret(kTfLiteNumDevices);
     for (int i = 0; i < temp_table_.size(); i++) {
       temp_table_[i] = ParseTemperature(i);
     }
@@ -64,8 +63,9 @@ void ResourceMonitor::Monitor() {
     for (int i = 0; i < target_temp_table_.size(); i++) {
       target_temp_table_[i] = ParseTargetTemperature(i);
     }
-    lock.unlock();
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    // lock.unlock();
+    // std::this_thread::sleep_for(std::chrono::microseconds(300));
+    // LOGI("[%lld], %d", profiling::time::NowMicros(), temp_table_[kTfLiteCPU]);
   }
 }
 

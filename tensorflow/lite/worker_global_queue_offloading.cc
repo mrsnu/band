@@ -42,12 +42,6 @@ std::vector<thermal_t> GlobalQueueOffloadingWorker::GetEstimatedEndTemperature()
   return planner_ptr->GetResourceMonitor().GetAllTemperature();
 }
 
-int64_t GlobalQueueOffloadingWorker::GetEstimatedFinishTime() {
-  std::unique_lock<std::mutex> lock(device_mtx_);
-  // Return dummy values
-  return requests_.back().estimated_finish_time;
-}
-
 int64_t GlobalQueueOffloadingWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {
@@ -87,9 +81,7 @@ void GlobalQueueOffloadingWorker::Work() {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
       lock.lock();
       current_job_.invoke_time = profiling::time::NowMicros();
-      current_job_.before_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
-      current_job_.before_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
-      current_job_.frequency = planner_ptr->GetResourceMonitor().GetAllFrequency(); 
+      planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job_);
       lock.unlock();
 
       // TODO: Need to send and receive input/output tensors
@@ -115,15 +107,16 @@ void GlobalQueueOffloadingWorker::Work() {
           break;
       }
 
+      planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job_);
       current_job_.end_time = profiling::time::NowMicros();
-      current_job_.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
-      current_job_.after_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
       current_job_.latency = current_job_.end_time - current_job_.invoke_time;
+
       interpreter_ptr->UpdateExpectedLatency(subgraph_idx, current_job_.latency);
+
+      planner_ptr->GetModelManager()->Update(current_job_);
       if (current_job_.following_jobs.size() != 0) {
         planner_ptr->EnqueueBatch(current_job_.following_jobs);
       }
-      // planner_ptr->GetModelManager()->Update(current_job_);
       planner_ptr->EnqueueFinishedJob(current_job_);
 
       lock.lock();

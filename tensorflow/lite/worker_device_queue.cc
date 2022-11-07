@@ -49,20 +49,6 @@ std::vector<thermal_t> DeviceQueueWorker::GetEstimatedEndTemperature() {
   return temp;
 }
 
-int64_t DeviceQueueWorker::GetEstimatedFinishTime() {
-  std::unique_lock<std::mutex> lock(device_mtx_);
-  int64_t now = profiling::time::NowMicros();
-  if (requests_.empty()) {
-    return now;
-  }
-  int64_t expected = requests_.back().estimated_finish_time;
-  if (now > expected) {
-    return now;
-  }
-  // TODO : When preemption is available, this value could be wrong
-  return expected;
-}
-
 bool DeviceQueueWorker::GiveJob(Job& job) {
   if (!IsAvailable()) {
     return false;
@@ -109,20 +95,20 @@ void DeviceQueueWorker::Work() {
       if (TryCopyInputTensors(current_job) == kTfLiteOk) {
         lock.lock();
         current_job.invoke_time = profiling::time::NowMicros();
-        current_job.before_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
-        current_job.before_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
-        current_job.frequency = planner_ptr->GetResourceMonitor().GetAllFrequency(); 
-        current_job.estimated_finish_time = current_job.invoke_time + current_job.estimated_latency; 
+        planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job);
         lock.unlock();
 
+        // LOGI("[%lld], start", profiling::time::NowMicros());
         TfLiteStatus status = subgraph.Invoke();
+        // LOGI("[%lld], end", profiling::time::NowMicros());
         if (status == kTfLiteOk) {
           current_job.end_time = profiling::time::NowMicros();
-          current_job.after_temp = planner_ptr->GetResourceMonitor().GetAllTemperature();
-          current_job.after_target_temp = planner_ptr->GetResourceMonitor().GetAllTargetTemperature();
           current_job.latency = current_job.end_time - current_job.invoke_time;
+          // TODO: Extract this delay into another thread to avoid performance decrease
+          // std::this_thread::sleep_for(std::chrono::microseconds(1200));
+          planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
 
-          planner_ptr->GetModelManager()->Update(current_job);
+          // planner_ptr->GetModelManager()->Update(current_job);
 
           if (current_job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job.following_jobs);

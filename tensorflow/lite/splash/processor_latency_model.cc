@@ -39,6 +39,11 @@ int64_t ProcessorLatencyModel::PredictThrottled(int32_t model_id) {
   }
 }
 
+TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
+  model_latency_table_[model_id] = latency; 
+  return kTfLiteOk;
+}
+
 TfLiteStatus ProcessorLatencyModel::Update(int32_t model_id, int64_t latency) {
   thermal_t current_temp = GetResourceMonitor().GetTemperature(wid_);
   thermal_t threshold = GetResourceMonitor().GetThrottlingThreshold(wid_);

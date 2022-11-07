@@ -10,60 +10,127 @@ namespace tflite {
 namespace impl {
 
 void ThermalAwareScheduler::Schedule(JobQueue& requests) {
-  while (!requests.empty()) {
-    std::vector<std::unique_ptr<Worker>>& workers = planner_->GetWorkers();
-
-    Job to_execute = requests.front();
-    int model_id = to_execute.model_id;
-
-    int64_t earliest_finish_time = INT64_MAX;
-    int64_t shortest_latency = INT64_MAX;
-    Subgraph * target_subgraph;
-    for (auto& worker : workers) {
-      if (worker->GetId() != kTfLiteNPU) {
-        continue;
-      }
-      int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker->GetId());
-      Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
-      if (!model_manager_->IsAvailableWorker(worker->GetId(), subgraph)) {
-        // LOGI("[TAS] Throttling predicted! = Worker %d", worker->GetId());
-        continue;
-      }
-      int64_t finish_time = worker->GetEstimatedFinishTime();
-      int64_t latency = model_manager_->GetPredictedLatency(worker->GetId(), model_id);
-      // LOGI("[TAS] worker %d finish_time = [%lld], latency = [%lld]", worker->GetId(), finish_time, latency);
-      // LOGI("[TAS] earliest_finish_time = %lld value = %lld", earliest_finish_time, finish_time + latency);
-      if (earliest_finish_time > finish_time + latency) {
-        earliest_finish_time = finish_time + latency;
-        shortest_latency = latency;
-        target_subgraph = subgraph;
-      }
+  int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
+  // stop if there are no idle devices OR there's nothing in `requests`
+  while (window_size > 0) {
+    planner_->UpdateWorkerWaitingTime();
+    std::set<int> idle_workers = planner_->GetIdleWorkers();
+    if (idle_workers.empty()) {
+      break;
     }
 
-    if (earliest_finish_time == INT64_MAX) {
-      continue;
-      // LOGI("[TAS] All workers are throttled! => selects minimize throttled latency");
-      for (auto& worker : workers) {
-        int64_t finish_time = worker->GetEstimatedFinishTime();
-        int64_t latency = model_manager_->GetPredictedThrottledLatency(worker->GetId(), model_id);
-        if (earliest_finish_time > finish_time + latency) {
-          earliest_finish_time = finish_time + latency;
-          shortest_latency = latency;
-          int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker->GetId());
-          target_subgraph = GetInterpreter()->subgraph(subgraph_idx); 
+    // hold on to a local copy of worker waiting time
+    WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
+
+    std::set<int> jobs_to_yield;
+    // basically the same as ShortestExpectedLatencyScheduler
+    int64_t largest_shortest_latency;
+    int target_job_idx;
+    int target_subgraph_idx;
+    do {
+      largest_shortest_latency = -1;
+      target_job_idx = -1;
+      target_subgraph_idx = -1;
+
+      // only check up to `window_size` requests
+      std::set<std::pair<int, int>> searched_jobs;
+      for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
+        Job& job = *it;
+
+        if (jobs_to_yield.find(job.job_id) != jobs_to_yield.end()) {
+          continue;
         }
-      } 
-    }
-    // insert estimated_latency, finish_time, temp 
-    to_execute.estimated_latency = shortest_latency;
-    to_execute.estimated_finish_time = earliest_finish_time;
-    to_execute.estimated_temp = model_manager_->GetPredictedTemperature(
-      target_subgraph->GetKey().worker_id, target_subgraph);
 
-    // LOGI("[Worker %d] selected!", target_subgraph->GetKey().worker_id);
-    requests.pop_front();
-    EnqueueAction(to_execute, target_subgraph);
+        // start_unit_idx = 0 always
+        std::pair<int, int> job_to_search = std::make_pair(job.model_id, job.start_unit_idx);
+        if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
+          continue;
+        } else {
+          searched_jobs.insert(job_to_search);
+        }
+
+        std::pair<int, int64_t> best_subgraph = GetShortestSubgraph(job.model_id, waiting_time);
+
+        if (largest_shortest_latency < best_subgraph.second) {
+          Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
+          largest_shortest_latency = best_subgraph.second;
+          target_subgraph_idx = best_subgraph.first;
+          target_job_idx = it - requests.begin();
+        }
+      }
+
+      if (target_job_idx < 0) {
+        return;
+      }
+      if (largest_shortest_latency == INT64_MAX) {
+        LOGI("[TAS] All workers are throttled! => selects minimize throttled latency");
+        // for (auto& worker : workers) {
+        //   int64_t latency = model_manager_->GetPredictedThrottledLatency(worker->GetId(), model_id);
+        //   if (earliest_finish_time > finish_time + latency) {
+        //     earliest_finish_time = finish_time + latency;
+        //     shortest_latency = latency;
+        //     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker->GetId());
+        //     target_subgraph = GetInterpreter()->subgraph(subgraph_idx); 
+        //   }
+        // } 
+        continue;
+      }
+
+      // skip this job if we can't schedule it immediately,
+      // even if this job is the "most urgent" one
+      Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+      int worker_id = target_subgraph->GetKey().worker_id;
+      if (idle_workers.find(worker_id) == idle_workers.end()) {
+        waiting_time[worker_id] += model_manager_->GetPredictedLatency(worker_id, target_subgraph->GetKey().model_id);
+        auto requests_it = requests.begin() + target_job_idx;
+        Job job = *requests_it;
+        jobs_to_yield.insert(job.job_id);
+        continue;
+      } else {
+        break;
+      }
+    } while (true);
+
+    auto requests_it = requests.begin() + target_job_idx;
+    Job job = *requests_it;
+
+    // erase the job from requests and decrement window_size
+    requests.erase(requests_it);
+    window_size--;
+
+    job.expected_latency = largest_shortest_latency;
+    job.estimated_latency = largest_shortest_latency;
+    job.estimated_temp = 0;
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    job.estimated_temp = model_manager_->GetPredictedTemperature(
+      target_subgraph->GetKey().worker_id, target_subgraph);
+    EnqueueAction(job, target_subgraph);
   }
+}
+
+std::pair<int, int64_t>
+ThermalAwareScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting) {
+  int64_t min_latency = INT64_MAX;
+  int min_idx = -1;
+
+  std::vector<int> subgraph_indices = GetInterpreter()->GetSubgraphIndices(model_id);
+  for (auto subgraph_index : subgraph_indices) {
+    Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_index);
+    SubgraphKey& key = subgraph->GetKey();
+    if (!model_manager_->IsAvailableWorker(key.worker_id, subgraph)) {
+      // LOGI("[TAS] Throttling predicted! = Worker %d", key.worker_id);
+      continue;
+    }
+    int64_t waiting_time = worker_waiting[key.worker_id];
+    int64_t expected_latency = model_manager_->GetPredictedLatency(key.worker_id, key.model_id);
+    int64_t total = expected_latency + waiting_time;
+
+    if (min_latency > total) {
+      min_latency = total;
+      min_idx = subgraph_index;
+    }
+  }
+  return {min_idx, min_latency};
 }
 
 }  // namespace impl

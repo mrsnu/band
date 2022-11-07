@@ -24,6 +24,8 @@ class CloudLatencyModel : public ILatencyModel {
   int64_t PredictThrottled(int32_t model_id) override;
 
   TfLiteStatus Update(int32_t model_id, int64_t latency) override;
+  
+  TfLiteStatus Profile(int32_t model_id, int64_t latency) override;
 
  private:
   std::unordered_map<int, int64_t> model_latency_table_; // {model_id, latency}

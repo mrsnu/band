@@ -137,7 +137,6 @@ struct Job {
   std::vector<thermal_t> before_target_temp;
   std::vector<thermal_t> after_target_temp;
   std::vector<freq_t> frequency;
-  int64_t estimated_finish_time;
 };
 
 // Model configuration struct.

@@ -695,6 +695,8 @@ class Interpreter {
   // Return the subgraph index that matches the given subgraph_key.
   int GetSubgraphIdx(SubgraphKey subgraph_key);
 
+  std::vector<int> GetSubgraphIndices(int model_id);
+
   void DeleteKey(SubgraphKey subgraph_key);
 
   std::set<int> models() const;

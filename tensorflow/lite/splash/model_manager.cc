@@ -100,5 +100,10 @@ TfLiteStatus ModelManager::Update(Job& job) {
   return kTfLiteOk;
 }
 
+TfLiteStatus ModelManager::ProfileLatency(int model_id, int worker_id, int64_t latency) {
+  latency_models_[worker_id]->Update(model_id, latency);
+  return kTfLiteOk;
+}
+
 } // namespace impl
 } // namespace tflite

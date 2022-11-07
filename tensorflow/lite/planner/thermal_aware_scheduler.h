@@ -10,14 +10,16 @@ namespace impl {
 class ThermalAwareScheduler : public Scheduler {
  public:
   explicit ThermalAwareScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner) {
-    need_profile_ = false;
-    worker_type_ = kDeviceQueue;
+    need_profile_ = true;
+    worker_type_ = kGlobalQueue;
     model_manager_ = model_manager;
   }
   void Schedule(JobQueue& requests) override;
 
  private:
   ModelManager * model_manager_;
+
+  std::pair<int, int64_t> GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting);
 };
 
 }  // namespace impl
