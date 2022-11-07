@@ -123,9 +123,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(
-      engine->InvokeSyncModel(model.GetId(), {input_tensor}, {output_tensor}),
-      kBandOk);
+  EXPECT_EQ(engine->RequestSync(model.GetId(), {input_tensor}, {output_tensor}),
+            kBandOk);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
@@ -171,7 +170,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
-  JobId job_id = engine->InvokeAsyncModel(model.GetId(), {input_tensor});
+  JobId job_id = engine->RequestAsync(model.GetId(), {input_tensor});
   EXPECT_EQ(engine->Wait(job_id, {output_tensor}), kBandOk);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
@@ -179,6 +178,64 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   delete input_tensor;
   delete output_tensor;
 }  // namespace
+
+TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
+  RuntimeConfigBuilder b;
+  RuntimeConfig config =
+      b.AddPlannerLogPath("band/test/data/log.csv")
+          .AddSchedulers({kBandFixedDevice})
+          .AddMinimumSubgraphSize(7)
+          .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
+          .AddCPUMask(kBandAll)
+          .AddPlannerCPUMask(kBandPrimary)
+          .AddWorkers({kBandCPU, kBandCPU, kBandDSP, kBandNPU, kBandGPU})
+          .AddWorkerNumThreads({3, 4, 1, 1, 1})
+          .AddWorkerCPUMasks(
+              {kBandBig, kBandLittle, kBandAll, kBandAll, kBandAll})
+          .AddSmoothingFactor(0.1)
+          .AddProfileDataPath("band/test/data/profile.json")
+          .AddOnline(true)
+          .AddNumWarmups(1)
+          .AddNumRuns(1)
+          .AddAllowWorkSteal(true)
+          .AddAvailabilityCheckIntervalMs(30000)
+          .AddScheduleWindowSize(10)
+          .Build();
+
+  auto engine = Engine::Create(config);
+  EXPECT_TRUE(engine);
+
+  Model model;
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
+  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+
+  Tensor* input_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
+  Tensor* output_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
+
+  EXPECT_TRUE(input_tensor && output_tensor);
+
+  std::array<float, 2> input = {1.f, 3.f};
+  memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
+
+  std::cout << "Num workers " << engine->GetNumWorkers() << std::endl;
+  for (int worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
+    std::cout << "Run on worker (device: "
+              << BandDeviceGetName(engine->GetWorkerDevice(worker_id)) << ")"
+              << std::endl;
+    EXPECT_EQ(engine->RequestSyncOnWorker(model.GetId(), worker_id,
+                                          {input_tensor}, {output_tensor}),
+              kBandOk);
+    EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
+    EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
+
+    memset(output_tensor->GetData(), 0, sizeof(float) * 2);
+  }
+
+  delete input_tensor;
+  delete output_tensor;
+}
 }  // namespace Band
 
 int main(int argc, char** argv) {

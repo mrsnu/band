@@ -242,6 +242,14 @@ int BandEngineGetNumOutputTensors(BandEngine* engine, BandModel* model) {
   return engine->impl->GetOutputTensorIndices(model->impl->GetId()).size();
 }
 
+int BandEngineGetNumWorkers(BandEngine* engine) {
+  return engine->impl->GetNumWorkers();
+}
+
+BandDeviceFlags BandEngineGetWorkerDevice(BandEngine* engine, int worker_id) {
+  return engine->impl->GetWorkerDevice(worker_id);
+}
+
 BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,
                                         size_t index) {
   auto input_indices =
@@ -261,7 +269,7 @@ BandTensor* BandEngineCreateOutputTensor(BandEngine* engine, BandModel* model,
 BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
                                  BandTensor** input_tensors,
                                  BandTensor** output_tensors) {
-  return engine->impl->InvokeSyncModel(
+  return engine->impl->RequestSync(
       model->impl->GetId(),
       BandTensorArrayToVec(input_tensors,
                            BandEngineGetNumInputTensors(engine, model)),
@@ -271,8 +279,30 @@ BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
 
 BandRequestHandle BandEngineRequestAsync(BandEngine* engine, BandModel* model,
                                          BandTensor** input_tensors) {
-  return engine->impl->InvokeAsyncModel(
+  return engine->impl->RequestAsync(
       model->impl->GetId(),
+      BandTensorArrayToVec(input_tensors,
+                           BandEngineGetNumInputTensors(engine, model)));
+}
+
+BandStatus BandEngineRequestSyncOnWorker(BandEngine* engine, BandModel* model,
+                                         int target_worker,
+                                         BandTensor** input_tensors,
+                                         BandTensor** output_tensors) {
+  return engine->impl->RequestSyncOnWorker(
+      model->impl->GetId(), target_worker,
+      BandTensorArrayToVec(input_tensors,
+                           BandEngineGetNumInputTensors(engine, model)),
+      BandTensorArrayToVec(output_tensors,
+                           BandEngineGetNumOutputTensors(engine, model)));
+}
+
+BandRequestHandle BandEngineRequestAsyncOnWorker(BandEngine* engine,
+                                                 BandModel* model,
+                                                 int target_worker,
+                                                 BandTensor** input_tensors) {
+  return engine->impl->RequestAsyncOnWorker(
+      model->impl->GetId(), target_worker,
       BandTensorArrayToVec(input_tensors,
                            BandEngineGetNumInputTensors(engine, model)));
 }

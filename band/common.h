@@ -116,6 +116,9 @@ struct Job {
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
 
+  // Target worker id (only for fixed worker request)
+  WorkerId target_worker_id = -1;
+
   // Constant variables (Valid after invoke)
   // TODO: better job life-cycle to change these to `const`
   ModelId model_id;

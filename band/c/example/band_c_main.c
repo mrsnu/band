@@ -26,9 +26,13 @@ PFN_BandEngineCreateOutputTensor pBandEngineCreateOutputTensor;
 PFN_BandEngineDelete pBandEngineDelete;
 PFN_BandEngineGetNumInputTensors pBandEngineGetNumInputTensors;
 PFN_BandEngineGetNumOutputTensors pBandEngineGetNumOutputTensors;
+PFN_BandEngineGetNumWorkers pBandEngineGetNumWorkers;
+PFN_BandEngineGetWorkerDevice pBandEngineGetWorkerDevice;
 PFN_BandEngineRegisterModel pBandEngineRegisterModel;
 PFN_BandEngineRequestAsync pBandEngineRequestAsync;
 PFN_BandEngineRequestSync pBandEngineRequestSync;
+PFN_BandEngineRequestAsyncOnWorker pBandEngineRequestAsyncOnWorker;
+PFN_BandEngineRequestSyncOnWorker pBandEngineRequestSyncOnWorker;
 PFN_BandEngineWait pBandEngineWait;
 PFN_BandModelAddFromBuffer pBandModelAddFromBuffer;
 PFN_BandModelAddFromFile pBandModelAddFromFile;
@@ -67,9 +71,13 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandEngineDelete);
   LoadFunction(BandEngineGetNumInputTensors);
   LoadFunction(BandEngineGetNumOutputTensors);
+  LoadFunction(BandEngineGetNumWorkers);
+  LoadFunction(BandEngineGetWorkerDevice);
   LoadFunction(BandEngineRegisterModel);
   LoadFunction(BandEngineRequestAsync);
   LoadFunction(BandEngineRequestSync);
+  LoadFunction(BandEngineRequestAsyncOnWorker);
+  LoadFunction(BandEngineRequestSyncOnWorker);
   LoadFunction(BandEngineWait);
   LoadFunction(BandModelAddFromBuffer);
   LoadFunction(BandModelAddFromFile);
@@ -94,7 +102,7 @@ bool LoadBandLibrary() {
   } else {
     DWORD error_code = GetLastError();
     fprintf(stderr,
-            "Cannnot open Band C Library oon this device, error code - %d\n",
+            "Cannnot open Band C Library on this device, error code - %d\n",
             error_code);
     return false;
   }
@@ -171,6 +179,12 @@ int main() {
   printf("BandGetNumInputTensors\n");
   pBandEngineGetNumOutputTensors(engine, model);
   printf("BandGetNumOutputTensors\n");
+
+  int num_workers = pBandEngineGetNumWorkers(engine);
+  printf("BandEngineGetNumWorkers\n");
+  for (int i = 0; i < num_workers; i++) {
+    printf("BandEngineGetWorkerDevice %s\n", BandDeviceGetName(pBandEngineGetWorkerDevice(engine, i)));
+  }
 
   BandTensor* input_tensor = pBandEngineCreateInputTensor(engine, model, 0);
   printf("BandEngineCreateInputTensor\n");

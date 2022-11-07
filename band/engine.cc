@@ -13,7 +13,7 @@
 namespace Band {
 Engine::~Engine() {
   for (auto& worker : workers_) {
-    worker.second->End();
+    worker->End();
   }
 
   for (auto& interpreter : interpreters_) {
@@ -21,7 +21,7 @@ Engine::~Engine() {
   }
 
   for (auto& worker : workers_) {
-    worker.second.reset();
+    worker.reset();
   }
 
   planner_.reset();
@@ -47,16 +47,16 @@ BandStatus Engine::RegisterModel(Model* model) {
     }
 
     // Add whole-model subgraphs
-    for (auto& id_worker : workers_) {
+    for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
       std::unique_ptr<Interface::IInterpreter> interpreter(
           BackendFactory::CreateInterpreter(backend_type));
       if (interpreter->FromModel(
-              model->GetBackendModel(backend_type), id_worker.first,
-              id_worker.second->GetDeviceFlag()) == kBandOk) {
-        BAND_LOG_INTERNAL(BAND_LOG_INFO,
-                          "Create interpreter for model %d worker %s", model_id,
-                          BandDeviceGetName(id_worker.second->GetDeviceFlag()));
-        interpreters_[{id_worker.first, model_id}] = std::move(interpreter);
+              model->GetBackendModel(backend_type), worker_id,
+              workers_[worker_id]->GetDeviceFlag()) == kBandOk) {
+        BAND_LOG_INTERNAL(
+            BAND_LOG_INFO, "Create interpreter for model %d worker %s",
+            model_id, BandDeviceGetName(workers_[worker_id]->GetDeviceFlag()));
+        interpreters_[{worker_id, model_id}] = std::move(interpreter);
       }
     }
 
@@ -137,28 +137,39 @@ std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
                      : std::vector<int>();
 }
 
-BandStatus Engine::InvokeSyncModel(ModelId model_id, Tensors inputs,
-                                   Tensors outputs) {
-  return Wait(InvokeAsyncModel(model_id, inputs), outputs);
+size_t Engine::GetNumWorkers() const { return workers_.size(); }
+
+BandDeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
+  if (id >= 0 && id < workers_.size()) {
+    return workers_.at(id)->GetDeviceFlag();
+  } else {
+    BAND_REPORT_ERROR(error_reporter_, "Invalid worker id %d", id);
+    return kBandNumDevices;
+  }
 }
 
-BandStatus Engine::InvokeSyncModels(std::vector<ModelId> model_ids,
-                                    std::vector<Tensors> inputs,
-                                    std::vector<Tensors> outputs) {
-  return Wait(InvokeAsyncModels(model_ids, inputs), outputs);
+BandStatus Engine::RequestSync(ModelId model_id, Tensors inputs,
+                               Tensors outputs) {
+  return Wait(RequestAsync(model_id, inputs), outputs);
 }
 
-JobId Engine::InvokeAsyncModel(ModelId model_id, Tensors inputs) {
+BandStatus Engine::RequestSync(std::vector<ModelId> model_ids,
+                               std::vector<Tensors> inputs,
+                               std::vector<Tensors> outputs) {
+  return Wait(RequestAsync(model_ids, inputs), outputs);
+}
+
+JobId Engine::RequestAsync(ModelId model_id, Tensors inputs) {
   std::vector<Tensors> input_tensors;
   if (inputs.size()) {
     input_tensors.push_back(inputs);
   }
-  auto job_ids = InvokeAsyncModels({model_id}, input_tensors);
+  auto job_ids = RequestAsync({model_id}, input_tensors);
   return job_ids.size() == 1 ? job_ids[0] : -1;
 }
 
-std::vector<JobId> Engine::InvokeAsyncModels(std::vector<ModelId> model_ids,
-                                             std::vector<Tensors> inputs) {
+std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
+                                        std::vector<Tensors> inputs) {
   std::vector<Job> jobs;
 
   for (size_t i = 0; i < model_ids.size(); i++) {
@@ -174,6 +185,72 @@ std::vector<JobId> Engine::InvokeAsyncModels(std::vector<ModelId> model_ids,
       job.input_handle = input_handle;
       job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
     }
+    jobs.push_back(job);
+  }
+
+  for (ModelId model_id : model_ids) {
+  }
+  return EnqueueBatch(jobs);
+}
+
+BandStatus Engine::RequestSyncOnWorker(ModelId model_id, WorkerId target_worker,
+                                       Tensors inputs, Tensors outputs) {
+  return Wait(RequestAsyncOnWorker(model_id, target_worker, inputs), outputs);
+}
+
+BandStatus Engine::RequestSyncOnWorker(std::vector<ModelId> model_ids,
+                                       std::vector<WorkerId> target_workers,
+                                       std::vector<Tensors> inputs,
+                                       std::vector<Tensors> outputs) {
+  return Wait(RequestAsyncOnWorker(model_ids, target_workers, inputs), outputs);
+}
+
+JobId Engine::RequestAsyncOnWorker(ModelId model_id, WorkerId target_worker,
+                                   Tensors inputs) {
+  std::vector<Tensors> input_tensors;
+  if (inputs.size()) {
+    input_tensors.push_back(inputs);
+  }
+  auto job_ids =
+      RequestAsyncOnWorker({model_id}, {target_worker}, input_tensors);
+  return job_ids.size() == 1 ? job_ids[0] : -1;
+}
+
+std::vector<JobId> Engine::RequestAsyncOnWorker(
+    std::vector<ModelId> model_ids, std::vector<WorkerId> target_workers,
+    std::vector<Tensors> inputs) {
+  std::vector<Job> jobs;
+
+  if (model_ids.size() != target_workers.size()) {
+    BAND_REPORT_ERROR(error_reporter_,
+                      "# Model requests (%llu) != # Worker ids (%llu)",
+                      model_ids.size(), target_workers.size());
+    return {};
+  }
+
+  for (size_t i = 0; i < model_ids.size(); i++) {
+    Job job(model_ids[i]);
+    Worker* target_worker = GetWorker(target_workers[i]);
+    if (target_worker == nullptr) {
+      BAND_REPORT_ERROR(error_reporter_,
+                        "Request assigned to invalid worker id (%d)",
+                        target_workers[i]);
+      return {};
+    }
+
+    if (i < inputs.size()) {
+      int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
+      if (model_input_buffer_[model_ids[i]]->PutTensorsToHandle(
+              inputs[i], input_handle) != kBandOk) {
+        BAND_REPORT_ERROR(error_reporter_, "Input copy failure for model %d",
+                          model_ids[i]);
+        return {};
+      }
+      job.input_handle = input_handle;
+      job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
+    }
+
+    job.target_worker_id = target_workers[i];
     jobs.push_back(job);
   }
 
@@ -230,9 +307,9 @@ BandStatus Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   return kBandOk;
 }
 
-void Engine::SetEndInvokeFunction(
-    std::function<void(int, BandStatus)> on_end_invoke) {
-  planner_->SetEndInvokeFunction(on_end_invoke);
+void Engine::SetEndRequest(
+    std::function<void(int, BandStatus)> on_end_request) {
+  planner_->SetEndRequest(on_end_request);
 }
 
 BandStatus Engine::Init(const RuntimeConfig& config) {
@@ -289,7 +366,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         BandDeviceGetName(device_flag));
       worker->Start();
-      workers_[worker_id] = std::move(worker);
+      workers_.push_back(std::move(worker));
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         BandDeviceGetName(device_flag));
@@ -321,13 +398,10 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
     // Translate device - affinity to WorkerId
     if (model_config.models_assigned_worker.size() > 0) {
-      int j = 0;
-      for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-           worker_it++, j++) {
+      for (int j = 0; j < workers_.size(); j++) {
         DeviceWorkerAffinityPair pair = model_config.models_assigned_worker[i];
-        if (worker_it->second->GetDeviceFlag() == pair.device &&
-            j == pair.worker) {
-          planner_->GetModelWorkerMap()[model_id] = worker_it->first;
+        if (workers_[j]->GetDeviceFlag() == pair.device && j == pair.worker) {
+          planner_->GetModelWorkerMap()[model_id] = j;
         }
       }
     }
@@ -345,9 +419,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
 
 void Engine::UpdateWorkerWaitingTime() const {
-  for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-       worker_it++) {
-    workers_waiting_[worker_it->first] = worker_it->second->GetWaitingTime();
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    workers_waiting_[worker_id] = workers_[worker_id]->GetWaitingTime();
   }
 }
 
@@ -358,10 +431,9 @@ const WorkerWaitingTime& Engine::GetWorkerWaitingTime() const {
 std::set<int> Engine::GetIdleWorkers() const {
   std::set<int> idle_workers;
 
-  for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-       worker_it++) {
-    if (!worker_it->second->HasJob()) {
-      idle_workers.insert(worker_it->first);
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (!workers_[worker_id]->HasJob()) {
+      idle_workers.insert(worker_id);
     }
   }
   return idle_workers;
@@ -457,8 +529,11 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
 Worker* Engine::GetWorker(WorkerId id) {
-  auto it = workers_.find(id);
-  return it != workers_.end() ? it->second.get() : nullptr;
+  if (id >= 0 && id < workers_.size()) {
+    return workers_[id].get();
+  } else {
+    return nullptr;
+  }
 }
 
 BandStatus Engine::TryCopyInputTensors(const Job& job) {
@@ -573,9 +648,9 @@ BandStatus Engine::TryCopyOutputTensors(const Job& job) {
 }
 
 WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
-  for (auto& it : workers_) {
-    if (it.second->GetDeviceFlag() == flag) {
-      return it.first;
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (workers_[worker_id]->GetDeviceFlag() == flag) {
+      return worker_id;
     }
   }
   BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a worker for %s",

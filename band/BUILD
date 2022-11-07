@@ -223,12 +223,12 @@ cc_library(
 cc_library(
     name = "scheduler",
     srcs = [
-        "scheduler/fixed_device_global_queue_scheduler.cc",
-        "scheduler/fixed_device_scheduler.cc",
+        "scheduler/fixed_worker_global_queue_scheduler.cc",
+        "scheduler/fixed_worker_scheduler.cc",
         "scheduler/round_robin_scheduler.cc",
     ],
     hdrs = [
-        "scheduler/fixed_device_scheduler.h",
+        "scheduler/fixed_worker_scheduler.h",
         "scheduler/round_robin_scheduler.h",
         "scheduler/scheduler.h",
     ],

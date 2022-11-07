@@ -44,7 +44,7 @@ typedef std::vector<Interface::ITensor*> Tensors;
  * engine->GetOutputTensorIndices(model.GetId())[0]);
  *
  * // Copy input data to input_tensor->GetData()
- * engine->InvokeSyncModel(model.GetId(), {input_tensor}, {output_tensor})
+ * engine->RequestSync(model.GetId(), {input_tensor}, {output_tensor})
  * // Copy result from output_tensor->GetData()
  */
 class Engine : public Context {
@@ -59,21 +59,38 @@ class Engine : public Context {
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
-  BandStatus InvokeSyncModel(ModelId model_id, Tensors inputs = {},
-                             Tensors outputs = {});
-  BandStatus InvokeSyncModels(std::vector<ModelId> model_ids,
-                              std::vector<Tensors> inputs = {},
-                              std::vector<Tensors> outputs = {});
-  JobId InvokeAsyncModel(ModelId model_id, Tensors inputs = {});
-  std::vector<JobId> InvokeAsyncModels(std::vector<ModelId> model_ids,
-                                       std::vector<Tensors> inputs = {});
+  size_t GetNumWorkers() const;
+  BandDeviceFlags GetWorkerDevice(WorkerId id) const;
+
+  BandStatus RequestSync(ModelId model_id, Tensors inputs = {},
+                         Tensors outputs = {});
+  BandStatus RequestSync(std::vector<ModelId> model_ids,
+                         std::vector<Tensors> inputs = {},
+                         std::vector<Tensors> outputs = {});
+  JobId RequestAsync(ModelId model_id, Tensors inputs = {});
+  std::vector<JobId> RequestAsync(std::vector<ModelId> model_ids,
+                                  std::vector<Tensors> inputs = {});
+
+  // Direct request to specific worker, requires fixed device scheduler
+  BandStatus RequestSyncOnWorker(ModelId model_id, WorkerId target_worker,
+                                 Tensors inputs = {}, Tensors outputs = {});
+  BandStatus RequestSyncOnWorker(std::vector<ModelId> model_ids,
+                                 std::vector<WorkerId> target_workers,
+                                 std::vector<Tensors> inputs = {},
+                                 std::vector<Tensors> outputs = {});
+  JobId RequestAsyncOnWorker(ModelId model_id, WorkerId target_worker,
+                             Tensors inputs = {});
+  std::vector<JobId> RequestAsyncOnWorker(std::vector<ModelId> model_ids,
+                                          std::vector<WorkerId> target_workers,
+                                          std::vector<Tensors> inputs = {});
+
   BandStatus Wait(JobId job_id, Tensors outputs = {});
   BandStatus Wait(std::vector<JobId> job_ids,
                   std::vector<Tensors> outputs = {});
   BandStatus GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetEndInvokeFunction(std::function<void(int, BandStatus)> on_end_invoke);
+  void SetEndRequest(std::function<void(int, BandStatus)> on_end_request);
 
  private:
   /* context */
@@ -150,7 +167,7 @@ class Engine : public Context {
   std::map<std::pair<WorkerId, ModelId>,
            std::unique_ptr<Interface::IInterpreter>>
       interpreters_;
-  std::map<WorkerId, std::unique_ptr<Worker>> workers_;
+  std::vector<std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
   std::unique_ptr<Profiler> profiler_;
   std::unique_ptr<Planner> planner_;
