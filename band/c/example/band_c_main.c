@@ -34,6 +34,7 @@ PFN_BandEngineRequestSync pBandEngineRequestSync;
 PFN_BandEngineRequestAsyncOnWorker pBandEngineRequestAsyncOnWorker;
 PFN_BandEngineRequestSyncOnWorker pBandEngineRequestSyncOnWorker;
 PFN_BandEngineWait pBandEngineWait;
+PFN_BandEngineSetOnEndRequest pBandEngineSetOnEndRequest;
 PFN_BandModelAddFromBuffer pBandModelAddFromBuffer;
 PFN_BandModelAddFromFile pBandModelAddFromFile;
 PFN_BandModelCreate pBandModelCreate;
@@ -79,6 +80,7 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandEngineRequestAsyncOnWorker);
   LoadFunction(BandEngineRequestSyncOnWorker);
   LoadFunction(BandEngineWait);
+  LoadFunction(BandEngineSetOnEndRequest);
   LoadFunction(BandModelAddFromBuffer);
   LoadFunction(BandModelAddFromFile);
   LoadFunction(BandModelCreate);
@@ -114,6 +116,12 @@ bool LoadBandLibrary() {
     return true;
   }
 #endif
+}
+
+void on_end_request(void* user_data, int job_id, BandStatus status) {
+  if (job_id == 0 && status == kBandOk) {
+   (*(int*)(user_data))++;
+  }
 }
 
 int main() {
@@ -191,6 +199,10 @@ int main() {
   BandTensor* output_tensor = pBandEngineCreateOutputTensor(engine, model, 0);
   printf("BandEngineCreateOutputTensor\n");
 
+  int execution_count = 0;
+  pBandEngineSetOnEndRequest(engine, on_end_request, &execution_count);
+  printf("BandEngineSetOnEndRequest\n");
+
   float input[] = {1.f, 3.f};
   memcpy(pBandTensorGetData(input_tensor), input, 2 * sizeof(float));
   printf("BandTensorGetData\n");
@@ -198,6 +210,10 @@ int main() {
   printf("BandTensorNumDims\n");
   pBandEngineRequestSync(engine, model, &input_tensor, &output_tensor);
   printf("BandEngineRequestSync\n");
+
+  if (execution_count != 1) {
+    printf("BandEngineSetOnEndRequest not worked (callback not called)\n");
+  }
 
   if (((float*)pBandTensorGetData(output_tensor))[0] == 3.f &&
       ((float*)pBandTensorGetData(output_tensor))[1] == 9.f) {

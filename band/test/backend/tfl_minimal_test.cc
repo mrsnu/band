@@ -120,6 +120,10 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 
   EXPECT_TRUE(input_tensor && output_tensor);
 
+  int execution_count = 0;
+  engine->SetOnEndRequest(
+      [&execution_count](int, BandStatus) { execution_count++; });
+
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
@@ -127,6 +131,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
             kBandOk);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
+  EXPECT_EQ(execution_count, 1);
 
   delete input_tensor;
   delete output_tensor;
@@ -170,10 +175,15 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
+  int execution_count = 0;
+  engine->SetOnEndRequest(
+      [&execution_count](int, BandStatus) { execution_count++; });
+
   JobId job_id = engine->RequestAsync(model.GetId(), {input_tensor});
   EXPECT_EQ(engine->Wait(job_id, {output_tensor}), kBandOk);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
+  EXPECT_EQ(execution_count, 1);
 
   delete input_tensor;
   delete output_tensor;

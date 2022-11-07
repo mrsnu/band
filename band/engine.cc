@@ -307,9 +307,9 @@ BandStatus Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   return kBandOk;
 }
 
-void Engine::SetEndRequest(
+void Engine::SetOnEndRequest(
     std::function<void(int, BandStatus)> on_end_request) {
-  planner_->SetEndRequest(on_end_request);
+  planner_->SetOnEndRequest(on_end_request);
 }
 
 BandStatus Engine::Init(const RuntimeConfig& config) {

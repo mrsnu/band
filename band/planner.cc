@@ -245,7 +245,7 @@ Job Planner::GetFinishedJob(int job_id) {
   }
 }
 
-void Planner::SetEndRequest(
+void Planner::SetOnEndRequest(
     std::function<void(int, BandStatus)> on_end_request) {
   on_end_request_ = on_end_request;
 }

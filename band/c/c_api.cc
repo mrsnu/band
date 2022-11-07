@@ -313,6 +313,16 @@ BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
                             BandTensorArrayToVec(output_tensors, num_outputs));
 }
 
+void BandEngineSetOnEndRequest(BandEngine* engine,
+                               void (*on_end_invoke)(void* user_data,
+                                                     int job_id,
+                                                     BandStatus status),
+                               void* user_data) {
+  auto user_data_invoke = std::bind(
+      on_end_invoke, user_data, std::placeholders::_1, std::placeholders::_2);
+  return engine->impl->SetOnEndRequest(user_data_invoke);
+}
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus

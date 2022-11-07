@@ -103,6 +103,10 @@ BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandRequestHandle handle,
                                                   BandTensor** output_tensors,
                                                   size_t num_outputs);
+BAND_CAPI_EXPORT extern void BandEngineSetOnEndRequest(
+    BandEngine* engine,
+    void (*on_end_invoke)(void* user_data, int job_id, BandStatus status),
+    void* user_data);
 
 typedef BandConfigBuilder* (*PFN_BandConfigBuilderCreate)();
 typedef void (*PFN_BandAddConfig)(BandConfigBuilder*, int, int, ...);
@@ -146,6 +150,9 @@ typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOnWorker)(BandEngine*,
                                                                 BandTensor**);
 typedef BandStatus (*PFN_BandEngineWait)(BandEngine*, BandRequestHandle,
                                          BandTensor**, size_t);
+typedef void (*PFN_BandEngineSetOnEndRequest)(BandEngine*,
+                                              void (*)(void*, int, BandStatus),
+                                              void*);
 
 #ifdef __cplusplus
 }  // extern "C"
