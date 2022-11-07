@@ -15,7 +15,8 @@ class TfLiteTensorView : public Interface::ITensorView {
   void SetType(BandType type) override;
   const char* GetData() const override;
   char* GetData() override;
-  std::vector<int> GetDims() const override;
+  const int* GetDims() const override;
+  size_t GetNumDims() const override;
   void SetDims(const std::vector<int>& dims) override;
   size_t GetBytes() const override;
   const char* GetName() const override;

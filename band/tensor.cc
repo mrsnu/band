@@ -6,7 +6,8 @@ namespace Band {
 Tensor::Tensor(ITensor* tensor_view)
     : type_(tensor_view->GetType()),
       num_bytes_(tensor_view->GetBytes()),
-      dims_(tensor_view->GetDims()),
+      dims_(tensor_view->GetDims(),
+            tensor_view->GetDims() + tensor_view->GetNumDims()),
       data_(new char[tensor_view->GetBytes()]),
       name_(tensor_view->GetName()) {
   SetQuantization(tensor_view->GetQuantization());
@@ -22,7 +23,9 @@ const char* Tensor::GetData() const { return data_; }
 
 char* Tensor::GetData() { return data_; }
 
-std::vector<int> Tensor::GetDims() const { return dims_; }
+const int* Tensor::GetDims() const { return dims_.data(); }
+
+size_t Tensor::GetNumDims() const { return dims_.size(); }
 
 void Tensor::SetDims(const std::vector<int>& dims) {
   dims_ = std::vector<int>(dims.begin(), dims.end());

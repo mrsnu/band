@@ -59,7 +59,8 @@ BAND_CAPI_EXPORT extern BandStatus BandModelAddFromFile(
 BAND_CAPI_EXPORT extern void BandTensorDelete(BandTensor* tensor);
 BAND_CAPI_EXPORT extern BandType BandTensorGetType(BandTensor* tensor);
 BAND_CAPI_EXPORT extern void* BandTensorGetData(BandTensor* tensor);
-BAND_CAPI_EXPORT extern int* BandTensorGetDims(BandTensor* tensor);
+BAND_CAPI_EXPORT extern size_t BandTensorGetNumDims(BandTensor* tensor);
+BAND_CAPI_EXPORT extern const int* BandTensorGetDims(BandTensor* tensor);
 BAND_CAPI_EXPORT extern size_t BandTensorGetBytes(BandTensor* tensor);
 BAND_CAPI_EXPORT extern const char* BandTensorGetName(BandTensor* tensor);
 BAND_CAPI_EXPORT extern BandQuantization BandTensorGetQuantization(
@@ -105,7 +106,8 @@ typedef BandStatus (*PFN_BandModelAddFromFile)(BandModel*, BandBackendType,
 typedef void (*PFN_BandTensorDelete)(BandTensor*);
 typedef BandType (*PFN_BandTensorGetType)(BandTensor*);
 typedef void* (*PFN_BandTensorGetData)(BandTensor*);
-typedef int* (*PFN_BandTensorGetDims)(BandTensor*);
+typedef size_t (*PFN_BandTensorGetNumDims)(BandTensor*);
+typedef const int* (*PFN_BandTensorGetDims)(BandTensor*);
 typedef size_t (*PFN_BandTensorGetBytes)(BandTensor*);
 typedef const char* (*PFN_BandTensorGetName)(BandTensor*);
 typedef BandQuantization (*PFN_BandTensorGetQuantization)(BandTensor*);

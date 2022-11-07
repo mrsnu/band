@@ -196,8 +196,12 @@ BandType BandTensorGetType(BandTensor* tensor) {
 
 void* BandTensorGetData(BandTensor* tensor) { return tensor->impl->GetData(); }
 
-int* BandTensorGetDims(BandTensor* tensor) {
-  return tensor->impl->GetDims().data();
+size_t BandTensorGetNumDims(BandTensor* tensor) {
+  return tensor->impl->GetNumDims();
+}
+
+const int* BandTensorGetDims(BandTensor* tensor) {
+  return tensor->impl->GetDims();
 }
 
 size_t BandTensorGetBytes(BandTensor* tensor) {
