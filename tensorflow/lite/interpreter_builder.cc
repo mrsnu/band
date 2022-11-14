@@ -615,39 +615,98 @@ int InterpreterBuilder::RegisterModel(const ::tflite::Model* model,
     return -1;
   }
 
-  // Create subgraphs
-  // Save subgraph_idx - device_op_indices map for prev/next setting
-  for (auto& subgraph_metadata : subgraph_indices) {
-    int unit_subgraph_idx = subgraph_metadata.first;
-    auto& device_op_indices = subgraph_metadata.second;
+  if (false) { // To check whether model has a fallback
+    // Device,ops to subgraph index map to avoid duplicate
+    // subgraph construction without input/output ops
+    std::map<DeviceOpIndices, int> device_ops_to_subgraph_index;
 
-    const int worker_id =
-        (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
-    const int subgraph_idx =
-        AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
-                    device_op_indices);
-    if (subgraph_idx == -1) {
-      TF_LITE_REPORT_ERROR(error_reporter_,
-                            "Failed to add subgraph to index %d",
-                            subgraph_idx);
-      continue;
+    // register subgraphs for all devices
+    for (int i = 0; i < kTfLiteNumDevices; ++i) {
+      TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
+      std::vector<DeviceOpIndices> device_subgraph_indices =
+          (*interpreter)->MakeSubgraphsForFallbackOps(model_id, device_flag);
+
+      for (auto& device_op_indices : device_subgraph_indices) {
+        const int worker_id =
+            (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
+        std::string prefix;
+        int subgraph_idx = -1;
+        // Duplicate subgraph search without key
+        if (device_ops_to_subgraph_index.find(device_op_indices) !=
+            device_ops_to_subgraph_index.end()) {
+          subgraph_idx = device_ops_to_subgraph_index[device_op_indices];
+          LOGI("Subgraph reuse %d", subgraph_idx);
+        } else {
+          subgraph_idx = AddSubgraph(model, op_resolver, interpreter, model_id,
+                                     worker_id, device_op_indices);
+          if (subgraph_idx != -1) {
+            subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
+            device_ops_to_subgraph_index[device_op_indices] = subgraph_idx;
+          } else {
+            continue;
+          }
+        }
+
+        Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
+
+        if (subgraph == nullptr) {
+          LOGI("Failed to get subgraph from index %d", subgraph_idx);
+          continue;
+        }
+
+        auto& subgraph_key = subgraph->GetKey();
+        // Set unit subgraph indices.
+        for (auto& unit_index_device_ops : subgraph_indices) {
+          auto unit_index = unit_index_device_ops.first;
+          auto& device_ops = unit_index_device_ops.second;
+          auto& device = device_ops.first;
+          auto& op_indices = device_ops.second;
+
+          if (device == (*interpreter)->GetWorkerDeviceFlag(subgraph_key.worker_id)) {
+            if (std::includes(device_op_indices.second.begin(),
+                              device_op_indices.second.end(),
+                              op_indices.begin(), op_indices.end())) {
+              subgraph_key.unit_indices.insert(unit_index);
+            }
+          }
+        }
+      }
     }
-    subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
+  } else {
+    // Create subgraphs
+    // Save subgraph_idx - device_op_indices map for prev/next setting
+    for (auto& subgraph_metadata : subgraph_indices) {
+      int unit_subgraph_idx = subgraph_metadata.first;
+      auto& device_op_indices = subgraph_metadata.second;
 
-    Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
-    if (subgraph == nullptr) {
-      TF_LITE_REPORT_ERROR(
-          error_reporter_,
-          "Failed to get subgraph from index %d", subgraph_idx);
-      continue;
+      const int worker_id =
+          (*interpreter)->GetRepresentativeWorkerId(device_op_indices.first);
+      const int subgraph_idx =
+          AddSubgraph(model, op_resolver, interpreter, model_id, worker_id,
+                      device_op_indices);
+      if (subgraph_idx == -1) {
+        TF_LITE_REPORT_ERROR(error_reporter_,
+                              "Failed to add subgraph to index %d",
+                              subgraph_idx);
+        continue;
+      }
+      subgraph_idx_to_device_ops[subgraph_idx] = device_op_indices;
+
+      Subgraph* subgraph = (*interpreter)->subgraph(subgraph_idx);
+      if (subgraph == nullptr) {
+        TF_LITE_REPORT_ERROR(
+            error_reporter_,
+            "Failed to get subgraph from index %d", subgraph_idx);
+        continue;
+      }
+
+      SubgraphKey& subgraph_key = subgraph->GetKey();
+      subgraph_key.unit_indices.insert(unit_subgraph_idx);
+      LOGI("%dth subgraph has %d unit subgraphs", subgraph_idx, unit_subgraph_idx);
     }
 
-    SubgraphKey& subgraph_key = subgraph->GetKey();
-    subgraph_key.unit_indices.insert(unit_subgraph_idx);
-    LOGI("%dth subgraph has %d unit subgraphs", subgraph_idx, unit_subgraph_idx);
+    LOGI("%d subgraphs created during GetUnitSubgraphs()", subgraph_idx_to_device_ops.size());
   }
-
-  LOGI("%d subgraphs created during GetUnitSubgraphs()", subgraph_idx_to_device_ops.size());
 
   int num_workers = (*interpreter)->GetNumWorkers();
   std::map<TfLiteDeviceFlags, std::vector<int>> device_to_extra_workers;

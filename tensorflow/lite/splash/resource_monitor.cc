@@ -50,7 +50,10 @@ void ResourceMonitor::Monitor() {
       } 
       need_cpu_update_ = false;
     }
-    // std::unique_lock<std::mutex> lock(cpu_mtx_);
+    // Update target temp
+    for (int i = 0; i < target_temp_table_.size(); i++) {
+      target_temp_table_[i] = ParseTargetTemperature(i);
+    }
     // Update temp
     for (int i = 0; i < temp_table_.size(); i++) {
       temp_table_[i] = ParseTemperature(i);
@@ -58,10 +61,6 @@ void ResourceMonitor::Monitor() {
     // Update frequency
     for (int i = 0; i < freq_table_.size(); i++) {
       freq_table_[i] = ParseFrequency(i);
-    }
-    // Update target temp
-    for (int i = 0; i < target_temp_table_.size(); i++) {
-      target_temp_table_[i] = ParseTargetTemperature(i);
     }
     // lock.unlock();
     // std::this_thread::sleep_for(std::chrono::microseconds(300));

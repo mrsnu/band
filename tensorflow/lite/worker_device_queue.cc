@@ -102,11 +102,11 @@ void DeviceQueueWorker::Work() {
         TfLiteStatus status = subgraph.Invoke();
         // LOGI("[%lld], end", profiling::time::NowMicros());
         if (status == kTfLiteOk) {
+          // planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
           current_job.end_time = profiling::time::NowMicros();
           current_job.latency = current_job.end_time - current_job.invoke_time;
           // TODO: Extract this delay into another thread to avoid performance decrease
-          // std::this_thread::sleep_for(std::chrono::microseconds(1200));
-          planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
+          // std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
           // planner_ptr->GetModelManager()->Update(current_job);
 
