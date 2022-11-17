@@ -23,15 +23,17 @@ class CloudLatencyModel : public ILatencyModel {
   int64_t Predict(int32_t model_id) override;
   int64_t PredictThrottled(int32_t model_id) override;
 
-  TfLiteStatus Update(int32_t model_id, int64_t latency) override;
+  TfLiteStatus Update(Job job) override;
   
   TfLiteStatus Profile(int32_t model_id, int64_t latency) override;
 
  private:
-  std::unordered_map<int, int64_t> model_latency_table_; // {model_id, latency}
+  std::unordered_map<int, int64_t> computation_time_table_; // {model_id, latency}
 
   int64_t EstimateInputSize(const Subgraph* subgraph);
   int64_t EstimateOutputSize(const Subgraph* subgraph);
+  int64_t GetComputationTime(int32_t model_id);
+  int64_t PredictCommunicationTime(int32_t model_id);
 };
 
 } // namespace impl

@@ -30,13 +30,6 @@ int GlobalQueueWorker::GetCurrentJobId() {
   return current_job_.job_id;
 }
 
-std::vector<thermal_t> GlobalQueueWorker::GetEstimatedEndTemperature() {
-  std::unique_lock<std::mutex> lock(device_mtx_);
-  // Return dummy values
-  std::shared_ptr<Planner> planner_ptr = planner_.lock();
-  return planner_ptr->GetResourceMonitor().GetAllTemperature();
-}
-
 // This function returns the remaining time until this worker can start
 // processing another Job.
 //

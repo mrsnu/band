@@ -1,25 +1,23 @@
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 
-package(
-    default_visibility = [
-        "//visibility:public",
-    ],
-    licenses = ["notice"],  # Apache 2.0
-)
+exports_files([
+    "splash.proto",
+])
 
 proto_library(
-    name = "helloworld_proto",
-    srcs = ["helloworld.proto"],
+    name = "splash_proto",
+    srcs = ["splash.proto"],
 )
 
 cc_proto_library(
-    name = "helloworld_cc_proto",
-    deps = [":helloworld_proto"],
+    name = "splash_cc_proto",
+    deps = [":splash_proto"],
 )
 
 cc_grpc_library(
-    name = "helloworld_cc_grpc",
-    srcs = [":helloworld_proto"],
+    name = "splash_grpc_proto",
+    srcs = [":splash_proto"],
+    deps = [":splash_cc_proto"],
     grpc_only = True,
-    deps = [":helloworld_cc_proto"],
+    visibility = ["//visibility:public"]
 )

@@ -70,18 +70,15 @@ typedef enum TfLiteWorkerType {
 } TfLiteWorkerType;
 
 typedef enum TfLiteSchedulerType {
-  kFixedDevice = 0,
-  kRoundRobin = 1,
-  kShortestExpectedLatency = 2,
-  kFixedDeviceGlobalQueue = 3,
-  kHeterogeneousEarliestFinishTime = 4,
-  kLSF = 5,
-  kHeterogeneousEarliestFinishTimeReserved = 6,
-  kOffloading = 7,
-  kRandomAssign = 8,
-  kThermalAware= 9,
-  kBaselineConfigurable = 10,
-  kNumSchedulerTypes = 11
+  kCloudOnly = 0,
+  kMobileOnlyHeft = 1,
+  kMobileOnlyLst = 2,
+  kMobileCloudHeft = 3,
+  kMobileCloudLst = 4,
+  kRandomAssign = 5,
+  kSplashHeft= 6,
+  kSplashLst= 7,
+  kNumSchedulerTypes = 8
 } TfLiteSchedulerType;
 
 // Forward declare so dependent structs and methods can reference these types

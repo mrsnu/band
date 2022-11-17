@@ -100,7 +100,7 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     int scheduler_id = root["schedulers"][i].asInt();
     TF_LITE_ENSURE_MSG(
         error_reporter,
-        scheduler_id >= kFixedDevice && scheduler_id < kNumSchedulerTypes,
+        scheduler_id >= kCloudOnly && scheduler_id < kNumSchedulerTypes,
         "Wrong `schedulers` argument is given.");
     planner_config.schedulers.push_back(
         static_cast<TfLiteSchedulerType>(scheduler_id));

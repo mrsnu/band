@@ -19,7 +19,7 @@ void RandomAssignScheduler::Schedule(JobQueue& requests) {
     // std::advance(it, target_idx);
     // int worker_id = *it;
     // LOGI("It's selected : %d", worker_id);
-    int worker_id = kTfLiteCPU;
+    int worker_id = kTfLiteCLOUD;
 
     // if (worker_id != kTfLiteCPU) {
       // continue;

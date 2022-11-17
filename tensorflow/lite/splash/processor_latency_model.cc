@@ -44,28 +44,28 @@ TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
   return kTfLiteOk;
 }
 
-TfLiteStatus ProcessorLatencyModel::Update(int32_t model_id, int64_t latency) {
+TfLiteStatus ProcessorLatencyModel::Update(Job job) {
   thermal_t current_temp = GetResourceMonitor().GetTemperature(wid_);
   thermal_t threshold = GetResourceMonitor().GetThrottlingThreshold(wid_);
   if (current_temp > threshold) {
-    UpdateThrottledLatency(model_id, latency); 
+    UpdateThrottledLatency(job.model_id, job.latency); 
     return kTfLiteOk;
   }
 
-  auto it = model_latency_table_.find(model_id);
+  auto it = model_latency_table_.find(job.model_id);
   if (it != model_latency_table_.end()) {
     // if (IsThrottled(model_id, latency, current_temp)) { // If new throttling threshold detected
     //   LOGI("PLM::Update Newly Throttling detected in worker[%d] on current temp = %d", wid_, current_temp);
     //   GetResourceMonitor().SetThrottlingThreshold(wid_, current_temp);
     //   UpdateThrottledLatency(model_id, latency);
     // } else {
-      int64_t prev_latency = model_latency_table_[model_id];
-      model_latency_table_[model_id] =
-          smoothing_factor_ * latency +
+      int64_t prev_latency = model_latency_table_[job.model_id];
+      model_latency_table_[job.model_id] =
+          smoothing_factor_ * job.latency +
           (1 - smoothing_factor_) * prev_latency;
     // }
   } else {
-    model_latency_table_[model_id] = latency;
+    model_latency_table_[job.model_id] = job.latency;
   }
   return kTfLiteOk;
 }

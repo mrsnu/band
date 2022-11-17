@@ -239,7 +239,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       std::unique_ptr<Worker> worker;
 
       if (device_flag == kTfLiteCLOUD) {
-        continue;
+        // continue;
         if (planner_->GetWorkerType() == kGlobalQueue) {
           worker = std::make_unique<GlobalQueueOffloadingWorker>(planner_, device_flag);
         } else {

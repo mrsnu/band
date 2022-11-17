@@ -30,7 +30,7 @@ class ILatencyModel {
   virtual int64_t PredictThrottled(int32_t model_id) = 0;
 
   // Update model parameters with the real latency 
-  virtual TfLiteStatus Update(int32_t model_id, int64_t latency) = 0;
+  virtual TfLiteStatus Update(Job job) = 0;
 
   virtual TfLiteStatus Profile(int32_t model_id, int64_t latency) = 0;
 

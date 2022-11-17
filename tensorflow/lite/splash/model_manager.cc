@@ -96,12 +96,14 @@ int64_t ModelManager::GetPredictedThrottledLatency(worker_id_t wid, int32_t mode
 
 TfLiteStatus ModelManager::Update(Job& job) {
   thermal_models_[job.worker_id]->Update(job);
-  latency_models_[job.worker_id]->Update(job.model_id, job.latency);
+  latency_models_[job.worker_id]->Update(job);
   return kTfLiteOk;
 }
 
 TfLiteStatus ModelManager::ProfileLatency(int model_id, int worker_id, int64_t latency) {
-  latency_models_[worker_id]->Update(model_id, latency);
+  Job job = Job(model_id);
+  job.latency = latency;
+  latency_models_[worker_id]->Update(job);
   return kTfLiteOk;
 }
 

@@ -15,21 +15,49 @@ TfLiteStatus CloudLatencyModel::Init() {
 }
 
 int64_t CloudLatencyModel::Predict(int32_t model_id) {
-  // Get network bandwidth measurement 
-  return 40000;
+  int64_t comp_time = GetComputationTime(model_id);
+  int64_t comm_time = PredictCommunicationTime(model_id);
+  return comp_time + comm_time;
+}
+
+int64_t CloudLatencyModel::GetComputationTime(int32_t model_id) {
+  auto it = computation_time_table_.find(model_id);
+  if (it != computation_time_table_.end()) {
+    return it->second;
+  } else {
+    return 0; // Minimum value to be selected
+  }
+}
+
+int64_t CloudLatencyModel::PredictCommunicationTime(int32_t model_id) {
+  auto it = computation_time_table_.find(model_id);
+  if (it != computation_time_table_.end()) {
+    return it->second;
+  } else {
+    return 0; // Minimum value to be selected
+  }
 }
 
 int64_t CloudLatencyModel::PredictThrottled(int32_t model_id) {
-  // Get network bandwidth measurement 
-  return 40000;
+  return Predict(model_id);
 }
 
 TfLiteStatus CloudLatencyModel::Profile(int32_t model_id, int64_t latency) {
+  // Not implemented
   return kTfLiteOk;
 }
 
-
-TfLiteStatus CloudLatencyModel::Update(int32_t model_id, int64_t latency) {
+TfLiteStatus CloudLatencyModel::Update(Job job) {
+  int64_t computation_time = job.latency - job.communication_time;
+  auto it = computation_time_table_.find(job.model_id);
+  if (it != computation_time_table_.end()) {
+    int64_t prev_latency = computation_time_table_[job.model_id];
+    computation_time_table_[job.model_id] =
+        smoothing_factor_ * computation_time +
+        (1 - smoothing_factor_) * prev_latency;
+  } else {
+    computation_time_table_[job.model_id] = computation_time;
+  }
   return kTfLiteOk;
 }
 

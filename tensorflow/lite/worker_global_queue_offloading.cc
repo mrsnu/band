@@ -35,13 +35,6 @@ int GlobalQueueOffloadingWorker::GetCurrentJobId() {
   return current_job_.job_id;
 }
 
-std::vector<thermal_t> GlobalQueueOffloadingWorker::GetEstimatedEndTemperature() {
-  std::unique_lock<std::mutex> lock(device_mtx_);
-  // Return dummy values
-  std::shared_ptr<Planner> planner_ptr = planner_.lock();
-  return planner_ptr->GetResourceMonitor().GetAllTemperature();
-}
-
 int64_t GlobalQueueOffloadingWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {

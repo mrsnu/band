@@ -24,7 +24,7 @@ class ProcessorLatencyModel : public ILatencyModel {
   int64_t Predict(int32_t model_id) override;
   int64_t PredictThrottled(int32_t model_id) override;
 
-  TfLiteStatus Update(int32_t model_id, int64_t latency) override;
+  TfLiteStatus Update(Job job) override;
 
   TfLiteStatus Profile(int32_t model_id, int64_t latency) override;
  

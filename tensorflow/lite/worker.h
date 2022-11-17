@@ -46,7 +46,6 @@ class Worker {
   // with the lock.
   virtual bool GiveJob(Job& job) = 0;
 
-  virtual std::vector<thermal_t> GetEstimatedEndTemperature() = 0;
 
   // DeviceQueueWorker methods
   virtual JobQueue& GetDeviceRequests();
@@ -104,7 +103,6 @@ class DeviceQueueWorker : public Worker {
   JobQueue& GetDeviceRequests() override;
   // GlobalQueueWorker methods
   bool IsBusy() override;
-  std::vector<thermal_t> GetEstimatedEndTemperature() override;
 
  protected:
   void Work() override;
@@ -124,7 +122,6 @@ class GlobalQueueWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   bool IsBusy() override;
-  std::vector<thermal_t> GetEstimatedEndTemperature() override;
 
  protected:
   void Work() override;
@@ -148,7 +145,6 @@ class DeviceQueueOffloadingWorker : public Worker {
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
   bool IsBusy() override;
-  std::vector<thermal_t> GetEstimatedEndTemperature() override;
 
  protected:
   void Work() override;
@@ -166,7 +162,6 @@ class GlobalQueueOffloadingWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   bool IsBusy() override;
-  std::vector<thermal_t> GetEstimatedEndTemperature() override;
 
  protected:
   void Work() override;

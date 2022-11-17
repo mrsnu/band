@@ -38,17 +38,6 @@ bool DeviceQueueWorker::IsBusy() {
   return !requests_.empty();
 }
 
-std::vector<thermal_t> DeviceQueueWorker::GetEstimatedEndTemperature() {
-  std::unique_lock<std::mutex> lock(device_mtx_);
-  std::shared_ptr<Planner> planner_ptr = planner_.lock();
-  std::vector<thermal_t> temp = planner_ptr->GetResourceMonitor().GetAllTemperature(); 
-  if (requests_.empty()) {
-    return temp;
-  }
-  temp[worker_id_] = requests_.back().estimated_temp;
-  return temp;
-}
-
 bool DeviceQueueWorker::GiveJob(Job& job) {
   if (!IsAvailable()) {
     return false;
@@ -102,7 +91,7 @@ void DeviceQueueWorker::Work() {
         TfLiteStatus status = subgraph.Invoke();
         // LOGI("[%lld], end", profiling::time::NowMicros());
         if (status == kTfLiteOk) {
-          // planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
+          planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
           current_job.end_time = profiling::time::NowMicros();
           current_job.latency = current_job.end_time - current_job.invoke_time;
           // TODO: Extract this delay into another thread to avoid performance decrease

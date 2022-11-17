@@ -109,6 +109,7 @@ struct Job {
   // Expected total latency
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
+  int64_t communication_time = 0;
 
   // Constant variables (Valid after invoke)
   // TODO: better job life-cycle to change these to `const`

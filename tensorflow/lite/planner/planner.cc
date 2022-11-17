@@ -3,13 +3,13 @@
 #include <fstream>
 
 #include "tensorflow/lite/interpreter.h"
-#include "tensorflow/lite/planner/baseline_configurable_scheduler.h"
-#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
-#include "tensorflow/lite/planner/fixed_device_scheduler.h"
+#include "tensorflow/lite/planner/cloud_only_scheduler.h"
+#include "tensorflow/lite/planner/mobile_only_heft_scheduler.h"
+#include "tensorflow/lite/planner/mobile_only_lst_scheduler.h"
+#include "tensorflow/lite/planner/mobile_cloud_heft_scheduler.h"
+#include "tensorflow/lite/planner/mobile_cloud_lst_scheduler.h"
 #include "tensorflow/lite/planner/random_assign_scheduler.h"
-#include "tensorflow/lite/planner/offloading_scheduler.h"
 #include "tensorflow/lite/planner/thermal_aware_scheduler.h"
-// #include "tensorflow/lite/resource_monitor.h"
 #include "tensorflow/lite/profiling/time.h"
 
 #if defined(__ANDROID__)
@@ -46,7 +46,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   if (log_path_.size()) {
     std::ofstream log_file(log_path_);
     if (!log_file.is_open()) return kTfLiteError;
-    log_file << "sched_id\t"
+    log_file << "job_id\t"
+             << "sched_id\t"
              << "model_name\t"
              << "model_id\t"
              << "worker_id\t"
@@ -69,10 +70,10 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
             //  << "prediction_error_temp\t"
             //  << "prediction_error_latency\t"
              << "before_target_temp\t"
-            //  << "after_target_temp\t"
-            //  << "temp_increase\t"
-            //  << "fps\t"
-            //  << "ppt\t"
+             << "after_target_temp\t"
+             << "temp_increase\t"
+             << "fps\t"
+             << "ppt\t"
              << "job_status\n";
     log_file.close();
   }
@@ -89,21 +90,22 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
 
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
-    if (schedulers[i] == kFixedDevice) {
-      schedulers_.emplace_back(new FixedDeviceScheduler(this));
-    } else if (schedulers[i] == kFixedDeviceGlobalQueue) {
-      schedulers_.emplace_back(new FixedDeviceGlobalQueueScheduler(this));
-    } else if (schedulers[i] == kRoundRobin) {
-      schedulers_.emplace_back(new OffloadingScheduler(this));
+    if (schedulers[i] == kCloudOnly) {
+      schedulers_.emplace_back(new CloudOnlyScheduler(this));
+    } else if (schedulers[i] == kMobileOnlyHeft) {
+      schedulers_.emplace_back(new MobileOnlyHeftScheduler(this));
+    } else if (schedulers[i] == kMobileOnlyLst) {
+      schedulers_.emplace_back(new MobileOnlyLstScheduler(this));
+    } else if (schedulers[i] == kMobileCloudHeft) {
+      schedulers_.emplace_back(new MobileCloudHeftScheduler(this));
+    } else if (schedulers[i] == kMobileCloudLst) {
+      schedulers_.emplace_back(new MobileCloudLstScheduler(this));
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
-    } else if (schedulers[i] == kThermalAware) {
+    } else if (schedulers[i] == kSplashHeft) {
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
-    } else if (schedulers[i] == kBaselineConfigurable) {
-      schedulers_.emplace_back(new BaselineConfigurableScheduler(this));
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTimeReserved) {
-      schedulers_.emplace_back(
-          new HeterogeneousEarliestFinishTimeReservedScheduler(this));
+    } else if (schedulers[i] == kSplashLst) {
+      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
     } else {
       return kTfLiteError;
     }
@@ -363,16 +365,17 @@ void Planner::FlushFinishedJobs() {
         job.status =
             latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
       }
-      // double ppt = 0.;
-      // double fps = (double)(1000000. / (double)job.latency);
-      // int temp_diff = job.after_target_temp[job.worker_id] - job.before_target_temp[job.worker_id];
-      // if (temp_diff > 0) {
-      //   ppt = fps / (double)(temp_diff) * 1000.;
-      // } else {
-      //   temp_diff = 0;
-      // }
+      double ppt = 0.;
+      double fps = (double)(1000000. / (double)job.latency);
+      int temp_diff = job.after_target_temp[job.worker_id] - job.before_target_temp[job.worker_id];
+      if (temp_diff > 0) {
+        ppt = fps / (double)(temp_diff) * 1000.;
+      } else {
+        temp_diff = 100;
+      }
       // write all timestamp statistics to log file
-      log_file << job.sched_id << "\t"
+      log_file << job.job_id << "\t"
+               << job.sched_id << "\t"
                << job.model_fname << "\t"
                << job.model_id << "\t"
                << job.worker_id << "\t"
@@ -395,10 +398,10 @@ void Planner::FlushFinishedJobs() {
               //  << job.after_temp[job.worker_id] - job.estimated_temp<< "\t"
               //  << job.latency - job.estimated_latency << "\t"
                << job.before_target_temp[job.worker_id] << "\t"
-              //  << job.after_target_temp[job.worker_id] << "\t"
-              //  << temp_diff << "\t"
-              //  << fps << "\t"
-              //  << ppt << "\t"
+               << job.after_target_temp[job.worker_id] << "\t"
+               << temp_diff << "\t"
+               << fps << "\t"
+               << ppt << "\t"
                << job.status << "\n";
     }
     log_file.close();

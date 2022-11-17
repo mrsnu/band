@@ -1,9 +1,9 @@
-#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
+#include "tensorflow/lite/planner/mobile_cloud_heft_scheduler.h"
 
 namespace tflite {
 namespace impl {
 
-void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& requests) {
+void MobileCloudHeftScheduler::Schedule(JobQueue& requests) {
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
@@ -99,14 +99,9 @@ void HeterogeneousEarliestFinishTimeReservedScheduler::Schedule(JobQueue& reques
     window_size--;
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    // Update Job status specific to this planner.
-    // Common status will be updated by `EnqueueAction`.
-    // if (target_subgraph->IsStart()) {
-      // only set these fields if this is the first subgraph of this model
-      job.expected_latency = largest_shortest_latency;
-      job.estimated_latency = largest_shortest_latency;
-      job.estimated_temp = 0;
-    // }
+    job.expected_latency = largest_shortest_latency;
+    job.estimated_latency = largest_shortest_latency;
+    job.estimated_temp = 0;
     EnqueueAction(job, target_subgraph);
 
     // add next job to reserved_, if one exists
