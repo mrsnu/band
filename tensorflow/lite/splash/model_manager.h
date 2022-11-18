@@ -33,13 +33,13 @@ class ModelManager {
   bool IsAvailableWorker(worker_id_t wid, Subgraph* subgraph);
 
   thermal_t GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph);
-  int64_t GetPredictedLatency(worker_id_t wid, int32_t model_id);
-  int64_t GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id);
+  int64_t GetPredictedLatency(worker_id_t wid, Subgraph* subgraph);
+  // int64_t GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id);
 
   // Update model parameters with the prediction error
-  TfLiteStatus Update(Job& job);
+  TfLiteStatus Update(Job& job, Subgraph* subgraph);
 
-  TfLiteStatus ProfileLatency(int model_id, int worker_id, int64_t latency);
+  TfLiteStatus ProfileLatency(Subgraph* subgraph, int64_t latency);
 
  private:
   std::vector<std::unique_ptr<IThermalModel>> thermal_models_;

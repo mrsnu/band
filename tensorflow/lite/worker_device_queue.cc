@@ -74,7 +74,7 @@ void DeviceQueueWorker::Work() {
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
-      Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
+      Subgraph* subgraph = interpreter_ptr->subgraph(subgraph_idx);
 
       if (TryUpdateWorkerThread() != kTfLiteOk) {
         // TODO #21: Handle errors in multi-thread environment
@@ -88,7 +88,7 @@ void DeviceQueueWorker::Work() {
         lock.unlock();
 
         // LOGI("[%lld], start", profiling::time::NowMicros());
-        TfLiteStatus status = subgraph.Invoke();
+        TfLiteStatus status = subgraph->Invoke();
         // LOGI("[%lld], end", profiling::time::NowMicros());
         if (status == kTfLiteOk) {
           planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
@@ -97,7 +97,7 @@ void DeviceQueueWorker::Work() {
           // TODO: Extract this delay into another thread to avoid performance decrease
           // std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-          // planner_ptr->GetModelManager()->Update(current_job);
+          planner_ptr->GetModelManager()->Update(current_job, subgraph);
 
           if (current_job.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job.following_jobs);

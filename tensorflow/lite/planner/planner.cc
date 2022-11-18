@@ -5,9 +5,7 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/planner/cloud_only_scheduler.h"
 #include "tensorflow/lite/planner/mobile_only_heft_scheduler.h"
-#include "tensorflow/lite/planner/mobile_only_lst_scheduler.h"
 #include "tensorflow/lite/planner/mobile_cloud_heft_scheduler.h"
-#include "tensorflow/lite/planner/mobile_cloud_lst_scheduler.h"
 #include "tensorflow/lite/planner/random_assign_scheduler.h"
 #include "tensorflow/lite/planner/thermal_aware_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
@@ -94,12 +92,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new CloudOnlyScheduler(this));
     } else if (schedulers[i] == kMobileOnlyHeft) {
       schedulers_.emplace_back(new MobileOnlyHeftScheduler(this));
-    } else if (schedulers[i] == kMobileOnlyLst) {
-      schedulers_.emplace_back(new MobileOnlyLstScheduler(this));
     } else if (schedulers[i] == kMobileCloudHeft) {
       schedulers_.emplace_back(new MobileCloudHeftScheduler(this));
-    } else if (schedulers[i] == kMobileCloudLst) {
-      schedulers_.emplace_back(new MobileCloudLstScheduler(this));
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
     } else if (schedulers[i] == kSplashHeft) {
@@ -229,9 +223,22 @@ void Planner::UpdateWorkerWaitingTime() {
   }
 }
 
-std::set<int> Planner::GetIdleWorkers() {
+std::set<int> Planner::GetIdleAllWorkers() {
   std::set<int> idle_workers;
   for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
+      idle_workers.insert(i);
+    }
+  }
+  return idle_workers;
+}
+
+std::set<int> Planner::GetIdleProcessorWorkers() {
+  std::set<int> idle_workers;
+  for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    if (i == kTfLiteCLOUD) {
+      continue;
+    }
     if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
       idle_workers.insert(i);
     }

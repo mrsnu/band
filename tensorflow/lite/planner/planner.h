@@ -110,7 +110,8 @@ class Planner {
   // Get idle workers from `workers_waiting_`.
   // NOTE: Another option to implement the function is to be pass
   // the current WorkerWaitingTime as a parameter.
-  std::set<int> GetIdleWorkers();
+  std::set<int> GetIdleProcessorWorkers();
+  std::set<int> GetIdleAllWorkers();
 
   std::vector<std::unique_ptr<Worker>>& GetWorkers();
 
@@ -191,7 +192,6 @@ class Scheduler {
 
  protected:
   bool need_profile_;
-  bool need_fallback_subgraphs_;
   TfLiteWorkerType worker_type_;
   Planner* planner_;
   ScheduleAction action_;

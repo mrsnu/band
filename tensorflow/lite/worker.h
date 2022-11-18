@@ -29,7 +29,7 @@ class Worker {
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   TfLiteStatus UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads);
-  void WaitUntilDeviceAvailable(Subgraph& subgraph);
+  void WaitUntilDeviceAvailable(Subgraph* subgraph);
   bool IsAvailable();
   void Pause();
   void Resume();

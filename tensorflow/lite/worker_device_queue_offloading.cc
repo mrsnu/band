@@ -242,8 +242,12 @@ void DeviceQueueOffloadingWorker::Work() {
       break;
     }
 
+    int subgraph_idx = current_job.subgraph_idx;
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
+      Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
+      Subgraph* subgraph = interpreter_ptr->subgraph(subgraph_idx);
+
       lock.lock();
       current_job.invoke_time = profiling::time::NowMicros();
       planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job);
@@ -256,7 +260,7 @@ void DeviceQueueOffloadingWorker::Work() {
       current_job.latency = current_job.end_time - current_job.invoke_time;
       current_job.communication_time = current_job.latency - computation_time;
 
-      planner_ptr->GetModelManager()->Update(current_job);
+      planner_ptr->GetModelManager()->Update(current_job, subgraph);
 
       if (current_job.following_jobs.size() != 0) {
         planner_ptr->EnqueueBatch(current_job.following_jobs);

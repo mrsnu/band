@@ -11,7 +11,7 @@ namespace impl {
 void RandomAssignScheduler::Schedule(JobQueue& requests) {
   // LOGI("Idle worker size : %d", idle_workers.size());
   while (!requests.empty()) {
-    // std::set<int> idle_workers = planner_->GetIdleWorkers();
+    // std::set<int> idle_workers = planner_->GetIdleAllWorkers();
     // Select a worker
     // std::vector<worker_id_t> possible_workers = model_manager_.GetPossibleWorkers(to_execute);
     // int target_idx = rand() % idle_workers.size();

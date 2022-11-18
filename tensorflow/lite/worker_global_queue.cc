@@ -80,7 +80,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
   int64_t profiled_latency =
       // interpreter->GetExpectedLatency(current_job_.subgraph_idx);
-      planner->GetModelManager()->GetPredictedLatency(current_job_.worker_id, current_job_.model_id);
+      planner->GetModelManager()->GetPredictedLatency(current_job_.worker_id, current_subgraph);
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet
@@ -117,7 +117,7 @@ void GlobalQueueWorker::Work() {
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
-      Subgraph& subgraph = *(interpreter_ptr->subgraph(subgraph_idx));
+      Subgraph* subgraph = interpreter_ptr->subgraph(subgraph_idx);
 
       if (TryUpdateWorkerThread() != kTfLiteOk) {
         // TODO #21: Handle errors in multi-thread environment
@@ -130,7 +130,7 @@ void GlobalQueueWorker::Work() {
         planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job_);
         lock.unlock();
 
-        TfLiteStatus status = subgraph.Invoke();
+        TfLiteStatus status = subgraph->Invoke();
         if (status == kTfLiteOk) {
           // end_time is never read/written by any other thread as long as
           // is_busy == true, so it's safe to update it w/o grabbing the lock
@@ -138,7 +138,7 @@ void GlobalQueueWorker::Work() {
           current_job_.end_time = profiling::time::NowMicros();
           current_job_.latency = current_job_.end_time - current_job_.invoke_time;
 
-          planner_ptr->GetModelManager()->Update(current_job_);
+          planner_ptr->GetModelManager()->Update(current_job_, subgraph);
           interpreter_ptr->UpdateExpectedLatency(subgraph_idx, current_job_.latency);
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);

@@ -21,18 +21,9 @@ TfLiteStatus ProcessorLatencyModel::Init() {
   return kTfLiteOk;
 }
 
-int64_t ProcessorLatencyModel::Predict(int32_t model_id) {
-  auto it = model_latency_table_.find(model_id);
+int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
+  auto it = model_latency_table_.find(subgraph->GetKey().model_id);
   if (it != model_latency_table_.end()) {
-    return it->second;
-  } else {
-    return 0; // Minimum value to be selected
-  }
-}
-
-int64_t ProcessorLatencyModel::PredictThrottled(int32_t model_id) {
-  auto it = model_throttled_latency_table_.find(model_id);
-  if (it != model_throttled_latency_table_.end()) {
     return it->second;
   } else {
     return 0; // Minimum value to be selected
@@ -44,7 +35,7 @@ TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
   return kTfLiteOk;
 }
 
-TfLiteStatus ProcessorLatencyModel::Update(Job job) {
+TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
   thermal_t current_temp = GetResourceMonitor().GetTemperature(wid_);
   thermal_t threshold = GetResourceMonitor().GetThrottlingThreshold(wid_);
   if (current_temp > threshold) {

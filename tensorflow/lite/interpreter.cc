@@ -939,7 +939,7 @@ void Interpreter::ProfileOnline(int model_id,
     const Subgraph* primary_subgraph =
         subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
     for (const int& sub_idx : worker_subgraph_indices) {
-      const Subgraph* subgraph = subgraphs_[sub_idx].get();
+      Subgraph* subgraph = subgraphs_[sub_idx].get();
       const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
       if (subgraph->GetHealth()) {
         const int64_t latency = EstimateLatency(
@@ -948,7 +948,7 @@ void Interpreter::ProfileOnline(int model_id,
 
         moving_averaged_latencies_[sub_idx] = latency;
         profile_database_[key] = latency;
-        planner_->GetModelManager()->ProfileLatency(key.model_id, key.worker_id, latency);
+        planner_->GetModelManager()->ProfileLatency(subgraph, latency);
 
         TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                    "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
@@ -1089,7 +1089,7 @@ void Interpreter::ProfileOffline(int model_id,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
       moving_averaged_latencies_[sub_idx] = profiled_latency;
-      planner_->GetModelManager()->ProfileLatency(key.model_id, key.worker_id, profiled_latency);
+      planner_->GetModelManager()->ProfileLatency(subgraph, profiled_latency);
 
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                  "Reusing profiled result\n model=%d avg=%d us worker=%d "
@@ -1115,7 +1115,7 @@ void Interpreter::ProfileOffline(int model_id,
 
       moving_averaged_latencies_[sub_idx] = latency;
       profile_database_[key] = latency;
-      planner_->GetModelManager()->ProfileLatency(key.model_id, key.worker_id, latency);
+      planner_->GetModelManager()->ProfileLatency(subgraph, latency);
 
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                  "Profiling result\n model=%d avg=%d us worker=%d "
@@ -1977,6 +1977,9 @@ Interpreter::GetShortestSubgraphIndex(
     int64_t waiting_time = worker_waiting[key.worker_id];
     int64_t expected_latency = GetExpectedLatency(subgraph_index);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
+    LOGI("[%d] waiting time = %lld", key.worker_id, waiting_time);
+    LOGI("[%d] expected_latency = %lld", key.worker_id, expected_latency);
+    LOGI("[%d] total = %lld", key.worker_id, total);
 
     if (min_latency > total) {
       min_latency = total;

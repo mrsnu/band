@@ -23,14 +23,10 @@ class ILatencyModel {
 
   // Get an estimation value of future latency 
   // after executing inference of the input model
-  virtual int64_t Predict(int32_t model_id) = 0;
-
-  // Get an estimation value of future latency 
-  // after executing inference of the input model
-  virtual int64_t PredictThrottled(int32_t model_id) = 0;
+  virtual int64_t Predict(Subgraph* subgraph) = 0;
 
   // Update model parameters with the real latency 
-  virtual TfLiteStatus Update(Job job) = 0;
+  virtual TfLiteStatus Update(Job job, Subgraph* subgraph) = 0;
 
   virtual TfLiteStatus Profile(int32_t model_id, int64_t latency) = 0;
 

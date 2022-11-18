@@ -64,7 +64,7 @@ std::unique_ptr<ILatencyModel> ModelManager::BuildLatencyModel(worker_id_t wid) 
 bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
   auto& thermal_model = thermal_models_[wid]; 
   std::vector<thermal_t> before_temp = resource_monitor_.GetAllTemperature();
-  int64_t latency = GetPredictedLatency(wid, subgraph->GetKey().model_id);
+  int64_t latency = GetPredictedLatency(wid, subgraph);
   thermal_t temp = thermal_model->Predict(subgraph, latency, before_temp); 
   auto threshold = resource_monitor_.GetThrottlingThreshold(wid);
   if (temp > threshold) {
@@ -82,28 +82,28 @@ bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
 
 thermal_t ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
   std::vector<thermal_t> before_temp = resource_monitor_.GetAllTemperature();
-  auto latency = GetPredictedLatency(wid, subgraph->GetKey().model_id);
+  auto latency = GetPredictedLatency(wid, subgraph);
   return thermal_models_[wid]->Predict(subgraph, latency, before_temp);
 }
 
-int64_t ModelManager::GetPredictedLatency(worker_id_t wid, int32_t model_id) {
-  return latency_models_[wid]->Predict(model_id);
+int64_t ModelManager::GetPredictedLatency(worker_id_t wid, Subgraph* subgraph) {
+  return latency_models_[wid]->Predict(subgraph);
 }
 
-int64_t ModelManager::GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id) {
-  return latency_models_[wid]->PredictThrottled(model_id);
-}
+// int64_t ModelManager::GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id) {
+//   return latency_models_[wid]->PredictThrottled(model_id);
+// }
 
-TfLiteStatus ModelManager::Update(Job& job) {
+TfLiteStatus ModelManager::Update(Job& job, Subgraph* subgraph) {
   thermal_models_[job.worker_id]->Update(job);
-  latency_models_[job.worker_id]->Update(job);
+  latency_models_[job.worker_id]->Update(job, subgraph);
   return kTfLiteOk;
 }
 
-TfLiteStatus ModelManager::ProfileLatency(int model_id, int worker_id, int64_t latency) {
-  Job job = Job(model_id);
+TfLiteStatus ModelManager::ProfileLatency(Subgraph* subgraph, int64_t latency) {
+  Job job = Job(subgraph->GetKey().model_id);
   job.latency = latency;
-  latency_models_[worker_id]->Update(job);
+  latency_models_[subgraph->GetKey().worker_id]->Update(job, subgraph);
   return kTfLiteOk;
 }
 

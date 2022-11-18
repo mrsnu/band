@@ -44,7 +44,33 @@ int64_t GlobalQueueOffloadingWorker::GetWaitingTime() {
   if (!is_busy_) {
     return 0;
   }
-  return 0;
+
+  int64_t invoke_time = current_job_.invoke_time;
+  lock.unlock();
+
+  std::shared_ptr<Planner> planner = planner_.lock();
+  if (!planner) {
+    TF_LITE_MAYBE_REPORT_ERROR(
+        GetErrorReporter(),
+        "%s worker failed to acquire ptr to planner",
+        TfLiteDeviceGetName(device_flag_));
+    return -1;
+  }
+  Interpreter* interpreter = planner->GetInterpreter();
+
+  Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
+  int64_t profiled_latency =
+      // interpreter->GetExpectedLatency(current_job_.subgraph_idx);
+      planner->GetModelManager()->GetPredictedLatency(current_job_.worker_id, current_subgraph);
+
+  if (invoke_time == 0) {
+    // the worker has not started on processing the job yet
+    return profiled_latency;
+  }
+
+  int64_t current_time = profiling::time::NowMicros();
+  int64_t progress = current_time - invoke_time;
+  return std::max((long) (profiled_latency - progress), 0L);
 }
 
 void GlobalQueueOffloadingWorker::Work() {
@@ -72,6 +98,7 @@ void GlobalQueueOffloadingWorker::Work() {
     std::shared_ptr<Planner> planner_ptr = planner_.lock();
     if (planner_ptr) {
       Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
+      Subgraph* subgraph = interpreter_ptr->subgraph(subgraph_idx);
       lock.lock();
       current_job_.invoke_time = profiling::time::NowMicros();
       planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job_);
@@ -106,7 +133,7 @@ void GlobalQueueOffloadingWorker::Work() {
 
       interpreter_ptr->UpdateExpectedLatency(subgraph_idx, current_job_.latency);
 
-      planner_ptr->GetModelManager()->Update(current_job_);
+      planner_ptr->GetModelManager()->Update(current_job_, subgraph);
       if (current_job_.following_jobs.size() != 0) {
         planner_ptr->EnqueueBatch(current_job_.following_jobs);
       }

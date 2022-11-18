@@ -14,7 +14,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
     planner_->UpdateWorkerWaitingTime();
-    std::set<int> idle_workers = planner_->GetIdleWorkers();
+    std::set<int> idle_workers = planner_->GetIdleAllWorkers();
     if (idle_workers.empty()) {
       break;
     }
@@ -81,7 +81,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
       Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
       int worker_id = target_subgraph->GetKey().worker_id;
       if (idle_workers.find(worker_id) == idle_workers.end()) {
-        waiting_time[worker_id] += model_manager_->GetPredictedLatency(worker_id, target_subgraph->GetKey().model_id);
+        waiting_time[worker_id] += model_manager_->GetPredictedLatency(worker_id, target_subgraph);
         auto requests_it = requests.begin() + target_job_idx;
         Job job = *requests_it;
         jobs_to_yield.insert(job.job_id);
@@ -122,7 +122,7 @@ ThermalAwareScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>&
       continue;
     }
     int64_t waiting_time = worker_waiting[key.worker_id];
-    int64_t expected_latency = model_manager_->GetPredictedLatency(key.worker_id, key.model_id);
+    int64_t expected_latency = model_manager_->GetPredictedLatency(key.worker_id, subgraph);
     int64_t total = expected_latency + waiting_time;
 
     if (min_latency > total) {

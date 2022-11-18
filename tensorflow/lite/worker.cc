@@ -77,12 +77,12 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
   return kTfLiteOk;
 }
 
-void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
+void Worker::WaitUntilDeviceAvailable(Subgraph* subgraph) {
   while (true) {
     tflite::profiling::time::SleepForMicros(1000 * availability_check_interval_ms_);
     TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Availability check at %d ms.",
                         tflite::profiling::time::NowMicros());
-    if (subgraph.Invoke() == kTfLiteOk) {
+    if (subgraph->Invoke() == kTfLiteOk) {
       return;
     }
   }

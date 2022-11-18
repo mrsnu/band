@@ -1,5 +1,8 @@
 #include "tensorflow/lite/planner/mobile_only_heft_scheduler.h"
-
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 namespace tflite {
 namespace impl {
 
@@ -8,7 +11,7 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
     planner_->UpdateWorkerWaitingTime();
-    std::set<int> idle_workers = planner_->GetIdleWorkers();
+    std::set<int> idle_workers = planner_->GetIdleProcessorWorkers();
     if (idle_workers.empty()) {
       break;
     }
@@ -21,12 +24,11 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
     int64_t largest_shortest_latency;
     int target_job_idx;
     int target_subgraph_idx;
-    int target_subgraph_idx_next;
     do {
       largest_shortest_latency = -1;
       target_job_idx = -1;
       target_subgraph_idx = -1;
-      target_subgraph_idx_next = -1;
+      LOGI("Here");
 
       // only check up to `window_size` requests
       std::set<std::pair<int, int>> searched_jobs;
@@ -67,7 +69,6 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
           largest_shortest_latency = best_subgraph.second;
           target_subgraph_idx = best_subgraph.first.front();
           target_job_idx = it - requests.begin();
-          target_subgraph_idx_next = -1;
         }
       }
 
@@ -104,12 +105,7 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
     job.estimated_temp = 0;
     EnqueueAction(job, target_subgraph);
 
-    // add next job to reserved_, if one exists
-    if (target_subgraph_idx_next != -1) {
-      reserved_[job.job_id] = target_subgraph_idx_next;
-    } else {
-      reserved_.erase(job.job_id);
-    }
+    reserved_.erase(job.job_id);
   }
 }
 
