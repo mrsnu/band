@@ -23,6 +23,10 @@ TfLiteStatus ProcessorLatencyModel::Init() {
 
 int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
   auto it = model_latency_table_.find(subgraph->GetKey().model_id);
+  auto count = minimum_profiled_count_.find(subgraph->GetKey().model_id);
+  if (count == minimum_profiled_count_.end() || count->second < minimum_profiled_threshold_) {
+    return 0;
+  }
   if (it != model_latency_table_.end()) {
     return it->second;
   } else {
@@ -44,6 +48,7 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
   }
 
   auto it = model_latency_table_.find(job.model_id);
+  auto count = minimum_profiled_count_.find(job.model_id);
   if (it != model_latency_table_.end()) {
     // if (IsThrottled(model_id, latency, current_temp)) { // If new throttling threshold detected
     //   LOGI("PLM::Update Newly Throttling detected in worker[%d] on current temp = %d", wid_, current_temp);
@@ -54,9 +59,13 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
       model_latency_table_[job.model_id] =
           smoothing_factor_ * job.latency +
           (1 - smoothing_factor_) * prev_latency;
+      if (count->second <= minimum_profiled_threshold_) {
+        minimum_profiled_count_[job.model_id] = count->second + 1;
+      }
     // }
   } else {
     model_latency_table_[job.model_id] = job.latency;
+    minimum_profiled_count_[job.model_id] = 1;
   }
   return kTfLiteOk;
 }

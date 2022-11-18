@@ -35,6 +35,8 @@ class ProcessorLatencyModel : public ILatencyModel {
   int throttle_count_ = 0;
   int throttle_count_threshold_ = 5;
   thermal_t throttled_temp_min_ = 40000;
+  std::unordered_map<int, int> minimum_profiled_count_; // {model_id, count}
+  int minimum_profiled_threshold_ = 3;
 
   bool IsThrottled(int32_t model_id, int64_t latency, thermal_t current_temp);
   TfLiteStatus UpdateThrottledLatency(int32_t model_id, int64_t latency);

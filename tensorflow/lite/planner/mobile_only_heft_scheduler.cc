@@ -20,7 +20,6 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
 
     std::set<int> jobs_to_yield;
-    // basically the same as ShortestExpectedLatencyScheduler
     int64_t largest_shortest_latency;
     int target_job_idx;
     int target_subgraph_idx;
@@ -28,7 +27,6 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
       largest_shortest_latency = -1;
       target_job_idx = -1;
       target_subgraph_idx = -1;
-      LOGI("Here");
 
       // only check up to `window_size` requests
       std::set<std::pair<int, int>> searched_jobs;
@@ -56,18 +54,17 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
           int reserved_id = pair.second;
           Subgraph* reserved_subgraph = GetInterpreter()->subgraph(reserved_id);
           int worker_id = reserved_subgraph->GetKey().worker_id;
-          int64_t latency = GetInterpreter()->GetExpectedLatency(reserved_id);
+          int64_t latency = model_manager_->GetPredictedLatency(worker_id, reserved_subgraph);
           reserved_time[worker_id] += latency;
         }
 
-        std::pair<std::vector<int>, int64_t> best_subgraph =
-            GetInterpreter()->GetSubgraphWithShortestLatency(job, reserved_time);
+        std::pair<int, int64_t> best_subgraph = GetShortestSubgraph(job.model_id, waiting_time);
 
         if (largest_shortest_latency < best_subgraph.second) {
-          Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first.front());
+          Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
 
           largest_shortest_latency = best_subgraph.second;
-          target_subgraph_idx = best_subgraph.first.front();
+          target_subgraph_idx = best_subgraph.first;
           target_job_idx = it - requests.begin();
         }
       }
@@ -82,7 +79,7 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
       Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
       int worker_id = target_subgraph->GetKey().worker_id;
       if (idle_workers.find(worker_id) == idle_workers.end()) {
-        waiting_time[worker_id] += GetInterpreter()->GetExpectedLatency(target_subgraph_idx);
+        waiting_time[worker_id] += model_manager_->GetPredictedLatency(worker_id, target_subgraph);
         auto requests_it = requests.begin() + target_job_idx;
         Job job = *requests_it;
         jobs_to_yield.insert(job.job_id);
@@ -108,6 +105,30 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
     reserved_.erase(job.job_id);
   }
 }
+
+std::pair<int, int64_t>
+MobileOnlyHeftScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting) {
+  int64_t min_latency = INT64_MAX;
+  int min_idx = -1;
+
+  std::vector<int> subgraph_indices = GetInterpreter()->GetSubgraphIndices(model_id);
+  for (auto subgraph_index : subgraph_indices) {
+    Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_index);
+    SubgraphKey& key = subgraph->GetKey();
+    if (key.worker_id == kTfLiteCLOUD) continue;
+
+    int64_t waiting_time = worker_waiting[key.worker_id];
+    int64_t expected_latency = model_manager_->GetPredictedLatency(key.worker_id, subgraph);
+    int64_t total = expected_latency + waiting_time;
+
+    if (min_latency > total) {
+      min_latency = total;
+      min_idx = subgraph_index;
+    }
+  }
+  return {min_idx, min_latency};
+}
+
 
 }  // namespace impl
 }  // namespace tflite

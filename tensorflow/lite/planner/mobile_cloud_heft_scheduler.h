@@ -6,18 +6,21 @@
 
 namespace tflite {
 namespace impl {
-class Interpreter;
 
 class MobileCloudHeftScheduler : public Scheduler {
  public:
-  explicit MobileCloudHeftScheduler(Planner* planner) : Scheduler(planner) {
-    need_profile_ = true;
+  explicit MobileCloudHeftScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner) {
+    need_profile_ = false;
     worker_type_ = kGlobalQueue;
+    model_manager_ = model_manager;
   }
   void Schedule(JobQueue& requests) override;
 
  private:
+  ModelManager * model_manager_;
+
   std::map<int, int> reserved_;
+  std::pair<int, int64_t> GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting);
 };
 
 }  // namespace impl

@@ -6,10 +6,92 @@
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
 
+#include <grpcpp/grpcpp.h>
+
+#include "tensorflow/lite/proto/splash.grpc.pb.h"
+
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 #endif // defined(__ANDROID__)
+
+using grpc::Channel;
+using grpc::ClientContext;
+using grpc::Status;
+using grpc::ClientWriter;
+using grpc::ClientReader;
+using grpc::WriteOptions;
+using splash::Splash;
+using splash::Request;
+using splash::Response;
+
+class SplashGlobalClient {
+ public:
+  SplashGlobalClient(std::shared_ptr<Channel> channel, int data_size)
+      : stub_(Splash::NewStub(channel)) {
+        dataSize = data_size;
+        int height = 160;
+        int width = 160;
+        int data = height * width * 3;
+        std::allocator<char> alloc;
+        buffer_ = alloc.allocate(data);
+        for (int i = 0; i < data; i++) {
+          buffer_[i] = 1;
+        }
+        buffer_[data - 1] = 0; 
+      }
+
+  // Assembles the client's payload, sends it and presents the response back
+  // from the server.
+  int64_t Invoke(tflite::Subgraph* subgraph) {
+    // Data we are sending to the server.
+    Request request;
+    // FIXME : input to buffer
+    int input_size = EstimateInputSize(subgraph);
+    for (int i = 0; i < input_size; i++) {
+      buffer_[i] = 1;
+    }
+    buffer_[input_size - 1] = 0; 
+    if (subgraph->GetKey().model_id == 0) {
+      request.set_model("face_detection");
+      request.set_height(160);
+      request.set_width(160);
+    } else if (subgraph->GetKey().model_id == 1) {
+      request.set_model("face_recognition");
+      request.set_height(112);
+      request.set_width(112);
+    }
+    request.set_data(buffer_);
+
+    Response response;
+    ClientContext context;
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    Status status = stub_->RequestInference(&context, request, &response);
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
+    if (status.ok()) {
+      return response.computation_time_ms();
+    } else {
+      return -1;
+    }
+  }
+
+ private:
+  std::unique_ptr<Splash::Stub> stub_;
+  int dataSize;
+  char* buffer_;
+
+  int64_t EstimateInputSize(const tflite::Subgraph* subgraph) {
+    // TODO: Add input tensors without weights.
+    const std::vector<int>& input_tensors = subgraph->inputs();
+    int64_t subgraph_input_size = 0;
+    for (int tensor_idx : input_tensors) {
+      subgraph_input_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
+    }
+    return subgraph_input_size;
+  }
+};
 
 namespace tflite {
 namespace impl {
@@ -74,6 +156,9 @@ int64_t GlobalQueueOffloadingWorker::GetWaitingTime() {
 }
 
 void GlobalQueueOffloadingWorker::Work() {
+  SplashGlobalClient grpc_client(
+  grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()), offloading_data_size_);
+  LOGI("Offloading target: %s", offloading_target_.c_str());
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(lock, [this]() {
@@ -104,32 +189,12 @@ void GlobalQueueOffloadingWorker::Work() {
       planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job_);
       lock.unlock();
 
-      // TODO: Need to send and receive input/output tensors
-      // std::string reply = greeter.SayHello(user);
-      // std::string reply = greeter.UploadFile("/data/data/com.aaa.cj.offloading/1GB.bin");
-      // std::string reply2 = greeter.DownloadFile("/data/data/com.aaa.cj.offloading/1GB_download.bin");
-      // std::cout << "Greeter received: " << reply << std::endl;
-      switch (current_job_.model_id) {
-        case 0://"retinaface_mbv2_quant_160.tflite":
-          std::this_thread::sleep_for(std::chrono::milliseconds(101));
-          break;
-        case 1://"arc_mbv2_quant.tflite":
-          std::this_thread::sleep_for(std::chrono::milliseconds(27));
-          break;
-        case 2://"arc_res50_quant.tflite":
-          std::this_thread::sleep_for(std::chrono::milliseconds(103));
-          break;
-        case 3://"ICN_quant.tflite":
-          std::this_thread::sleep_for(std::chrono::milliseconds(45));
-          break;
-        default:
-          std::this_thread::sleep_for(std::chrono::milliseconds(40));
-          break;
-      }
+      int64_t computation_time = grpc_client.Invoke(subgraph);
 
       planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job_);
       current_job_.end_time = profiling::time::NowMicros();
       current_job_.latency = current_job_.end_time - current_job_.invoke_time;
+      current_job_.communication_time = current_job_.latency - computation_time;
 
       interpreter_ptr->UpdateExpectedLatency(subgraph_idx, current_job_.latency);
 

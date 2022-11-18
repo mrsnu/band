@@ -91,9 +91,9 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     if (schedulers[i] == kCloudOnly) {
       schedulers_.emplace_back(new CloudOnlyScheduler(this));
     } else if (schedulers[i] == kMobileOnlyHeft) {
-      schedulers_.emplace_back(new MobileOnlyHeftScheduler(this));
+      schedulers_.emplace_back(new MobileOnlyHeftScheduler(this, model_manager_));
     } else if (schedulers[i] == kMobileCloudHeft) {
-      schedulers_.emplace_back(new MobileCloudHeftScheduler(this));
+      schedulers_.emplace_back(new MobileCloudHeftScheduler(this, model_manager_));
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
     } else if (schedulers[i] == kSplashHeft) {

@@ -52,7 +52,7 @@ class SplashClient {
 
   // Assembles the client's payload, sends it and presents the response back
   // from the server.
-  int64_t Invoke(const std::string& user) {
+  int64_t Invoke(tflite::Subgraph* subgraph) {
     // Data we are sending to the server.
     Request request;
     int height = 112;
@@ -218,7 +218,6 @@ void DeviceQueueOffloadingWorker::Work() {
   SplashClient grpc_client(
   grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()), offloading_data_size_);
   // random string; copy-pasted from grpc example
-  std::string user("world");
 
   LOGI("Offloading target: %s", offloading_target_.c_str());
   while (true) {
@@ -253,7 +252,7 @@ void DeviceQueueOffloadingWorker::Work() {
       planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job);
       lock.unlock();
 
-      int64_t computation_time = grpc_client.Invoke(user);
+      int64_t computation_time = grpc_client.Invoke(subgraph);
 
       planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
       current_job.end_time = profiling::time::NowMicros();

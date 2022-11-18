@@ -1977,9 +1977,6 @@ Interpreter::GetShortestSubgraphIndex(
     int64_t waiting_time = worker_waiting[key.worker_id];
     int64_t expected_latency = GetExpectedLatency(subgraph_index);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
-    LOGI("[%d] waiting time = %lld", key.worker_id, waiting_time);
-    LOGI("[%d] expected_latency = %lld", key.worker_id, expected_latency);
-    LOGI("[%d] total = %lld", key.worker_id, total);
 
     if (min_latency > total) {
       min_latency = total;
