@@ -10,7 +10,7 @@ namespace impl {
 class MobileCloudHeftScheduler : public Scheduler {
  public:
   explicit MobileCloudHeftScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner) {
-    need_profile_ = false;
+    need_profile_ = true; // It's only for warm up
     worker_type_ = kGlobalQueue;
     model_manager_ = model_manager;
   }

@@ -34,34 +34,37 @@ class SplashGlobalClient {
         int width = 160;
         int data = height * width * 3;
         std::allocator<char> alloc;
-        buffer_ = alloc.allocate(data);
-        for (int i = 0; i < data; i++) {
-          buffer_[i] = 1;
-        }
-        buffer_[data - 1] = 0; 
+        buffer_1_ = alloc.allocate(data);
+
+        int height2 = 112;
+        int width2 = 112;
+        int data2 = height * width * 3;
+        buffer_2_ = alloc.allocate(data2);
       }
 
-  // Assembles the client's payload, sends it and presents the response back
-  // from the server.
   int64_t Invoke(tflite::Subgraph* subgraph) {
-    // Data we are sending to the server.
     Request request;
     // FIXME : input to buffer
     int input_size = EstimateInputSize(subgraph);
-    for (int i = 0; i < input_size; i++) {
-      buffer_[i] = 1;
-    }
-    buffer_[input_size - 1] = 0; 
     if (subgraph->GetKey().model_id == 0) {
+      for (int i = 0; i < input_size; i++) {
+        buffer_1_[i] = 1;
+      }
+      buffer_1_[input_size - 1] = 0; 
       request.set_model("face_detection");
       request.set_height(160);
       request.set_width(160);
+      request.set_data(buffer_1_);
     } else if (subgraph->GetKey().model_id == 1) {
+      for (int i = 0; i < input_size; i++) {
+        buffer_2_[i] = 1;
+      }
+      buffer_2_[input_size - 1] = 0; 
       request.set_model("face_recognition");
       request.set_height(112);
       request.set_width(112);
+      request.set_data(buffer_2_);
     }
-    request.set_data(buffer_);
 
     Response response;
     ClientContext context;
@@ -69,7 +72,7 @@ class SplashGlobalClient {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     Status status = stub_->RequestInference(&context, request, &response);
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
+    // LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
     if (status.ok()) {
       return response.computation_time_ms();
     } else {
@@ -80,10 +83,10 @@ class SplashGlobalClient {
  private:
   std::unique_ptr<Splash::Stub> stub_;
   int dataSize;
-  char* buffer_;
+  char* buffer_1_;
+  char* buffer_2_;
 
   int64_t EstimateInputSize(const tflite::Subgraph* subgraph) {
-    // TODO: Add input tensors without weights.
     const std::vector<int>& input_tensors = subgraph->inputs();
     int64_t subgraph_input_size = 0;
     for (int tensor_idx : input_tensors) {
@@ -142,11 +145,9 @@ int64_t GlobalQueueOffloadingWorker::GetWaitingTime() {
 
   Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
   int64_t profiled_latency =
-      // interpreter->GetExpectedLatency(current_job_.subgraph_idx);
       planner->GetModelManager()->GetPredictedLatency(current_job_.worker_id, current_subgraph);
 
   if (invoke_time == 0) {
-    // the worker has not started on processing the job yet
     return profiled_latency;
   }
 
@@ -189,6 +190,8 @@ void GlobalQueueOffloadingWorker::Work() {
       planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job_);
       lock.unlock();
 
+      // std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      // int64_t computation_time = 2000;
       int64_t computation_time = grpc_client.Invoke(subgraph);
 
       planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job_);

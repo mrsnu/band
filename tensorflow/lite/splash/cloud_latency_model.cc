@@ -40,9 +40,9 @@ int64_t CloudLatencyModel::GetComputationTime(int32_t model_id) {
 }
 
 int64_t CloudLatencyModel::PredictCommunicationTime(Subgraph* subgraph) {
-  int64_t comm_time = 0; // minimum value
+  int64_t comm_time = 2000; // minimum value
   vector<int64_t> regressor;
-  if (log_size_ < 50) {
+  if (log_size_ < 30) {
     return comm_time;
   }
   int64_t input_size = EstimateInputSize(subgraph);
@@ -91,7 +91,7 @@ TfLiteStatus CloudLatencyModel::UpdateCommunicationModel(Subgraph* subgraph, int
   X.row(log_index) << input_size, output_size, 1.0;
   Y.row(log_index) << communication_time;
 
-  if (log_size_ < 50) {
+  if (log_size_ < 30) {
     LOGI("CloudLatencyModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }

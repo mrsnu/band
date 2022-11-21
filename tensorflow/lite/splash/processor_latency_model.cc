@@ -64,7 +64,7 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
       }
     // }
   } else {
-    model_latency_table_[job.model_id] = job.latency;
+    model_latency_table_[job.model_id] = 0; // Discard first data
     minimum_profiled_count_[job.model_id] = 1;
   }
   return kTfLiteOk;
