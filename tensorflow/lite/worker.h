@@ -101,8 +101,6 @@ class DeviceQueueWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
-  // GlobalQueueWorker methods
-  bool IsBusy() override;
 
  protected:
   void Work() override;
@@ -141,10 +139,8 @@ class DeviceQueueOffloadingWorker : public Worker {
 
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
-  int64_t GetBandwidthMeasurement();
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
-  bool IsBusy() override;
 
  protected:
   void Work() override;

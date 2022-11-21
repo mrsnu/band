@@ -60,19 +60,6 @@ thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph,
   // return EstimateFutureTemperature(temp, input_size, output_size, rssi, waiting_time);
 }
 
-vector<thermal_t> CloudThermalModel::EstimateFutureTemperature(const vector<thermal_t> temp,
-                                                               const int64_t input_size,
-                                                               const int64_t output_size,
-                                                               const int64_t rssi,
-                                                               const int64_t waiting_time) {
-  vector<thermal_t> future_temperature;
-  // TODO: Refactor this calculation
-  future_temperature = Plus(Plus(Multiply(temp_param_, temp), Multiply(input_param_, input_size)),
-    Plus(Plus(Multiply(output_param_, output_size), Multiply(rssi_param_, rssi)),
-    Plus(Multiply(waiting_param_, waiting_time), Multiply(error_param_, 1))));
-  return future_temperature;
-}
-
 int64_t CloudThermalModel::EstimateInputSize(const Subgraph* subgraph) {
   // TODO: Add input tensors without weights.
   const std::vector<int>& input_tensors = subgraph->inputs();

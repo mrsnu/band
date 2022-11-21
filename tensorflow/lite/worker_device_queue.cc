@@ -30,12 +30,35 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
   }
-  return 0;
-}
 
-bool DeviceQueueWorker::IsBusy() {
-  std::unique_lock<std::mutex> lock(device_mtx_);
-  return !requests_.empty();
+  std::shared_ptr<Planner> planner = planner_.lock();
+  if (!planner) {
+    return -1;
+  }
+  Interpreter* interpreter = planner->GetInterpreter();
+
+  int64_t total = 0;
+  for (JobQueue::iterator it = requests_.begin();
+       it != requests_.end(); ++it) {
+    Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
+    int64_t expected_latency =
+      planner->GetModelManager()->GetPredictedLatency(it->worker_id, current_subgraph);
+
+    total += expected_latency;
+    if (it == requests_.begin()) {
+      int64_t current_time = profiling::time::NowMicros();
+      int64_t invoke_time = (*it).invoke_time;
+      if (invoke_time > 0 && current_time > invoke_time) {
+        int64_t progress =
+          (current_time - invoke_time) > expected_latency ? expected_latency
+                                              : (current_time - invoke_time);
+        total -= progress;
+      }
+    }
+  }
+  lock.unlock();
+
+  return total;
 }
 
 bool DeviceQueueWorker::GiveJob(Job& job) {
@@ -87,16 +110,11 @@ void DeviceQueueWorker::Work() {
         planner_ptr->GetResourceMonitor().FillJobInfoBefore(current_job);
         lock.unlock();
 
-        // LOGI("[%lld], start", profiling::time::NowMicros());
         TfLiteStatus status = subgraph->Invoke();
-        // LOGI("[%lld], end", profiling::time::NowMicros());
         if (status == kTfLiteOk) {
           planner_ptr->GetResourceMonitor().FillJobInfoAfter(current_job);
           current_job.end_time = profiling::time::NowMicros();
           current_job.latency = current_job.end_time - current_job.invoke_time;
-          // TODO: Extract this delay into another thread to avoid performance decrease
-          // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
           planner_ptr->GetModelManager()->Update(current_job, subgraph);
 
           if (current_job.following_jobs.size() != 0) {

@@ -96,7 +96,8 @@ FRAMEWORK_LIB_HDRS = [
     "splash/processor_thermal_model.h",
     "splash/latency_model.h",
     "splash/cloud_latency_model.h",
-    "splash/processor_latency_model.h"
+    "splash/processor_latency_model.h",
+    "splash/splash_grpc_client.h"
 ]
 
 cc_library(

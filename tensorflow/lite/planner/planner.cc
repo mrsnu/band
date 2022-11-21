@@ -44,8 +44,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   if (log_path_.size()) {
     std::ofstream log_file(log_path_);
     if (!log_file.is_open()) return kTfLiteError;
-    log_file << "job_id\t"
-             << "sched_id\t"
+    log_file << "sched_id\t"
              << "model_name\t"
              << "model_id\t"
              << "worker_id\t"
@@ -382,8 +381,7 @@ void Planner::FlushFinishedJobs() {
         temp_diff = 100;
       }
       // write all timestamp statistics to log file
-      log_file << job.job_id << "\t"
-               << job.sched_id << "\t"
+      log_file << job.sched_id << "\t"
                << job.model_fname << "\t"
                << job.model_id << "\t"
                << job.worker_id << "\t"

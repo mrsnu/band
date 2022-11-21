@@ -16,7 +16,6 @@ namespace impl {
 Worker::Worker(std::shared_ptr<Planner> planner, TfLiteDeviceFlags device_flag)
   : device_flag_(device_flag) {
   planner_ = planner;
-  LOGI("Worker create");
 }
 
 Worker::~Worker() {

@@ -79,7 +79,6 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
 
   Subgraph* current_subgraph = interpreter->subgraph(current_job_.subgraph_idx);
   int64_t profiled_latency =
-      // interpreter->GetExpectedLatency(current_job_.subgraph_idx);
       planner->GetModelManager()->GetPredictedLatency(current_job_.worker_id, current_subgraph);
 
   if (invoke_time == 0) {
@@ -139,7 +138,6 @@ void GlobalQueueWorker::Work() {
           current_job_.latency = current_job_.end_time - current_job_.invoke_time;
 
           planner_ptr->GetModelManager()->Update(current_job_, subgraph);
-          interpreter_ptr->UpdateExpectedLatency(subgraph_idx, current_job_.latency);
           if (current_job_.following_jobs.size() != 0) {
             planner_ptr->EnqueueBatch(current_job_.following_jobs);
           } 

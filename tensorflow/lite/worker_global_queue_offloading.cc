@@ -5,96 +5,7 @@
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/profiling/time.h"
-
-#include <grpcpp/grpcpp.h>
-
-#include "tensorflow/lite/proto/splash.grpc.pb.h"
-
-#if defined(__ANDROID__)
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
-#include <android/log.h>
-#endif // defined(__ANDROID__)
-
-using grpc::Channel;
-using grpc::ClientContext;
-using grpc::Status;
-using grpc::ClientWriter;
-using grpc::ClientReader;
-using grpc::WriteOptions;
-using splash::Splash;
-using splash::Request;
-using splash::Response;
-
-class SplashGlobalClient {
- public:
-  SplashGlobalClient(std::shared_ptr<Channel> channel, int data_size)
-      : stub_(Splash::NewStub(channel)) {
-        dataSize = data_size;
-        int height = 160;
-        int width = 160;
-        int data = height * width * 3;
-        std::allocator<char> alloc;
-        buffer_1_ = alloc.allocate(data);
-
-        int height2 = 112;
-        int width2 = 112;
-        int data2 = height * width * 3;
-        buffer_2_ = alloc.allocate(data2);
-      }
-
-  int64_t Invoke(tflite::Subgraph* subgraph) {
-    Request request;
-    // FIXME : input to buffer
-    int input_size = EstimateInputSize(subgraph);
-    if (subgraph->GetKey().model_id == 0) {
-      for (int i = 0; i < input_size; i++) {
-        buffer_1_[i] = 1;
-      }
-      buffer_1_[input_size - 1] = 0; 
-      request.set_model("face_detection");
-      request.set_height(160);
-      request.set_width(160);
-      request.set_data(buffer_1_);
-    } else if (subgraph->GetKey().model_id == 1) {
-      for (int i = 0; i < input_size; i++) {
-        buffer_2_[i] = 1;
-      }
-      buffer_2_[input_size - 1] = 0; 
-      request.set_model("face_recognition");
-      request.set_height(112);
-      request.set_width(112);
-      request.set_data(buffer_2_);
-    }
-
-    Response response;
-    ClientContext context;
-
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    Status status = stub_->RequestInference(&context, request, &response);
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    // LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
-    if (status.ok()) {
-      return response.computation_time_ms();
-    } else {
-      return -1;
-    }
-  }
-
- private:
-  std::unique_ptr<Splash::Stub> stub_;
-  int dataSize;
-  char* buffer_1_;
-  char* buffer_2_;
-
-  int64_t EstimateInputSize(const tflite::Subgraph* subgraph) {
-    const std::vector<int>& input_tensors = subgraph->inputs();
-    int64_t subgraph_input_size = 0;
-    for (int tensor_idx : input_tensors) {
-      subgraph_input_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
-    }
-    return subgraph_input_size;
-  }
-};
+#include "tensorflow/lite/splash/splash_grpc_client.h"
 
 namespace tflite {
 namespace impl {
@@ -157,7 +68,7 @@ int64_t GlobalQueueOffloadingWorker::GetWaitingTime() {
 }
 
 void GlobalQueueOffloadingWorker::Work() {
-  SplashGlobalClient grpc_client(
+  SplashGrpcClient grpc_client(
   grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()), offloading_data_size_);
   LOGI("Offloading target: %s", offloading_target_.c_str());
   while (true) {
