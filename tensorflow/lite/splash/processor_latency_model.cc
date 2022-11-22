@@ -26,22 +26,28 @@ int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
   int model_id = subgraph->GetKey().model_id;
   auto it = model_latency_table_.find(model_id);
   auto model_count = minimum_profiled_count_.find(model_id);
-  if (model_count == minimum_profiled_count_.end()) {
-    return 0;
-  }
-  auto model_count_temp = model_count->second.find(target_temp);
-  if (model_count_temp == model_count->second.end() || model_count_temp->second < minimum_profiled_threshold_) {
+  if (model_count == minimum_profiled_count_.end() || model_count->second < minimum_profiled_threshold_) {
     return 0;
   }
   auto model_latency = model_latency_table_.find(model_id); 
   if (model_latency == model_latency_table_.end()) {
-    return 0;
+    return 0; // Minimum value to be selected
   }
   auto model_latency_temp = model_latency->second.find(target_temp);
   if (model_latency_temp != model_latency->second.end()) {
     return model_latency_temp->second;
   } else {
-    return 0; // Minimum value to be selected
+    return FindNearestValue(model_id, target_temp);
+  }
+}
+
+int64_t ProcessorLatencyModel::FindNearestValue(int model_id, thermal_t target_temp) {
+  auto model_latency = model_latency_table_.find(model_id); 
+  for (thermal_t i = target_temp ; i >= 0 ; i--) {
+    auto model_latency_temp = model_latency->second.find(i);
+    if (model_latency_temp != model_latency->second.end()) {
+      return model_latency_temp->second;
+    } 
   }
 }
 
@@ -60,24 +66,22 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
   auto it = model_latency_table_.find(model_id);
   if (it != model_latency_table_.end()) {
     auto latency = it->second.find(target_temp);
-    auto count = minimum_profiled_count_[model_id].find(target_temp);
     if (latency != it->second.end()) {
       int64_t prev_latency = latency->second;
       model_latency_table_[model_id][target_temp] =
           smoothing_factor_ * job.latency +
           (1 - smoothing_factor_) * prev_latency;
-      if (count->second <= minimum_profiled_threshold_) {
-        minimum_profiled_count_[model_id][target_temp] = count->second + 1;
+      auto count = minimum_profiled_count_[model_id];
+      if (count <= minimum_profiled_threshold_) {
+        minimum_profiled_count_[model_id] = count + 1;
       }
     } else {
       model_latency_table_[model_id][target_temp] = 0; 
-      minimum_profiled_count_[model_id][target_temp] = 1;
     }
   } else {
     model_latency_table_[model_id] = std::unordered_map<int, int64_t>(); 
     model_latency_table_[model_id][target_temp] = 0;
-    minimum_profiled_count_[model_id] = std::unordered_map<int, int>(); 
-    minimum_profiled_count_[model_id][target_temp] = 1;
+    minimum_profiled_count_[model_id] = 1;
   }
   return kTfLiteOk;
 }

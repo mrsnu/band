@@ -30,8 +30,10 @@ class ProcessorLatencyModel : public ILatencyModel {
  private:
   std::unordered_map<int, std::unordered_map<int, int64_t>> model_latency_table_; // {model_id, {temp, latency}}
 
-  std::unordered_map<int, std::unordered_map<int, int>> minimum_profiled_count_; // {model_id, {temp, count}}
+  std::unordered_map<int, int> minimum_profiled_count_; // {model_id, count}
   int minimum_profiled_threshold_ = 3;
+
+  int64_t FindNearestValue(int model_id, thermal_t target_temp);
 };
 
 } // namespace impl
