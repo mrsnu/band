@@ -58,12 +58,13 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "before_temp_gpu\t"
              << "before_temp_dsp\t"
              << "before_temp_npu\t"
+             << "before_temp_modem\t"
             //  << "after_temp_cpu\t"
             //  << "after_temp_gpu\t"
             //  << "after_temp_dsp\t"
             //  << "after_temp_npu\t"
-            //  << "frequency_cpu\t"
-            //  << "frequency_gpu\t"
+             << "frequency_cpu\t"
+             << "frequency_gpu\t"
             //  << "estimated_temp\t"
             //  << "prediction_error_temp\t"
             //  << "prediction_error_latency\t"
@@ -164,7 +165,7 @@ bool Planner::IsSLOViolated(Job& job) {
     int64_t current_time = profiling::time::NowMicros();
     int64_t expected_latency =
         workers_waiting_[job.worker_id] +
-        job.expected_execution_time;
+        job.estimated_latency;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
       return true;
@@ -232,6 +233,20 @@ std::set<int> Planner::GetIdleAllWorkers() {
   }
   return idle_workers;
 }
+
+std::set<int> Planner::GetIdleAllWorkersForThermal() {
+  std::set<int> idle_workers;
+  for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    if (i == kTfLiteCPU) {
+      continue;
+    }
+    if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
+      idle_workers.insert(i);
+    }
+  }
+  return idle_workers;
+}
+
 
 std::set<int> Planner::GetIdleProcessorWorkers() {
   std::set<int> idle_workers;
@@ -376,10 +391,10 @@ void Planner::FlushFinishedJobs() {
       double fps = (double)(1000000. / (double)job.latency);
       int temp_diff = job.after_target_temp[job.worker_id] - job.before_target_temp[job.worker_id];
       if (temp_diff > 0) {
-        ppt = fps / (double)(temp_diff) * 1000.;
       } else {
-        temp_diff = 100;
+        temp_diff = 1;
       }
+      ppt = fps / (double)(temp_diff) * 1000.;
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
                << job.model_fname << "\t"
@@ -395,12 +410,13 @@ void Planner::FlushFinishedJobs() {
                << job.before_temp[kTfLiteGPU] << "\t"
                << job.before_temp[kTfLiteDSP] << "\t"
                << job.before_temp[kTfLiteNPU] << "\t"
+               << job.before_temp[kTfLiteCLOUD] << "\t"
               //  << job.after_temp[kTfLiteCPU] << "\t"
               //  << job.after_temp[kTfLiteGPU] << "\t"
               //  << job.after_temp[kTfLiteDSP] << "\t"
               //  << job.after_temp[kTfLiteNPU] << "\t"
-              //  << job.frequency[kTfLiteCPU] << "\t"
-              //  << job.frequency[kTfLiteGPU] << "\t"
+               << job.frequency[kTfLiteCPU] << "\t"
+               << job.frequency[kTfLiteGPU] << "\t"
               //  << job.estimated_temp << "\t"
               //  << job.after_temp[job.worker_id] - job.estimated_temp<< "\t"
               //  << job.latency - job.estimated_latency << "\t"
@@ -427,7 +443,6 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.worker_id = target_key.worker_id;
   job.device_id = interpreter_->GetWorkerDeviceFlag(target_key.worker_id);
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
 }
 
 void Planner::PrepareReenqueue(Job& job) {

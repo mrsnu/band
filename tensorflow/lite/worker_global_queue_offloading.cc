@@ -109,7 +109,7 @@ void GlobalQueueOffloadingWorker::Work() {
       current_job_.end_time = profiling::time::NowMicros();
       current_job_.latency = current_job_.end_time - current_job_.invoke_time;
       current_job_.communication_time = current_job_.latency - computation_time;
-
+      current_job_.status = kTfLiteJobSuccess;
       interpreter_ptr->UpdateExpectedLatency(subgraph_idx, current_job_.latency);
 
       planner_ptr->GetModelManager()->Update(current_job_, subgraph);

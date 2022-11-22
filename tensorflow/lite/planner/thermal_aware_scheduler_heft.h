@@ -20,7 +20,6 @@ class ThermalAwareScheduler : public Scheduler {
   ModelManager * model_manager_;
 
   std::pair<int, int64_t> GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting);
-  std::pair<int, double> GetMaxPptSubgraphIdx(int model_id, std::map<int, int64_t>& worker_waiting);
 };
 
 }  // namespace impl

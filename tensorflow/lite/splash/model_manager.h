@@ -35,6 +35,8 @@ class ModelManager {
   thermal_t GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph);
   int64_t GetPredictedLatency(worker_id_t wid, Subgraph* subgraph);
   // int64_t GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id);
+  std::pair<thermal_t, int64_t>
+  GetPredictedTempAndLatency(worker_id_t wid, Subgraph* subgraph);
 
   // Update model parameters with the prediction error
   TfLiteStatus Update(Job& job, Subgraph* subgraph);

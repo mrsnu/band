@@ -23,11 +23,11 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
 
     std::set<int> jobs_to_yield;
-    double largest_ppt;
+    int64_t largest_shortest_latency;
     int target_job_idx;
     int target_subgraph_idx;
     do {
-      largest_ppt= -1.0;
+      largest_shortest_latency = -1;
       target_job_idx = -1;
       target_subgraph_idx = -1;
 
@@ -47,11 +47,11 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
           searched_jobs.insert(job_to_search);
         }
 
-        std::pair<int, double> best_subgraph = GetMaxPptSubgraphIdx(job.model_id, waiting_time);
+        std::pair<int, int64_t> best_subgraph = GetShortestSubgraph(job.model_id, waiting_time);
 
-        if (largest_ppt < best_subgraph.second) {
+        if (largest_shortest_latency < best_subgraph.second) {
           Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
-          largest_ppt = best_subgraph.second;
+          largest_shortest_latency = best_subgraph.second;
           target_subgraph_idx = best_subgraph.first;
           target_job_idx = it - requests.begin();
         }
@@ -60,6 +60,19 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
       if (target_job_idx < 0) {
         return;
       }
+      // if (largest_shortest_latency == INT64_MAX) {
+      //   LOGI("[TAS] All workers are throttled! => selects minimize throttled latency");
+      //   // for (auto& worker : workers) {
+      //   //   int64_t latency = model_manager_->GetPredictedThrottledLatency(worker->GetId(), model_id);
+      //   //   if (earliest_finish_time > finish_time + latency) {
+      //   //     earliest_finish_time = finish_time + latency;
+      //   //     shortest_latency = latency;
+      //   //     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker->GetId());
+      //   //     target_subgraph = GetInterpreter()->subgraph(subgraph_idx); 
+      //   //   }
+      //   // } 
+      //   continue;
+      // }
 
       // skip this job if we can't schedule it immediately,
       // even if this job is the "most urgent" one
@@ -83,10 +96,10 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     requests.erase(requests_it);
     window_size--;
 
+    job.estimated_latency = largest_shortest_latency;
+    job.estimated_temp = 0;
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     job.estimated_temp = model_manager_->GetPredictedTemperature(
-      target_subgraph->GetKey().worker_id, target_subgraph);
-    job.estimated_latency = model_manager_->GetPredictedLatency(
       target_subgraph->GetKey().worker_id, target_subgraph);
     EnqueueAction(job, target_subgraph);
   }
@@ -105,7 +118,7 @@ ThermalAwareScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>&
     //   // LOGI("[TAS] Throttling predicted! = Worker %d", key.worker_id);
     //   continue;
     // }
-    // if (key.worker_id == kTfLiteCPU) continue;
+    if (key.worker_id == kTfLiteCPU) continue;
 
     int64_t waiting_time = worker_waiting[key.worker_id];
     int64_t expected_latency = model_manager_->GetPredictedLatency(key.worker_id, subgraph);
@@ -119,7 +132,7 @@ ThermalAwareScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>&
   return {min_idx, min_latency};
 }
 
-std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(int model_id, std::map<int, int64_t>& worker_waiting) {
+int ThermalAwareScheduler::GetMaxPptSubgraphIdx(int model_id, std::map<int, int64_t>& worker_waiting) {
   double max_ppt = -1.0;
   int max_idx = -1;
 
@@ -133,28 +146,20 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(int model_id,
     int64_t expected_latency = source.second;
     int64_t total = expected_latency + waiting_time;
     thermal_t temp_diff = source.first;
-    if (total <= 0) {
-      total = 1; // epsilon value
-    }
+
+    double ppt = 0.;
+    double fps = (double)(1000000. / (double)total);
     if (temp_diff <= 0) {
       temp_diff = 1; // epsilon value
     }
-    // LOGI("temp_diff= %d", temp_diff);
-
-    double config = 0.5;
-    // double thermal_efficiency = 1 / (double)temp_diff * (double)1000;
-    double ppt = (1.0 - config) * thermal_efficiency - config * (double)total;
-    // double ppt = thermal_efficiency / (double)total;
-    // LOGI("thermal_Efficiency = %f", thermal_efficiency);
-    // LOGI("latency = %lld", total);
-    // LOGI("ppt = %f", ppt);
+    ppt = fps / (double)(temp_diff) * 1000.;
 
     if (max_ppt < ppt) {
       max_ppt = ppt;
       max_idx = subgraph_index;
     }
   }
-  return { max_idx, max_ppt };
+  return max_idx;
 }
 
 }  // namespace impl

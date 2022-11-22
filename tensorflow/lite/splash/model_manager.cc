@@ -83,7 +83,16 @@ bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
 thermal_t ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgraph) {
   std::vector<thermal_t> before_temp = resource_monitor_.GetAllTemperature();
   auto latency = GetPredictedLatency(wid, subgraph);
-  return thermal_models_[wid]->Predict(subgraph, latency, before_temp);
+  return thermal_models_[wid]->PredictTarget(subgraph, latency, before_temp);
+}
+
+std::pair<thermal_t, int64_t>
+ModelManager::GetPredictedTempAndLatency(worker_id_t wid, Subgraph* subgraph) {
+  std::vector<thermal_t> before_temp = resource_monitor_.GetAllTargetTemperature();
+  auto latency = GetPredictedLatency(wid, subgraph);
+  auto future_temp = thermal_models_[wid]->PredictTarget(subgraph, latency, before_temp);
+  thermal_t temp_diff = future_temp - before_temp[wid];
+  return { std::max(0, temp_diff), latency };
 }
 
 int64_t ModelManager::GetPredictedLatency(worker_id_t wid, Subgraph* subgraph) {

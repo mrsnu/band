@@ -835,6 +835,9 @@ void Interpreter::ProfileOnline(int model_id,
   for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
     Worker* worker = workers_[worker_id].get();
     const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
+    if (worker_id == kTfLiteCLOUD) {
+      continue;
+    }
 
     // Get subgraphs for target model & worker
     std::vector<int> worker_subgraph_indices;
@@ -1079,6 +1082,9 @@ void Interpreter::ProfileOffline(int model_id,
         TfLiteDeviceGetName(GetWorkerDeviceFlag(key.worker_id));
 
     if (key.model_id != model_id) {
+      continue;
+    }
+    if (key.worker_id == kTfLiteCLOUD) {
       continue;
     }
 

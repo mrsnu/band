@@ -102,12 +102,7 @@ struct Job {
   int64_t end_time = 0;
   int64_t latency = 0;
   int64_t estimated_latency = 0;
-  // Profiled invoke execution time
-  int64_t profiled_execution_time = 0;
-  // Expected invoke execution time
-  int64_t expected_execution_time = 0;
-  // Expected total latency
-  int64_t expected_latency = 0;
+
   int64_t slo_us = 0;
   int64_t communication_time = 0;
 
@@ -131,7 +126,6 @@ struct Job {
   std::set<int> resolved_tensors;
   std::list<int> previous_subgraph_indices;
 
-  std::vector<thermal_t> real_temp;
   thermal_t estimated_temp;
   std::vector<thermal_t> before_temp;
   std::vector<thermal_t> after_temp;

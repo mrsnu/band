@@ -112,6 +112,7 @@ class Planner {
   // the current WorkerWaitingTime as a parameter.
   std::set<int> GetIdleProcessorWorkers();
   std::set<int> GetIdleAllWorkers();
+  std::set<int> GetIdleAllWorkersForThermal();
 
   std::vector<std::unique_ptr<Worker>>& GetWorkers();
 

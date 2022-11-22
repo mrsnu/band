@@ -97,7 +97,6 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
     window_size--;
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    job.expected_latency = largest_shortest_latency;
     job.estimated_latency = largest_shortest_latency;
     job.estimated_temp = 0;
     EnqueueAction(job, target_subgraph);
