@@ -139,18 +139,19 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
           std::make_unique<CpuBackendContext>());
 
   // Create a Planner instance.
-  planner_.reset(new Planner(this));
+  planner_.reset(new Planner(this, runtime_config.resource_config));
   if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
     exit(-1);
   }
+
   // Initialize configurations.
   if (Init(runtime_config.interpreter_config) != kTfLiteOk) {
     error_reporter_->Report("Interpreter::Init() failed.");
     exit(-1);
   }
 
-  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU, kTfLiteOffloading };
+  std::set<TfLiteDeviceFlags> valid_devices = { kTfLiteCPU, kTfLiteCLOUD };
   // Create Delegates for each device.
   // TODO #13: Create mobile device independent delegate instances
   TfLiteDelegatePtr null_delegate =
@@ -184,6 +185,7 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
   // mediatek : neuron-ann, mtk-gpu, mtk-dsp, mtk-neuron, mtk-mdla
   // google tpu : google-edgetpu
   // huawei npu : liteadaptor
+  // samsung npu : eden-drv
   for (const char* device_name : string_device_names_list) {
     if (IsNNAPIDeviceUseful(device_name)) {
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Available NNAPI device name %s", device_name);
@@ -236,10 +238,10 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
 
-      if (device_flag == kTfLiteOffloading) {
+      if (device_flag == kTfLiteCLOUD) {
+        // continue;
         if (planner_->GetWorkerType() == kGlobalQueue) {
-          error_reporter_->Report("Does not support global queue for offloading yet");
-          exit(-1);
+          worker = std::make_unique<GlobalQueueOffloadingWorker>(planner_, device_flag);
         } else {
           worker = std::make_unique<DeviceQueueOffloadingWorker>(planner_, device_flag);
         }
@@ -252,14 +254,12 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
       }
 
       if (worker->Init(runtime_config.worker_config, workers_.size()) != kTfLiteOk) {
-        error_reporter_->Report("Worker::Init() failed for worker : %s.",
-                                TfLiteDeviceGetName(device_flag));
+        LOGI("Worker::Init() failed for worker : %s.", TfLiteDeviceGetName(device_flag));
         exit(-1);
       }
-
       workers_.emplace_back(std::move(worker));
     } else {
-      TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "%s worker is not created.",
+      LOGI("%s worker is not created.",
                  TfLiteDeviceGetName(device_flag));
     }
   }
@@ -320,8 +320,7 @@ TfLiteStatus Interpreter::Init(InterpreterConfig& config) {
       static_cast<TfLiteCPUMaskFlags>(config.cpu_masks);
   auto cpu_mask_set = TfLiteCPUMaskGetSet(cpu_mask);
 
-  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Set affinity to %s cores.",
-             TfLiteCPUMaskGetName(cpu_mask));
+  LOGI("Set affinity to %s cores.", TfLiteCPUMaskGetName(cpu_mask));
 
   return SetCPUThreadAffinity(cpu_mask_set);
 }
@@ -836,6 +835,9 @@ void Interpreter::ProfileOnline(int model_id,
   for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
     Worker* worker = workers_[worker_id].get();
     const char* device_name = TfLiteDeviceGetName(worker->GetDeviceFlag());
+    if (worker_id == kTfLiteCLOUD) {
+      continue;
+    }
 
     // Get subgraphs for target model & worker
     std::vector<int> worker_subgraph_indices;
@@ -940,7 +942,7 @@ void Interpreter::ProfileOnline(int model_id,
     const Subgraph* primary_subgraph =
         subgraph(GetSubgraphIdx(model_id, kTfLiteCPU));
     for (const int& sub_idx : worker_subgraph_indices) {
-      const Subgraph* subgraph = subgraphs_[sub_idx].get();
+      Subgraph* subgraph = subgraphs_[sub_idx].get();
       const SubgraphKey& key = subgraphs_[sub_idx]->GetKey();
       if (subgraph->GetHealth()) {
         const int64_t latency = EstimateLatency(
@@ -949,6 +951,7 @@ void Interpreter::ProfileOnline(int model_id,
 
         moving_averaged_latencies_[sub_idx] = latency;
         profile_database_[key] = latency;
+        planner_->GetModelManager()->ProfileLatency(subgraph, latency);
 
         TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                    "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
@@ -1081,6 +1084,9 @@ void Interpreter::ProfileOffline(int model_id,
     if (key.model_id != model_id) {
       continue;
     }
+    if (key.worker_id == kTfLiteCLOUD) {
+      continue;
+    }
 
     auto it = profile_database_.find(key);
     if (it != profile_database_.end()) {
@@ -1089,6 +1095,7 @@ void Interpreter::ProfileOffline(int model_id,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
       moving_averaged_latencies_[sub_idx] = profiled_latency;
+      planner_->GetModelManager()->ProfileLatency(subgraph, profiled_latency);
 
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                  "Reusing profiled result\n model=%d avg=%d us worker=%d "
@@ -1114,6 +1121,7 @@ void Interpreter::ProfileOffline(int model_id,
 
       moving_averaged_latencies_[sub_idx] = latency;
       profile_database_[key] = latency;
+      planner_->GetModelManager()->ProfileLatency(subgraph, latency);
 
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                  "Profiling result\n model=%d avg=%d us worker=%d "
@@ -1208,7 +1216,7 @@ TfLiteStatus Interpreter::ApplyBestDeviceDelegate(Subgraph* subgraph,
 
   switch (device) {
     case kTfLiteCPU:
-    case kTfLiteOffloading:
+    case kTfLiteCLOUD:
       // TODO #23: XNNPACK seems inefficient than default CPU
       if (targetDelegate == nullptr)
         // Only valid case to return Ok with nullptr
@@ -1298,6 +1306,19 @@ std::set<int> Interpreter::GetSubgraphIdx(int model_id,
     }
   }
 
+  return indices;
+}
+
+std::vector<int> Interpreter::GetSubgraphIndices(int model_id) {
+  std::vector<int> indices;
+  for (auto& subgraph_key_id : subgraph_idx_map_) {
+    const SubgraphKey& key = subgraph_key_id.first;
+    int subgraph_index = subgraph_key_id.second;
+
+    if (key.model_id == model_id) {
+      indices.push_back(subgraph_index);
+    }
+  }
   return indices;
 }
 
@@ -1518,7 +1539,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
     for (auto device_and_ops : device_op_sets) {
       auto device = device_and_ops.first;
       auto& ops = device_and_ops.second;
-      if (device == kTfLiteCPU || device == kTfLiteOffloading) {
+      if (device == kTfLiteCPU || device == kTfLiteCLOUD) {
         continue;
       }
       if (ops.size() < minimum_subgraph_size_) {
@@ -1536,7 +1557,7 @@ TfLiteStatus Interpreter::GetUnitSubgraphs(
   for (int op_index = 0; op_index < num_ops; op_index++) {
     for (int device_id = 0; device_id < kTfLiteNumDevices; device_id++) {
       TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(device_id);
-      if (device_flag == kTfLiteCPU || device_flag == kTfLiteOffloading) {
+      if (device_flag == kTfLiteCPU || device_flag == kTfLiteCLOUD) {
         op_support_table[op_index] |= 1 << device_id;
         continue;
       }
@@ -1709,7 +1730,7 @@ void Interpreter::InvestigateModelSpec(int model_id) {
   for (int i = 0; i < kTfLiteNumDevices; ++i) {
     TfLiteDeviceFlags device_flag = static_cast<TfLiteDeviceFlags>(i);
 
-    if (device_flag == kTfLiteCPU || device_flag == kTfLiteOffloading) {
+    if (device_flag == kTfLiteCPU || device_flag == kTfLiteCLOUD) {
       // no need to check supportability for CPU
       continue;
     }
@@ -1736,46 +1757,12 @@ void Interpreter::InvestigateModelSpec(int model_id) {
 std::pair<std::vector<int>, int64_t> Interpreter::GetShortestLatencyWithUnitSubgraph(
     int model_id, int start_unit_idx,
     std::map<int, int64_t>& worker_waiting) {
-  auto& memo = model_specs_[model_id].latency_memo;
-  auto num_unit_subgraphs = model_specs_[model_id].num_unit_subgraphs;
-
-  // Initialize memo.
-  for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair<std::vector<int>, int64_t>({}, INT_MAX);
-  }
-
-  // `i` and `j` refer to an unit subgraph idx.
-  // A subgraph(i, j) consists of the unit subgraphs in [i, j].
-  // The goal of the algorithm is to find the minimum expected latency;
-  // `memo[k].second` is the minimum expected latency of the subgraph(start_unit_idx, k).
-  // `memo[k].first` is the list of subgraph indices of the best execution plan.
-  // So, the shortest expected latency of a subgraph(start_unit_idx, num_unit_subgraphs - 1) is
-  // `memo[num_unit_subgraphs - 1].second`.
-  for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
-    std::pair<std::vector<int>, int64_t> local_min = std::make_pair<std::vector<int>, int64_t>({}, -1);
-    for (int i = j; i >= start_unit_idx; --i) {
-      // Search from the profile result of the unit subgraph.
-      auto& range = unit_subgraphs_to_subgraph_indices_[model_id][i][j];
-      int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
-      std::pair<int, int64_t> target_subgraph =
-        GetShortestSubgraphIndex(range, start, worker_waiting);
-
-      if (local_min.second == -1 || target_subgraph.second < local_min.second) {
-        if (i > start_unit_idx) {
-          local_min.first = memo[i - 1].first;
-          local_min.first.push_back(target_subgraph.first);
-          local_min.second = target_subgraph.second;
-        } else {
-          local_min.first.clear();
-          local_min.first.push_back(target_subgraph.first);
-          local_min.second = target_subgraph.second;
-        }
-      }
-    }
-    memo[j] = local_min;
-  }
-
-  return memo[num_unit_subgraphs - 1];
+  std::pair<std::vector<int>, int64_t> local_min = std::make_pair<std::vector<int>, int64_t>({}, -1);
+  auto range = GetSubgraphIndices(model_id);
+  std::pair<int, int64_t> target_subgraph = GetShortestSubgraphIndex(range, 0, worker_waiting);
+  local_min.first.push_back(target_subgraph.first);
+  local_min.second = target_subgraph.second;
+  return local_min;
 }
 
 std::pair<int, int64_t> Interpreter::GetShortestLatency(
@@ -1922,21 +1909,7 @@ int Interpreter::GetSubgraphIdxSatisfyingSLO(Job& job,
 std::pair<std::vector<int>, int64_t>
 Interpreter::GetSubgraphWithShortestLatency(Job& job,
                                             std::map<int, int64_t>& worker_waiting) {
-  if (subgraph_preparation_type_ == "fallback_per_device") {
-    int preceded_subgraph_index =
-      job.previous_subgraph_indices.empty() ? -1
-                                            : job.previous_subgraph_indices.back();
-    auto pair = GetShortestLatency(job.model_id,
-                              job.resolved_tensors,
-                              0,
-                              worker_waiting,
-                              preceded_subgraph_index);
-    std::pair<std::vector<int>, int64_t> ret = std::pair<std::vector<int>, int64_t>({}, pair.second);
-    ret.first.push_back(pair.first);
-    return ret;
-  } else {
-    return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
-  }
+  return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx, worker_waiting);
 }
 
 std::map<std::pair<std::set<int>, std::set<int>>, std::vector<int>>

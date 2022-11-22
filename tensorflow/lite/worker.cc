@@ -4,6 +4,11 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/subgraph.h"
 #include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/cpu.h"
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 
 namespace tflite {
 namespace impl {
@@ -23,22 +28,29 @@ Worker::~Worker() {
 }
 
 TfLiteStatus Worker::Init(WorkerConfig& config, int worker_id) {
-  if (config.allow_worksteal) {
-    AllowWorkSteal();
-  }
-  
+  LOGI("Worker init [%d]", worker_id);
+  worker_id_ = worker_id;
   availability_check_interval_ms_ = config.availability_check_interval_ms;
   offloading_target_ = config.offloading_target;
   offloading_data_size_ = config.offloading_data_size;
 
-  TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
-                      "Set affinity of %s to %s cores for %d threads.",
+  LOGI("Set affinity of %s to %s cores for %d threads.",
                       TfLiteDeviceGetName(device_flag_),
                       TfLiteCPUMaskGetName(config.cpu_masks[worker_id]),
                       config.num_threads[worker_id]);
 
-  const CpuSet worker_mask_set =
+  CpuSet worker_mask_set =
     TfLiteCPUMaskGetSet(config.cpu_masks[worker_id]);
+  if (device_flag_ == kTfLiteCPU) {
+    int mask_num = worker_mask_set.NumEnabled();
+    int num_to_turn_off = mask_num - config.num_threads[worker_id];
+    for (int i = GetCPUCount() - 1; i >= 0; i--) {
+      if (worker_mask_set.IsEnabled(i) && num_to_turn_off > 0) {
+        worker_mask_set.Disable(i);
+        num_to_turn_off--;
+      }
+    }
+  }
   return UpdateWorkerThread(worker_mask_set, config.num_threads[worker_id]);
 }
 
@@ -64,12 +76,12 @@ TfLiteStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask, int n
   return kTfLiteOk;
 }
 
-void Worker::WaitUntilDeviceAvailable(Subgraph& subgraph) {
+void Worker::WaitUntilDeviceAvailable(Subgraph* subgraph) {
   while (true) {
     tflite::profiling::time::SleepForMicros(1000 * availability_check_interval_ms_);
     TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO, "Availability check at %d ms.",
                         tflite::profiling::time::NowMicros());
-    if (subgraph.Invoke() == kTfLiteOk) {
+    if (subgraph->Invoke() == kTfLiteOk) {
       return;
     }
   }
@@ -104,10 +116,6 @@ JobQueue& Worker::GetDeviceRequests() {
   TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING,
                       "GetDeviceRequests() Not implemented");
   return requests_;
-}
-
-void Worker::AllowWorkSteal() {
-  TFLITE_LOG_INTERNAL(TFLITE_LOG_WARNING, "AllowWorkSteal() Not implemented");
 }
 
 bool Worker::IsBusy() {

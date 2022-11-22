@@ -3,15 +3,10 @@
 #include <fstream>
 
 #include "tensorflow/lite/interpreter.h"
-#include "tensorflow/lite/planner/baseline_configurable_scheduler.h"
-#include "tensorflow/lite/planner/fixed_device_scheduler.h"
+#include "tensorflow/lite/planner/cloud_only_scheduler.h"
+#include "tensorflow/lite/planner/mobile_only_heft_scheduler.h"
+#include "tensorflow/lite/planner/mobile_cloud_heft_scheduler.h"
 #include "tensorflow/lite/planner/random_assign_scheduler.h"
-#include "tensorflow/lite/planner/round_robin_scheduler.h"
-#include "tensorflow/lite/planner/shortest_expected_latency_scheduler.h"
-#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_scheduler.h"
-#include "tensorflow/lite/planner/least_slack_first_scheduler.h"
-#include "tensorflow/lite/planner/heterogeneous_earliest_finish_time_reserved_scheduler.h"
-#include "tensorflow/lite/planner/offloading_scheduler.h"
 #include "tensorflow/lite/planner/thermal_aware_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 
@@ -23,9 +18,18 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter) : num_submitted_jobs_(0) {
-  interpreter_ = interpreter;
+Planner::Planner(Interpreter* interpreter, ResourceConfig& resource_config) : interpreter_(interpreter), num_submitted_jobs_(0){
   planner_thread_ = std::thread([this] { this->Plan(); });
+
+  // Init a ResourceMonitor instance
+  if (resource_monitor_.Init(resource_config) != kTfLiteOk) {
+    LOGI("ResourceMonitor init fails");
+  }
+
+  model_manager_ = new ModelManager(resource_monitor_);
+  if (model_manager_->Init(resource_config) != kTfLiteOk) {
+    LOGI("ModelManager init fails");
+  }
 }
 
 Planner::~Planner() {
@@ -38,27 +42,38 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
   if (log_path_.size()) {
-    // Open file to write per-request timestamps later
-    // NOTE: Columns starting `sched_id` are added for debugging purpose
-    // and the metrics are only for ShortestExpectedLatency Planner.
     std::ofstream log_file(log_path_);
     if (!log_file.is_open()) return kTfLiteError;
     log_file << "sched_id\t"
-             << "job_id\t"
              << "model_name\t"
              << "model_id\t"
-             << "device_id\t"
              << "worker_id\t"
-             << "subgraph_idx\t"
              << "enqueue_time\t"
              << "invoke_time\t"
              << "end_time\t"
-             << "profiled_execution_time\t"
-             << "expected_execution_time\t"
-             << "slo_us\t"
-             << "job_status\t"
-             << "is_final_subgraph\t"
-             << "prev_subgraphs\n";
+             << "estimated_latency\t"
+             << "latency\t"
+             << "communication_time\t"
+             << "before_temp_cpu\t"
+             << "before_temp_gpu\t"
+             << "before_temp_dsp\t"
+             << "before_temp_npu\t"
+             << "before_temp_modem\t"
+            //  << "after_temp_cpu\t"
+            //  << "after_temp_gpu\t"
+            //  << "after_temp_dsp\t"
+            //  << "after_temp_npu\t"
+             << "frequency_cpu\t"
+             << "frequency_gpu\t"
+            //  << "estimated_temp\t"
+            //  << "prediction_error_temp\t"
+            //  << "prediction_error_latency\t"
+             << "before_target_temp\t"
+             << "after_target_temp\t"
+             << "temp_increase\t"
+             << "fps\t"
+             << "ppt\t"
+             << "job_status\n";
     log_file.close();
   }
 
@@ -70,43 +85,25 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     return kTfLiteError;
   }
 
+  LOGI("Planner init");
+
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
-    if (schedulers[i] == kFixedDevice) {
-      schedulers_.emplace_back(new FixedDeviceScheduler(this));
-    } else if (schedulers[i] == kFixedDeviceGlobalQueue) {
-      schedulers_.emplace_back(new FixedDeviceGlobalQueueScheduler(this));
-    } else if (schedulers[i] == kRoundRobin) {
-      schedulers_.emplace_back(new RoundRobinScheduler(this));
-    } else if (schedulers[i] == kShortestExpectedLatency) {
-      schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(this));
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTime) {
-      schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeScheduler(this));
-    } else if (schedulers[i] == kLSF) {
-      schedulers_.emplace_back(new LeastSlackFirstScheduler(this));
-    } else if (schedulers[i] == kHeterogeneousEarliestFinishTimeReserved) {
-      schedulers_.emplace_back(new HeterogeneousEarliestFinishTimeReservedScheduler(this));
-    } else if (schedulers[i] == kOffloading) {
-      schedulers_.emplace_back(new OffloadingScheduler(this));
+    if (schedulers[i] == kCloudOnly) {
+      schedulers_.emplace_back(new CloudOnlyScheduler(this));
+    } else if (schedulers[i] == kMobileOnlyHeft) {
+      schedulers_.emplace_back(new MobileOnlyHeftScheduler(this, model_manager_));
+    } else if (schedulers[i] == kMobileCloudHeft) {
+      schedulers_.emplace_back(new MobileCloudHeftScheduler(this, model_manager_));
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
-    } else if (schedulers[i] == kThermalAware) {
-      schedulers_.emplace_back(new ThermalAwareScheduler(this));
-    } else if (schedulers[i] == kBaselineConfigurable) {
-      schedulers_.emplace_back(new BaselineConfigurableScheduler(this));
+    } else if (schedulers[i] == kSplashHeft) {
+      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
+    } else if (schedulers[i] == kSplashLst) {
+      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
     } else {
       return kTfLiteError;
     }
-
-    // Checks if all the schedulers have the same requirements for the
-    // fallback subgraphs.
-    // Currently, we do not allow using schedulers with different requirements
-    // for the fallback subgraphs.
-    // if (i == 0) {
-    //   allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
-    // } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
-    //   return kTfLiteError;
-    // }
   }
 
   // All schedulers must have the same worker type.
@@ -137,35 +134,23 @@ int Planner::GetWorkerType() const {
   return worker_type;
 }
 
+std::vector<std::unique_ptr<Worker>>& Planner::GetWorkers() {
+  return interpreter_->GetWorkers();
+}
+
 bool Planner::NeedFallbackSubgraphs() const {
-  for (int i = 0; i < schedulers_.size(); ++i) {
-    if (schedulers_[i]->NeedFallbackSubgraphs()) return true;
-  }
-  return false;
+  return true;
 }
 
 void Planner::CopyToLocalQueues() {
   std::unique_lock<std::mutex> request_lock(GetRequestsMtx());
   JobQueue& requests = GetRequests();
   if (!requests.empty()) {
-    if (schedulers_.size() == 1) {
-      // Gets jobs from requests and removes those jobs from the requests.
-      auto& local_jobs = local_queues_[0];
-      local_jobs.insert(local_jobs.end(),
-                        std::make_move_iterator(requests.begin()),
-                        std::make_move_iterator(requests.end()));
-
-    } else if (schedulers_.size() == 2) {
-      // TODO: general method for assigning SLO/non-SLO requests
-      for (Job& job : requests) {
-        if (job.slo_us > 0) {
-          local_queues_[0].push_back(std::move(job));
-        } else {
-          local_queues_[1].push_back(std::move(job));
-        }
-      }
-    } // other else cases should have been caught in Init()
-
+    // Gets jobs from requests and removes those jobs from the requests.
+    auto& local_jobs = local_queues_[0];
+    local_jobs.insert(local_jobs.end(),
+                      std::make_move_iterator(requests.begin()),
+                      std::make_move_iterator(requests.end()));
     requests.clear();
   }
   request_lock.unlock();
@@ -180,7 +165,7 @@ bool Planner::IsSLOViolated(Job& job) {
     int64_t current_time = profiling::time::NowMicros();
     int64_t expected_latency =
         workers_waiting_[job.worker_id] +
-        job.expected_execution_time;
+        job.estimated_latency;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
       return true;
@@ -239,9 +224,36 @@ void Planner::UpdateWorkerWaitingTime() {
   }
 }
 
-std::set<int> Planner::GetIdleWorkers() {
+std::set<int> Planner::GetIdleAllWorkers() {
   std::set<int> idle_workers;
   for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
+      idle_workers.insert(i);
+    }
+  }
+  return idle_workers;
+}
+
+std::set<int> Planner::GetIdleAllWorkersForThermal() {
+  std::set<int> idle_workers;
+  for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    if (i == kTfLiteCPU) {
+      continue;
+    }
+    if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
+      idle_workers.insert(i);
+    }
+  }
+  return idle_workers;
+}
+
+
+std::set<int> Planner::GetIdleProcessorWorkers() {
+  std::set<int> idle_workers;
+  for (int i = 0; i < GetInterpreter()->GetNumWorkers(); ++i) {
+    if (i == kTfLiteCLOUD) {
+      continue;
+    }
     if (!GetInterpreter()->GetWorker(i)->IsBusy()) {
       idle_workers.insert(i);
     }
@@ -375,35 +387,45 @@ void Planner::FlushFinishedJobs() {
         job.status =
             latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
       }
-
-      if (is_final_subgraph) {
-        // update internal map to keep track of the # of inferences per model
-        model_execution_count_[job.model_id]++;
+      double ppt = 0.;
+      double fps = (double)(1000000. / (double)job.latency);
+      int temp_diff = job.after_target_temp[job.worker_id] - job.before_target_temp[job.worker_id];
+      if (temp_diff > 0) {
+      } else {
+        temp_diff = 1;
       }
-
-      std::string prev_subgraphs;
-
-      for (int i : job.previous_subgraph_indices) {
-        prev_subgraphs += std::to_string(i) + " ";
-      }
-
+      ppt = fps / (double)(temp_diff) * 1000.;
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
-               << job.job_id << "\t"
                << job.model_fname << "\t"
                << job.model_id << "\t"
-               << job.device_id << "\t"
                << job.worker_id << "\t"
-               << job.subgraph_idx << "\t"
                << job.enqueue_time << "\t"
                << job.invoke_time << "\t"
                << job.end_time << "\t"
-               << job.profiled_execution_time << "\t"
-               << job.expected_execution_time << "\t"
-               << job.slo_us << "\t"
-               << job.status << "\t"
-               << is_final_subgraph << "\t"
-               << prev_subgraphs << "\n";
+               << job.estimated_latency << "\t" 
+               << job.latency << "\t"
+               << job.communication_time << "\t"
+               << job.before_temp[kTfLiteCPU] << "\t"
+               << job.before_temp[kTfLiteGPU] << "\t"
+               << job.before_temp[kTfLiteDSP] << "\t"
+               << job.before_temp[kTfLiteNPU] << "\t"
+               << job.before_temp[kTfLiteCLOUD] << "\t"
+              //  << job.after_temp[kTfLiteCPU] << "\t"
+              //  << job.after_temp[kTfLiteGPU] << "\t"
+              //  << job.after_temp[kTfLiteDSP] << "\t"
+              //  << job.after_temp[kTfLiteNPU] << "\t"
+               << job.frequency[kTfLiteCPU] << "\t"
+               << job.frequency[kTfLiteGPU] << "\t"
+              //  << job.estimated_temp << "\t"
+              //  << job.after_temp[job.worker_id] - job.estimated_temp<< "\t"
+              //  << job.latency - job.estimated_latency << "\t"
+               << job.before_target_temp[job.worker_id] << "\t"
+               << job.after_target_temp[job.worker_id] << "\t"
+               << temp_diff << "\t"
+               << fps << "\t"
+               << ppt << "\t"
+               << job.status << "\n";
     }
     log_file.close();
   } else {
@@ -421,33 +443,6 @@ void Planner::UpdateJobScheduleStatus(Job& job, Subgraph* target_subgraph) {
   job.worker_id = target_key.worker_id;
   job.device_id = interpreter_->GetWorkerDeviceFlag(target_key.worker_id);
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = interpreter_->GetProfiledLatency(target_key);
-  job.expected_execution_time = interpreter_->GetExpectedLatency(job.subgraph_idx);
-
-  if (!target_subgraph->IsEnd()) {
-    Job remaining_ops(job.model_id);
-    remaining_ops.model_fname = job.model_fname;
-    remaining_ops.slo_us = job.slo_us;
-    remaining_ops.enqueue_time = job.enqueue_time;
-    remaining_ops.following_jobs = job.following_jobs;
-    remaining_ops.expected_latency = job.expected_latency;
-    remaining_ops.sched_id = job.sched_id;
-    remaining_ops.job_id = job.job_id;
-    remaining_ops.input_handle = job.input_handle;
-    remaining_ops.output_handle = job.output_handle;
-    remaining_ops.resolved_tensors = job.resolved_tensors;
-    remaining_ops.previous_subgraph_indices = job.previous_subgraph_indices;
-    remaining_ops.previous_subgraph_indices.emplace_back(job.subgraph_idx);
-    // The next start_unit_idx is the next one from the current max unit index.
-    remaining_ops.start_unit_idx = *target_key.unit_indices.rbegin() + 1;
-
-    for (int output_index : target_subgraph->outputs()) {
-      remaining_ops.resolved_tensors.insert(output_index);
-    }
-
-    job.following_jobs.clear();
-    job.following_jobs.push_back(remaining_ops);
-  }
 }
 
 void Planner::PrepareReenqueue(Job& job) {
@@ -489,8 +484,7 @@ void Planner::TryUpdateModelWorkerMapping() {
       int selected_model_id = -1;
       for (auto& workers_per_models : workers_per_models_map) {
         for (int model_id : workers_per_models.second) {
-          if (GetInterpreter()->GetSubgraphIdx(
-                  model_id, worker_id) != -1) {
+          if (GetInterpreter()->GetSubgraphIdx(model_id, worker_id) != -1) {
             selected_model_id = model_id;
             break;
           }

@@ -32,6 +32,7 @@ typedef enum {
     kTfLiteAll,
     kTfLiteLittle,
     kTfLiteBig,
+    kTfLiteBigFirst,
     kTfLitePrimary,
     kTfLiteNumCpuMasks
 } TfLiteCPUMaskFlags;

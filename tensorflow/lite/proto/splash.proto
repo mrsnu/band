@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.mrsnu.splash";
+option java_outer_classname = "InferenceRequestProto";
+option objc_class_prefix = "IR";
+
+package splash;
+
+service Splash {
+  rpc RequestInference (Request) returns (Response) {}
+}
+
+message Request {
+  string model = 1;
+  int32 height = 2;
+  int32 width = 3;
+  bytes data = 4;
+  int32 latency_ms = 5;
+}
+
+message Response {
+  int32 computation_time_ms = 1;
+  bytes result = 2;
+}

@@ -82,25 +82,28 @@ FRAMEWORK_LIB_HDRS = [
     "tensor_ring_buffer.h",
     "planner/util.h",
     "planner/planner.h",
-    "planner/baseline_configurable_scheduler.h",
-    "planner/fixed_device_scheduler.h",
-    "planner/round_robin_scheduler.h",
+    "planner/cloud_only_scheduler.h",
     "planner/random_assign_scheduler.h",
-    "planner/shortest_expected_latency_scheduler.h",
-    "planner/heterogeneous_earliest_finish_time_scheduler.h",
-    "planner/least_slack_first_scheduler.h",
-    "planner/heterogeneous_earliest_finish_time_reserved_scheduler.h",
-    "planner/offloading_scheduler.h",
     "planner/thermal_aware_scheduler.h",
+    "planner/mobile_only_heft_scheduler.h",
+    "planner/mobile_cloud_heft_scheduler.h",
     "worker.h",
     "safe_bool.h",
-    "resource_monitor.h"
+    "splash/resource_monitor.h",
+    "splash/model_manager.h",
+    "splash/thermal_model.h",
+    "splash/cloud_thermal_model.h",
+    "splash/processor_thermal_model.h",
+    "splash/latency_model.h",
+    "splash/cloud_latency_model.h",
+    "splash/processor_latency_model.h",
+    "splash/splash_grpc_client.h"
 ]
 
 cc_library(
     name = "resource_monitor",
-    srcs = ["resource_monitor.cc"],
-    hdrs = ["resource_monitor.h"],
+    srcs = ["splash/resource_monitor.cc"],
+    hdrs = ["splash/resource_monitor.h"],
     copts = TFLITE_DEFAULT_COPTS + tflite_copts(),
     deps = [
         "//tensorflow/lite/profiling:time",
@@ -111,7 +114,7 @@ cc_library(
 tflite_cc_android_test(
     name = "resource_monitor_test",
     srcs = [
-        "resource_monitor_test.cc"
+        "splash/resource_monitor_test.cc"
     ],
     deps = [
         ":resource_monitor",
@@ -303,22 +306,22 @@ cc_library(
         "optional_debug_tools.cc",
         "tensor_ring_buffer.cc",
         "planner/planner.cc",
-        "planner/baseline_configurable_scheduler.cc",
-        "planner/fixed_device_scheduler.cc",
-        "planner/fixed_device_global_queue_scheduler.cc",
-        "planner/round_robin_scheduler.cc",
+        "planner/cloud_only_scheduler.cc",
+        "planner/mobile_only_heft_scheduler.cc",
+        "planner/mobile_cloud_heft_scheduler.cc",
         "planner/random_assign_scheduler.cc",
-        "planner/shortest_expected_latency_scheduler.cc",
-        "planner/heterogeneous_earliest_finish_time_scheduler.cc",
-        "planner/least_slack_first_scheduler.cc",
-        "planner/heterogeneous_earliest_finish_time_reserved_scheduler.cc",
-        "planner/offloading_scheduler.cc",
         "planner/thermal_aware_scheduler.cc",
         "worker.cc",
         "worker_device_queue.cc",
         "worker_global_queue.cc",
         "worker_device_queue_offloading.cc",
-        "resource_monitor.cc"
+        "worker_global_queue_offloading.cc",
+        "splash/resource_monitor.cc",
+        "splash/model_manager.cc",
+        "splash/cloud_thermal_model.cc",
+        "splash/processor_thermal_model.cc",
+        "splash/cloud_latency_model.cc",
+        "splash/processor_latency_model.cc"
     ],
     hdrs = FRAMEWORK_LIB_HDRS,
     copts = tflite_copts() + TFLITE_DEFAULT_COPTS,
@@ -356,7 +359,7 @@ cc_library(
         "//tensorflow/lite/profiling:util",
         "//external:grpc_lib",
         "@com_github_grpc_grpc//:grpc++_reflection",
-        "//tensorflow/lite/proto:helloworld_cc_grpc",
+        "//tensorflow/lite/proto:splash_grpc_proto",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",

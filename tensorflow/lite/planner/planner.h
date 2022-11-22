@@ -13,18 +13,20 @@
 #include "tensorflow/lite/planner/util.h"
 #include "tensorflow/lite/safe_bool.h"
 #include "tensorflow/lite/worker.h"
+#include "tensorflow/lite/splash/model_manager.h"
+#include "tensorflow/lite/splash/resource_monitor.h"
 
 namespace tflite {
-
 namespace impl {
 
 class Interpreter;
 class Scheduler;
+class ModelManager;
 
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter);
+  explicit Planner(Interpreter* interpreter, ResourceConfig& resource_config);
   ~Planner();
   TfLiteStatus Init(PlannerConfig& config);
 
@@ -108,7 +110,11 @@ class Planner {
   // Get idle workers from `workers_waiting_`.
   // NOTE: Another option to implement the function is to be pass
   // the current WorkerWaitingTime as a parameter.
-  std::set<int> GetIdleWorkers();
+  std::set<int> GetIdleProcessorWorkers();
+  std::set<int> GetIdleAllWorkers();
+  std::set<int> GetIdleAllWorkersForThermal();
+
+  std::vector<std::unique_ptr<Worker>>& GetWorkers();
 
   WorkerWaitingTime& GetWorkerWaitingTime() { return workers_waiting_; }
 
@@ -120,10 +126,16 @@ class Planner {
 
   void PrepareReenqueue(Job& job);
 
+  ModelManager * GetModelManager() { return model_manager_; }
+
+  ResourceMonitor& GetResourceMonitor() { return resource_monitor_; }
+
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
+  ModelManager * model_manager_;
+  ResourceMonitor& resource_monitor_ = ResourceMonitor::instance();
   CpuSet cpu_set_;
   bool need_cpu_update_ = false;
 
@@ -175,14 +187,12 @@ class Scheduler {
     return planner_->GetWorkerWaitingTime();
   }
   bool NeedProfile() { return need_profile_; }
-  bool NeedFallbackSubgraphs() { return need_fallback_subgraphs_; }
   TfLiteWorkerType GetWorkerType() { return worker_type_; }
   ScheduleAction& GetAction() { return action_; }
   void EnqueueAction(Job job, Subgraph* subgraph);
 
  protected:
   bool need_profile_;
-  bool need_fallback_subgraphs_;
   TfLiteWorkerType worker_type_;
   Planner* planner_;
   ScheduleAction action_;

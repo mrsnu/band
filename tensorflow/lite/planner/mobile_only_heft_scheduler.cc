@@ -1,20 +1,17 @@
-#include "tensorflow/lite/planner/thermal_aware_scheduler.h"
-
-#include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/planner/mobile_only_heft_scheduler.h"
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 #endif // defined(__ANDROID__)
-
 namespace tflite {
 namespace impl {
 
-void ThermalAwareScheduler::Schedule(JobQueue& requests) {
+void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
   int window_size = std::min(planner_->GetWindowSize(), (int)requests.size());
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
     planner_->UpdateWorkerWaitingTime();
-    std::set<int> idle_workers = planner_->GetIdleAllWorkers();
+    std::set<int> idle_workers = planner_->GetIdleProcessorWorkers();
     if (idle_workers.empty()) {
       break;
     }
@@ -23,11 +20,11 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
 
     std::set<int> jobs_to_yield;
-    double largest_ppt;
+    int64_t largest_shortest_latency;
     int target_job_idx;
     int target_subgraph_idx;
     do {
-      largest_ppt= -1.0;
+      largest_shortest_latency = -1;
       target_job_idx = -1;
       target_subgraph_idx = -1;
 
@@ -47,17 +44,33 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
           searched_jobs.insert(job_to_search);
         }
 
-        std::pair<int, double> best_subgraph = GetMaxPptSubgraphIdx(job.model_id, waiting_time);
+        // update waiting_time for all future jobs in reserved_
+        WorkerWaitingTime reserved_time(waiting_time);
+        for (auto pair : reserved_) {
+          if (pair.first == job.job_id) {
+            continue;
+          }
 
-        if (largest_ppt < best_subgraph.second) {
+          int reserved_id = pair.second;
+          Subgraph* reserved_subgraph = GetInterpreter()->subgraph(reserved_id);
+          int worker_id = reserved_subgraph->GetKey().worker_id;
+          int64_t latency = model_manager_->GetPredictedLatency(worker_id, reserved_subgraph);
+          reserved_time[worker_id] += latency;
+        }
+
+        std::pair<int, int64_t> best_subgraph = GetShortestSubgraph(job.model_id, waiting_time);
+
+        if (largest_shortest_latency < best_subgraph.second) {
           Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
-          largest_ppt = best_subgraph.second;
+
+          largest_shortest_latency = best_subgraph.second;
           target_subgraph_idx = best_subgraph.first;
           target_job_idx = it - requests.begin();
         }
       }
 
       if (target_job_idx < 0) {
+        // no one wants to be scheduled..
         return;
       }
 
@@ -84,16 +97,16 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     window_size--;
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    job.estimated_temp = model_manager_->GetPredictedTemperature(
-      target_subgraph->GetKey().worker_id, target_subgraph);
-    job.estimated_latency = model_manager_->GetPredictedLatency(
-      target_subgraph->GetKey().worker_id, target_subgraph);
+    job.estimated_latency = largest_shortest_latency;
+    job.estimated_temp = 0;
     EnqueueAction(job, target_subgraph);
+
+    reserved_.erase(job.job_id);
   }
 }
 
 std::pair<int, int64_t>
-ThermalAwareScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting) {
+MobileOnlyHeftScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting) {
   int64_t min_latency = INT64_MAX;
   int min_idx = -1;
 
@@ -101,11 +114,7 @@ ThermalAwareScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>&
   for (auto subgraph_index : subgraph_indices) {
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_index);
     SubgraphKey& key = subgraph->GetKey();
-    // if (!model_manager_->IsAvailableWorker(key.worker_id, subgraph)) {
-    //   // LOGI("[TAS] Throttling predicted! = Worker %d", key.worker_id);
-    //   continue;
-    // }
-    // if (key.worker_id == kTfLiteCPU) continue;
+    if (key.worker_id == kTfLiteCLOUD) continue;
 
     int64_t waiting_time = worker_waiting[key.worker_id];
     int64_t expected_latency = model_manager_->GetPredictedLatency(key.worker_id, subgraph);
@@ -119,43 +128,6 @@ ThermalAwareScheduler::GetShortestSubgraph(int model_id, std::map<int, int64_t>&
   return {min_idx, min_latency};
 }
 
-std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(int model_id, std::map<int, int64_t>& worker_waiting) {
-  double max_ppt = -1.0;
-  int max_idx = -1;
-
-  std::vector<int> subgraph_indices = GetInterpreter()->GetSubgraphIndices(model_id);
-  for (auto subgraph_index : subgraph_indices) {
-    Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_index);
-    SubgraphKey& key = subgraph->GetKey();
-
-    int64_t waiting_time = worker_waiting[key.worker_id];
-    std::pair<int, int64_t> source = model_manager_->GetPredictedTempAndLatency(key.worker_id, subgraph);
-    int64_t expected_latency = source.second;
-    int64_t total = expected_latency + waiting_time;
-    thermal_t temp_diff = source.first;
-    if (total <= 0) {
-      total = 1; // epsilon value
-    }
-    if (temp_diff <= 0) {
-      temp_diff = 1; // epsilon value
-    }
-    // LOGI("temp_diff= %d", temp_diff);
-
-    double config = 0.5;
-    // double thermal_efficiency = 1 / (double)temp_diff * (double)1000;
-    double ppt = (1.0 - config) * thermal_efficiency - config * (double)total;
-    // double ppt = thermal_efficiency / (double)total;
-    // LOGI("thermal_Efficiency = %f", thermal_efficiency);
-    // LOGI("latency = %lld", total);
-    // LOGI("ppt = %f", ppt);
-
-    if (max_ppt < ppt) {
-      max_ppt = ppt;
-      max_idx = subgraph_index;
-    }
-  }
-  return { max_idx, max_ppt };
-}
 
 }  // namespace impl
 }  // namespace tflite

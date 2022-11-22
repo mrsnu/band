@@ -29,12 +29,16 @@ class Worker {
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   TfLiteStatus UpdateWorkerThread(const CpuSet thread_affinity_mask, int num_threads);
-  void WaitUntilDeviceAvailable(Subgraph& subgraph);
+  void WaitUntilDeviceAvailable(Subgraph* subgraph);
   bool IsAvailable();
   void Pause();
   void Resume();
   const CpuSet& GetWorkerThreadAffinity() const;
   int GetNumThreads() const;
+
+  worker_id_t GetId() {
+    return worker_id_;
+  }
   virtual int GetCurrentJobId() = 0;
   virtual int64_t GetWaitingTime() = 0;
   // Make sure the worker lock is acquired before calling the function.
@@ -42,9 +46,9 @@ class Worker {
   // with the lock.
   virtual bool GiveJob(Job& job) = 0;
 
+
   // DeviceQueueWorker methods
   virtual JobQueue& GetDeviceRequests();
-  virtual void AllowWorkSteal();
 
   // GlobalQueueWorker methods
   virtual bool IsBusy();
@@ -57,6 +61,7 @@ class Worker {
   TfLiteStatus TryUpdateWorkerThread();
   virtual void Work() = 0;
 
+  worker_id_t worker_id_ = -1;
   std::weak_ptr<Planner> planner_;
   std::thread device_cpu_thread_;
   std::mutex device_mtx_;
@@ -64,9 +69,11 @@ class Worker {
   bool kill_worker_ = false;
   bool is_throttling_ = false;
   bool is_paused_ = false;
+  
+  // Configs
   int32_t availability_check_interval_ms_;
   std::string offloading_target_;
-  std::int32_t offloading_data_size_;
+  int32_t offloading_data_size_;
 
   // GlobalQueueWorker doesn't actually use this for scheduling, but we
   // need this for the return value of GetDeviceRequests()
@@ -94,15 +101,11 @@ class DeviceQueueWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
-  void AllowWorkSteal() override;
 
  protected:
   void Work() override;
 
  private:
-  void TryWorkSteal();
-
-  bool allow_work_steal_ = false;
 };
 
 class GlobalQueueWorker : public Worker {
@@ -138,15 +141,30 @@ class DeviceQueueOffloadingWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
   JobQueue& GetDeviceRequests() override;
-  void AllowWorkSteal() override;
+
+ protected:
+  void Work() override;
+};
+
+class GlobalQueueOffloadingWorker : public Worker {
+ public:
+  explicit GlobalQueueOffloadingWorker(std::shared_ptr<Planner> planner,
+                             TfLiteDeviceFlags device_flag)
+      : Worker(planner, device_flag) {
+    device_cpu_thread_ = std::thread([this]{this->Work();});
+  }
+
+  int GetCurrentJobId() override;
+  int64_t GetWaitingTime() override;
+  bool GiveJob(Job& job) override;
+  bool IsBusy() override;
 
  protected:
   void Work() override;
 
  private:
-  void TryWorkSteal();
-
-  bool allow_work_steal_ = false;
+  Job current_job_{-1};
+  bool is_busy_ = false;
 };
 
 }  // namespace impl

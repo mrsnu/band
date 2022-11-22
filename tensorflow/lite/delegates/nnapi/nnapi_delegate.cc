@@ -4201,7 +4201,8 @@ TfLiteDelegateFlags GetNNAPIDeviceFlag(std::string name) {
     "liteadaptor", // Huawei (DaVinci NPU)
     "neuron-ann", // Mediatek APU
     "qti-hta", // Hexagon tensor accelerator
-    "mtk-neuron" // Mediatek APU
+    "mtk-neuron", // Mediatek APU
+    "eden-drv" // Samsung NPU
     // "mtk-mdla" #TODO(#139) - Mediatek APU for half float
     })) {
     return kTfLiteDelegateFlagsNNAPINPU;

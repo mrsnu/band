@@ -39,6 +39,7 @@ limitations under the License.
 #include "tensorflow/lite/planner/planner.h"
 #include "tensorflow/lite/profiling/util.h"
 #include "tensorflow/lite/model_builder.h"
+#include "tensorflow/lite/splash/resource_monitor.h"
 
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
@@ -694,6 +695,8 @@ class Interpreter {
   // Return the subgraph index that matches the given subgraph_key.
   int GetSubgraphIdx(SubgraphKey subgraph_key);
 
+  std::vector<int> GetSubgraphIndices(int model_id);
+
   void DeleteKey(SubgraphKey subgraph_key);
 
   std::set<int> models() const;
@@ -711,7 +714,6 @@ class Interpreter {
   // into `profile_database_`.
   void SetModelConfigAndFillProfile(int model_id, ModelConfig& model_config);
   
-
   void UpdateExpectedLatency(const int subgraph_idx, int64_t latency);
   int64_t GetExpectedLatency(const int subgraph_idx);
   int64_t GetProfiledLatency(SubgraphKey& key);
@@ -721,6 +723,21 @@ class Interpreter {
   // fill in the ModelSpec for this model
   // TODO: Remove status dependency.
   void InvestigateModelSpec(int model_id);
+  // hash function to use pair<int, set<int>> as map key in cache_
+  // https://stackoverflow.com/a/32685618
+  struct PairHash {
+    std::size_t operator() (const std::pair<int, std::set<int>> &p) const {
+      auto hash_func = std::hash<int>();
+      std::size_t hash = hash_func(p.first);
+      for (int e : p.second) {
+        hash ^= hash_func(e);
+      }
+      return hash;
+    }
+  };
+  
+  // cache for GetShortestLatency()
+  std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // Return a pair of the subgraph idx that leads to the shortest final
   // latency, and that final latency value.
@@ -744,22 +761,6 @@ class Interpreter {
   int GetSubgraphIdxSatisfyingSLO(Job& job,
                                   std::map<int, int64_t>& worker_waiting,
                                   std::set<int>& idle_workers);
-
-  // hash function to use pair<int, set<int>> as map key in cache_
-  // https://stackoverflow.com/a/32685618
-  struct PairHash {
-    std::size_t operator() (const std::pair<int, std::set<int>> &p) const {
-      auto hash_func = std::hash<int>();
-      std::size_t hash = hash_func(p.first);
-      for (int e : p.second) {
-        hash ^= hash_func(e);
-      }
-      return hash;
-    }
-  };
-
-  // cache for GetShortestLatency()
-  std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>, PairHash> cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
   // NOTE: we assume every subgraph consists of unit subgraphs with the continuous unit subgraph indices.

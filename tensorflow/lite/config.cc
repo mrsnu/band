@@ -19,6 +19,10 @@ limitations under the License.
 #include <json/json.h>
 
 #include <fstream>
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
 
 namespace tflite {
 
@@ -35,14 +39,15 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   auto& interpreter_config = runtime_config.interpreter_config;
   auto& planner_config = runtime_config.planner_config;
   auto& worker_config = runtime_config.worker_config;
+  auto& resource_config = runtime_config.resource_config;
 
-  // Set Interpreter Configs
   // 1. CPU mask
   if (!root["cpu_masks"].isNull()) {
     interpreter_config.cpu_masks =
         impl::TfLiteCPUMaskGetMask(root["cpu_masks"].asCString());
   }
-  // 2. Dynamic profile config
+
+    // 2. Dynamic profile config
   if (!root["profile_smoothing_factor"].isNull()) {
     interpreter_config.profile_smoothing_factor =
         root["profile_smoothing_factor"].asFloat();
@@ -82,24 +87,25 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
         root["minimum_subgraph_size"].asInt();
   }
 
-  // Set Planner configs
-  // 1. Log path
+  // 2. Log path
   planner_config.log_path = root["log_path"].asString();
   // 2. Scheduling window size
   if (!root["schedule_window_size"].isNull()) {
     planner_config.schedule_window_size = root["schedule_window_size"].asInt();
     TF_LITE_ENSURE(error_reporter, planner_config.schedule_window_size > 0);
   }
+
   // 3. Planner type
   for (int i = 0; i < root["schedulers"].size(); ++i) {
     int scheduler_id = root["schedulers"][i].asInt();
     TF_LITE_ENSURE_MSG(
         error_reporter,
-        scheduler_id >= kFixedDevice && scheduler_id < kNumSchedulerTypes,
+        scheduler_id >= kCloudOnly && scheduler_id < kNumSchedulerTypes,
         "Wrong `schedulers` argument is given.");
     planner_config.schedulers.push_back(
         static_cast<TfLiteSchedulerType>(scheduler_id));
   }
+
   // 4. Planner CPU masks
   if (!root["planner_cpu_masks"].isNull()) {
     planner_config.cpu_masks =
@@ -183,6 +189,7 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     worker_config.availability_check_interval_ms =
         root["availability_check_interval_ms"].asInt();
   }
+
   if (!root["offloading_target"].isNull()) {
     worker_config.offloading_target = root["offloading_target"].asCString();
   }
@@ -190,6 +197,43 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   if (!root["offloading_data_size"].isNull()) {
     worker_config.offloading_data_size = root["offloading_data_size"].asInt();
   }
+
+  // Set Resource configs
+  // 1. Temperature log path
+  if (!root["resources"].isNull()) {
+    for (int i = 0; i < root["resources"].size(); ++i) {
+      auto resource_config_json = root["resources"][i];
+      // 1. worker thermal_zone path 
+      if (!resource_config_json["tz_path"].isNull()) {
+        resource_config.tz_path.push_back(resource_config_json["tz_path"].asCString());
+      }
+      // 2. worker frequency path
+      if (!resource_config_json["freq_path"].isNull()) {
+        resource_config.freq_path.push_back(resource_config_json["freq_path"].asCString());
+      }
+
+      // 3. worker threshold
+      if (!resource_config_json["threshold"].isNull()) {
+        resource_config.threshold.push_back(resource_config_json["threshold"].asInt());
+      }
+
+      // 4. target thermal_zone path
+      if (!resource_config_json["target_tz_path"].isNull()) {
+        resource_config.target_tz_path.push_back(resource_config_json["target_tz_path"].asCString());
+      }
+
+      // 4. target thermal_zone threshold
+      if (!resource_config_json["target_threshold"].isNull()) {
+        resource_config.target_threshold.push_back(resource_config_json["target_threshold"].asInt());
+      }
+    }
+  }
+
+  // 2. thermal model update window size
+  if (!root["model_update_window_size"].isNull()) {
+    resource_config.model_update_window_size = root["model_update_window_size"].asInt();
+  }
+
 
   return kTfLiteOk;
 }

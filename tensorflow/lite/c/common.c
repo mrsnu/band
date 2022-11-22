@@ -263,8 +263,8 @@ const char* TfLiteDeviceGetName(TfLiteDeviceFlags flag) {
     return "DSP";
   case kTfLiteNPU:
     return "NPU";
-  case kTfLiteOffloading:
-    return "Offloading";
+  case kTfLiteCLOUD:
+    return "CLOUD";
   }
   return "Unknown type";  
 }

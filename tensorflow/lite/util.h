@@ -36,6 +36,12 @@ limitations under the License.
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
+
+typedef int32_t worker_id_t;
+typedef int32_t thermal_t;
+typedef int32_t freq_t;
+typedef std::string path_t;
+
 // data structure for identifying subgraphs within whole models
 struct SubgraphKey {
   SubgraphKey() {}
@@ -94,13 +100,11 @@ struct Job {
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
-  // Profiled invoke execution time
-  int64_t profiled_execution_time = 0;
-  // Expected invoke execution time
-  int64_t expected_execution_time = 0;
-  // Expected total latency
-  int64_t expected_latency = 0;
+  int64_t latency = 0;
+  int64_t estimated_latency = 0;
+
   int64_t slo_us = 0;
+  int64_t communication_time = 0;
 
   // Constant variables (Valid after invoke)
   // TODO: better job life-cycle to change these to `const`
@@ -121,6 +125,13 @@ struct Job {
   // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
   std::set<int> resolved_tensors;
   std::list<int> previous_subgraph_indices;
+
+  thermal_t estimated_temp;
+  std::vector<thermal_t> before_temp;
+  std::vector<thermal_t> after_temp;
+  std::vector<thermal_t> before_target_temp;
+  std::vector<thermal_t> after_target_temp;
+  std::vector<freq_t> frequency;
 };
 
 // Model configuration struct.

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/cpu.h"
@@ -30,7 +31,7 @@ struct ProfileConfig {
     copy_computation_ratio = std::vector<int>(kTfLiteNumDevices, 0);
   }
   bool online = true;
-  int num_warmups = 1;
+  int num_warmups = 3;
   int num_runs = 1;
   std::vector<int> copy_computation_ratio;
 };
@@ -40,7 +41,7 @@ struct InterpreterConfig {
   ProfileConfig profile_config;
   int minimum_subgraph_size = 7;
   float profile_smoothing_factor = 0.1;
-  std::string subgraph_preparation_type = "merge_unit_subgraph";
+  std::string subgraph_preparation_type = "no_fallback_subgraph";
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
   int copy_computation_ratio = 1000;
   int num_threads = -1;
@@ -48,7 +49,7 @@ struct InterpreterConfig {
 
 struct PlannerConfig {
   std::string log_path;
-  int schedule_window_size = INT_MAX;
+  int schedule_window_size = 5;
   std::vector<TfLiteSchedulerType> schedulers;
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
 };
@@ -72,10 +73,20 @@ struct WorkerConfig {
   std::int32_t offloading_data_size = 0; 
 };
 
+struct ResourceConfig {
+  std::vector<std::string> tz_path;
+  std::vector<std::string> freq_path;
+  std::vector<thermal_t> threshold;
+  std::vector<std::string> target_tz_path;
+  std::vector<thermal_t> target_threshold;
+  int32_t model_update_window_size = 750;
+};
+
 struct RuntimeConfig {
   InterpreterConfig interpreter_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  ResourceConfig resource_config;
 };
 
 class ErrorReporter;
