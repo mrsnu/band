@@ -141,10 +141,10 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(int model_id,
     }
     // LOGI("temp_diff= %d", temp_diff);
 
-    double config = 0.5;
+    // double config = 0.5;
     double thermal_efficiency = 1 / (double)temp_diff * (double)1000;
-    double ppt = (1.0 - config) * thermal_efficiency - config * (double)total;
-    // double ppt = thermal_efficiency / (double)total;
+    // double ppt = (1.0 - config) * thermal_efficiency - config * (double)total; // Note that this can be negatvie value!
+    double ppt = thermal_efficiency / (double)total;
     // LOGI("thermal_Efficiency = %f", thermal_efficiency);
     // LOGI("latency = %lld", total);
     // LOGI("ppt = %f", ppt);

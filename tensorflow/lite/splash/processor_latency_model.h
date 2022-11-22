@@ -28,18 +28,10 @@ class ProcessorLatencyModel : public ILatencyModel {
   TfLiteStatus Profile(int32_t model_id, int64_t latency) override;
  
  private:
-  std::unordered_map<int, int64_t> model_latency_table_; // {model_id, latency}
-  std::unordered_map<int, int64_t> model_throttled_latency_table_; // {model_id, latency}
+  std::unordered_map<int, std::unordered_map<int, int64_t>> model_latency_table_; // {model_id, {temp, latency}}
 
-  float throttled_diff_rate_ = 0.1;
-  int throttle_count_ = 0;
-  int throttle_count_threshold_ = 5;
-  thermal_t throttled_temp_min_ = 40000;
-  std::unordered_map<int, int> minimum_profiled_count_; // {model_id, count}
+  std::unordered_map<int, std::unordered_map<int, int>> minimum_profiled_count_; // {model_id, {temp, count}}
   int minimum_profiled_threshold_ = 3;
-
-  bool IsThrottled(int32_t model_id, int64_t latency, thermal_t current_temp);
-  TfLiteStatus UpdateThrottledLatency(int32_t model_id, int64_t latency);
 };
 
 } // namespace impl

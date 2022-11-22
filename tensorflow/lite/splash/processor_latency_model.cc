@@ -22,90 +22,62 @@ TfLiteStatus ProcessorLatencyModel::Init() {
 }
 
 int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
-  auto it = model_latency_table_.find(subgraph->GetKey().model_id);
-  auto count = minimum_profiled_count_.find(subgraph->GetKey().model_id);
-  if (count == minimum_profiled_count_.end() || count->second < minimum_profiled_threshold_) {
+  thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_) / 1000; 
+  int model_id = subgraph->GetKey().model_id;
+  auto it = model_latency_table_.find(model_id);
+  auto model_count = minimum_profiled_count_.find(model_id);
+  if (model_count == minimum_profiled_count_.end()) {
     return 0;
   }
-  if (it != model_latency_table_.end()) {
-    return it->second;
+  auto model_count_temp = model_count->second.find(target_temp);
+  if (model_count_temp == model_count->second.end() || model_count_temp->second < minimum_profiled_threshold_) {
+    return 0;
+  }
+  auto model_latency = model_latency_table_.find(model_id); 
+  if (model_latency == model_latency_table_.end()) {
+    return 0;
+  }
+  auto model_latency_temp = model_latency->second.find(target_temp);
+  if (model_latency_temp != model_latency->second.end()) {
+    return model_latency_temp->second;
   } else {
     return 0; // Minimum value to be selected
   }
 }
 
 TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
-  model_latency_table_[model_id] = latency; 
+  thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_) / 1000; 
+  if (model_latency_table_.find(model_id) == model_latency_table_.end()) {
+    model_latency_table_[model_id] = std::unordered_map<int, int64_t>();
+  }
+  model_latency_table_[model_id][target_temp] = latency;
   return kTfLiteOk;
 }
 
 TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
-  thermal_t current_temp = GetResourceMonitor().GetTemperature(wid_);
-  thermal_t threshold = GetResourceMonitor().GetThrottlingThreshold(wid_);
-  if (current_temp > threshold) {
-    UpdateThrottledLatency(job.model_id, job.latency); 
-    return kTfLiteOk;
-  }
-
-  auto it = model_latency_table_.find(job.model_id);
-  auto count = minimum_profiled_count_.find(job.model_id);
+  thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_) / 1000; 
+  int model_id = job.model_id;
+  auto it = model_latency_table_.find(model_id);
   if (it != model_latency_table_.end()) {
-    // if (IsThrottled(model_id, latency, current_temp)) { // If new throttling threshold detected
-    //   LOGI("PLM::Update Newly Throttling detected in worker[%d] on current temp = %d", wid_, current_temp);
-    //   GetResourceMonitor().SetThrottlingThreshold(wid_, current_temp);
-    //   UpdateThrottledLatency(model_id, latency);
-    // } else {
-      int64_t prev_latency = model_latency_table_[job.model_id];
-      model_latency_table_[job.model_id] =
+    auto latency = it->second.find(target_temp);
+    auto count = minimum_profiled_count_[model_id].find(target_temp);
+    if (latency != it->second.end()) {
+      int64_t prev_latency = latency->second;
+      model_latency_table_[model_id][target_temp] =
           smoothing_factor_ * job.latency +
           (1 - smoothing_factor_) * prev_latency;
       if (count->second <= minimum_profiled_threshold_) {
-        minimum_profiled_count_[job.model_id] = count->second + 1;
+        minimum_profiled_count_[model_id][target_temp] = count->second + 1;
       }
-    // }
-  } else {
-    model_latency_table_[job.model_id] = 0; // Discard first data
-    minimum_profiled_count_[job.model_id] = 1;
-  }
-  return kTfLiteOk;
-}
-
-bool ProcessorLatencyModel::IsThrottled(int32_t model_id, int64_t latency, thermal_t current_temp) {
-  auto it = model_throttled_latency_table_.find(model_id);
-  if (it != model_throttled_latency_table_.end()) { 
-    // If table has previous throttled_latency value,
-    // the system must have experienced this temp before.
-    return false;
-  }
-  int64_t prev_latency = model_latency_table_[model_id];
-  int64_t diff = latency - prev_latency;
-  int64_t target = (int64_t) (prev_latency * throttled_diff_rate_);
-  if (diff > target) {
-    // LOGI("PLM::Newly Throttling detected (latency) = %lld", latency);
-    // LOGI("PLM::Newly Throttling detected (prev_latency) = %lld", prev_latency);
-    // LOGI("PLM::Newly Throttling detected (diff) = %lld", diff);
-    // LOGI("PLM::Newly Throttling detected (target) = %lld", target);
-    if (current_temp > throttled_temp_min_) {
-      throttle_count_++;
-      if (throttle_count_ > throttle_count_threshold_) {
-        LOGI("PLM::Newly Throttling detected current_temp = %d", current_temp);
-        return true;
-      }
+    } else {
+      model_latency_table_[model_id][target_temp] = 0; 
+      minimum_profiled_count_[model_id][target_temp] = 1;
     }
-  }
-  throttle_count_ = 0;
-  return false;
-}
-
-TfLiteStatus ProcessorLatencyModel::UpdateThrottledLatency(int32_t model_id, int64_t latency) {
-  auto it = model_throttled_latency_table_.find(model_id);
-  if (it != model_throttled_latency_table_.end()) { 
-    int64_t prev_latency = model_throttled_latency_table_[model_id];
-    model_throttled_latency_table_[model_id] =
-        smoothing_factor_ * latency +
-        (1 - smoothing_factor_) * prev_latency;
   } else {
-    model_throttled_latency_table_[model_id] = latency;
+    model_latency_table_[model_id] = std::unordered_map<int, int64_t>(); 
+    model_latency_table_[model_id][target_temp] = 0;
+    minimum_profiled_count_[model_id] = std::unordered_map<int, int>(); 
+    minimum_profiled_count_[model_id][target_temp] = 1;
   }
   return kTfLiteOk;
 }
