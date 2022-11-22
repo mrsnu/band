@@ -30,7 +30,7 @@ class ProcessorThermalModel : public IThermalModel {
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
-  TfLiteStatus Update(Job job) override;
+  TfLiteStatus Update(Job job, const Subgraph* subgraph) override;
  
  private:
   // Log buffer
@@ -39,15 +39,16 @@ class ProcessorThermalModel : public IThermalModel {
   Eigen::VectorXd Y;
   Eigen::VectorXd targetY;
   uint32_t log_size_ = 0;
-  int32_t window_size_;
+  int window_size_;
+  int param_num_ = 0;
+
+  const int minimum_log_size_ = 50;
   
   // Model parameter
-  std::vector<double> model_param_; // [temp_c, temp_g, temp_d, temp_n, freq_c, freq_g, latency, error]
+  std::vector<double> model_param_; // [temp_c, temp_g, temp_d, temp_n, temp_cloud, freq_c, freq_g, latency, error]
 
   // Target Model parameter
-  std::vector<double> target_model_param_; // Same structure with model_param_
-
-  void PrintParameters();
+  std::vector<double> target_model_param_; // temp_target + [model_param_]
 };
 
 } // namespace impl

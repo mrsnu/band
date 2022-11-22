@@ -59,20 +59,11 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "before_temp_dsp\t"
              << "before_temp_npu\t"
              << "before_temp_modem\t"
-            //  << "after_temp_cpu\t"
-            //  << "after_temp_gpu\t"
-            //  << "after_temp_dsp\t"
-            //  << "after_temp_npu\t"
              << "frequency_cpu\t"
              << "frequency_gpu\t"
-            //  << "estimated_temp\t"
-            //  << "prediction_error_temp\t"
-            //  << "prediction_error_latency\t"
+             << "estimated_temp\t"
              << "before_target_temp\t"
              << "after_target_temp\t"
-             << "temp_increase\t"
-             << "fps\t"
-             << "ppt\t"
              << "job_status\n";
     log_file.close();
   }
@@ -387,14 +378,14 @@ void Planner::FlushFinishedJobs() {
         job.status =
             latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
       }
-      double ppt = 0.;
-      double fps = (double)(1000000. / (double)job.latency);
-      int temp_diff = job.after_target_temp[job.worker_id] - job.before_target_temp[job.worker_id];
-      if (temp_diff > 0) {
-      } else {
-        temp_diff = 1;
-      }
-      ppt = fps / (double)(temp_diff) * 1000.;
+      // double ppt = 0.;
+      // double fps = (double)(1000000. / (double)job.latency);
+      // int temp_diff = job.after_target_temp[job.worker_id] - job.before_target_temp[job.worker_id];
+      // if (temp_diff > 0) {
+      // } else {
+      //   temp_diff = 1;
+      // }
+      // ppt = fps / (double)(temp_diff) * 1000.;
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t"
                << job.model_fname << "\t"
@@ -411,20 +402,11 @@ void Planner::FlushFinishedJobs() {
                << job.before_temp[kTfLiteDSP] << "\t"
                << job.before_temp[kTfLiteNPU] << "\t"
                << job.before_temp[kTfLiteCLOUD] << "\t"
-              //  << job.after_temp[kTfLiteCPU] << "\t"
-              //  << job.after_temp[kTfLiteGPU] << "\t"
-              //  << job.after_temp[kTfLiteDSP] << "\t"
-              //  << job.after_temp[kTfLiteNPU] << "\t"
                << job.frequency[kTfLiteCPU] << "\t"
                << job.frequency[kTfLiteGPU] << "\t"
-              //  << job.estimated_temp << "\t"
-              //  << job.after_temp[job.worker_id] - job.estimated_temp<< "\t"
-              //  << job.latency - job.estimated_latency << "\t"
+               << job.estimated_temp << "\t"
                << job.before_target_temp[job.worker_id] << "\t"
                << job.after_target_temp[job.worker_id] << "\t"
-               << temp_diff << "\t"
-               << fps << "\t"
-               << ppt << "\t"
                << job.status << "\n";
     }
     log_file.close();

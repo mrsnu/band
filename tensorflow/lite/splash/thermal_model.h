@@ -35,7 +35,7 @@ class IThermalModel {
                                   std::vector<thermal_t> current_temp) = 0;
 
   // Update model parameters with the prediction error
-  virtual TfLiteStatus Update(Job job) = 0;
+  virtual TfLiteStatus Update(Job job, const Subgraph* subgraph) = 0;
 
   worker_id_t GetWorkerId() {
     return wid_;

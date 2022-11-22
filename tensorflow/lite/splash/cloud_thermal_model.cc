@@ -5,10 +5,23 @@
 
 #include "tensorflow/lite/profiling/time.h"
 
+#include "third_party/eigen3/Eigen/Core"
+#include "third_party/eigen3/Eigen/Cholesky"
+#include "tensorflow/lite/profiling/time.h"
+#include "tensorflow/lite/builtin_ops.h"
+
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#endif // defined(__ANDROID__)
+
+#define TARGET_PARAM_NUM 7
+
 namespace tflite {
 namespace impl {
 
 using namespace std;
+using namespace Eigen;
 
 TfLiteStatus CloudThermalModel::Init(int32_t window_size) {
   window_size_ = window_size;
@@ -18,50 +31,41 @@ TfLiteStatus CloudThermalModel::Init(int32_t window_size) {
 thermal_t CloudThermalModel::Predict(const Subgraph* subgraph, 
                                      const int64_t latency, 
                                      std::vector<thermal_t> current_temp) {
-  return current_temp[wid_];
-  // Get temperature from resource monitor
-  // vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
-
-  // // Get input size
-  // int64_t input_size = EstimateInputSize(subgraph);
-
-  // // Get ouput size
-  // int64_t output_size = EstimateOutputSize(subgraph);
-
-  // // Get rssi value from resource monitor
-  // int64_t rssi = -50;
-
-  // // Get expected latency from server from resource monitor
-  // int64_t waiting_time = GetResourceMonitor().GetThrottlingThreshold(GetWorkerId());
-
-  // return EstimateFutureTemperature(temp, input_size, output_size, rssi, waiting_time);
+  return PredictTarget(subgraph, latency, current_temp);
 }
 
 thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph, 
                                      const int64_t latency, 
                                      std::vector<thermal_t> current_temp) {
+  vector<double> regressor;
   thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_);
-  return target_temp;
-  // Get temperature from resource monitor
-  // vector<thermal_t> temp = GetResourceMonitor().GetAllTemperature();
+  if (log_size_ < minimum_log_size_) {
+    // Just return current temp
+    return target_temp;
+  }
 
-  // // Get input size
-  // int64_t input_size = EstimateInputSize(subgraph);
+  regressor.push_back(target_temp);
+  regressor.push_back(current_temp[wid_]);
+  regressor.push_back(EstimateInputSize(subgraph));
+  regressor.push_back(EstimateOutputSize(subgraph));
+  regressor.push_back(-49); // RSSI value
+  regressor.push_back(latency);
+  regressor.push_back(1);
 
-  // // Get ouput size
-  // int64_t output_size = EstimateOutputSize(subgraph);
+  double target_future_temperature = 0.;
 
-  // // Get rssi value from resource monitor
-  // int64_t rssi = -50;
+  if (regressor.size() != target_model_param_.size()) {
+    LOGI("[Error!!: regressor.size()[%d] != target_model_param_.size()[%d]", regressor.size(), target_model_param_.size());
+    return target_future_temperature;
+  }
 
-  // // Get expected latency from server from resource monitor
-  // int64_t waiting_time = GetResourceMonitor().GetThrottlingThreshold(GetWorkerId());
-
-  // return EstimateFutureTemperature(temp, input_size, output_size, rssi, waiting_time);
+  for (int i = 0; i < regressor.size(); i++) {
+    target_future_temperature += regressor[i] * target_model_param_[i]; 
+  }
+  return (thermal_t)target_future_temperature; 
 }
 
 int64_t CloudThermalModel::EstimateInputSize(const Subgraph* subgraph) {
-  // TODO: Add input tensors without weights.
   const std::vector<int>& input_tensors = subgraph->inputs();
   int64_t subgraph_input_size = 0;
   for (int tensor_idx : input_tensors) {
@@ -71,7 +75,6 @@ int64_t CloudThermalModel::EstimateInputSize(const Subgraph* subgraph) {
 }
 
 int64_t CloudThermalModel::EstimateOutputSize(const Subgraph* subgraph) {
-  // TODO: Add output tensors without weights.
   const std::vector<int>& output_tensors = subgraph->outputs();
   int64_t subgraph_output_size = 0;
   for (int tensor_idx : output_tensors) {
@@ -80,10 +83,28 @@ int64_t CloudThermalModel::EstimateOutputSize(const Subgraph* subgraph) {
   return subgraph_output_size;
 }
 
-TfLiteStatus CloudThermalModel::Update(Job job) {
+TfLiteStatus CloudThermalModel::Update(Job job, const Subgraph* subgraph) {
+  log_size_++;
+  if (log_size_ <= window_size_) {
+    targetX.conservativeResize(log_size_, TARGET_PARAM_NUM);
+    targetY.conservativeResize(log_size_, 1);
+  }
+  int log_index = (log_size_ - 1) % window_size_;
+  targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[wid_], EstimateInputSize(subgraph), EstimateOutputSize(subgraph), -49, job.latency, 1.0; // RSSI value
+  targetY.row(log_index) << job.after_target_temp[wid_];
+
+  if (log_size_ < minimum_log_size_) {
+    LOGI("CloudThermalModel::Update Not enough data : %d", log_size_);
+    return kTfLiteOk;
+  }
+
+  // Update parameters via normal equation with log table
+  Eigen::Matrix<double, 1, TARGET_PARAM_NUM> targetTheta = (targetX.transpose() * targetX).ldlt().solve(targetX.transpose() * targetY);
+  for (auto i = 0; i < target_model_param_.size(); i++) {
+    target_model_param_[i] = targetTheta(0, i); 
+  }
   return kTfLiteOk;
 }
-
 
 } // namespace impl
 } // namespace tflite

@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 
+#include "third_party/eigen3/Eigen/Core"
+#include "third_party/eigen3/Eigen/Cholesky"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/core/subgraph.h"
@@ -28,18 +30,20 @@ class CloudThermalModel : public IThermalModel {
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
-  TfLiteStatus Update(Job job) override;
+  TfLiteStatus Update(Job job, const Subgraph* subgraph) override;
 
  private:
-  int32_t window_size_;
+  // Log buffer
+  Eigen::MatrixXd targetX;
+  Eigen::VectorXd targetY;
+  uint32_t log_size_ = 0;
+  int window_size_;
+  int param_num_ = 0;
+
+  const int minimum_log_size_ = 50;
   
-  // Model parameter
-  std::vector<std::vector<double>> temp_param_;
-  std::vector<double> input_param_;
-  std::vector<double> output_param_;
-  std::vector<double> rssi_param_;
-  std::vector<double> waiting_param_;
-  std::vector<double> error_param_;
+  // Target Model parameter
+  std::vector<double> target_model_param_; // [temp_target, temp_cloud, input, output, rssi, latency, error]
 
   int64_t EstimateInputSize(const Subgraph* subgraph);
   int64_t EstimateOutputSize(const Subgraph* subgraph);
