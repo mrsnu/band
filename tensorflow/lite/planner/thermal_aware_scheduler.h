@@ -11,7 +11,7 @@ class ThermalAwareScheduler : public Scheduler {
  public:
   explicit ThermalAwareScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner) {
     need_profile_ = true;
-    worker_type_ = kGlobalQueue;
+    worker_type_ = kDeviceQueue;
     model_manager_ = model_manager;
   }
   void Schedule(JobQueue& requests) override;
@@ -19,8 +19,7 @@ class ThermalAwareScheduler : public Scheduler {
  private:
   ModelManager * model_manager_;
 
-  std::pair<int, int64_t> GetShortestSubgraph(int model_id, std::map<int, int64_t>& worker_waiting);
-  std::pair<int, double> GetMaxPptSubgraphIdx(int model_id, std::map<int, int64_t>& worker_waiting);
+  std::pair<int, double> GetMaxPptSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting);
 };
 
 }  // namespace impl

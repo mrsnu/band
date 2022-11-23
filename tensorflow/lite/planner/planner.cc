@@ -64,6 +64,21 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
              << "estimated_temp\t"
              << "before_target_temp\t"
              << "after_target_temp\t"
+             << "est_ppt_cpu\t"
+             << "est_ppt_gpu\t"
+             << "est_ppt_dsp\t"
+             << "est_ppt_npu\t"
+             << "est_ppt_cloud\t"
+             << "est_temp_diff_cpu\t"
+             << "est_temp_diff_gpu\t"
+             << "est_temp_diff_dsp\t"
+             << "est_temp_diff_npu\t"
+             << "est_temp_diff_cloud\t"
+             << "est_total_latency_cpu\t"
+             << "est_total_latency_gpu\t"
+             << "est_total_latency_dsp\t"
+             << "est_total_latency_npu\t"
+             << "est_total_latency_cloud\t"
              << "job_status\n";
     log_file.close();
   }
@@ -406,8 +421,29 @@ void Planner::FlushFinishedJobs() {
                << job.frequency[kTfLiteGPU] << "\t"
                << job.estimated_temp << "\t"
                << job.before_target_temp[job.worker_id] << "\t"
-               << job.after_target_temp[job.worker_id] << "\t"
-               << job.status << "\n";
+               << job.after_target_temp[job.worker_id] << "\t";
+      if (job.estimated_ppt.size() != 0) {
+        log_file << job.estimated_ppt[kTfLiteCPU] << "\t"
+               << job.estimated_ppt[kTfLiteGPU] << "\t"
+               << job.estimated_ppt[kTfLiteDSP] << "\t"
+               << job.estimated_ppt[kTfLiteNPU] << "\t"
+               << job.estimated_ppt[kTfLiteCLOUD] << "\t";
+      }
+      if (job.estimated_temp_diff.size() != 0) {
+        log_file << job.estimated_temp_diff[kTfLiteCPU] << "\t"
+               << job.estimated_temp_diff[kTfLiteGPU] << "\t"
+               << job.estimated_temp_diff[kTfLiteDSP] << "\t"
+               << job.estimated_temp_diff[kTfLiteNPU] << "\t"
+               << job.estimated_temp_diff[kTfLiteCLOUD] << "\t";
+      }
+      if (job.estimated_total_latency.size() != 0) {
+        log_file << job.estimated_total_latency[kTfLiteCPU] << "\t"
+               << job.estimated_total_latency[kTfLiteGPU] << "\t"
+               << job.estimated_total_latency[kTfLiteDSP] << "\t"
+               << job.estimated_total_latency[kTfLiteNPU] << "\t"
+               << job.estimated_total_latency[kTfLiteCLOUD] << "\t";
+      }
+      log_file << job.status << "\n";
     }
     log_file.close();
   } else {
