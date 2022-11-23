@@ -4,6 +4,8 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 namespace tflite {
@@ -152,6 +154,8 @@ int ThermalAwareScheduler::GetMaxPptSubgraphIdx(int model_id, std::map<int, int6
     if (temp_diff <= 0) {
       temp_diff = 1; // epsilon value
     }
+
+    LOGI("temp_diff: %d", temp_diff);
     ppt = fps / (double)(temp_diff) * 1000.;
 
     if (max_ppt < ppt) {

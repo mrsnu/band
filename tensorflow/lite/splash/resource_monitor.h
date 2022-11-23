@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <cassert>
 #include <thread>
+#include <mutex>
 
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"

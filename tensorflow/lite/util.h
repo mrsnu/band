@@ -109,6 +109,7 @@ struct Job {
   std::vector<int64_t> estimated_total_latency;
   std::vector<thermal_t> estimated_temp_diff;
   std::vector<double> estimated_ppt;
+  std::vector<double> estimated_slo_cost;
 
   // Constant variables (Valid after invoke)
   // TODO: better job life-cycle to change these to `const`

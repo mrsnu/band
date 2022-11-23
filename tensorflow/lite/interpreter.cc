@@ -47,6 +47,8 @@ limitations under the License.
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 #define TFLITE_IS_MOBILE_PLATFORM
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif  // defined(__ANDROID__)
 
 #if defined(__APPLE__)

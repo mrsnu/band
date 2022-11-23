@@ -1,8 +1,12 @@
 #include "tensorflow/lite/planner/mobile_only_heft_scheduler.h"
+
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
+
 namespace tflite {
 namespace impl {
 
