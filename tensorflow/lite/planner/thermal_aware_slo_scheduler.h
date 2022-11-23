@@ -11,14 +11,14 @@ class ThermalAwareSloScheduler : public Scheduler {
  public:
   explicit ThermalAwareSloScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner)   {
     need_profile_ = true;
-    worker_type_ = kGlobalQueue;
+    worker_type_ = kDeviceQueue;
     model_manager_ = model_manager;
   }
   void Schedule(JobQueue& requests) override;
 
  private:
   ModelManager* model_manager_;
-  std::pair<int, double> GetMinSloCostSubgraphIdx(Job& job, std::map<int, int64_t> worker_waiting, int64_t slo_us);
+  std::pair<int, double> GetMinCostSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting);
 };
 
 }
