@@ -99,12 +99,8 @@ int64_t ModelManager::GetPredictedLatency(worker_id_t wid, Subgraph* subgraph) {
   return latency_models_[wid]->Predict(subgraph);
 }
 
-// int64_t ModelManager::GetPredictedThrottledLatency(worker_id_t wid, int32_t model_id) {
-//   return latency_models_[wid]->PredictThrottled(model_id);
-// }
-
 TfLiteStatus ModelManager::Update(Job& job, Subgraph* subgraph) {
-  thermal_models_[job.worker_id]->Update(job);
+  thermal_models_[job.worker_id]->Update(job, subgraph);
   latency_models_[job.worker_id]->Update(job, subgraph);
   return kTfLiteOk;
 }
