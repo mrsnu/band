@@ -8,11 +8,14 @@
 #include "tensorflow/lite/planner/mobile_cloud_heft_scheduler.h"
 #include "tensorflow/lite/planner/random_assign_scheduler.h"
 #include "tensorflow/lite/planner/thermal_aware_scheduler.h"
+#include "tensorflow/lite/planner/thermal_aware_slo_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 namespace tflite {
@@ -107,6 +110,9 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
     } else if (schedulers[i] == kSplashLst) {
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
+    } else if (schedulers[i] == kSplashSlo) {
+      LOGI("SplashSLO");
+      schedulers_.emplace_back(new ThermalAwareSloScheduler(this, model_manager_));
     } else {
       return kTfLiteError;
     }
@@ -428,6 +434,13 @@ void Planner::FlushFinishedJobs() {
                << job.estimated_ppt[kTfLiteDSP] << "\t"
                << job.estimated_ppt[kTfLiteNPU] << "\t"
                << job.estimated_ppt[kTfLiteCLOUD] << "\t";
+      }
+      if (job.estimated_slo_cost.size() != 0) {
+        log_file << job.estimated_slo_cost[kTfLiteCPU] << "\t"
+               << job.estimated_slo_cost[kTfLiteGPU] << "\t"
+               << job.estimated_slo_cost[kTfLiteDSP] << "\t"
+               << job.estimated_slo_cost[kTfLiteNPU] << "\t"
+               << job.estimated_slo_cost[kTfLiteCLOUD] << "\t";
       }
       if (job.estimated_temp_diff.size() != 0) {
         log_file << job.estimated_temp_diff[kTfLiteCPU] << "\t"

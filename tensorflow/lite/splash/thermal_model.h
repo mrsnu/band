@@ -4,9 +4,15 @@
 #include <vector>
 #include <string>
 
+#include "third_party/eigen3/Eigen/Core"
+#include "third_party/eigen3/Eigen/Cholesky"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/splash/resource_monitor.h"
+
+using Eigen::Matrix;
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
 
 namespace tflite {
 namespace impl {
@@ -43,6 +49,11 @@ class IThermalModel {
 
   ResourceMonitor& GetResourceMonitor() {
     return resource_monitor_;
+  }
+
+  template<typename S, int m, int n>
+  inline static Eigen::Matrix<S, m, n> GetNormalEquation(Eigen::MatrixXd x, Eigen::VectorXd y) {
+    return (x.transpose() * x).ldlt().solve(x.transpose() * y);
   }
 
  protected:

@@ -11,6 +11,8 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 #define PARAM_NUM 9
@@ -117,8 +119,8 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
   }
 
   // Update parameters via normal equation with log table
-  Eigen::Matrix<double, 1, PARAM_NUM> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
-  Eigen::Matrix<double, 1, TARGET_PARAM_NUM> targetTheta = (targetX.transpose() * targetX).ldlt().solve(targetX.transpose() * targetY);
+  auto theta = GetNormalEquation<double, 1, PARAM_NUM>(X, Y);
+  auto targetTheta = GetNormalEquation<double, 1, TARGET_PARAM_NUM>(targetX, targetY);
   for (auto i = 0; i < model_param_.size(); i++) {
     model_param_[i] = theta(0, i); 
   }

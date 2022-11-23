@@ -43,6 +43,8 @@ limitations under the License.
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 // aligned_alloc is available (via cstdlib/stdlib.h) with C++17/C11.

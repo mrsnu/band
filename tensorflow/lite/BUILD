@@ -85,6 +85,7 @@ FRAMEWORK_LIB_HDRS = [
     "planner/cloud_only_scheduler.h",
     "planner/random_assign_scheduler.h",
     "planner/thermal_aware_scheduler.h",
+    "planner/thermal_aware_slo_scheduler.h",
     "planner/mobile_only_heft_scheduler.h",
     "planner/mobile_cloud_heft_scheduler.h",
     "worker.h",
@@ -151,6 +152,21 @@ cc_library(
         ":simple_memory_arena",
         "//tensorflow/lite/c:common",
     ],
+)
+
+cc_test(
+    name = "thermal_model_test",
+    size = "small",
+    srcs = ["splash/thermal_model_test.cc"],
+    tags = [
+        "tflite_not_portable_ios",  # TODO(b/117786830)
+    ],
+    deps = [
+        ":framework",
+        "//tensorflow/lite/testing:util",
+        "//third_party/eigen3",
+        "@com_google_googletest//:gtest",
+    ]
 )
 
 cc_test(
@@ -311,6 +327,7 @@ cc_library(
         "planner/mobile_cloud_heft_scheduler.cc",
         "planner/random_assign_scheduler.cc",
         "planner/thermal_aware_scheduler.cc",
+        "planner/thermal_aware_slo_scheduler.cc",
         "worker.cc",
         "worker_device_queue.cc",
         "worker_global_queue.cc",
@@ -360,6 +377,7 @@ cc_library(
         "//external:grpc_lib",
         "@com_github_grpc_grpc//:grpc++_reflection",
         "//tensorflow/lite/proto:splash_grpc_proto",
+        "//third_party/eigen3",
     ] + select({
         ":enable_default_profiler": [
             "//tensorflow/lite/profiling:platform_profiler",
