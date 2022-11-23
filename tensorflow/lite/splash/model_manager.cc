@@ -26,7 +26,7 @@ TfLiteStatus ModelManager::Init(ResourceConfig& config) {
     thermal_models_.emplace_back(std::move(model));
   }
   for (auto& thermal_model : thermal_models_) {
-    auto status = thermal_model->Init(config.model_update_window_size);
+    auto status = thermal_model->Init(config);
     if (status == kTfLiteError) {
       return kTfLiteError;
     }
@@ -38,7 +38,7 @@ TfLiteStatus ModelManager::Init(ResourceConfig& config) {
     latency_models_.emplace_back(std::move(model));
   }
   for (auto& latency_model : latency_models_) {
-    auto status = latency_model->Init();
+    auto status = latency_model->Init(config);
     if (status == kTfLiteError) {
       return kTfLiteError;
     }

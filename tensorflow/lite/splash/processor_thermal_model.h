@@ -20,7 +20,7 @@ class ProcessorThermalModel : public IThermalModel {
   ProcessorThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
   : IThermalModel(wid, resource_monitor) {}
 
-  TfLiteStatus Init(int32_t window_size) override;
+  TfLiteStatus Init(ResourceConfig& config) override;
 
   thermal_t Predict(const Subgraph* subgraph, 
                     const int64_t latency, 

@@ -23,8 +23,8 @@ namespace impl {
 using namespace std;
 using namespace Eigen;
 
-TfLiteStatus CloudThermalModel::Init(int32_t window_size) {
-  window_size_ = window_size;
+TfLiteStatus CloudThermalModel::Init(ResourceConfig& config) {
+  window_size_ = config.model_update_window_size;
   target_model_param_ = vector<double>(TARGET_PARAM_NUM, 1.);
   return kTfLiteOk;
 }

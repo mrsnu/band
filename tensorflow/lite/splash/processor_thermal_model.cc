@@ -22,7 +22,7 @@ namespace impl {
 using namespace std;
 using namespace Eigen;
 
-TfLiteStatus ProcessorThermalModel::Init(int32_t window_size) {
+TfLiteStatus ProcessorThermalModel::Init(ResourceConfig& config) {
   int temp_size = GetResourceMonitor().GetAllTemperature().size();
   int freq_size = GetResourceMonitor().GetAllFrequency().size();
   int param_num = temp_size + freq_size + 2; 
@@ -31,7 +31,7 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t window_size) {
   }
   model_param_ = vector<double>(PARAM_NUM, 1.);
   target_model_param_ = vector<double>(TARGET_PARAM_NUM, 1.);
-  window_size_ = window_size;
+  window_size_ = config.model_update_window_size;
   return kTfLiteOk;
 }
 

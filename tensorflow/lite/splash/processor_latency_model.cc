@@ -16,7 +16,7 @@ namespace impl {
 
 using namespace std;
 
-TfLiteStatus ProcessorLatencyModel::Init() {
+TfLiteStatus ProcessorLatencyModel::Init(ResourceConfig& config) {
   // Do nothing
   return kTfLiteOk;
 }

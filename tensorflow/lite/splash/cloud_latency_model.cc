@@ -18,24 +18,53 @@ namespace impl {
 using namespace std;
 using namespace Eigen;
 
-TfLiteStatus CloudLatencyModel::Init() {
+TfLiteStatus CloudLatencyModel::Init(ResourceConfig& config) {
   model_param_ = vector<double>(3, 1.);
+  LoadModelParameter(config.cloud_latency_model_param_path);
   window_size_ = 100;
   return kTfLiteOk;
 }
 
 int64_t CloudLatencyModel::Predict(Subgraph* subgraph) {
-  int64_t comp_time = GetComputationTime(subgraph->GetKey().model_id);
+  int64_t comp_time = GetComputationTime(subgraph->GetKey().model_name);
   int64_t comm_time = PredictCommunicationTime(subgraph);
   return comp_time + comm_time;
 }
 
-int64_t CloudLatencyModel::GetComputationTime(int32_t model_id) {
-  auto it = computation_time_table_.find(model_id);
+int64_t CloudLatencyModel::GetComputationTime(string model_name) {
+  auto it = computation_time_table_.find(model_name);
   if (it != computation_time_table_.end()) {
     return it->second;
   } else {
     return 0; // Minimum value to be selected
+  }
+}
+
+void CloudLatencyModel::LoadModelParameter(string latency_model_path) {
+  Json::Value model_param = LoadJsonObjectFromFile(latency_model_path); 
+  for (auto type_it = model_param.begin(); type_it != model_param.end(); ++type_it) {
+    string type = type_it.key().asString();
+
+    if (type == "comm") {
+      const Json::Value param = *type_it;
+      for (auto it = param.begin(); it != param.end(); it++) {
+        LOGI("[Profile][%d] model_param : %f", it - param.begin(), (*it).asDouble());
+        model_param_[it - param.begin()] = (*it).asDouble();
+      }
+    } else if (type == "comp") {
+      const Json::Value model = *type_it;
+      for (auto model_it = model.begin(); model_it != model.end(); ++model_it) {
+        string model_name = model_it.key().asString();
+        int64_t latency = (*model_it).asInt64(); 
+
+        if (latency <= 0) {
+          continue;
+        }
+        
+        LOGI("[Profile][%s] latency = %lld", model_name.c_str(), latency);
+        computation_time_table_[model_name.c_str()] = latency;
+      }
+    }
   }
 }
 
@@ -66,14 +95,14 @@ TfLiteStatus CloudLatencyModel::Profile(int32_t model_id, int64_t latency) {
 
 TfLiteStatus CloudLatencyModel::Update(Job job, Subgraph* subgraph) {
   int64_t computation_time = job.latency - job.communication_time;
-  auto it = computation_time_table_.find(job.model_id);
+  auto it = computation_time_table_.find(job.model_fname);
   if (it != computation_time_table_.end()) {
-    int64_t prev_latency = computation_time_table_[job.model_id];
-    computation_time_table_[job.model_id] =
+    int64_t prev_latency = computation_time_table_[job.model_fname];
+    computation_time_table_[job.model_fname] =
         smoothing_factor_ * computation_time +
         (1 - smoothing_factor_) * prev_latency;
   } else {
-    computation_time_table_[job.model_id] = computation_time;
+    computation_time_table_[job.model_fname] = computation_time;
   }
   UpdateCommunicationModel(subgraph, job.communication_time);
   return kTfLiteOk;

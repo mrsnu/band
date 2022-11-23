@@ -19,7 +19,7 @@ class ProcessorLatencyModel : public ILatencyModel {
   ProcessorLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor)
   : ILatencyModel(wid, resource_monitor) {}
 
-  TfLiteStatus Init() override;
+  TfLiteStatus Init(ResourceConfig& config) override;
 
   int64_t Predict(Subgraph* subgraph) override;
 

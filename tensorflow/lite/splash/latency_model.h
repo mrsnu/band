@@ -19,7 +19,7 @@ class ILatencyModel {
     : wid_(wid), resource_monitor_(resource_monitor) {}
 
   // init model parameters with default values
-  virtual TfLiteStatus Init() = 0;
+  virtual TfLiteStatus Init(ResourceConfig& config) = 0;
 
   // Get an estimation value of future latency 
   // after executing inference of the input model

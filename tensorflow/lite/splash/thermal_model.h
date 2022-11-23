@@ -20,7 +20,7 @@ class IThermalModel {
                          : wid_(wid), resource_monitor_(resource_monitor) {}
 
   // init model parameters with default values
-  virtual TfLiteStatus Init(int32_t window_size) = 0;
+  virtual TfLiteStatus Init(ResourceConfig& config) = 0;
 
   // Get an estimation value of future temperature 
   // after executing inference of the input model
