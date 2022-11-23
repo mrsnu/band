@@ -23,9 +23,9 @@ void ThermalAwareSloScheduler::Schedule(JobQueue& requests) {
 
     Job job = requests.front();
     requests.pop_front();
-    
+
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
-    std::pair<int, double> best_subgraph = GetMinSloCostSubgraphIdx(job, waiting_time, job.slo_us);
+    std::pair<int, double> best_subgraph = GetMinCostSubgraphIdx(job, waiting_time);
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
 
@@ -37,10 +37,10 @@ void ThermalAwareSloScheduler::Schedule(JobQueue& requests) {
   }
 }
 
-std::pair<int, double> ThermalAwareSloScheduler::GetMinSloCostSubgraphIdx(Job& job, std::map<int, int64_t> worker_waiting, int64_t slo_us) {
-  double min_cost = DBL_MAX;
+std::pair<int, double> ThermalAwareSloScheduler::GetMinCostSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting) {
+  double min_slo_cost = DBL_MAX;
   int min_idx = -1;
-  
+
   std::vector<int> subgraph_indices = GetInterpreter()->GetSubgraphIndices(job.model_id);
   for (auto subgraph_index : subgraph_indices) {
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_index);
@@ -49,34 +49,30 @@ std::pair<int, double> ThermalAwareSloScheduler::GetMinSloCostSubgraphIdx(Job& j
     int64_t waiting_time = worker_waiting[key.worker_id];
     std::pair<int, int64_t> source = model_manager_->GetPredictedTempAndLatency(key.worker_id, subgraph);
     int64_t expected_latency = source.second;
-    int64_t latency = expected_latency + waiting_time;
+    int64_t total = expected_latency + waiting_time;
     thermal_t temp_diff = source.first;
-    if (latency <= 0) {
-      latency = 1;
+    if (total <= 0) {
+      total = 1; // epsilon value
     }
-
     if (temp_diff <= 0) {
-      temp_diff = 1;
+      temp_diff = 1; // epsilon value
     }
 
-    double eta = 0.5;
-    // \Delta temp + \eta * max(0.f, SLO - FPS)
-    LOGI("temp_diff: %d\n", temp_diff);
-    LOGI("slo_us - latency: %lld\n", slo_us - latency);
-    double slo_cost = temp_diff + eta * std::max(0L, slo_us - latency);
-    LOGI("slo_cost = %lf\n", slo_cost);
+    double eta = (double) 1 / 1000.;
+    double slo_cost = (double) temp_diff + (double) std::max(0L, total - job.slo_us);
+    LOGI("SLO cost: %lf", slo_cost);
 
     job.estimated_slo_cost.push_back(slo_cost);
     job.estimated_temp_diff.push_back(temp_diff);
-    job.estimated_total_latency.push_back(latency);
+    job.estimated_total_latency.push_back(total);
 
-    if (min_cost > slo_cost) {
-      min_cost = slo_cost;
+    if (min_slo_cost > slo_cost) {
+      min_slo_cost = slo_cost;
       min_idx = subgraph_index;
     }
   }
-  return { min_idx, min_cost };
+  return { min_idx, min_slo_cost };
 }
 
-}  // namepsace impl
+}  // namespace impl
 }  // namespace tflite
