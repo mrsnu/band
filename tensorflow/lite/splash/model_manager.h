@@ -43,6 +43,8 @@ class ModelManager {
 
   TfLiteStatus ProfileLatency(Subgraph* subgraph, int64_t latency);
 
+  TfLiteStatus Close();
+
  private:
   std::vector<std::unique_ptr<IThermalModel>> thermal_models_;
   std::vector<std::unique_ptr<ILatencyModel>> latency_models_;

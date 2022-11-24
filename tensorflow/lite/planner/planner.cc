@@ -36,6 +36,11 @@ Planner::~Planner() {
   FlushFinishedJobs();
   planner_safe_bool_.terminate();
   planner_thread_.join();
+  Finish();
+}
+
+TfLiteStatus Planner::Finish() {
+  model_manager_->Close();
 }
 
 TfLiteStatus Planner::Init(PlannerConfig& config) {

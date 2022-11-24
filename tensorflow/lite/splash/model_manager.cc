@@ -112,5 +112,23 @@ TfLiteStatus ModelManager::ProfileLatency(Subgraph* subgraph, int64_t latency) {
   return kTfLiteOk;
 }
 
+TfLiteStatus ModelManager::Close() {
+  for (auto& thermal_model : thermal_models_) {
+    auto status = thermal_model->Close();
+    if (status == kTfLiteError) {
+      LOGI("Thermal model Error = %d", thermal_model->GetWorkerId());
+      return kTfLiteError;
+    }
+  }
+  for (auto& latency_model : latency_models_) {
+    auto status = latency_model->Close();
+    if (status == kTfLiteError) {
+      LOGI("Latency model Error = %d", latency_model->GetWorkerId());
+      return kTfLiteError;
+    }
+  }
+  return kTfLiteOk;
+}
+
 } // namespace impl
 } // namespace tflite

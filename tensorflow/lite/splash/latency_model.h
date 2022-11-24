@@ -30,6 +30,8 @@ class ILatencyModel {
 
   virtual TfLiteStatus Profile(int32_t model_id, int64_t latency) = 0;
 
+  virtual TfLiteStatus Close() = 0;
+
   worker_id_t GetWorkerId() {
     return wid_;
   }

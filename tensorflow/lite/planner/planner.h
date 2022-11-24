@@ -133,6 +133,7 @@ class Planner {
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
+  TfLiteStatus Finish();
 
   ModelManager * model_manager_;
   ResourceMonitor& resource_monitor_ = ResourceMonitor::instance();

@@ -37,6 +37,8 @@ class IThermalModel {
   // Update model parameters with the prediction error
   virtual TfLiteStatus Update(Job job, const Subgraph* subgraph) = 0;
 
+  virtual TfLiteStatus Close() = 0;
+
   worker_id_t GetWorkerId() {
     return wid_;
   }

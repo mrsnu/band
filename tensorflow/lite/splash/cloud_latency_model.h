@@ -28,9 +28,12 @@ class CloudLatencyModel : public ILatencyModel {
   
   TfLiteStatus Profile(int32_t model_id, int64_t latency) override;
 
+  TfLiteStatus Close() override;
+
  private:
-  std::unordered_map<std::string, int64_t> computation_time_table_; // {model_name, latency}
+  std::unordered_map<int, int64_t> computation_time_table_; // {model_id, latency}
   int64_t communication_time_;
+  std::string model_path_;
 
   // Log buffer
   Eigen::MatrixXd X;
@@ -43,7 +46,7 @@ class CloudLatencyModel : public ILatencyModel {
   void LoadModelParameter(std::string latency_model_path);
   int64_t EstimateInputSize(const Subgraph* subgraph);
   int64_t EstimateOutputSize(const Subgraph* subgraph);
-  int64_t GetComputationTime(std::string model_name);
+  int64_t GetComputationTime(int model_id);
   int64_t PredictCommunicationTime(Subgraph* subgraph);
   TfLiteStatus UpdateCommunicationModel(Subgraph* subgraph, int64_t communication_time);
 };

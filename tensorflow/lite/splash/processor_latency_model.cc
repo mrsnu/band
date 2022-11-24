@@ -17,8 +17,38 @@ namespace impl {
 using namespace std;
 
 TfLiteStatus ProcessorLatencyModel::Init(ResourceConfig& config) {
-  // Do nothing
+  model_path_ = config.latency_model_param_path;
+  LoadModelParameter(model_path_);
   return kTfLiteOk;
+}
+
+void ProcessorLatencyModel::LoadModelParameter(string latency_model_path) {
+  Json::Value model_param = LoadJsonObjectFromFile(latency_model_path); 
+  for (auto worker_id_it = model_param.begin(); worker_id_it != model_param.end(); ++worker_id_it) {
+    int worker_id = std::atoi(worker_id_it.key().asString().c_str());
+    if (worker_id != wid_) {
+      continue;
+    }
+
+    const Json::Value param = *worker_id_it;
+    for (auto model_it = param.begin(); model_it != param.end(); ++model_it) {
+      int model_id = std::atoi(model_it.key().asString().c_str());
+      model_latency_table_[model_id] = std::unordered_map<int, int64_t>(); 
+
+      const Json::Value model = *model_it;
+      for (auto temp_it = model.begin(); temp_it != model.end(); ++temp_it) {
+        int temp = std::atoi(temp_it.key().asString().c_str());
+        int64_t latency = (*temp_it).asInt64(); 
+        
+        if (latency <= 0) {
+          continue;
+        }
+
+        LOGI("[ProcessorLatencyModel][model_id = %d] temp(%d) : latency = %lld", model_id, temp, latency);
+        model_latency_table_[model_id][temp] = latency;
+      }
+    }
+  }
 }
 
 int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
@@ -83,6 +113,26 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
     model_latency_table_[model_id][target_temp] = 0;
     minimum_profiled_count_[model_id] = 1;
   }
+  return kTfLiteOk;
+}
+
+TfLiteStatus ProcessorLatencyModel::Close() {
+  Json::Value root;
+  if (wid_ != 0) {
+    root = LoadJsonObjectFromFile(model_path_); 
+  }
+  Json::Value comp;
+  for (auto comp_time : model_latency_table_) {
+    Json::Value model;
+    for (auto temp_latency: comp_time.second) {
+      if (temp_latency.second != 0) {
+        model[std::to_string(temp_latency.first)] = temp_latency.second;
+      }
+    }
+    comp[std::to_string(comp_time.first)] = model;
+  }
+  root[std::to_string(wid_)] = comp;
+  WriteJsonObjectToFile(root, model_path_);
   return kTfLiteOk;
 }
 

@@ -26,14 +26,18 @@ class ProcessorLatencyModel : public ILatencyModel {
   TfLiteStatus Update(Job job, Subgraph* subgraph) override;
 
   TfLiteStatus Profile(int32_t model_id, int64_t latency) override;
+
+  TfLiteStatus Close() override;
  
  private:
   std::unordered_map<int, std::unordered_map<int, int64_t>> model_latency_table_; // {model_id, {temp, latency}}
 
   std::unordered_map<int, int> minimum_profiled_count_; // {model_id, count}
   int minimum_profiled_threshold_ = 3;
+  std::string model_path_;
 
   int64_t FindNearestValue(int model_id, thermal_t target_temp);
+  void LoadModelParameter(string latency_model_path);
 };
 
 } // namespace impl
