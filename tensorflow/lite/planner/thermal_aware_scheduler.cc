@@ -21,6 +21,11 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     requests.pop_front();
 
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
+    LOGI("================Waiting time==================");
+    for (int i = 0; i < kTfLiteNumDevices; i++) {
+      LOGI("[%d]waiting time = %lld", i, waiting_time[i]);
+    }
+    LOGI("==============================================");
     std::pair<int, double> best_subgraph = GetMaxPptSubgraphIdx(job, waiting_time);
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
@@ -34,7 +39,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
 }
 
 std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting) {
-  double max_ppt = -1.0;
+  double max_ppt = -DBL_MAX;
   int max_idx = -1;
 
   std::vector<int> subgraph_indices = GetInterpreter()->GetSubgraphIndices(job.model_id);

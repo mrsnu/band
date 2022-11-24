@@ -38,8 +38,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   Interpreter* interpreter = planner->GetInterpreter();
 
   int64_t total = 0;
-  for (JobQueue::iterator it = requests_.begin();
-       it != requests_.end(); ++it) {
+  for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
     Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
     int64_t expected_latency =
       planner->GetModelManager()->GetPredictedLatency(it->worker_id, current_subgraph);
