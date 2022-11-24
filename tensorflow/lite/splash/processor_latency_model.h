@@ -16,8 +16,8 @@ namespace impl {
 class ProcessorLatencyModel : public ILatencyModel {
  public:
  public:
-  ProcessorLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor)
-  : ILatencyModel(wid, resource_monitor) {}
+  ProcessorLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor, bool is_thermal_aware)
+  : ILatencyModel(wid, resource_monitor, is_thermal_aware) {}
 
   TfLiteStatus Init(ResourceConfig& config) override;
 
@@ -30,6 +30,7 @@ class ProcessorLatencyModel : public ILatencyModel {
   TfLiteStatus Close() override;
  
  private:
+
   std::unordered_map<int, std::unordered_map<int, int64_t>> model_latency_table_; // {model_id, {temp, latency}}
 
   std::unordered_map<int, int> minimum_profiled_count_; // {model_id, count}

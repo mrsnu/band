@@ -58,7 +58,7 @@ thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph,
                                      std::vector<thermal_t> current_temp) {
   vector<double> regressor;
   thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_);
-  if (log_size_ < minimum_log_size_) {
+  if (log_size_ < minimum_update_log_size_) {
     // Just return current temp
     return target_temp;
   }

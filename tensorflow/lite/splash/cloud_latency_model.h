@@ -17,8 +17,8 @@ namespace impl {
 
 class CloudLatencyModel : public ILatencyModel {
  public:
-  CloudLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor)
-  : ILatencyModel(wid, resource_monitor) {}
+  CloudLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor, bool is_thermal_aware)
+  : ILatencyModel(wid, resource_monitor, is_thermal_aware) {}
 
   TfLiteStatus Init(ResourceConfig& config) override;
 

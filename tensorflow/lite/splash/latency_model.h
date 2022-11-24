@@ -15,8 +15,8 @@ class Subgraph;
 
 class ILatencyModel {
  public:
-  ILatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor) 
-    : wid_(wid), resource_monitor_(resource_monitor) {}
+  ILatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor, bool is_thermal_aware) 
+    : wid_(wid), resource_monitor_(resource_monitor), is_thermal_aware_(is_thermal_aware) {}
 
   // init model parameters with default values
   virtual TfLiteStatus Init(ResourceConfig& config) = 0;
@@ -43,6 +43,7 @@ class ILatencyModel {
  protected:
   worker_id_t wid_;
   ResourceMonitor& resource_monitor_;
+  bool is_thermal_aware_;
 
   double smoothing_factor_ = 0.1;
 };

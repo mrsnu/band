@@ -11,19 +11,13 @@ namespace impl {
 void RandomAssignScheduler::Schedule(JobQueue& requests) {
   // LOGI("Idle worker size : %d", idle_workers.size());
   while (!requests.empty()) {
-    // std::set<int> idle_workers = planner_->GetIdleAllWorkers();
+    std::set<int> idle_workers = planner_->GetIdleAllWorkers();
     // Select a worker
-    // std::vector<worker_id_t> possible_workers = model_manager_.GetPossibleWorkers(to_execute);
-    // int target_idx = rand() % idle_workers.size();
-    // std::set<int>::iterator it = idle_workers.begin();
-    // std::advance(it, target_idx);
-    // int worker_id = *it;
-    // LOGI("It's selected : %d", worker_id);
-    int worker_id = kTfLiteCLOUD;
-
-    // if (worker_id != kTfLiteCPU) {
-      // continue;
-    // }
+    int target_idx = rand() % idle_workers.size();
+    std::set<int>::iterator it = idle_workers.begin();
+    std::advance(it, target_idx);
+    int worker_id = *it;
+    LOGI("It's selected : %d", worker_id);
 
     Job to_execute = requests.front();
     requests.pop_front();

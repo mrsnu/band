@@ -44,7 +44,8 @@ class ProcessorThermalModel : public IThermalModel {
   int window_size_;
   int param_num_ = 0;
 
-  const int minimum_log_size_ = 50;
+  const int minimum_log_size_ = 1;
+  const int minimum_update_log_size_ = 50;
   std::string model_path_;
   
   // Model parameter

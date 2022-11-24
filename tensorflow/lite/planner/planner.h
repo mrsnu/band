@@ -26,9 +26,9 @@ class ModelManager;
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter, ResourceConfig& resource_config);
+  explicit Planner(Interpreter* interpreter);
   ~Planner();
-  TfLiteStatus Init(PlannerConfig& config);
+  TfLiteStatus Init(PlannerConfig& config, ResourceConfig& resource_config);
 
   void Plan();
 

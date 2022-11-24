@@ -27,7 +27,7 @@ class ModelManager {
   ~ModelManager();
 
   // Initialize model parameters with default values
-  TfLiteStatus Init(ResourceConfig& config);
+  TfLiteStatus Init(ResourceConfig& config, bool is_thermal_aware);
 
   // Check if it's throttled or will occur thermal throttling
   bool IsAvailableWorker(worker_id_t wid, Subgraph* subgraph);
@@ -51,7 +51,7 @@ class ModelManager {
   ResourceMonitor& resource_monitor_;
 
   std::unique_ptr<IThermalModel> BuildThermalModel(worker_id_t wid);
-  std::unique_ptr<ILatencyModel> BuildLatencyModel(worker_id_t wid);
+  std::unique_ptr<ILatencyModel> BuildLatencyModel(worker_id_t wid, bool is_thermal_aware);
 
 };
 

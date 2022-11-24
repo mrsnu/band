@@ -130,7 +130,7 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
   Y.row(log_index) << job.after_temp[wid_];
   targetY.row(log_index) << job.after_target_temp[wid_];
 
-  if (log_size_ < minimum_log_size_) {
+  if (log_size_ < minimum_update_log_size_) {
     LOGI("ProcessorThermalModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }
