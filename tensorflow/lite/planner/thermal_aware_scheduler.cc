@@ -21,11 +21,6 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     requests.pop_front();
 
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
-    LOGI("================Waiting time==================");
-    for (int i = 0; i < kTfLiteNumDevices; i++) {
-      LOGI("[%d]waiting time = %lld", i, waiting_time[i]);
-    }
-    LOGI("==============================================");
     std::pair<int, double> best_subgraph = GetMaxPptSubgraphIdx(job, waiting_time);
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
@@ -48,6 +43,7 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
     SubgraphKey& key = subgraph->GetKey();
 
     int64_t waiting_time = worker_waiting[key.worker_id];
+    // if (waiting_time == LARGE_WAITING_TIME) continue;
     std::pair<int, int64_t> source = model_manager_->GetPredictedTempAndLatency(key.worker_id, subgraph);
     int64_t expected_latency = source.second;
     int64_t total = expected_latency + waiting_time;
@@ -60,10 +56,10 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
     }
     // LOGI("temp_diff= %d", temp_diff);
 
-    // double config = 0.5;
+    double config = 0.3;
     double thermal_efficiency = 1 / (double)temp_diff * (double)1000;
-    // double ppt = (1.0 - config) * thermal_efficiency - config * (double)total; // Note that this can be negatvie value!
-    double ppt = thermal_efficiency / (double)total;
+    double ppt = (1.0 - config) * thermal_efficiency - config * (double)total; // Note that this can be negatvie value!
+    // double ppt = thermal_efficiency / (double)total;
     // LOGI("thermal_Efficiency = %f", thermal_efficiency);
     // LOGI("latency = %lld", total);
     // LOGI("ppt = %f", ppt);

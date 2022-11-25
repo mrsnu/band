@@ -127,8 +127,16 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
   int log_index = (log_size_ - 1) % window_size_;
   X.row(log_index) << job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], job.frequency[0], job.frequency[1], job.latency, 1.0;
   targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], job.frequency[0], job.frequency[1], job.latency, 1.0;
-  Y.row(log_index) << job.after_temp[wid_];
-  targetY.row(log_index) << job.after_target_temp[wid_];
+  if (job.after_temp[wid_] < job.before_temp[wid_]) {
+    Y.row(log_index) << job.before_temp[wid_]; 
+  } else {
+    Y.row(log_index) << job.after_temp[wid_];
+  }
+  if (job.after_target_temp[wid_] < job.before_target_temp[wid_]) {
+    targetY.row(log_index) << job.before_target_temp[wid_];
+  } else {
+    targetY.row(log_index) << job.after_target_temp[wid_];
+  }
 
   if (log_size_ < minimum_update_log_size_) {
     LOGI("ProcessorThermalModel::Update Not enough data : %d", log_size_);

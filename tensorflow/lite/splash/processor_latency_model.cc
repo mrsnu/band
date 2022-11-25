@@ -81,10 +81,11 @@ int64_t ProcessorLatencyModel::FindNearestValue(int model_id, thermal_t target_t
   auto model_latency = model_latency_table_.find(model_id); 
   for (thermal_t i = target_temp ; i >= 0 ; i--) {
     auto model_latency_temp = model_latency->second.find(i);
-    if (model_latency_temp != model_latency->second.end()) {
+    if (model_latency_temp != model_latency->second.end() && model_latency_temp->second > 0) {
       return model_latency_temp->second;
     } 
   }
+  return 0;
 }
 
 TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
@@ -107,6 +108,7 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
     auto latency = it->second.find(target_temp);
     if (latency != it->second.end()) {
       int64_t prev_latency = latency->second;
+      if (job.latency > prev_latency * 2) return kTfLiteOk; // Outlier
       model_latency_table_[model_id][target_temp] =
           smoothing_factor_ * job.latency +
           (1 - smoothing_factor_) * prev_latency;
@@ -115,7 +117,11 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
         minimum_profiled_count_[model_id] = count + 1;
       }
     } else {
-      model_latency_table_[model_id][target_temp] = 0; 
+      auto prev_latency = FindNearestValue(model_id, target_temp);
+      if (job.latency > prev_latency * 2) return kTfLiteOk; // Outlier
+      model_latency_table_[model_id][target_temp] = 
+          smoothing_factor_ * job.latency +
+          (1 - smoothing_factor_) * prev_latency; 
     }
   } else {
     model_latency_table_[model_id] = std::unordered_map<int, int64_t>(); 

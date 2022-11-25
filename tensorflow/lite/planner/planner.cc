@@ -66,16 +66,19 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
              << "estimated_temp\t"
              << "before_target_temp\t"
              << "after_target_temp\t"
+             << "\t"
              << "est_ppt_cpu\t"
              << "est_ppt_gpu\t"
              << "est_ppt_dsp\t"
              << "est_ppt_npu\t"
              << "est_ppt_cloud\t"
+             << "\t"
              << "est_temp_diff_cpu\t"
              << "est_temp_diff_gpu\t"
              << "est_temp_diff_dsp\t"
              << "est_temp_diff_npu\t"
              << "est_temp_diff_cloud\t"
+             << "\t"
              << "est_total_latency_cpu\t"
              << "est_total_latency_gpu\t"
              << "est_total_latency_dsp\t"
@@ -425,6 +428,7 @@ void Planner::FlushFinishedJobs() {
                << job.estimated_temp << "\t"
                << job.before_target_temp[job.worker_id] << "\t"
                << job.after_target_temp[job.worker_id] << "\t";
+      log_file << "\t";
       if (job.estimated_ppt.size() != 0) {
         log_file << job.estimated_ppt[kTfLiteCPU] << "\t"
                << job.estimated_ppt[kTfLiteGPU] << "\t"
@@ -432,6 +436,7 @@ void Planner::FlushFinishedJobs() {
                << job.estimated_ppt[kTfLiteNPU] << "\t"
                << job.estimated_ppt[kTfLiteCLOUD] << "\t";
       }
+      log_file << "\t";
       if (job.estimated_temp_diff.size() != 0) {
         log_file << job.estimated_temp_diff[kTfLiteCPU] << "\t"
                << job.estimated_temp_diff[kTfLiteGPU] << "\t"
@@ -439,6 +444,7 @@ void Planner::FlushFinishedJobs() {
                << job.estimated_temp_diff[kTfLiteNPU] << "\t"
                << job.estimated_temp_diff[kTfLiteCLOUD] << "\t";
       }
+      log_file << "\t";
       if (job.estimated_total_latency.size() != 0) {
         log_file << job.estimated_total_latency[kTfLiteCPU] << "\t"
                << job.estimated_total_latency[kTfLiteGPU] << "\t"

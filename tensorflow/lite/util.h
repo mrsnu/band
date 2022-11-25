@@ -106,7 +106,7 @@ struct Job {
   int64_t slo_us = 0;
   int64_t communication_time = 0;
 
-  std::vector<int> estimated_total_latency;
+  std::vector<int64_t> estimated_total_latency;
   std::vector<thermal_t> estimated_temp_diff;
   std::vector<double> estimated_ppt;
 
