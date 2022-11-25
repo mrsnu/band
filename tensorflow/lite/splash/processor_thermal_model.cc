@@ -22,7 +22,7 @@ namespace impl {
 using namespace std;
 using namespace Eigen;
 
-TfLiteStatus ProcessorThermalModel::Init(int32_t window_size) {
+TfLiteStatus ProcessorThermalModel::Init(ResourceConfig& config) {
   int temp_size = GetResourceMonitor().GetAllTemperature().size();
   int freq_size = GetResourceMonitor().GetAllFrequency().size();
   int param_num = temp_size + freq_size + 2; 
@@ -31,9 +31,28 @@ TfLiteStatus ProcessorThermalModel::Init(int32_t window_size) {
   }
   model_param_ = vector<double>(PARAM_NUM, 1.);
   target_model_param_ = vector<double>(TARGET_PARAM_NUM, 1.);
-  window_size_ = window_size;
+  window_size_ = config.model_update_window_size;
+  model_path_ = config.thermal_model_param_path;
+  LoadModelParameter(model_path_);
   return kTfLiteOk;
 }
+
+void ProcessorThermalModel::LoadModelParameter(string thermal_model_path) {
+  Json::Value model_param = LoadJsonObjectFromFile(thermal_model_path); 
+  for (auto worker_id_it = model_param.begin(); worker_id_it != model_param.end(); ++worker_id_it) {
+    int worker_id = std::atoi(worker_id_it.key().asString().c_str());
+    if (worker_id != wid_) {
+      continue;
+    }
+
+    const Json::Value param = *worker_id_it;
+    for (auto it = param.begin(); it != param.end(); it++) {
+      LOGI("[ProcessorThermalModel][%d] model_param : %f", it - param.begin(), (*it).asDouble());
+      target_model_param_[it - param.begin()] = (*it).asDouble();
+    }
+  }
+}
+
 
 thermal_t ProcessorThermalModel::Predict(const Subgraph* subgraph, 
                                          const int64_t latency, 
@@ -111,7 +130,7 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
   Y.row(log_index) << job.after_temp[wid_];
   targetY.row(log_index) << job.after_target_temp[wid_];
 
-  if (log_size_ < minimum_log_size_) {
+  if (log_size_ < minimum_update_log_size_) {
     LOGI("ProcessorThermalModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }
@@ -125,6 +144,20 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
   for (auto i = 0; i < target_model_param_.size(); i++) {
     target_model_param_[i] = targetTheta(0, i); 
   }
+  return kTfLiteOk;
+}
+
+TfLiteStatus ProcessorThermalModel::Close() {
+  Json::Value root;
+  if (wid_ != 0) {
+    root = LoadJsonObjectFromFile(model_path_); 
+  }
+  Json::Value param;
+  for (int i = 0; i < target_model_param_.size(); i++) {
+    param.append(target_model_param_[i]); 
+  } 
+  root[std::to_string(wid_)] = param;
+  WriteJsonObjectToFile(root, model_path_);
   return kTfLiteOk;
 }
 

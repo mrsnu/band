@@ -98,6 +98,7 @@ void DeviceQueueOffloadingWorker::Work() {
       current_job.end_time = profiling::time::NowMicros();
       current_job.latency = current_job.end_time - current_job.invoke_time;
       current_job.communication_time = current_job.latency - computation_time;
+      current_job.status = kTfLiteJobSuccess;
 
       planner_ptr->GetModelManager()->Update(current_job, subgraph);
 

@@ -26,9 +26,9 @@ class ModelManager;
 // The interpreter manages a `Planner`.
 class Planner {
  public:
-  explicit Planner(Interpreter* interpreter, ResourceConfig& resource_config);
+  explicit Planner(Interpreter* interpreter);
   ~Planner();
-  TfLiteStatus Init(PlannerConfig& config);
+  TfLiteStatus Init(PlannerConfig& config, ResourceConfig& resource_config);
 
   void Plan();
 
@@ -133,6 +133,7 @@ class Planner {
  private:
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
+  TfLiteStatus Finish();
 
   ModelManager * model_manager_;
   ResourceMonitor& resource_monitor_ = ResourceMonitor::instance();

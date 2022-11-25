@@ -139,8 +139,8 @@ Interpreter::Interpreter(ErrorReporter* error_reporter,
           std::make_unique<CpuBackendContext>());
 
   // Create a Planner instance.
-  planner_.reset(new Planner(this, runtime_config.resource_config));
-  if (planner_->Init(runtime_config.planner_config) != kTfLiteOk) {
+  planner_.reset(new Planner(this));
+  if (planner_->Init(runtime_config.planner_config, runtime_config.resource_config) != kTfLiteOk) {
     error_reporter_->Report("Planner::Init() failed.");
     exit(-1);
   }
@@ -285,11 +285,12 @@ Interpreter::~Interpreter() {
       internal_context->ClearCaches();
     }
   }
-
-  // update the profile file to include all new profile results from this run
-  profiling::util::UpdateDatabase(profile_database_, model_configs_,
-                                  profile_database_json_);
-  WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
+  if (profile_data_path_ != "") {
+    // update the profile file to include all new profile results from this run
+    profiling::util::UpdateDatabase(profile_database_, model_configs_,
+                                    profile_database_json_);
+    WriteJsonObjectToFile(profile_database_json_, profile_data_path_);
+  }
 }
 
 

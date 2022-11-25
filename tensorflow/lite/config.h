@@ -52,6 +52,7 @@ struct PlannerConfig {
   int schedule_window_size = 5;
   std::vector<TfLiteSchedulerType> schedulers;
   impl::TfLiteCPUMaskFlags cpu_masks = impl::kTfLiteAll;
+
 };
 
 struct WorkerConfig {
@@ -80,6 +81,9 @@ struct ResourceConfig {
   std::vector<std::string> target_tz_path;
   std::vector<thermal_t> target_threshold;
   int32_t model_update_window_size = 750;
+  std::string latency_model_param_path;
+  std::string cloud_latency_model_param_path;
+  std::string thermal_model_param_path;
 };
 
 struct RuntimeConfig {

@@ -18,29 +18,31 @@
 namespace tflite {
 namespace impl {
 
-Planner::Planner(Interpreter* interpreter, ResourceConfig& resource_config) : interpreter_(interpreter), num_submitted_jobs_(0){
+Planner::Planner(Interpreter* interpreter) : interpreter_(interpreter), num_submitted_jobs_(0){
   planner_thread_ = std::thread([this] { this->Plan(); });
-
-  // Init a ResourceMonitor instance
-  if (resource_monitor_.Init(resource_config) != kTfLiteOk) {
-    LOGI("ResourceMonitor init fails");
-  }
-
-  model_manager_ = new ModelManager(resource_monitor_);
-  if (model_manager_->Init(resource_config) != kTfLiteOk) {
-    LOGI("ModelManager init fails");
-  }
 }
 
 Planner::~Planner() {
   FlushFinishedJobs();
   planner_safe_bool_.terminate();
   planner_thread_.join();
+  Finish();
 }
 
-TfLiteStatus Planner::Init(PlannerConfig& config) {
+TfLiteStatus Planner::Finish() {
+  model_manager_->Close();
+}
+
+TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
+
+  // Init a ResourceMonitor instance
+  if (resource_monitor_.Init(resource_config) != kTfLiteOk) {
+    LOGI("ResourceMonitor init fails");
+  }
+  model_manager_ = new ModelManager(resource_monitor_);
+
   if (log_path_.size()) {
     std::ofstream log_file(log_path_);
     if (!log_file.is_open()) return kTfLiteError;
@@ -92,7 +94,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
   }
 
   LOGI("Planner init");
-
+  bool is_thermal_aware = false;
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
     if (schedulers[i] == kCloudOnly) {
@@ -104,8 +106,10 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
     } else if (schedulers[i] == kSplashHeft) {
+      is_thermal_aware = true;
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
     } else if (schedulers[i] == kSplashLst) {
+      is_thermal_aware = true;
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
     } else {
       return kTfLiteError;
@@ -122,6 +126,9 @@ TfLiteStatus Planner::Init(PlannerConfig& config) {
     need_cpu_update_ = true;
   }
 
+  if (model_manager_->Init(resource_config, is_thermal_aware) != kTfLiteOk) {
+    LOGI("ModelManager init fails");
+  }
   return kTfLiteOk;
 }
 
@@ -383,11 +390,7 @@ void Planner::FlushFinishedJobs() {
       Job job = jobs_finished_.queue.front();
       jobs_finished_.queue.pop_front();
 
-      bool is_final_subgraph =
-          interpreter_->subgraph(job.subgraph_idx)->IsEnd();
-
-      if (job.slo_us > 0 && is_final_subgraph &&
-          job.status == kTfLiteJobSuccess) {
+      if (job.slo_us > 0 && job.status == kTfLiteJobSuccess) {
         // check if slo has been violated or not
         auto latency = job.end_time - job.enqueue_time;
         job.status =

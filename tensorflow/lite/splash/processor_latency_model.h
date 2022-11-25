@@ -16,24 +16,29 @@ namespace impl {
 class ProcessorLatencyModel : public ILatencyModel {
  public:
  public:
-  ProcessorLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor)
-  : ILatencyModel(wid, resource_monitor) {}
+  ProcessorLatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor, bool is_thermal_aware)
+  : ILatencyModel(wid, resource_monitor, is_thermal_aware) {}
 
-  TfLiteStatus Init() override;
+  TfLiteStatus Init(ResourceConfig& config) override;
 
   int64_t Predict(Subgraph* subgraph) override;
 
   TfLiteStatus Update(Job job, Subgraph* subgraph) override;
 
   TfLiteStatus Profile(int32_t model_id, int64_t latency) override;
+
+  TfLiteStatus Close() override;
  
  private:
+
   std::unordered_map<int, std::unordered_map<int, int64_t>> model_latency_table_; // {model_id, {temp, latency}}
 
   std::unordered_map<int, int> minimum_profiled_count_; // {model_id, count}
   int minimum_profiled_threshold_ = 3;
+  std::string model_path_;
 
   int64_t FindNearestValue(int model_id, thermal_t target_temp);
+  void LoadModelParameter(string latency_model_path);
 };
 
 } // namespace impl

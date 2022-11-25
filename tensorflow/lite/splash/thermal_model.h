@@ -20,7 +20,7 @@ class IThermalModel {
                          : wid_(wid), resource_monitor_(resource_monitor) {}
 
   // init model parameters with default values
-  virtual TfLiteStatus Init(int32_t window_size) = 0;
+  virtual TfLiteStatus Init(ResourceConfig& config) = 0;
 
   // Get an estimation value of future temperature 
   // after executing inference of the input model
@@ -36,6 +36,8 @@ class IThermalModel {
 
   // Update model parameters with the prediction error
   virtual TfLiteStatus Update(Job job, const Subgraph* subgraph) = 0;
+
+  virtual TfLiteStatus Close() = 0;
 
   worker_id_t GetWorkerId() {
     return wid_;

@@ -20,7 +20,7 @@ class ProcessorThermalModel : public IThermalModel {
   ProcessorThermalModel(worker_id_t wid, ResourceMonitor& resource_monitor)
   : IThermalModel(wid, resource_monitor) {}
 
-  TfLiteStatus Init(int32_t window_size) override;
+  TfLiteStatus Init(ResourceConfig& config) override;
 
   thermal_t Predict(const Subgraph* subgraph, 
                     const int64_t latency, 
@@ -31,6 +31,8 @@ class ProcessorThermalModel : public IThermalModel {
                     std::vector<thermal_t> current_temp) override;
 
   TfLiteStatus Update(Job job, const Subgraph* subgraph) override;
+
+  TfLiteStatus Close() override;
  
  private:
   // Log buffer
@@ -42,13 +44,17 @@ class ProcessorThermalModel : public IThermalModel {
   int window_size_;
   int param_num_ = 0;
 
-  const int minimum_log_size_ = 50;
+  const int minimum_log_size_ = 1;
+  const int minimum_update_log_size_ = 50;
+  std::string model_path_;
   
   // Model parameter
   std::vector<double> model_param_; // [temp_c, temp_g, temp_d, temp_n, temp_cloud, freq_c, freq_g, latency, error]
 
   // Target Model parameter
   std::vector<double> target_model_param_; // temp_target + [model_param_]
+
+  void LoadModelParameter(string thermal_model_path);
 };
 
 } // namespace impl

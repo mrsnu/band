@@ -18,9 +18,11 @@ namespace impl {
 using namespace std;
 using namespace Eigen;
 
-TfLiteStatus CloudLatencyModel::Init() {
+TfLiteStatus CloudLatencyModel::Init(ResourceConfig& config) {
   model_param_ = vector<double>(3, 1.);
   window_size_ = 100;
+  model_path_ = config.cloud_latency_model_param_path;
+  LoadModelParameter(model_path_);
   return kTfLiteOk;
 }
 
@@ -30,12 +32,40 @@ int64_t CloudLatencyModel::Predict(Subgraph* subgraph) {
   return comp_time + comm_time;
 }
 
-int64_t CloudLatencyModel::GetComputationTime(int32_t model_id) {
+int64_t CloudLatencyModel::GetComputationTime(int model_id) {
   auto it = computation_time_table_.find(model_id);
   if (it != computation_time_table_.end()) {
     return it->second;
   } else {
     return 0; // Minimum value to be selected
+  }
+}
+
+void CloudLatencyModel::LoadModelParameter(string latency_model_path) {
+  Json::Value model_param = LoadJsonObjectFromFile(latency_model_path); 
+  for (auto type_it = model_param.begin(); type_it != model_param.end(); ++type_it) {
+    string type = type_it.key().asString();
+
+    if (type == "comm") {
+      const Json::Value param = *type_it;
+      for (auto it = param.begin(); it != param.end(); it++) {
+        LOGI("[CloudLatencyModel][%d] model_param : %f", it - param.begin(), (*it).asDouble());
+        model_param_[it - param.begin()] = (*it).asDouble();
+      }
+    } else if (type == "comp") {
+      const Json::Value model = *type_it;
+      for (auto model_it = model.begin(); model_it != model.end(); ++model_it) {
+        int model_id = std::atoi(model_it.key().asString().c_str());
+        int64_t latency = (*model_it).asInt64(); 
+
+        if (latency <= 0) {
+          continue;
+        }
+        
+        LOGI("[CloudLatencyModel][%d] latency = %lld", model_id, latency);
+        computation_time_table_[model_id] = latency;
+      }
+    }
   }
 }
 
@@ -120,6 +150,22 @@ int64_t CloudLatencyModel::EstimateOutputSize(const Subgraph* subgraph) {
     subgraph_output_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
   }
   return subgraph_output_size;
+}
+
+TfLiteStatus CloudLatencyModel::Close() {
+  Json::Value root;
+  Json::Value comm;
+  for (int i = 0; i < model_param_.size(); i++) {
+    comm.append(model_param_[i]); 
+  } 
+  root["comm"] = comm;
+  Json::Value comp;
+  for (auto comp_time : computation_time_table_) {
+    comp[std::to_string(comp_time.first)] = comp_time.second;
+  }
+  root["comp"] = comp;
+  WriteJsonObjectToFile(root, model_path_);
+  return kTfLiteOk;
 }
 
 } // namespace impl

@@ -18,7 +18,7 @@ namespace tflite {
 namespace impl {
 
 
-TfLiteStatus ModelManager::Init(ResourceConfig& config) {
+TfLiteStatus ModelManager::Init(ResourceConfig& config, bool is_thermal_aware) {
   LOGI("ModelManager:: init");
   // Build ThermalModel
   for (int wid = 0; wid < kTfLiteNumDevices; wid++) {
@@ -26,7 +26,7 @@ TfLiteStatus ModelManager::Init(ResourceConfig& config) {
     thermal_models_.emplace_back(std::move(model));
   }
   for (auto& thermal_model : thermal_models_) {
-    auto status = thermal_model->Init(config.model_update_window_size);
+    auto status = thermal_model->Init(config);
     if (status == kTfLiteError) {
       return kTfLiteError;
     }
@@ -34,16 +34,15 @@ TfLiteStatus ModelManager::Init(ResourceConfig& config) {
 
   // Build LatencyModel
   for (int wid = 0; wid < kTfLiteNumDevices; wid++) {
-    std::unique_ptr<ILatencyModel> model = BuildLatencyModel(wid);
-    latency_models_.emplace_back(std::move(model));
+    std::unique_ptr<ILatencyModel> model = BuildLatencyModel(wid, is_thermal_aware);
+    latency_models_.push_back(std::move(model));
   }
   for (auto& latency_model : latency_models_) {
-    auto status = latency_model->Init();
+    auto status = latency_model->Init(config);
     if (status == kTfLiteError) {
       return kTfLiteError;
     }
   }
-  LOGI("ModelManager:: finish");
   return kTfLiteOk;
 }
 
@@ -54,11 +53,11 @@ std::unique_ptr<IThermalModel> ModelManager::BuildThermalModel(worker_id_t wid) 
   return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
 }
 
-std::unique_ptr<ILatencyModel> ModelManager::BuildLatencyModel(worker_id_t wid) {
+std::unique_ptr<ILatencyModel> ModelManager::BuildLatencyModel(worker_id_t wid, bool is_thermal_aware) {
   if (wid == kTfLiteCLOUD) {
-    return std::make_unique<CloudLatencyModel>(wid, resource_monitor_);
+    return std::make_unique<CloudLatencyModel>(wid, resource_monitor_, is_thermal_aware);
   }
-  return std::make_unique<ProcessorLatencyModel>(wid, resource_monitor_);
+  return std::make_unique<ProcessorLatencyModel>(wid, resource_monitor_, is_thermal_aware);
 }
 
 bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
@@ -109,6 +108,24 @@ TfLiteStatus ModelManager::ProfileLatency(Subgraph* subgraph, int64_t latency) {
   Job job = Job(subgraph->GetKey().model_id);
   job.latency = latency;
   latency_models_[subgraph->GetKey().worker_id]->Update(job, subgraph);
+  return kTfLiteOk;
+}
+
+TfLiteStatus ModelManager::Close() {
+  for (auto& thermal_model : thermal_models_) {
+    auto status = thermal_model->Close();
+    if (status == kTfLiteError) {
+      LOGI("Thermal model Error = %d", thermal_model->GetWorkerId());
+      return kTfLiteError;
+    }
+  }
+  for (auto& latency_model : latency_models_) {
+    auto status = latency_model->Close();
+    if (status == kTfLiteError) {
+      LOGI("Latency model Error = %d", latency_model->GetWorkerId());
+      return kTfLiteError;
+    }
+  }
   return kTfLiteOk;
 }
 

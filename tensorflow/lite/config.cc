@@ -234,6 +234,16 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     resource_config.model_update_window_size = root["model_update_window_size"].asInt();
   }
 
+  // 3. Model param path
+  if (!root["latency_model_param_path"].isNull()) {
+    resource_config.latency_model_param_path = root["latency_model_param_path"].asString();
+  }
+  if (!root["cloud_latency_model_param_path"].isNull()) {
+    resource_config.cloud_latency_model_param_path = root["cloud_latency_model_param_path"].asString();
+  }
+  if (!root["thermal_model_param_path"].isNull()) {
+    resource_config.thermal_model_param_path = root["thermal_model_param_path"].asString();
+  }
 
   return kTfLiteOk;
 }

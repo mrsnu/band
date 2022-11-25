@@ -15,11 +15,11 @@ class Subgraph;
 
 class ILatencyModel {
  public:
-  ILatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor) 
-    : wid_(wid), resource_monitor_(resource_monitor) {}
+  ILatencyModel(worker_id_t wid, ResourceMonitor& resource_monitor, bool is_thermal_aware) 
+    : wid_(wid), resource_monitor_(resource_monitor), is_thermal_aware_(is_thermal_aware) {}
 
   // init model parameters with default values
-  virtual TfLiteStatus Init() = 0;
+  virtual TfLiteStatus Init(ResourceConfig& config) = 0;
 
   // Get an estimation value of future latency 
   // after executing inference of the input model
@@ -29,6 +29,8 @@ class ILatencyModel {
   virtual TfLiteStatus Update(Job job, Subgraph* subgraph) = 0;
 
   virtual TfLiteStatus Profile(int32_t model_id, int64_t latency) = 0;
+
+  virtual TfLiteStatus Close() = 0;
 
   worker_id_t GetWorkerId() {
     return wid_;
@@ -41,6 +43,7 @@ class ILatencyModel {
  protected:
   worker_id_t wid_;
   ResourceMonitor& resource_monitor_;
+  bool is_thermal_aware_;
 
   double smoothing_factor_ = 0.1;
 };
