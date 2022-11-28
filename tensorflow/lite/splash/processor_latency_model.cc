@@ -60,20 +60,19 @@ int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
   auto it = model_latency_table_.find(model_id);
   auto model_count = minimum_profiled_count_.find(model_id);
   if (model_count == minimum_profiled_count_.end() || model_count->second < minimum_profiled_threshold_) {
+    // No model or has model but less than minimum
     return 0;
   }
   auto model_latency = model_latency_table_.find(model_id); 
   if (model_latency == model_latency_table_.end()) {
-    return 0; // Minimum value to be selected
+    // No model
+    return 0;
   }
   auto model_latency_temp = model_latency->second.find(target_temp);
   if (model_latency_temp != model_latency->second.end()) {
     return model_latency_temp->second;
   } else {
-    if (is_thermal_aware_) {
-      return FindNearestValue(model_id, target_temp);
-    }
-    else return 0;
+    return FindNearestValue(model_id, target_temp);
   }
 }
 
@@ -107,21 +106,22 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
   if (it != model_latency_table_.end()) {
     auto latency = it->second.find(target_temp);
     if (latency != it->second.end()) {
-      int64_t prev_latency = latency->second;
+      auto prev_latency = latency->second;
       if (job.latency > prev_latency * 2) return kTfLiteOk; // Outlier
       model_latency_table_[model_id][target_temp] =
-          smoothing_factor_ * job.latency +
-          (1 - smoothing_factor_) * prev_latency;
-      auto count = minimum_profiled_count_[model_id];
-      if (count <= minimum_profiled_threshold_) {
-        minimum_profiled_count_[model_id] = count + 1;
-      }
+          smoothing_factor_ * job.latency + (1 - smoothing_factor_) * prev_latency;
     } else {
       auto prev_latency = FindNearestValue(model_id, target_temp);
-      if (job.latency > prev_latency * 2) return kTfLiteOk; // Outlier
-      model_latency_table_[model_id][target_temp] = 
-          smoothing_factor_ * job.latency +
-          (1 - smoothing_factor_) * prev_latency; 
+      if (prev_latency == 0) {
+        model_latency_table_[model_id][target_temp] = job.latency;  
+      } else {
+        model_latency_table_[model_id][target_temp] = 
+            smoothing_factor_ * job.latency + (1 - smoothing_factor_) * prev_latency; 
+      }
+    }
+    auto count = minimum_profiled_count_[model_id];
+    if (count <= minimum_profiled_threshold_) {
+      minimum_profiled_count_[model_id] = count + 1;
     }
   } else {
     model_latency_table_[model_id] = std::unordered_map<int, int64_t>(); 

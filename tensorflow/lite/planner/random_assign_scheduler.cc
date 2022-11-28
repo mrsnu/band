@@ -17,7 +17,8 @@ void RandomAssignScheduler::Schedule(JobQueue& requests) {
     std::set<int>::iterator it = idle_workers.begin();
     std::advance(it, target_idx);
     int worker_id = *it;
-    LOGI("It's selected : %d", worker_id);
+    // LOGI("It's selected : %d", worker_id);
+    // int worker_id = kTfLiteCLOUD;
 
     Job to_execute = requests.front();
     requests.pop_front();

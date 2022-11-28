@@ -108,6 +108,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
       schedulers_.emplace_back(new MobileCloudHeftScheduler(this, model_manager_));
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
+      is_thermal_aware = true;
     } else if (schedulers[i] == kSplashHeft) {
       is_thermal_aware = true;
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
