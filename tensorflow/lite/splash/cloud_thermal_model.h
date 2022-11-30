@@ -43,7 +43,7 @@ class CloudThermalModel : public IThermalModel {
   int param_num_ = 0;
   std::string model_path_;
 
-  const int minimum_log_size_ = 1;
+  bool is_thermal_model_prepared = false; 
   const int minimum_update_log_size_ = 50;
   
   // Target Model parameter

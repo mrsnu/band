@@ -43,6 +43,7 @@ void CloudThermalModel::LoadModelParameter(string thermal_model_path) {
     for (auto it = param.begin(); it != param.end(); it++) {
       LOGI("[CloudThermalModel][%d] model_param : %f", it - param.begin(), (*it).asDouble());
       target_model_param_[it - param.begin()] = (*it).asDouble();
+      is_thermal_model_prepared = true;
     }
   }
 }
@@ -58,8 +59,7 @@ thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph,
                                      std::vector<thermal_t> current_temp) {
   vector<double> regressor;
   thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_);
-  if (log_size_ < minimum_update_log_size_) {
-    // Just return current temp
+  if (!is_thermal_model_prepared) {
     return target_temp;
   }
 
@@ -112,7 +112,7 @@ TfLiteStatus CloudThermalModel::Update(Job job, const Subgraph* subgraph) {
   targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[wid_], EstimateInputSize(subgraph), EstimateOutputSize(subgraph), -49, job.latency, 1.0; // RSSI value
   targetY.row(log_index) << job.after_target_temp[wid_];
 
-  if (log_size_ < minimum_log_size_) {
+  if (log_size_ < minimum_update_log_size_) {
     LOGI("CloudThermalModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }
@@ -122,6 +122,7 @@ TfLiteStatus CloudThermalModel::Update(Job job, const Subgraph* subgraph) {
   for (auto i = 0; i < target_model_param_.size(); i++) {
     target_model_param_[i] = targetTheta(0, i); 
   }
+  is_thermal_model_prepared = true;
   return kTfLiteOk;
 }
 

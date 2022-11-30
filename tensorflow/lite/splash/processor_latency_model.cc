@@ -84,6 +84,13 @@ int64_t ProcessorLatencyModel::FindNearestValue(int model_id, thermal_t target_t
       return model_latency_temp->second;
     } 
   }
+  for (thermal_t i = target_temp ; i <= 100 ; i++) {
+    auto model_latency_temp = model_latency->second.find(i);
+    if (model_latency_temp != model_latency->second.end() && model_latency_temp->second > 0) {
+      return model_latency_temp->second;
+    } 
+  }
+  LOGI("Cannot find nearest value : [%d] model = %d, target = %d", wid_, model_id, target_temp);
   return 0;
 }
 
@@ -105,19 +112,18 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
   auto it = model_latency_table_.find(model_id);
   if (it != model_latency_table_.end()) {
     auto latency = it->second.find(target_temp);
+    auto prev_latency = 0;
     if (latency != it->second.end()) {
-      auto prev_latency = latency->second;
-      if (job.latency > prev_latency * 2) return kTfLiteOk; // Outlier
-      model_latency_table_[model_id][target_temp] =
-          smoothing_factor_ * job.latency + (1 - smoothing_factor_) * prev_latency;
+      prev_latency = latency->second;
     } else {
-      auto prev_latency = FindNearestValue(model_id, target_temp);
-      if (prev_latency == 0) {
-        model_latency_table_[model_id][target_temp] = job.latency;  
-      } else {
-        model_latency_table_[model_id][target_temp] = 
-            smoothing_factor_ * job.latency + (1 - smoothing_factor_) * prev_latency; 
-      }
+      prev_latency = FindNearestValue(model_id, target_temp);
+    }
+    if (prev_latency == 0) {
+      model_latency_table_[model_id][target_temp] = job.latency;  
+    } else {
+      if (job.latency > prev_latency * 3) return kTfLiteOk; // Outlier
+      model_latency_table_[model_id][target_temp] = 
+          smoothing_factor_ * job.latency + (1 - smoothing_factor_) * prev_latency; 
     }
     auto count = minimum_profiled_count_[model_id];
     if (count <= minimum_profiled_threshold_) {
