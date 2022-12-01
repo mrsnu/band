@@ -297,7 +297,7 @@ void Planner::Wait(std::vector<int> job_ids) {
   });
 
   request_lock.unlock();
-  // FlushFinishedJobs();
+  FlushFinishedJobs();
 }
 
 void Planner::WaitAll() {
@@ -308,7 +308,7 @@ void Planner::WaitAll() {
 
   request_lock.unlock();
 
-  // FlushFinishedJobs();
+  FlushFinishedJobs();
 }
 
 void Planner::EnqueueFinishedJob(Job job) {

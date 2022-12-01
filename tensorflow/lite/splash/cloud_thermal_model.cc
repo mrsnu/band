@@ -15,8 +15,6 @@
 #include <android/log.h>
 #endif // defined(__ANDROID__)
 
-#define TARGET_PARAM_NUM 7
-
 namespace tflite {
 namespace impl {
 
@@ -24,8 +22,10 @@ using namespace std;
 using namespace Eigen;
 
 TfLiteStatus CloudThermalModel::Init(ResourceConfig& config) {
+  int temp_size = GetResourceMonitor().GetAllTemperature().size();
   window_size_ = config.model_update_window_size;
-  target_model_param_ = vector<double>(TARGET_PARAM_NUM, 1.);
+  param_num_ = 1 + temp_size + 5;
+  target_model_param_ = vector<double>(param_num_, 1.);
   model_path_ = config.thermal_model_param_path;
   LoadModelParameter(model_path_);
   return kTfLiteOk;
@@ -64,7 +64,7 @@ thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph,
   }
 
   regressor.push_back(target_temp);
-  regressor.push_back(current_temp[wid_]);
+  regressor.insert(regressor.end(), current_temp.begin(), current_temp.end());
   regressor.push_back(EstimateInputSize(subgraph));
   regressor.push_back(EstimateOutputSize(subgraph));
   regressor.push_back(-49); // RSSI value
@@ -74,7 +74,7 @@ thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph,
   double target_future_temperature = 0.;
 
   if (regressor.size() != target_model_param_.size()) {
-    LOGI("[Error!!: regressor.size()[%d] != target_model_param_.size()[%d]", regressor.size(), target_model_param_.size());
+    LOGI("[CloudThermalModel] Error!!: regressor.size()[%d] != model_param_.size()[%d]", regressor.size(), target_model_param_.size());
     return target_future_temperature;
   }
 
@@ -105,7 +105,7 @@ int64_t CloudThermalModel::EstimateOutputSize(const Subgraph* subgraph) {
 TfLiteStatus CloudThermalModel::Update(Job job, const Subgraph* subgraph) {
   log_size_++;
   if (log_size_ <= window_size_) {
-    targetX.conservativeResize(log_size_, TARGET_PARAM_NUM);
+    targetX.conservativeResize(log_size_, param_num_);
     targetY.conservativeResize(log_size_, 1);
   }
   int log_index = (log_size_ - 1) % window_size_;
@@ -118,15 +118,20 @@ TfLiteStatus CloudThermalModel::Update(Job job, const Subgraph* subgraph) {
   }
 
   // Update parameters via normal equation with log table
-  Eigen::Matrix<double, 1, TARGET_PARAM_NUM> targetTheta = (targetX.transpose() * targetX).ldlt().solve(targetX.transpose() * targetY);
+  Eigen::MatrixXd targetTheta;
+  targetTheta.conservativeResize(param_num_, 1);
+  targetTheta = (targetX.transpose() * targetX).ldlt().solve(targetX.transpose() * targetY);
   for (auto i = 0; i < target_model_param_.size(); i++) {
-    target_model_param_[i] = targetTheta(0, i); 
+    target_model_param_[i] = targetTheta(i, 0); 
   }
   is_thermal_model_prepared = true;
   return kTfLiteOk;
 }
 
 TfLiteStatus CloudThermalModel::Close() {
+  if (!is_thermal_model_prepared) {
+    return kTfLiteOk;
+  }
   Json::Value root= LoadJsonObjectFromFile(model_path_); 
   Json::Value param;
   for (int i = 0; i < target_model_param_.size(); i++) {

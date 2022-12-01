@@ -55,6 +55,9 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
       temp_diff = 1; // epsilon value
     }
     // LOGI("temp_diff= %d", temp_diff);
+    // if (key.worker_id == kTfLiteGPU) {
+      // temp_diff += 3000;
+    // }
 
     double config = 0.3;
     double thermal_efficiency = 1 / (double)temp_diff * (double)1000;
