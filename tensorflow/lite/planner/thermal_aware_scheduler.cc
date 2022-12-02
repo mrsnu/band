@@ -45,7 +45,6 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
     SubgraphKey& key = subgraph->GetKey();
 
     int64_t waiting_time = worker_waiting[key.worker_id];
-    // if (waiting_time == LARGE_WAITING_TIME) continue;
     std::pair<int, int64_t> source = model_manager_->GetPredictedTempAndLatency(key.worker_id, subgraph);
     int64_t expected_latency = source.second;
     int64_t total = expected_latency + waiting_time;
@@ -57,9 +56,6 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
       temp_diff = 1; // epsilon value
     }
     // LOGI("temp_diff= %d", temp_diff);
-    // if (key.worker_id == kTfLiteGPU) {
-      // temp_diff += 3000;
-    // }
 
     double config = 0.3;
     double thermal_efficiency = 1 / (double)temp_diff * (double)1000;

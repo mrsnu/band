@@ -413,8 +413,6 @@ void Planner::FlushFinishedJobs() {
       // }
       // ppt = fps / (double)(temp_diff) * 1000.;
       // write all timestamp statistics to log file
-      LOGI("job workerid: %d", job.worker_id);
-
       log_file << job.sched_id << "\t"
                << job.model_fname << "\t"
                << job.model_id << "\t"

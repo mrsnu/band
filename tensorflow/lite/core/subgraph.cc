@@ -27,13 +27,12 @@ limitations under the License.
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/util.h"
 
-// TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
-#include "tensorflow/lite/nnapi/nnapi_util.h"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
-#define TFLITE_IS_MOBILE_PLATFORM
-#endif  // defined(__ANDROID__)
+#else
+#define LOGI(...) printf(__VA_ARGS__)
+#endif // defined(__ANDROID__)
 
 namespace tflite {
 

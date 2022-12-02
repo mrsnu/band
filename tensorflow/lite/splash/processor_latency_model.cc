@@ -95,7 +95,6 @@ int64_t ProcessorLatencyModel::FindNearestValue(int model_id, thermal_t target_t
       return model_latency_temp->second;
     } 
   }
-  LOGI("Cannot find nearest value : [%d] model = %d, target = %d", wid_, model_id, target_temp);
   return 0;
 }
 

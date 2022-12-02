@@ -197,8 +197,6 @@ class Scheduler {
   TfLiteWorkerType worker_type_;
   Planner* planner_;
   ScheduleAction action_;
-
-  static const int64_t LARGE_WAITING_TIME = INT_MAX/2;
 };
 
 }  // namespace impl

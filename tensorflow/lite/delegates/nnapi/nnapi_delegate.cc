@@ -43,13 +43,12 @@ limitations under the License.
 #include <unistd.h>
 #endif
 
-// TODO(b/139446230): Move to portable platform header.
 #if defined(__ANDROID__)
-#include "tensorflow/lite/nnapi/nnapi_util.h"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
-#define TFLITE_IS_MOBILE_PLATFORM
-#endif  // defined(__ANDROID__)
+#else
+#define LOGI(...) printf(__VA_ARGS__)
+#endif // defined(__ANDROID__)
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
@@ -4453,6 +4452,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       !nnapi->nnapi_exists) {
     return kTfLiteOk;
   }
+
   int target_sdk_version = nnapi->android_sdk_version;
   const StatefulNnApiDelegate::Options delegate_options =
       StatefulNnApiDelegate::GetOptions(delegate);
@@ -4491,6 +4491,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       }
     }
   }
+
   std::vector<int> supported_nodes;
   std::set<std::string> unsupported_nodes_info;
   // We don't care about all nodes_, we only care about ones in the
@@ -4516,6 +4517,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       unsupported_nodes_info.insert(node_info);
     }
   }
+
   // If there are no delegated nodes, short-circuit node replacement.
   if (supported_nodes.empty()) {
     return kTfLiteOk;
@@ -4569,6 +4571,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
   };
 
   std::vector<int> nodes_to_delegate;
+
   int num_partitions;
   TfLiteDelegateParams* params_array;
   if (is_accelerator_specified &&
@@ -4624,6 +4627,7 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     absl::StrAppend(&error_message, num_unsupported, " operations will run on the CPU.\n");
     LOGI(error_message.c_str());
   }
+
   if (nodes_to_delegate.empty()) {
     return kTfLiteError;
   } else {
