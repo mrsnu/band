@@ -245,6 +245,10 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
     resource_config.thermal_model_param_path = root["thermal_model_param_path"].asString();
   }
 
+  if (!root["weighted_ppt_config"].isNull()) {
+    resource_config.weighted_ppt_config = root["weighted_ppt_config"].asFloat();
+  }
+
   return kTfLiteOk;
 }
 

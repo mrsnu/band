@@ -43,6 +43,14 @@ limitations under the License.
 #include <unistd.h>
 #endif
 
+// TODO(b/139446230): Move to portable platform header.
+#if defined(__ANDROID__)
+#include "tensorflow/lite/nnapi/nnapi_util.h"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#define TFLITE_IS_MOBILE_PLATFORM
+#endif  // defined(__ANDROID__)
+
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "tensorflow/lite/allocation.h"
@@ -111,8 +119,7 @@ std::string NnApiErrorDescription(int error_code) {
     const auto _call_desc = (call_desc);                                      \
     if (_code != ANEURALNETWORKS_NO_ERROR) {                                  \
       const auto error_desc = NnApiErrorDescription(_code);                   \
-      context->ReportError(context,                                           \
-                           "NN API returned error %s at line %d while %s.\n", \
+      LOGI("NN API returned error %s at line %d while %s.\n",                 \
                            error_desc.c_str(), __LINE__, _call_desc);         \
       *p_errno = _code;                                                       \
       return kTfLiteError;                                                    \
@@ -4446,7 +4453,6 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       !nnapi->nnapi_exists) {
     return kTfLiteOk;
   }
-
   int target_sdk_version = nnapi->android_sdk_version;
   const StatefulNnApiDelegate::Options delegate_options =
       StatefulNnApiDelegate::GetOptions(delegate);
@@ -4485,7 +4491,6 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       }
     }
   }
-
   std::vector<int> supported_nodes;
   std::set<std::string> unsupported_nodes_info;
   // We don't care about all nodes_, we only care about ones in the
@@ -4511,7 +4516,6 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
       unsupported_nodes_info.insert(node_info);
     }
   }
-
   // If there are no delegated nodes, short-circuit node replacement.
   if (supported_nodes.empty()) {
     return kTfLiteOk;
@@ -4565,7 +4569,6 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
   };
 
   std::vector<int> nodes_to_delegate;
-
   int num_partitions;
   TfLiteDelegateParams* params_array;
   if (is_accelerator_specified &&
@@ -4591,9 +4594,8 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
     std::string error_message = absl::StrCat(
         "Following operations are not supported by ", accelerator_name, "\n",
         unsupported);
-    TF_LITE_KERNEL_LOG(context, error_message.c_str());
+    LOGI(error_message.c_str());
   }
-
   TF_LITE_ENSURE_STATUS(
       LimitDelegatedPartitions(delegate_options.max_number_delegated_partitions,
                                std::vector<TfLiteDelegateParams>(
@@ -4620,9 +4622,8 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
                       "No operations will run with NNAPI, and all ");
     }
     absl::StrAppend(&error_message, num_unsupported, " operations will run on the CPU.\n");
-    TF_LITE_KERNEL_LOG(context, error_message.c_str());
+    LOGI(error_message.c_str());
   }
-
   if (nodes_to_delegate.empty()) {
     return kTfLiteError;
   } else {
