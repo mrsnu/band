@@ -250,6 +250,9 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   if (!root["weighted_ppt_config"].isNull()) {
     resource_config.weighted_ppt_config = root["weighted_ppt_config"].asFloat();
   }
+  if (!root["rssi_path"].isNull()) {
+    resource_config.rssi_path = root["rssi_path"].asString();
+  }
 
   return kTfLiteOk;
 }

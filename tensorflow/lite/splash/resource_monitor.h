@@ -110,6 +110,10 @@ class ResourceMonitor {
     return target_temp_table_;
   }
 
+  inline int32_t GetRSSI() {
+    return rssi_value_;
+  }
+
   inline void FillJobInfoBefore(Job& job) {
     job.before_temp = GetAllTemperature();
     job.before_target_temp = GetAllTargetTemperature();
@@ -146,6 +150,7 @@ class ResourceMonitor {
   thermal_t ParseTemperature(worker_id_t wid);
   thermal_t ParseTargetTemperature(worker_id_t wid);
   freq_t ParseFrequency(worker_id_t wid);
+  int32_t ParseRSSI();
 
   std::thread monitor_thread_;
   CpuSet cpu_set_;
@@ -162,6 +167,9 @@ class ResourceMonitor {
   std::vector<thermal_t> temp_table_;
   std::vector<freq_t> freq_table_;
   std::vector<thermal_t> target_temp_table_;
+
+  std::string rssi_path_;
+  int32_t rssi_value_ = 0;
 };
 
 } // namespace impl

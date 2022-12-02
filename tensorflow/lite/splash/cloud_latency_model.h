@@ -44,11 +44,14 @@ class CloudLatencyModel : public ILatencyModel {
   // Model parameter
   std::vector<double> model_param_; // [input, output, error]
   void LoadModelParameter(std::string latency_model_path);
-  int64_t EstimateInputSize(const Subgraph* subgraph);
-  int64_t EstimateOutputSize(const Subgraph* subgraph);
+  int64_t EstimateInputSize(Subgraph* subgraph);
+  int64_t EstimateOutputSize(Subgraph* subgraph);
   int64_t GetComputationTime(int model_id);
   int64_t PredictCommunicationTime(Subgraph* subgraph);
   TfLiteStatus UpdateCommunicationModel(Subgraph* subgraph, int64_t communication_time);
+
+  std::unordered_map<int, int64_t> input_size_table_; // {model_id, input}
+  std::unordered_map<int, int64_t> output_size_table_; // {model_id, output}
 };
 
 } // namespace impl

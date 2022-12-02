@@ -30,18 +30,18 @@ class IThermalModel {
 
   // Get an estimation value of future temperature 
   // after executing inference of the input model
-  virtual thermal_t Predict(const Subgraph* subgraph, 
+  virtual thermal_t Predict(Subgraph* subgraph, 
                             const int64_t latency, 
                             std::vector<thermal_t> current_temp) = 0;
 
   // Get an estimation value of target future temperature 
   // after executing inference of the input model
-  virtual thermal_t PredictTarget(const Subgraph* subgraph, 
+  virtual thermal_t PredictTarget(Subgraph* subgraph, 
                                   const int64_t latency, 
                                   std::vector<thermal_t> current_temp) = 0;
 
   // Update model parameters with the prediction error
-  virtual TfLiteStatus Update(Job job, const Subgraph* subgraph) = 0;
+  virtual TfLiteStatus Update(Job job, Subgraph* subgraph) = 0;
 
   virtual TfLiteStatus Close() = 0;
 
@@ -53,8 +53,7 @@ class IThermalModel {
     return resource_monitor_;
   }
 
-  template<typename S, int m, int n>
-  inline static Eigen::Matrix<S, m, n> GetNormalEquation(Eigen::MatrixXd x, Eigen::VectorXd y) {
+  inline static Eigen::MatrixXd GetNormalEquation(Eigen::MatrixXd x, Eigen::VectorXd y) {
     return (x.transpose() * x).ldlt().solve(x.transpose() * y);
   }
 

@@ -54,13 +54,13 @@ void ProcessorThermalModel::LoadModelParameter(string thermal_model_path) {
 }
 
 
-thermal_t ProcessorThermalModel::Predict(const Subgraph* subgraph, 
+thermal_t ProcessorThermalModel::Predict(Subgraph* subgraph, 
                                          const int64_t latency, 
                                          std::vector<thermal_t> current_temp) {
   return PredictTarget(subgraph, latency, current_temp); 
 }
 
-thermal_t ProcessorThermalModel::PredictTarget(const Subgraph* subgraph, 
+thermal_t ProcessorThermalModel::PredictTarget(Subgraph* subgraph, 
                                          const int64_t latency, 
                                          std::vector<thermal_t> current_temp) {
   vector<double> regressor;
@@ -90,7 +90,7 @@ thermal_t ProcessorThermalModel::PredictTarget(const Subgraph* subgraph,
   return (thermal_t) target_future_temperature; 
 }
 
-TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
+TfLiteStatus ProcessorThermalModel::Update(Job job, Subgraph* subgraph) {
   if (minimum_profiled_count_ < minimum_profiled_threshold_) {
     minimum_profiled_count_++;
     return kTfLiteOk;
@@ -114,15 +114,9 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
   }
 
   // Update parameters via normal equation with log table
-  auto theta = GetNormalEquation<double, 1, PARAM_NUM>(X, Y);
-  auto targetTheta = GetNormalEquation<double, 1, TARGET_PARAM_NUM>(targetX, targetY);
-
   Eigen::MatrixXd targetTheta; 
   targetTheta.conservativeResize(param_num_, 1);
-  targetTheta = (targetX.transpose() * targetX).ldlt().solve(targetX.transpose() * targetY);
-  for (auto i = 0; i < model_param_.size(); i++) {
-    model_param_[i] = theta(0, i); 
-  }
+  targetTheta = GetNormalEquation(targetX, targetY);
   for (auto i = 0; i < target_model_param_.size(); i++) {
     target_model_param_[i] = targetTheta(i, 0); 
   }

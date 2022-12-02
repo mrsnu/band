@@ -48,13 +48,13 @@ void CloudThermalModel::LoadModelParameter(string thermal_model_path) {
   }
 }
 
-thermal_t CloudThermalModel::Predict(const Subgraph* subgraph, 
+thermal_t CloudThermalModel::Predict(Subgraph* subgraph, 
                                      const int64_t latency, 
                                      std::vector<thermal_t> current_temp) {
   return PredictTarget(subgraph, latency, current_temp);
 }
 
-thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph, 
+thermal_t CloudThermalModel::PredictTarget(Subgraph* subgraph, 
                                      const int64_t latency, 
                                      std::vector<thermal_t> current_temp) {
   vector<double> regressor;
@@ -62,12 +62,13 @@ thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph,
   if (!is_thermal_model_prepared) {
     return target_temp;
   }
+  int32_t rssi = GetResourceMonitor().GetRSSI();
 
   regressor.push_back(target_temp);
   regressor.insert(regressor.end(), current_temp.begin(), current_temp.end());
   regressor.push_back(EstimateInputSize(subgraph));
   regressor.push_back(EstimateOutputSize(subgraph));
-  regressor.push_back(-49); // RSSI value
+  regressor.push_back(rssi); // RSSI value
   regressor.push_back(latency);
   regressor.push_back(1);
 
@@ -84,32 +85,43 @@ thermal_t CloudThermalModel::PredictTarget(const Subgraph* subgraph,
   return (thermal_t)target_future_temperature; 
 }
 
-int64_t CloudThermalModel::EstimateInputSize(const Subgraph* subgraph) {
+int64_t CloudThermalModel::EstimateInputSize(Subgraph* subgraph) {
+  auto it = input_size_table_.find(subgraph->GetKey().model_id);
+  if (it != input_size_table_.end()) {
+    return it->second;
+  }
   const std::vector<int>& input_tensors = subgraph->inputs();
   int64_t subgraph_input_size = 0;
   for (int tensor_idx : input_tensors) {
     subgraph_input_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
   }
+  input_size_table_[subgraph->GetKey().model_id] = subgraph_input_size;
   return subgraph_input_size;
 }
 
-int64_t CloudThermalModel::EstimateOutputSize(const Subgraph* subgraph) {
+int64_t CloudThermalModel::EstimateOutputSize(Subgraph* subgraph) {
+  auto it = output_size_table_.find(subgraph->GetKey().model_id);
+  if (it != output_size_table_.end()) {
+    return it->second;
+  }
   const std::vector<int>& output_tensors = subgraph->outputs();
   int64_t subgraph_output_size = 0;
   for (int tensor_idx : output_tensors) {
     subgraph_output_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
   }
+  output_size_table_[subgraph->GetKey().model_id] = subgraph_output_size;
   return subgraph_output_size;
 }
 
-TfLiteStatus CloudThermalModel::Update(Job job, const Subgraph* subgraph) {
+TfLiteStatus CloudThermalModel::Update(Job job, Subgraph* subgraph) {
   log_size_++;
   if (log_size_ <= window_size_) {
     targetX.conservativeResize(log_size_, param_num_);
     targetY.conservativeResize(log_size_, 1);
   }
   int log_index = (log_size_ - 1) % window_size_;
-  targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[wid_], EstimateInputSize(subgraph), EstimateOutputSize(subgraph), -49, job.latency, 1.0; // RSSI value
+  int32_t rssi = GetResourceMonitor().GetRSSI(); 
+  targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[wid_], EstimateInputSize(subgraph), EstimateOutputSize(subgraph), rssi, job.latency, 1.0;
   targetY.row(log_index) << job.after_target_temp[wid_];
 
   if (log_size_ < minimum_update_log_size_) {

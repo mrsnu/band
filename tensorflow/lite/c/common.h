@@ -74,10 +74,9 @@ typedef enum TfLiteSchedulerType {
   kMobileOnlyHeft = 1,
   kMobileCloudHeft = 2,
   kRandomAssign = 3,
-  kSplashHeft= 4,
-  kSplashLst= 5,
-  kSplashSlo = 6,
-  kNumSchedulerTypes = 7
+  kSplashWeightedPpt= 4,
+  kSplashSlo = 5,
+  kNumSchedulerTypes = 6
 } TfLiteSchedulerType;
 
 // Forward declare so dependent structs and methods can reference these types

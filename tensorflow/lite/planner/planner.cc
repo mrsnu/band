@@ -99,7 +99,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
     return kTfLiteError;
   }
 
-  LOGI("Planner init");
+  LOGI("Planner init : scheduler = %d", schedulers[0]);
   bool is_thermal_aware = false;
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
@@ -112,14 +112,12 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
       is_thermal_aware = true;
-    } else if (schedulers[i] == kSplashHeft) {
+    } else if (schedulers[i] == kSplashWeightedPpt) {
       is_thermal_aware = true;
-      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
-    } else if (schedulers[i] == kSplashLst) {
-      is_thermal_aware = true;
-      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
+      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_, resource_config));
     } else if (schedulers[i] == kSplashSlo) {
       LOGI("SplashSLO");
+      is_thermal_aware = true;
       schedulers_.emplace_back(new ThermalAwareSloScheduler(this, model_manager_));
     } else {
       return kTfLiteError;
