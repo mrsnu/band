@@ -34,6 +34,8 @@ class CloudThermalModel : public IThermalModel {
 
   TfLiteStatus Close() override;
 
+  TfLiteStatus Close() override;
+
  private:
   // Log buffer
   Eigen::MatrixXd targetX;

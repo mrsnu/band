@@ -74,7 +74,10 @@ int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
   if (model_latency_temp != model_latency->second.end()) {
     return model_latency_temp->second;
   } else {
-    return FindNearestValue(model_id, target_temp);
+    if (is_thermal_aware_) {
+      return FindNearestValue(model_id, target_temp);
+    }
+    else return 0;
   }
 }
 

@@ -45,6 +45,8 @@ class IThermalModel {
 
   virtual TfLiteStatus Close() = 0;
 
+  virtual TfLiteStatus Close() = 0;
+
   worker_id_t GetWorkerId() {
     return wid_;
   }

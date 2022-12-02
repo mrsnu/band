@@ -33,13 +33,9 @@ TfLiteStatus ProcessorThermalModel::Init(ResourceConfig& config) {
 }
 
 void ProcessorThermalModel::LoadModelParameter(string thermal_model_path) {
-  LOGI("[ProcessorThermalModel] LoadModelParameter init");
   Json::Value model_param = LoadJsonObjectFromFile(thermal_model_path); 
-  LOGI("[ProcessorThermalModel] load json done");
   for (auto worker_id_it = model_param.begin(); worker_id_it != model_param.end(); ++worker_id_it) {
-    LOGI("[ProcessorThermalModel] here");
     int worker_id = std::atoi(worker_id_it.key().asString().c_str());
-    LOGI("[ProcessorThermalModel] load worker %d", worker_id);
     if (worker_id != wid_) {
       continue;
     }
@@ -128,6 +124,20 @@ TfLiteStatus ProcessorThermalModel::Close() {
   if (!is_thermal_model_prepared) {
     return kTfLiteOk;
   }
+  Json::Value root;
+  if (wid_ != 0) {
+    root = LoadJsonObjectFromFile(model_path_); 
+  }
+  Json::Value param;
+  for (int i = 0; i < target_model_param_.size(); i++) {
+    param.append(target_model_param_[i]); 
+  } 
+  root[std::to_string(wid_)] = param;
+  WriteJsonObjectToFile(root, model_path_);
+  return kTfLiteOk;
+}
+
+TfLiteStatus ProcessorThermalModel::Close() {
   Json::Value root;
   if (wid_ != 0) {
     root = LoadJsonObjectFromFile(model_path_); 

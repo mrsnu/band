@@ -154,5 +154,16 @@ TfLiteStatus CloudThermalModel::Close() {
   return kTfLiteOk;
 }
 
+TfLiteStatus CloudThermalModel::Close() {
+  Json::Value root= LoadJsonObjectFromFile(model_path_); 
+  Json::Value param;
+  for (int i = 0; i < target_model_param_.size(); i++) {
+    param.append(target_model_param_[i]); 
+  } 
+  root[std::to_string(wid_)] = param;
+  WriteJsonObjectToFile(root, model_path_);
+  return kTfLiteOk;
+}
+
 } // namespace impl
 } // namespace tflite
