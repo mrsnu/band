@@ -1,4 +1,6 @@
-#include "tensorflow/lite/planner/thermal_aware_scheduler.h"
+#include "tensorflow/lite/planner/thermal_aware_slo_scheduler.h"
+
+#include <float.h>
 
 #include "tensorflow/lite/profiling/time.h"
 #if defined(__ANDROID__)
@@ -11,7 +13,7 @@
 namespace tflite {
 namespace impl {
 
-void ThermalAwareScheduler::Schedule(JobQueue& requests) {
+void ThermalAwareSloScheduler::Schedule(JobQueue& requests) {
   while (!requests.empty()) {
     planner_->UpdateWorkerWaitingTime();
     std::set<int> idle_workers = planner_->GetIdleAllWorkers();
@@ -23,7 +25,7 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
     requests.pop_front();
 
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
-    std::pair<int, double> best_subgraph = GetMaxPptSubgraphIdx(job, waiting_time);
+    std::pair<int, double> best_subgraph = GetMinCostSubgraphIdx(job, waiting_time);
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
 
@@ -35,9 +37,9 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
   }
 }
 
-std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting) {
-  double max_ppt = -DBL_MAX;
-  int max_idx = -1;
+std::pair<int, double> ThermalAwareSloScheduler::GetMinCostSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting) {
+  double min_slo_cost = DBL_MAX;
+  int min_idx = -1;
 
   std::vector<int> subgraph_indices = GetInterpreter()->GetSubgraphIndices(job.model_id);
   for (auto subgraph_index : subgraph_indices) {
@@ -55,25 +57,21 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
     if (temp_diff <= 0) {
       temp_diff = 1; // epsilon value
     }
-    // LOGI("temp_diff= %d", temp_diff);
 
-    double config = 0.3;
-    double thermal_efficiency = 1 / (double)temp_diff * (double)1000;
-    double ppt = (1.0 - config) * thermal_efficiency - config * (double)total; // Note that this can be negatvie value!
-    // double ppt = thermal_efficiency / (double)total;
-    // LOGI("thermal_Efficiency = %f", thermal_efficiency);
-    // LOGI("latency = %lld", total);
-    // LOGI("ppt = %f", ppt);
-    job.estimated_ppt.push_back(ppt);
+    double eta = (double) 1 / 1000.;
+    double slo_cost = (double) temp_diff + (double) std::max(0L, total - job.slo_us);
+    LOGI("SLO cost: %lf", slo_cost);
+
+    job.estimated_slo_cost.push_back(slo_cost);
     job.estimated_temp_diff.push_back(temp_diff);
     job.estimated_total_latency.push_back(total);
 
-    if (max_ppt < ppt) {
-      max_ppt = ppt;
-      max_idx = subgraph_index;
+    if (min_slo_cost > slo_cost) {
+      min_slo_cost = slo_cost;
+      min_idx = subgraph_index;
     }
   }
-  return { max_idx, max_ppt };
+  return { min_idx, min_slo_cost };
 }
 
 }  // namespace impl

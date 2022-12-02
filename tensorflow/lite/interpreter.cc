@@ -47,6 +47,8 @@ limitations under the License.
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
 #define TFLITE_IS_MOBILE_PLATFORM
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif  // defined(__ANDROID__)
 
 #if defined(__APPLE__)
@@ -952,7 +954,6 @@ void Interpreter::ProfileOnline(int model_id,
 
         moving_averaged_latencies_[sub_idx] = latency;
         profile_database_[key] = latency;
-        planner_->GetModelManager()->ProfileLatency(subgraph, latency);
 
         TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                    "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
@@ -1096,7 +1097,6 @@ void Interpreter::ProfileOffline(int model_id,
       // then reuse it to reduce initialization time
       int64_t profiled_latency = it->second;
       moving_averaged_latencies_[sub_idx] = profiled_latency;
-      planner_->GetModelManager()->ProfileLatency(subgraph, profiled_latency);
 
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                  "Reusing profiled result\n model=%d avg=%d us worker=%d "
@@ -1122,7 +1122,6 @@ void Interpreter::ProfileOffline(int model_id,
 
       moving_averaged_latencies_[sub_idx] = latency;
       profile_database_[key] = latency;
-      planner_->GetModelManager()->ProfileLatency(subgraph, latency);
 
       TFLITE_LOG_INTERNAL(TFLITE_LOG_INFO,
                  "Profiling result\n model=%d avg=%d us worker=%d "

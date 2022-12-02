@@ -27,6 +27,13 @@ limitations under the License.
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/util.h"
 
+#if defined(__ANDROID__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
+#include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
+#endif // defined(__ANDROID__)
+
 namespace tflite {
 
 namespace impl {
@@ -1391,7 +1398,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
   TF_LITE_ENSURE_STATUS(RedoAllDelegates());
 
   if (state_ == kStateInvokableAndImmutable) {
-    ReportError(
+    LOGI(
         "ModifyGraphWithDelegate is disallowed when graph is immutable.");
     return kTfLiteError;
   }
@@ -1404,7 +1411,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
       // Make sure that we are in a defined ready state before returning.
       // Plan and allocate tensors before returning.
       TF_LITE_ENSURE_OK(&context_, EnsureMemoryAllocations());
-      ReportError(
+      LOGI(
           "Attempting to use a delegate that only supports static-sized "
           "tensors with a graph that has dynamic-sized tensors.");
       return kTfLiteError;
@@ -1427,7 +1434,7 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
   auto reset_delegation_if_not_ok = [this](TfLiteStatus status) {
     if (status != kTfLiteOk) {
       TF_LITE_ENSURE_STATUS(RemoveAllDelegates());
-      ReportError(
+      LOGI(
           "Restored original execution plan after delegate application "
           "failure.");
       return kTfLiteDelegateError;
@@ -1436,7 +1443,6 @@ TfLiteStatus Subgraph::ModifyGraphWithDelegate(TfLiteDelegate* delegate) {
   };
 
   TfLiteStatus status = delegate->Prepare(&context_, delegate);
-
   // Remove additional context info.
   SwitchToKernelContext();
 

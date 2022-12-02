@@ -9,15 +9,17 @@ namespace impl {
 
 class ThermalAwareScheduler : public Scheduler {
  public:
-  explicit ThermalAwareScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner) {
-    need_profile_ = true;
+  explicit ThermalAwareScheduler(Planner* planner, ModelManager* model_manager, ResourceConfig config) : Scheduler(planner) {
+    need_profile_ = false;
     worker_type_ = kDeviceQueue;
     model_manager_ = model_manager;
+    eta_ = config.weighted_ppt_config;
   }
   void Schedule(JobQueue& requests) override;
 
  private:
   ModelManager * model_manager_;
+  float eta_;
 
   std::pair<int, double> GetMaxPptSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting);
 };

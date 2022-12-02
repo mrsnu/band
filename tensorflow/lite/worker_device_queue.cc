@@ -8,6 +8,8 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 namespace tflite {
@@ -38,8 +40,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   Interpreter* interpreter = planner->GetInterpreter();
 
   int64_t total = 0;
-  for (JobQueue::iterator it = requests_.begin();
-       it != requests_.end(); ++it) {
+  for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
     Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
     int64_t expected_latency =
       planner->GetModelManager()->GetPredictedLatency(it->worker_id, current_subgraph);

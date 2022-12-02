@@ -11,10 +11,9 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
-
-#define PARAM_NUM 9
-#define TARGET_PARAM_NUM 10
 
 namespace tflite {
 namespace impl {
@@ -25,12 +24,8 @@ using namespace Eigen;
 TfLiteStatus ProcessorThermalModel::Init(ResourceConfig& config) {
   int temp_size = GetResourceMonitor().GetAllTemperature().size();
   int freq_size = GetResourceMonitor().GetAllFrequency().size();
-  int param_num = temp_size + freq_size + 2; 
-  if (param_num != PARAM_NUM) {
-    LOGI("[Error] ProcessorThermalModel - param size error");
-  }
-  model_param_ = vector<double>(PARAM_NUM, 1.);
-  target_model_param_ = vector<double>(TARGET_PARAM_NUM, 1.);
+  param_num_ = 1 + temp_size + freq_size + 2; 
+  target_model_param_ = vector<double>(param_num_, 1.);
   window_size_ = config.model_update_window_size;
   model_path_ = config.thermal_model_param_path;
   LoadModelParameter(model_path_);
@@ -49,49 +44,24 @@ void ProcessorThermalModel::LoadModelParameter(string thermal_model_path) {
     for (auto it = param.begin(); it != param.end(); it++) {
       LOGI("[ProcessorThermalModel][%d] model_param : %f", it - param.begin(), (*it).asDouble());
       target_model_param_[it - param.begin()] = (*it).asDouble();
+      is_thermal_model_prepared = true;
     }
   }
 }
 
 
-thermal_t ProcessorThermalModel::Predict(const Subgraph* subgraph, 
+thermal_t ProcessorThermalModel::Predict(Subgraph* subgraph, 
                                          const int64_t latency, 
                                          std::vector<thermal_t> current_temp) {
-  vector<double> regressor;
-  if (log_size_ < minimum_log_size_) {
-    // Just return current temp
-    return current_temp[wid_];
-  }
-
-  // Get temperature from resource monitor
-  regressor.insert(regressor.end(), current_temp.begin(), current_temp.end());
-
-  // Get frequency 
-  vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
-  regressor.insert(regressor.end(), freq.begin(), freq.end());
-
-  regressor.push_back(latency);
-  regressor.push_back(1);
-
-  double future_temperature = 0;
-
-  if (regressor.size() != model_param_.size()) {
-    LOGI("[ProcessorThermalModel] Error!!: regressor.size()[%d] != model_param_.size()[%d]", regressor.size(), model_param_.size());
-    return future_temperature;
-  }
-
-  for (int i = 0; i < regressor.size(); i++) {
-    future_temperature += regressor[i] * model_param_[i];
-  }
-  return (thermal_t) future_temperature; 
+  return PredictTarget(subgraph, latency, current_temp); 
 }
 
-thermal_t ProcessorThermalModel::PredictTarget(const Subgraph* subgraph, 
+thermal_t ProcessorThermalModel::PredictTarget(Subgraph* subgraph, 
                                          const int64_t latency, 
                                          std::vector<thermal_t> current_temp) {
   vector<double> regressor;
   thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_);
-  if (log_size_ < minimum_log_size_) {
+  if (!is_thermal_model_prepared) {
     // Just return current temp
     return target_temp;
   }
@@ -116,19 +86,23 @@ thermal_t ProcessorThermalModel::PredictTarget(const Subgraph* subgraph,
   return (thermal_t) target_future_temperature; 
 }
 
-TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
+TfLiteStatus ProcessorThermalModel::Update(Job job, Subgraph* subgraph) {
+  if (minimum_profiled_count_ < minimum_profiled_threshold_) {
+    minimum_profiled_count_++;
+    return kTfLiteOk;
+  }
   log_size_++;
   if (log_size_ <= window_size_) {
-    X.conservativeResize(log_size_, PARAM_NUM);
-    targetX.conservativeResize(log_size_, TARGET_PARAM_NUM);
-    Y.conservativeResize(log_size_, 1);
+    targetX.conservativeResize(log_size_, param_num_);
     targetY.conservativeResize(log_size_, 1);
   }
   int log_index = (log_size_ - 1) % window_size_;
-  X.row(log_index) << job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], job.frequency[0], job.frequency[1], job.latency, 1.0;
   targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], job.frequency[0], job.frequency[1], job.latency, 1.0;
-  Y.row(log_index) << job.after_temp[wid_];
-  targetY.row(log_index) << job.after_target_temp[wid_];
+  if (job.after_target_temp[wid_] < job.before_target_temp[wid_]) {
+    targetY.row(log_index) << job.before_target_temp[wid_];
+  } else {
+    targetY.row(log_index) << job.after_target_temp[wid_];
+  }
 
   if (log_size_ < minimum_update_log_size_) {
     LOGI("ProcessorThermalModel::Update Not enough data : %d", log_size_);
@@ -136,18 +110,20 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, const Subgraph* subgraph) {
   }
 
   // Update parameters via normal equation with log table
-  Eigen::Matrix<double, 1, PARAM_NUM> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
-  Eigen::Matrix<double, 1, TARGET_PARAM_NUM> targetTheta = (targetX.transpose() * targetX).ldlt().solve(targetX.transpose() * targetY);
-  for (auto i = 0; i < model_param_.size(); i++) {
-    model_param_[i] = theta(0, i); 
-  }
+  Eigen::MatrixXd targetTheta; 
+  targetTheta.conservativeResize(param_num_, 1);
+  targetTheta = GetNormalEquation(targetX, targetY);
   for (auto i = 0; i < target_model_param_.size(); i++) {
-    target_model_param_[i] = targetTheta(0, i); 
+    target_model_param_[i] = targetTheta(i, 0); 
   }
+  is_thermal_model_prepared = true;
   return kTfLiteOk;
 }
 
 TfLiteStatus ProcessorThermalModel::Close() {
+  if (!is_thermal_model_prepared) {
+    return kTfLiteOk;
+  }
   Json::Value root;
   if (wid_ != 0) {
     root = LoadJsonObjectFromFile(model_path_); 

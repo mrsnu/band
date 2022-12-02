@@ -84,6 +84,8 @@ struct ResourceConfig {
   std::string latency_model_param_path;
   std::string cloud_latency_model_param_path;
   std::string thermal_model_param_path;
+  float weighted_ppt_config = 0.3;
+  std::string rssi_path;
 };
 
 struct RuntimeConfig {

@@ -8,11 +8,14 @@
 #include "tensorflow/lite/planner/mobile_cloud_heft_scheduler.h"
 #include "tensorflow/lite/planner/random_assign_scheduler.h"
 #include "tensorflow/lite/planner/thermal_aware_scheduler.h"
+#include "tensorflow/lite/planner/thermal_aware_slo_scheduler.h"
 #include "tensorflow/lite/profiling/time.h"
 
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 namespace tflite {
@@ -66,16 +69,19 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
              << "estimated_temp\t"
              << "before_target_temp\t"
              << "after_target_temp\t"
+             << "\t"
              << "est_ppt_cpu\t"
              << "est_ppt_gpu\t"
              << "est_ppt_dsp\t"
              << "est_ppt_npu\t"
              << "est_ppt_cloud\t"
+             << "\t"
              << "est_temp_diff_cpu\t"
              << "est_temp_diff_gpu\t"
              << "est_temp_diff_dsp\t"
              << "est_temp_diff_npu\t"
              << "est_temp_diff_cloud\t"
+             << "\t"
              << "est_total_latency_cpu\t"
              << "est_total_latency_gpu\t"
              << "est_total_latency_dsp\t"
@@ -93,7 +99,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
     return kTfLiteError;
   }
 
-  LOGI("Planner init");
+  LOGI("Planner init : scheduler = %d", schedulers[0]);
   bool is_thermal_aware = false;
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
@@ -105,12 +111,14 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
       schedulers_.emplace_back(new MobileCloudHeftScheduler(this, model_manager_));
     } else if (schedulers[i] == kRandomAssign) {
       schedulers_.emplace_back(new RandomAssignScheduler(this));
-    } else if (schedulers[i] == kSplashHeft) {
       is_thermal_aware = true;
-      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
-    } else if (schedulers[i] == kSplashLst) {
+    } else if (schedulers[i] == kSplashWeightedPpt) {
       is_thermal_aware = true;
-      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_));
+      schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_, resource_config));
+    } else if (schedulers[i] == kSplashSlo) {
+      LOGI("SplashSLO");
+      is_thermal_aware = true;
+      schedulers_.emplace_back(new ThermalAwareSloScheduler(this, model_manager_));
     } else {
       return kTfLiteError;
     }
@@ -425,6 +433,7 @@ void Planner::FlushFinishedJobs() {
                << job.estimated_temp << "\t"
                << job.before_target_temp[job.worker_id] << "\t"
                << job.after_target_temp[job.worker_id] << "\t";
+      log_file << "\t";
       if (job.estimated_ppt.size() != 0) {
         log_file << job.estimated_ppt[kTfLiteCPU] << "\t"
                << job.estimated_ppt[kTfLiteGPU] << "\t"
@@ -432,6 +441,15 @@ void Planner::FlushFinishedJobs() {
                << job.estimated_ppt[kTfLiteNPU] << "\t"
                << job.estimated_ppt[kTfLiteCLOUD] << "\t";
       }
+      log_file << "\t";
+      if (job.estimated_slo_cost.size() != 0) {
+        log_file << job.estimated_slo_cost[kTfLiteCPU] << "\t"
+               << job.estimated_slo_cost[kTfLiteGPU] << "\t"
+               << job.estimated_slo_cost[kTfLiteDSP] << "\t"
+               << job.estimated_slo_cost[kTfLiteNPU] << "\t"
+               << job.estimated_slo_cost[kTfLiteCLOUD] << "\t";
+      }
+      log_file << "\t";
       if (job.estimated_temp_diff.size() != 0) {
         log_file << job.estimated_temp_diff[kTfLiteCPU] << "\t"
                << job.estimated_temp_diff[kTfLiteGPU] << "\t"
@@ -439,6 +457,7 @@ void Planner::FlushFinishedJobs() {
                << job.estimated_temp_diff[kTfLiteNPU] << "\t"
                << job.estimated_temp_diff[kTfLiteCLOUD] << "\t";
       }
+      log_file << "\t";
       if (job.estimated_total_latency.size() != 0) {
         log_file << job.estimated_total_latency[kTfLiteCPU] << "\t"
                << job.estimated_total_latency[kTfLiteGPU] << "\t"

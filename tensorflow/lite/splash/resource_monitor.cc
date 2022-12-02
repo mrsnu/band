@@ -7,6 +7,8 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 namespace tflite {
 namespace impl {
@@ -35,10 +37,11 @@ TfLiteStatus ResourceMonitor::Init(ResourceConfig& config) {
     LOGI("target_threshold value : %d", config.target_threshold[i]);
     SetTargetThreshold(i, config.target_threshold[i]);
   }
-  LOGI("Init ends");
-  monitor_thread_ = std::thread([this] { this->Monitor(); });
+  rssi_path_ = config.rssi_path;
   cpu_set_ = impl::TfLiteCPUMaskGetSet(kTfLiteLittle);
   need_cpu_update_ = true;
+  monitor_thread_ = std::thread([this] { this->Monitor(); });
+  LOGI("Init ends");
   return kTfLiteOk;
 }
 
@@ -62,6 +65,7 @@ void ResourceMonitor::Monitor() {
     for (int i = 0; i < freq_table_.size(); i++) {
       freq_table_[i] = ParseFrequency(i);
     }
+    rssi_value_ = ParseRSSI();
     // lock.unlock();
     // std::this_thread::sleep_for(std::chrono::microseconds(300));
     // LOGI("[%lld], %d", profiling::time::NowMicros(), temp_table_[kTfLiteCPU]);
@@ -103,6 +107,16 @@ freq_t ResourceMonitor::ParseFrequency(worker_id_t wid) {
   std::ifstream fin;
   freq_t freq_curr = -1;
   fin.open(GetFreqPath(wid));
+  if (fin.is_open()) {
+    fin >> freq_curr;
+  }
+  return freq_curr;
+}
+
+int32_t ResourceMonitor::ParseRSSI() {
+  std::ifstream fin;
+  int32_t freq_curr = -1;
+  fin.open(rssi_path_);
   if (fin.is_open()) {
     fin >> freq_curr;
   }

@@ -1,6 +1,8 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 #define MAX_FILE_SIZE 102400
@@ -42,8 +44,34 @@ int64_t DeviceQueueOffloadingWorker::GetWaitingTime() {
   if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
   }
-  // TODO: not implemented yet 
-  return 1000000 * requests_.size();
+
+  std::shared_ptr<Planner> planner = planner_.lock();
+  if (!planner) {
+    return -1;
+  }
+  Interpreter* interpreter = planner->GetInterpreter();
+
+  int64_t total = 0;
+  for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
+    Subgraph* current_subgraph = interpreter->subgraph(it->subgraph_idx);
+    int64_t expected_latency =
+      planner->GetModelManager()->GetPredictedLatency(it->worker_id, current_subgraph);
+
+    total += expected_latency;
+    if (it == requests_.begin()) {
+      int64_t current_time = profiling::time::NowMicros();
+      int64_t invoke_time = (*it).invoke_time;
+      if (invoke_time > 0 && current_time > invoke_time) {
+        int64_t progress =
+          (current_time - invoke_time) > expected_latency ? expected_latency
+                                              : (current_time - invoke_time);
+        total -= progress;
+      }
+    }
+  }
+  lock.unlock();
+
+  return total;
 }
 
 bool DeviceQueueOffloadingWorker::GiveJob(Job& job) {

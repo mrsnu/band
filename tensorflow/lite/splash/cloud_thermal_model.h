@@ -22,15 +22,15 @@ class CloudThermalModel : public IThermalModel {
 
   TfLiteStatus Init(ResourceConfig& config) override;
 
-  thermal_t Predict(const Subgraph* subgraph, 
+  thermal_t Predict(Subgraph* subgraph, 
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
-  thermal_t PredictTarget(const Subgraph* subgraph, 
+  thermal_t PredictTarget(Subgraph* subgraph, 
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
-  TfLiteStatus Update(Job job, const Subgraph* subgraph) override;
+  TfLiteStatus Update(Job job, Subgraph* subgraph) override;
 
   TfLiteStatus Close() override;
 
@@ -43,15 +43,18 @@ class CloudThermalModel : public IThermalModel {
   int param_num_ = 0;
   std::string model_path_;
 
-  const int minimum_log_size_ = 1;
+  bool is_thermal_model_prepared = false; 
   const int minimum_update_log_size_ = 50;
   
   // Target Model parameter
   std::vector<double> target_model_param_; // [temp_target, temp_cloud, input, output, rssi, latency, error]
 
   void LoadModelParameter(string thermal_model_path);
-  int64_t EstimateInputSize(const Subgraph* subgraph);
-  int64_t EstimateOutputSize(const Subgraph* subgraph);
+  int64_t EstimateInputSize(Subgraph* subgraph);
+  int64_t EstimateOutputSize(Subgraph* subgraph);
+
+  std::unordered_map<int, int64_t> input_size_table_; // {model_id, input}
+  std::unordered_map<int, int64_t> output_size_table_; // {model_id, output}
 };
 
 } // namespace impl

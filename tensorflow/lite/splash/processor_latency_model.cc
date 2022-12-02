@@ -9,6 +9,8 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 namespace tflite {
@@ -60,11 +62,13 @@ int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
   auto it = model_latency_table_.find(model_id);
   auto model_count = minimum_profiled_count_.find(model_id);
   if (model_count == minimum_profiled_count_.end() || model_count->second < minimum_profiled_threshold_) {
+    // No model or has model but less than minimum
     return 0;
   }
   auto model_latency = model_latency_table_.find(model_id); 
   if (model_latency == model_latency_table_.end()) {
-    return 0; // Minimum value to be selected
+    // No model
+    return 0;
   }
   auto model_latency_temp = model_latency->second.find(target_temp);
   if (model_latency_temp != model_latency->second.end()) {
@@ -81,10 +85,17 @@ int64_t ProcessorLatencyModel::FindNearestValue(int model_id, thermal_t target_t
   auto model_latency = model_latency_table_.find(model_id); 
   for (thermal_t i = target_temp ; i >= 0 ; i--) {
     auto model_latency_temp = model_latency->second.find(i);
-    if (model_latency_temp != model_latency->second.end()) {
+    if (model_latency_temp != model_latency->second.end() && model_latency_temp->second > 0) {
       return model_latency_temp->second;
     } 
   }
+  for (thermal_t i = target_temp ; i <= 100 ; i++) {
+    auto model_latency_temp = model_latency->second.find(i);
+    if (model_latency_temp != model_latency->second.end() && model_latency_temp->second > 0) {
+      return model_latency_temp->second;
+    } 
+  }
+  return 0;
 }
 
 TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
@@ -105,17 +116,22 @@ TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
   auto it = model_latency_table_.find(model_id);
   if (it != model_latency_table_.end()) {
     auto latency = it->second.find(target_temp);
+    auto prev_latency = 0;
     if (latency != it->second.end()) {
-      int64_t prev_latency = latency->second;
-      model_latency_table_[model_id][target_temp] =
-          smoothing_factor_ * job.latency +
-          (1 - smoothing_factor_) * prev_latency;
-      auto count = minimum_profiled_count_[model_id];
-      if (count <= minimum_profiled_threshold_) {
-        minimum_profiled_count_[model_id] = count + 1;
-      }
+      prev_latency = latency->second;
     } else {
-      model_latency_table_[model_id][target_temp] = 0; 
+      prev_latency = FindNearestValue(model_id, target_temp);
+    }
+    if (prev_latency == 0) {
+      model_latency_table_[model_id][target_temp] = job.latency;  
+    } else {
+      if (job.latency > prev_latency * 3) return kTfLiteOk; // Outlier
+      model_latency_table_[model_id][target_temp] = 
+          smoothing_factor_ * job.latency + (1 - smoothing_factor_) * prev_latency; 
+    }
+    auto count = minimum_profiled_count_[model_id];
+    if (count <= minimum_profiled_threshold_) {
+      minimum_profiled_count_[model_id] = count + 1;
     }
   } else {
     model_latency_table_[model_id] = std::unordered_map<int, int64_t>(); 

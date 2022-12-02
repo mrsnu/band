@@ -10,6 +10,8 @@
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 namespace tflite {
@@ -132,23 +134,31 @@ TfLiteStatus CloudLatencyModel::UpdateCommunicationModel(Subgraph* subgraph, int
   return kTfLiteOk;
 }
 
-int64_t CloudLatencyModel::EstimateInputSize(const Subgraph* subgraph) {
-  // TODO: Add input tensors without weights.
+int64_t CloudLatencyModel::EstimateInputSize(Subgraph* subgraph) {
+  auto it = input_size_table_.find(subgraph->GetKey().model_id);
+  if (it != input_size_table_.end()) {
+    return it->second;
+  }
   const std::vector<int>& input_tensors = subgraph->inputs();
   int64_t subgraph_input_size = 0;
   for (int tensor_idx : input_tensors) {
     subgraph_input_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
   }
+  input_size_table_[subgraph->GetKey().model_id] = subgraph_input_size;
   return subgraph_input_size;
 }
 
-int64_t CloudLatencyModel::EstimateOutputSize(const Subgraph* subgraph) {
-  // TODO: Add output tensors without weights.
+int64_t CloudLatencyModel::EstimateOutputSize(Subgraph* subgraph) {
+  auto it = output_size_table_.find(subgraph->GetKey().model_id);
+  if (it != output_size_table_.end()) {
+    return it->second;
+  }
   const std::vector<int>& output_tensors = subgraph->outputs();
   int64_t subgraph_output_size = 0;
   for (int tensor_idx : output_tensors) {
     subgraph_output_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
   }
+  output_size_table_[subgraph->GetKey().model_id] = subgraph_output_size;
   return subgraph_output_size;
 }
 

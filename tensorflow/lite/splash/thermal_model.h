@@ -4,9 +4,15 @@
 #include <vector>
 #include <string>
 
+#include "third_party/eigen3/Eigen/Core"
+#include "third_party/eigen3/Eigen/Cholesky"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/config.h"
 #include "tensorflow/lite/splash/resource_monitor.h"
+
+using Eigen::Matrix;
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
 
 namespace tflite {
 namespace impl {
@@ -24,18 +30,18 @@ class IThermalModel {
 
   // Get an estimation value of future temperature 
   // after executing inference of the input model
-  virtual thermal_t Predict(const Subgraph* subgraph, 
+  virtual thermal_t Predict(Subgraph* subgraph, 
                             const int64_t latency, 
                             std::vector<thermal_t> current_temp) = 0;
 
   // Get an estimation value of target future temperature 
   // after executing inference of the input model
-  virtual thermal_t PredictTarget(const Subgraph* subgraph, 
+  virtual thermal_t PredictTarget(Subgraph* subgraph, 
                                   const int64_t latency, 
                                   std::vector<thermal_t> current_temp) = 0;
 
   // Update model parameters with the prediction error
-  virtual TfLiteStatus Update(Job job, const Subgraph* subgraph) = 0;
+  virtual TfLiteStatus Update(Job job, Subgraph* subgraph) = 0;
 
   virtual TfLiteStatus Close() = 0;
 
@@ -45,6 +51,10 @@ class IThermalModel {
 
   ResourceMonitor& GetResourceMonitor() {
     return resource_monitor_;
+  }
+
+  inline static Eigen::MatrixXd GetNormalEquation(Eigen::MatrixXd x, Eigen::VectorXd y) {
+    return (x.transpose() * x).ldlt().solve(x.transpose() * y);
   }
 
  protected:

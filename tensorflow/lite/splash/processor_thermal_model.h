@@ -22,15 +22,15 @@ class ProcessorThermalModel : public IThermalModel {
 
   TfLiteStatus Init(ResourceConfig& config) override;
 
-  thermal_t Predict(const Subgraph* subgraph, 
+  thermal_t Predict(Subgraph* subgraph, 
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
-  thermal_t PredictTarget(const Subgraph* subgraph, 
+  thermal_t PredictTarget(Subgraph* subgraph, 
                     const int64_t latency, 
                     std::vector<thermal_t> current_temp) override;
 
-  TfLiteStatus Update(Job job, const Subgraph* subgraph) override;
+  TfLiteStatus Update(Job job, Subgraph* subgraph) override;
 
   TfLiteStatus Close() override;
  
@@ -44,8 +44,10 @@ class ProcessorThermalModel : public IThermalModel {
   int window_size_;
   int param_num_ = 0;
 
-  const int minimum_log_size_ = 1;
+  bool is_thermal_model_prepared = false; 
   const int minimum_update_log_size_ = 50;
+  int minimum_profiled_count_ = 0; 
+  int minimum_profiled_threshold_ = 5;
   std::string model_path_;
   
   // Model parameter

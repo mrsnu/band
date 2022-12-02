@@ -22,6 +22,8 @@ limitations under the License.
 #if defined(__ANDROID__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "libtflite", __VA_ARGS__)
 #include <android/log.h>
+#else
+#define LOGI(...) printf(__VA_ARGS__)
 #endif // defined(__ANDROID__)
 
 namespace tflite {
@@ -243,6 +245,13 @@ TfLiteStatus ParseRuntimeConfigFromJsonObject(const Json::Value& root,
   }
   if (!root["thermal_model_param_path"].isNull()) {
     resource_config.thermal_model_param_path = root["thermal_model_param_path"].asString();
+  }
+
+  if (!root["weighted_ppt_config"].isNull()) {
+    resource_config.weighted_ppt_config = root["weighted_ppt_config"].asFloat();
+  }
+  if (!root["rssi_path"].isNull()) {
+    resource_config.rssi_path = root["rssi_path"].asString();
   }
 
   return kTfLiteOk;
