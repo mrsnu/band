@@ -59,7 +59,7 @@ std::pair<int, double> ThermalAwareSloScheduler::GetMinCostSubgraphIdx(Job& job,
     }
 
     double eta = (double) 1 / 1000.;
-    double slo_cost = (double) temp_diff + (double) std::max(0L, total - job.slo_us);
+    double slo_cost = (double) temp_diff + eta * (double) std::max(0L, total - job.slo_us);
     LOGI("SLO cost: %lf", slo_cost);
 
     job.estimated_slo_cost.push_back(slo_cost);
