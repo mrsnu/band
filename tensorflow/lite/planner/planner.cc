@@ -224,10 +224,10 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
       for (auto request : requests) {
-        if (IsSLOViolated(request)) {
-          HandleSLOViolatedJob(request);
-          continue;
-        }
+        // if (IsSLOViolated(request)) {
+        //   HandleSLOViolatedJob(request);
+        //   continue;
+        // }
         if (!worker->GiveJob(request)) {
           PrepareReenqueue(request);
           EnqueueRequest(request, true);
