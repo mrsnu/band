@@ -90,7 +90,7 @@ thermal_t ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgr
 
 std::pair<thermal_t, int64_t>
 ModelManager::GetPredictedTempAndLatency(worker_id_t wid, Subgraph* subgraph) {
-  std::vector<thermal_t> before_temp = resource_monitor_.GetAllTargetTemperature();
+  std::vector<thermal_t> before_temp = resource_monitor_.GetAllTemperature();
   auto latency = GetPredictedLatency(wid, subgraph);
   auto future_temp = thermal_models_[wid]->PredictTarget(subgraph, latency, before_temp);
   thermal_t temp_diff = future_temp - before_temp[wid];
