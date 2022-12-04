@@ -56,7 +56,7 @@ void ProcessorLatencyModel::LoadModelParameter(string latency_model_path) {
 int64_t ProcessorLatencyModel::Predict(Subgraph* subgraph) {
   thermal_t target_temp = 25;
   if (is_thermal_aware_) {
-    target_temp = GetResourceMonitor().GetTargetTemperature(wid_) / 1000; 
+    target_temp = GetResourceMonitor().GetTemperature(wid_) / 1000; 
   } 
   int model_id = subgraph->GetKey().model_id;
   auto it = model_latency_table_.find(model_id);
@@ -99,7 +99,7 @@ int64_t ProcessorLatencyModel::FindNearestValue(int model_id, thermal_t target_t
 }
 
 TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
-  thermal_t target_temp = GetResourceMonitor().GetTargetTemperature(wid_) / 1000; 
+  thermal_t target_temp = GetResourceMonitor().GetTemperature(wid_) / 1000; 
   if (model_latency_table_.find(model_id) == model_latency_table_.end()) {
     model_latency_table_[model_id] = std::unordered_map<int, int64_t>();
   }
@@ -110,7 +110,7 @@ TfLiteStatus ProcessorLatencyModel::Profile(int32_t model_id, int64_t latency) {
 TfLiteStatus ProcessorLatencyModel::Update(Job job, Subgraph* subgraph) {
   thermal_t target_temp = 25;
   if (is_thermal_aware_) {
-    target_temp = GetResourceMonitor().GetTargetTemperature(wid_) / 1000; 
+    target_temp = GetResourceMonitor().GetTemperature(wid_) / 1000; 
   }
   int model_id = job.model_id;
   auto it = model_latency_table_.find(model_id);

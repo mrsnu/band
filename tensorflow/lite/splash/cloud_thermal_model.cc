@@ -24,7 +24,8 @@ using namespace Eigen;
 TfLiteStatus CloudThermalModel::Init(ResourceConfig& config) {
   int temp_size = GetResourceMonitor().GetAllTemperature().size();
   window_size_ = config.model_update_window_size;
-  param_num_ = 1 + temp_size + 5;
+  // param_num_ = 1 + temp_size + 5;
+  param_num_ = temp_size + 5;
   target_model_param_ = vector<double>(param_num_, 1.);
   model_path_ = config.thermal_model_param_path;
   LoadModelParameter(model_path_);
@@ -64,7 +65,7 @@ thermal_t CloudThermalModel::PredictTarget(Subgraph* subgraph,
   }
   int32_t rssi = GetResourceMonitor().GetRSSI();
 
-  regressor.push_back(target_temp);
+  // regressor.push_back(target_temp);
   regressor.insert(regressor.end(), current_temp.begin(), current_temp.end());
   regressor.push_back(EstimateInputSize(subgraph));
   regressor.push_back(EstimateOutputSize(subgraph));
@@ -121,11 +122,11 @@ TfLiteStatus CloudThermalModel::Update(Job job, Subgraph* subgraph) {
   }
   int log_index = (log_size_ - 1) % window_size_;
   int32_t rssi = GetResourceMonitor().GetRSSI(); 
-  targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[wid_], EstimateInputSize(subgraph), EstimateOutputSize(subgraph), rssi, job.latency, 1.0;
-  targetY.row(log_index) << job.after_target_temp[wid_];
+  targetX.row(log_index) << job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], EstimateInputSize(subgraph), EstimateOutputSize(subgraph), rssi, job.latency, 1.0;
+  targetY.row(log_index) << job.after_temp[wid_];
 
   if (log_size_ < minimum_update_log_size_) {
-    LOGI("CloudThermalModel::Update Not enough data : %d", log_size_);
+    // LOGI("CloudThermalModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }
 

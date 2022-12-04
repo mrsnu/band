@@ -56,7 +56,7 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
              << "enqueue_time\t"
              << "invoke_time\t"
              << "end_time\t"
-             << "estimated_latency\t"
+            //  << "estimated_latency\t"
              << "latency\t"
              << "communication_time\t"
              << "before_temp_cpu\t"
@@ -66,27 +66,27 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
              << "before_temp_modem\t"
              << "frequency_cpu\t"
              << "frequency_gpu\t"
-             << "estimated_temp\t"
+            //  << "estimated_temp\t"
              << "before_target_temp\t"
              << "after_target_temp\t"
-             << "\t"
-             << "est_ppt_cpu\t"
-             << "est_ppt_gpu\t"
-             << "est_ppt_dsp\t"
-             << "est_ppt_npu\t"
-             << "est_ppt_cloud\t"
-             << "\t"
-             << "est_temp_diff_cpu\t"
-             << "est_temp_diff_gpu\t"
-             << "est_temp_diff_dsp\t"
-             << "est_temp_diff_npu\t"
-             << "est_temp_diff_cloud\t"
-             << "\t"
-             << "est_total_latency_cpu\t"
-             << "est_total_latency_gpu\t"
-             << "est_total_latency_dsp\t"
-             << "est_total_latency_npu\t"
-             << "est_total_latency_cloud\t"
+            //  << "\t"
+            //  << "est_ppt_cpu\t"
+            //  << "est_ppt_gpu\t"
+            //  << "est_ppt_dsp\t"
+            //  << "est_ppt_npu\t"
+            //  << "est_ppt_cloud\t"
+            //  << "\t"
+            //  << "est_temp_diff_cpu\t"
+            //  << "est_temp_diff_gpu\t"
+            //  << "est_temp_diff_dsp\t"
+            //  << "est_temp_diff_npu\t"
+            //  << "est_temp_diff_cloud\t"
+            //  << "\t"
+            //  << "est_total_latency_cpu\t"
+            //  << "est_total_latency_gpu\t"
+            //  << "est_total_latency_dsp\t"
+            //  << "est_total_latency_npu\t"
+            //  << "est_total_latency_cloud\t"
              << "job_status\n";
     log_file.close();
   }
@@ -301,7 +301,7 @@ void Planner::Wait(std::vector<int> job_ids) {
   });
 
   request_lock.unlock();
-  FlushFinishedJobs();
+  // FlushFinishedJobs();
 }
 
 void Planner::WaitAll() {
@@ -312,7 +312,7 @@ void Planner::WaitAll() {
 
   request_lock.unlock();
 
-  FlushFinishedJobs();
+  // FlushFinishedJobs();
 }
 
 void Planner::EnqueueFinishedJob(Job job) {
@@ -420,7 +420,7 @@ void Planner::FlushFinishedJobs() {
                << job.enqueue_time << "\t"
                << job.invoke_time << "\t"
                << job.end_time << "\t"
-               << job.estimated_latency << "\t" 
+              //  << job.estimated_latency << "\t" 
                << job.latency << "\t"
                << job.communication_time << "\t"
                << job.before_temp[kTfLiteCPU] << "\t"
@@ -430,41 +430,41 @@ void Planner::FlushFinishedJobs() {
                << job.before_temp[kTfLiteCLOUD] << "\t"
                << job.frequency[kTfLiteCPU] << "\t"
                << job.frequency[kTfLiteGPU] << "\t"
-               << job.estimated_temp << "\t"
+              //  << job.estimated_temp << "\t"
                << job.before_target_temp[job.worker_id] << "\t"
                << job.after_target_temp[job.worker_id] << "\t";
-      log_file << "\t";
-      if (job.estimated_ppt.size() != 0) {
-        log_file << job.estimated_ppt[kTfLiteCPU] << "\t"
-               << job.estimated_ppt[kTfLiteGPU] << "\t"
-               << job.estimated_ppt[kTfLiteDSP] << "\t"
-               << job.estimated_ppt[kTfLiteNPU] << "\t"
-               << job.estimated_ppt[kTfLiteCLOUD] << "\t";
-      }
-      log_file << "\t";
-      if (job.estimated_slo_cost.size() != 0) {
-        log_file << job.estimated_slo_cost[kTfLiteCPU] << "\t"
-               << job.estimated_slo_cost[kTfLiteGPU] << "\t"
-               << job.estimated_slo_cost[kTfLiteDSP] << "\t"
-               << job.estimated_slo_cost[kTfLiteNPU] << "\t"
-               << job.estimated_slo_cost[kTfLiteCLOUD] << "\t";
-      }
-      log_file << "\t";
-      if (job.estimated_temp_diff.size() != 0) {
-        log_file << job.estimated_temp_diff[kTfLiteCPU] << "\t"
-               << job.estimated_temp_diff[kTfLiteGPU] << "\t"
-               << job.estimated_temp_diff[kTfLiteDSP] << "\t"
-               << job.estimated_temp_diff[kTfLiteNPU] << "\t"
-               << job.estimated_temp_diff[kTfLiteCLOUD] << "\t";
-      }
-      log_file << "\t";
-      if (job.estimated_total_latency.size() != 0) {
-        log_file << job.estimated_total_latency[kTfLiteCPU] << "\t"
-               << job.estimated_total_latency[kTfLiteGPU] << "\t"
-               << job.estimated_total_latency[kTfLiteDSP] << "\t"
-               << job.estimated_total_latency[kTfLiteNPU] << "\t"
-               << job.estimated_total_latency[kTfLiteCLOUD] << "\t";
-      }
+      // log_file << "\t";
+      // if (job.estimated_ppt.size() != 0) {
+      //   log_file << job.estimated_ppt[kTfLiteCPU] << "\t"
+      //          << job.estimated_ppt[kTfLiteGPU] << "\t"
+      //          << job.estimated_ppt[kTfLiteDSP] << "\t"
+      //          << job.estimated_ppt[kTfLiteNPU] << "\t"
+      //          << job.estimated_ppt[kTfLiteCLOUD] << "\t";
+      // }
+      // log_file << "\t";
+      // if (job.estimated_slo_cost.size() != 0) {
+      //   log_file << job.estimated_slo_cost[kTfLiteCPU] << "\t"
+      //          << job.estimated_slo_cost[kTfLiteGPU] << "\t"
+      //          << job.estimated_slo_cost[kTfLiteDSP] << "\t"
+      //          << job.estimated_slo_cost[kTfLiteNPU] << "\t"
+      //          << job.estimated_slo_cost[kTfLiteCLOUD] << "\t";
+      // }
+      // log_file << "\t";
+      // if (job.estimated_temp_diff.size() != 0) {
+      //   log_file << job.estimated_temp_diff[kTfLiteCPU] << "\t"
+      //          << job.estimated_temp_diff[kTfLiteGPU] << "\t"
+      //          << job.estimated_temp_diff[kTfLiteDSP] << "\t"
+      //          << job.estimated_temp_diff[kTfLiteNPU] << "\t"
+      //          << job.estimated_temp_diff[kTfLiteCLOUD] << "\t";
+      // }
+      // log_file << "\t";
+      // if (job.estimated_total_latency.size() != 0) {
+      //   log_file << job.estimated_total_latency[kTfLiteCPU] << "\t"
+      //          << job.estimated_total_latency[kTfLiteGPU] << "\t"
+      //          << job.estimated_total_latency[kTfLiteDSP] << "\t"
+      //          << job.estimated_total_latency[kTfLiteNPU] << "\t"
+      //          << job.estimated_total_latency[kTfLiteCLOUD] << "\t";
+      // }
       log_file << job.status << "\n";
     }
     log_file.close();

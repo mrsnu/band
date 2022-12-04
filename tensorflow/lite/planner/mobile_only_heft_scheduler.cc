@@ -27,10 +27,10 @@ void MobileOnlyHeftScheduler::Schedule(JobQueue& requests) {
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
 
-    job.estimated_temp = model_manager_->GetPredictedTemperature(
-      target_subgraph->GetKey().worker_id, target_subgraph);
-    job.estimated_latency = model_manager_->GetPredictedLatency(
-      target_subgraph->GetKey().worker_id, target_subgraph);
+    // job.estimated_temp = model_manager_->GetPredictedTemperature(
+    //   target_subgraph->GetKey().worker_id, target_subgraph);
+    // job.estimated_latency = model_manager_->GetPredictedLatency(
+    //   target_subgraph->GetKey().worker_id, target_subgraph);
     EnqueueAction(job, target_subgraph);
   }
 }

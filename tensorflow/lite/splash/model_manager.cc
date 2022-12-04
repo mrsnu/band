@@ -22,6 +22,7 @@ namespace impl {
 
 TfLiteStatus ModelManager::Init(ResourceConfig& config, bool is_thermal_aware) {
   LOGI("ModelManager:: init");
+  is_thermal_aware_ = is_thermal_aware;
   // Build ThermalModel
   for (int wid = 0; wid < kTfLiteNumDevices; wid++) {
     std::unique_ptr<IThermalModel> model = BuildThermalModel(wid);
@@ -36,7 +37,7 @@ TfLiteStatus ModelManager::Init(ResourceConfig& config, bool is_thermal_aware) {
 
   // Build LatencyModel
   for (int wid = 0; wid < kTfLiteNumDevices; wid++) {
-    std::unique_ptr<ILatencyModel> model = BuildLatencyModel(wid, is_thermal_aware);
+    std::unique_ptr<ILatencyModel> model = BuildLatencyModel(wid);
     latency_models_.push_back(std::move(model));
   }
   for (auto& latency_model : latency_models_) {
@@ -55,11 +56,11 @@ std::unique_ptr<IThermalModel> ModelManager::BuildThermalModel(worker_id_t wid) 
   return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
 }
 
-std::unique_ptr<ILatencyModel> ModelManager::BuildLatencyModel(worker_id_t wid, bool is_thermal_aware) {
-  if (wid == kTfLiteCLOUD) {
-    return std::make_unique<CloudLatencyModel>(wid, resource_monitor_, is_thermal_aware);
+std::unique_ptr<ILatencyModel> ModelManager::BuildLatencyModel(worker_id_t wid) {
+  if (is_thermal_aware_ && wid == kTfLiteCLOUD) {
+    return std::make_unique<CloudLatencyModel>(wid, resource_monitor_, is_thermal_aware_);
   }
-  return std::make_unique<ProcessorLatencyModel>(wid, resource_monitor_, is_thermal_aware);
+  return std::make_unique<ProcessorLatencyModel>(wid, resource_monitor_, is_thermal_aware_);
 }
 
 bool ModelManager::IsAvailableWorker(worker_id_t wid, Subgraph* subgraph) {
@@ -101,7 +102,9 @@ int64_t ModelManager::GetPredictedLatency(worker_id_t wid, Subgraph* subgraph) {
 }
 
 TfLiteStatus ModelManager::Update(Job& job, Subgraph* subgraph) {
-  thermal_models_[job.worker_id]->Update(job, subgraph);
+  if (is_thermal_aware_) {
+    thermal_models_[job.worker_id]->Update(job, subgraph);
+  }
   latency_models_[job.worker_id]->Update(job, subgraph);
   return kTfLiteOk;
 }

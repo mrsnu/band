@@ -49,9 +49,10 @@ class ModelManager {
   std::vector<std::unique_ptr<IThermalModel>> thermal_models_;
   std::vector<std::unique_ptr<ILatencyModel>> latency_models_;
   ResourceMonitor& resource_monitor_;
+  bool is_thermal_aware_ = false;
 
   std::unique_ptr<IThermalModel> BuildThermalModel(worker_id_t wid);
-  std::unique_ptr<ILatencyModel> BuildLatencyModel(worker_id_t wid, bool is_thermal_aware);
+  std::unique_ptr<ILatencyModel> BuildLatencyModel(worker_id_t wid);
 
 };
 

@@ -24,7 +24,8 @@ using namespace Eigen;
 TfLiteStatus ProcessorThermalModel::Init(ResourceConfig& config) {
   int temp_size = GetResourceMonitor().GetAllTemperature().size();
   int freq_size = GetResourceMonitor().GetAllFrequency().size();
-  param_num_ = 1 + temp_size + freq_size + 2; 
+  // param_num_ = 1 + temp_size + freq_size + 2; 
+  param_num_ = temp_size + freq_size + 2; 
   target_model_param_ = vector<double>(param_num_, 1.);
   window_size_ = config.model_update_window_size;
   model_path_ = config.thermal_model_param_path;
@@ -49,7 +50,6 @@ void ProcessorThermalModel::LoadModelParameter(string thermal_model_path) {
   }
 }
 
-
 thermal_t ProcessorThermalModel::Predict(Subgraph* subgraph, 
                                          const int64_t latency, 
                                          std::vector<thermal_t> current_temp) {
@@ -66,7 +66,7 @@ thermal_t ProcessorThermalModel::PredictTarget(Subgraph* subgraph,
     return target_temp;
   }
 
-  regressor.push_back(target_temp);
+  // regressor.push_back(target_temp);
   regressor.insert(regressor.end(), current_temp.begin(), current_temp.end());
   vector<freq_t> freq = GetResourceMonitor().GetAllFrequency();
   regressor.insert(regressor.end(), freq.begin(), freq.end());
@@ -97,15 +97,15 @@ TfLiteStatus ProcessorThermalModel::Update(Job job, Subgraph* subgraph) {
     targetY.conservativeResize(log_size_, 1);
   }
   int log_index = (log_size_ - 1) % window_size_;
-  targetX.row(log_index) << job.before_target_temp[wid_], job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], job.frequency[0], job.frequency[1], job.latency, 1.0;
-  if (job.after_target_temp[wid_] < job.before_target_temp[wid_]) {
-    targetY.row(log_index) << job.before_target_temp[wid_];
+  targetX.row(log_index) << job.before_temp[0], job.before_temp[1], job.before_temp[2], job.before_temp[3], job.before_temp[4], job.frequency[0], job.frequency[1], job.latency, 1.0;
+  if (job.after_temp[wid_] < job.before_temp[wid_]) {
+    targetY.row(log_index) << job.before_temp[wid_];
   } else {
-    targetY.row(log_index) << job.after_target_temp[wid_];
+    targetY.row(log_index) << job.after_temp[wid_];
   }
 
   if (log_size_ < minimum_update_log_size_) {
-    LOGI("ProcessorThermalModel::Update Not enough data : %d", log_size_);
+    // LOGI("ProcessorThermalModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }
 

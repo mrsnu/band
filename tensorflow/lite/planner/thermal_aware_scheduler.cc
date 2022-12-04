@@ -27,10 +27,10 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
 
-    job.estimated_temp = model_manager_->GetPredictedTemperature(
-      target_subgraph->GetKey().worker_id, target_subgraph);
-    job.estimated_latency = model_manager_->GetPredictedLatency(
-      target_subgraph->GetKey().worker_id, target_subgraph);
+    // job.estimated_temp = model_manager_->GetPredictedTemperature(
+    //   target_subgraph->GetKey().worker_id, target_subgraph);
+    // job.estimated_latency = model_manager_->GetPredictedLatency(
+    //   target_subgraph->GetKey().worker_id, target_subgraph);
     EnqueueAction(job, target_subgraph);
   }
 }
@@ -62,9 +62,9 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
     // double ppt = thermal_efficiency / (double)total;
     // LOGI("thermal_Efficiency = %f", thermal_efficiency);
     // LOGI("ppt = %f", ppt);
-    job.estimated_ppt.push_back(ppt);
-    job.estimated_temp_diff.push_back(temp_diff);
-    job.estimated_total_latency.push_back(total);
+    // job.estimated_ppt.push_back(ppt);
+    // job.estimated_temp_diff.push_back(temp_diff);
+    // job.estimated_total_latency.push_back(total);
 
     if (max_ppt < ppt) {
       max_ppt = ppt;
