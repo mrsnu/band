@@ -72,7 +72,7 @@ void CloudLatencyModel::LoadModelParameter(string latency_model_path) {
 }
 
 int64_t CloudLatencyModel::PredictCommunicationTime(Subgraph* subgraph) {
-  int64_t comm_time = 2000; // minimum value
+  int64_t comm_time = 0; // minimum value
   vector<int64_t> regressor;
   if (log_size_ < 30) {
     return comm_time;

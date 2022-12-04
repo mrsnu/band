@@ -38,31 +38,40 @@ class SplashGrpcClient {
         int data = height * width * 3;
         std::allocator<char> alloc;
         buffer_1_ = alloc.allocate(data);
+        dummy_1_ = alloc.allocate(data);
+        for (int i = 0 ; i < data; i++) {
+          dummy_1_[i] = 1;
+        }
+        dummy_1_[data] = 0;
 
         int height2 = 112;
         int width2 = 112;
         int data2 = height * width * 3;
         buffer_2_ = alloc.allocate(data2);
+        dummy_2_ = alloc.allocate(data2);
+        for (int i = 0 ; i < data2; i++) {
+          dummy_2_[i] = 1;
+        }
+        dummy_1_[data2] = 0;
       }
 
   int64_t Invoke(tflite::Subgraph* subgraph) {
+    // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     Request request;
-    // FIXME : input to buffer
-    int input_size = EstimateInputSize(subgraph);
+    const std::vector<int>& input_tensors = subgraph->inputs();
+    const int tensor_idx = input_tensors[0]; // Now, only supporting for one input model
+    int64_t data_size = subgraph->tensor(tensor_idx)->bytes;
     if (subgraph->GetKey().model_id == 0) {
-      for (int i = 0; i < input_size; i++) {
-        buffer_1_[i] = 1;
-      }
-      buffer_1_[input_size - 1] = 0; 
+      memcpy(buffer_1_, dummy_1_, data_size);
+      buffer_1_[data_size] = 0;
       request.set_model("face_detection");
       request.set_height(160);
       request.set_width(160);
       request.set_data(buffer_1_);
     } else if (subgraph->GetKey().model_id == 1) {
-      for (int i = 0; i < input_size; i++) {
-        buffer_2_[i] = 1;
-      }
-      buffer_2_[input_size - 1] = 0; 
+      memcpy(buffer_2_, dummy_2_, data_size);
+      buffer_2_[data_size] = 0;
+      request.set_model("face_detection");
       request.set_model("face_recognition");
       request.set_height(112);
       request.set_width(112);
@@ -72,10 +81,9 @@ class SplashGrpcClient {
     Response response;
     ClientContext context;
 
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    // LOGI("copy time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
     Status status = stub_->RequestInference(&context, request, &response);
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    // LOGI("RPC time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
     if (status.ok()) {
       return response.computation_time_ms();
     } else {
@@ -161,15 +169,8 @@ class SplashGrpcClient {
   int dataSize;
   char* buffer_1_;
   char* buffer_2_;
-
-  int64_t EstimateInputSize(const tflite::Subgraph* subgraph) {
-    const std::vector<int>& input_tensors = subgraph->inputs();
-    int64_t subgraph_input_size = 0;
-    for (int tensor_idx : input_tensors) {
-      subgraph_input_size += (int64_t)subgraph->tensor(tensor_idx)->bytes;
-    }
-    return subgraph_input_size;
-  }
+  char* dummy_1_;
+  char* dummy_2_;
 };
 
 #endif // TENSORFLOW_LITE_SPLASH_GRPC_CLIENT_H_
