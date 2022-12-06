@@ -59,7 +59,7 @@ std::pair<int, double> ThermalAwareScheduler::GetMaxPptSubgraphIdx(Job& job, std
 
     double thermal_efficiency = 1 / (double)temp_diff * (double)1000;
     double ppt = (1.0 - eta_) * thermal_efficiency - eta_ * (double)total; // Note that this can be negatvie value!
-    // double ppt = thermal_efficiency / (double)total;
+    // double ppt = (eta_ - 1.0) * (double)temp_diff - eta_ * (double)total;
     // LOGI("thermal_Efficiency = %f", thermal_efficiency);
     // LOGI("ppt = %f", ppt);
     // job.estimated_ppt.push_back(ppt);
