@@ -43,6 +43,7 @@ class SplashGrpcClient {
           dummy_1_[i] = 1;
         }
         dummy_1_[data] = 0;
+        memcpy(buffer_1_, dummy_1_, data_size);
 
         int height2 = 112;
         int width2 = 112;
@@ -53,6 +54,7 @@ class SplashGrpcClient {
           dummy_2_[i] = 1;
         }
         dummy_1_[data2] = 0;
+        memcpy(buffer_2_, dummy_2_, data_size);
       }
 
   int64_t Invoke(tflite::Subgraph* subgraph) {
@@ -62,14 +64,12 @@ class SplashGrpcClient {
     const int tensor_idx = input_tensors[0]; // Now, only supporting for one input model
     int64_t data_size = subgraph->tensor(tensor_idx)->bytes;
     if (subgraph->GetKey().model_id == 0) {
-      memcpy(buffer_1_, dummy_1_, data_size);
       buffer_1_[data_size] = 0;
       request.set_model("face_detection");
       request.set_height(160);
       request.set_width(160);
       request.set_data(buffer_1_);
     } else if (subgraph->GetKey().model_id == 1) {
-      memcpy(buffer_2_, dummy_2_, data_size);
       buffer_2_[data_size] = 0;
       request.set_model("face_detection");
       request.set_model("face_recognition");

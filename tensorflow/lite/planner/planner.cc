@@ -116,9 +116,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
       is_thermal_aware = true;
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_, resource_config));
     } else if (schedulers[i] == kSplashSlo) {
-      LOGI("SplashSLO");
       is_thermal_aware = true;
-      schedulers_.emplace_back(new ThermalAwareSloScheduler(this, model_manager_));
+      schedulers_.emplace_back(new ThermalAwareSloScheduler(this, model_manager_, resource_config));
     } else {
       return kTfLiteError;
     }
@@ -301,7 +300,7 @@ void Planner::Wait(std::vector<int> job_ids) {
   });
 
   request_lock.unlock();
-  // FlushFinishedJobs();
+  FlushFinishedJobs();
 }
 
 void Planner::WaitAll() {
@@ -312,7 +311,7 @@ void Planner::WaitAll() {
 
   request_lock.unlock();
 
-  // FlushFinishedJobs();
+  FlushFinishedJobs();
 }
 
 void Planner::EnqueueFinishedJob(Job job) {
@@ -403,6 +402,9 @@ void Planner::FlushFinishedJobs() {
         auto latency = job.end_time - job.enqueue_time;
         job.status =
             latency > job.slo_us ? kTfLiteJobSLOViolation : kTfLiteJobSuccess;
+      }
+      if (job.status == kTfLiteJobInvokeFailure) {
+        continue;
       }
       // double ppt = 0.;
       // double fps = (double)(1000000. / (double)job.latency);

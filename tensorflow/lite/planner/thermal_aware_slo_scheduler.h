@@ -9,15 +9,17 @@ namespace impl {
 
 class ThermalAwareSloScheduler : public Scheduler {
  public:
-  explicit ThermalAwareSloScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner)   {
+  explicit ThermalAwareSloScheduler(Planner* planner, ModelManager* model_manager, ResourceConfig config) : Scheduler(planner)   {
     need_profile_ = true;
     worker_type_ = kDeviceQueue;
     model_manager_ = model_manager;
+    eta_ = config.weighted_ppt_config;
   }
   void Schedule(JobQueue& requests) override;
 
  private:
   ModelManager* model_manager_;
+  float eta_;
   std::pair<int, double> GetMinCostSubgraphIdx(Job& job, std::map<int, int64_t>& worker_waiting);
 };
 
