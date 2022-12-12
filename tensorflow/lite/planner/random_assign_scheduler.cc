@@ -30,6 +30,8 @@ void RandomAssignScheduler::Schedule(JobQueue& requests) {
     int subgraph_idx = GetInterpreter()->GetSubgraphIdx(model_id, worker_id);
     Subgraph* subgraph = GetInterpreter()->subgraph(subgraph_idx);
 
+    to_execute.estimated_temp = model_manager_->GetPredictedTemperature(worker_id, subgraph);
+
     EnqueueAction(to_execute, subgraph);
   }
 }

@@ -21,14 +21,20 @@ void ThermalAwareScheduler::Schedule(JobQueue& requests) {
 
     Job job = requests.front();
     requests.pop_front();
-
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+  
+  
     WorkerWaitingTime waiting_time = GetWorkerWaitingTime();
     std::pair<int, double> best_subgraph = GetMaxPptSubgraphIdx(job, waiting_time);
+
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    LOGI("[%d] Total scheduling time : %lld ms", job.worker_id, std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
+
 
     Subgraph* target_subgraph = GetInterpreter()->subgraph(best_subgraph.first);
 
     // job.estimated_temp = model_manager_->GetPredictedTemperature(
-    //   target_subgraph->GetKey().worker_id, target_subgraph);
+      // target_subgraph->GetKey().worker_id, target_subgraph);
     // job.estimated_latency = model_manager_->GetPredictedLatency(
     //   target_subgraph->GetKey().worker_id, target_subgraph);
     EnqueueAction(job, target_subgraph);

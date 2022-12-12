@@ -137,6 +137,7 @@ class DeviceQueueOffloadingWorker : public Worker {
     device_cpu_thread_ = std::thread([this]{this->Work();});
   }
 
+  std::thread periodic_thread_;
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;

@@ -50,9 +50,9 @@ TfLiteStatus ModelManager::Init(ResourceConfig& config, bool is_thermal_aware) {
 }
 
 std::unique_ptr<IThermalModel> ModelManager::BuildThermalModel(worker_id_t wid) {
-  if (wid == kTfLiteCLOUD) {
-    return std::make_unique<CloudThermalModel>(wid, resource_monitor_);
-  }
+  // if (wid == kTfLiteCLOUD) {
+  //   return std::make_unique<CloudThermalModel>(wid, resource_monitor_);
+  // }
   return std::make_unique<ProcessorThermalModel>(wid, resource_monitor_);
 }
 
@@ -91,8 +91,18 @@ thermal_t ModelManager::GetPredictedTemperature(worker_id_t wid, Subgraph* subgr
 std::pair<thermal_t, int64_t>
 ModelManager::GetPredictedTempAndLatency(worker_id_t wid, Subgraph* subgraph) {
   std::vector<thermal_t> before_temp = resource_monitor_.GetAllTemperature();
+  // predict latency start
+  // std::chrono::steady_clock::time_point latency_begin = std::chrono::steady_clock::now();
   auto latency = GetPredictedLatency(wid, subgraph);
+  // std::chrono::steady_clock::time_point latency_end = std::chrono::steady_clock::now();
+  // LOGI("[%d] Predict latency time : %lld ms", wid, std::chrono::duration_cast<std::chrono::microseconds>(latency_end - latency_begin).count());
+  // predict latency end
+  // predict temp start
+  // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   auto future_temp = thermal_models_[wid]->PredictTarget(subgraph, latency, before_temp);
+  // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  // predict temp end
+  // LOGI("[%d] Predict thermal time : %lld ms", wid, std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
   thermal_t temp_diff = future_temp - before_temp[wid];
   return { std::max(0, temp_diff), latency };
 }
@@ -102,10 +112,15 @@ int64_t ModelManager::GetPredictedLatency(worker_id_t wid, Subgraph* subgraph) {
 }
 
 TfLiteStatus ModelManager::Update(Job& job, Subgraph* subgraph) {
+  // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   if (is_thermal_aware_) {
     thermal_models_[job.worker_id]->Update(job, subgraph);
   }
+  // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  // LOGI("[%d] Update theraml time : %lld ms", job.worker_id, std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
   latency_models_[job.worker_id]->Update(job, subgraph);
+  // std::chrono::steady_clock::time_point latency_end = std::chrono::steady_clock::now();
+  // LOGI("[%d] Update total time : %lld ms", job.worker_id, std::chrono::duration_cast<std::chrono::microseconds>(latency_end - end).count());
   return kTfLiteOk;
 }
 

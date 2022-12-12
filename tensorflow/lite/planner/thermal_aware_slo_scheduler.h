@@ -10,7 +10,7 @@ namespace impl {
 class ThermalAwareSloScheduler : public Scheduler {
  public:
   explicit ThermalAwareSloScheduler(Planner* planner, ModelManager* model_manager, ResourceConfig config) : Scheduler(planner)   {
-    need_profile_ = true;
+    need_profile_ = false;
     worker_type_ = kDeviceQueue;
     model_manager_ = model_manager;
     eta_ = config.weighted_ppt_config;

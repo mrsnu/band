@@ -66,9 +66,11 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
              << "before_temp_modem\t"
              << "frequency_cpu\t"
              << "frequency_gpu\t"
-            //  << "estimated_temp\t"
+             << "estimated_temp\t"
              << "before_target_temp\t"
              << "after_target_temp\t"
+             << "ours_error\t"
+             << "baseline_error\t"
             //  << "\t"
             //  << "est_ppt_cpu\t"
             //  << "est_ppt_gpu\t"
@@ -110,8 +112,8 @@ TfLiteStatus Planner::Init(PlannerConfig& config, ResourceConfig& resource_confi
     } else if (schedulers[i] == kMobileCloudHeft) {
       schedulers_.emplace_back(new MobileCloudHeftScheduler(this, model_manager_));
     } else if (schedulers[i] == kRandomAssign) {
-      schedulers_.emplace_back(new RandomAssignScheduler(this));
       is_thermal_aware = true;
+      schedulers_.emplace_back(new RandomAssignScheduler(this, model_manager_));
     } else if (schedulers[i] == kSplashWeightedPpt) {
       is_thermal_aware = true;
       schedulers_.emplace_back(new ThermalAwareScheduler(this, model_manager_, resource_config));
@@ -432,9 +434,11 @@ void Planner::FlushFinishedJobs() {
                << job.before_temp[kTfLiteCLOUD] << "\t"
                << job.frequency[kTfLiteCPU] << "\t"
                << job.frequency[kTfLiteGPU] << "\t"
-              //  << job.estimated_temp << "\t"
+               << job.estimated_temp << "\t"
                << job.before_target_temp[job.worker_id] << "\t"
-               << job.after_target_temp[job.worker_id] << "\t";
+               << job.after_target_temp[job.worker_id] << "\t"
+               << (job.after_target_temp[job.worker_id] - job.estimated_temp) << "\t"
+               << (job.after_target_temp[job.worker_id] - job.before_target_temp[job.worker_id])<< "\t";
       // log_file << "\t";
       // if (job.estimated_ppt.size() != 0) {
       //   log_file << job.estimated_ppt[kTfLiteCPU] << "\t"

@@ -21,7 +21,7 @@ using namespace std;
 using namespace Eigen;
 
 TfLiteStatus CloudLatencyModel::Init(ResourceConfig& config) {
-  model_param_ = vector<double>(3, 1.);
+  model_param_ = vector<double>(4, 1.);
   window_size_ = 100;
   model_path_ = config.cloud_latency_model_param_path;
   LoadModelParameter(model_path_);
@@ -77,8 +77,10 @@ int64_t CloudLatencyModel::PredictCommunicationTime(Subgraph* subgraph) {
   if (log_size_ < 30) {
     return comm_time;
   }
+  int32_t rssi = GetResourceMonitor().GetRSSI();
   int64_t input_size = EstimateInputSize(subgraph);
   int64_t output_size = EstimateOutputSize(subgraph);
+  regressor.push_back(rssi); // RSSI value
   regressor.push_back(input_size);
   regressor.push_back(output_size);
   regressor.push_back(1);
@@ -116,7 +118,7 @@ TfLiteStatus CloudLatencyModel::UpdateCommunicationModel(Subgraph* subgraph, int
   int64_t output_size = EstimateOutputSize(subgraph);
   log_size_++;
   if (log_size_ <= window_size_) {
-    X.conservativeResize(log_size_, 3);
+    X.conservativeResize(log_size_, 4);
     Y.conservativeResize(log_size_, 1);
   }
   int log_index = (log_size_ - 1) % window_size_;
@@ -127,7 +129,7 @@ TfLiteStatus CloudLatencyModel::UpdateCommunicationModel(Subgraph* subgraph, int
     LOGI("CloudLatencyModel::Update Not enough data : %d", log_size_);
     return kTfLiteOk;
   }
-  Eigen::Matrix<double, 1, 3> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
+  Eigen::Matrix<double, 1, 4> theta = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
   for (auto i = 0; i < model_param_.size(); i++) {
     model_param_[i] = theta(0, i); 
   }

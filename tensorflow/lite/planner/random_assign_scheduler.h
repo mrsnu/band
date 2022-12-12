@@ -11,11 +11,14 @@ class Interpreter;
 // assigns requested model to devices in a random manner.
 class RandomAssignScheduler : public Scheduler {
  public:
-  explicit RandomAssignScheduler(Planner* planner) : Scheduler(planner) {
+  explicit RandomAssignScheduler(Planner* planner, ModelManager* model_manager) : Scheduler(planner) {
     need_profile_ = false;
     worker_type_ = kDeviceQueue;
+    model_manager_ = model_manager;
   }
   void Schedule(JobQueue& requests) override;
+ private:
+  ModelManager * model_manager_;
 };
 
 }  // namespace impl

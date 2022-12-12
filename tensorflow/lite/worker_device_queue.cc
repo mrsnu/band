@@ -148,7 +148,7 @@ void DeviceQueueWorker::Work() {
           // TODO #21: Handle errors in multi-thread environment
           current_job.status = kTfLiteJobInvokeFailure;
           // For not selecting this subgraph again
-          planner_ptr->GetModelManager()->ProfileLatency(subgraph, INT64_MAX); 
+          planner_ptr->GetModelManager()->ProfileLatency(subgraph, 10000000); 
         }
       } else {
         TF_LITE_MAYBE_REPORT_ERROR(

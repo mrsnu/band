@@ -27,6 +27,22 @@
 namespace tflite {
 namespace impl {
 
+void DeviceQueueOffloadingWorker::Monitor(SplashGrpcClient& grpc_client) {
+  while (true) {
+    auto planner_ptr = planner_.lock();
+    if (planner_ptr) {
+      return planner_ptr->GetInterpreter()->GetErrorReporter();
+    } else {
+      nullptr;
+    }
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    grpc_client.Ping(); 
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    planner_ptr->GetModelManager()->UpdateCommunicationModel(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
+    std::this_thread::sleep_for(std::chrono::microseconds(1000 * 1000 * 60 * 10));
+  }
+}
+
 JobQueue& DeviceQueueOffloadingWorker::GetDeviceRequests() {
   return requests_;
 }
@@ -87,6 +103,7 @@ bool DeviceQueueOffloadingWorker::GiveJob(Job& job) {
 void DeviceQueueOffloadingWorker::Work() {
   SplashGrpcClient grpc_client(
   grpc::CreateChannel(offloading_target_, grpc::InsecureChannelCredentials()), offloading_data_size_);
+  periodic_thread_ = std::thread([this]{this->Monitor(grpc_client);});
   LOGI("Offloading target: %s", offloading_target_.c_str());
   while (true) {
     std::unique_lock<std::mutex> lock(device_mtx_);

@@ -42,6 +42,7 @@ class ModelManager {
   TfLiteStatus Update(Job& job, Subgraph* subgraph);
 
   TfLiteStatus ProfileLatency(Subgraph* subgraph, int64_t latency);
+  TfLiteStatus ProfileCloudCommunication(int64_t latency);
 
   TfLiteStatus Close();
 

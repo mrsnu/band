@@ -20,10 +20,12 @@
 
 using grpc::Channel;
 using grpc::ClientContext;
+using grpc::CompletionQueue;
 using grpc::Status;
 using grpc::ClientWriter;
 using grpc::ClientReader;
 using grpc::WriteOptions;
+using grpc::ClientAsyncResponseReader;
 using splash::Splash;
 using splash::Request;
 using splash::Response;
@@ -33,8 +35,8 @@ class SplashGrpcClient {
   SplashGrpcClient(std::shared_ptr<Channel> channel, int data_size)
       : stub_(Splash::NewStub(channel)) {
         dataSize = data_size;
-        int height = 160;
-        int width = 160;
+        int height = 130;
+        int width = 130;
         int data = height * width * 3;
         std::allocator<char> alloc;
         buffer_1_ = alloc.allocate(data);
@@ -43,7 +45,7 @@ class SplashGrpcClient {
           dummy_1_[i] = 1;
         }
         dummy_1_[data] = 0;
-        memcpy(buffer_1_, dummy_1_, data_size);
+        memcpy(buffer_1_, dummy_1_, data);
 
         int height2 = 112;
         int width2 = 112;
@@ -53,9 +55,9 @@ class SplashGrpcClient {
         for (int i = 0 ; i < data2; i++) {
           dummy_2_[i] = 1;
         }
-        dummy_1_[data2] = 0;
-        memcpy(buffer_2_, dummy_2_, data_size);
-      }
+        dummy_2_[data2] = 0;
+        memcpy(buffer_2_, dummy_2_, data2);
+  }
 
   int64_t Invoke(tflite::Subgraph* subgraph) {
     // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -63,19 +65,32 @@ class SplashGrpcClient {
     const std::vector<int>& input_tensors = subgraph->inputs();
     const int tensor_idx = input_tensors[0]; // Now, only supporting for one input model
     int64_t data_size = subgraph->tensor(tensor_idx)->bytes;
+    // if (subgraph->GetKey().model_id == 0) {
+    //   request.set_model("face_detection");
+    //   request.set_height(160);
+    //   request.set_width(160);
+    //   request.set_data(buffer_1_);
+    // } else if (subgraph->GetKey().model_id == 1) {
+    //   request.set_model("face_recognition");
+    //   request.set_height(112);
+    //   request.set_width(112);
+    //   request.set_data(buffer_2_);
+    // }
     if (subgraph->GetKey().model_id == 0) {
-      buffer_1_[data_size] = 0;
-      request.set_model("face_detection");
-      request.set_height(160);
-      request.set_width(160);
+      request.set_model("object_detection");
+      request.set_height(320);
+      request.set_width(320);
       request.set_data(buffer_1_);
+    // } else if (subgraph->GetKey().model_id == 1) {
+    //   request.set_model("text_detection");
+    //   request.set_height(320);
+    //   request.set_width(320);
+    //   request.set_data(buffer_2_);
     } else if (subgraph->GetKey().model_id == 1) {
-      buffer_2_[data_size] = 0;
-      request.set_model("face_detection");
-      request.set_model("face_recognition");
-      request.set_height(112);
-      request.set_width(112);
-      request.set_data(buffer_2_);
+      request.set_model("image_classification");
+      request.set_height(224);
+      request.set_width(224);
+      request.set_data(buffer_3_);
     }
 
     Response response;
@@ -89,40 +104,78 @@ class SplashGrpcClient {
     } else {
       return -1;
     }
+    
+    // CompletionQueue cq;
+
+    // std::unique_ptr<ClientAsyncResponseReader<Response>> rpc(stub_->AsyncRequestInference(&context, request, &cq));
+    // // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    // // LOGI("copy time : %d", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
+    // Status status;
+    // rpc->Finish(&response, &status, (void*)1);
+    // void* got_tag;
+    // bool ok = false;
+    // cq.Next(&got_tag, &ok);
+    // if (ok && got_tag == (void*)1) {
+    //   return response.computation_time_ms();
+    // } else {
+    //   return -1;
+    // }
   }
 
-  // std::string UploadFile(const std::string& filename) {
+  int64_t Ping() {
+    Request request;
+    request.set_model("nothing");
+    request.set_height(130);
+    request.set_width(130);
+    request.set_data(buffer_1_);
+
+    Response response;
+    ClientContext context;
+
+    Status status = stub_->RequestInference(&context, request, &response);
+    if (status.ok()) {
+      return response.computation_time_ms();
+    } else {
+      return -1;
+    }
+  }
+
+  // std::string InvokeStream(tflite::Subgraph* subgraph) {
+  //   const std::vector<int>& input_tensors = subgraph->inputs();
+  //   const int tensor_idx = input_tensors[0]; // Now, only supporting for one input model
+  //   int64_t data_size = subgraph->tensor(tensor_idx)->bytes;
+
+  //   if (subgraph->GetKey().model_id == 0) {
+  //     request.set_model("object_detection");
+  //     request.set_height(320);
+  //     request.set_width(320);
+  //     request.set_data(buffer_1_);
+  //   // } else if (subgraph->GetKey().model_id == 1) {
+  //   //   request.set_model("text_detection");
+  //   //   request.set_height(320);
+  //   //   request.set_width(320);
+  //   //   request.set_data(buffer_2_);
+  //   } else if (subgraph->GetKey().model_id == 1) {
+  //     request.set_model("image_classification");
+  //     request.set_height(224);
+  //     request.set_width(224);
+  //     request.set_data(buffer_3_);
+  //   }
+
   //   StringResponse response;
   //   ClientContext context;
   //   std::unique_ptr<ClientWriter<UploadFileRequest>> writer(stub_->UploadFile(&context, &response));
 
   //   UploadFileRequest request;
-  //   request.mutable_metadata()->set_filename("1GB");
-  //   request.mutable_metadata()->set_extension(".bin");
 
-  //   char buffer[MAX_FILE_SIZE];
-  //   LOGI("UploadFile: file transfer %s", filename.c_str());
-  //   std::fstream fileStream = std::fstream(filename, std::ios::in | std::ios::binary);
-  //   if (!fileStream.is_open()) {
-  //     LOGI("File not exists");
-  //     return "File not exists"; 
-  //   }
-  //   std::chrono::steady_clock::time_point total_begin = std::chrono::steady_clock::now();
-  //   while (!fileStream.eof()) {
-  //     // std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_DELAY_MILLISECONDS));
+  //   int64_t remain_bytes = data_size;
+  //   while (remain_bytes > 0) {
   //     request.clear_chunk_data();
-  //     fileStream.read(buffer, MAX_FILE_SIZE);
-  //     request.set_chunk_data(std::string(buffer, MAX_FILE_SIZE));
-  //     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+  //     request.set_chunk_data(std::string(buffer_1_, MAX_FILE_SIZE));
   //     writer->Write(request, WriteOptions().set_buffer_hint());
-  //     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-  //     LOGI("UploadFile RPC time : %d ms", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000);
+  //     remain_bytes -= MAX_FILE_SIZE;
   //   }
-  //   std::chrono::steady_clock::time_point total_end = std::chrono::steady_clock::now();
-  //   LOGI("UploadFile total time : %d ms", std::chrono::duration_cast<std::chrono::microseconds>(total_end - total_begin).count() / 1000);
   //   writer->WritesDone();
-  //   fileStream.close();
-  //   LOGI("UploadFile: file transfer %s done", filename.c_str());
   //   Status status = writer->Finish();
   //   if (status.ok()) {
   //     return "RPC success";
@@ -169,8 +222,10 @@ class SplashGrpcClient {
   int dataSize;
   char* buffer_1_;
   char* buffer_2_;
+  char* buffer_3_;
   char* dummy_1_;
   char* dummy_2_;
+  char* dummy_3_;
 };
 
 #endif // TENSORFLOW_LITE_SPLASH_GRPC_CLIENT_H_
