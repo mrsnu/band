@@ -4,6 +4,25 @@
 #include <cstdarg>
 #include <cstdio>
 
+#ifdef __ANDROID__
+#include <android/log.h>
+
+int LogSeverityToAndroid(Band::LogSeverity severity) {
+  switch (severity) {
+    case Band::BAND_LOG_INFO:
+      return ANDROID_LOG_INFO;
+      break;
+    case Band::BAND_LOG_WARNING:
+      return ANDROID_LOG_WARN;
+      break;
+    case Band::BAND_LOG_ERROR:
+      return ANDROID_LOG_ERROR;
+      break;
+  }
+  return -1;
+}
+#endif
+
 namespace Band {
 LogSeverity Logger::verbosity = BAND_LOG_INFO;
 
@@ -24,6 +43,10 @@ void Logger::LogFormatted(LogSeverity severity, const char* format,
   vfprintf(stderr, format, args);
 #pragma clang diagnostic pop
   fputc('\n', stderr);
+
+#ifdef __ANDROID__
+  __android_log_vprint(LogSeverityToAndroid(severity), "BAND", format, args);
+#endif
 }
 
 void Logger::SetVerbosity(int severity) {
