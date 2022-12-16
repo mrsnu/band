@@ -127,6 +127,7 @@ struct Job {
   JobId job_id = -1;
   int sched_id = -1;
   std::string model_fname;
+  bool require_callback = true;
 
   // Current status for execution (Valid after planning)
   JobStatus status = kBandJobQueued;

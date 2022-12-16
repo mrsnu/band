@@ -193,48 +193,49 @@ std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
   return EnqueueBatch(jobs);
 }
 
-BandStatus Engine::RequestSyncOnWorker(ModelId model_id, WorkerId target_worker,
+BandStatus Engine::RequestSync(ModelId model_id, BandRequestOptions options,
                                        Tensors inputs, Tensors outputs) {
-  return Wait(RequestAsyncOnWorker(model_id, target_worker, inputs), outputs);
+  return Wait(RequestAsync(model_id, options, inputs), outputs);
 }
 
-BandStatus Engine::RequestSyncOnWorker(std::vector<ModelId> model_ids,
-                                       std::vector<WorkerId> target_workers,
+BandStatus Engine::RequestSync(std::vector<ModelId> model_ids,
+                                       std::vector<BandRequestOptions> options,
                                        std::vector<Tensors> inputs,
                                        std::vector<Tensors> outputs) {
-  return Wait(RequestAsyncOnWorker(model_ids, target_workers, inputs), outputs);
+  return Wait(RequestAsync(model_ids, options, inputs), outputs);
 }
 
-JobId Engine::RequestAsyncOnWorker(ModelId model_id, WorkerId target_worker,
+JobId Engine::RequestAsync(ModelId model_id, BandRequestOptions options,
                                    Tensors inputs) {
   std::vector<Tensors> input_tensors;
   if (inputs.size()) {
     input_tensors.push_back(inputs);
   }
   auto job_ids =
-      RequestAsyncOnWorker({model_id}, {target_worker}, input_tensors);
+      RequestAsync({model_id}, {options}, input_tensors);
   return job_ids.size() == 1 ? job_ids[0] : -1;
 }
 
-std::vector<JobId> Engine::RequestAsyncOnWorker(
-    std::vector<ModelId> model_ids, std::vector<WorkerId> target_workers,
+std::vector<JobId> Engine::RequestAsync(
+    std::vector<ModelId> model_ids, std::vector<BandRequestOptions> options,
     std::vector<Tensors> inputs) {
   std::vector<Job> jobs;
 
-  if (model_ids.size() != target_workers.size()) {
+  if (model_ids.size() != options.size()) {
     BAND_REPORT_ERROR(error_reporter_,
                       "# Model requests (%llu) != # Worker ids (%llu)",
-                      model_ids.size(), target_workers.size());
+                      model_ids.size(), options.size());
     return {};
   }
 
   for (size_t i = 0; i < model_ids.size(); i++) {
     Job job(model_ids[i]);
-    Worker* target_worker = GetWorker(target_workers[i]);
+    job.require_callback = options[i].require_callback;
+    Worker* target_worker = GetWorker(options[i].target_worker);
     if (target_worker == nullptr) {
       BAND_REPORT_ERROR(error_reporter_,
                         "Request assigned to invalid worker id (%d)",
-                        target_workers[i]);
+                        options[i]);
       return {};
     }
 
@@ -250,7 +251,7 @@ std::vector<JobId> Engine::RequestAsyncOnWorker(
       job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
     }
 
-    job.target_worker_id = target_workers[i];
+    job.target_worker_id = options[i].target_worker;
     jobs.push_back(job);
   }
 

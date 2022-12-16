@@ -281,6 +281,11 @@ typedef struct BandAffineQuantization {
   int32_t quantized_dimension;
 } BandAffineQuantization;
 
+typedef struct BandRequestOptions {
+  int target_worker;
+  bool require_callback;
+} BandRequestOptions;
+
 // TODO #23, #30
 // Add additional devices for HTA, NPU
 typedef enum {

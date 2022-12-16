@@ -205,7 +205,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
   }
 
   // report end invoke using callback
-  if (on_end_request_ && context_->IsEnd(job.subgraph_key)) {
+  if (on_end_request_ && job.require_callback && context_->IsEnd(job.subgraph_key)) {
     on_end_request_(job.job_id,
                     job.status == kBandJobSuccess ? kBandOk : kBandError);
   }

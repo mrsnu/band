@@ -93,11 +93,11 @@ BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSync(
     BandTensor** output_tensors);
 BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsync(
     BandEngine* engine, BandModel* model, BandTensor** input_tensors);
-BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSyncOnWorker(
-    BandEngine* engine, BandModel* model, int target_worker,
+BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSyncOptions(
+    BandEngine* engine, BandModel* model, BandRequestOptions options,
     BandTensor** input_tensors, BandTensor** output_tensors);
-BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsyncOnWorker(
-    BandEngine* engine, BandModel* model, int target_worker,
+BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsyncOptions(
+    BandEngine* engine, BandModel* model, BandRequestOptions options,
     BandTensor** input_tensors);
 BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandRequestHandle handle,
@@ -142,12 +142,12 @@ typedef BandStatus (*PFN_BandEngineRequestSync)(BandEngine*, BandModel*,
                                                 BandTensor**, BandTensor**);
 typedef BandRequestHandle (*PFN_BandEngineRequestAsync)(BandEngine*, BandModel*,
                                                         BandTensor**);
-typedef BandStatus (*PFN_BandEngineRequestSyncOnWorker)(BandEngine*, BandModel*,
-                                                        int, BandTensor**,
+typedef BandStatus (*PFN_BandEngineRequestSyncOptions)(BandEngine*, BandModel*,
+                                                BandRequestOptions,
+                                                BandTensor**, BandTensor**);
+typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(BandEngine*, BandModel*,
+                                                        BandRequestOptions,
                                                         BandTensor**);
-typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOnWorker)(BandEngine*,
-                                                                BandModel*, int,
-                                                                BandTensor**);
 typedef BandStatus (*PFN_BandEngineWait)(BandEngine*, BandRequestHandle,
                                          BandTensor**, size_t);
 typedef void (*PFN_BandEngineSetOnEndRequest)(BandEngine*,

@@ -72,16 +72,16 @@ class Engine : public Context {
                                   std::vector<Tensors> inputs = {});
 
   // Direct request to specific worker, requires fixed device scheduler
-  BandStatus RequestSyncOnWorker(ModelId model_id, WorkerId target_worker,
+  BandStatus RequestSync(ModelId model_id, BandRequestOptions options,
                                  Tensors inputs = {}, Tensors outputs = {});
-  BandStatus RequestSyncOnWorker(std::vector<ModelId> model_ids,
-                                 std::vector<WorkerId> target_workers,
+  BandStatus RequestSync(std::vector<ModelId> model_ids,
+                                 std::vector<BandRequestOptions> options,
                                  std::vector<Tensors> inputs = {},
                                  std::vector<Tensors> outputs = {});
-  JobId RequestAsyncOnWorker(ModelId model_id, WorkerId target_worker,
+  JobId RequestAsync(ModelId model_id, BandRequestOptions options,
                              Tensors inputs = {});
-  std::vector<JobId> RequestAsyncOnWorker(std::vector<ModelId> model_ids,
-                                          std::vector<WorkerId> target_workers,
+  std::vector<JobId> RequestAsync(std::vector<ModelId> model_ids,
+                                          std::vector<BandRequestOptions> options,
                                           std::vector<Tensors> inputs = {});
 
   BandStatus Wait(JobId job_id, Tensors outputs = {});

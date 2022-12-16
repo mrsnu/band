@@ -285,24 +285,24 @@ BandRequestHandle BandEngineRequestAsync(BandEngine* engine, BandModel* model,
                            BandEngineGetNumInputTensors(engine, model)));
 }
 
-BandStatus BandEngineRequestSyncOnWorker(BandEngine* engine, BandModel* model,
-                                         int target_worker,
+BandStatus BandEngineRequestSyncOptions(BandEngine* engine, BandModel* model,
+                                         BandRequestOptions options,
                                          BandTensor** input_tensors,
                                          BandTensor** output_tensors) {
-  return engine->impl->RequestSyncOnWorker(
-      model->impl->GetId(), target_worker,
+  return engine->impl->RequestSync(
+      model->impl->GetId(), options,
       BandTensorArrayToVec(input_tensors,
                            BandEngineGetNumInputTensors(engine, model)),
       BandTensorArrayToVec(output_tensors,
                            BandEngineGetNumOutputTensors(engine, model)));
 }
 
-BandRequestHandle BandEngineRequestAsyncOnWorker(BandEngine* engine,
+BandRequestHandle BandEngineRequestAsyncOptions(BandEngine* engine,
                                                  BandModel* model,
-                                                 int target_worker,
+                                                 BandRequestOptions options,
                                                  BandTensor** input_tensors) {
-  return engine->impl->RequestAsyncOnWorker(
-      model->impl->GetId(), target_worker,
+  return engine->impl->RequestAsync(
+      model->impl->GetId(), options,
       BandTensorArrayToVec(input_tensors,
                            BandEngineGetNumInputTensors(engine, model)));
 }
