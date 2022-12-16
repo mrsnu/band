@@ -23,10 +23,9 @@ const char* TfLiteTensorView::GetData() const {
 
 char* TfLiteTensorView::GetData() { return tensor_->data.raw; }
 
-std::vector<int> TfLiteTensorView::GetDims() const {
-  auto view = tflite::TfLiteIntArrayView(tensor_->dims);
-  return std::vector<int>(view.begin(), view.end());
-}
+const int* TfLiteTensorView::GetDims() const { return tensor_->dims->data; }
+
+size_t TfLiteTensorView::GetNumDims() const { return tensor_->dims->size; }
 
 void TfLiteTensorView::SetDims(const std::vector<int>& dims) {
   if (dims.size() == tensor_->dims->size) {

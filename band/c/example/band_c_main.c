@@ -38,6 +38,7 @@ PFN_BandTensorDelete pBandTensorDelete;
 PFN_BandTensorGetBytes pBandTensorGetBytes;
 PFN_BandTensorGetData pBandTensorGetData;
 PFN_BandTensorGetDims pBandTensorGetDims;
+PFN_BandTensorGetNumDims pBandTensorGetNumDims;
 PFN_BandTensorGetName pBandTensorGetName;
 PFN_BandTensorGetQuantization pBandTensorGetQuantization;
 PFN_BandTensorGetType pBandTensorGetType;
@@ -78,6 +79,7 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandTensorGetBytes);
   LoadFunction(BandTensorGetData);
   LoadFunction(BandTensorGetDims);
+  LoadFunction(BandTensorGetNumDims);
   LoadFunction(BandTensorGetName);
   LoadFunction(BandTensorGetQuantization);
   LoadFunction(BandTensorGetType);
@@ -178,6 +180,8 @@ int main() {
   float input[] = {1.f, 3.f};
   memcpy(pBandTensorGetData(input_tensor), input, 2 * sizeof(float));
   printf("BandTensorGetData\n");
+  pBandTensorGetNumDims(input_tensor);
+  printf("BandTensorNumDims\n");
   pBandEngineRequestSync(engine, model, &input_tensor, &output_tensor);
   printf("BandEngineRequestSync\n");
 

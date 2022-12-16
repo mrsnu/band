@@ -15,7 +15,8 @@ struct ITensor {
   virtual void SetType(BandType type) = 0;
   virtual const char* GetData() const = 0;
   virtual char* GetData() = 0;
-  virtual std::vector<int> GetDims() const = 0;
+  virtual const int* GetDims() const = 0;
+  virtual size_t GetNumDims() const = 0;
   virtual void SetDims(const std::vector<int>& dims) = 0;
   virtual size_t GetBytes() const = 0;
   virtual const char* GetName() const = 0;

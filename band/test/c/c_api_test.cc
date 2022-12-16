@@ -97,6 +97,12 @@ TEST(CApi, EngineSimpleInvoke) {
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[1], 9.f);
 
+  EXPECT_EQ(BandTensorGetNumDims(output_tensor), 4);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[0], 1);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[1], 8);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[2], 8);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[3], 3);
+
   BandTensorDelete(input_tensor);
   BandTensorDelete(output_tensor);
 #endif  // BAND_TFLITE

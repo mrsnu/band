@@ -196,8 +196,12 @@ BandType BandTensorGetType(BandTensor* tensor) {
 
 void* BandTensorGetData(BandTensor* tensor) { return tensor->impl->GetData(); }
 
-int* BandTensorGetDims(BandTensor* tensor) {
-  return tensor->impl->GetDims().data();
+size_t BandTensorGetNumDims(BandTensor* tensor) {
+  return tensor->impl->GetNumDims();
+}
+
+const int* BandTensorGetDims(BandTensor* tensor) {
+  return tensor->impl->GetDims();
 }
 
 size_t BandTensorGetBytes(BandTensor* tensor) {
@@ -213,9 +217,14 @@ BandQuantization BandTensorGetQuantization(BandTensor* tensor) {
 }
 
 BandEngine* BandEngineCreate(BandConfig* config) {
-  return new BandEngine(std::move(Band::Engine::Create(config->impl)));
+  std::unique_ptr<Band::Engine> engine(Band::Engine::Create(config->impl));
+  return engine ? new BandEngine(std::move(engine)) : nullptr;
 }
-void BandEngineDelete(BandEngine* engine) { delete engine; }
+void BandEngineDelete(BandEngine* engine) {
+  if (engine) {
+    delete engine;
+  }
+}
 
 BandStatus BandEngineRegisterModel(BandEngine* engine, BandModel* model) {
   auto status = engine->impl->RegisterModel(model->impl.get());

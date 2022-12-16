@@ -146,6 +146,10 @@ BandStatus TfLiteInterpreter::FromModel(Interface::IModel* model,
         vec2set(interpreter->outputs()))] = std::move(interpreter);
   }
 
+  BAND_LOG_PROD(BAND_LOG_INFO,
+                "Create Tensorflow Lite Interpreter for (%s , worker %d)",
+                BandDeviceGetName(device), worker_id);
+
   return GetBandStatus(status);
 }
 
@@ -201,7 +205,6 @@ BandStatus TfLiteInterpreter::InvokeSubgraph(const SubgraphKey& key) {
     return kBandError;
   }
   BandStatus status = GetBandStatus(interpreters_[key]->Invoke());
-  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Invoke %d", status);
   return status;
 }
 
@@ -335,6 +338,8 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
         gpu_opts.max_delegated_partitions = 100;
         target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
             TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
+
+        BAND_LOG_PROD(BAND_LOG_INFO, "Create Tensorflow Lite GPU delegate");
         break;
       }
 
@@ -378,12 +383,20 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
                       kBandDSP) {
                 target_delegate = std::move(nnapi_delegate);
+                BAND_LOG_PROD(BAND_LOG_INFO,
+                              "Create Tensorflow Lite NNAPI delegate (%s , %s)",
+                              nnapi_options.accelerator_name,
+                              BandDeviceGetName(device));
               }
 
               if (device == kBandNPU &&
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
                       kBandNPU) {
                 target_delegate = std::move(nnapi_delegate);
+                BAND_LOG_PROD(BAND_LOG_INFO,
+                              "Create Tensorflow Lite NNAPI delegate (%s , %s)",
+                              nnapi_options.accelerator_name,
+                              BandDeviceGetName(device));
               }
             }
           }
@@ -406,7 +419,10 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
       delegates_.insert({device, std::move(target_delegate)});
     }
 
-    return {success ? kBandOk : kBandError, target_delegate.get()};
+    return {success ? kBandOk : kBandError,
+            delegates_.find(device) != delegates_.end()
+                ? delegates_.at(device).get()
+                : nullptr};
   }
 }  // namespace TfLite
 
