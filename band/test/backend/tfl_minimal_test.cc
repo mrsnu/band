@@ -248,7 +248,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
 }
 
 
-TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
+TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.csv")
@@ -278,32 +278,19 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
-  Tensor* input_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor* output_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
+  int execution_count = 0;
+  engine->SetOnEndRequest([&execution_count](int job_id, BandStatus status) {
+    execution_count++;
+  });
 
-  EXPECT_TRUE(input_tensor && output_tensor);
-
-  std::array<float, 2> input = {1.f, 3.f};
-  memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
-
-  std::cout << "Num workers " << engine->GetNumWorkers() << std::endl;
   for (int worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
-    std::cout << "Run on worker (device: "
-              << BandDeviceGetName(engine->GetWorkerDevice(worker_id)) << ")"
-              << std::endl;
-    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true},
-                                          {input_tensor}, {output_tensor}),
+    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true}),
               kBandOk);
-    EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
-    EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
-
-    memset(output_tensor->GetData(), 0, sizeof(float) * 2);
+    EXPECT_EQ(execution_count, worker_id + 1);
+    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, false}),
+              kBandOk);
+    EXPECT_EQ(execution_count, worker_id + 1);
   }
-
-  delete input_tensor;
-  delete output_tensor;
 }
 }  // namespace Band
 

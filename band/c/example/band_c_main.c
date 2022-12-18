@@ -77,8 +77,8 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandEngineRegisterModel);
   LoadFunction(BandEngineRequestAsync);
   LoadFunction(BandEngineRequestSync);
-  LoadFunction(BandEngineRequestAsync);
-  LoadFunction(BandEngineRequestSync);
+  LoadFunction(BandEngineRequestAsyncOptions);
+  LoadFunction(BandEngineRequestSyncOptions);
   LoadFunction(BandEngineWait);
   LoadFunction(BandEngineSetOnEndRequest);
   LoadFunction(BandModelAddFromBuffer);
@@ -215,7 +215,7 @@ int main() {
     printf("BandEngineSetOnEndRequest not worked in RequestSync (callback not called)\n");
   }
 
-  int request_handle = pBandEngineRequestAsync(engine, model, &input);
+  BandRequestHandle request_handle = pBandEngineRequestAsync(engine, model, &input);
   printf("BandEngineRequestAsync\n");
   pBandEngineWait(engine, request_handle, &output_tensor, num_outputs);
 
@@ -228,7 +228,7 @@ int main() {
   options.target_worker = -1;
   options.require_callback = false;
   
-  int request_handle = pBandEngineRequestAsyncOptions(engine, model, options, &input_tensor);
+  request_handle = pBandEngineRequestAsyncOptions(engine, model, options, &input_tensor);
   printf("BandEngineRequestAsyncOptions\n");
   pBandEngineWait(engine, request_handle, &output_tensor, num_outputs);
 
@@ -236,7 +236,7 @@ int main() {
     printf("BandEngineSetOnEndRequest should not be triggered with BandEngineRequestAsyncOptions\n");
   }
   
-  int request_handle = pBandEngineRequestSyncOptions(engine, model, options, &input_tensor, &output_tensor);
+  request_handle = pBandEngineRequestSyncOptions(engine, model, options, &input_tensor, &output_tensor);
   printf("BandEngineRequestSyncOptions\n");
   pBandEngineWait(engine, request_handle, &output_tensor, num_outputs);
 
