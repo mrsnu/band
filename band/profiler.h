@@ -3,7 +3,7 @@
 
 #include <json/json.h>
 
-#include <map>
+#include <unordered_map>
 
 #include "band/common.h"
 #include "band/config.h"
@@ -36,7 +36,7 @@ class Profiler {
   // because the model name --> int mapping is not available at init time.
   Json::Value profile_database_json_;
 
-  std::map<SubgraphKey, Latency> profile_database_;
+  std::unordered_map<SubgraphKey, Latency, SubgraphHash> profile_database_;
   float profile_smoothing_factor_;
 
   bool profile_online_;
