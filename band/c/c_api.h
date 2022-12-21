@@ -94,10 +94,10 @@ BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSync(
 BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsync(
     BandEngine* engine, BandModel* model, BandTensor** input_tensors);
 BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSyncOptions(
-    BandEngine* engine, BandModel* model, BandRequestOptions options,
+    BandEngine* engine, BandModel* model, BandRequestOption options,
     BandTensor** input_tensors, BandTensor** output_tensors);
 BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsyncOptions(
-    BandEngine* engine, BandModel* model, BandRequestOptions options,
+    BandEngine* engine, BandModel* model, BandRequestOption options,
     BandTensor** input_tensors);
 BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandRequestHandle handle,
@@ -143,10 +143,10 @@ typedef BandStatus (*PFN_BandEngineRequestSync)(BandEngine*, BandModel*,
 typedef BandRequestHandle (*PFN_BandEngineRequestAsync)(BandEngine*, BandModel*,
                                                         BandTensor**);
 typedef BandStatus (*PFN_BandEngineRequestSyncOptions)(BandEngine*, BandModel*,
-                                                BandRequestOptions,
+                                                BandRequestOption,
                                                 BandTensor**, BandTensor**);
 typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(BandEngine*, BandModel*,
-                                                        BandRequestOptions,
+                                                        BandRequestOption,
                                                         BandTensor**);
 typedef BandStatus (*PFN_BandEngineWait)(BandEngine*, BandRequestHandle,
                                          BandTensor**, size_t);

@@ -67,9 +67,9 @@ BandStatus Planner::Init(const PlannerConfig& config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == kBandFixedDevice) {
+    if (schedulers[i] == kBandFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler());
-    } else if (schedulers[i] == kBandFixedDeviceGlobalQueue) {
+    } else if (schedulers[i] == kBandFixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler());
     } else if (schedulers[i] == kBandRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler());
@@ -205,7 +205,8 @@ void Planner::EnqueueFinishedJob(Job& job) {
   }
 
   // report end invoke using callback
-  if (on_end_request_ && job.require_callback && context_->IsEnd(job.subgraph_key)) {
+  if (on_end_request_ && job.require_callback &&
+      context_->IsEnd(job.subgraph_key)) {
     on_end_request_(job.job_id,
                     job.status == kBandJobSuccess ? kBandOk : kBandError);
   }
@@ -280,7 +281,6 @@ void Planner::Plan() {
       for (size_t i = 0; i < local_queues_.size(); ++i) {
         auto workers_actions =
             schedulers_[i]->Schedule(*context_, local_queues_[i]);
-        //
         for (auto& actions : workers_actions) {
           for (auto& action : actions.second) {
             UpdateJobScheduleStatus(action.first, action.second);

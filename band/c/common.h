@@ -37,10 +37,10 @@ typedef enum BandWorkerType {
 } BandWorkerType;
 
 typedef enum BandSchedulerType {
-  kBandFixedDevice = 0,
+  kBandFixedWorker = 0,
   kBandRoundRobin = 1,
   kBandShortestExpectedLatency = 2,
-  kBandFixedDeviceGlobalQueue = 3,
+  kBandFixedWorkerGlobalQueue = 3,
   kBandHeterogeneousEarliestFinishTime = 4,
   kBandLeastSlackTimeFirst = 5,
   kBandHeterogeneousEarliestFinishTimeReserved = 6,
@@ -281,10 +281,23 @@ typedef struct BandAffineQuantization {
   int32_t quantized_dimension;
 } BandAffineQuantization;
 
-typedef struct BandRequestOptions {
+// Optional parameters for model request
+// `target_worker`: designate the target worker for a request.
+// [default : -1 (not specified)] This option requires the FixedWorkerScheduler.
+// `require_callback`: report if OnEndRequest is specified in an engine
+// [default: true]
+// `slo_us` and `slo_scale`: specifying an SLO value for a model.
+// Setting `slo_scale` will make the SLO =  slo_scale * profiled latency of
+// that model. `slo_scale` will be ignored if `slo_us` is given
+// (i.e., no reason to specify both options). [default : -1 (not specified)]
+typedef struct BandRequestOption {
   int target_worker;
   bool require_callback;
-} BandRequestOptions;
+  int slo_us;
+  int slo_scale;
+} BandRequestOption;
+
+BandRequestOption BandGetDefaultRequestOption();
 
 // TODO #23, #30
 // Add additional devices for HTA, NPU
@@ -297,7 +310,7 @@ typedef enum {
 } BandDeviceFlags;
 
 const char* BandDeviceGetName(BandDeviceFlags flag);
-const BandDeviceFlags BandDeviceGetFlag(const char* name);
+BandDeviceFlags BandDeviceGetFlag(const char* name);
 
 #ifdef __cplusplus
 }  // extern "C"

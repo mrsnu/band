@@ -23,7 +23,6 @@ struct MockContextBase : public Context {
 
   /* model */
   MOCK_METHOD1(GetModelSpec, const ModelSpec*(ModelId));
-  MOCK_CONST_METHOD1(GetModelConfigIdx, int(ModelId));
   MOCK_CONST_METHOD1(GetModelWorker, WorkerId(ModelId));
 
   /* scheduling */

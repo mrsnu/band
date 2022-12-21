@@ -127,7 +127,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(engine->RequestSync(model.GetId(), {input_tensor}, {output_tensor}),
+  EXPECT_EQ(engine->RequestSync(model.GetId(), BandGetDefaultRequestOption(),
+                                {input_tensor}, {output_tensor}),
             kBandOk);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
@@ -179,7 +180,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   engine->SetOnEndRequest(
       [&execution_count](int, BandStatus) { execution_count++; });
 
-  JobId job_id = engine->RequestAsync(model.GetId(), {input_tensor});
+  JobId job_id = engine->RequestAsync(
+      model.GetId(), BandGetDefaultRequestOption(), {input_tensor});
   EXPECT_EQ(engine->Wait(job_id, {output_tensor}), kBandOk);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
@@ -193,7 +195,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.csv")
-          .AddSchedulers({kBandFixedDevice})
+          .AddSchedulers({kBandFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
           .AddCPUMask(kBandAll)
@@ -234,8 +236,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
     std::cout << "Run on worker (device: "
               << BandDeviceGetName(engine->GetWorkerDevice(worker_id)) << ")"
               << std::endl;
-    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true},
-                                          {input_tensor}, {output_tensor}),
+    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true, -1, -1},
+                                  {input_tensor}, {output_tensor}),
               kBandOk);
     EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
     EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
@@ -247,12 +249,11 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   delete output_tensor;
 }
 
-
 TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.csv")
-          .AddSchedulers({kBandFixedDevice})
+          .AddSchedulers({kBandFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
           .AddCPUMask(kBandAll)
@@ -279,15 +280,14 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   int execution_count = 0;
-  engine->SetOnEndRequest([&execution_count](int job_id, BandStatus status) {
-    execution_count++;
-  });
+  engine->SetOnEndRequest(
+      [&execution_count](int job_id, BandStatus status) { execution_count++; });
 
   for (int worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
-    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true}),
+    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true, -1, -1}),
               kBandOk);
     EXPECT_EQ(execution_count, worker_id + 1);
-    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, false}),
+    EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, false, -1, -1}),
               kBandOk);
     EXPECT_EQ(execution_count, worker_id + 1);
   }

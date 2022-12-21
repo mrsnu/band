@@ -115,17 +115,48 @@ TEST(CApi, EngineFixedDeviceInvoke) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
   BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
                 "band/test/data/log.csv");
-  BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandFixedDevice);
-  BandAddConfig(b, BAND_MODEL_MODELS, 1, "band/test/data/add.bin");
+  BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandFixedWorker);
   BandConfig* config = BandConfigCreate(b);
   EXPECT_NE(config, nullptr);
 
-#ifdef BAND_TFLITE
   BandEngine* engine = BandEngineCreate(config);
   EXPECT_NE(engine, nullptr);
-  BandEngineDelete(engine);
+
+#ifdef BAND_TFLITE
+  BandModel* model = BandModelCreate();
+  EXPECT_NE(model, nullptr);
+  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin"),
+            kBandOk);
+  EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
+  EXPECT_EQ(BandEngineGetNumInputTensors(engine, model), 1);
+  EXPECT_EQ(BandEngineGetNumOutputTensors(engine, model), 1);
+
+  BandTensor* input_tensor = BandEngineCreateInputTensor(engine, model, 0);
+  BandTensor* output_tensor = BandEngineCreateOutputTensor(engine, model, 0);
+
+  std::array<float, 2> input = {1.f, 3.f};
+  memcpy(BandTensorGetData(input_tensor), input.data(),
+         input.size() * sizeof(float));
+  BandRequestOption request_option = BandGetDefaultRequestOption();
+  request_option.target_worker = 0;
+  EXPECT_EQ(BandEngineRequestSyncOptions(engine, model, request_option,
+                                         &input_tensor, &output_tensor),
+            kBandOk);
+
+  EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[0], 3.f);
+  EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[1], 9.f);
+
+  EXPECT_EQ(BandTensorGetNumDims(output_tensor), 4);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[0], 1);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[1], 8);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[2], 8);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[3], 3);
+
+  BandTensorDelete(input_tensor);
+  BandTensorDelete(output_tensor);
 #endif  // BAND_TFLITE
 
+  BandEngineDelete(engine);
   BandConfigDelete(config);
 }
 

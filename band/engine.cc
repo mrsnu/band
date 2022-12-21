@@ -9,6 +9,7 @@
 #include "band/profiler.h"
 #include "band/tensor.h"
 #include "band/worker.h"
+#include "engine.h"
 
 namespace Band {
 Engine::~Engine() {
@@ -23,8 +24,6 @@ Engine::~Engine() {
   for (auto& worker : workers_) {
     worker.reset();
   }
-
-  planner_.reset();
 }
 
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
@@ -148,77 +147,41 @@ BandDeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
   }
 }
 
-BandStatus Engine::RequestSync(ModelId model_id, Tensors inputs,
-                               Tensors outputs) {
-  return Wait(RequestAsync(model_id, inputs), outputs);
+BandStatus Engine::RequestSync(ModelId model_id, BandRequestOption options,
+                               Tensors inputs, Tensors outputs) {
+  JobId job_id = RequestAsync(model_id, options, inputs);
+  if (job_id == -1) {
+    return kBandError;
+  } else {
+    return Wait(job_id, outputs);
+  }
 }
 
 BandStatus Engine::RequestSync(std::vector<ModelId> model_ids,
+                               std::vector<BandRequestOption> options,
                                std::vector<Tensors> inputs,
                                std::vector<Tensors> outputs) {
-  return Wait(RequestAsync(model_ids, inputs), outputs);
+  std::vector<JobId> job_ids = RequestAsync(model_ids, options, inputs);
+  if (job_ids.size() > 0) {
+    return kBandError;
+  } else {
+    return Wait(job_ids, outputs);
+  }
 }
 
-JobId Engine::RequestAsync(ModelId model_id, Tensors inputs) {
+JobId Engine::RequestAsync(ModelId model_id, BandRequestOption options,
+                           Tensors inputs) {
   std::vector<Tensors> input_tensors;
   if (inputs.size()) {
     input_tensors.push_back(inputs);
   }
-  auto job_ids = RequestAsync({model_id}, input_tensors);
+  auto job_ids = RequestAsync({model_id}, {options}, input_tensors);
   return job_ids.size() == 1 ? job_ids[0] : -1;
 }
 
 std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
+                                        std::vector<BandRequestOption> options,
                                         std::vector<Tensors> inputs) {
-  std::vector<Job> jobs;
-
-  for (size_t i = 0; i < model_ids.size(); i++) {
-    Job job(model_ids[i]);
-    if (i < inputs.size()) {
-      int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
-      if (model_input_buffer_[model_ids[i]]->PutTensorsToHandle(
-              inputs[i], input_handle) != kBandOk) {
-        BAND_REPORT_ERROR(error_reporter_, "Input copy failure for model %d",
-                          model_ids[i]);
-        return {};
-      }
-      job.input_handle = input_handle;
-      job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
-    }
-    jobs.push_back(job);
-  }
-
-  for (ModelId model_id : model_ids) {
-  }
-  return EnqueueBatch(jobs);
-}
-
-BandStatus Engine::RequestSync(ModelId model_id, BandRequestOptions options,
-                                       Tensors inputs, Tensors outputs) {
-  return Wait(RequestAsync(model_id, options, inputs), outputs);
-}
-
-BandStatus Engine::RequestSync(std::vector<ModelId> model_ids,
-                                       std::vector<BandRequestOptions> options,
-                                       std::vector<Tensors> inputs,
-                                       std::vector<Tensors> outputs) {
-  return Wait(RequestAsync(model_ids, options, inputs), outputs);
-}
-
-JobId Engine::RequestAsync(ModelId model_id, BandRequestOptions options,
-                                   Tensors inputs) {
-  std::vector<Tensors> input_tensors;
-  if (inputs.size()) {
-    input_tensors.push_back(inputs);
-  }
-  auto job_ids =
-      RequestAsync({model_id}, {options}, input_tensors);
-  return job_ids.size() == 1 ? job_ids[0] : -1;
-}
-
-std::vector<JobId> Engine::RequestAsync(
-    std::vector<ModelId> model_ids, std::vector<BandRequestOptions> options,
-    std::vector<Tensors> inputs) {
   std::vector<Job> jobs;
 
   if (model_ids.size() != options.size()) {
@@ -229,14 +192,38 @@ std::vector<JobId> Engine::RequestAsync(
   }
 
   for (size_t i = 0; i < model_ids.size(); i++) {
+    // TODO(BAND-33): explicit job life cycle
     Job job(model_ids[i]);
     job.require_callback = options[i].require_callback;
-    Worker* target_worker = GetWorker(options[i].target_worker);
-    if (target_worker == nullptr) {
-      BAND_REPORT_ERROR(error_reporter_,
-                        "Request assigned to invalid worker id (%d)",
-                        options[i]);
-      return {};
+
+    int target_slo_us = options[i].slo_us;
+    if (options[i].slo_scale != -1) {
+      if (options[i].slo_scale <= 0) {
+        BAND_REPORT_ERROR(error_reporter_,
+                          "Specified slo_scale is invalid (%f <= 0)",
+                          options[i].slo_scale);
+        return {};
+      }
+
+      target_slo_us = GetWorst(model_ids[i]) * options[i].slo_scale;
+    }
+
+    // override, if `slo_us` is specified
+    if (options[i].slo_us != -1) {
+      target_slo_us = options[i].slo_us;
+    }
+
+    job.slo_us = target_slo_us;
+
+    if (options[i].target_worker != -1) {
+      Worker* target_worker = GetWorker(options[i].target_worker);
+      if (target_worker == nullptr) {
+        BAND_REPORT_ERROR(error_reporter_,
+                          "Request assigned to invalid worker id (%d)",
+                          options[i]);
+        return {};
+      }
+      job.target_worker_id = options[i].target_worker;
     }
 
     if (i < inputs.size()) {
@@ -251,7 +238,6 @@ std::vector<JobId> Engine::RequestAsync(
       job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
     }
 
-    job.target_worker_id = options[i].target_worker;
     jobs.push_back(job);
   }
 
@@ -374,46 +360,6 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     }
   }
 
-  // Instantiate and register a model for each model_config
-  ModelConfig model_config = config.model_configs;
-  std::vector<int> assigned_workers(workers_.size());
-  for (int i = 0; i < assigned_workers.size(); i++) assigned_workers[i] = 0;
-  for (int i = 0; i < model_config.models.size(); i++) {
-    std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
-    ModelId model_id;
-    // Create a model for each valid backend
-    // TODO(juimdpp): selectively support a single backend (based on config)
-    for (auto backend : valid_backends) {
-      if (model_ptr->FromPath(backend, model_config.models[i].c_str()) !=
-          kBandOk) {
-        error_reporter_->Report("Model %s could not be instantiated for %s.",
-                                model_config.models[i].c_str(),
-                                BandBackendGetName(backend));
-      }
-    }
-
-    // Save model and its config
-    model_id = model_ptr->GetId();
-    model_configs_idx_[model_id] = i;
-    models_.emplace(model_id, model_ptr);
-
-    // Translate device - affinity to WorkerId
-    if (model_config.models_assigned_worker.size() > 0) {
-      for (int j = 0; j < workers_.size(); j++) {
-        DeviceWorkerAffinityPair pair = model_config.models_assigned_worker[i];
-        if (workers_[j]->GetDeviceFlag() == pair.device && j == pair.worker) {
-          planner_->GetModelWorkerMap()[model_id] = j;
-        }
-      }
-    }
-
-    // Register model
-    if (RegisterModel(model_ptr.get()) != kBandOk) {
-      error_reporter_->Report("Model %s could not be registered.",
-                              model_config.models[i].c_str());
-    }
-    models_.emplace(model_id, std::move(model_ptr));
-  }
   return kBandOk;
 }
 
@@ -504,15 +450,23 @@ SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
 }
 
 void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
+  // requires nullity check for schedulers without profile
   if (profiler_) profiler_->UpdateLatency(key, latency);
 }
 
 int64_t Engine::GetProfiled(const SubgraphKey& key) const {
+  // requires nullity check for schedulers without profile
   return profiler_ ? profiler_->GetProfiled(key) : 0;
 }
 
 int64_t Engine::GetExpected(const SubgraphKey& key) const {
+  // requires nullity check for schedulers without profile
   return profiler_ ? profiler_->GetExpected(key) : 0;
+}
+
+int64_t Engine::GetWorst(ModelId model_id) const {
+  // requires nullity check for schedulers without profile
+  return profiler_ ? profiler_->GetWorst(model_id) : 0;
 }
 
 void Engine::Trigger() { planner_->Trigger(); }
