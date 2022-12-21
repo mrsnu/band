@@ -9,7 +9,6 @@
 #include "band/profiler.h"
 #include "band/tensor.h"
 #include "band/worker.h"
-#include "engine.h"
 
 namespace Band {
 Engine::~Engine() {
@@ -24,6 +23,8 @@ Engine::~Engine() {
   for (auto& worker : workers_) {
     worker.reset();
   }
+
+  planner_.reset();
 }
 
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
