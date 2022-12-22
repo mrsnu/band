@@ -116,6 +116,9 @@ struct Job {
   int64_t expected_latency = 0;
   int64_t slo_us = 0;
 
+  // Target worker id (only for fixed worker request)
+  WorkerId target_worker_id = -1;
+
   // Constant variables (Valid after invoke)
   // TODO: better job life-cycle to change these to `const`
   ModelId model_id;
@@ -124,6 +127,7 @@ struct Job {
   JobId job_id = -1;
   int sched_id = -1;
   std::string model_fname;
+  bool require_callback = true;
 
   // Current status for execution (Valid after planning)
   JobStatus status = kBandJobQueued;

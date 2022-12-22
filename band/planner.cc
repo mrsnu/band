@@ -3,7 +3,7 @@
 #include <fstream>
 
 #include "band/context.h"
-#include "band/scheduler/fixed_device_scheduler.h"
+#include "band/scheduler/fixed_worker_scheduler.h"
 //#include
 //"band/scheduler/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 //#include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
@@ -67,10 +67,10 @@ BandStatus Planner::Init(const PlannerConfig& config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == kBandFixedDevice) {
-      schedulers_.emplace_back(new FixedDeviceScheduler());
-    } else if (schedulers[i] == kBandFixedDeviceGlobalQueue) {
-      schedulers_.emplace_back(new FixedDeviceGlobalQueueScheduler());
+    if (schedulers[i] == kBandFixedWorker) {
+      schedulers_.emplace_back(new FixedWorkerScheduler());
+    } else if (schedulers[i] == kBandFixedWorkerGlobalQueue) {
+      schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler());
     } else if (schedulers[i] == kBandRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler());
     } else if (schedulers[i] == kBandShortestExpectedLatency) {
@@ -205,9 +205,10 @@ void Planner::EnqueueFinishedJob(Job& job) {
   }
 
   // report end invoke using callback
-  if (on_end_invoke_ && context_->IsEnd(job.subgraph_key)) {
-    on_end_invoke_(job.job_id,
-                   job.status == kBandJobSuccess ? kBandOk : kBandError);
+  if (on_end_request_ && job.require_callback &&
+      context_->IsEnd(job.subgraph_key)) {
+    on_end_request_(job.job_id,
+                    job.status == kBandJobSuccess ? kBandOk : kBandError);
   }
 }
 
@@ -245,9 +246,9 @@ Job Planner::GetFinishedJob(int job_id) {
   }
 }
 
-void Planner::SetEndInvokeFunction(
-    std::function<void(int, BandStatus)> on_end_invoke) {
-  on_end_invoke_ = on_end_invoke;
+void Planner::SetOnEndRequest(
+    std::function<void(int, BandStatus)> on_end_request) {
+  on_end_request_ = on_end_request;
 }
 
 int Planner::GetWorkerType() const {
@@ -280,7 +281,6 @@ void Planner::Plan() {
       for (size_t i = 0; i < local_queues_.size(); ++i) {
         auto workers_actions =
             schedulers_[i]->Schedule(*context_, local_queues_[i]);
-        //
         for (auto& actions : workers_actions) {
           for (auto& action : actions.second) {
             UpdateJobScheduleStatus(action.first, action.second);

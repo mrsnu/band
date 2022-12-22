@@ -17,6 +17,7 @@ class Profiler {
 
   int64_t GetProfiled(const SubgraphKey& key) const;
   int64_t GetExpected(const SubgraphKey& key) const;
+  int64_t GetWorst(ModelId model_id) const;
 
  private:
   // latency in microseconds

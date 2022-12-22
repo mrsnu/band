@@ -67,7 +67,7 @@ class Planner {
     return model_execution_count_;
   }
   // Sets the callback function pointer to report the end of invoke.
-  void SetEndInvokeFunction(std::function<void(int, BandStatus)> on_end_invoke);
+  void SetOnEndRequest(std::function<void(int, BandStatus)> on_end_request);
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
@@ -106,7 +106,7 @@ class Planner {
   ConcurrentJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
-  std::function<void(int, BandStatus)> on_end_invoke_;
+  std::function<void(int, BandStatus)> on_end_request_;
 
   // Request Queue
   ConcurrentJobQueue requests_;

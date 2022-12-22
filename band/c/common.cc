@@ -117,7 +117,7 @@ const char* BandDeviceGetName(BandDeviceFlags flag) {
   return "Unknown type";
 }
 
-const BandDeviceFlags BandDeviceGetFlag(const char* name) {
+BandDeviceFlags BandDeviceGetFlag(const char* name) {
   for (int i = 0; i < kBandNumDevices; i++) {
     BandDeviceFlags flag = (BandDeviceFlags)i;
     if (strcmp(BandDeviceGetName(flag), name) == 0) {
@@ -125,6 +125,10 @@ const BandDeviceFlags BandDeviceGetFlag(const char* name) {
     }
   }
   return kBandNumDevices;
+}
+
+BandRequestOption BandGetDefaultRequestOption() {
+  return {-1, true, -1.f, -1.f};
 }
 
 const char* BandBackendGetName(BandBackendType flag) {

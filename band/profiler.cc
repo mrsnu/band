@@ -45,4 +45,14 @@ int64_t Profiler::GetExpected(const SubgraphKey& key) const {
     return -1;
   }
 }
+
+int64_t Profiler::GetWorst(ModelId model_id) const {
+  int64_t worst_model_latency = 0;
+  for (auto it : profile_database_) {
+    if (it.first.GetModelId() == model_id) {
+      worst_model_latency = std::max(worst_model_latency, it.second.moving_averaged);
+    }
+  }
+  return worst_model_latency;
+}
 }  // namespace Band

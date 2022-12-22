@@ -13,7 +13,7 @@
 namespace Band {
 Engine::~Engine() {
   for (auto& worker : workers_) {
-    worker.second->End();
+    worker->End();
   }
 
   for (auto& interpreter : interpreters_) {
@@ -21,7 +21,7 @@ Engine::~Engine() {
   }
 
   for (auto& worker : workers_) {
-    worker.second.reset();
+    worker.reset();
   }
 
   planner_.reset();
@@ -47,16 +47,16 @@ BandStatus Engine::RegisterModel(Model* model) {
     }
 
     // Add whole-model subgraphs
-    for (auto& id_worker : workers_) {
+    for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
       std::unique_ptr<Interface::IInterpreter> interpreter(
           BackendFactory::CreateInterpreter(backend_type));
       if (interpreter->FromModel(
-              model->GetBackendModel(backend_type), id_worker.first,
-              id_worker.second->GetDeviceFlag()) == kBandOk) {
-        BAND_LOG_INTERNAL(BAND_LOG_INFO,
-                          "Create interpreter for model %d worker %s", model_id,
-                          BandDeviceGetName(id_worker.second->GetDeviceFlag()));
-        interpreters_[{id_worker.first, model_id}] = std::move(interpreter);
+              model->GetBackendModel(backend_type), worker_id,
+              workers_[worker_id]->GetDeviceFlag()) == kBandOk) {
+        BAND_LOG_INTERNAL(
+            BAND_LOG_INFO, "Create interpreter for model %d worker %s",
+            model_id, BandDeviceGetName(workers_[worker_id]->GetDeviceFlag()));
+        interpreters_[{worker_id, model_id}] = std::move(interpreter);
       }
     }
 
@@ -137,32 +137,96 @@ std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
                      : std::vector<int>();
 }
 
-BandStatus Engine::InvokeSyncModel(ModelId model_id, Tensors inputs,
-                                   Tensors outputs) {
-  return Wait(InvokeAsyncModel(model_id, inputs), outputs);
+size_t Engine::GetNumWorkers() const { return workers_.size(); }
+
+BandDeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
+  if (id >= 0 && id < workers_.size()) {
+    return workers_.at(id)->GetDeviceFlag();
+  } else {
+    BAND_REPORT_ERROR(error_reporter_, "Invalid worker id %d", id);
+    return kBandNumDevices;
+  }
 }
 
-BandStatus Engine::InvokeSyncModels(std::vector<ModelId> model_ids,
-                                    std::vector<Tensors> inputs,
-                                    std::vector<Tensors> outputs) {
-  return Wait(InvokeAsyncModels(model_ids, inputs), outputs);
+BandStatus Engine::RequestSync(ModelId model_id, BandRequestOption options,
+                               Tensors inputs, Tensors outputs) {
+  JobId job_id = RequestAsync(model_id, options, inputs);
+  if (job_id == -1) {
+    return kBandError;
+  } else {
+    return Wait(job_id, outputs);
+  }
 }
 
-JobId Engine::InvokeAsyncModel(ModelId model_id, Tensors inputs) {
+BandStatus Engine::RequestSync(std::vector<ModelId> model_ids,
+                               std::vector<BandRequestOption> options,
+                               std::vector<Tensors> inputs,
+                               std::vector<Tensors> outputs) {
+  std::vector<JobId> job_ids = RequestAsync(model_ids, options, inputs);
+  if (job_ids.size() > 0) {
+    return kBandError;
+  } else {
+    return Wait(job_ids, outputs);
+  }
+}
+
+JobId Engine::RequestAsync(ModelId model_id, BandRequestOption options,
+                           Tensors inputs) {
   std::vector<Tensors> input_tensors;
   if (inputs.size()) {
     input_tensors.push_back(inputs);
   }
-  auto job_ids = InvokeAsyncModels({model_id}, input_tensors);
+  auto job_ids = RequestAsync({model_id}, {options}, input_tensors);
   return job_ids.size() == 1 ? job_ids[0] : -1;
 }
 
-std::vector<JobId> Engine::InvokeAsyncModels(std::vector<ModelId> model_ids,
-                                             std::vector<Tensors> inputs) {
+std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
+                                        std::vector<BandRequestOption> options,
+                                        std::vector<Tensors> inputs) {
   std::vector<Job> jobs;
 
+  if (model_ids.size() != options.size()) {
+    BAND_REPORT_ERROR(error_reporter_,
+                      "# Model requests (%llu) != # Worker ids (%llu)",
+                      model_ids.size(), options.size());
+    return {};
+  }
+
   for (size_t i = 0; i < model_ids.size(); i++) {
+    // TODO(BAND-33): explicit job life cycle
     Job job(model_ids[i]);
+    job.require_callback = options[i].require_callback;
+
+    int target_slo_us = options[i].slo_us;
+    if (options[i].slo_scale != -1) {
+      if (options[i].slo_scale <= 0) {
+        BAND_REPORT_ERROR(error_reporter_,
+                          "Specified slo_scale is invalid (%f <= 0)",
+                          options[i].slo_scale);
+        return {};
+      }
+
+      target_slo_us = GetWorst(model_ids[i]) * options[i].slo_scale;
+    }
+
+    // override, if `slo_us` is specified
+    if (options[i].slo_us != -1) {
+      target_slo_us = options[i].slo_us;
+    }
+
+    job.slo_us = target_slo_us;
+
+    if (options[i].target_worker != -1) {
+      Worker* target_worker = GetWorker(options[i].target_worker);
+      if (target_worker == nullptr) {
+        BAND_REPORT_ERROR(error_reporter_,
+                          "Request assigned to invalid worker id (%d)",
+                          options[i]);
+        return {};
+      }
+      job.target_worker_id = options[i].target_worker;
+    }
+
     if (i < inputs.size()) {
       int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
       if (model_input_buffer_[model_ids[i]]->PutTensorsToHandle(
@@ -174,6 +238,7 @@ std::vector<JobId> Engine::InvokeAsyncModels(std::vector<ModelId> model_ids,
       job.input_handle = input_handle;
       job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
     }
+
     jobs.push_back(job);
   }
 
@@ -230,9 +295,9 @@ BandStatus Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   return kBandOk;
 }
 
-void Engine::SetEndInvokeFunction(
-    std::function<void(int, BandStatus)> on_end_invoke) {
-  planner_->SetEndInvokeFunction(on_end_invoke);
+void Engine::SetOnEndRequest(
+    std::function<void(int, BandStatus)> on_end_request) {
+  planner_->SetOnEndRequest(on_end_request);
 }
 
 BandStatus Engine::Init(const RuntimeConfig& config) {
@@ -289,65 +354,21 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         BandDeviceGetName(device_flag));
       worker->Start();
-      workers_[worker_id] = std::move(worker);
+      workers_.push_back(std::move(worker));
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         BandDeviceGetName(device_flag));
     }
   }
 
-  // Instantiate and register a model for each model_config
-  ModelConfig model_config = config.model_configs;
-  std::vector<int> assigned_workers(workers_.size());
-  for (int i = 0; i < assigned_workers.size(); i++) assigned_workers[i] = 0;
-  for (int i = 0; i < model_config.models.size(); i++) {
-    std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
-    ModelId model_id;
-    // Create a model for each valid backend
-    // TODO(juimdpp): selectively support a single backend (based on config)
-    for (auto backend : valid_backends) {
-      if (model_ptr->FromPath(backend, model_config.models[i].c_str()) !=
-          kBandOk) {
-        error_reporter_->Report("Model %s could not be instantiated for %s.",
-                                model_config.models[i].c_str(),
-                                BandBackendGetName(backend));
-      }
-    }
-
-    // Save model and its config
-    model_id = model_ptr->GetId();
-    model_configs_idx_[model_id] = i;
-    models_.emplace(model_id, model_ptr);
-
-    // Translate device - affinity to WorkerId
-    if (model_config.models_assigned_worker.size() > 0) {
-      int j = 0;
-      for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-           worker_it++, j++) {
-        DeviceWorkerAffinityPair pair = model_config.models_assigned_worker[i];
-        if (worker_it->second->GetDeviceFlag() == pair.device &&
-            j == pair.worker) {
-          planner_->GetModelWorkerMap()[model_id] = worker_it->first;
-        }
-      }
-    }
-
-    // Register model
-    if (RegisterModel(model_ptr.get()) != kBandOk) {
-      error_reporter_->Report("Model %s could not be registered.",
-                              model_config.models[i].c_str());
-    }
-    models_.emplace(model_id, std::move(model_ptr));
-  }
   return kBandOk;
 }
 
 Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
 
 void Engine::UpdateWorkerWaitingTime() const {
-  for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-       worker_it++) {
-    workers_waiting_[worker_it->first] = worker_it->second->GetWaitingTime();
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    workers_waiting_[worker_id] = workers_[worker_id]->GetWaitingTime();
   }
 }
 
@@ -358,10 +379,9 @@ const WorkerWaitingTime& Engine::GetWorkerWaitingTime() const {
 std::set<int> Engine::GetIdleWorkers() const {
   std::set<int> idle_workers;
 
-  for (auto worker_it = workers_.begin(); worker_it != workers_.end();
-       worker_it++) {
-    if (!worker_it->second->HasJob()) {
-      idle_workers.insert(worker_it->first);
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (!workers_[worker_id]->HasJob()) {
+      idle_workers.insert(worker_id);
     }
   }
   return idle_workers;
@@ -431,15 +451,23 @@ SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
 }
 
 void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
+  // requires nullity check for schedulers without profile
   if (profiler_) profiler_->UpdateLatency(key, latency);
 }
 
 int64_t Engine::GetProfiled(const SubgraphKey& key) const {
+  // requires nullity check for schedulers without profile
   return profiler_ ? profiler_->GetProfiled(key) : 0;
 }
 
 int64_t Engine::GetExpected(const SubgraphKey& key) const {
+  // requires nullity check for schedulers without profile
   return profiler_ ? profiler_->GetExpected(key) : 0;
+}
+
+int64_t Engine::GetWorst(ModelId model_id) const {
+  // requires nullity check for schedulers without profile
+  return profiler_ ? profiler_->GetWorst(model_id) : 0;
 }
 
 void Engine::Trigger() { planner_->Trigger(); }
@@ -457,8 +485,11 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
 Worker* Engine::GetWorker(WorkerId id) {
-  auto it = workers_.find(id);
-  return it != workers_.end() ? it->second.get() : nullptr;
+  if (id >= 0 && id < workers_.size()) {
+    return workers_[id].get();
+  } else {
+    return nullptr;
+  }
 }
 
 BandStatus Engine::TryCopyInputTensors(const Job& job) {
@@ -573,9 +604,9 @@ BandStatus Engine::TryCopyOutputTensors(const Job& job) {
 }
 
 WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
-  for (auto& it : workers_) {
-    if (it.second->GetDeviceFlag() == flag) {
-      return it.first;
+  for (int worker_id = 0; worker_id < workers_.size(); worker_id++) {
+    if (workers_[worker_id]->GetDeviceFlag() == flag) {
+      return worker_id;
     }
   }
   BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a worker for %s",

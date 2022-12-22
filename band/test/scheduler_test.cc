@@ -5,7 +5,7 @@
 
 #include "band/config.h"
 #include "band/model.h"
-#include "band/scheduler/fixed_device_scheduler.h"
+#include "band/scheduler/fixed_worker_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/test/test_util.h"
 
@@ -84,7 +84,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  FixedDeviceScheduler fd_scheduler;
+  FixedWorkerScheduler fd_scheduler;
   auto action = fd_scheduler.Schedule(context, requests);
 
   int count_scheduled = 0;
@@ -111,6 +111,48 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest) {
   }
 }
 
+TEST_P(ConfigLevelTestsFixture, FixedDeviceEngineRequestTest) {
+  // Set configs in context
+  std::deque<int> request_models = std::get<0>(GetParam());
+  std::set<int> available_workers = std::get<1>(GetParam());
+  const int target_worker = 0;
+
+  std::deque<Job> requests;
+  for (auto it = request_models.begin(); it != request_models.end(); it++) {
+    Job job = Job(*it);
+    job.target_worker_id = target_worker;
+    requests.emplace_back(job);
+  }
+  const int count_requests = requests.size();
+
+  MockContext context(available_workers);
+  FixedWorkerScheduler fd_scheduler;
+  auto action = fd_scheduler.Schedule(context, requests);
+
+  int count_scheduled = 0;
+  for (auto scheduled_jobs : action) {
+    count_scheduled += scheduled_jobs.second.size();
+  }
+
+  // Each model made a single request and should be scheduled once
+  EXPECT_EQ(count_scheduled, count_requests);
+  // requests should be deleted
+  EXPECT_EQ(requests.size(), 0);
+
+  std::set<ModelId> scheduled_models;
+  // each worker should have a single model scheduled
+  EXPECT_EQ(action[target_worker].size(), count_requests);
+  for (auto scheduled_model : action) {
+    for (auto job_key : scheduled_model.second) {
+      scheduled_models.insert(job_key.first.model_id);
+    }
+  }
+  // Each requested model should be scheduled
+  for (auto it = request_models.begin(); it != request_models.end(); it++) {
+    EXPECT_NE(scheduled_models.find((*it)), scheduled_models.end());
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     RoundRobinTests, ModelLevelTestsFixture,
     testing::Values(
@@ -120,6 +162,10 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     FixedDeviceTests, ConfigLevelTestsFixture,
+    testing::Values(std::make_tuple(std::deque<int>{0, 1, 2},
+                                    std::set<int>{0, 1, 2})));
+INSTANTIATE_TEST_SUITE_P(
+    FixedDeviceEngineRequestTests, ConfigLevelTestsFixture,
     testing::Values(std::make_tuple(std::deque<int>{0, 1, 2},
                                     std::set<int>{0, 1, 2})));
 

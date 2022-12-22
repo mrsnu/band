@@ -76,9 +76,15 @@ BAND_CAPI_EXPORT extern int BandEngineGetNumInputTensors(BandEngine* engine,
                                                          BandModel* model);
 BAND_CAPI_EXPORT extern int BandEngineGetNumOutputTensors(BandEngine* engine,
                                                           BandModel* model);
+
+BAND_CAPI_EXPORT extern int BandEngineGetNumWorkers(BandEngine* engine);
+BAND_CAPI_EXPORT extern BandDeviceFlags BandEngineGetWorkerDevice(
+    BandEngine* engine, int worker_id);
+
 // Create a input tensor for given model's n'th index
-BAND_CAPI_EXPORT extern BandTensor* BandEngineCreateInputTensor(
-    BandEngine* engine, BandModel* model, size_t index);
+BAND_CAPI_EXPORT
+extern BandTensor* BandEngineCreateInputTensor(BandEngine* engine,
+                                               BandModel* model, size_t index);
 // Create a output tensor for given model's n'th index
 BAND_CAPI_EXPORT extern BandTensor* BandEngineCreateOutputTensor(
     BandEngine* engine, BandModel* model, size_t index);
@@ -87,10 +93,20 @@ BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSync(
     BandTensor** output_tensors);
 BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsync(
     BandEngine* engine, BandModel* model, BandTensor** input_tensors);
+BAND_CAPI_EXPORT extern BandStatus BandEngineRequestSyncOptions(
+    BandEngine* engine, BandModel* model, BandRequestOption options,
+    BandTensor** input_tensors, BandTensor** output_tensors);
+BAND_CAPI_EXPORT extern BandRequestHandle BandEngineRequestAsyncOptions(
+    BandEngine* engine, BandModel* model, BandRequestOption options,
+    BandTensor** input_tensors);
 BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandRequestHandle handle,
                                                   BandTensor** output_tensors,
                                                   size_t num_outputs);
+BAND_CAPI_EXPORT extern void BandEngineSetOnEndRequest(
+    BandEngine* engine,
+    void (*on_end_invoke)(void* user_data, int job_id, BandStatus status),
+    void* user_data);
 
 typedef BandConfigBuilder* (*PFN_BandConfigBuilderCreate)();
 typedef void (*PFN_BandAddConfig)(BandConfigBuilder*, int, int, ...);
@@ -116,6 +132,8 @@ typedef void (*PFN_BandEngineDelete)(BandEngine*);
 typedef BandStatus (*PFN_BandEngineRegisterModel)(BandEngine*, BandModel*);
 typedef int (*PFN_BandEngineGetNumInputTensors)(BandEngine*, BandModel*);
 typedef int (*PFN_BandEngineGetNumOutputTensors)(BandEngine*, BandModel*);
+typedef int (*PFN_BandEngineGetNumWorkers)(BandEngine*);
+typedef BandDeviceFlags (*PFN_BandEngineGetWorkerDevice)(BandEngine*, int);
 typedef BandTensor* (*PFN_BandEngineCreateInputTensor)(BandEngine*, BandModel*,
                                                        size_t);
 typedef BandTensor* (*PFN_BandEngineCreateOutputTensor)(BandEngine*, BandModel*,
@@ -124,8 +142,17 @@ typedef BandStatus (*PFN_BandEngineRequestSync)(BandEngine*, BandModel*,
                                                 BandTensor**, BandTensor**);
 typedef BandRequestHandle (*PFN_BandEngineRequestAsync)(BandEngine*, BandModel*,
                                                         BandTensor**);
+typedef BandStatus (*PFN_BandEngineRequestSyncOptions)(BandEngine*, BandModel*,
+                                                BandRequestOption,
+                                                BandTensor**, BandTensor**);
+typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(BandEngine*, BandModel*,
+                                                        BandRequestOption,
+                                                        BandTensor**);
 typedef BandStatus (*PFN_BandEngineWait)(BandEngine*, BandRequestHandle,
                                          BandTensor**, size_t);
+typedef void (*PFN_BandEngineSetOnEndRequest)(BandEngine*,
+                                              void (*)(void*, int, BandStatus),
+                                              void*);
 
 #ifdef __cplusplus
 }  // extern "C"
