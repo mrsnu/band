@@ -211,6 +211,23 @@ cc_library(
 )
 
 cc_library(
+    name = "model_analyzer",
+    srcs = [
+        "model_analyzer.cc",
+    ],
+    hdrs = [
+        "model_analyzer.h",
+    ],
+    deps = [
+        ":backend_factory",
+        ":common",
+        ":interface",
+        ":model",
+        ":worker",
+    ],
+)
+
+cc_library(
     name = "worker",
     srcs = [
         "worker.cc",
@@ -315,6 +332,7 @@ cc_library(
             ":json_util",
             ":latency_estimator",
             ":model",
+            ":model_analyzer",
             ":planner",
             ":scheduler",
             ":tensor",

@@ -124,18 +124,16 @@ class Engine : public Context {
   /* latency estimator */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
   int64_t GetWorst(ModelId model_id) const;
-<<<<<<< Updated upstream
-  == == == =
 
->>>>>>> Stashed changes
-               /* planner */
-      void Trigger() override;
+  /* planner */
+  void Trigger() override;
   JobId EnqueueRequest(Job job, bool push_front = false) override;
   std::vector<JobId> EnqueueBatch(std::vector<Job> jobs,
                                   bool push_front = false) override;
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
   /* getters */
+  const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
   /* tensor communication */
   BandStatus TryCopyInputTensors(const Job& job) override;
@@ -153,15 +151,7 @@ class Engine : public Context {
   Engine& operator=(const Engine&) = delete;
   Engine& operator=(const Engine&&) = delete;
 
-  struct ModelOption {
-    // Minimum subgraph size.
-    // Will not create subgraph if num operators < minimum_subgraph_size.
-    int minimum_subgraph_size_;
-
-    // Subgraph preparation type
-    // "fallback_per_device", "unit_subgraph"
-    std::string subgraph_preparation_type_;
-  } model_option_;
+  ModelConfig model_config_;
 
   std::map<std::pair<WorkerId, ModelId>,
            std::unique_ptr<Interface::IInterpreter>>
@@ -174,9 +164,6 @@ class Engine : public Context {
   // Models
   // Model instances (used only for benchmark tools)
   std::map<ModelId, std::shared_ptr<Model>> models_;  // index is ModelId
-  // Maps to each modelid to its index in config.model_config. No usage right
-  // now, but might be useful later.
-  std::map<ModelId, int> model_configs_idx_;
   // Maps to model spec
   std::map<ModelId, ModelSpec> model_specs_;
 

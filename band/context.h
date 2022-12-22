@@ -99,6 +99,7 @@ class Context {
   virtual const ErrorReporter* GetErrorReporter() const {
     return error_reporter_;
   }
+  virtual const Worker* GetWorker(WorkerId id) const = 0;
   virtual Worker* GetWorker(WorkerId id) = 0;
   virtual size_t GetNumWorkers() const = 0;
 

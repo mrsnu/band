@@ -25,7 +25,14 @@ TfLiteInterpreter::~TfLiteInterpreter() {
 }
 
 ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
-  ModelSpec model_spec;
+  int num_ops;
+  int num_tensors;
+  std::vector<BandType> tensor_types;
+  std::set<int> input_tensor_indices;
+  std::set<int> output_tensor_indices;
+  std::vector<std::set<int>> op_input_tensors;
+  std::vector<std::set<int>> op_output_tensors;
+  std::map<BandDeviceFlags, std::set<int>> unsupported_ops;
 
   // Analyze entire model based on CPU interpereter
   {
@@ -34,7 +41,7 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
 
     tflite::Subgraph& primary_subgraph = interpreter->primary_subgraph();
     std::vector<int>& execution_plan = primary_subgraph.execution_plan();
-    model_spec.num_ops = execution_plan.size();
+    num_ops = execution_plan.size();
 
     // allocate circular buffer for model IO
     std::vector<TfLiteTensor*> input_tensors;
@@ -53,31 +60,37 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
       const TfLiteNode& node =
           primary_subgraph.node_and_registration(node_index)->first;
 
+      op_output_tensors.push_back({});
       std::set<int> tensor_indices;
       for (int input_tensor : tflite::TfLiteIntArrayView(node.inputs)) {
         tensor_indices.insert(input_tensor);
+        // skip input tensors that are always available
+        if (primary_subgraph.tensor(input_tensor)->allocation_type !=
+            kTfLiteMmapRo) {
+          op_input_tensors.back().insert(input_tensor);
+        }
       }
 
+      op_output_tensors.push_back({});
       for (int output_tensor : tflite::TfLiteIntArrayView(node.outputs)) {
         tensor_indices.insert(output_tensor);
-        model_spec.node_output_tensors.insert(output_tensor);
+        op_output_tensors.back().insert(output_tensor);
       }
 
       for (auto i : tensor_indices) {
         const auto* tensor = primary_subgraph.tensor(i);
-        model_spec.tensor_types.insert(GetBandType(tensor->type));
+        tensor_types.push_back(GetBandType(tensor->type));
       }
     }
 
-    std::copy(primary_subgraph.inputs().begin(),
-              primary_subgraph.inputs().end(),
-              std::inserter(model_spec.input_tensors,
-                            model_spec.input_tensors.begin()));
+    std::copy(
+        primary_subgraph.inputs().begin(), primary_subgraph.inputs().end(),
+        std::inserter(input_tensor_indices, input_tensor_indices.begin()));
 
-    std::copy(primary_subgraph.outputs().begin(),
-              primary_subgraph.outputs().end(),
-              std::inserter(model_spec.output_tensors,
-                            model_spec.output_tensors.begin()));
+    std::copy(
+        primary_subgraph.outputs().begin(), primary_subgraph.outputs().end(),
+        std::inserter(output_tensor_indices, output_tensor_indices.begin()));
+    num_tensors = primary_subgraph.tensors_size();
   }
 
   // also check unsupported ops to fill in model_spec.unsupported_ops
@@ -105,10 +118,15 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
       if (node.delegate == nullptr) {
         // this subgraph is always a 0~num_ops-1 CPU subgraph so
         // the node-->op mapping is basically the identity mapping
-        model_spec.unsupported_ops[device_flag].insert(node_index);
+        unsupported_ops[device_flag].insert(node_index);
       }
     }
   }
+
+  ModelSpec model_spec(num_ops, num_tensors, tensor_types, input_tensor_indices,
+                       output_tensor_indices, op_input_tensors,
+                       op_output_tensors, unsupported_ops);
+
   model_spec.path = model->GetPath();
   return model_spec;
 }

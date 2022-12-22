@@ -2,28 +2,45 @@
 #define BAND_MODEL_ANALYZER_H_
 
 #include <map>
+#include <memory>
 
 #include "band/context.h"
 
 namespace Band {
 class Model;
 
+struct SubgraphDef {
+  WorkerId worker_id;
+  std::set<int> op_indices;
+};
+
 class ModelAnalyzer {
  public:
-  ModelAnalyzer(const Context& context, Model* model,
+  ModelAnalyzer(const Context& context, ModelConfig model_config, Model* model,
                 BandBackendType backend_type);
 
+  // A model is partitioned into unit subgraphs.
+  // We assign an index to each unit subgraph, and the unit subgraph indices are
+  // topologically sorted. Note that there can be better way to assign unit
+  // subgraph indices if there exists any unit subgraphs that can be executed in
+  // parallel.
   BandStatus GetUnitSubgraphs(
-      ModelId model_id, bool need_fallback_subgraph,
-      // <worker id, op indices>
-      std::vector<std::pair<WorkerId, std::set<size_t>>>& unit_subgraphs);
+      ModelId model_id,
+      std::vector<std::pair<int, SubgraphDef>>& unit_subgraphs);
+  // Generate subgraphs for fallback ops in `model_id`.
+  // DeviceOpIndices contains device flag and op_indices of single subgraph.
+  std::vector<SubgraphDef> MakeSubgraphsForFallbackOps(ModelId model_id,
+                                                       WorkerId worker_id);
 
   const ModelSpec& GetModelSpec() const;
 
  private:
-  ModelSpec model_spec_;
+  bool IsResolved(const std::set<int> resolved_tensors, int op_index) const;
+
   const Context& context_;
-  const BandBackendType target_backend_type_;
+  const ModelConfig model_config_;
+  const BandBackendType backend_type_;
+  std::shared_ptr<ModelSpec> model_spec_;
 };
 }  // namespace Band
 

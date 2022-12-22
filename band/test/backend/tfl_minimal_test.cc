@@ -35,8 +35,7 @@ TEST(TFLiteBackend, ModelSpec) {
   bin_model.FromPath("band/test/data/add.bin");
 
   TfLite::TfLiteInterpreter interpreter;
-  ModelSpec model_spec;
-  model_spec = interpreter.InvestigateModelSpec(&bin_model);
+  ModelSpec model_spec = interpreter.InvestigateModelSpec(&bin_model);
 
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
   EXPECT_EQ(model_spec.num_ops, 1);

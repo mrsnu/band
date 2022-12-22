@@ -126,8 +126,7 @@ JobQueue& Worker::GetDeviceRequests() {
 
 void Worker::AllowWorkSteal() { BAND_NOT_IMPLEMENTED; }
 
-ErrorReporter* Worker::GetErrorReporter() {
-  // TODO(dostos): return from context
+const ErrorReporter* Worker::GetErrorReporter() const {
   return context_->GetErrorReporter();
 }
 

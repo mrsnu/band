@@ -59,7 +59,7 @@ class Worker {
   virtual void AllowWorkSteal();
 
  protected:
-  ErrorReporter* GetErrorReporter();
+  const ErrorReporter* GetErrorReporter() const;
   bool IsValid(Job& job);
   BandStatus TryUpdateWorkerThread();
   void Work();

@@ -90,8 +90,9 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.profile_config.profile_data_path,
             "band/test/data/config.json");
-  EXPECT_EQ(config_ok.minimum_subgraph_size, 5);
-  EXPECT_EQ(config_ok.subgraph_preparation_type, kBandMergeUnitSubgraph);
+  EXPECT_EQ(config_ok.model_config.minimum_subgraph_size, 5);
+  EXPECT_EQ(config_ok.model_config.subgraph_preparation_type,
+            kBandMergeUnitSubgraph);
   EXPECT_EQ(config_ok.cpu_mask, kBandPrimary);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
@@ -131,8 +132,9 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.worker_config.num_threads[3], 1);
   EXPECT_EQ(config_ok.worker_config.allow_worksteal, false);
   EXPECT_EQ(config_ok.worker_config.availability_check_interval_ms, 30000);
-  EXPECT_EQ(config_ok.minimum_subgraph_size, 7);
-  EXPECT_EQ(config_ok.subgraph_preparation_type, kBandMergeUnitSubgraph);
+  EXPECT_EQ(config_ok.model_config.minimum_subgraph_size, 7);
+  EXPECT_EQ(config_ok.model_config.subgraph_preparation_type,
+            kBandMergeUnitSubgraph);
   EXPECT_EQ(config_ok.cpu_mask, kBandAll);
 }
 

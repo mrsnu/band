@@ -71,14 +71,14 @@ BandStatus Engine::RegisterModel(Model* model) {
 
     bool need_fallback_subgraph =
         planner_->NeedFallbackSubgraphs() &&
-        model_option_.subgraph_preparation_type_ != "no_fallback_subgraph";
+        model_config_.subgraph_preparation_type == kBandNoFallbackSubgraph;
     // TODO: Create a interpreter that represents <Interface::IModel,
     // DeviceFlag>
 
-    std::vector<std::pair<WorkerId, std::set<size_t>>> unit_subgraphs;
-    ModelAnalyzer analyzer(*this, model, backend_type);
+    std::set<std::pair<int, SubgraphDef>> unit_subgraphs;
+    ModelAnalyzer analyzer(*this, model_config_, model, backend_type);
 
-    model_specs_[model_id] = analyzer.GetModelSpec();
+    model_specs_.insert({model_id, analyzer.GetModelSpec()});
 
     // Initialize tensor ring buffer
     // Assumption: each backend model in Band::Model has the same input / output
@@ -323,10 +323,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
   BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
 
-  // TODO: Update interpreter config to something
   {
-    model_option_.minimum_subgraph_size_ = config.minimum_subgraph_size;
-    model_option_.subgraph_preparation_type_ = config.subgraph_preparation_type;
+    model_config_ = config.model_config;
 
     if (planner_->NeedProfile()) {
       latency_estimator_ = std::make_unique<LatencyEstimator>(this);
@@ -506,6 +504,14 @@ std::vector<int> Engine::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
 void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
+
+const Worker* Engine::GetWorker(WorkerId id) const {
+  if (id >= 0 && id < workers_.size()) {
+    return workers_.at(id).get();
+  } else {
+    return nullptr;
+  }
+}
 
 Worker* Engine::GetWorker(WorkerId id) {
   if (id >= 0 && id < workers_.size()) {
