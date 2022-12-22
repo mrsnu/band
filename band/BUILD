@@ -110,6 +110,13 @@ cc_library(
         "logger.h",
     ],
     copts = band_copts(),
+    linkopts = select({
+        "//band:android": [
+            "-llog",
+        ],
+        "//conditions:default": [
+        ],
+    }),
     deps = [
         "//band/c:common",
     ],
@@ -199,6 +206,21 @@ cc_library(
     ],
     deps = [
         ":backend_factory",
+        ":interface",
+    ],
+)
+
+cc_library(
+    name = "model_analyzer",
+    srcs = [
+        "model_analyzer.cc",
+    ],
+    hdrs = [
+        "model_analyzer.h",
+    ],
+    deps = [
+        ":backend_factory",
+        ":common",
         ":interface",
     ],
 )
