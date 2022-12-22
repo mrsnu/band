@@ -22,14 +22,14 @@ namespace Band {
 class ErrorReporter {
  public:
   virtual ~ErrorReporter() {}
-  virtual int Report(const char* format, va_list args) = 0;
-  int Report(const char* format, ...);
-  int ReportError(void*, const char* format, ...);
+  virtual int Report(const char* format, va_list args) const = 0;
+  int Report(const char* format, ...) const;
+  int ReportError(void*, const char* format, ...) const;
 };
 
 // An error reporter that simply writes the message to stderr.
 struct StderrReporter : public ErrorReporter {
-  int Report(const char* format, va_list args) override;
+  int Report(const char* format, va_list args) const override;
 };
 
 // Return the default error reporter (output to stderr).
@@ -47,9 +47,9 @@ ErrorReporter* DefaultErrorReporter();
 // reduce binary size, define BAND_STRIP_ERROR_STRINGS when compiling and
 // every call will be stubbed out, taking no memory.
 #ifndef BAND_STRIP_ERROR_STRINGS
-#define BAND_REPORT_ERROR(reporter, ...)                              \
-  do {                                                                \
-    static_cast<Band::ErrorReporter*>(reporter)->Report(__VA_ARGS__); \
+#define BAND_REPORT_ERROR(reporter, ...) \
+  do {                                   \
+    reporter->Report(__VA_ARGS__);       \
   } while (false)
 #else  // BAND_STRIP_ERROR_STRINGS
 #define BAND_REPORT_ERROR(reporter, ...)

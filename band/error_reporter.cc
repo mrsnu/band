@@ -7,7 +7,7 @@
 
 namespace Band {
 
-int ErrorReporter::Report(const char* format, ...) {
+int ErrorReporter::Report(const char* format, ...) const {
   va_list args;
   va_start(args, format);
   int code = Report(format, args);
@@ -17,7 +17,7 @@ int ErrorReporter::Report(const char* format, ...) {
 
 // TODO(aselle): Make the name of ReportError on context the same, so
 // we can use the ensure functions w/o a context and w/ a reporter.
-int ErrorReporter::ReportError(void*, const char* format, ...) {
+int ErrorReporter::ReportError(void*, const char* format, ...) const {
   va_list args;
   va_start(args, format);
   int code = Report(format, args);
@@ -25,7 +25,7 @@ int ErrorReporter::ReportError(void*, const char* format, ...) {
   return code;
 }
 
-int StderrReporter::Report(const char* format, va_list args) {
+int StderrReporter::Report(const char* format, va_list args) const {
   Logger::LogFormatted(LogSeverity::BAND_LOG_ERROR, format, args);
   return 0;
 }

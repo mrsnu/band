@@ -22,7 +22,7 @@ struct MockContextBase : public Context {
   MOCK_METHOD1(Invoke, BandStatus(const SubgraphKey&));
 
   /* model */
-  MOCK_METHOD1(GetModelSpec, const ModelSpec*(ModelId));
+  MOCK_CONST_METHOD1(GetModelSpec, const ModelSpec*(ModelId));
   MOCK_CONST_METHOD1(GetModelWorker, WorkerId(ModelId));
 
   /* scheduling */

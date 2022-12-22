@@ -97,11 +97,11 @@ class Engine : public Context {
   void UpdateWorkerWaitingTime() const override;
   const WorkerWaitingTime& GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
+
   bool IsEnd(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
-  const ModelSpec* GetModelSpec(ModelId model_id) {
-    return &model_specs_[model_id];
-  }
+
+  const ModelSpec* GetModelSpec(ModelId model_id) const override;
   WorkerId GetModelWorker(ModelId model_id) const override;
 
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
@@ -124,8 +124,12 @@ class Engine : public Context {
   /* latency estimator */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
   int64_t GetWorst(ModelId model_id) const;
-  /* planner */
-  void Trigger() override;
+<<<<<<< Updated upstream
+  == == == =
+
+>>>>>>> Stashed changes
+               /* planner */
+      void Trigger() override;
   JobId EnqueueRequest(Job job, bool push_front = false) override;
   std::vector<JobId> EnqueueBatch(std::vector<Job> jobs,
                                   bool push_front = false) override;

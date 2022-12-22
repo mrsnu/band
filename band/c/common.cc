@@ -146,3 +146,15 @@ const BandBackendType BandBackendGetType(const char* name) {
   }
   return kBandNumBackendTypes;
 }
+
+const char* BandStatusGetName(BandStatus status) {
+  switch (status) {
+    case kBandOk:
+      return "Ok";
+    case kBandDelegateError:
+      return "DelegateError";
+    case kBandError:
+      return "Error";
+  }
+  return "Unknown type";
+}

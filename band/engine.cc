@@ -6,6 +6,7 @@
 #include "band/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
+#include "band/model_analyzer.h"
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
@@ -43,26 +44,29 @@ BandStatus Engine::RegisterModel(Model* model) {
 
   // Create internal interpreter per each supported backends
   for (BandBackendType backend_type : model->GetSupportedBackends()) {
-    // Analyze model spec
-    {
-      std::unique_ptr<Interface::IInterpreter> interpreter(
-          BackendFactory::CreateInterpreter(backend_type));
-      model_specs_[model_id] = interpreter->InvestigateModelSpec(
-          model->GetBackendModel(backend_type));
-    }
-
+    bool added_once = false;
     // Add whole-model subgraphs
     for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
       std::unique_ptr<Interface::IInterpreter> interpreter(
           BackendFactory::CreateInterpreter(backend_type));
-      if (interpreter->FromModel(
-              model->GetBackendModel(backend_type), worker_id,
-              workers_[worker_id]->GetDeviceFlag()) == kBandOk) {
-        BAND_LOG_INTERNAL(
-            BAND_LOG_INFO, "Create interpreter for model %d worker %s",
-            model_id, BandDeviceGetName(workers_[worker_id]->GetDeviceFlag()));
+      BandStatus status = interpreter->FromModel(
+          model->GetBackendModel(backend_type), worker_id,
+          workers_[worker_id]->GetDeviceFlag());
+      if (status == kBandOk) {
         interpreters_[{worker_id, model_id}] = std::move(interpreter);
+        added_once = true;
       }
+      BAND_LOG_INTERNAL(
+          BAND_LOG_INFO,
+          "Create whole model subgraph for model %d worker %s (%s)", model_id,
+          BandDeviceGetName(workers_[worker_id]->GetDeviceFlag()),
+          BandStatusGetName(status));
+    }
+
+    if (!added_once) {
+      BAND_REPORT_ERROR(error_reporter_,
+                        "Failed to create model subgraph on all worker types");
+      return kBandError;
     }
 
     bool need_fallback_subgraph =
@@ -70,6 +74,11 @@ BandStatus Engine::RegisterModel(Model* model) {
         model_option_.subgraph_preparation_type_ != "no_fallback_subgraph";
     // TODO: Create a interpreter that represents <Interface::IModel,
     // DeviceFlag>
+
+    std::vector<std::pair<WorkerId, std::set<size_t>>> unit_subgraphs;
+    ModelAnalyzer analyzer(*this, model, backend_type);
+
+    model_specs_[model_id] = analyzer.GetModelSpec();
 
     // Initialize tensor ring buffer
     // Assumption: each backend model in Band::Model has the same input / output
@@ -112,7 +121,7 @@ BandStatus Engine::RegisterModel(Model* model) {
   }
 
   return kBandOk;
-}
+}  // namespace Band
 
 Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
   // TODO: What if there are multiple backends?
@@ -404,6 +413,14 @@ SubgraphKey Engine::GetModelSubgraphKey(ModelId model_id,
   } else {
     // TODO: report error
     return SubgraphKey();
+  }
+}
+
+const ModelSpec* Engine::GetModelSpec(ModelId model_id) const {
+  if (model_specs_.find(model_id) == model_specs_.end()) {
+    return nullptr;
+  } else {
+    return &model_specs_.at(model_id);
   }
 }
 

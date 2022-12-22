@@ -23,6 +23,8 @@ typedef enum BandStatus {
   kBandDelegateError = 2
 } BandStatus;
 
+const char* BandStatusGetName(BandStatus status);
+
 typedef enum {
   kBandAll = 0,
   kBandLittle = 1,

@@ -52,7 +52,7 @@ class Context {
   virtual BandStatus Invoke(const SubgraphKey& key) = 0;
 
   /* model */
-  virtual const ModelSpec* GetModelSpec(ModelId model_id) = 0;
+  virtual const ModelSpec* GetModelSpec(ModelId model_id) const = 0;
   virtual WorkerId GetModelWorker(ModelId model_id) const = 0;
 
   /* scheduling */
@@ -96,7 +96,9 @@ class Context {
   virtual void EnqueueFinishedJob(Job& job) = 0;
 
   /* getters */
-  virtual ErrorReporter* GetErrorReporter() { return error_reporter_; }
+  virtual const ErrorReporter* GetErrorReporter() const {
+    return error_reporter_;
+  }
   virtual Worker* GetWorker(WorkerId id) = 0;
   virtual size_t GetNumWorkers() const = 0;
 
