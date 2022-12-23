@@ -261,6 +261,8 @@ typedef struct BandQuantization {
   void* params;
 } BandQuantization;
 
+void BandQuantizationFree(BandQuantization* quantization);
+
 // Legacy. Will be deprecated in favor of BandAffineQuantization.
 // If per-layer quantization is specified this field will still be populated in
 // addition to BandAffineQuantization.

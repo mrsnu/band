@@ -72,7 +72,7 @@ BandFloatArray* BandFloatArrayCreate(int size) {
 void BandFloatArrayFree(BandFloatArray* a) { free(a); }
 
 void BandQuantizationFree(BandQuantization* quantization) {
-  if (quantization->type == kBandAffineQuantization) {
+  if (quantization->type == kBandAffineQuantization && quantization->params) {
     BandAffineQuantization* q_params =
         (BandAffineQuantization*)(quantization->params);
     if (q_params->scale) {
