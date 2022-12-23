@@ -52,7 +52,7 @@ def test_local(enable_xnnpack=False, debug=False):
         f'bazel test {get_options(enable_xnnpack, debug)} band/test/...')
 
 
-def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False):
+def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False, filter=""):
     # build android targets only (specified in band_cc_android_test tags)
     build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
     if docker:
@@ -70,6 +70,9 @@ def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False)
     run_cmd(
         f'adb -d push band/test /data/local/tmp/{temp_dir_name}/band/test')
     for test_file in os.listdir(f'{get_dst_path("armv8-a", debug)}/test'):
+        if filter != "":
+            if filter not in test_file:
+                continue
         # Check whether the given path is binary and file
         if test_file.find('.') == -1 and os.path.isfile(f'{get_dst_path("armv8-a", debug)}/test/{test_file}'):
             print(f'-----------TEST : {test_file}-----------')
@@ -96,17 +99,20 @@ if __name__ == '__main__':
     # TODO: add support for arbitrary ssh endpoint
     parser.add_argument('-xnnpack', action="store_true", default=False,
                         help='Build with XNNPACK')
-    parser.add_argument('-debug', action="store_true", default=False,
+    parser.add_argument('-d', '--debug', action="store_true", default=False,
                         help='Build debug (default = release)')
-    parser.add_argument('-rebuild', action="store_true", default=False,
+    parser.add_argument('-r', '--rebuild', action="store_true", default=False,
                         help='Re-build test target')
+    parser.add_argument('-f', '--filter', default="",
+                        help='Run specific test that contains given string (only for android)')
+    
 
     args = parser.parse_args()
 
     if args.android:
         # Need to set Android build option in ./configure
         print('Test Android')
-        test_android(args.xnnpack, args.debug, args.docker, args.rebuild)
+        test_android(args.xnnpack, args.debug, args.docker, args.rebuild, args.filter)
     else:
         print(f'Test {platform_name}')
         test_local(args.xnnpack, args.debug)
