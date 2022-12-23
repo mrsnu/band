@@ -1,5 +1,6 @@
 package org.mrsnu.band;
 
+import org.mrsnu.band.BandInterface;
 import java.util.List;
 
 public class Tensor implements BandInterface, AutoCloseable {

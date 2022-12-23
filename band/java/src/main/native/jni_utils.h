@@ -74,7 +74,6 @@ Tensors convertLongListToTensors(JNIEnv* env, jobject tensor_handles) {
     if (!env->ExceptionCheck()) {
       // TODO(widiba03304): handle error
     }
-    return;
   }
   static jmethodID list_size_method =
       env->GetMethodID(list_class, "size", "()I");
@@ -82,7 +81,6 @@ Tensors convertLongListToTensors(JNIEnv* env, jobject tensor_handles) {
     if (!env->ExceptionCheck()) {
       // TODO(widiba03304): handle error
     }
-    return;
   }
   static jmethodID list_get_method =
       env->GetMethodID(list_class, "get", "(I)Ljava/lang/Object;");
@@ -90,14 +88,12 @@ Tensors convertLongListToTensors(JNIEnv* env, jobject tensor_handles) {
     if (!env->ExceptionCheck()) {
       // TODO(widiba03304): handle error
     }
-    return;
   }
   static jclass long_class = env->FindClass("java/lang/Long");
   if (long_class == nullptr) {
     if (!env->ExceptionCheck()) {
       // TODO(widiba03304): handle error
     }
-    return;
   }
   static jmethodID long_value_method =
       env->GetMethodID(long_class, "longValue", "()J");
@@ -105,7 +101,6 @@ Tensors convertLongListToTensors(JNIEnv* env, jobject tensor_handles) {
     if (!env->ExceptionCheck()) {
       // TODO(widiba03304): handle error
     }
-    return;
   }
 
   jint size = env->CallIntMethod(tensor_handles, list_size_method);

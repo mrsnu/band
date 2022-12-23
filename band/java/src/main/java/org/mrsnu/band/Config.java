@@ -1,5 +1,7 @@
 package org.mrsnu.band;
 
+import org.mrsnu.band.BandInterface;
+
 public class Config implements BandInterface, AutoCloseable {
   private NativeConfigWrapper wrapper;
 

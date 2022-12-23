@@ -11,6 +11,12 @@ cc_library(
             ":jni_md.h",
         ],
     }),
+    deps = [
+        "//band:common",
+        "//band:interface",
+        "//band:framework",
+        "//band:config_builder",
+    ],
     includes = select({
         "//band:android": [],
         "//conditions:default": ["."],

@@ -20,7 +20,21 @@ filegroup(
 
 # TODO(widiba03304): fill java API sources.
 JAVA_API_SRCS = [
-    "src/main/java/org/mrsnu/band/EngineApi.java",
+    "src/main/java/org/mrsnu/band/BackendType.java",
+    "src/main/java/org/mrsnu/band/Config.java",
+    "src/main/java/org/mrsnu/band/ConfigBuilder.java",
+    "src/main/java/org/mrsnu/band/CpuMaskFlags.java",
+    "src/main/java/org/mrsnu/band/DataType.java",
+    "src/main/java/org/mrsnu/band/Device.java",
+    "src/main/java/org/mrsnu/band/DeviceWorkerAffinityPair.java",
+    "src/main/java/org/mrsnu/band/Engine.java",
+    "src/main/java/org/mrsnu/band/Model.java",
+    "src/main/java/org/mrsnu/band/Quantization.java",
+    "src/main/java/org/mrsnu/band/Request.java",
+    "src/main/java/org/mrsnu/band/SchedulerType.java",
+    "src/main/java/org/mrsnu/band/SubgraphPreparationType.java",
+    "src/main/java/org/mrsnu/band/Tensor.java",
+    "src/main/java/org/mrsnu/band/WorkerType.java",
 ]
 
 # Java source files for API uses.
