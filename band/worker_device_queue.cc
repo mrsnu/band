@@ -64,7 +64,9 @@ void DeviceQueueWorker::EndEnqueue() {
   requests_.pop_front();
 
   if (allow_work_steal_ && requests_.empty()) {
-    TryWorkSteal();
+    // TODO: call this function once we re-implement
+    // and test TryWorkSteal()
+    // TryWorkSteal();
   }
 }
 
