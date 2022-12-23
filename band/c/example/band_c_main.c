@@ -224,7 +224,7 @@ int main() {
     printf("BandEngineSetOnEndRequest not worked in RequestAsync (callback not called)\n");
   }
 
-  BandRequestOptions options;
+  BandRequestOption options;
   options.target_worker = -1;
   options.require_callback = false;
   
