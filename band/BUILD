@@ -211,21 +211,6 @@ cc_library(
 )
 
 cc_library(
-    name = "model_analyzer",
-    srcs = [
-        "model_analyzer.cc",
-    ],
-    hdrs = [
-        "model_analyzer.h",
-    ],
-    deps = [
-        ":backend_factory",
-        ":common",
-        ":interface",
-    ],
-)
-
-cc_library(
     name = "worker",
     srcs = [
         "worker.cc",
