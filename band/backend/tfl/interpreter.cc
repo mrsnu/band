@@ -60,7 +60,7 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
       const TfLiteNode& node =
           primary_subgraph.node_and_registration(node_index)->first;
 
-      op_output_tensors.push_back({});
+      op_input_tensors.push_back({});
       std::set<int> tensor_indices;
       for (int input_tensor : tflite::TfLiteIntArrayView(node.inputs)) {
         tensor_indices.insert(input_tensor);

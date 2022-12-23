@@ -57,6 +57,8 @@ typedef enum BandSubgraphPreparationType {
   kBandNumSubgraphPreparationType = 4,
 } BandSubgraphPreparationType;
 
+const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type);
+
 // Fixed size list of integers. Used for dimensions and inputs/outputs tensor
 // indices
 typedef struct BandIntArray {

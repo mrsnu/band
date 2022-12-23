@@ -56,6 +56,8 @@ class Engine : public Context {
       ErrorReporter* error_reporter = DefaultErrorReporter());
 
   BandStatus RegisterModel(Model* model);
+  BandStatus UnregisterModel(Model* model);
+
   Tensor* CreateTensor(ModelId model_id, int tensor_index);
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
@@ -162,11 +164,9 @@ class Engine : public Context {
   std::unique_ptr<Planner> planner_;
 
   // Models
-  // Model instances (used only for benchmark tools)
-  std::map<ModelId, std::shared_ptr<Model>> models_;  // index is ModelId
+
   // Maps to model spec
   std::map<ModelId, ModelSpec> model_specs_;
-
   std::map<ModelId, std::unique_ptr<TensorRingBuffer>> model_input_buffer_;
   std::map<ModelId, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
 

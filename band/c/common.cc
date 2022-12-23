@@ -3,6 +3,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
+
+const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
+  switch (type) {
+    case kBandNoFallbackSubgraph:
+      return "NoFallbackSubgraph";
+    case kBandFallbackPerDevice:
+      return "FallbackPerDevice";
+    case kBandUnitSubgraph:
+      return "UnitSubgraph";
+    case kBandMergeUnitSubgraph:
+      return "MergeUnitSubgraph";
+  }
+  return "Unknown type";
+}
+
 int BandIntArrayGetSizeInBytes(int size) {
   static BandIntArray dummy;
   return sizeof(dummy) + sizeof(dummy.data[0]) * size;

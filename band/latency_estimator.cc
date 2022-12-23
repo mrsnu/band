@@ -118,19 +118,21 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
           subgraph_key.GetOutputOpsString().c_str());
     }
   } else {
-    const std::string model_name = context_->GetModelSpec(model_id)->path;
-    auto model_profile = JsonToModelProfile(model_name, model_id);
-    if (model_profile.size() > 0) {
-      profile_database_.insert(model_profile.begin(), model_profile.end());
-      BAND_LOG_INTERNAL(
-          BAND_LOG_INFO,
-          "Successfully found %d profile entries for model (%s, %d).",
-          model_profile.size(), model_name.c_str(), model_id);
-    } else {
-      BAND_LOG_INTERNAL(
-          BAND_LOG_WARNING,
-          "Failed to find profile entries for given model name %s.",
-          model_name.c_str());
+    if (context_ && context_->GetModelSpec(model_id)) {
+      const std::string model_name = context_->GetModelSpec(model_id)->path;
+      auto model_profile = JsonToModelProfile(model_name, model_id);
+      if (model_profile.size() > 0) {
+        profile_database_.insert(model_profile.begin(), model_profile.end());
+        BAND_LOG_INTERNAL(
+            BAND_LOG_INFO,
+            "Successfully found %d profile entries for model (%s, %d).",
+            model_profile.size(), model_name.c_str(), model_id);
+      } else {
+        BAND_LOG_INTERNAL(
+            BAND_LOG_WARNING,
+            "Failed to find profile entries for given model name %s.",
+            model_name.c_str());
+      }
     }
   }
   return kBandOk;

@@ -10,6 +10,7 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
+#include "engine.h"
 
 namespace Band {
 Engine::~Engine() {
@@ -36,7 +37,7 @@ std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
 
 BandStatus Engine::RegisterModel(Model* model) {
   if (!model || model->GetSupportedBackends().size() == 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register model.");
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register model");
     return kBandError;
   }
 
@@ -69,16 +70,46 @@ BandStatus Engine::RegisterModel(Model* model) {
       return kBandError;
     }
 
-    bool need_fallback_subgraph =
-        planner_->NeedFallbackSubgraphs() &&
-        model_config_.subgraph_preparation_type == kBandNoFallbackSubgraph;
     // TODO: Create a interpreter that represents <Interface::IModel,
     // DeviceFlag>
 
-    std::set<std::pair<int, SubgraphDef>> unit_subgraphs;
-    ModelAnalyzer analyzer(*this, model_config_, model, backend_type);
+    BandStatus status;
+    ModelSpec model_spec;
+    std::vector<SubgraphDef> subgraph_defs;
+    ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
+                           model_config_, model, backend_type);
 
-    model_specs_.insert({model_id, analyzer.GetModelSpec()});
+    auto result = analyzer.CreateSubgraphs();
+
+    if (std::get<0>(result) != kBandOk) {
+      BAND_REPORT_ERROR(
+          error_reporter_,
+          "Failed to create subgraphs for model %d with subgraph option %s",
+          model_id,
+          BandSubgraphPreparationGetName(
+              model_config_.subgraph_preparation_type));
+      UnregisterModel(model);
+      return kBandError;
+    }
+
+    BAND_LOG_INTERNAL(
+        BAND_LOG_INFO, "Create %d subgraphs for model %s with mode %s",
+        std::get<2>(result).size(), std::get<1>(result).path.c_str(),
+        BandSubgraphPreparationGetName(
+            model_config_.subgraph_preparation_type));
+
+    model_specs_.insert({model_id, std::get<1>(result)});
+
+    for (const SubgraphDef& subgraph_def : std::get<2>(result)) {
+      BandStatus status =
+          interpreters_[{subgraph_def.worker_id, model_id}]->FromModel(
+              model->GetBackendModel(backend_type), subgraph_def.worker_id,
+              workers_[subgraph_def.worker_id]->GetDeviceFlag(),
+              subgraph_def.op_indices);
+      // todo: handle failure case
+    }
+
+    // todo: connect prev / next && unit indices
 
     // Initialize tensor ring buffer
     // Assumption: each backend model in Band::Model has the same input / output
@@ -121,7 +152,34 @@ BandStatus Engine::RegisterModel(Model* model) {
   }
 
   return kBandOk;
-}  // namespace Band
+}
+
+BandStatus Engine::UnregisterModel(Model* model) {
+  if (!model) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to unregister null model.");
+    return kBandError;
+  }
+
+  for (auto it = interpreters_.begin(); it != interpreters_.end();) {
+    (it->first.second == model->GetId()) ? interpreters_.erase(it++) : (++it);
+  }
+
+  for (auto it = model_specs_.begin(); it != model_specs_.end();) {
+    (it->first == model->GetId()) ? model_specs_.erase(it++) : (++it);
+  }
+
+  for (auto it = model_input_buffer_.begin();
+       it != model_input_buffer_.end();) {
+    (it->first == model->GetId()) ? model_input_buffer_.erase(it++) : (++it);
+  }
+
+  for (auto it = model_output_buffer_.begin();
+       it != model_output_buffer_.end();) {
+    (it->first == model->GetId()) ? model_output_buffer_.erase(it++) : (++it);
+  }
+
+  return kBandOk;
+}
 
 Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
   // TODO: What if there are multiple backends?

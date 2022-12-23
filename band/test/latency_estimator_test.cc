@@ -16,7 +16,9 @@ struct CustomWorkerMockContext : public MockContextBase {
   CustomWorkerMockContext() { model_spec.path = "dummy"; }
   Worker* GetWorker(WorkerId id) override { return worker; }
   size_t GetNumWorkers() const { return 1; }
-  const ModelSpec* GetModelSpec(ModelId model_id) { return &model_spec; }
+  const ModelSpec* GetModelSpec(ModelId model_id) const override {
+    return &model_spec;
+  }
 
   Worker* worker;
   ModelSpec model_spec;
