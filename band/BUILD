@@ -249,11 +249,13 @@ cc_library(
     name = "scheduler",
     srcs = [
         "scheduler/fixed_worker_global_queue_scheduler.cc",
+        "scheduler/least_slack_first_scheduler.cc",
         "scheduler/fixed_worker_scheduler.cc",
         "scheduler/round_robin_scheduler.cc",
     ],
     hdrs = [
         "scheduler/fixed_worker_scheduler.h",
+        "scheduler/least_slack_first_scheduler.h",
         "scheduler/round_robin_scheduler.h",
         "scheduler/scheduler.h",
     ],
