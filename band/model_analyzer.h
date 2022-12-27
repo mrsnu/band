@@ -39,6 +39,7 @@ class ModelAnalyzer {
 
  private:
   bool NeedFallbackSubgraph() const;
+  bool IsWorkerValid(WorkerId worker_id) const;
   bool IsResolved(const std::set<int> resolved_tensors, int op_index) const;
 
   std::set<int> GetInputTensors(const SubgraphDef& subgraph) const;

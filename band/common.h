@@ -107,12 +107,13 @@ struct Job {
 struct ModelSpec {
   // explicitly remove default ctor, to force initialization of required
   // params
-  ModelSpec() : ModelSpec(0, 0, {}, {}, {}, {}, {}, {}) {}
+  ModelSpec() : ModelSpec(0, 0, {}, {}, {}, {}, {}, {}, {}) {}
   ModelSpec(int num_ops, int num_tensors, std::vector<BandType> tensor_types,
             std::set<int> input_tensors, std::set<int> output_tensors,
             std::vector<std::set<int>> op_input_tensors,
             std::vector<std::set<int>> op_output_tensors,
-            std::map<BandDeviceFlags, std::set<int>> unsupported_ops)
+            std::map<BandDeviceFlags, std::set<int>> unsupported_ops,
+            std::set<BandDeviceFlags> unavailable_devices)
       : num_ops(num_ops),
         num_tensors(num_tensors),
         tensor_types(tensor_types),
@@ -120,7 +121,8 @@ struct ModelSpec {
         output_tensors(output_tensors),
         op_input_tensors(op_input_tensors),
         op_output_tensors(op_output_tensors),
-        unsupported_ops(unsupported_ops) {}
+        unsupported_ops(unsupported_ops),
+        unavailable_devices(unavailable_devices) {}
 
   /* from Interpreter::InvestigateModelSpec */
   const int num_ops;
@@ -137,6 +139,7 @@ struct ModelSpec {
   const std::vector<std::set<int>> op_input_tensors;
   const std::vector<std::set<int>> op_output_tensors;
   const std::map<BandDeviceFlags, std::set<int>> unsupported_ops;
+  const std::set<BandDeviceFlags> unavailable_devices;
 
   std::string path;
 

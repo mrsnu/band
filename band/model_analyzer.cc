@@ -100,8 +100,11 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     for (int i = 0; i < model_spec_->num_ops; i++) {
       entire_ops.insert(i);
     }
-    for (WorkerId id = 0; id < num_workers; id++) {
-      unit_subgraphs.push_back({id, entire_ops, {0}});
+
+    for (WorkerId worker_id = 0; worker_id < num_workers; worker_id++) {
+      if (IsWorkerValid(worker_id)) {
+        unit_subgraphs.push_back({worker_id, entire_ops, {0}});
+      }
     }
   } else {
     const int num_ops = model_spec_->num_ops;
@@ -137,8 +140,10 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     std::map<WorkerId, std::set<int>> unsupported_ops;
     // TODO(BAND-62): assume that band device type targets a single processor.
     for (WorkerId worker_id = 0; worker_id < num_workers; ++worker_id) {
-      unsupported_ops[worker_id] = model_spec_->unsupported_ops.at(
-          context_.GetWorker(worker_id)->GetDeviceFlag());
+      if (IsWorkerValid(worker_id)) {
+        unsupported_ops[worker_id] = model_spec_->unsupported_ops.at(
+            context_.GetWorker(worker_id)->GetDeviceFlag());
+      }
     }
 
     for (int op_index = 0; op_index < num_ops; op_index++) {
@@ -245,6 +250,10 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
   if (!worker) {
     BAND_REPORT_ERROR(context_.GetErrorReporter(), "Invalied worker_id %d",
                       worker_id);
+    return {};
+  }
+
+  if (!IsWorkerValid(worker_id)) {
     return {};
   }
 
@@ -452,6 +461,12 @@ const ModelSpec& ModelAnalyzer::GetModelSpec() const { return *model_spec_; }
 bool ModelAnalyzer::NeedFallbackSubgraph() const {
   return need_fallback_subgraph_ &&
          (model_config_.subgraph_preparation_type != kBandNoFallbackSubgraph);
+}
+
+bool ModelAnalyzer::IsWorkerValid(WorkerId worker_id) const {
+  return model_spec_->unavailable_devices.find(
+             context_.GetWorker(worker_id)->GetDeviceFlag()) !=
+         model_spec_->unavailable_devices.end();
 }
 
 bool ModelAnalyzer::IsResolved(const std::set<int> resolved_tensors,
