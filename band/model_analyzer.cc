@@ -14,17 +14,29 @@
 
 namespace Band {
 std::string SetToString(const std::set<int>& set) {
-  std::string result = "{";
-  if (set.size() > 1 && ((*set.rbegin() - *set.begin()) == set.size() - 1)) {
-    result += std::to_string(*set.begin()) + "-" +
-              std::to_string(*set.rbegin()) + ",";
-  } else {
-    for (auto v : set) {
-      result += std::to_string(v) + ",";
+  auto range_to_string = [](int lhs, int rhs) {
+    if (lhs == rhs) {
+      return std::to_string(lhs);
+    } else {
+      return std::to_string(lhs) + "-" + std::to_string(rhs);
     }
-  }
-  if (result.size() > 1) {
-    result.pop_back();
+  };
+
+  std::string result = "{";
+  if (set.size() > 0) {
+    int current_start = std::numeric_limits<int>::min();
+    int prev = current_start;
+    for (auto v : set) {
+      // not continuous
+      if (v > prev + 1) {
+        if (current_start >= 0) {
+          result += range_to_string(current_start, prev) + ",";
+        }
+        current_start = v;
+      }
+      prev = v;
+    }
+    result += range_to_string(current_start, *set.rbegin());
   }
   return result + "}";
 }
@@ -275,6 +287,9 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
       }
       if (unit_subgraph_ops.empty()) break;
       for (WorkerId worker_id = 0; worker_id < num_workers; ++worker_id) {
+        if (!IsWorkerValid(worker_id)) {
+          continue;
+        }
         if (support_devices & (1 << worker_id)) {
           unit_subgraphs.push_back(
               {worker_id, unit_subgraph_ops, {subgraph_local_idx}});

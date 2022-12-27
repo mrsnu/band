@@ -100,10 +100,10 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
   // also check unsupported ops to fill in model_spec.unsupported_ops
   for (int i = 0; i < kBandNumDevices; ++i) {
     BandDeviceFlags device_flag = static_cast<BandDeviceFlags>(i);
+    unsupported_ops[device_flag] = {};
 
     if (device_flag == kBandCPU) {
       // no need to check supportability for CPU
-      unsupported_ops[device_flag] = {};
       continue;
     }
 

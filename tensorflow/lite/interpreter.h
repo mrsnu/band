@@ -27,6 +27,7 @@ limitations under the License.
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -68,9 +69,16 @@ class InterpreterWrapper;  // Class for friend declarations.
 class InterpreterOptions {
  public:
   InterpreterOptions()
-      : experimental_preserve_all_tensors_(false),
+      : target_nodes_({}),
+        experimental_preserve_all_tensors_(false),
         experimental_ensure_dynamic_tensors_are_released_(false),
         experimental_dynamic_allocation_for_large_tensors_(0) {}
+
+  void SetTargetNodes(std::set<int> target_nodes = {}) {
+    target_nodes_ = target_nodes;
+  }
+
+  const std::set<int>& GetTargetNodes() { return target_nodes_; }
 
   /// Preserving all intermediates tensors for debugging.
   /// WARNING: This is an experimental API and subject to change.
@@ -116,6 +124,7 @@ class InterpreterOptions {
   }
 
  private:
+  std::set<int> target_nodes_;
   bool experimental_preserve_all_tensors_;
   bool experimental_ensure_dynamic_tensors_are_released_;
   int experimental_dynamic_allocation_for_large_tensors_;
@@ -515,7 +524,6 @@ class Interpreter {
   /// re-perform memory planning. AllocateTensors needs to be called before next
   /// invocation. WARNING: Experimental interface, subject to change
   TfLiteStatus ReleaseNonPersistentMemory();
-
 
   /// Update allocations for all tensors. This will redim dependent tensors
   /// using the input tensor dimensionality as given. This is relatively
