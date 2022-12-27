@@ -92,7 +92,7 @@ BandStatus Engine::RegisterModel(Model* model) {
       return kBandError;
     }
 
-    BAND_LOG_INTERNAL(
+    BAND_LOG_PROD(
         BAND_LOG_INFO, "Create %d subgraphs for model %s with mode %s",
         std::get<2>(result).size(), std::get<1>(result).path.c_str(),
         BandSubgraphPreparationGetName(

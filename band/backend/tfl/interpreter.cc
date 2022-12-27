@@ -75,7 +75,10 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
       op_output_tensors.push_back({});
       for (int output_tensor : tflite::TfLiteIntArrayView(node.outputs)) {
         tensor_indices.insert(output_tensor);
-        op_output_tensors.back().insert(output_tensor);
+        if (primary_subgraph.tensor(output_tensor)->allocation_type !=
+            kTfLiteMmapRo) {
+          op_output_tensors.back().insert(output_tensor);
+        }
       }
 
       for (auto i : tensor_indices) {
@@ -100,6 +103,7 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
 
     if (device_flag == kBandCPU) {
       // no need to check supportability for CPU
+      unsupported_ops[device_flag] = {};
       continue;
     }
 
@@ -166,9 +170,9 @@ BandStatus TfLiteInterpreter::FromModel(Interface::IModel* model,
         vec2set(interpreter->outputs()))] = std::move(interpreter);
   }
 
-  BAND_LOG_PROD(BAND_LOG_INFO,
-                "Create Tensorflow Lite Interpreter for (%s , worker %d)",
-                BandDeviceGetName(device), worker_id);
+  BAND_LOG_INTERNAL(BAND_LOG_INFO,
+                    "Create Tensorflow Lite Interpreter for (%s , worker %d)",
+                    BandDeviceGetName(device), worker_id);
 
   return GetBandStatus(status);
 }
@@ -275,7 +279,8 @@ BandDeviceFlags GetNNAPIDeviceFlag(std::string name) {
           "neuron-ann",   // Mediatek APU
           "qti-hta",      // Hexagon tensor accelerator
           "mtk-neuron"    // Mediatek APU
-                        // "mtk-mdla" #TODO(#139) - Mediatek APU for half float
+                          // "mtk-mdla" #TODO(#139) - Mediatek APU for half
+                          // float
       })) {
     return kBandNPU;
   }
@@ -367,7 +372,7 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
         target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
             TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
 
-        BAND_LOG_PROD(BAND_LOG_INFO, "Create Tensorflow Lite GPU delegate");
+        BAND_LOG_INTERNAL(BAND_LOG_INFO, "Create Tensorflow Lite GPU delegate");
         break;
       }
 
@@ -411,20 +416,20 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
                       kBandDSP) {
                 target_delegate = std::move(nnapi_delegate);
-                BAND_LOG_PROD(BAND_LOG_INFO,
-                              "Create Tensorflow Lite NNAPI delegate (%s , %s)",
-                              nnapi_options.accelerator_name,
-                              BandDeviceGetName(device));
+                BAND_LOG_INTERNAL(
+                    BAND_LOG_INFO,
+                    "Create Tensorflow Lite NNAPI delegate (%s , %s)",
+                    nnapi_options.accelerator_name, BandDeviceGetName(device));
               }
 
               if (device == kBandNPU &&
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
                       kBandNPU) {
                 target_delegate = std::move(nnapi_delegate);
-                BAND_LOG_PROD(BAND_LOG_INFO,
-                              "Create Tensorflow Lite NNAPI delegate (%s , %s)",
-                              nnapi_options.accelerator_name,
-                              BandDeviceGetName(device));
+                BAND_LOG_INTERNAL(
+                    BAND_LOG_INFO,
+                    "Create Tensorflow Lite NNAPI delegate (%s , %s)",
+                    nnapi_options.accelerator_name, BandDeviceGetName(device));
               }
             }
           }

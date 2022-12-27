@@ -325,56 +325,6 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
     EXPECT_EQ(execution_count, worker_id + 1);
   }
 }
-
-struct ModelPartitionTestsFixture
-    : public testing::TestWithParam<
-          std::tuple<std::string, BandSubgraphPreparationType>> {};
-
-TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
-  std::string model_name = "band/test/data/" + std::get<0>(GetParam());
-  BandSubgraphPreparationType subgraph_type = std::get<1>(GetParam());
-
-  RuntimeConfigBuilder b;
-  RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
-          .AddSchedulers({kBandFixedWorker})
-          .AddMinimumSubgraphSize(7)
-          .AddSubgraphPreparationType(subgraph_type)
-          .AddCPUMask(kBandAll)
-          .AddPlannerCPUMask(kBandPrimary)
-          .AddWorkers({kBandCPU, kBandCPU, kBandDSP, kBandNPU, kBandGPU})
-          .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks(
-              {kBandBig, kBandLittle, kBandAll, kBandAll, kBandAll})
-          .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/profile.json")
-          .AddOnline(true)
-          .AddNumWarmups(1)
-          .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
-          .AddAvailabilityCheckIntervalMs(30000)
-          .AddScheduleWindowSize(10)
-          .Build();
-
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
-
-  Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, model_name.c_str()), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    ModelPartitionTests, ModelPartitionTestsFixture,
-    testing::Values(
-        std::make_tuple("ICN_quant.tflite", kBandMergeUnitSubgraph),
-        std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-                        kBandMergeUnitSubgraph),
-        std::make_tuple(
-            "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
-            kBandMergeUnitSubgraph),
-        std::make_tuple("retinaface_mbv2_quant_160.tflite",
-                        kBandMergeUnitSubgraph)));
 }  // namespace Band
 
 int main(int argc, char** argv) {

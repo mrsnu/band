@@ -18,10 +18,6 @@ Worker::~Worker() {
 }
 
 BandStatus Worker::Init(const WorkerConfig& config, int worker_id) {
-  if (config.allow_worksteal) {
-    AllowWorkSteal();
-  }
-
   availability_check_interval_ms_ = config.availability_check_interval_ms;
   worker_id_ = worker_id;
 

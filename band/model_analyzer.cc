@@ -13,6 +13,29 @@
 #include "model_analyzer.h"
 
 namespace Band {
+std::string SetToString(const std::set<int>& set) {
+  std::string result = "{";
+  if (set.size() > 1 && ((*set.rbegin() - *set.begin()) == set.size() - 1)) {
+    result += std::to_string(*set.begin()) + "-" +
+              std::to_string(*set.rbegin()) + ",";
+  } else {
+    for (auto v : set) {
+      result += std::to_string(v) + ",";
+    }
+  }
+  if (result.size() > 1) {
+    result.pop_back();
+  }
+  return result + "}";
+}
+
+std::string SubgraphDef::ToString() const {
+  std::string result = "worker " + std::to_string(worker_id) + " unit index " +
+                       SetToString(unit_subgraph_indices);
+  result += " " + SetToString(op_indices);
+  return result;
+}
+
 ModelAnalyzer::ModelAnalyzer(const Context& context,
                              bool need_fallback_subgraph,
                              ModelConfig model_config, Model* model,
@@ -25,6 +48,12 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
       BackendFactory::CreateInterpreter(backend_type));
   model_spec_ = std::make_shared<ModelSpec>(
       interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)));
+
+  for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
+                  SetToString(device_unsupported_ops.second).c_str(),
+                  BandDeviceGetName(device_unsupported_ops.first));
+  }
 }
 
 std::tuple<BandStatus, ModelSpec, std::vector<SubgraphDef>>
@@ -34,6 +63,16 @@ ModelAnalyzer::CreateSubgraphs() {
 
   if (GetUnitSubgraphs(unit_subgraph_defs) != kBandOk) {
     return {kBandError, {}, {}};
+  }
+
+  for (auto unit_subgraph_def : unit_subgraph_defs) {
+    BAND_LOG_PROD(
+        BAND_LOG_INFO, "Unit subgraph %s (%s) inputs %s outputs %s",
+        unit_subgraph_def.ToString().c_str(),
+        BandDeviceGetName(
+            context_.GetWorker(unit_subgraph_def.worker_id)->GetDeviceFlag()),
+        SetToString(GetPureInputTensors(unit_subgraph_def)).c_str(),
+        SetToString(GetOutputTensors(unit_subgraph_def)).c_str());
   }
 
   model_spec_->num_unit_subgraphs = unit_subgraph_defs.size();
@@ -69,10 +108,12 @@ ModelAnalyzer::CreateSubgraphs() {
         subgraph_defs.insert(subgraph_defs.end(), worker_subgraphs.begin(),
                              worker_subgraphs.end());
       }
-    } break;
+      break;
+    }
     case kBandNoFallbackSubgraph:
     case kBandUnitSubgraph: {
       subgraph_defs = unit_subgraph_defs;
+      break;
     }
     case kBandMergeUnitSubgraph: {
       // Add merged atomic subgraphs
@@ -81,10 +122,20 @@ ModelAnalyzer::CreateSubgraphs() {
       // If we find any of the case that does not satisfy the condition,
       // we should re-implement the merging logic.
       subgraph_defs = MergeUnitSubgraphs(unit_subgraph_defs);
-    } break;
+      break;
+    }
 
     default:
       break;
+  }
+
+  for (auto subgraph_def : subgraph_defs) {
+    BAND_LOG_PROD(
+        BAND_LOG_INFO, "[%s] Subgraph %s (%s)",
+        BandSubgraphPreparationGetName(model_config_.subgraph_preparation_type),
+        subgraph_def.ToString().c_str(),
+        BandDeviceGetName(
+            context_.GetWorker(subgraph_def.worker_id)->GetDeviceFlag()));
   }
 
   return {kBandOk, *model_spec_, subgraph_defs};
@@ -238,8 +289,9 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     }
   }
 
-  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Create %d unit subgraphs",
-                    unit_subgraphs.size());
+  BAND_LOG_PROD(BAND_LOG_INFO,
+                "Create %d unit subgraphs, planner requires subgraph %d",
+                unit_subgraphs.size(), NeedFallbackSubgraph());
 
   return kBandOk;
 }
@@ -401,27 +453,44 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
     for (const auto& prev_unit_subgraph : result_subgraphs) {
       const std::set<int> prev_outputs = GetOutputTensors(prev_unit_subgraph);
       for (const auto& next_unit_subgraph : result_subgraphs) {
-        // Skip same subgraph
-        if (&prev_unit_subgraph == &next_unit_subgraph) continue;
-        // Skip different device
-        if (prev_unit_subgraph.worker_id != next_unit_subgraph.worker_id) {
+        // Prepare merged worker_id - op_indices
+        const WorkerId worker_id = prev_unit_subgraph.worker_id;
+        const std::set<int> next_inputs =
+            GetPureInputTensors(next_unit_subgraph);
+        // Skip same subgraph or different device
+        if ((&prev_unit_subgraph == &next_unit_subgraph) ||
+            (prev_unit_subgraph.worker_id != next_unit_subgraph.worker_id)) {
+          // BAND_LOG_PROD(
+          //     BAND_LOG_INFO,
+          //     "Skipping merge lhs [%s] %s rhs [%s] %s, prev outputs %s "
+          //     "next_inputs %s",
+          //     BandDeviceGetName(
+          //         context_.GetWorker(prev_unit_subgraph.worker_id)
+          //             ->GetDeviceFlag()),
+          //     SetToString(prev_unit_subgraph.unit_subgraph_indices).c_str(),
+          //     BandDeviceGetName(
+          //         context_.GetWorker(next_unit_subgraph.worker_id)
+          //             ->GetDeviceFlag()),
+          //     SetToString(next_unit_subgraph.unit_subgraph_indices).c_str(),
+          //     SetToString(prev_outputs).c_str(),
+          //     SetToString(next_inputs).c_str());
           continue;
         }
-        // Skip if there is not resolved output tensor
-        if (*prev_unit_subgraph.unit_subgraph_indices.rbegin() + 1 !=
-            *next_unit_subgraph.unit_subgraph_indices.begin()) {
-          continue;
-        }
-
-        const std::set<int> next_inputs = GetInputTensors(next_unit_subgraph);
         // Check whether prev subgraph fully resolves the next
         if (!std::includes(prev_outputs.begin(), prev_outputs.end(),
                            next_inputs.begin(), next_inputs.end())) {
+          // BAND_LOG_PROD(
+          //     BAND_LOG_INFO,
+          //     "[%s] Skipping merge lhs %s rhs %s, prev outputs %s "
+          //     "next_inputs %s",
+          //     BandDeviceGetName(context_.GetWorker(worker_id)->GetDeviceFlag()),
+          //     SetToString(prev_unit_subgraph.unit_subgraph_indices).c_str(),
+          //     SetToString(next_unit_subgraph.unit_subgraph_indices).c_str(),
+          //     SetToString(prev_outputs).c_str(),
+          //     SetToString(next_inputs).c_str());
           continue;
         }
 
-        // Prepare merged worker_id - op_indices
-        const WorkerId worker_id = prev_unit_subgraph.worker_id;
         std::set<int> op_indices;
         const std::set<int>& prev_op_indices = prev_unit_subgraph.op_indices;
         const std::set<int>& next_op_indices = next_unit_subgraph.op_indices;
@@ -450,8 +519,9 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
       result_subgraphs.push_back(subgraph);
     }
   }
-  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Create %d merged subgraphs",
-                    result_subgraphs.size() - num_subgraphs_before_merge);
+
+  BAND_LOG_PROD(BAND_LOG_INFO, "Create %d merged subgraphs",
+                result_subgraphs.size() - num_subgraphs_before_merge);
 
   return result_subgraphs;
 }
@@ -480,7 +550,7 @@ bool ModelAnalyzer::IsResolved(const std::set<int> resolved_tensors,
   return true;
 }
 
-std::set<int> ModelAnalyzer::GetInputTensors(
+std::set<int> ModelAnalyzer::GetPureInputTensors(
     const SubgraphDef& subgraph) const {
   // {all input tensors in ops} - {all output tensors in ops}
   std::set<int> input_tensors;
@@ -501,18 +571,11 @@ std::set<int> ModelAnalyzer::GetInputTensors(
 
 std::set<int> ModelAnalyzer::GetOutputTensors(
     const SubgraphDef& subgraph) const {
-  // {all output tensors in ops} - {all output tensors in ops}
+  // {all output tensors in ops}
   std::set<int> output_tensors;
   for (const auto& op_index : subgraph.op_indices) {
     const std::set<int>& outputs = model_spec_->op_output_tensors[op_index];
     output_tensors.insert(outputs.begin(), outputs.end());
-  }
-
-  for (const auto& op_index : subgraph.op_indices) {
-    const std::set<int>& inputs = model_spec_->op_input_tensors[op_index];
-    for (int input_index : inputs) {
-      output_tensors.erase(input_index);
-    }
   }
 
   return output_tensors;
