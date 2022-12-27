@@ -301,7 +301,7 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
   auto delegate = GetDeviceDelegate(device);
 
   if (delegate.first == kBandError) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+    BAND_LOG_PROD(BAND_LOG_ERROR,
                       "Failed to create Tensorflow Lite delegate for %s",
                       BandDeviceGetName(device));
     return nullptr;
@@ -311,9 +311,17 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
     builder.AddDelegate(delegate.second);
   }
 
-  TfLiteStatus status = builder(&interpreter);
+  if (builder(&interpreter) != kTfLiteOk) {
+    BAND_LOG_PROD(BAND_LOG_ERROR,
+                      "Failed to build Tensorflow Lite interpreter for %s",
+                      BandDeviceGetName(device));
+    return nullptr;
+  }
 
-  if (GetBandStatus(interpreter->AllocateTensors()) != kBandOk) {
+  if (interpreter->AllocateTensors() != kTfLiteOk) {
+    BAND_LOG_PROD(BAND_LOG_ERROR,
+                      "Failed to build Tensorflow Lite interpreter for %s",
+                      BandDeviceGetName(device));
     return nullptr;
   }
 
