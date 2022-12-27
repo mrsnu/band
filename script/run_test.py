@@ -25,7 +25,7 @@ def copy(src, dst):
 def get_options(enable_xnnpack, debug):
     option_xnnpack = 'true' if enable_xnnpack else 'false'
     debug_option = 'dbg' if debug else 'opt'
-    strip_option = 'always' if debug else 'never'
+    strip_option = 'never' if debug else 'always'
     return f'--jobs={multiprocessing.cpu_count()} {" --test_output=all" if debug else ""} -c {debug_option} --strip {strip_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
 
 def get_dst_path(target_platform, debug):
