@@ -572,7 +572,7 @@ TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
                       gpu_delegate->MaxDelegatedPartitions(), &excluded_ops);
   const auto status = context->ReplaceNodeSubsetsWithDelegateKernels(
       context, kRegistration, ops_to_replace, delegate);
-  TFLITE_LOG_PROD(TFLITE_LOG_INFO, "Created %d GPU delegate kernels.",
+  TFLITE_LOG(TFLITE_LOG_INFO, "Created %d GPU delegate kernels.",
                   gpu_delegate->num_delegate_kernels());
   TfLiteIntArrayFree(ops_to_replace);
   return status;
@@ -601,7 +601,7 @@ TfLiteGpuDelegateOptionsV2 TfLiteGpuDelegateOptionsV2Default() {
 TfLiteDelegate* TfLiteGpuDelegateV2Create(
     const TfLiteGpuDelegateOptionsV2* options) {
   auto* gpu_delegate = new tflite::gpu::Delegate(options);
-  TFLITE_LOG_PROD_ONCE(tflite::TFLITE_LOG_INFO,
+  TFLITE_LOG(tflite::TFLITE_LOG_INFO,
                        "Created TensorFlow Lite delegate for GPU.");
   return gpu_delegate ? gpu_delegate->tflite_delegate() : nullptr;
 }

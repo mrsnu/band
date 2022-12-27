@@ -410,18 +410,6 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
   std::vector<NodeSubset> node_subsets;
   PartitionGraphIntoIndependentNodeSubsets(&info, nodes_to_replace,
                                            &node_subsets);
-
-#ifdef __ANDROID__
-  // On Android the log message below is used for diagnosing delegation success
-  // also in production builds. Delegation happens sufficiently rarely that the
-  // message isn't spammy.
-  TFLITE_LOG_PROD(
-      tflite::TFLITE_LOG_INFO,
-      "Replacing %d node(s) with delegate (%s) node, yielding %zu partitions.",
-      nodes_to_replace->size,
-      registration.custom_name ? registration.custom_name : "unknown",
-      node_subsets.size());
-#else   // !__ANDROID__
   // Server-side, delegation may happen so often as to make logging spammy + we
   // don't have a clear need for the diagnostic in production builds.
   TFLITE_LOG(
@@ -430,7 +418,6 @@ TfLiteStatus Subgraph::ReplaceNodeSubsetsWithDelegateKernels(
       nodes_to_replace->size,
       registration.custom_name ? registration.custom_name : "unknown",
       node_subsets.size());
-#endif  // __ANDROID__
 
   execution_plan_.clear();
 

@@ -6285,7 +6285,7 @@ void StatefulNnApiDelegate::StatefulNnApiDelegateConstructorImpl(
   delegate_data_.max_execution_cache_size = options.max_execution_cache_size;
   delegate_data_.tensor_max_size_hints = options.tensor_max_size_hints;
 
-  TFLITE_LOG_PROD_ONCE(tflite::TFLITE_LOG_INFO,
+  TFLITE_LOG(tflite::TFLITE_LOG_INFO,
                        "Created TensorFlow Lite delegate for NNAPI.");
   Prepare = DoPrepare;
   CopyFromBufferHandle = DoCopyFromBufferHandle;
