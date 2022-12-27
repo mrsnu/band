@@ -101,11 +101,21 @@ BandStatus Engine::RegisterModel(Model* model) {
     model_specs_.insert({model_id, std::get<1>(result)});
 
     for (const SubgraphDef& subgraph_def : std::get<2>(result)) {
-      BandStatus status =
-          interpreters_[{subgraph_def.worker_id, model_id}]->FromModel(
-              model->GetBackendModel(backend_type), subgraph_def.worker_id,
-              workers_[subgraph_def.worker_id]->GetDeviceFlag(),
-              subgraph_def.op_indices);
+      const std::pair<WorkerId, ModelId> interpreter_key = {
+          subgraph_def.worker_id, model_id};
+
+      if (interpreters_.find(interpreter_key) == interpreters_.end()) {
+        BAND_REPORT_ERROR(error_reporter_,
+                          "Subgraph logic created a subgraph for worker %d "
+                          "that does not supports model %d",
+                          subgraph_def.worker_id, model_id);
+      } else {
+        BandStatus status =
+            interpreters_[{subgraph_def.worker_id, model_id}]->FromModel(
+                model->GetBackendModel(backend_type), subgraph_def.worker_id,
+                workers_[subgraph_def.worker_id]->GetDeviceFlag(),
+                subgraph_def.op_indices);
+      }
       // todo: handle failure case
     }
 

@@ -465,7 +465,7 @@ bool ModelAnalyzer::NeedFallbackSubgraph() const {
 
 bool ModelAnalyzer::IsWorkerValid(WorkerId worker_id) const {
   return model_spec_->unavailable_devices.find(
-             context_.GetWorker(worker_id)->GetDeviceFlag()) !=
+             context_.GetWorker(worker_id)->GetDeviceFlag()) ==
          model_spec_->unavailable_devices.end();
 }
 
