@@ -11,12 +11,10 @@ import tempfile
 
 BASE_DIR = 'test_bin'
 
-
+# TODO: share utility functions below with build_c_api.py
 def run_cmd(cmd):
-    # print(cmd)
     args = shlex.split(cmd)
-    subprocess.call(args, cwd=os.getcwd(), stderr=None)
-
+    subprocess.call(args, cwd=os.getcwd())
 
 def copy(src, dst):
     subprocess.call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
@@ -24,20 +22,11 @@ def copy(src, dst):
     dst = os.path.join(dst, os.path.basename(src))
     shutil.copytree(src, dst)
 
-
-def patch(file_path, target_str, patched_str):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        source = file.read()
-    source = source.replace(target_str, patched_str)
-    with open(file_path, 'w', encoding='utf-8') as file:
-        file.write(source)
-
-
 def get_options(enable_xnnpack, debug):
     option_xnnpack = 'true' if enable_xnnpack else 'false'
     debug_option = 'dbg' if debug else 'opt'
-    return f'--jobs={multiprocessing.cpu_count()} {" --test_output=all" if debug else ""} -c {debug_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
-
+    strip_option = 'always' if debug else 'never'
+    return f'--jobs={multiprocessing.cpu_count()} {" --test_output=all" if debug else ""} -c {debug_option} --strip {strip_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
 
 def get_dst_path(target_platform, debug):
     build = 'debug' if debug else 'release'
@@ -46,7 +35,6 @@ def get_dst_path(target_platform, debug):
         path = path.replace('\\', '/')
     return path
 
-
 def test_local(enable_xnnpack=False, debug=False):
     run_cmd(
         f'bazel test {get_options(enable_xnnpack, debug)} band/test/...')
@@ -54,7 +42,7 @@ def test_local(enable_xnnpack=False, debug=False):
 
 def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False, filter=""):
     # build android targets only (specified in band_cc_android_test tags)
-    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --config=android_arm64 --build_tag_filters=android --strip always  {get_options(enable_xnnpack, debug)} band/test/...'
+    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build --config=android_arm64 --build_tag_filters=android {get_options(enable_xnnpack, debug)} band/test/...'
     if docker:
         run_cmd(f'sh script/docker_util.sh -r {build_command}')
         # create a local path

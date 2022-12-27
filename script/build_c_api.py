@@ -4,45 +4,35 @@
 import argparse
 import os
 import platform
-import shlex
 import shutil
+import shlex
 import subprocess
 import multiprocessing
 
 BASE_DIR = 'bin'
 
-
 def run_cmd(cmd):
-    print(cmd)
     args = shlex.split(cmd)
     subprocess.call(args, cwd=os.getcwd())
-
 
 def copy(src, dst):
     subprocess.call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
     # append filename to dst directory
     dst = os.path.join(dst, os.path.basename(src))
-    shutil.copyfile(src, dst)
-
-
-def patch(file_path, target_str, patched_str):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        source = file.read()
-    source = source.replace(target_str, patched_str)
-    with open(file_path, 'w', encoding='utf-8') as file:
-        file.write(source)
-
+    shutil.copytree(src, dst)
 
 def get_options(enable_xnnpack, debug):
     option_xnnpack = 'true' if enable_xnnpack else 'false'
     debug_option = 'dbg' if debug else 'opt'
-    return f'--jobs={multiprocessing.cpu_count()} -c {debug_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
+    strip_option = 'always' if debug else 'never'
+    return f'--jobs={multiprocessing.cpu_count()} {" --test_output=all" if debug else ""} -c {debug_option} --strip {strip_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
 
-
-def get_dst_path(platform, debug):
+def get_dst_path(target_platform, debug):
     build = 'debug' if debug else 'release'
-    return os.path.join(BASE_DIR, platform, build)
-
+    path = os.path.join(BASE_DIR, target_platform, build)
+    if platform.system() == 'Windows':
+        path = path.replace('\\', '/')
+    return path
 
 def build_windows(enable_xnnpack=False, debug=False):
     run_cmd(
