@@ -157,22 +157,13 @@ BandStatus TfLiteInterpreter::FromModel(Interface::IModel* model,
     return kBandError;
   }
 
-  // model-level subgraph
-  if (ops.size() == 0) {
-    interpreters_[SubgraphKey(model->GetId(), worker_id)] =
-        std::move(interpreter);
-  } else {
-    auto vec2set = [](std::vector<int> vec) {
-      return std::set<int>(vec.begin(), vec.end());
-    };
-    interpreters_[SubgraphKey(
-        model->GetId(), worker_id, vec2set(interpreter->inputs()),
-        vec2set(interpreter->outputs()))] = std::move(interpreter);
-  }
+  auto vec2set = [](std::vector<int> vec) {
+    return std::set<int>(vec.begin(), vec.end());
+  };
 
-  BAND_LOG_INTERNAL(BAND_LOG_INFO,
-                    "Create Tensorflow Lite Interpreter for (%s , worker %d)",
-                    BandDeviceGetName(device), worker_id);
+  interpreters_[SubgraphKey(
+      model->GetId(), worker_id, vec2set(interpreter->inputs()),
+      vec2set(interpreter->outputs()))] = std::move(interpreter);
 
   return GetBandStatus(status);
 }
@@ -214,10 +205,18 @@ std::shared_ptr<Interface::ITensorView> TfLiteInterpreter::GetTensorView(
   return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
 }
 
-SubgraphKey TfLiteInterpreter::GetModelSubgraphKey(ModelId model_id) const {
-  // doesn't need to validate worker id
-  // since it creates invalid subgraph key
-  return SubgraphKey(model_id, worker_id_);
+SubgraphKey TfLiteInterpreter::GetLargestSubgraphKey(ModelId model_id) const {
+  SubgraphKey largest_key;
+  int largest_num_ops = 0;
+
+  for (const auto& it : interpreters_) {
+    if (largest_num_ops < it.second->nodes_size()) {
+      largest_key = it.first;
+      largest_num_ops = it.second->nodes_size();
+    }
+  }
+
+  return largest_key;
 }
 
 bool TfLiteInterpreter::HasSubgraph(const SubgraphKey& key) const {
@@ -295,8 +294,10 @@ BandDeviceFlags GetNNAPIDeviceFlag(std::string name) {
 std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
     Interface::IModel* model, BandDeviceFlags device,
     std::set<int> op_indices) {
-  // TODO: Build subgraph based on op_indices
   std::unique_ptr<tflite::Interpreter> interpreter;
+  std::shared_ptr<tflite::InterpreterOptions> option =
+      std::make_shared<tflite::InterpreterOptions>();
+  option->SetTargetNodes(op_indices);
 
   TfLiteModel* tf_model = static_cast<TfLiteModel*>(model);
   if (!IsCompatible(model) || !tf_model || !tf_model->IsInitialized()) {
@@ -304,7 +305,8 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
   }
 
   tflite::ops::builtin::BuiltinOpResolver resolver;
-  tflite::InterpreterBuilder builder(*tf_model->GetFlatBufferModel(), resolver);
+  tflite::InterpreterBuilder builder(*tf_model->GetFlatBufferModel(), resolver,
+                                     option.get());
   auto delegate = GetDeviceDelegate(device);
 
   if (delegate.first == kBandError) {

@@ -38,7 +38,7 @@ class IInterpreter : public IBackendSpecific {
                                                      int index) = 0;
 
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
-  virtual SubgraphKey GetModelSubgraphKey(ModelId model_id) const = 0;
+  virtual SubgraphKey GetLargestSubgraphKey(ModelId model_id) const = 0;
 
   virtual BandStatus InvokeSubgraph(const SubgraphKey& key) = 0;
 

@@ -63,7 +63,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
   IInterpreter* interpreter = BackendFactory::CreateInterpreter(kBandTfLite);
   EXPECT_EQ(interpreter->FromModel(bin_model, 0, kBandCPU), kBandOk);
 
-  SubgraphKey key = interpreter->GetModelSubgraphKey(bin_model->GetId());
+  SubgraphKey key = interpreter->GetLargestSubgraphKey(bin_model->GetId());
 
   EXPECT_EQ(interpreter->GetInputs(key).size(), 1);
   EXPECT_EQ(interpreter->GetOutputs(key).size(), 1);
@@ -165,10 +165,10 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
-  EXPECT_GT(engine->GetProfiled(engine->GetModelSubgraphKey(model.GetId(), 0)),
-            0);
-  EXPECT_GT(engine->GetExpected(engine->GetModelSubgraphKey(model.GetId(), 0)),
-            0);
+  EXPECT_GT(
+      engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
+  EXPECT_GT(
+      engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {

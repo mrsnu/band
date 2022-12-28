@@ -29,7 +29,7 @@ class TfLiteInterpreter : public Interface::IInterpreter {
   std::shared_ptr<Interface::ITensorView> GetTensorView(const SubgraphKey& key,
                                                         int index) override;
 
-  SubgraphKey GetModelSubgraphKey(ModelId model_id) const override;
+  SubgraphKey GetLargestSubgraphKey(ModelId model_id) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
 
   BandStatus InvokeSubgraph(const SubgraphKey& key) override;

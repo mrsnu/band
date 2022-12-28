@@ -46,9 +46,10 @@ class Context {
   virtual std::set<WorkerId> GetIdleWorkers() const = 0;
 
   /* subgraph */
-  virtual SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                          WorkerId worker_id) const = 0;
+  virtual SubgraphKey GetLargestSubgraphKey(ModelId model_id,
+                                            WorkerId worker_id) const = 0;
   virtual bool IsEnd(const SubgraphKey& key) const = 0;
+  virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual BandStatus Invoke(const SubgraphKey& key) = 0;
 
   /* model */

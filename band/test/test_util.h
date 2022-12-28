@@ -17,8 +17,9 @@ struct MockContextBase : public Context {
   MOCK_CONST_METHOD0(GetIdleWorkers, std::set<WorkerId>(void));
 
   /* subgraph */
-  MOCK_CONST_METHOD2(GetModelSubgraphKey, SubgraphKey(ModelId, WorkerId));
+  MOCK_CONST_METHOD2(GetLargestSubgraphKey, SubgraphKey(ModelId, WorkerId));
   MOCK_CONST_METHOD1(IsEnd, bool(const SubgraphKey&));
+  MOCK_CONST_METHOD1(HasSubgraph, bool(const SubgraphKey&));
   MOCK_METHOD1(Invoke, BandStatus(const SubgraphKey&));
 
   /* model */

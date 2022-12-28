@@ -61,25 +61,14 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
 INSTANTIATE_TEST_SUITE_P(
     ModelPartitionTests, ModelPartitionTestsFixture,
     testing::Values(
-        // std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-        //                 kBandUnitSubgraph),
-        // std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-        //                 kBandFallbackPerDevice),
-        // std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-        //                 kBandMergeUnitSubgraph)
-
-        // std::make_tuple("ICN_quant.tflite", kBandMergeUnitSubgraph)
+        std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
+                        kBandMergeUnitSubgraph),
+        std::make_tuple("ICN_quant.tflite", kBandMergeUnitSubgraph),
         std::make_tuple(
             "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
-            kBandMergeUnitSubgraph)
-        // std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-        //                 kBandMergeUnitSubgraph),
-        // std::make_tuple(
-        //     "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
-        //     kBandMergeUnitSubgraph),
-        // std::make_tuple("retinaface_mbv2_quant_160.tflite",
-        //                 kBandMergeUnitSubgraph)
-        ));
+            kBandMergeUnitSubgraph),
+        std::make_tuple("retinaface_mbv2_quant_160.tflite",
+                        kBandMergeUnitSubgraph)));
 }  // namespace Band
 
 int main(int argc, char** argv) {

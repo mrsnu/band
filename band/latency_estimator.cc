@@ -48,74 +48,76 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
       // wait for workers to finish current job
       worker->Wait();
 
-      // TODO(dostos): find largest subgraph after subgraph-support (L878-,
-      // tensorflow_band/lite/interpreter.cc)
       Job largest_subgraph_job(model_id);
-      SubgraphKey subgraph_key(model_id, worker_id);
+      SubgraphKey subgraph_key =
+          context_->GetLargestSubgraphKey(model_id, worker_id);
       largest_subgraph_job.subgraph_key = subgraph_key;
 
-      Profiler average_profiler;
-      // invoke target subgraph in an isolated thread
-      std::thread profile_thread([&]() {
-        if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
-            SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
-                kBandOk) {
-          BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                            "Failed to propagate thread affinity of worker id "
-                            "%d to profile thread",
-                            worker_id);
-          return;
-        }
-
-        // TODO(BAND-20): propagate affinity to CPU backend if necessary
-        // (L1143-,tensorflow_band/lite/interpreter.cc)
-
-        for (int i = 0; i < profile_num_warmups_; i++) {
-          if (context_->Invoke(subgraph_key) != kBandOk) {
-            BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
+      if (context_->HasSubgraph(subgraph_key)) {
+        Profiler average_profiler;
+        // invoke target subgraph in an isolated thread
+        std::thread profile_thread([&]() {
+          if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
+              SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
+                  kBandOk) {
+            BAND_LOG_INTERNAL(
+                BAND_LOG_ERROR,
+                "Failed to propagate thread affinity of worker id "
+                "%d to profile thread",
+                worker_id);
             return;
           }
-        }
 
-        for (int i = 0; i < profile_num_runs_; i++) {
-          const size_t event_id = average_profiler.BeginEvent();
-          if (context_->Invoke(subgraph_key) != kBandOk) {
-            BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
-            return;
+          // TODO(BAND-20): propagate affinity to CPU backend if necessary
+          // (L1143-,tensorflow_band/lite/interpreter.cc)
+
+          for (int i = 0; i < profile_num_warmups_; i++) {
+            if (context_->Invoke(subgraph_key) != kBandOk) {
+              BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                                "Profiler failed to invoke largest subgraph of "
+                                "model %d in worker %d",
+                                model_id, worker_id);
+              return;
+            }
           }
-          average_profiler.EndEvent(event_id);
-        }
-      });
-      profile_thread.join();
 
-      // TODO(dostos): estimate latency with largest subgraph latency (L926-,
-      // tensorflow_band/lite/interpreter.cc)
-      if (average_profiler.GetNumEvents() != profile_num_runs_) {
-        return kBandError;
+          for (int i = 0; i < profile_num_runs_; i++) {
+            const size_t event_id = average_profiler.BeginEvent();
+            if (context_->Invoke(subgraph_key) != kBandOk) {
+              BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                                "Profiler failed to invoke largest subgraph of "
+                                "model %d in worker %d",
+                                model_id, worker_id);
+              return;
+            }
+            average_profiler.EndEvent(event_id);
+          }
+        });
+        profile_thread.join();
+
+        // TODO(dostos): estimate latency with largest subgraph latency (L926-,
+        // tensorflow_band/lite/interpreter.cc)
+        if (average_profiler.GetNumEvents() != profile_num_runs_) {
+          return kBandError;
+        }
+
+        const int64_t latency =
+            average_profiler.GetAverageElapsedTime<std::chrono::microseconds>();
+
+        profile_database_[subgraph_key] = {latency, latency};
+
+        BAND_LOG_PROD(
+            BAND_LOG_INFO,
+            "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
+            "start=%s end=%s.",
+            model_id, latency, worker_id,
+            BandDeviceGetName(worker->GetDeviceFlag()),
+            subgraph_key.GetInputOpsString().c_str(),
+            subgraph_key.GetOutputOpsString().c_str());
       }
-
-      const int64_t latency =
-          average_profiler.GetAverageElapsedTime<std::chrono::microseconds>();
-
-      profile_database_[subgraph_key] = {latency, latency};
 
       // resume worker
       worker->Resume();
-
-      BAND_LOG_INTERNAL(
-          BAND_LOG_INFO,
-          "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
-          "start=%s end=%s.",
-          model_id, latency, worker_id,
-          BandDeviceGetName(worker->GetDeviceFlag()),
-          subgraph_key.GetInputOpsString().c_str(),
-          subgraph_key.GetOutputOpsString().c_str());
     }
   } else {
     if (context_ && context_->GetModelSpec(model_id)) {

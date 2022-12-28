@@ -223,9 +223,9 @@ class DelegateKernel {
 
   absl::Status Invoke(TfLiteContext* context) {
     if (thread_id_prepare_ != std::this_thread::get_id()) {
-      TFLITE_LOG(tflite::TFLITE_LOG_WARNING,
-                 "GpuDelegate invoke thread != prepare thread");
       if (enforce_same_thread_) {
+        TFLITE_LOG(tflite::TFLITE_LOG_ERROR,
+                   "GpuDelegate invoke thread != prepare thread");
         return absl::FailedPreconditionError(
             "GpuDelegate must run on the same thread where it was "
             "initialized.");
@@ -313,20 +313,39 @@ class DelegateKernel {
     // input/output_refs.
     // TODO(b/211393366): Fix this at GraphFloat32.inputs/outputs() level.
     const std::vector<Value*> inputs = graph->inputs();
-    input_refs->clear();
-    input_refs->reserve(delegate_params->input_tensors->size);
-    for (int i = 0, j = 0; i < delegate_params->input_tensors->size; ++i) {
-      const TfLiteTensor* tensor =
-          context->tensors + delegate_params->input_tensors->data[i];
-      if (tflite::IsConstantTensor(tensor)) continue;
-      input_refs->push_back(inputs[j]->tensor.ref);
-      ++j;
-    }
     const std::vector<Value*> outputs = graph->outputs();
+    input_refs->clear();
     output_refs->clear();
-    output_refs->reserve(delegate_params->output_tensors->size);
-    for (int i = 0; i < delegate_params->output_tensors->size; ++i) {
-      output_refs->push_back(outputs[i]->tensor.ref);
+
+    if (delegate_params->input_tensors->size <= inputs.size() &&
+        delegate_params->output_tensors->size <= outputs.size()) {
+      input_refs->reserve(delegate_params->input_tensors->size);
+      output_refs->reserve(delegate_params->output_tensors->size);
+      for (int i = 0, j = 0; i < delegate_params->input_tensors->size; ++i) {
+        const TfLiteTensor* tensor =
+            context->tensors + delegate_params->input_tensors->data[i];
+        if (tflite::IsConstantTensor(tensor)) continue;
+        input_refs->push_back(inputs[j]->tensor.ref);
+        ++j;
+      }
+      for (int i = 0; i < delegate_params->output_tensors->size; ++i) {
+        output_refs->push_back(outputs[i]->tensor.ref);
+      }
+    } else {
+      // TODO: rollback TFLite official change from
+      // 251ef5b4077741dee0e7afc72b07ef4f82962096 to avoid tensor references in
+      // delegate_params to support subgraph. This is mainly because
+      // delegate_params only contains input / output tensors from the given
+      // node subsets, accessing them using the graph's tensor index has the
+      // potential to seg fault.
+      input_refs->reserve(inputs.size());
+      output_refs->reserve(outputs.size());
+      for (const auto& input : inputs) {
+        input_refs->push_back(input->tensor.ref);
+      }
+      for (const auto& output : outputs) {
+        output_refs->push_back(output->tensor.ref);
+      }
     }
 
     return absl::OkStatus();
@@ -573,7 +592,7 @@ TfLiteStatus DelegatePrepare(TfLiteContext* context, TfLiteDelegate* delegate) {
   const auto status = context->ReplaceNodeSubsetsWithDelegateKernels(
       context, kRegistration, ops_to_replace, delegate);
   TFLITE_LOG(TFLITE_LOG_INFO, "Created %d GPU delegate kernels.",
-                  gpu_delegate->num_delegate_kernels());
+             gpu_delegate->num_delegate_kernels());
   TfLiteIntArrayFree(ops_to_replace);
   return status;
 }
@@ -602,7 +621,7 @@ TfLiteDelegate* TfLiteGpuDelegateV2Create(
     const TfLiteGpuDelegateOptionsV2* options) {
   auto* gpu_delegate = new tflite::gpu::Delegate(options);
   TFLITE_LOG(tflite::TFLITE_LOG_INFO,
-                       "Created TensorFlow Lite delegate for GPU.");
+             "Created TensorFlow Lite delegate for GPU.");
   return gpu_delegate ? gpu_delegate->tflite_delegate() : nullptr;
 }
 

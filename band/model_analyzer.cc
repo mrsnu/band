@@ -79,7 +79,7 @@ ModelAnalyzer::CreateSubgraphs() {
 
   for (auto unit_subgraph_def : unit_subgraph_defs) {
     BAND_LOG_PROD(
-        BAND_LOG_INFO, "Unit subgraph %s (%s) inputs %s outputs %s",
+        BAND_LOG_INFO, "UnitSubgraph %s (%s) inputs %s outputs %s",
         unit_subgraph_def.ToString().c_str(),
         BandDeviceGetName(
             context_.GetWorker(unit_subgraph_def.worker_id)->GetDeviceFlag()),
@@ -141,13 +141,15 @@ ModelAnalyzer::CreateSubgraphs() {
       break;
   }
 
-  for (auto subgraph_def : subgraph_defs) {
+  for (int i = unit_subgraph_defs.size(); i < subgraph_defs.size(); i++) {
     BAND_LOG_PROD(
-        BAND_LOG_INFO, "[%s] Subgraph %s (%s)",
+        BAND_LOG_INFO, "[%s] Subgraph %s (%s) inputs %s outputs %s",
         BandSubgraphPreparationGetName(model_config_.subgraph_preparation_type),
-        subgraph_def.ToString().c_str(),
+        subgraph_defs[i].ToString().c_str(),
         BandDeviceGetName(
-            context_.GetWorker(subgraph_def.worker_id)->GetDeviceFlag()));
+            context_.GetWorker(subgraph_defs[i].worker_id)->GetDeviceFlag()),
+        SetToString(GetPureInputTensors(subgraph_defs[i])).c_str(),
+        SetToString(GetOutputTensors(subgraph_defs[i])).c_str());
   }
 
   return {kBandOk, *model_spec_, subgraph_defs};

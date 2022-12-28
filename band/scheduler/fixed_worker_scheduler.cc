@@ -19,7 +19,7 @@ ScheduleAction FixedWorkerScheduler::Schedule(const Context& context,
     WorkerId worker_id = to_execute.target_worker_id == -1
                              ? context.GetModelWorker(model_id)
                              : to_execute.target_worker_id;
-    SubgraphKey key = context.GetModelSubgraphKey(model_id, worker_id);
+    SubgraphKey key = context.GetLargestSubgraphKey(model_id, worker_id);
     action[worker_id].push_back({to_execute, key});
   }
   return action;

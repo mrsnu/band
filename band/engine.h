@@ -90,8 +90,8 @@ class Engine : public Context {
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
-  SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                  WorkerId worker_id) const override;
+  SubgraphKey GetLargestSubgraphKey(ModelId model_id,
+                                    WorkerId worker_id) const override;
 
  private:
   /* context */
@@ -101,6 +101,7 @@ class Engine : public Context {
   std::set<WorkerId> GetIdleWorkers() const override;
 
   bool IsEnd(const SubgraphKey& key) const override;
+  bool HasSubgraph(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
