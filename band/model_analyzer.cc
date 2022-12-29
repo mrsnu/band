@@ -1,6 +1,7 @@
 #include "band/model_analyzer.h"
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
 
 #include "band/backend_factory.h"
