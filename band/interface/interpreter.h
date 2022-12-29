@@ -23,7 +23,8 @@ class IInterpreter : public IBackendSpecific {
   virtual ~IInterpreter() = default;
 
   virtual ModelSpec InvestigateModelSpec(IModel* model) = 0;
-  virtual BandStatus PrepareSubgraph(IModel* model, std::set<int> ops = {}) = 0;
+  virtual BandStatus PrepareSubgraph(IModel* model, std::set<int> ops = {},
+                                     std::set<int> unit_indices = {}) = 0;
 
   virtual const std::vector<int>& GetInputs(const SubgraphKey& key) const = 0;
   virtual const std::vector<int>& GetOutputs(const SubgraphKey& key) const = 0;

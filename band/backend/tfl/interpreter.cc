@@ -148,7 +148,8 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
 }
 
 BandStatus TfLiteInterpreter::PrepareSubgraph(Interface::IModel* model,
-                                              std::set<int> ops) {
+                                              std::set<int> ops,
+                                              std::set<int> unit_indices) {
   if (model_id_ != model->GetId()) {
     BAND_LOG_PROD(BAND_LOG_ERROR,
                   "Failed to prepare subgraph, given model id %d != "
@@ -157,24 +158,17 @@ BandStatus TfLiteInterpreter::PrepareSubgraph(Interface::IModel* model,
     return kBandError;
   }
 
-  TfLiteStatus status = kTfLiteOk;
   std::unique_ptr<tflite::Interpreter> interpreter =
       CreateTfLiteInterpreter(model, device_flag_, ops);
 
   if (!interpreter) {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to create TFLite Interpreter");
     return kBandError;
+  } else {
+    interpreters_[SubgraphKey(model->GetId(), worker_id_, unit_indices)] =
+        std::move(interpreter);
+    return kBandOk;
   }
-
-  auto vec2set = [](std::vector<int> vec) {
-    return std::set<int>(vec.begin(), vec.end());
-  };
-
-  interpreters_[SubgraphKey(
-      model->GetId(), worker_id_, vec2set(interpreter->inputs()),
-      vec2set(interpreter->outputs()))] = std::move(interpreter);
-
-  return GetBandStatus(status);
 }
 
 BandBackendType TfLiteInterpreter::GetBackendType() const {
@@ -216,7 +210,7 @@ std::shared_ptr<Interface::ITensorView> TfLiteInterpreter::GetTensorView(
 
 SubgraphKey TfLiteInterpreter::GetLargestSubgraphKey() const {
   SubgraphKey largest_key;
-  int largest_num_ops = 0;
+  size_t largest_num_ops = 0;
 
   for (const auto& it : interpreters_) {
     if (largest_num_ops < it.second->nodes_size()) {
@@ -319,9 +313,9 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
   auto delegate = GetDeviceDelegate(device);
 
   if (delegate.first == kBandError) {
-    BAND_LOG_PROD(BAND_LOG_ERROR,
-                  "Failed to create Tensorflow Lite delegate for %s",
-                  BandDeviceGetName(device));
+    BAND_LOG_INTERNAL(BAND_LOG_WARNING,
+                      "Failed to create Tensorflow Lite delegate for %s",
+                      BandDeviceGetName(device));
     return nullptr;
   }
 

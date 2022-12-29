@@ -15,8 +15,8 @@ class TfLiteInterpreter : public Interface::IInterpreter {
   ~TfLiteInterpreter() override;
 
   ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
-  BandStatus PrepareSubgraph(Interface::IModel* model,
-                             std::set<int> ops = {}) override;
+  BandStatus PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
+                             std::set<int> unit_indices = {}) override;
 
   BandBackendType GetBackendType() const override;
   const std::vector<int>& GetInputs(const SubgraphKey& key) const override;

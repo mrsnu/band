@@ -517,12 +517,13 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
     added = false;
     std::vector<SubgraphDef> subgraphs_to_add;
     for (const auto& prev_unit_subgraph : result_subgraphs) {
-      const std::set<int> prev_outputs = GetOutputTensors(prev_unit_subgraph);
+      const std::set<int> prev_outputs =
+          model_spec_->GetOutputTensors(prev_unit_subgraph.op_indices);
       for (const auto& next_unit_subgraph : result_subgraphs) {
         // Prepare merged worker_id - op_indices
         const WorkerId worker_id = prev_unit_subgraph.worker_id;
         const std::set<int> next_inputs =
-            GetPureInputTensors(next_unit_subgraph);
+            model_spec_->GetPureInputTensors(next_unit_subgraph.op_indices);
         // Skip same subgraph or different device
         if ((&prev_unit_subgraph == &next_unit_subgraph) ||
             (prev_unit_subgraph.worker_id != next_unit_subgraph.worker_id)) {
@@ -592,36 +593,4 @@ bool ModelAnalyzer::IsResolved(const std::set<int> resolved_tensors,
   }
   return true;
 }
-
-std::set<int> ModelAnalyzer::GetPureInputTensors(
-    const SubgraphDef& subgraph) const {
-  // {all input tensors in ops} - {all output tensors in ops}
-  std::set<int> input_tensors;
-  for (const auto& op_index : subgraph.op_indices) {
-    const std::set<int>& inputs = model_spec_->op_input_tensors[op_index];
-    input_tensors.insert(inputs.begin(), inputs.end());
-  }
-
-  for (const auto& op_index : subgraph.op_indices) {
-    const std::set<int>& outputs = model_spec_->op_output_tensors[op_index];
-    for (int output_index : outputs) {
-      input_tensors.erase(output_index);
-    }
-  }
-
-  return input_tensors;
-}
-
-std::set<int> ModelAnalyzer::GetOutputTensors(
-    const SubgraphDef& subgraph) const {
-  // {all output tensors in ops}
-  std::set<int> output_tensors;
-  for (const auto& op_index : subgraph.op_indices) {
-    const std::set<int>& outputs = model_spec_->op_output_tensors[op_index];
-    output_tensors.insert(outputs.begin(), outputs.end());
-  }
-
-  return output_tensors;
-}
-
 }  // namespace Band

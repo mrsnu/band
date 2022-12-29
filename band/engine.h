@@ -156,7 +156,7 @@ class Engine : public Context {
 
   ModelConfig model_config_;
 
-  std::map<std::pair<WorkerId, ModelId>,
+  std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<Interface::IInterpreter>>
       interpreters_;
   std::vector<std::unique_ptr<Worker>> workers_;

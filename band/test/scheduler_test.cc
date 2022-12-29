@@ -27,7 +27,7 @@ struct MockContext : public MockContextBase {
 
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override {
-    return SubgraphKey(model_id, worker_id, {0}, {0});
+    return SubgraphKey(model_id, worker_id, {0});
   }
 
   WorkerId GetModelWorker(ModelId model_id) const override {

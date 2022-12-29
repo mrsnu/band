@@ -106,14 +106,10 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
 
         profile_database_[subgraph_key] = {latency, latency};
 
-        BAND_LOG_PROD(
-            BAND_LOG_INFO,
-            "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
-            "start=%s end=%s.",
-            model_id, latency, worker_id,
-            BandDeviceGetName(worker->GetDeviceFlag()),
-            subgraph_key.GetInputOpsString().c_str(),
-            subgraph_key.GetOutputOpsString().c_str());
+        BAND_LOG_PROD(BAND_LOG_INFO,
+                      "Profiled latency of subgraph (%s device=%s) avg=%d us",
+                      subgraph_key.ToString().c_str(),
+                      BandDeviceGetName(worker->GetDeviceFlag()), latency);
       }
 
       // resume worker
@@ -188,7 +184,7 @@ size_t LatencyEstimator::GetProfileHash() const {
 std::map<SubgraphKey, LatencyEstimator::Latency>
 LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
                                      const int model_id) {
-  auto string_to_node_indices = [](std::string index_string) {
+  auto string_to_indices = [](std::string index_string) {
     std::set<int> node_indices;
     std::stringstream ss(index_string);
 
@@ -228,15 +224,8 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
     const Json::Value idx_profile = *profile_it;
     for (auto idx_profile_it = idx_profile.begin();
          idx_profile_it != idx_profile.end(); ++idx_profile_it) {
-      std::string idx = idx_profile_it.key().asString();
-
-      // parse the key to retrieve start/end indices
-      // e.g., "25/50" --> delim_pos = 2
-      auto delim_pos = idx.find("/");
-      std::set<int> root_indices =
-          string_to_node_indices(idx.substr(0, delim_pos));
-      std::set<int> leaf_indices = string_to_node_indices(
-          idx.substr(delim_pos + 1, idx.length() - delim_pos - 1));
+      std::string unit_indices_string = idx_profile_it.key().asString();
+      std::set<int> unit_indices = string_to_indices(unit_indices_string);
 
       const Json::Value device_profile = *idx_profile_it;
       for (auto device_profile_it = device_profile.begin();
@@ -250,7 +239,7 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
           continue;
         }
 
-        SubgraphKey key(model_id, worker_id, root_indices, leaf_indices);
+        SubgraphKey key(model_id, worker_id, unit_indices);
         id_profile[key] = {profiled_latency, profiled_latency};
       }
     }
@@ -264,19 +253,14 @@ Json::Value LatencyEstimator::ProfileToJson() {
   for (auto& pair : profile_database_) {
     SubgraphKey key = pair.first;
     const int model_id = key.GetModelId();
-    const std::string start_indices = key.GetInputOpsString();
-    const std::string end_indices = key.GetOutputOpsString();
     const int64_t profiled_latency = pair.second.profiled;
 
     // check the string name of this model id
     auto model_spec = context_->GetModelSpec(model_id);
     if (model_spec && !model_spec->path.empty()) {
       // copy all entries in id_profile --> database_json
-      // as an ad-hoc method, we simply concat the start/end indices to form
-      // the level-two key in the final json value
-      const std::string index_key = start_indices + "/" + end_indices;
-      name_profile[model_spec->path][index_key][key.GetWorkerId()] =
-          profiled_latency;
+      name_profile[model_spec->path][key.GetUnitIndicesString()]
+                  [key.GetWorkerId()] = profiled_latency;
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                         "Cannot find model %d from "

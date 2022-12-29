@@ -18,30 +18,22 @@ typedef int JobId;
 class SubgraphKey {
  public:
   SubgraphKey();
-  // special case - entire model subgraph
-  SubgraphKey(ModelId model_id, WorkerId worker_id);
-  SubgraphKey(ModelId model_id, WorkerId worker_id, std::set<int> input_ops,
-              std::set<int> output_ops);
+  SubgraphKey(ModelId model_id, WorkerId worker_id,
+              std::set<int> unit_indices = {});
   bool operator<(const SubgraphKey& key) const;
   bool operator==(const SubgraphKey& key) const;
 
-  std::string GetInputOpsString() const;
-  std::string GetOutputOpsString() const;
-
   ModelId GetModelId() const { return model_id; }
   WorkerId GetWorkerId() const { return worker_id; }
-  const std::set<int>& GetInputOps() const { return input_ops; }
-  const std::set<int>& GetOutputOps() const { return output_ops; }
+  const std::set<int>& GetUnitIndices() const { return unit_indices; }
+  std::string GetUnitIndicesString() const;
 
+  std::string ToString() const;
   bool IsValid() const;
 
  private:
   ModelId model_id = -1;
   WorkerId worker_id = -1;
-  std::set<int> input_ops;
-  std::set<int> output_ops;
-
-  // TODO: Where to move `unit_indices`?
   std::set<int> unit_indices;
 };
 
@@ -123,6 +115,17 @@ struct ModelSpec {
         op_output_tensors(op_output_tensors),
         unsupported_ops(unsupported_ops),
         unavailable_devices(unavailable_devices) {}
+
+  // Get `pure` input tensors to given subgraph
+  // that requires external dependency from predecessors.
+  std::set<int> GetPureInputTensors(const std::set<int>& op_indices) const;
+  // Get all output tensors from all ops in a given subgraph,
+  // We can't compute a `pure` output tensor since there is no information on
+  // whether a particular op's output is pointing external op. (e.g.,
+  // lite-model_efficientdet_lite0_int8_1.tflite`s 64'th node (MaxPool2D)
+  // connected to multiple ops across multiple subgraphs in Pixel 4 -- output
+  // tensor #396).
+  std::set<int> GetOutputTensors(const std::set<int>& op_indices) const;
 
   /* from Interpreter::InvestigateModelSpec */
   const int num_ops;
