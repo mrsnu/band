@@ -92,13 +92,19 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
 
   summary += "MergedSubgraphs\n";
 
-  for (const auto& merged_subgraph : merged_subgraphs) {
-    summary += "\t Worker " + std::to_string(merged_subgraph.worker_id) + "\t";
-    for (const auto& unit_index : unique_unit_subgraph_indices) {
-      summary += (merged_subgraph.unit_subgraph_indices.find(unit_index) !=
-                          merged_subgraph.unit_subgraph_indices.end()
-                      ? "-\t"
-                      : " \t");
+  for (WorkerId target_worker_id = 0;
+       target_worker_id < unit_subgraph_availabilities.size();
+       target_worker_id++) {
+    summary += "\t Worker " + std::to_string(target_worker_id) + "\t";
+    for (const auto& merged_subgraph : merged_subgraphs) {
+      if (merged_subgraph.worker_id == target_worker_id) {
+        for (const auto& unit_index : unique_unit_subgraph_indices) {
+          summary += (merged_subgraph.unit_subgraph_indices.find(unit_index) !=
+                              merged_subgraph.unit_subgraph_indices.end()
+                          ? "-\t"
+                          : " \t");
+        }
+      }
     }
     summary += "\n";
   }
