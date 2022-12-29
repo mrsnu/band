@@ -148,9 +148,6 @@ ModelAnalyzer::CreateSubgraphs() {
     return {kBandError, {}, {}};
   }
 
-  model_spec_->num_unit_subgraphs = unit_subgraph_defs.size();
-  model_spec_->latency_memo.resize(unit_subgraph_defs.size());
-
   switch (model_config_.subgraph_preparation_type) {
     case kBandFallbackPerDevice: {
       for (WorkerId worker_id = 0; worker_id < context_.GetNumWorkers();
@@ -253,6 +250,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     // build op_support_table
     std::vector<BitMask> op_support_table(num_ops, 0U);
     std::map<WorkerId, std::set<int>> unsupported_ops;
+    int unit_subgraph_index = 0;
     // TODO(BAND-62): assume that band device type targets a single processor.
     for (WorkerId worker_id = 0; worker_id < num_workers; ++worker_id) {
       if (IsWorkerValid(worker_id)) {
@@ -294,7 +292,6 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
       remaining_ops.insert(i);
     }
 
-    int subgraph_local_idx = 0;
     while (true) {
       std::set<int> unit_subgraph_ops;
       BitMask support_devices = 0;
@@ -344,10 +341,10 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
         }
         if (support_devices & (1 << worker_id)) {
           unit_subgraphs.push_back(
-              {worker_id, unit_subgraph_ops, {subgraph_local_idx}});
+              {worker_id, unit_subgraph_ops, {unit_subgraph_index}});
         }
       }
-      subgraph_local_idx++;
+      unit_subgraph_index++;
     }
 
     if (!remaining_ops.empty()) {
@@ -356,9 +353,19 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     }
   }
 
+  std::set<int> unique_unit_subgraph_indices;
+
+  for (const auto& subgraph_def : unit_subgraphs) {
+    unique_unit_subgraph_indices.insert(
+        *subgraph_def.unit_subgraph_indices.begin());
+  }
+
+  model_spec_->num_unit_subgraphs = unique_unit_subgraph_indices.size();
+  model_spec_->latency_memo.resize(unique_unit_subgraph_indices.size());
+
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d unit subgraphs, planner requires subgraph %d",
-                unit_subgraphs.size(), NeedFallbackSubgraph());
+                unique_unit_subgraph_indices.size(), NeedFallbackSubgraph());
 
   return kBandOk;
 }
