@@ -117,6 +117,12 @@ BandStatus Engine::RegisterModel(Model* model) {
               model->GetBackendModel(backend_type), subgraph_def.op_indices);
         }
       }
+
+      // Verification #1: # ops == # nodes
+
+      // Verification #2 : # input tensors , # output tensors
+
+      // Verification #3 : Tensor view check for all pair
     }
 
     // todo: connect prev / next && unit indices
