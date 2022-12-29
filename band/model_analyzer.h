@@ -16,6 +16,7 @@ struct SubgraphDef {
   std::string ToString() const;
 };
 
+std::string SetToString(const std::set<int>& set);
 std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs);
 
 class ModelAnalyzer {

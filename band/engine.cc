@@ -105,7 +105,7 @@ BandStatus Engine::RegisterModel(Model* model) {
 
     // Prepare execution of subgraph definitions per each interpreter
     {
-      for (const SubgraphDef& subgraph_def : std::get<2>(result)) {
+      for (const SubgraphDef& subgraph_def : subgraph_defs) {
         const std::pair<ModelId, WorkerId> interpreter_key = {
             model_id, subgraph_def.worker_id};
         const SubgraphKey key = {model_id, subgraph_def.worker_id,
@@ -140,52 +140,94 @@ BandStatus Engine::RegisterModel(Model* model) {
         }
       }
 
-      // Verification #3 : Tensor view check for all pair
-    }
+      // Verify equality of all tensor pairs
+      for (const SubgraphDef& lhs : subgraph_defs) {
+        const std::pair<ModelId, WorkerId> lhs_interpreter_key = {
+            model_id, lhs.worker_id};
+        auto& lhs_interpreter = interpreters_[{model_id, lhs.worker_id}];
+        const SubgraphKey lhs_key = {model_id, lhs.worker_id,
+                                     lhs.unit_subgraph_indices};
 
-    // todo: connect prev / next && unit indices
+        std::set<int> lhs_outputs{lhs_interpreter->GetOutputs(lhs_key).begin(),
+                                  lhs_interpreter->GetOutputs(lhs_key).end()};
 
-    // Initialize tensor ring buffer
-    // Assumption: each backend model in Band::Model has the same input / output
-    // tensor shapes
-    {
-      std::vector<std::shared_ptr<Interface::ITensor>> input_tensors;
-      std::vector<std::shared_ptr<Interface::ITensor>> output_tensors;
+        for (const SubgraphDef& rhs : subgraph_defs) {
+          const std::pair<ModelId, WorkerId> rhs_interpreter_key = {
+              model_id, rhs.worker_id};
+          auto& rhs_interpreter = interpreters_[{model_id, rhs.worker_id}];
+          const SubgraphKey rhs_key = {model_id, rhs.worker_id,
+                                       rhs.unit_subgraph_indices};
+          if ((lhs.worker_id != rhs.worker_id) && (&lhs != &rhs)) {
+            std::set<int> rhs_inputs{
+                rhs_interpreter->GetInputs(rhs_key).begin(),
+                rhs_interpreter->GetInputs(rhs_key).end()};
 
-      auto model_subgraph_key =
-          GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
-      Interface::IInterpreter* primary_interpreter =
-          GetInterpreter(model_subgraph_key);
+            std::set<int> common_tensors;
+            std::set_intersection(
+                lhs_outputs.begin(), lhs_outputs.end(), rhs_inputs.begin(),
+                rhs_inputs.end(),
+                std::inserter(common_tensors, common_tensors.end()));
 
-      for (int input_tensor : model_spec.input_tensors) {
-        input_tensors.push_back(primary_interpreter->GetTensorView(
-            model_subgraph_key, input_tensor));
+            for (int common_tensor_index : common_tensors) {
+              if (!(*lhs_interpreter->GetTensorView(lhs_key,
+                                                    common_tensor_index) ==
+                    *rhs_interpreter->GetTensorView(rhs_key,
+                                                    common_tensor_index))) {
+                BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s %d != %s %s %d",
+                              BandDeviceGetName(GetWorkerDevice(lhs.worker_id)),
+                              lhs.ToString().c_str(), common_tensor_index,
+                              BandDeviceGetName(GetWorkerDevice(rhs.worker_id)),
+                              rhs.ToString().c_str(), common_tensor_index);
+              }
+            }
+          }
+        }
       }
 
-      for (int output_tensor : model_spec.output_tensors) {
-        output_tensors.push_back(primary_interpreter->GetTensorView(
-            model_subgraph_key, output_tensor));
+      // todo: connect prev / next && unit indices
+
+      // Initialize tensor ring buffer
+      // Assumption: each backend model in Band::Model has the same input /
+      // output tensor shapes
+      {
+        std::vector<std::shared_ptr<Interface::ITensor>> input_tensors;
+        std::vector<std::shared_ptr<Interface::ITensor>> output_tensors;
+
+        auto model_subgraph_key =
+            GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+        Interface::IInterpreter* primary_interpreter =
+            GetInterpreter(model_subgraph_key);
+
+        for (int input_tensor : model_spec.input_tensors) {
+          input_tensors.push_back(primary_interpreter->GetTensorView(
+              model_subgraph_key, input_tensor));
+        }
+
+        for (int output_tensor : model_spec.output_tensors) {
+          output_tensors.push_back(primary_interpreter->GetTensorView(
+              model_subgraph_key, output_tensor));
+        }
+
+        const std::vector<int> input_indices{model_spec.input_tensors.begin(),
+                                             model_spec.input_tensors.end()};
+        const std::vector<int> output_indices{model_spec.output_tensors.begin(),
+                                              model_spec.output_tensors.end()};
+
+        model_input_buffer_.emplace(
+            model->GetId(), std::make_unique<TensorRingBuffer>(
+                                error_reporter_, input_tensors, input_indices));
+        model_output_buffer_.emplace(
+            model_id, std::make_unique<TensorRingBuffer>(
+                          error_reporter_, output_tensors, output_indices));
       }
-
-      const std::vector<int> input_indices{model_spec.input_tensors.begin(),
-                                           model_spec.input_tensors.end()};
-      const std::vector<int> output_indices{model_spec.output_tensors.begin(),
-                                            model_spec.output_tensors.end()};
-
-      model_input_buffer_.emplace(
-          model->GetId(), std::make_unique<TensorRingBuffer>(
-                              error_reporter_, input_tensors, input_indices));
-      model_output_buffer_.emplace(
-          model_id, std::make_unique<TensorRingBuffer>(
-                        error_reporter_, output_tensors, output_indices));
     }
-  }
 
-  if (planner_->NeedProfile()) {
-    latency_estimator_->ProfileModel(model_id);
-  }
+    if (planner_->NeedProfile()) {
+      latency_estimator_->ProfileModel(model_id);
+    }
 
-  return kBandOk;
+    return kBandOk;
+  }
 }
 
 BandStatus Engine::UnregisterModel(Model* model) {

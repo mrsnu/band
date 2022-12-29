@@ -336,7 +336,6 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
                   BandDeviceGetName(device));
     return nullptr;
   }
-
   return interpreter;
 }
 

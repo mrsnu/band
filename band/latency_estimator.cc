@@ -95,8 +95,6 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
         });
         profile_thread.join();
 
-        // TODO(dostos): estimate latency with largest subgraph latency (L926-,
-        // tensorflow_band/lite/interpreter.cc)
         if (average_profiler.GetNumEvents() != profile_num_runs_) {
           return kBandError;
         }

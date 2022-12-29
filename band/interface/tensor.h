@@ -17,11 +17,13 @@ struct ITensor {
   virtual char* GetData() = 0;
   virtual const int* GetDims() const = 0;
   virtual size_t GetNumDims() const = 0;
+  std::vector<int> GetDimsVector() const;
   virtual void SetDims(const std::vector<int>& dims) = 0;
   virtual size_t GetBytes() const = 0;
   virtual const char* GetName() const = 0;
   virtual BandQuantization GetQuantization() const = 0;
   virtual void SetQuantization(BandQuantization quantization) = 0;
+  bool operator==(const ITensor& rhs) const;
 
   BandStatus CopyDataFrom(const ITensor& rhs);
   BandStatus CopyDataFrom(const ITensor* rhs);
