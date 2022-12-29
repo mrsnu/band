@@ -57,7 +57,8 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
       model_config_(model_config),
       backend_type_(backend_type) {
   std::unique_ptr<Interface::IInterpreter> interpreter(
-      BackendFactory::CreateInterpreter(backend_type));
+      BackendFactory::CreateInterpreter(backend_type, model->GetId(), 0,
+                                        kBandCPU));
   model_spec_ = std::make_shared<ModelSpec>(
       interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)));
 

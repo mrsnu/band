@@ -11,9 +11,13 @@
 namespace Band {
 using namespace Interface;
 namespace TfLite {
-class InterpreterCreator : public Creator<IInterpreter> {
+class InterpreterCreator
+    : public Creator<IInterpreter, ModelId, WorkerId, BandDeviceFlags> {
  public:
-  IInterpreter* Create() const override { return new TfLiteInterpreter(); }
+  IInterpreter* Create(ModelId model_id, WorkerId worker_id,
+                       BandDeviceFlags device_flag) const override {
+    return new TfLiteInterpreter(model_id, worker_id, device_flag);
+  }
 };
 
 class ModelCreator : public Creator<IModel, ModelId> {

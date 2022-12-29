@@ -5,8 +5,10 @@
 #include "band/backend/tfl/util.h"
 #include "band/error_reporter.h"
 #include "band/logger.h"
+#include "band/worker.h"
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/subgraph.h"
+
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
@@ -17,6 +19,14 @@
 
 namespace Band {
 namespace TfLite {
+
+std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
+    TfLiteInterpreter::delegates_ = {};
+
+TfLiteInterpreter::TfLiteInterpreter(ModelId model_id, WorkerId worker_id,
+                                     BandDeviceFlags device_flag)
+    : IInterpreter(model_id, worker_id, device_flag) {}
+
 TfLiteInterpreter::~TfLiteInterpreter() {
   // explicitly remove interpreters first
   // since delegates own interpreter.
@@ -137,23 +147,22 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
   return model_spec;
 }
 
-BandStatus TfLiteInterpreter::FromModel(Interface::IModel* model,
-                                        WorkerId worker_id,
-                                        BandDeviceFlags device,
-                                        std::set<int> ops) {
-  TfLiteStatus status = kTfLiteOk;
-  std::unique_ptr<tflite::Interpreter> interpreter =
-      CreateTfLiteInterpreter(model, device, ops);
-
-  if (!interpreter) {
+BandStatus TfLiteInterpreter::PrepareSubgraph(Interface::IModel* model,
+                                              std::set<int> ops) {
+  if (model_id_ != model->GetId()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR,
+                  "Failed to prepare subgraph, given model id %d != "
+                  "predeclared interpreter's model id %d",
+                  model->GetId(), model_id_);
     return kBandError;
   }
 
-  if (worker_id_ == -1) {
-    worker_id_ = worker_id;
-  }
+  TfLiteStatus status = kTfLiteOk;
+  std::unique_ptr<tflite::Interpreter> interpreter =
+      CreateTfLiteInterpreter(model, device_flag_, ops);
 
-  if (worker_id != worker_id_) {
+  if (!interpreter) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to create TFLite Interpreter");
     return kBandError;
   }
 
@@ -162,7 +171,7 @@ BandStatus TfLiteInterpreter::FromModel(Interface::IModel* model,
   };
 
   interpreters_[SubgraphKey(
-      model->GetId(), worker_id, vec2set(interpreter->inputs()),
+      model->GetId(), worker_id_, vec2set(interpreter->inputs()),
       vec2set(interpreter->outputs()))] = std::move(interpreter);
 
   return GetBandStatus(status);
@@ -205,7 +214,7 @@ std::shared_ptr<Interface::ITensorView> TfLiteInterpreter::GetTensorView(
   return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
 }
 
-SubgraphKey TfLiteInterpreter::GetLargestSubgraphKey(ModelId model_id) const {
+SubgraphKey TfLiteInterpreter::GetLargestSubgraphKey() const {
   SubgraphKey largest_key;
   int largest_num_ops = 0;
 

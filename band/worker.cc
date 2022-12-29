@@ -6,8 +6,9 @@
 #include "band/time.h"
 
 namespace Band {
-Worker::Worker(Context* context, BandDeviceFlags device_flag)
-    : device_flag_(device_flag), context_(context) {}
+Worker::Worker(Context* context, WorkerId worker_id,
+               BandDeviceFlags device_flag)
+    : context_(context), worker_id_(worker_id), device_flag_(device_flag) {}
 
 Worker::~Worker() {
   if (!kill_worker_) {
@@ -17,19 +18,19 @@ Worker::~Worker() {
   }
 }
 
-BandStatus Worker::Init(const WorkerConfig& config, int worker_id) {
+BandStatus Worker::Init(const WorkerConfig& config) {
   availability_check_interval_ms_ = config.availability_check_interval_ms;
-  worker_id_ = worker_id;
 
   BAND_LOG_INTERNAL(
       BAND_LOG_INFO,
-      "Set affinity of worker (%d,%s) to %s cores for %d threads.", worker_id,
+      "Set affinity of worker (%d,%s) to %s cores for %d threads.", worker_id_,
       BandDeviceGetName(device_flag_),
-      BandCPUMaskGetName(config.cpu_masks[worker_id]),
-      config.num_threads[worker_id]);
+      BandCPUMaskGetName(config.cpu_masks[worker_id_]),
+      config.num_threads[worker_id_]);
 
-  const CpuSet worker_mask_set = BandCPUMaskGetSet(config.cpu_masks[worker_id]);
-  return UpdateWorkerThread(worker_mask_set, config.num_threads[worker_id]);
+  const CpuSet worker_mask_set =
+      BandCPUMaskGetSet(config.cpu_masks[worker_id_]);
+  return UpdateWorkerThread(worker_mask_set, config.num_threads[worker_id_]);
 }
 
 BandStatus Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,

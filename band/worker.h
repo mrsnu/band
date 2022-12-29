@@ -14,21 +14,15 @@ namespace Band {
 
 class Planner;
 
-/*
-List of changes
-- Explicitly start / end worker thread
-instead of ctor / dtor to avoid access
-to vtable during class construction / destruction
-
-*/
-
 class Worker {
  public:
-  explicit Worker(Context* context, BandDeviceFlags device_flag);
+  explicit Worker(Context* context, WorkerId worker_id,
+                  BandDeviceFlags device_flag);
   virtual ~Worker();
 
-  BandStatus Init(const WorkerConfig& config, int worker_id);
+  BandStatus Init(const WorkerConfig& config);
   BandDeviceFlags GetDeviceFlag() const { return device_flag_; }
+  WorkerId GetId() const { return worker_id_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   BandStatus UpdateWorkerThread(const CpuSet thread_affinity_mask,
@@ -79,7 +73,7 @@ class Worker {
   bool is_throttling_ = false;
   bool is_paused_ = false;
   int availability_check_interval_ms_;
-  int worker_id_ = -1;
+  WorkerId worker_id_ = -1;
 
   CpuSet cpu_set_;
   int num_threads_;
@@ -93,9 +87,9 @@ class Worker {
 
 class DeviceQueueWorker : public Worker {
  public:
-  explicit DeviceQueueWorker(Context* context, BandDeviceFlags device_flag)
-      : Worker(context, device_flag) {}
-
+  explicit DeviceQueueWorker(Context* context, WorkerId worker_id,
+                             BandDeviceFlags device_flag)
+      : Worker(context, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;
@@ -117,9 +111,9 @@ class DeviceQueueWorker : public Worker {
 
 class GlobalQueueWorker : public Worker {
  public:
-  explicit GlobalQueueWorker(Context* context, BandDeviceFlags device_flag)
-      : Worker(context, device_flag) {}
-
+  explicit GlobalQueueWorker(Context* context, WorkerId worker_id,
+                             BandDeviceFlags device_flag)
+      : Worker(context, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool GiveJob(Job& job) override;

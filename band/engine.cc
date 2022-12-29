@@ -14,12 +14,12 @@
 
 namespace Band {
 Engine::~Engine() {
-  for (auto& worker : workers_) {
-    worker->End();
-  }
-
   for (auto& interpreter : interpreters_) {
     interpreter.second.reset();
+  }
+
+  for (auto& worker : workers_) {
+    worker->End();
   }
 
   for (auto& worker : workers_) {
@@ -43,8 +43,8 @@ BandStatus Engine::RegisterModel(Model* model) {
 
   const ModelId model_id = model->GetId();
 
-  // Create internal interpreter per each supported backends
   for (BandBackendType backend_type : model->GetSupportedBackends()) {
+    // Analyze model & generate subgraphs per backend type
     ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
                            model_config_, model, backend_type);
     const auto result = analyzer.CreateSubgraphs();
@@ -60,6 +60,7 @@ BandStatus Engine::RegisterModel(Model* model) {
           model_id,
           BandSubgraphPreparationGetName(
               model_config_.subgraph_preparation_type));
+      // TODO(BAND-49): unregister for specific backend
       UnregisterModel(model);
       return kBandError;
     }
@@ -70,44 +71,51 @@ BandStatus Engine::RegisterModel(Model* model) {
                   BandSubgraphPreparationGetName(
                       model_config_.subgraph_preparation_type));
 
-    bool added_once = false;
-    // Add whole-model subgraphs
-    for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
-      if (model_spec.unavailable_devices.find(GetWorkerDevice(worker_id)) ==
-          model_spec.unavailable_devices.end()) {
-        std::unique_ptr<Interface::IInterpreter> interpreter(
-            BackendFactory::CreateInterpreter(backend_type));
-        interpreters_[{worker_id, model_id}] = std::move(interpreter);
-        added_once = true;
-        BAND_LOG_INTERNAL(
-            BAND_LOG_INFO, "Create interpreter for model %d worker %s (%s)",
-            model_id, BandDeviceGetName(workers_[worker_id]->GetDeviceFlag()),
-            BandStatusGetName(status));
+    // Create internal interpreter per each supported backends
+    {
+      bool added_once = false;
+      for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
+        if (model_spec.unavailable_devices.find(GetWorkerDevice(worker_id)) ==
+            model_spec.unavailable_devices.end()) {
+          std::unique_ptr<Interface::IInterpreter> interpreter(
+              BackendFactory::CreateInterpreter(backend_type, model_id,
+                                                worker_id,
+                                                GetWorkerDevice(worker_id)));
+          interpreters_[{worker_id, model_id}] = std::move(interpreter);
+          added_once = true;
+          BAND_LOG_INTERNAL(
+              BAND_LOG_INFO, "Create interpreter for model %d worker %s (%s)",
+              model_id, BandDeviceGetName(GetWorkerDevice(worker_id)),
+              BandStatusGetName(status));
+        }
       }
-    }
 
-    if (!added_once) {
-      BAND_REPORT_ERROR(error_reporter_,
-                        "Failed to create interpreter on all worker types");
-      return kBandError;
+      if (!added_once) {
+        BAND_REPORT_ERROR(error_reporter_,
+                          "Failed to create interpreter on all worker types");
+        // TODO(BAND-49): unregister for specific backend
+        UnregisterModel(model);
+        return kBandError;
+      }
     }
 
     model_specs_.insert({model_id, model_spec});
 
-    for (const SubgraphDef& subgraph_def : std::get<2>(result)) {
-      const std::pair<WorkerId, ModelId> interpreter_key = {
-          subgraph_def.worker_id, model_id};
+    // Prepare execution of subgraph definitions per each interpreter
+    {
+      for (const SubgraphDef& subgraph_def : std::get<2>(result)) {
+        const std::pair<WorkerId, ModelId> interpreter_key = {
+            subgraph_def.worker_id, model_id};
 
-      if (interpreters_.find(interpreter_key) == interpreters_.end()) {
-        BAND_REPORT_ERROR(error_reporter_,
-                          "Subgraph logic created a subgraph for worker %d "
-                          "that does not supports model %d",
-                          subgraph_def.worker_id, model_id);
-      } else {
-        interpreters_[{subgraph_def.worker_id, model_id}]->FromModel(
-            model->GetBackendModel(backend_type), subgraph_def.worker_id,
-            workers_[subgraph_def.worker_id]->GetDeviceFlag(),
-            subgraph_def.op_indices);
+        if (interpreters_.find(interpreter_key) == interpreters_.end()) {
+          BAND_REPORT_ERROR(error_reporter_,
+                            "Subgraph logic created a subgraph for worker %d "
+                            "that does not supports model %d",
+                            subgraph_def.worker_id, model_id);
+        } else {
+          interpreters_[{subgraph_def.worker_id, model_id}]->PrepareSubgraph(
+              model->GetBackendModel(backend_type), subgraph_def.op_indices);
+        }
       }
     }
 
@@ -154,7 +162,7 @@ BandStatus Engine::RegisterModel(Model* model) {
   }
 
   return kBandOk;
-}  // namespace Band
+}
 
 BandStatus Engine::UnregisterModel(Model* model) {
   if (!model) {
@@ -416,15 +424,16 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
       if (planner_->GetWorkerType() == kBandGlobalQueue) {
-        worker = std::make_unique<GlobalQueueWorker>(this, device_flag);
+        worker = std::make_unique<GlobalQueueWorker>(this, workers_.size(),
+                                                     device_flag);
       } else {
-        worker = std::make_unique<DeviceQueueWorker>(this, device_flag);
+        worker = std::make_unique<DeviceQueueWorker>(this, workers_.size(),
+                                                     device_flag);
       }
-      WorkerId worker_id = workers_.size();
-      if (worker->Init(config.worker_config, worker_id) != kBandOk) {
+      if (worker->Init(config.worker_config) != kBandOk) {
         error_reporter_->Report("Worker::Init() failed for worker : %s.",
                                 BandDeviceGetName(device_flag));
-        exit(-1);
+        return kBandError;
       }
 
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
@@ -467,7 +476,7 @@ SubgraphKey Engine::GetLargestSubgraphKey(ModelId model_id,
                                           WorkerId worker_id) const {
   auto interpreter_it = interpreters_.find({worker_id, model_id});
   if (interpreter_it != interpreters_.end()) {
-    return interpreter_it->second->GetLargestSubgraphKey(model_id);
+    return interpreter_it->second->GetLargestSubgraphKey();
   } else {
     return SubgraphKey();
   }
