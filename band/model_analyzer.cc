@@ -48,6 +48,49 @@ std::string SubgraphDef::ToString() const {
   return result;
 }
 
+std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
+  std::string summary;
+  std::vector<SubgraphDef> unit_subgraphs;
+  std::set<int> unique_unit_subgraph_indices;
+
+  for (const auto& subgraph_def : subgraph_defs) {
+    if (subgraph_def.unit_subgraph_indices.size() == 1) {
+      unit_subgraphs.push_back(subgraph_def);
+      unique_unit_subgraph_indices.insert(
+          *subgraph_def.unit_subgraph_indices.begin());
+    }
+  }
+  summary += "UnitSubgraph Definitions\n";
+
+  std::map<WorkerId, std::vector<bool>> unit_subgraph_availabilities;
+  for (const auto& unit_subgraph : unit_subgraphs) {
+    if (unit_subgraph_availabilities.find(unit_subgraph.worker_id) ==
+        unit_subgraph_availabilities.end()) {
+      unit_subgraph_availabilities[unit_subgraph.worker_id] =
+          std::vector<bool>(unique_unit_subgraph_indices.size(), false);
+    }
+
+    unit_subgraph_availabilities[unit_subgraph.worker_id]
+                                [*unit_subgraph.unit_subgraph_indices.begin()] =
+                                    true;
+    if (unit_subgraph.worker_id == 0) {
+      summary += "\t" + unit_subgraph.ToString() + "\n";
+    }
+  }
+
+  summary += "UnitSubgraph Availabilities\n";
+
+  for (const auto& unit_subgraph_availability : unit_subgraph_availabilities) {
+    summary += "\t" + std::to_string(unit_subgraph_availability.first) + "\t";
+    for (const auto& availability : unit_subgraph_availability.second) {
+      summary += (availability ? "O\t" : "X\t");
+    }
+    summary += "\n";
+  }
+
+  return summary;
+}
+
 ModelAnalyzer::ModelAnalyzer(const Context& context,
                              bool need_fallback_subgraph,
                              ModelConfig model_config, Model* model,
@@ -78,15 +121,8 @@ ModelAnalyzer::CreateSubgraphs() {
     return {kBandError, {}, {}};
   }
 
-  for (auto unit_subgraph_def : unit_subgraph_defs) {
-    BAND_LOG_PROD(
-        BAND_LOG_INFO, "UnitSubgraph %s (%s) inputs %s outputs %s",
-        unit_subgraph_def.ToString().c_str(),
-        BandDeviceGetName(
-            context_.GetWorker(unit_subgraph_def.worker_id)->GetDeviceFlag()),
-        SetToString(GetPureInputTensors(unit_subgraph_def)).c_str(),
-        SetToString(GetOutputTensors(unit_subgraph_def)).c_str());
-  }
+  BAND_LOG_PROD(BAND_LOG_INFO, "%s",
+                SummarizeSubgraphs(unit_subgraph_defs).c_str());
 
   model_spec_->num_unit_subgraphs = unit_subgraph_defs.size();
   model_spec_->latency_memo.resize(unit_subgraph_defs.size());
@@ -478,34 +514,11 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
         // Skip same subgraph or different device
         if ((&prev_unit_subgraph == &next_unit_subgraph) ||
             (prev_unit_subgraph.worker_id != next_unit_subgraph.worker_id)) {
-          // BAND_LOG_PROD(
-          //     BAND_LOG_INFO,
-          //     "Skipping merge lhs [%s] %s rhs [%s] %s, prev outputs %s "
-          //     "next_inputs %s",
-          //     BandDeviceGetName(
-          //         context_.GetWorker(prev_unit_subgraph.worker_id)
-          //             ->GetDeviceFlag()),
-          //     SetToString(prev_unit_subgraph.unit_subgraph_indices).c_str(),
-          //     BandDeviceGetName(
-          //         context_.GetWorker(next_unit_subgraph.worker_id)
-          //             ->GetDeviceFlag()),
-          //     SetToString(next_unit_subgraph.unit_subgraph_indices).c_str(),
-          //     SetToString(prev_outputs).c_str(),
-          //     SetToString(next_inputs).c_str());
           continue;
         }
         // Check whether prev subgraph fully resolves the next
         if (!std::includes(prev_outputs.begin(), prev_outputs.end(),
                            next_inputs.begin(), next_inputs.end())) {
-          // BAND_LOG_PROD(
-          //     BAND_LOG_INFO,
-          //     "[%s] Skipping merge lhs %s rhs %s, prev outputs %s "
-          //     "next_inputs %s",
-          //     BandDeviceGetName(context_.GetWorker(worker_id)->GetDeviceFlag()),
-          //     SetToString(prev_unit_subgraph.unit_subgraph_indices).c_str(),
-          //     SetToString(next_unit_subgraph.unit_subgraph_indices).c_str(),
-          //     SetToString(prev_outputs).c_str(),
-          //     SetToString(next_inputs).c_str());
           continue;
         }
 

@@ -16,6 +16,8 @@ struct SubgraphDef {
   std::string ToString() const;
 };
 
+std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs);
+
 class ModelAnalyzer {
  public:
   ModelAnalyzer(const Context& context, bool need_subgraph,
