@@ -92,14 +92,6 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
 
   summary += "MergedSubgraphs\n";
 
-  std::sort(merged_subgraphs.begin(), merged_subgraphs.end(),
-            [](const SubgraphDef& lhs, const SubgraphDef& rhs) {
-              if (lhs.worker_id != rhs.worker_id)
-                return lhs.worker_id < rhs.worker_id;
-              else
-                return lhs.unit_subgraph_indices < rhs.unit_subgraph_indices;
-            });
-
   for (const auto& merged_subgraph : merged_subgraphs) {
     summary += "\t Worker " + std::to_string(merged_subgraph.worker_id) + "\t";
     for (const auto& unit_index : unique_unit_subgraph_indices) {
@@ -197,9 +189,6 @@ ModelAnalyzer::CreateSubgraphs() {
     default:
       break;
   }
-
-  BAND_LOG_PROD(BAND_LOG_INFO, "%s",
-                SummarizeSubgraphs(unit_subgraph_defs).c_str());
 
   return {kBandOk, *model_spec_, subgraph_defs};
 }

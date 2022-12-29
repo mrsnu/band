@@ -65,11 +65,11 @@ BandStatus Engine::RegisterModel(Model* model) {
       return kBandError;
     }
 
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "Create %d subgraphs for model %s with mode %s",
-                  subgraph_defs.size(), model_spec.path.c_str(),
-                  BandSubgraphPreparationGetName(
-                      model_config_.subgraph_preparation_type));
+    BAND_LOG_PROD(
+        BAND_LOG_INFO, "Create %d subgraphs for model %s with mode %s %s",
+        subgraph_defs.size(), model_spec.path.c_str(),
+        BandSubgraphPreparationGetName(model_config_.subgraph_preparation_type),
+        SummarizeSubgraphs(subgraph_defs).c_str());
 
     // Create internal interpreter per each supported backends
     {
