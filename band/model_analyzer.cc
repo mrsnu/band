@@ -42,15 +42,14 @@ std::string SetToString(const std::set<int>& set) {
 }
 
 std::string SubgraphDef::ToString() const {
-  std::string result = "worker " + std::to_string(worker_id) + " unit index " +
-                       SetToString(unit_subgraph_indices);
-  result += " " + SetToString(op_indices);
-  return result;
+  return "Index " + SetToString(unit_subgraph_indices) + " Ops " +
+         SetToString(op_indices);
 }
 
 std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
   std::string summary;
   std::vector<SubgraphDef> unit_subgraphs;
+  std::vector<SubgraphDef> merged_subgraphs;
   std::set<int> unique_unit_subgraph_indices;
 
   for (const auto& subgraph_def : subgraph_defs) {
@@ -58,9 +57,11 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
       unit_subgraphs.push_back(subgraph_def);
       unique_unit_subgraph_indices.insert(
           *subgraph_def.unit_subgraph_indices.begin());
+    } else {
+      merged_subgraphs.push_back(subgraph_def);
     }
   }
-  summary += "UnitSubgraph Definitions\n";
+  summary += "\nUnitSubgraph Definitions\n";
 
   std::map<WorkerId, std::vector<bool>> unit_subgraph_availabilities;
   for (const auto& unit_subgraph : unit_subgraphs) {
@@ -81,9 +82,31 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
   summary += "UnitSubgraph Availabilities\n";
 
   for (const auto& unit_subgraph_availability : unit_subgraph_availabilities) {
-    summary += "\t" + std::to_string(unit_subgraph_availability.first) + "\t";
+    summary +=
+        "\t Worker " + std::to_string(unit_subgraph_availability.first) + "\t";
     for (const auto& availability : unit_subgraph_availability.second) {
       summary += (availability ? "O\t" : "X\t");
+    }
+    summary += "\n";
+  }
+
+  summary += "MergedSubgraphs\n";
+
+  std::sort(merged_subgraphs.begin(), merged_subgraphs.end(),
+            [](const SubgraphDef& lhs, const SubgraphDef& rhs) {
+              if (lhs.worker_id != rhs.worker_id)
+                return lhs.worker_id < rhs.worker_id;
+              else
+                return lhs.unit_subgraph_indices < rhs.unit_subgraph_indices;
+            });
+
+  for (const auto& merged_subgraph : merged_subgraphs) {
+    summary += "\t Worker " + std::to_string(merged_subgraph.worker_id) + "\t";
+    for (const auto& unit_index : unique_unit_subgraph_indices) {
+      summary += (merged_subgraph.unit_subgraph_indices.find(unit_index) !=
+                          merged_subgraph.unit_subgraph_indices.end()
+                      ? "-\t"
+                      : " \t");
     }
     summary += "\n";
   }
@@ -120,9 +143,6 @@ ModelAnalyzer::CreateSubgraphs() {
   if (GetUnitSubgraphs(unit_subgraph_defs) != kBandOk) {
     return {kBandError, {}, {}};
   }
-
-  BAND_LOG_PROD(BAND_LOG_INFO, "%s",
-                SummarizeSubgraphs(unit_subgraph_defs).c_str());
 
   model_spec_->num_unit_subgraphs = unit_subgraph_defs.size();
   model_spec_->latency_memo.resize(unit_subgraph_defs.size());
@@ -178,16 +198,8 @@ ModelAnalyzer::CreateSubgraphs() {
       break;
   }
 
-  for (int i = unit_subgraph_defs.size(); i < subgraph_defs.size(); i++) {
-    BAND_LOG_PROD(
-        BAND_LOG_INFO, "[%s] Subgraph %s (%s) inputs %s outputs %s",
-        BandSubgraphPreparationGetName(model_config_.subgraph_preparation_type),
-        subgraph_defs[i].ToString().c_str(),
-        BandDeviceGetName(
-            context_.GetWorker(subgraph_defs[i].worker_id)->GetDeviceFlag()),
-        SetToString(GetPureInputTensors(subgraph_defs[i])).c_str(),
-        SetToString(GetOutputTensors(subgraph_defs[i])).c_str());
-  }
+  BAND_LOG_PROD(BAND_LOG_INFO, "%s",
+                SummarizeSubgraphs(unit_subgraph_defs).c_str());
 
   return {kBandOk, *model_spec_, subgraph_defs};
 }
