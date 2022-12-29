@@ -51,6 +51,7 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
   std::vector<SubgraphDef> unit_subgraphs;
   std::vector<SubgraphDef> merged_subgraphs;
   std::set<int> unique_unit_subgraph_indices;
+  int num_workers = 0;
 
   for (const auto& subgraph_def : subgraph_defs) {
     if (subgraph_def.unit_subgraph_indices.size() == 1) {
@@ -60,17 +61,17 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
     } else {
       merged_subgraphs.push_back(subgraph_def);
     }
+    num_workers = std::max(num_workers, subgraph_def.worker_id + 1);
   }
   summary += "\nUnitSubgraph Definitions\n";
 
   std::map<WorkerId, std::vector<bool>> unit_subgraph_availabilities;
-  for (const auto& unit_subgraph : unit_subgraphs) {
-    if (unit_subgraph_availabilities.find(unit_subgraph.worker_id) ==
-        unit_subgraph_availabilities.end()) {
-      unit_subgraph_availabilities[unit_subgraph.worker_id] =
-          std::vector<bool>(unique_unit_subgraph_indices.size(), false);
-    }
+  for (WorkerId i = 0; i < num_workers; i++) {
+    unit_subgraph_availabilities[i] =
+        std::vector<bool>(unique_unit_subgraph_indices.size(), false);
+  }
 
+  for (const auto& unit_subgraph : unit_subgraphs) {
     unit_subgraph_availabilities[unit_subgraph.worker_id]
                                 [*unit_subgraph.unit_subgraph_indices.begin()] =
                                     true;
@@ -92,21 +93,20 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
 
   summary += "MergedSubgraphs\n";
 
-  for (WorkerId target_worker_id = 0;
-       target_worker_id < unit_subgraph_availabilities.size();
+  for (WorkerId target_worker_id = 0; target_worker_id < num_workers;
        target_worker_id++) {
-    summary += "\t Worker " + std::to_string(target_worker_id) + "\t";
     for (const auto& merged_subgraph : merged_subgraphs) {
       if (merged_subgraph.worker_id == target_worker_id) {
+        summary += "\t Worker " + std::to_string(target_worker_id) + "\t";
         for (const auto& unit_index : unique_unit_subgraph_indices) {
           summary += (merged_subgraph.unit_subgraph_indices.find(unit_index) !=
                               merged_subgraph.unit_subgraph_indices.end()
                           ? "-\t"
                           : " \t");
         }
+        summary += "\n";
       }
     }
-    summary += "\n";
   }
 
   return summary;
@@ -130,6 +130,11 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
     BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
                   SetToString(device_unsupported_ops.second).c_str(),
                   BandDeviceGetName(device_unsupported_ops.first));
+  }
+
+  for (auto device : model_spec_->unavailable_devices) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s",
+                  BandDeviceGetName(device));
   }
 }
 
