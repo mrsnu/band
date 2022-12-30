@@ -37,7 +37,7 @@ class ModelAnalyzer {
   // parallel.
   BandStatus GetUnitSubgraphs(std::vector<SubgraphDef>& unit_subgraphs);
   // Generate subgraphs for fallback ops in provided model
-  // DeviceOpIndices contains device flag and op_indices of single subgraph.
+  // This does not provides unit indices with a SubgraphDef
   std::vector<SubgraphDef> GetSubgraphsForFallbackOps(WorkerId worker_id);
   std::vector<SubgraphDef> MergeUnitSubgraphs(
       const std::vector<SubgraphDef>& unit_subgraphs);

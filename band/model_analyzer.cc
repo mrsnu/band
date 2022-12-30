@@ -547,11 +547,10 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     if (operator_set.size()) {
       if (current_device == kBandCPU && device_flag != kBandCPU) {
         for (auto cpu_worker_id : cpu_worker_ids) {
-          subgraph_defs.push_back(
-              {cpu_worker_id, operator_set, {unit_subgraph_idx}});
+          subgraph_defs.push_back({cpu_worker_id, operator_set, {}});
         }
       } else {
-        subgraph_defs.push_back({worker_id, operator_set, {unit_subgraph_idx}});
+        subgraph_defs.push_back({worker_id, operator_set, {}});
       }
     }
 
