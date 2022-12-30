@@ -72,7 +72,7 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
   EXPECT_EQ(count_requests, requests.size() + count_scheduled);
 }
 
-TEST_P(ConfigLevelTestsFixture, FixedDeviceTest) {
+TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerTest) {
   // Set configs in context
   std::deque<int> request_models = std::get<0>(GetParam());
   std::set<int> available_workers = std::get<1>(GetParam());
@@ -111,7 +111,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceTest) {
   }
 }
 
-TEST_P(ConfigLevelTestsFixture, FixedDeviceEngineRequestTest) {
+TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
   // Set configs in context
   std::deque<int> request_models = std::get<0>(GetParam());
   std::set<int> available_workers = std::get<1>(GetParam());
@@ -161,11 +161,11 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(std::deque<int>{0, 1, 2}, std::set<int>{0, 1})));
 
 INSTANTIATE_TEST_SUITE_P(
-    FixedDeviceTests, ConfigLevelTestsFixture,
+    FixedDeviceFixedWorkerTests, ConfigLevelTestsFixture,
     testing::Values(std::make_tuple(std::deque<int>{0, 1, 2},
                                     std::set<int>{0, 1, 2})));
 INSTANTIATE_TEST_SUITE_P(
-    FixedDeviceEngineRequestTests, ConfigLevelTestsFixture,
+    FixedDeviceFixedWorkerEngineRequestTests, ConfigLevelTestsFixture,
     testing::Values(std::make_tuple(std::deque<int>{0, 1, 2},
                                     std::set<int>{0, 1, 2})));
 

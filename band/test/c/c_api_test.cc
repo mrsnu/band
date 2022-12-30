@@ -111,7 +111,7 @@ TEST(CApi, EngineSimpleInvoke) {
   BandModelDelete(model);
 }
 
-TEST(CApi, EngineFixedDeviceInvoke) {
+TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
   BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
                 "band/test/data/log.csv");

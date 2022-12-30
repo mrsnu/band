@@ -119,7 +119,7 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
   return summary;
 }
 
-std::string SummarizeFallbackPerDeviceSubgraphs(
+std::string SummarizeFallbackPerWorkerSubgraphs(
     const std::vector<SubgraphDef>& unit_subgraph_defs,
     const std::vector<SubgraphDef>& subgraph_defs) {
   std::string summary = SummarizeSubgraphs(unit_subgraph_defs);
@@ -134,7 +134,7 @@ std::string SummarizeFallbackPerDeviceSubgraphs(
     num_workers = std::max(num_workers, subgraph_def.worker_id + 1);
   }
 
-  summary += "FallbackPerDeviceSubgraphs\n";
+  summary += "FallbackPerWorkerSubgraphs\n";
 
   for (WorkerId target_worker_id = 0; target_worker_id < num_workers;
        target_worker_id++) {
@@ -244,7 +244,7 @@ ModelAnalyzer::CreateSubgraphs() {
   const std::string subgraph_summary =
       model_config_.subgraph_preparation_type != kBandFallbackPerWorker
           ? SummarizeSubgraphs(subgraph_defs)
-          : SummarizeFallbackPerDeviceSubgraphs(unit_subgraph_defs,
+          : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
                                                 subgraph_defs);
 
   BAND_LOG_PROD(

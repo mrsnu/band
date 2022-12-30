@@ -18,7 +18,7 @@ struct SubgraphDef {
 
 std::string SetToString(const std::set<int>& set);
 std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs);
-std::string SummarizeFallbackPerDeviceSubgraphs(
+std::string SummarizeFallbackPerWorkerSubgraphs(
     const std::vector<SubgraphDef>& unit_subgraph_defs,
     const std::vector<SubgraphDef>& subgraph_defs);
 

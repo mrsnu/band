@@ -7,7 +7,7 @@ ScheduleAction FixedWorkerScheduler::Schedule(const Context& context,
                                               JobQueue& requests) {
   ScheduleAction action;
 
-  // TODO: fallback subgraphs for FixedDevicePlanner?
+  // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   while (!requests.empty()) {
     Job to_execute = requests.front();
     requests.pop_front();  // erase job
