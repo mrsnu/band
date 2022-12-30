@@ -9,7 +9,7 @@ const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
   switch (type) {
     case kBandNoFallbackSubgraph:
       return "NoFallbackSubgraph";
-    case kBandFallbackPerDevice:
+    case kBandFallbackPerWorker:
       return "FallbackPerDevice";
     case kBandUnitSubgraph:
       return "UnitSubgraph";

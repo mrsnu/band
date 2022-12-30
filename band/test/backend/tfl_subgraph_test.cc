@@ -64,7 +64,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
                         kBandMergeUnitSubgraph),
         std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-                        kBandFallbackPerDevice),
+                        kBandFallbackPerWorker),
         std::make_tuple("ICN_quant.tflite", kBandMergeUnitSubgraph),
         std::make_tuple(
             "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",

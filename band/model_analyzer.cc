@@ -48,12 +48,11 @@ std::string SubgraphDef::ToString() const {
 }
 
 std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
-  std::string summary;
+  std::string summary = "\n";
   std::vector<SubgraphDef> unit_subgraphs;
   std::vector<SubgraphDef> merged_subgraphs;
   std::set<int> unique_unit_subgraph_indices;
   int num_workers = 0;
-
   for (const auto& subgraph_def : subgraph_defs) {
     if (subgraph_def.unit_subgraph_indices.size() == 1) {
       unit_subgraphs.push_back(subgraph_def);
@@ -64,39 +63,82 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
     }
     num_workers = std::max(num_workers, subgraph_def.worker_id + 1);
   }
-  summary += "\nUnitSubgraph Definitions\n";
 
-  std::map<WorkerId, std::vector<bool>> unit_subgraph_availabilities;
-  for (WorkerId i = 0; i < num_workers; i++) {
-    unit_subgraph_availabilities[i] =
-        std::vector<bool>(unique_unit_subgraph_indices.size(), false);
-  }
+  if (unit_subgraphs.size()) {
+    summary += "UnitSubgraph Definitions\n";
 
-  for (const auto& unit_subgraph : unit_subgraphs) {
-    unit_subgraph_availabilities[unit_subgraph.worker_id]
-                                [*unit_subgraph.unit_subgraph_indices.begin()] =
-                                    true;
-    if (unit_subgraph.worker_id == 0) {
-      summary += "\t" + unit_subgraph.ToString() + "\n";
+    std::map<WorkerId, std::vector<bool>> unit_subgraph_availabilities;
+    for (WorkerId i = 0; i < num_workers; i++) {
+      unit_subgraph_availabilities[i] =
+          std::vector<bool>(unique_unit_subgraph_indices.size(), false);
+    }
+
+    for (const auto& unit_subgraph : unit_subgraphs) {
+      unit_subgraph_availabilities[unit_subgraph.worker_id]
+                                  [*unit_subgraph.unit_subgraph_indices
+                                        .begin()] = true;
+      if (unit_subgraph.worker_id == 0) {
+        summary += "\t" + unit_subgraph.ToString() + "\n";
+      }
+    }
+
+    summary += "UnitSubgraph Availabilities\n";
+
+    for (const auto& unit_subgraph_availability :
+         unit_subgraph_availabilities) {
+      summary += "\t Worker " +
+                 std::to_string(unit_subgraph_availability.first) + "\t";
+      for (const auto& availability : unit_subgraph_availability.second) {
+        summary += (availability ? "O\t" : "X\t");
+      }
+      summary += "\n";
     }
   }
 
-  summary += "UnitSubgraph Availabilities\n";
+  if (merged_subgraphs.size()) {
+    summary += "MergedSubgraphs\n";
 
-  for (const auto& unit_subgraph_availability : unit_subgraph_availabilities) {
-    summary +=
-        "\t Worker " + std::to_string(unit_subgraph_availability.first) + "\t";
-    for (const auto& availability : unit_subgraph_availability.second) {
-      summary += (availability ? "O\t" : "X\t");
+    for (WorkerId target_worker_id = 0; target_worker_id < num_workers;
+         target_worker_id++) {
+      for (const auto& merged_subgraph : merged_subgraphs) {
+        if (merged_subgraph.worker_id == target_worker_id) {
+          summary += "\t Worker " + std::to_string(target_worker_id) + "\t";
+          for (const auto& unit_index : unique_unit_subgraph_indices) {
+            summary +=
+                (merged_subgraph.unit_subgraph_indices.find(unit_index) !=
+                         merged_subgraph.unit_subgraph_indices.end()
+                     ? "-\t"
+                     : " \t");
+          }
+          summary += "\n";
+        }
+      }
     }
-    summary += "\n";
   }
 
-  summary += "MergedSubgraphs\n";
+  return summary;
+}
+
+std::string SummarizeFallbackPerDeviceSubgraphs(
+    const std::vector<SubgraphDef>& unit_subgraph_defs,
+    const std::vector<SubgraphDef>& subgraph_defs) {
+  std::string summary = SummarizeSubgraphs(unit_subgraph_defs);
+
+  std::set<int> unique_unit_subgraph_indices;
+  int num_workers = 0;
+  for (const auto& subgraph_def : unit_subgraph_defs) {
+    if (subgraph_def.unit_subgraph_indices.size() == 1) {
+      unique_unit_subgraph_indices.insert(
+          *subgraph_def.unit_subgraph_indices.begin());
+    }
+    num_workers = std::max(num_workers, subgraph_def.worker_id + 1);
+  }
+
+  summary += "FallbackPerDeviceSubgraphs\n";
 
   for (WorkerId target_worker_id = 0; target_worker_id < num_workers;
        target_worker_id++) {
-    for (const auto& merged_subgraph : merged_subgraphs) {
+    for (const auto& merged_subgraph : subgraph_defs) {
       if (merged_subgraph.worker_id == target_worker_id) {
         summary += "\t Worker " + std::to_string(target_worker_id) + "\t";
         for (const auto& unit_index : unique_unit_subgraph_indices) {
@@ -149,7 +191,7 @@ ModelAnalyzer::CreateSubgraphs() {
   }
 
   switch (model_config_.subgraph_preparation_type) {
-    case kBandFallbackPerDevice: {
+    case kBandFallbackPerWorker: {
       for (WorkerId worker_id = 0; worker_id < context_.GetNumWorkers();
            worker_id++) {
         std::vector<SubgraphDef> worker_subgraphs =
@@ -199,8 +241,20 @@ ModelAnalyzer::CreateSubgraphs() {
       break;
   }
 
+  const std::string subgraph_summary =
+      model_config_.subgraph_preparation_type != kBandFallbackPerWorker
+          ? SummarizeSubgraphs(subgraph_defs)
+          : SummarizeFallbackPerDeviceSubgraphs(unit_subgraph_defs,
+                                                subgraph_defs);
+
+  BAND_LOG_PROD(
+      BAND_LOG_INFO, "Create %d subgraphs for model %s with mode %s %s",
+      subgraph_defs.size(), model_spec_->path.c_str(),
+      BandSubgraphPreparationGetName(model_config_.subgraph_preparation_type),
+      subgraph_summary.c_str());
+
   return {kBandOk, *model_spec_, subgraph_defs};
-}
+}  // namespace Band
 
 BandStatus ModelAnalyzer::GetUnitSubgraphs(
     std::vector<SubgraphDef>& unit_subgraphs) {
@@ -388,15 +442,23 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     for (int i = 0; i < model_spec_->num_ops; i++) {
       entire_ops.insert(i);
     }
-    return {{worker_id, entire_ops}};
+    return {{worker_id, entire_ops, {0}}};
   }
 
-  std::vector<SubgraphDef> subgraph_indices;
+  std::vector<SubgraphDef> subgraph_defs;
   const int num_ops = model_spec_->num_ops;
   const BandDeviceFlags device_flag =
       context_.GetWorker(worker_id)->GetDeviceFlag();
   const std::set<int>& unsupported_ops =
       model_spec_->unsupported_ops.at(device_flag);
+
+  std::set<int> cpu_worker_ids;
+  for (WorkerId worker_id = 0; worker_id < context_.GetNumWorkers();
+       worker_id++) {
+    if (context_.GetWorker(worker_id)->GetDeviceFlag() == kBandCPU) {
+      cpu_worker_ids.insert(worker_id);
+    }
+  }
 
   std::set<int> resolved_tensors;
   std::set<int> remaining_ops;
@@ -437,6 +499,7 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
   }
 
   bool is_fallback = false;
+  int unit_subgraph_idx = 0;
   while (remaining_ops.size() > 0) {
     std::set<int> operator_set;
     bool found = true;
@@ -482,13 +545,21 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     }
 
     if (operator_set.size()) {
-      subgraph_indices.push_back({current_device, operator_set});
+      if (current_device == kBandCPU && device_flag != kBandCPU) {
+        for (auto cpu_worker_id : cpu_worker_ids) {
+          subgraph_defs.push_back(
+              {cpu_worker_id, operator_set, {unit_subgraph_idx}});
+        }
+      } else {
+        subgraph_defs.push_back({worker_id, operator_set, {unit_subgraph_idx}});
+      }
     }
 
+    unit_subgraph_idx++;
     is_fallback = !is_fallback;
   }
 
-  return subgraph_indices;
+  return subgraph_defs;
 }
 
 std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(

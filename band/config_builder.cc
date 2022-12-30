@@ -75,7 +75,7 @@ bool RuntimeConfigBuilder::IsValid(
   REPORT_IF_FALSE(RuntimeConfigBuilder, minimum_subgraph_size_ > 0);
   REPORT_IF_FALSE(RuntimeConfigBuilder,
                   subgraph_preparation_type_ == kBandNoFallbackSubgraph ||
-                      subgraph_preparation_type_ == kBandFallbackPerDevice ||
+                      subgraph_preparation_type_ == kBandFallbackPerWorker ||
                       subgraph_preparation_type_ == kBandUnitSubgraph ||
                       subgraph_preparation_type_ == kBandMergeUnitSubgraph);
   REPORT_IF_FALSE(RuntimeConfigBuilder,

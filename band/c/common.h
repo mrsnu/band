@@ -51,7 +51,7 @@ typedef enum BandSchedulerType {
 
 typedef enum BandSubgraphPreparationType {
   kBandNoFallbackSubgraph = 0,
-  kBandFallbackPerDevice = 1,
+  kBandFallbackPerWorker = 1,
   kBandUnitSubgraph = 2,
   kBandMergeUnitSubgraph = 3,
   kBandNumSubgraphPreparationType = 4,
