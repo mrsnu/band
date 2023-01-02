@@ -107,8 +107,9 @@ class Engine : public Context {
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
   WorkerId GetModelWorker(ModelId model_id) const override;
 
+  /* utility funtions for unit-level scheduling */
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      int model_id, std::set<int> resolved_tensors, int64_t start_time,
+      int model_id, int start_unit_idx, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting,
       SubgraphKey preceded_subgraph_index = {}) const override;
 
@@ -124,6 +125,7 @@ class Engine : public Context {
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
+
   /* latency estimator */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
   int64_t GetWorst(ModelId model_id) const;

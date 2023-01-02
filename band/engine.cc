@@ -582,11 +582,23 @@ BandStatus Engine::Invoke(const SubgraphKey& key) {
 }
 
 std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
-    int model_id, std::set<int> resolved_tensors, int64_t start_time,
+    int model_id, int start_unit_idx, int64_t start_time,
     const std::map<WorkerId, int64_t>& worker_waiting,
     SubgraphKey preceded_subgraph_index) const {
-  BAND_NOT_IMPLEMENTED;
-  return {};
+  if (model_config_.subgraph_preparation_type == kBandFallbackPerDevice) {
+    int preceded_subgraph_index = job.previous_subgraph_indices.empty()
+                                      ? -1
+                                      : job.previous_subgraph_indices.back();
+    auto pair = GetShortestLatency(job.model_id, job.resolved_tensors, 0,
+                                   worker_waiting, preceded_subgraph_index);
+    std::pair<std::vector<int>, int64_t> ret =
+        std::pair<std::vector<int>, int64_t>({}, pair.second);
+    ret.first.push_back(pair.first);
+    return ret;
+  } else {
+    return GetShortestLatencyWithUnitSubgraph(job.model_id, job.start_unit_idx,
+                                              worker_waiting);
+  }
 }
 
 std::pair<std::vector<SubgraphKey>, int64_t>

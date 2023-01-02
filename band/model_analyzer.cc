@@ -14,6 +14,37 @@
 #include "model_analyzer.h"
 
 namespace Band {
+std::set<int> ModelSpec::GetPureInputTensors(
+    const std::set<int>& op_indices) const {
+  // {all input tensors in ops} - {all output tensors in ops}
+  std::set<int> input_tensors;
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& inputs = op_input_tensors[op_index];
+    input_tensors.insert(inputs.begin(), inputs.end());
+  }
+
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& outputs = op_output_tensors[op_index];
+    for (int output_index : outputs) {
+      input_tensors.erase(output_index);
+    }
+  }
+
+  return input_tensors;
+}
+
+std::set<int> ModelSpec::GetOutputTensors(
+    const std::set<int>& op_indices) const {
+  // {all output tensors in ops}
+  std::set<int> output_tensors;
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& outputs = op_output_tensors[op_index];
+    output_tensors.insert(outputs.begin(), outputs.end());
+  }
+
+  return output_tensors;
+}
+
 std::string SetToString(const std::set<int>& set) {
   auto range_to_string = [](int lhs, int rhs) {
     if (lhs == rhs) {
@@ -241,6 +272,49 @@ ModelAnalyzer::CreateSubgraphs() {
       break;
   }
 
+  // Verify subgraphs
+  {
+    // 1. unit subgraph covers all ops
+    std::set<int> ops;
+    for (const auto& unit_subgraph_def : unit_subgraph_defs) {
+      ops.insert(unit_subgraph_def.op_indices.begin(),
+                 unit_subgraph_def.op_indices.end());
+    }
+
+    if ((ops.size() != model_spec_->num_ops) ||
+        (*ops.rbegin() != model_spec_->num_ops - 1)) {
+      BAND_LOG_PROD(BAND_LOG_ERROR,
+                    "Failed to create subgraph. Unit subgraph does not covers "
+                    "all operators for model %s and mode %s",
+                    model_spec_->path.c_str(),
+                    BandSubgraphPreparationGetName(
+                        model_config_.subgraph_preparation_type));
+      return {kBandError, {}, {}};
+    }
+
+    // 2. unit subgraph indices in merged subgraph are continous
+    for (const auto& subgraph_def : subgraph_defs) {
+      const int begin = *subgraph_def.unit_subgraph_indices.begin();
+      const int end = *subgraph_def.unit_subgraph_indices.rbegin();
+      if (end - begin != subgraph_def.unit_subgraph_indices.size() - 1) {
+        BAND_LOG_PROD(BAND_LOG_ERROR,
+                      "Failed to create subgraph. Unit subgraph indices in "
+                      "subgraph %s are not continous for model %s and mode %s",
+                      subgraph_def.ToString(), model_spec_->path.c_str(),
+                      BandSubgraphPreparationGetName(
+                          model_config_.subgraph_preparation_type));
+        return {kBandError, {}, {}};
+      }
+    }
+  }
+
+  model_spec_->unit_subgraph_ops.resize(unit_subgraph_defs.size());
+  for (const auto& unit_subgraph_def : unit_subgraph_defs) {
+    model_spec_
+        ->unit_subgraph_ops[*unit_subgraph_def.unit_subgraph_indices.begin()] =
+        unit_subgraph_def.op_indices;
+  }
+
   const std::string subgraph_summary =
       model_config_.subgraph_preparation_type != kBandFallbackPerWorker
           ? SummarizeSubgraphs(subgraph_defs)
@@ -254,7 +328,7 @@ ModelAnalyzer::CreateSubgraphs() {
       subgraph_summary.c_str());
 
   return {kBandOk, *model_spec_, subgraph_defs};
-}  // namespace Band
+}
 
 BandStatus ModelAnalyzer::GetUnitSubgraphs(
     std::vector<SubgraphDef>& unit_subgraphs) {
@@ -413,9 +487,6 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     unique_unit_subgraph_indices.insert(
         *subgraph_def.unit_subgraph_indices.begin());
   }
-
-  model_spec_->num_unit_subgraphs = unique_unit_subgraph_indices.size();
-  model_spec_->latency_memo.resize(unique_unit_subgraph_indices.size());
 
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d unit subgraphs, planner requires subgraph %d",
@@ -647,8 +718,6 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
 
   return result_subgraphs;
 }
-
-const ModelSpec& ModelAnalyzer::GetModelSpec() const { return *model_spec_; }
 
 bool ModelAnalyzer::NeedFallbackSubgraph() const {
   return need_fallback_subgraph_ &&
