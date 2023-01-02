@@ -110,8 +110,7 @@ class Engine : public Context {
   /* utility funtions for unit-level scheduling */
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
       int model_id, int start_unit_idx, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting,
-      SubgraphKey preceded_subgraph_index = {}) const override;
+      const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(

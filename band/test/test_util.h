@@ -32,10 +32,9 @@ struct MockContextBase : public Context {
       std::pair<std::vector<SubgraphKey>, int64_t>;
   using SubgraphWithShortestLatency =
       std::pair<std::vector<SubgraphKey>, int64_t>;
-  MOCK_CONST_METHOD5(GetShortestLatency,
-                     std::pair<SubgraphKey, int64_t>(int, std::set<int>,
-                                                     int64_t, WorkerWaiting,
-                                                     SubgraphKey));
+  MOCK_CONST_METHOD4(GetShortestLatency,
+                     std::pair<SubgraphKey, int64_t>(int, int, int64_t,
+                                                     WorkerWaiting));
 
   MOCK_CONST_METHOD3(GetShortestLatencyWithUnitSubgraph,
                      ShortestLatencyWithUnitSubgraph(int, int, WorkerWaiting));

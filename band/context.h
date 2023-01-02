@@ -66,9 +66,8 @@ class Context {
 
   // TODO: replace subgraph idx to subgraph key in below functions
   virtual std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      int model_id, std::set<int> resolved_tensors, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting,
-      SubgraphKey preceded_subgraph_index = {}) const = 0;
+      int model_id, int start_unit_idx, int64_t start_time,
+      const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(

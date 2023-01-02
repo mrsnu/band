@@ -14,37 +14,6 @@
 #include "model_analyzer.h"
 
 namespace Band {
-std::set<int> ModelSpec::GetPureInputTensors(
-    const std::set<int>& op_indices) const {
-  // {all input tensors in ops} - {all output tensors in ops}
-  std::set<int> input_tensors;
-  for (const auto& op_index : op_indices) {
-    const std::set<int>& inputs = op_input_tensors[op_index];
-    input_tensors.insert(inputs.begin(), inputs.end());
-  }
-
-  for (const auto& op_index : op_indices) {
-    const std::set<int>& outputs = op_output_tensors[op_index];
-    for (int output_index : outputs) {
-      input_tensors.erase(output_index);
-    }
-  }
-
-  return input_tensors;
-}
-
-std::set<int> ModelSpec::GetOutputTensors(
-    const std::set<int>& op_indices) const {
-  // {all output tensors in ops}
-  std::set<int> output_tensors;
-  for (const auto& op_index : op_indices) {
-    const std::set<int>& outputs = op_output_tensors[op_index];
-    output_tensors.insert(outputs.begin(), outputs.end());
-  }
-
-  return output_tensors;
-}
-
 std::string SetToString(const std::set<int>& set) {
   auto range_to_string = [](int lhs, int rhs) {
     if (lhs == rhs) {
@@ -274,25 +243,7 @@ ModelAnalyzer::CreateSubgraphs() {
 
   // Verify subgraphs
   {
-    // 1. unit subgraph covers all ops
-    std::set<int> ops;
-    for (const auto& unit_subgraph_def : unit_subgraph_defs) {
-      ops.insert(unit_subgraph_def.op_indices.begin(),
-                 unit_subgraph_def.op_indices.end());
-    }
-
-    if ((ops.size() != model_spec_->num_ops) ||
-        (*ops.rbegin() != model_spec_->num_ops - 1)) {
-      BAND_LOG_PROD(BAND_LOG_ERROR,
-                    "Failed to create subgraph. Unit subgraph does not covers "
-                    "all operators for model %s and mode %s",
-                    model_spec_->path.c_str(),
-                    BandSubgraphPreparationGetName(
-                        model_config_.subgraph_preparation_type));
-      return {kBandError, {}, {}};
-    }
-
-    // 2. unit subgraph indices in merged subgraph are continous
+    // unit subgraph indices in merged subgraph are continous
     for (const auto& subgraph_def : subgraph_defs) {
       const int begin = *subgraph_def.unit_subgraph_indices.begin();
       const int end = *subgraph_def.unit_subgraph_indices.rbegin();
@@ -306,13 +257,6 @@ ModelAnalyzer::CreateSubgraphs() {
         return {kBandError, {}, {}};
       }
     }
-  }
-
-  model_spec_->unit_subgraph_ops.resize(unit_subgraph_defs.size());
-  for (const auto& unit_subgraph_def : unit_subgraph_defs) {
-    model_spec_
-        ->unit_subgraph_ops[*unit_subgraph_def.unit_subgraph_indices.begin()] =
-        unit_subgraph_def.op_indices;
   }
 
   const std::string subgraph_summary =
@@ -486,6 +430,68 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
   for (const auto& subgraph_def : unit_subgraphs) {
     unique_unit_subgraph_indices.insert(
         *subgraph_def.unit_subgraph_indices.begin());
+  }
+
+  model_spec_->unit_subgraph_ops.resize(unique_unit_subgraph_indices.size());
+  for (const auto& unit_subgraph_def : unit_subgraphs) {
+    model_spec_
+        ->unit_subgraph_ops[*unit_subgraph_def.unit_subgraph_indices.begin()] =
+        unit_subgraph_def.op_indices;
+  }
+
+  for (const auto& lhs : unit_subgraphs) {
+    for (const auto& rhs : unit_subgraphs) {
+      if (&lhs == &rhs) {
+        continue;
+      }
+
+      if (*lhs.unit_subgraph_indices.begin() ==
+          *rhs.unit_subgraph_indices.begin()) {
+        if (lhs.op_indices != rhs.op_indices) {
+          BAND_LOG_PROD(
+              BAND_LOG_ERROR,
+              "Failed to create unit subgraph. Unit subgraph with same idx %d "
+              "has different operators",
+              *lhs.unit_subgraph_indices.begin());
+          return kBandError;
+        }
+      } else {
+        std::set<int> intersection;
+        std::set_intersection(
+            lhs.op_indices.begin(), lhs.op_indices.end(),
+            rhs.op_indices.begin(), rhs.op_indices.end(),
+            std::inserter(intersection, intersection.begin()));
+        if (intersection.size()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR,
+                        "Failed to create unit subgraph. Unit subgraph with "
+                        "different idx %d, %d "
+                        "has common operators %s",
+                        *lhs.unit_subgraph_indices.begin(),
+                        *rhs.unit_subgraph_indices.begin(),
+                        SetToString(intersection).c_str());
+          return kBandError;
+        }
+      }
+    }
+  }
+
+  // Verify whether unit subgraph covers all ops
+  std::set<int> ops;
+  for (const auto& unit_subgraph_def : unit_subgraphs) {
+    ops.insert(unit_subgraph_def.op_indices.begin(),
+               unit_subgraph_def.op_indices.end());
+  }
+
+  if ((ops.size() != model_spec_->num_ops) ||
+      (*ops.rbegin() != model_spec_->num_ops - 1)) {
+    BAND_LOG_PROD(
+        BAND_LOG_ERROR,
+        "Failed to create unit subgraph. Unit subgraph does not covers "
+        "all operators for model %s and mode %s",
+        model_spec_->path.c_str(),
+        BandSubgraphPreparationGetName(
+            model_config_.subgraph_preparation_type));
+    return kBandError;
   }
 
   BAND_LOG_PROD(BAND_LOG_INFO,

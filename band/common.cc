@@ -72,4 +72,35 @@ std::size_t PairHash::operator()(const std::pair<int, std::set<int>>& p) const {
   return hash;
 }
 
+std::set<int> ModelSpec::GetPureInputTensors(
+    const std::set<int>& op_indices) const {
+  // {all input tensors in ops} - {all output tensors in ops}
+  std::set<int> input_tensors;
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& inputs = op_input_tensors[op_index];
+    input_tensors.insert(inputs.begin(), inputs.end());
+  }
+
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& outputs = op_output_tensors[op_index];
+    for (int output_index : outputs) {
+      input_tensors.erase(output_index);
+    }
+  }
+
+  return input_tensors;
+}
+
+std::set<int> ModelSpec::GetOutputTensors(
+    const std::set<int>& op_indices) const {
+  // {all output tensors in ops}
+  std::set<int> output_tensors;
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& outputs = op_output_tensors[op_index];
+    output_tensors.insert(outputs.begin(), outputs.end());
+  }
+
+  return output_tensors;
+}
+
 }  // namespace Band
