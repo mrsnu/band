@@ -600,6 +600,7 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
   //   job.start_unit_idx,
   //                                             worker_waiting);
   // }
+  return {};
 }
 
 std::pair<std::vector<SubgraphKey>, int64_t>
