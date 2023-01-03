@@ -251,7 +251,8 @@ ModelAnalyzer::CreateSubgraphs() {
         BAND_LOG_PROD(BAND_LOG_ERROR,
                       "Failed to create subgraph. Unit subgraph indices in "
                       "subgraph %s are not continous for model %s and mode %s",
-                      subgraph_def.ToString(), model_spec_->path.c_str(),
+                      subgraph_def.ToString().c_str(),
+                      model_spec_->path.c_str(),
                       BandSubgraphPreparationGetName(
                           model_config_.subgraph_preparation_type));
         return {kBandError, {}, {}};
