@@ -367,7 +367,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
 
     while (true) {
       std::set<int> unit_subgraph_ops;
-      BitMask support_devices = 0;
+      BitMask support_workers = 0;
 
       // Find single unit subgraph ops
       while (true) {
@@ -381,13 +381,13 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
             continue;
           }
           // Check the op have same support devices
-          if (support_devices != 0 &&
-              support_devices != op_support_table[op_index]) {
+          if (support_workers != 0 &&
+              support_workers != op_support_table[op_index]) {
             continue;
           }
           // Set support devices using first op
-          if (support_devices == 0) {
-            support_devices = op_support_table[op_index];
+          if (support_workers == 0) {
+            support_workers = op_support_table[op_index];
           }
           to_add.push_back(op_index);
         }
@@ -412,7 +412,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
         if (!IsWorkerValid(worker_id)) {
           continue;
         }
-        if (support_devices & (1 << worker_id)) {
+        if (support_workers & (1 << worker_id)) {
           unit_subgraphs.push_back(
               {worker_id, unit_subgraph_ops, {unit_subgraph_index}});
         }
@@ -642,18 +642,6 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
 std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
     const std::vector<SubgraphDef>& unit_subgraphs) {
   std::vector<SubgraphDef> result_subgraphs = unit_subgraphs;
-
-  // Check all next input tensors are resolved by previous output tensors
-  auto is_all_input_prepared = [](const std::vector<int>& prev_output_tensors,
-                                  const std::vector<int>& next_input_tensors) {
-    for (int input_tensor : next_input_tensors) {
-      if (std::find(prev_output_tensors.begin(), prev_output_tensors.end(),
-                    input_tensor) == prev_output_tensors.end()) {
-        return false;
-      }
-    }
-    return true;
-  };
 
   // Check given worker - op_indices pair is already created or not
   auto is_already_created = [&result_subgraphs](WorkerId worker_id,
