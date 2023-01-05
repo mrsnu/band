@@ -1,4 +1,4 @@
-#include "band/backend/tfl/interpreter.h"
+#include "band/backend/tfl/model_executor.h"
 
 #include "band/backend/tfl/model.h"
 #include "band/backend/tfl/tensor.h"
@@ -14,6 +14,7 @@
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/nnapi/nnapi_util.h"
 #endif  // __ANDROID__
+#include "model_executor.h"
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 
@@ -21,20 +22,20 @@ namespace Band {
 namespace TfLite {
 
 std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
-    TfLiteInterpreter::delegates_ = {};
+    TfLiteModelExecutor::delegates_ = {};
 
-TfLiteInterpreter::TfLiteInterpreter(ModelId model_id, WorkerId worker_id,
-                                     BandDeviceFlags device_flag)
-    : IInterpreter(model_id, worker_id, device_flag) {}
+TfLiteModelExecutor::TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
+                                         BandDeviceFlags device_flag)
+    : IModelExecutor(model_id, worker_id, device_flag) {}
 
-TfLiteInterpreter::~TfLiteInterpreter() {
+TfLiteModelExecutor::~TfLiteModelExecutor() {
   // explicitly remove interpreters first
   // since delegates own interpreter.
   interpreters_.clear();
   delegates_.clear();
 }
 
-ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
+ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {
   int num_ops;
   int num_tensors;
   std::vector<BandType> tensor_types;
@@ -147,9 +148,9 @@ ModelSpec TfLiteInterpreter::InvestigateModelSpec(Interface::IModel* model) {
   return model_spec;
 }
 
-BandStatus TfLiteInterpreter::PrepareSubgraph(Interface::IModel* model,
-                                              std::set<int> ops,
-                                              std::set<int> unit_indices) {
+BandStatus TfLiteModelExecutor::PrepareSubgraph(Interface::IModel* model,
+                                                std::set<int> ops,
+                                                std::set<int> unit_indices) {
   if (model_id_ != model->GetId()) {
     BAND_LOG_PROD(BAND_LOG_ERROR,
                   "Failed to prepare subgraph, given model id %d != "
@@ -171,44 +172,44 @@ BandStatus TfLiteInterpreter::PrepareSubgraph(Interface::IModel* model,
   }
 }
 
-BandBackendType TfLiteInterpreter::GetBackendType() const {
+BandBackendType TfLiteModelExecutor::GetBackendType() const {
   return kBandTfLite;
 }
 
-const std::vector<int>& TfLiteInterpreter::GetInputs(
+const std::vector<int>& TfLiteModelExecutor::GetInputs(
     const SubgraphKey& key) const {
   return GetInterpreter(key)->inputs();
 }
 
-const std::vector<int>& TfLiteInterpreter::GetOutputs(
+const std::vector<int>& TfLiteModelExecutor::GetOutputs(
     const SubgraphKey& key) const {
   return GetInterpreter(key)->outputs();
 }
 
-const char* TfLiteInterpreter::GetInputName(const SubgraphKey& key,
-                                            int index) const {
+const char* TfLiteModelExecutor::GetInputName(const SubgraphKey& key,
+                                              int index) const {
   return GetInterpreter(key)->GetInputName(index);
 }
 
-const char* TfLiteInterpreter::GetOutputName(const SubgraphKey& key,
-                                             int index) const {
+const char* TfLiteModelExecutor::GetOutputName(const SubgraphKey& key,
+                                               int index) const {
   return GetInterpreter(key)->GetOutputName(index);
 }
 
-size_t TfLiteInterpreter::GetNumTensors(const SubgraphKey& key) const {
+size_t TfLiteModelExecutor::GetNumTensors(const SubgraphKey& key) const {
   return GetInterpreter(key)->tensors_size();
 }
 
-size_t TfLiteInterpreter::GetNumNodes(const SubgraphKey& key) const {
+size_t TfLiteModelExecutor::GetNumNodes(const SubgraphKey& key) const {
   return GetInterpreter(key)->nodes_size();
 }
 
-std::shared_ptr<Interface::ITensorView> TfLiteInterpreter::GetTensorView(
+std::shared_ptr<Interface::ITensorView> TfLiteModelExecutor::GetTensorView(
     const SubgraphKey& key, int index) {
   return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
 }
 
-SubgraphKey TfLiteInterpreter::GetLargestSubgraphKey() const {
+SubgraphKey TfLiteModelExecutor::GetLargestSubgraphKey() const {
   SubgraphKey largest_key;
   size_t largest_num_ops = 0;
 
@@ -222,11 +223,11 @@ SubgraphKey TfLiteInterpreter::GetLargestSubgraphKey() const {
   return largest_key;
 }
 
-bool TfLiteInterpreter::HasSubgraph(const SubgraphKey& key) const {
+bool TfLiteModelExecutor::HasSubgraph(const SubgraphKey& key) const {
   return interpreters_.find(key) != interpreters_.end();
 }
 
-BandStatus TfLiteInterpreter::InvokeSubgraph(const SubgraphKey& key) {
+BandStatus TfLiteModelExecutor::ExecuteSubgraph(const SubgraphKey& key) {
   if (!HasSubgraph(key)) {
     return kBandError;
   }
@@ -234,12 +235,20 @@ BandStatus TfLiteInterpreter::InvokeSubgraph(const SubgraphKey& key) {
   return status;
 }
 
-tflite::Interpreter* TfLiteInterpreter::GetInterpreter(const SubgraphKey& key) {
+void TfLiteModelExecutor::IterateSubgraphs(
+    std::function<void(const SubgraphKey&)> iterator) {
+  for (const auto& interpreter : interpreters_) {
+    iterator(interpreter.first);
+  }
+}
+
+tflite::Interpreter* TfLiteModelExecutor::GetInterpreter(
+    const SubgraphKey& key) {
   auto it = interpreters_.find(key);
   return it != interpreters_.end() ? it->second.get() : nullptr;
 }
 
-const tflite::Interpreter* TfLiteInterpreter::GetInterpreter(
+const tflite::Interpreter* TfLiteModelExecutor::GetInterpreter(
     const SubgraphKey& key) const {
   auto it = interpreters_.find(key);
   return it != interpreters_.end() ? it->second.get() : nullptr;
@@ -294,9 +303,10 @@ BandDeviceFlags GetNNAPIDeviceFlag(std::string name) {
   return kBandNumDevices;
 }
 
-std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
-    Interface::IModel* model, BandDeviceFlags device,
-    std::set<int> op_indices) {
+std::unique_ptr<tflite::Interpreter>
+TfLiteModelExecutor::CreateTfLiteInterpreter(Interface::IModel* model,
+                                             BandDeviceFlags device,
+                                             std::set<int> op_indices) {
   std::unique_ptr<tflite::Interpreter> interpreter;
   std::shared_ptr<tflite::InterpreterOptions> option =
       std::make_shared<tflite::InterpreterOptions>();
@@ -339,7 +349,7 @@ std::unique_ptr<tflite::Interpreter> TfLiteInterpreter::CreateTfLiteInterpreter(
   return interpreter;
 }
 
-std::pair<BandStatus, TfLiteDelegate*> TfLiteInterpreter::GetDeviceDelegate(
+std::pair<BandStatus, TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
     BandDeviceFlags device) {
   auto delegate_it = delegates_.find(device);
   if (delegate_it != delegates_.end()) {

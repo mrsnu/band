@@ -6,13 +6,13 @@
 #include <fstream>
 #include <vector>
 
-#include "band/backend/tfl/interpreter.h"
 #include "band/backend/tfl/model.h"
+#include "band/backend/tfl/model_executor.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend_factory.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
-#include "band/interface/interpreter.h"
+#include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/model.h"
 #include "band/tensor.h"
@@ -23,9 +23,9 @@ TEST(TFLiteBackend, BackendInvoke) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.bin");
 
-  TfLite::TfLiteInterpreter interpreter(0, 0, kBandCPU);
+  TfLite::TfLiteModelExecutor interpreter(0, 0, kBandCPU);
   EXPECT_EQ(interpreter.PrepareSubgraph(&bin_model), kBandOk);
-  EXPECT_EQ(interpreter.InvokeSubgraph(interpreter.GetLargestSubgraphKey()),
+  EXPECT_EQ(interpreter.ExecuteSubgraph(interpreter.GetLargestSubgraphKey()),
             kBandOk);
 }
 
@@ -33,7 +33,7 @@ TEST(TFLiteBackend, ModelSpec) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.bin");
 
-  TfLite::TfLiteInterpreter interpreter(0, 0, kBandCPU);
+  TfLite::TfLiteModelExecutor interpreter(0, 0, kBandCPU);
   ModelSpec model_spec = interpreter.InvestigateModelSpec(&bin_model);
 
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
@@ -59,8 +59,8 @@ TEST(TFLiteBackend, InterfaceInvoke) {
   IModel* bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
   bin_model->FromPath("band/test/data/add.bin");
 
-  IInterpreter* interpreter =
-      BackendFactory::CreateInterpreter(kBandTfLite, 0, 0, kBandCPU);
+  IModelExecutor* interpreter =
+      BackendFactory::CreateModelExecutor(kBandTfLite, 0, 0, kBandCPU);
   EXPECT_EQ(interpreter->PrepareSubgraph(bin_model), kBandOk);
 
   SubgraphKey key = interpreter->GetLargestSubgraphKey();
@@ -73,7 +73,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
              ->GetData(),
          input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(interpreter->InvokeSubgraph(key), kBandOk);
+  EXPECT_EQ(interpreter->ExecuteSubgraph(key), kBandOk);
 
   auto output_tensor =
       interpreter->GetTensorView(key, interpreter->GetOutputs(key)[0]);

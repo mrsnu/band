@@ -129,8 +129,8 @@ cc_library(
     ],
     hdrs = [
         "interface/backend.h",
-        "interface/interpreter.h",
         "interface/model.h",
+        "interface/model_executor.h",
         "interface/tensor.h",
         "interface/tensor_view.h",
     ],

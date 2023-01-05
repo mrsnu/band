@@ -13,7 +13,7 @@
 namespace Band {
 namespace Interface {
 class IModel;
-class IInterpreter;
+class IModelExecutor;
 }  // namespace Interface
 class Worker;
 class Planner;

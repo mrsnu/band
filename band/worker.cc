@@ -139,7 +139,7 @@ BandStatus Worker::TryUpdateWorkerThread() {
 
     // TODO: propagate num threads per each interpreter?
 
-    // Interpreter *interpreter_ptr = context_ptr->GetInterpreter();
+    // Interpreter *interpreter_ptr = context_ptr->GetModelExecutor();
     // auto internal_backend =
     //     interpreter_ptr->GetCpuBackendContext()->internal_backend_context();
     // internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
