@@ -5,7 +5,7 @@
 
 namespace Band {
 
-class HeterogeneousEarliestFinishTimeScheduler : public IScheduler {
+class HEFTScheduler : public IScheduler {
  public:
   ScheduleAction Schedule(const Context& context) override;
   bool NeedProfile() override { return true; }

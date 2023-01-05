@@ -1,19 +1,23 @@
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 
+#include <unordered_set>
+
 #include "band/time.h"
 
 namespace Band {
+ShortestExpectedLatencyScheduler::ShortestExpectedLatencyScheduler(
+    int window_size)
+    : window_size_(window_size) {}
 
-void ShortestExpectedLatencyScheduler::Schedule(JobQueue& context.requests_) {
+ScheduleAction ShortestExpectedLatencyScheduler::Schedule(
+    const Context& context, JobQueue& requests) {
+  ScheduleAction action;
   JobQueue local_jobs;
-  int window_size =
-      std::min(planner_->GetWindowSize(), (int)context.requests_.size());
-  local_jobs.insert(local_jobs.begin(), context.requests_.begin(),
-                    context.requests_.begin() + window_size);
-  context.requests_.erase(context.requests_.begin(),
-                          context.requests_.begin() + window_size);
+  int window_size = std::min(window_size_, (int)requests.size());
+  local_jobs.insert(local_jobs.begin(), requests.begin(),
+                    requests.begin() + window_size);
+  requests.erase(requests.begin(), requests.begin() + window_size);
   while (!local_jobs.empty()) {
-    planner_->UpdateWorkerWaitingTime();
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
     // Put that job into some worker, and repeat this whole loop until we've
@@ -31,27 +35,28 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& context.requests_) {
     // find the most urgent job and save its index within the queue
     int64_t largest_shortest_latency = -1;
     int target_job_idx;
-    int target_subgraph_idx;
+    SubgraphKey target_subgraph_key;
+    WorkerWaitingTime worker_waiting = context.GetWorkerWaitingTime();
 
-    std::set<std::pair<int, int>> searched_jobs;
+    std::unordered_set<std::pair<int, BitMask>, CacheHash> searched_jobs;
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
-      std::pair<int, int> job_to_search =
-          std::make_pair(next_job.model_id, next_job.start_unit_idx);
+
+      std::pair<int, BitMask> job_to_search =
+          std::make_pair(next_job.model_id, next_job.resolved_unit_subgraphs);
       if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
         continue;
       } else {
         searched_jobs.insert(job_to_search);
       }
 
-      std::pair<std::vector<int>, int64_t> best_subgraph =
-          GetInterpreter()->GetSubgraphWithShortestLatency(
-              next_job, GetWorkerWaitingTime());
+      std::pair<std::vector<SubgraphKey>, int64_t> best_subgraph =
+          context.GetSubgraphWithShortestLatency(next_job, worker_waiting);
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
         target_job_idx = it - local_jobs.begin();
-        target_subgraph_idx = best_subgraph.first.front();
+        target_subgraph_key = best_subgraph.first.front();
       }
     }
 
@@ -62,16 +67,13 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& context.requests_) {
     // remove the job from the queue so that we don't meet it in the next loop
     local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-    // Update Job status specific to this planner.
-    // Common status will be updated by `EnqueueAction`.
-    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
-    if (target_subgraph->IsStart()) {
+    if (context.IsBegin(most_urgent_job.subgraph_key)) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
     }
-    EnqueueAction(most_urgent_job, target_subgraph);
+    action[target_subgraph_key.GetWorkerId()].push_back(
+        {most_urgent_job, target_subgraph_key});
   }
+  return action;
 }
-
-}  // namespace Band
 }  // namespace Band
