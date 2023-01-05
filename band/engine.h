@@ -12,7 +12,7 @@
 #include "band/config.h"
 #include "band/context.h"
 #include "band/error_reporter.h"
-#include "band/interface/interpreter.h"
+#include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
 
@@ -145,8 +145,9 @@ class Engine : public Context {
 
   /* helper functions */
   WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const;
-  Interface::IInterpreter* GetInterpreter(const SubgraphKey& key);
-  const Interface::IInterpreter* GetInterpreter(const SubgraphKey& key) const;
+  Interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
+  const Interface::IModelExecutor* GetModelExecutor(
+      const SubgraphKey& key) const;
 
   Engine() = delete;
   Engine(ErrorReporter* error_reporeter);
@@ -158,8 +159,8 @@ class Engine : public Context {
   ModelConfig model_config_;
 
   std::map<std::pair<ModelId, WorkerId>,
-           std::unique_ptr<Interface::IInterpreter>>
-      interpreters_;
+           std::unique_ptr<Interface::IModelExecutor>>
+      model_executors_;
   std::vector<std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
   std::unique_ptr<LatencyEstimator> latency_estimator_;

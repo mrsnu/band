@@ -1,18 +1,18 @@
-#ifndef BAND_BACKEND_TFL_INTERPRETER_H_
-#define BAND_BACKEND_TFL_INTERPRETER_H_
+#ifndef BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
+#define BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 
 #include "band/c/common.h"
-#include "band/interface/interpreter.h"
+#include "band/interface/model_executor.h"
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/interpreter.h"
 
 namespace Band {
 namespace TfLite {
-class TfLiteInterpreter : public Interface::IInterpreter {
+class TfLiteModelExecutor : public Interface::IModelExecutor {
  public:
-  TfLiteInterpreter(ModelId model_id, WorkerId worker_id,
-                    BandDeviceFlags device_flag);
-  ~TfLiteInterpreter() override;
+  TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
+                      BandDeviceFlags device_flag);
+  ~TfLiteModelExecutor() override;
 
   ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
   BandStatus PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
@@ -28,11 +28,12 @@ class TfLiteInterpreter : public Interface::IInterpreter {
 
   std::shared_ptr<Interface::ITensorView> GetTensorView(const SubgraphKey& key,
                                                         int index) override;
-
   SubgraphKey GetLargestSubgraphKey() const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
 
-  BandStatus InvokeSubgraph(const SubgraphKey& key) override;
+  BandStatus ExecuteSubgraph(const SubgraphKey& key) override;
+  void IterateSubgraphs(
+      std::function<void(const SubgraphKey&)> iterator) override;
 
  private:
   friend class TfLiteUtil;
@@ -55,4 +56,4 @@ class TfLiteInterpreter : public Interface::IInterpreter {
 }  // namespace TfLite
 }  // namespace Band
 
-#endif  // BAND_BACKEND_TFL_INTERPRETER_H_
+#endif  // BAND_BACKEND_TFL_MODEL_EXECUTOR_H_

@@ -102,7 +102,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     Planner"; return;
     }
 
-    Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
+    Interpreter* interpreter_ptr = planner_ptr->GetModelExecutor();
     int64_t max_latency_gain = -1;
     int max_latency_gain_worker = -1;
     int max_latency_gain_subgraph_idx = -1;
