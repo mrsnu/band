@@ -7,10 +7,15 @@ namespace Band {
 
 class ShortestExpectedLatencyScheduler : public IScheduler {
  public:
-  ScheduleAction Schedule(const Context& context) override;
+  explicit ShortestExpectedLatencyScheduler(int window_size);
+
+  ScheduleAction Schedule(const Context& context, JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }
+
+ private:
+  const int window_size_;
 };
 
 }  // namespace Band
