@@ -36,7 +36,7 @@ def patch(file_path, target_str, patched_str):
 def get_options(enable_xnnpack, debug):
     option_xnnpack = 'true' if enable_xnnpack else 'false'
     debug_option = 'dbg' if debug else 'opt'
-    return f'--jobs={multiprocessing.cpu_count()} -c {debug_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
+    return f'--jobs={multiprocessing.cpu_count()} {" --test_output=all" if debug else ""} -c {debug_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
 
 
 def get_dst_path(target_platform, debug):

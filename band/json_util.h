@@ -3,6 +3,8 @@
 
 #include <json/json.h>
 
+#include "band/common.h"
+
 namespace Band {
 
 // load data from the given file
@@ -10,8 +12,8 @@ namespace Band {
 Json::Value LoadJsonObjectFromFile(std::string file_path);
 
 // Write json object.
-void WriteJsonObjectToFile(const Json::Value& json_object,
-                           std::string file_path);
+BandStatus WriteJsonObjectToFile(const Json::Value& json_object,
+                                 std::string file_path);
 
 }  // namespace Band
 

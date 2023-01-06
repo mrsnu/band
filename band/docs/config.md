@@ -53,15 +53,6 @@ Each configuration field is optional or required. If a field is optional, then i
 - `allow_worksteal` [type: `bool`, default: `false`]: Work-stealing is enabled if true, disabled if false.
 - `availability_check_interval_ms` [type: `int`, default: `30_000`]: The interval for checking availability of devices. Used for detecting thermal throttling.
 
-## `ModelConfig`
-- `models` [type: `std::string`]: The list of models. By default, no models is defined.
-- `models_period_ms_` [type: `int`]. Period in ms. If the period is specified for a specific model, all other models' period must also be specified.
-- `models_batch_size_` [type: `int`]: Batch size.  If the batch size is specified for a specific model, all other models' batch size must also be specified.
-- `models_slo_us_` [type: `int64_t`]: Slo in us. If the slo is specified for a specific model, all other models' slo must also be specified.
-- `models_slo_scale_` [type: `float`]: Slo scale. If the slo scale is specified for a specific model, all other models' slo scale must also be specified.
-- `models_assigned_worker_` [type: `BandDeviceFlags`]: If the worker is specified for a specific model, all other models' worker must also be specified.
-- `models_worker_affinity_` [type: `int`]: If the worker is specified for a specific model, worker affinity must also be specified.
-
 ## `RuntimeConfig`
 - `RuntimeConfig` contains `ProfileConfig`, `PlannerConfig` and `WorkerConfig`.
 - `minimum_subgraph_size` [type: `int`, default: `7`]: The minimum subgraph size. If candidate subgraph size is smaller than this, the subgraph will not be created.

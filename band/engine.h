@@ -19,6 +19,7 @@
 namespace Band {
 
 class Model;
+class LatencyEstimator;
 
 typedef std::vector<Interface::ITensor*> Tensors;
 
@@ -44,7 +45,7 @@ typedef std::vector<Interface::ITensor*> Tensors;
  * engine->GetOutputTensorIndices(model.GetId())[0]);
  *
  * // Copy input data to input_tensor->GetData()
- * engine->InvokeSyncModel(model.GetId(), {input_tensor}, {output_tensor})
+ * engine->RequestSync(model.GetId(), {input_tensor}, {output_tensor})
  * // Copy result from output_tensor->GetData()
  */
 class Engine : public Context {
@@ -59,21 +60,36 @@ class Engine : public Context {
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
-  BandStatus InvokeSyncModel(ModelId model_id, Tensors inputs = {},
-                             Tensors outputs = {});
-  BandStatus InvokeSyncModels(std::vector<ModelId> model_ids,
-                              std::vector<Tensors> inputs = {},
-                              std::vector<Tensors> outputs = {});
-  JobId InvokeAsyncModel(ModelId model_id, Tensors inputs = {});
-  std::vector<JobId> InvokeAsyncModels(std::vector<ModelId> model_ids,
-                                       std::vector<Tensors> inputs = {});
+  size_t GetNumWorkers() const override;
+  BandDeviceFlags GetWorkerDevice(WorkerId id) const;
+
+  BandStatus RequestSync(
+      ModelId model_id,
+      BandRequestOption options = BandGetDefaultRequestOption(),
+      Tensors inputs = {}, Tensors outputs = {});
+  BandStatus RequestSync(std::vector<ModelId> model_ids,
+                         std::vector<BandRequestOption> options = {},
+                         std::vector<Tensors> inputs = {},
+                         std::vector<Tensors> outputs = {});
+  JobId RequestAsync(ModelId model_id,
+                     BandRequestOption options = BandGetDefaultRequestOption(),
+                     Tensors inputs = {});
+  std::vector<JobId> RequestAsync(std::vector<ModelId> model_ids,
+                                  std::vector<BandRequestOption> options = {},
+                                  std::vector<Tensors> inputs = {});
+
   BandStatus Wait(JobId job_id, Tensors outputs = {});
   BandStatus Wait(std::vector<JobId> job_ids,
                   std::vector<Tensors> outputs = {});
   BandStatus GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetEndInvokeFunction(std::function<void(int, BandStatus)> on_end_invoke);
+  void SetOnEndRequest(std::function<void(int, BandStatus)> on_end_request);
+
+  int64_t GetProfiled(const SubgraphKey& key) const override;
+  int64_t GetExpected(const SubgraphKey& key) const override;
+  SubgraphKey GetModelSubgraphKey(ModelId model_id,
+                                  WorkerId worker_id) const override;
 
  private:
   /* context */
@@ -81,13 +97,10 @@ class Engine : public Context {
   void UpdateWorkerWaitingTime() const override;
   const WorkerWaitingTime& GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
-  SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                  WorkerId worker_id) const override;
   bool IsEnd(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
-  ModelSpec* GetModelSpec(ModelId model_id) { return &model_specs_[model_id]; }
-  int GetModelConfigIdx(ModelId model_id) const override {
-    return model_configs_idx_.at(model_id);
+  const ModelSpec* GetModelSpec(ModelId model_id) {
+    return &model_specs_[model_id];
   }
   WorkerId GetModelWorker(ModelId model_id) const override;
 
@@ -108,10 +121,9 @@ class Engine : public Context {
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
-  /* profiler */
+  /* latency estimator */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
-  int64_t GetProfiled(const SubgraphKey& key) const override;
-  int64_t GetExpected(const SubgraphKey& key) const override;
+  int64_t GetWorst(ModelId model_id) const;
   /* planner */
   void Trigger() override;
   JobId EnqueueRequest(Job job, bool push_front = false) override;
@@ -150,9 +162,9 @@ class Engine : public Context {
   std::map<std::pair<WorkerId, ModelId>,
            std::unique_ptr<Interface::IInterpreter>>
       interpreters_;
-  std::map<WorkerId, std::unique_ptr<Worker>> workers_;
+  std::vector<std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
-  std::unique_ptr<Profiler> profiler_;
+  std::unique_ptr<LatencyEstimator> latency_estimator_;
   std::unique_ptr<Planner> planner_;
 
   // Models

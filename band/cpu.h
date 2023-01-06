@@ -44,6 +44,7 @@ class CpuSet {
   void DisableAll();
   bool IsEnabled(int cpu) const;
   int NumEnabled() const;
+  BandCPUMaskFlags GetCPUMaskFlag() const;
   const unsigned long* GetMaskBits() const;
   bool operator==(const CpuSet& rhs) const;
 

@@ -7,8 +7,11 @@ namespace Test {
 
 TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   ProfileConfigBuilder b;
-  ProfileConfig config_ok =
-      b.AddOnline(false).AddNumRuns(3).AddNumWarmups(3).Build();
+  ProfileConfig config_ok = b.AddOnline(false)
+                                .AddNumRuns(3)
+                                .AddNumWarmups(3)
+                                .AddProfileDataPath("hello")
+                                .Build();
 
   EXPECT_EQ(config_ok.online, false);
   EXPECT_EQ(config_ok.num_runs, 3);
@@ -16,13 +19,16 @@ TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
 
   b.AddNumRuns(-1);
   EXPECT_FALSE(b.IsValid());
+  b.AddNumRuns(1);
+  b.AddOnline(true);
+  EXPECT_TRUE(b.IsValid());
 }
 
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
   PlannerConfigBuilder b;
   PlannerConfig config_ok = b.AddLogPath("band/test/data/config.json")
                                 .AddScheduleWindowSize(5)
-                                .AddSchedulers({kBandFixedDevice})
+                                .AddSchedulers({kBandFixedWorker})
                                 .Build();
   EXPECT_EQ(config_ok.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.schedule_window_size, 5);
@@ -65,7 +71,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
           .AddPlannerLogPath("band/test/data/config.json")
           .AddScheduleWindowSize(1)
-          .AddSchedulers({kBandFixedDevice})
+          .AddSchedulers({kBandFixedWorker})
           .AddPlannerCPUMask(kBandBig)
           .AddWorkers({})
           .AddWorkerCPUMasks({})
@@ -89,7 +95,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.cpu_mask, kBandPrimary);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
-  EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedDevice);
+  EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedWorker);
   EXPECT_EQ(config_ok.planner_config.cpu_mask, kBandBig);
   EXPECT_EQ(config_ok.worker_config.workers[0], kBandCPU);
   EXPECT_EQ(config_ok.worker_config.cpu_masks[0], kBandAll);
@@ -100,7 +106,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
 
 TEST(ConfigBuilderTest, DefaultValueTest) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config_ok = b.AddSchedulers({kBandFixedDevice}).Build();
+  RuntimeConfig config_ok = b.AddSchedulers({kBandFixedWorker}).Build();
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
@@ -108,7 +114,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.profile_config.profile_data_path, "");
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");
-  EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedDevice);
+  EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedWorker);
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);
   EXPECT_EQ(config_ok.planner_config.cpu_mask, kBandAll);
   EXPECT_EQ(config_ok.worker_config.workers[0], kBandCPU);

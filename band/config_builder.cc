@@ -26,8 +26,9 @@ bool ProfileConfigBuilder::IsValid(
   }
   REPORT_IF_FALSE(ProfileConfigBuilder,
                   smoothing_factor_ >= .0f && smoothing_factor_ <= 1.0f);
-  REPORT_IF_FALSE(ProfileConfigBuilder,
-                  /*profile_data_path_*/ true);  // Always true
+  if (online_ == false) {
+    REPORT_IF_FALSE(ProfileConfigBuilder, profile_data_path_ != "");
+  }
   return result;
 }
 
@@ -68,42 +69,6 @@ bool WorkerConfigBuilder::IsValid(
   return result;
 }
 
-bool ModelConfigBuilder::IsValid(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  bool result = true;
-  if (models_.size() > 0) {
-    if (models_period_ms_.size() > 0) {
-      REPORT_IF_FALSE(ModelConfigBuilder,
-                      models_.size() == models_period_ms_.size());
-    }
-    if (models_assigned_worker_.size() > 0) {
-      REPORT_IF_FALSE(ModelConfigBuilder,
-                      models_.size() == models_assigned_worker_.size());
-      for (int i = 0; i < models_.size(); i++) {
-        REPORT_IF_FALSE(ModelConfigBuilder,
-                        models_assigned_worker_[i].device == kBandCPU ||
-                            models_assigned_worker_[i].device == kBandGPU ||
-                            models_assigned_worker_[i].device == kBandNPU ||
-                            models_assigned_worker_[i].device == kBandDSP);
-      }
-    }
-    if (models_batch_size_.size() > 0) {
-      REPORT_IF_FALSE(ModelConfigBuilder,
-                      models_.size() == models_batch_size_.size());
-    }
-    if (models_slo_us_.size() > 0) {
-      REPORT_IF_FALSE(ModelConfigBuilder,
-                      models_.size() == models_slo_us_.size());
-    }
-    if (models_slo_scale_.size() > 0) {
-      REPORT_IF_FALSE(ModelConfigBuilder,
-                      models_.size() == models_slo_scale_.size());
-    }
-  }
-
-  return result;
-}
-
 bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
@@ -121,28 +86,6 @@ bool RuntimeConfigBuilder::IsValid(
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, planner_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, worker_config_builder_.IsValid());
-  REPORT_IF_FALSE(RuntimeConfigBuilder, model_config_builder_.IsValid());
-
-  // Interdependent validation
-  // Check that worker affinity matches the number of workers defined
-  std::map<BandDeviceFlags, int> NumWorkersPerDevice;
-  for (int device = kBandCPU; device != kBandNumDevices; device++) {
-    NumWorkersPerDevice.emplace(static_cast<BandDeviceFlags>(device), 0);
-  }
-  for (int i = 0; i < worker_config_builder_.workers_.size(); i++) {
-    NumWorkersPerDevice[worker_config_builder_.workers_[i]]++;
-  }
-  for (int i = 0; i < model_config_builder_.models_assigned_worker_.size();
-       i++) {
-    DeviceWorkerAffinityPair pair =
-        model_config_builder_.models_assigned_worker_[i];
-    if (pair.worker < NumWorkersPerDevice[pair.device]) {
-      NumWorkersPerDevice[pair.device]--;
-    } else {
-      result = false;
-      break;
-    }
-  }
 
   return result;
 }
@@ -196,21 +139,6 @@ WorkerConfig WorkerConfigBuilder::Build(
   return worker_config;
 }
 
-ModelConfig ModelConfigBuilder::Build(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  if (!IsValid(error_reporter)) {
-    abort();
-  }
-  ModelConfig model_config;
-  model_config.models = models_;
-  model_config.models_assigned_worker = models_assigned_worker_;
-  model_config.models_batch_size = models_batch_size_;
-  model_config.models_period_ms = models_period_ms_;
-  model_config.models_slo_scale = models_slo_scale_;
-  model_config.models_slo_us = models_slo_us_;
-  return model_config;
-}
-
 RuntimeConfig RuntimeConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // TODO(widiba03304): This should not terminate the program. After employing
@@ -223,7 +151,6 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   ProfileConfig profile_config = profile_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
-  ModelConfig model_config = model_config_builder_.Build();
 
   runtime_config.minimum_subgraph_size = minimum_subgraph_size_;
   runtime_config.subgraph_preparation_type = subgraph_preparation_type_;
@@ -231,7 +158,6 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   runtime_config.profile_config = profile_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;
-  runtime_config.model_configs = model_config;
   return runtime_config;
 }
 

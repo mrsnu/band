@@ -26,10 +26,15 @@ PFN_BandEngineCreateOutputTensor pBandEngineCreateOutputTensor;
 PFN_BandEngineDelete pBandEngineDelete;
 PFN_BandEngineGetNumInputTensors pBandEngineGetNumInputTensors;
 PFN_BandEngineGetNumOutputTensors pBandEngineGetNumOutputTensors;
+PFN_BandEngineGetNumWorkers pBandEngineGetNumWorkers;
+PFN_BandEngineGetWorkerDevice pBandEngineGetWorkerDevice;
 PFN_BandEngineRegisterModel pBandEngineRegisterModel;
 PFN_BandEngineRequestAsync pBandEngineRequestAsync;
 PFN_BandEngineRequestSync pBandEngineRequestSync;
+PFN_BandEngineRequestAsyncOptions pBandEngineRequestAsyncOptions;
+PFN_BandEngineRequestSyncOptions pBandEngineRequestSyncOptions;
 PFN_BandEngineWait pBandEngineWait;
+PFN_BandEngineSetOnEndRequest pBandEngineSetOnEndRequest;
 PFN_BandModelAddFromBuffer pBandModelAddFromBuffer;
 PFN_BandModelAddFromFile pBandModelAddFromFile;
 PFN_BandModelCreate pBandModelCreate;
@@ -67,10 +72,15 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandEngineDelete);
   LoadFunction(BandEngineGetNumInputTensors);
   LoadFunction(BandEngineGetNumOutputTensors);
+  LoadFunction(BandEngineGetNumWorkers);
+  LoadFunction(BandEngineGetWorkerDevice);
   LoadFunction(BandEngineRegisterModel);
   LoadFunction(BandEngineRequestAsync);
   LoadFunction(BandEngineRequestSync);
+  LoadFunction(BandEngineRequestAsyncOptions);
+  LoadFunction(BandEngineRequestSyncOptions);
   LoadFunction(BandEngineWait);
+  LoadFunction(BandEngineSetOnEndRequest);
   LoadFunction(BandModelAddFromBuffer);
   LoadFunction(BandModelAddFromFile);
   LoadFunction(BandModelCreate);
@@ -94,7 +104,7 @@ bool LoadBandLibrary() {
   } else {
     DWORD error_code = GetLastError();
     fprintf(stderr,
-            "Cannnot open Band C Library oon this device, error code - %d\n",
+            "Cannnot open Band C Library on this device, error code - %d\n",
             error_code);
     return false;
   }
@@ -106,6 +116,12 @@ bool LoadBandLibrary() {
     return true;
   }
 #endif
+}
+
+void on_end_request(void* user_data, int job_id, BandStatus status) {
+  if (job_id == 0 && status == kBandOk) {
+   (*(int*)(user_data))++;
+  }
 }
 
 int main() {
@@ -169,13 +185,23 @@ int main() {
   printf("BandEngineRegisterModel\n");
   pBandEngineGetNumInputTensors(engine, model);
   printf("BandGetNumInputTensors\n");
-  pBandEngineGetNumOutputTensors(engine, model);
+  int num_outputs = pBandEngineGetNumOutputTensors(engine, model);
   printf("BandGetNumOutputTensors\n");
+
+  int num_workers = pBandEngineGetNumWorkers(engine);
+  printf("BandEngineGetNumWorkers\n");
+  for (int i = 0; i < num_workers; i++) {
+    printf("BandEngineGetWorkerDevice %s\n", BandDeviceGetName(pBandEngineGetWorkerDevice(engine, i)));
+  }
 
   BandTensor* input_tensor = pBandEngineCreateInputTensor(engine, model, 0);
   printf("BandEngineCreateInputTensor\n");
   BandTensor* output_tensor = pBandEngineCreateOutputTensor(engine, model, 0);
   printf("BandEngineCreateOutputTensor\n");
+
+  int execution_count = 0;
+  pBandEngineSetOnEndRequest(engine, on_end_request, &execution_count);
+  printf("BandEngineSetOnEndRequest\n");
 
   float input[] = {1.f, 3.f};
   memcpy(pBandTensorGetData(input_tensor), input, 2 * sizeof(float));
@@ -184,6 +210,40 @@ int main() {
   printf("BandTensorNumDims\n");
   pBandEngineRequestSync(engine, model, &input_tensor, &output_tensor);
   printf("BandEngineRequestSync\n");
+
+  if (execution_count != 1) {
+    printf("BandEngineSetOnEndRequest not worked in RequestSync (callback not called)\n");
+  }
+
+  BandRequestHandle request_handle = pBandEngineRequestAsync(engine, model, &input);
+  printf("BandEngineRequestAsync\n");
+  pBandEngineWait(engine, request_handle, &output_tensor, num_outputs);
+
+
+  if (execution_count != 2) {
+    printf("BandEngineSetOnEndRequest not worked in RequestAsync (callback not called)\n");
+  }
+
+  BandRequestOption options;
+  options.target_worker = -1;
+  options.require_callback = false;
+  
+  request_handle = pBandEngineRequestAsyncOptions(engine, model, options, &input_tensor);
+  printf("BandEngineRequestAsyncOptions\n");
+  pBandEngineWait(engine, request_handle, &output_tensor, num_outputs);
+
+  if (execution_count != 2) {
+    printf("BandEngineSetOnEndRequest should not be triggered with BandEngineRequestAsyncOptions\n");
+  }
+  
+  request_handle = pBandEngineRequestSyncOptions(engine, model, options, &input_tensor, &output_tensor);
+  printf("BandEngineRequestSyncOptions\n");
+  pBandEngineWait(engine, request_handle, &output_tensor, num_outputs);
+
+  if (execution_count != 2) {
+    printf("BandEngineSetOnEndRequest should not be triggered with BandEngineRequestSyncOptions\n");
+  }
+
 
   if (((float*)pBandTensorGetData(output_tensor))[0] == 3.f &&
       ((float*)pBandTensorGetData(output_tensor))[1] == 9.f) {

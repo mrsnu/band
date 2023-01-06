@@ -1,9 +1,9 @@
-#include "band/scheduler/fixed_device_scheduler.h"
+#include "band/scheduler/fixed_worker_scheduler.h"
 
 #include "band/error_reporter.h"
 
 namespace Band {
-ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
+ScheduleAction FixedWorkerScheduler::Schedule(const Context& context,
                                               JobQueue& requests) {
   ScheduleAction action;
 
@@ -13,7 +13,12 @@ ScheduleAction FixedDeviceScheduler::Schedule(const Context& context,
     requests.pop_front();  // erase job
 
     int model_id = to_execute.model_id;
-    WorkerId worker_id = context.GetModelWorker(model_id);
+    // Priority
+    // (1) : direct request from the engine
+    // (2) : predefined mapping from the config
+    WorkerId worker_id = to_execute.target_worker_id == -1
+                             ? context.GetModelWorker(model_id)
+                             : to_execute.target_worker_id;
     SubgraphKey key = context.GetModelSubgraphKey(model_id, worker_id);
     action[worker_id].push_back({to_execute, key});
   }

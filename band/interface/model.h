@@ -20,6 +20,7 @@ struct IModel : public IBackendSpecific {
   virtual BandStatus FromBuffer(const char* buffer, size_t buffer_size) = 0;
   virtual bool IsInitialized() const = 0;
   ModelId GetId() const { return id_; }
+  const std::string& GetPath() const { return path_; }
 
  private:
   std::string path_;

@@ -72,6 +72,19 @@ band_cc_android_test(
 )
 
 band_cc_android_test(
+    name = "latency_estimator_test",
+    size = "small",
+    srcs = ["latency_estimator_test.cc"],
+    deps = [
+        ":test_util",
+        "//band:config_builder",
+        "//band:latency_estimator",
+        "//band:worker",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
     name = "cpu_test",
     srcs = ["cpu_test.cc"],
     data = [],

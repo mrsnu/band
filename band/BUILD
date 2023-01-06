@@ -97,6 +97,7 @@ config_setting(
 cc_library(
     name = "common",
     srcs = [
+        "common.cc",
         "error_reporter.cc",
         "logger.cc",
     ],
@@ -109,6 +110,13 @@ cc_library(
         "logger.h",
     ],
     copts = band_copts(),
+    linkopts = select({
+        "//band:android": [
+            "-llog",
+        ],
+        "//conditions:default": [
+        ],
+    }),
     deps = [
         "//band/c:common",
     ],
@@ -223,12 +231,12 @@ cc_library(
 cc_library(
     name = "scheduler",
     srcs = [
-        "scheduler/fixed_device_global_queue_scheduler.cc",
-        "scheduler/fixed_device_scheduler.cc",
+        "scheduler/fixed_worker_global_queue_scheduler.cc",
+        "scheduler/fixed_worker_scheduler.cc",
         "scheduler/round_robin_scheduler.cc",
     ],
     hdrs = [
-        "scheduler/fixed_device_scheduler.h",
+        "scheduler/fixed_worker_scheduler.h",
         "scheduler/round_robin_scheduler.h",
         "scheduler/scheduler.h",
     ],
@@ -270,15 +278,32 @@ cc_library(
 )
 
 cc_library(
+    name = "latency_estimator",
+    srcs = [
+        "latency_estimator.cc",
+        "profiler.cc",
+    ],
+    hdrs = [
+        "latency_estimator.h",
+        "profiler.h",
+    ],
+    deps = [
+        ":common",
+        ":config",
+        ":cpu",
+        ":json_util",
+        ":worker",
+    ],
+)
+
+cc_library(
     name = "framework",
     srcs = [
         "engine.cc",
-        "profiler.cc",
         "tensor_ring_buffer.cc",
     ],
     hdrs = [
         "engine.h",
-        "profiler.h",
         "tensor_ring_buffer.h",
     ],
     deps =
@@ -288,6 +313,7 @@ cc_library(
             ":config",
             ":interface",
             ":json_util",
+            ":latency_estimator",
             ":model",
             ":planner",
             ":scheduler",
