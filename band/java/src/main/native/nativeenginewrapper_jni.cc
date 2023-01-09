@@ -14,12 +14,12 @@ using Band::RuntimeConfigBuilder;
 using Band::Tensor;
 using Band::Tensors;
 using Band::jni::BufferErrorReporter;
-using Band::jni::convertLongToConfig;
-using Band::jni::convertLongToEngine;
-using Band::jni::convertLongToModel;
-using Band::jni::convertLongToTensor;
-using Band::jni::convertLongToJobId;
 using Band::jni::convertLongListToTensors;
+using Band::jni::ConvertLongToConfig;
+using Band::jni::ConvertLongToEngine;
+using Band::jni::ConvertLongToJobId;
+using Band::jni::ConvertLongToModel;
+using Band::jni::ConvertLongToTensor;
 
 // TODO(widiba03304): error reporter should be adopted to check null for
 // pointers
@@ -35,34 +35,30 @@ Java_org_mrsnu_band_NativeEngineWrapper_createErrorReporter(JNIEnv* env,
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeEngineWrapper_deleteErrorReporter(JNIEnv* envv,
-                                                            jclass clazz,
-                                                            jlong error_reporter_handle) {
+Java_org_mrsnu_band_NativeEngineWrapper_deleteErrorReporter(
+    JNIEnv* envv, jclass clazz, jlong error_reporter_handle) {
   delete reinterpret_cast<BufferErrorReporter*>(error_reporter_handle);
 }
 
 // private static native long createEngine(long configHandle);
-JNIEXPORT jlong JNICALL 
-Java_org_mrsnu_band_NativeEngineWrapper_createEngine(
+JNIEXPORT jlong JNICALL Java_org_mrsnu_band_NativeEngineWrapper_createEngine(
     JNIEnv* env, jclass clazz, jlong config_handle) {
-  RuntimeConfig* config = convertLongToConfig(env, config_handle);
+  RuntimeConfig* config = ConvertLongToConfig(env, config_handle);
   // Destroy unique_ptr, delete is a must.
   return reinterpret_cast<jlong>(Engine::Create(*config).release());
 }
 
-JNIEXPORT void JNICALL 
-Java_org_mrsnu_band_NativeEngineWrapper_deleteEngine(
+JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_deleteEngine(
     JNIEnv* env, jclass clazz, jlong engine_handle) {
   delete reinterpret_cast<Engine*>(engine_handle);
 }
 
 // private static native long registerModel(long engineHandle, long
 // modelHandle);
-JNIEXPORT void JNICALL 
-Java_org_mrsnu_band_NativeEngineWrapper_registerModel(
+JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong engine_handle, jlong model_handle) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
-  Model* model = convertLongToModel(env, model_handle);
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
   engine->RegisterModel(model);
 }
 
@@ -73,9 +69,10 @@ Java_org_mrsnu_band_NativeEngineWrapper_getNumInputTensors(JNIEnv* env,
                                                            jclass clazz,
                                                            jlong engine_handle,
                                                            jlong model_handle) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
-  Model* model = convertLongToModel(env, model_handle);
-  return static_cast<jint>(engine->GetInputTensorIndices(model->GetId()).size());
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
+  return static_cast<jint>(
+      engine->GetInputTensorIndices(model->GetId()).size());
 }
 
 // private static native long getNumOutputTensors(long engineHandle, long
@@ -83,9 +80,10 @@ Java_org_mrsnu_band_NativeEngineWrapper_getNumInputTensors(JNIEnv* env,
 JNIEXPORT jint JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_getNumOutputTensors(
     JNIEnv* env, jclass clazz, jlong engine_handle, jlong model_handle) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
-  Model* model = convertLongToModel(env, model_handle);
-  return static_cast<jint>(engine->GetOutputTensorIndices(model->GetId()).size());
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
+  return static_cast<jint>(
+      engine->GetOutputTensorIndices(model->GetId()).size());
 }
 
 // private static native long createInputTensor(long engineHandle, long
@@ -96,8 +94,8 @@ Java_org_mrsnu_band_NativeEngineWrapper_createInputTensor(JNIEnv* env,
                                                           jlong engine_handle,
                                                           jlong model_handle,
                                                           jint index) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
-  Model* model = convertLongToModel(env, model_handle);
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
   auto input_indices = engine->GetInputTensorIndices(model->GetId());
   Tensor* input_tensor = engine->CreateTensor(
       model->GetId(), input_indices[static_cast<int>(index)]);
@@ -112,8 +110,8 @@ Java_org_mrsnu_band_NativeEngineWrapper_createOutputTensor(JNIEnv* env,
                                                            jlong engine_handle,
                                                            jlong model_handle,
                                                            jint index) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
-  Model* model = convertLongToModel(env, model_handle);
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
   auto output_indices = engine->GetOutputTensorIndices(model->GetId());
   Tensor* output_tensor = engine->CreateTensor(
       model->GetId(), output_indices[static_cast<int>(index)]);
@@ -122,37 +120,33 @@ Java_org_mrsnu_band_NativeEngineWrapper_createOutputTensor(JNIEnv* env,
 
 // private static native long requestSync(long engineHandle, long modelHandle,
 // List<Long> inputTensorHandles, List<Long> outputTensorHandles);
-JNIEXPORT void JNICALL 
-Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
+JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
     JNIEnv* env, jclass clazz, jlong engine_handle, jlong model_handle,
     jobject input_tensor_handles, jobject output_tensor_handles) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
-  Model* model = convertLongToModel(env, model_handle);
-  engine->InvokeSyncModel(model->GetId(),
-                          convertLongListToTensors(env, input_tensor_handles),
-                          convertLongListToTensors(env, output_tensor_handles));
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
+  engine->RequestSync(model->GetId(), BandGetDefaultRequestOption(),
+                      convertLongListToTensors(env, input_tensor_handles),
+                      convertLongListToTensors(env, output_tensor_handles));
 }
 
 // private static native long requestAsync(long engineHandle, long modelHandle,
 // List<Long> inputTensorHandles);
-JNIEXPORT jint JNICALL 
-Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
+JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
     JNIEnv* env, jclass clazz, jlong engine_handle, jlong model_handle,
     jobject input_tensor_handles) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
-  Model* model = convertLongToModel(env, model_handle);
-  auto job_id = engine->InvokeAsyncModel(
-      model->GetId(), convertLongListToTensors(env, input_tensor_handles));
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
+  auto job_id =
+      engine->RequestAsync(model->GetId(), BandGetDefaultRequestOption(),
+                           convertLongListToTensors(env, input_tensor_handles));
   return static_cast<jint>(job_id);
 }
 
-// private static native long wait(long engineHandle, long requestHandle,
-// List<Long> outputTensorHandles);
-JNIEXPORT void JNICALL 
-Java_org_mrsnu_band_NativeEngineWrapper_wait(
+JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_wait(
     JNIEnv* env, jclass clazz, jlong engine_handle, jlong request_handle,
     jobject output_tensor_handles) {
-  Engine* engine = convertLongToEngine(env, engine_handle);
+  Engine* engine = ConvertLongToEngine(env, engine_handle);
   engine->Wait(static_cast<int>(request_handle),
                convertLongListToTensors(env, output_tensor_handles));
 }

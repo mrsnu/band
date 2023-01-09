@@ -2,7 +2,7 @@ package org.mrsnu.band;
 
 import java.util.List;
 
-public class Model implements BandInterface, AutoCloseable {
+public class Model implements AutoCloseable {
   private NativeModelWrapper wrapper;
   
   Model(BackendType backendType, String filePath) {
@@ -16,9 +16,5 @@ public class Model implements BandInterface, AutoCloseable {
 
   public List<BackendType> getSupportedBackends() {
     return ((NativeModelWrapper) wrapper).getSupportedBackends();
-  }
-
-  public NativeModelWrapper getNativeWrapper(NativeWrapper.NativeKey key) {
-    return (NativeModelWrapper) wrapper;
   }
 }

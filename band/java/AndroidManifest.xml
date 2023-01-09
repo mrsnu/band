@@ -7,13 +7,7 @@
     <uses-sdk
         android:targetSdkVersion="19" />
 
-    <application>
-        <!-- Applications that target Android S+ require explicit declaration of
-             any referenced vendor-provided libraries. -->
-        <uses-native-library
-            android:name="libOpenCL.so"
-            android:required="false" />
-    </application>
+    <application />
 
 </manifest>
 

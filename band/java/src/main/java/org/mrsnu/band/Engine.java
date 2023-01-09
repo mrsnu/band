@@ -2,7 +2,7 @@ package org.mrsnu.band;
 
 import java.util.List;
 
-public class Engine implements BandInterface, AutoCloseable {
+public class Engine implements AutoCloseable {
   private NativeEngineWrapper wrapper;
 
   public Engine(Config config) {
@@ -64,9 +64,5 @@ public class Engine implements BandInterface, AutoCloseable {
       wrapper.close();
       wrapper = null;
     }
-  }
-
-  public NativeEngineWrapper getNativeWrapper(NativeWrapper.NativeKey key) {
-    return wrapper;
   }
 }

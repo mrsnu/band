@@ -1,92 +1,106 @@
 package org.mrsnu.band;
 
-public class NativeConfigBuilderWrapper extends NativeWrapper implements AutoCloseable {
-  public enum ConfigField {
-    BAND_PROFILE_ONLINE,
-    BAND_PROFILE_NUM_WARMUPS,
-    BAND_PROFILE_NUM_RUNS,
-    BAND_PROFILE_COPY_COMPUTATION_RATIO,
-    BAND_PROFILE_SMOOTHING_FACTOR,
-    BAND_PROFILE_DATA_PATH,
-    BAND_PLANNER_SCHEDULE_WINDOW_SIZE,
-    BAND_PLANNER_SCHEDULERS,
-    BAND_PLANNER_CPU_MASK,
-    BAND_PLANNER_LOG_PATH,
-    BAND_WORKER_WORKERS,
-    BAND_WORKER_CPU_MASKS,
-    BAND_WORKER_NUM_THREADS,
-    BAND_WORKER_ALLOW_WORKSTEAL,
-    BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS,
-    BAND_MODEL_MODELS,
-    BAND_MODEL_PERIODS,
-    BAND_MODEL_BATCH_SIZES,
-    BAND_MODEL_ASSIGNED_WORKERS,
-    BAND_MODEL_SLOS_US,
-    BAND_MODEL_SLOS_SCALE,
-    BAND_MINIMUM_SUBGRAPH_SIZE,
-    BAND_SUBGRAPH_PREPARATION_TYPE,
-    BAND_CPU_MASK,
-  }
+public class NativeConfigBuilderWrapper implements AutoCloseable {
+  private long nativeHandle = 0;
 
   public NativeConfigBuilderWrapper() {
+    nativeHandle = createConfigBuilder();
+  }
+
+  public void addOnline(boolean online) {
+    addOnline(nativeHandle, online);
+  }
+
+  public void addNumWarmups(int numWarmups) {
+    addNumWarmups(nativeHandle, numWarmups);
 
   }
 
-  public void addOnline(boolean online) {}
+  public void addNumRuns(int numRuns) {
+    addNumRuns(nativeHandle, numRuns);
+  }
 
-  public void addNumWarmups(int numWarmups) {}
+  public void addCopyComputationRatio(int[] copyComputationRatio) {
+    addCopyComputationRatio(nativeHandle, copyComputationRatio);
+  }
 
-  public void addNumRuns(int numRuns) {}
+  public void addProfileDataPath(String profileDataPath) {
+    addProfileDataPath(nativeHandle, profileDataPath);
+  }
 
-  public void addCopyComputationRatio(int[] copyComputationRatio) {}
+  public void addSmoothingFactor(float smoothingFactor) {
+    addSmoothingFactor(nativeHandle, smoothingFactor);
+  }
 
-  public void addProfileDataPath(String profileDataPath) {}
+  public void addPlannerLogPath(String plannerLogPath) {
+    addPlannerLogPath(nativeHandle, plannerLogPath);
+  }
 
-  public void addSmoothingFactor(float smoothingFactor) {}
+  public void addScheduleWindowSize(int scheduleWindowSize) {
+    addScheduleWindowSize(nativeHandle, scheduleWindowSize);
+  }
 
-  public void addPlannerLogPath(String plannerLogPath) {}
+  public void addSchedulers(SchedulerType[] schedulers) {
+    int[] tmpArray = new int[schedulers.length];
+    for (int i = 0; i < schedulers.length; i++) {
+      tmpArray[i] = schedulers[i].getValue();
+    }
+    addSchedulers(nativeHandle, tmpArray);
+  }
 
-  public void addScheduleWindowSize(int scheduleWindowSize) {}
+  public void addPlannerCPUMask(CpuMaskFlags cpuMask) {
+    addPlannerCPUMask(nativeHandle, cpuMask.getValue());
+  }
 
-  public void addSchedulers(SchedulerType[] scheduers) {}
+  public void addWorkers(Device[] workers) {
+    int[] tmpArray = new int[workers.length];
+    for (int i = 0; i < workers.length; i++) {
+      tmpArray[i] = workers[i].getValue();
+    }
+    addWorkers(nativeHandle, tmpArray);
+  }
 
-  public void addPlannerCPUMask(CpuMaskFlags cpuMasks) {}
+  public void addWorkerCPUMasks(CpuMaskFlags[] cpuMasks) {
+    int[] tmpArray = new int[cpuMasks.length];
+    for (int i = 0; i < cpuMasks.length; i++) {
+      tmpArray[i] = cpuMasks[i].getValue();
+    }
+    addWorkerCPUMasks(nativeHandle, tmpArray);
+  }
 
-  public void addWorkers(Device[] workers) {}
+  public void addWorkerNumThreads(int[] numThreads) {
+    addWorkerNumThreads(nativeHandle, numThreads);
+  }
 
-  public void addWorkerCPUMasks(CpuMaskFlags[] cpuMasks) {}
+  public void addAllowWorkSteal(boolean allowWorkSteal) {
+    addAllowWorkSteal(nativeHandle, allowWorkSteal);
+  }
 
-  public void addWorkerNumThreads(int[] numThreads) {}
+  public void addAvailabilityCheckIntervalMs(int availabilityCheckIntervalMs) {
+    addAvailabilityCheckIntervalMs(nativeHandle, availabilityCheckIntervalMs);
+  }
 
-  public void addAllowWorkSteal(boolean allowWorkSteal) {}
+  public void addMinimumSubgraphSize(int minimumSubgraphSize) {
+    addMinimumSubgraphSize(nativeHandle, minimumSubgraphSize);
+  }
 
-  public void addAvailabilityCheckIntervalMs(int availabilityCheckIntervalMs) {}
+  public void addSubgraphPreparationType(SubgraphPreparationType subgraphPreparationType) {
+    addSubgraphPreparationType(nativeHandle, subgraphPreparationType.getValue());
+  }
 
-  public void addMinimumSubgraphSize(int minimumSubgraphSize) {}
-
-  public void addSubgraphPreparationType(SubgraphPreparationType subgraphPreparationType) {}
-
-  public void addCPUMask(CpuMaskFlags cpuMask) {}
-
-  // TODO(widiba03304): Need to move functions below.
-  public void addModels(Model[] model) {}
-
-  public void addPeriodsMs(int[] modelsPeriodMs) {}
-
-  public void addBatchSizes(int[] modelsBatchSize) {}
-
-  public void addAssignedWorkers(DeviceWorkerAffinityPair modelsAssignedWorker) {}
-
-  public void addSlosUs(long[] modelsSloUs) {}
-
-  public void addSlosScale(float modelsSloScale) {}
+  public void addCPUMask(CpuMaskFlags cpuMask) {
+    addCPUMask(nativeHandle, cpuMask.getValue());
+  }
 
   public Config build() {
-    return null;
+    // TODO(widiba03304): Config should be built only by the ConfigBuilder.
+    // By declaring the Config's private ctor and violating the access control in
+    // JNI, it cannot be built with JAVA API.
+    return (Config) build(nativeHandle);
   }
 
   public boolean isValid() {
-    return true;
+    return isValid(nativeHandle);
   }
 
   @Override
@@ -95,5 +109,48 @@ public class NativeConfigBuilderWrapper extends NativeWrapper implements AutoClo
     nativeHandle = 0;
   }
 
-  public native void deleteConfigBuilder(long configBuilderHandle);
+  private native long createConfigBuilder();
+
+  private native void deleteConfigBuilder(long configBuilderHandle);
+
+  private native void addOnline(long configBuilderHandle, boolean online);
+
+  private native void addNumWarmups(long configBuilderHandle, int numWarmups);
+
+  private native void addNumRuns(long configBuilderHandle, int numRuns);
+
+  private native void addCopyComputationRatio(long configBuilderHandle, int[] copyComputationRatio);
+
+  private native void addProfileDataPath(long configBuilderHandle, String profileDataPath);
+
+  private native void addSmoothingFactor(long configBuilderHandle, float smoothingFactor);
+
+  private native void addPlannerLogPath(long configBuilderHandle, String plannerLogPath);
+
+  private native void addScheduleWindowSize(long configBuilderHandle, int scheduleWindowSize);
+
+  private native void addSchedulers(long configBuilderHandle, int[] scheduers);
+
+  private native void addPlannerCPUMask(long configBuilderHandle, int cpuMasks);
+
+  private native void addWorkers(long configBuilderHandle, int[] workers);
+
+  private native void addWorkerCPUMasks(long configBuilderHandle, int[] cpuMasks);
+
+  private native void addWorkerNumThreads(long configBuilderHandle, int[] numThreads);
+
+  private native void addAllowWorkSteal(long configBuilderHandle, boolean allowWorkSteal);
+
+  private native void addAvailabilityCheckIntervalMs(long configBuilderHandle, int availabilityCheckIntervalMs);
+
+  private native void addMinimumSubgraphSize(long configBuilderHandle, int minimumSubgraphSize);
+
+  private native void addSubgraphPreparationType(long configBuilderHandle,
+      int subgraphPreparationType);
+
+  private native void addCPUMask(long configBuilderHandle, int cpuMask);
+
+  private native boolean isValid(long configBuilderHandle);
+
+  private native Object build(long configBuilderHandle);
 }

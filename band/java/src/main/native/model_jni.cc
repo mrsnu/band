@@ -4,7 +4,7 @@
 #include "band/model.h"
 
 using Band::Model;
-using Band::jni::convertLongToModel;
+using Band::jni::ConvertLongToModel;
 
 namespace {
 
@@ -34,20 +34,20 @@ Java_org_mrsnu_band_NativeModelWrapper_createModel(JNIEnv* env, jclass clazz) {
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeModelWrapper_delete(
     JNIEnv* env, jclass clazz, jlong model_handle) {
-  Model* model = convertLongToModel(env, model_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
   delete model;
 }
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeModelWrapper_loadFromFile(
     JNIEnv* env, jclass clazz, jlong model_handle, jint backend_type,
     jstring file_path) {
-  Model* model = convertLongToModel(env, model_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
   model->FromPath((BandBackendType)backend_type,
                   env->GetStringUTFChars(file_path, nullptr));
 }
 
 JNIEXPORT jobject JNICALL
 Java_org_mrsnu_band_NativeModelWrapper_getSupportedBackends(JNIEnv* env, jclass clazz, jlong model_handle) {
-  Model* model = convertLongToModel(env, model_handle);
+  Model* model = ConvertLongToModel(env, model_handle);
   return convertCcSetToJavaSet(env, model->GetSupportedBackends());
 }

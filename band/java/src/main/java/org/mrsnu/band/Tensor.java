@@ -1,9 +1,8 @@
 package org.mrsnu.band;
 
-import org.mrsnu.band.BandInterface;
 import java.util.List;
 
-public class Tensor implements BandInterface, AutoCloseable {
+public class Tensor implements AutoCloseable {
   private NativeTensorWrapper wrapper;
 
   Tensor() {
@@ -48,9 +47,5 @@ public class Tensor implements BandInterface, AutoCloseable {
 
   public void setQuantization(Quantization quantization) {
 
-  }
-
-  public NativeTensorWrapper getNativeWrapper(NativeWrapper.NativeKey key) {
-    return wrapper;
   }
 }

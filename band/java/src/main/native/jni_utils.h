@@ -16,6 +16,12 @@ namespace jni {
 extern const char kIllegalArgumentException[];
 extern const char kNullPointerException[];
 
+struct JNIRuntimeConfig {
+  JNIRuntimeConfig(RuntimeConfig config) : impl(config) {}
+
+  RuntimeConfig impl;
+};
+
 void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...);
 
 bool CheckJniInitializedOrThrow(JNIEnv* env);
@@ -44,27 +50,46 @@ T* CastLongToPointer(JNIEnv* env, jlong handle) {
   return reinterpret_cast<T*>(handle);
 }
 
-Engine* convertLongToEngine(JNIEnv* env, jlong handle) {
+std::string ConvertJstringToString(JNIEnv* env, jstring jstr) {
+  if (!jstr) {
+    return "";
+  }
+  
+  const jclass string_cls = env->GetObjectClass(jstr);
+  const jmethodID get_bytes_method = env->GetMethodID(string_cls, "getBytes", "(Ljava/lang/String;)[B");
+  const jbyteArray string_jbytes = static_cast<jbyteArray>(env->CallObjectMethod(jstr, get_bytes_method, env->NewStringUTF("UTF-8")));
+
+  size_t length = static_cast<size_t>(env->GetArrayLength(string_jbytes));
+  jbyte* bytes = env->GetByteArrayElements(string_jbytes, nullptr);
+
+  std::string ret = std::string(reinterpret_cast<char*>(bytes), length);
+  env->ReleaseByteArrayElements(string_jbytes, bytes, JNI_ABORT);
+  env->DeleteLocalRef(string_jbytes);
+  env->DeleteLocalRef(string_cls);
+  return ret;
+}
+
+Engine* ConvertLongToEngine(JNIEnv* env, jlong handle) {
   return CastLongToPointer<Engine>(env, handle);
 }
 
-RuntimeConfigBuilder* convertLongToConfigBuilder(JNIEnv* env, jlong handle) {
+RuntimeConfigBuilder* ConvertLongToConfigBuilder(JNIEnv* env, jlong handle) {
   return CastLongToPointer<RuntimeConfigBuilder>(env, handle);
 }
 
-RuntimeConfig* convertLongToConfig(JNIEnv* env, jlong handle) {
+RuntimeConfig* ConvertLongToConfig(JNIEnv* env, jlong handle) {
   return CastLongToPointer<RuntimeConfig>(env, handle);
 }
 
-Model* convertLongToModel(JNIEnv* env, jlong handle) {
+Model* ConvertLongToModel(JNIEnv* env, jlong handle) {
   return CastLongToPointer<Model>(env, handle);
 }
 
-Tensor* convertLongToTensor(JNIEnv* env, jlong handle) {
+Tensor* ConvertLongToTensor(JNIEnv* env, jlong handle) {
   return CastLongToPointer<Tensor>(env, handle);
 }
 
-int convertLongToJobId(jint request_handle) {
+int ConvertLongToJobId(jint request_handle) {
   return static_cast<int>(request_handle);
 }
 
@@ -128,7 +153,7 @@ Tensors convertLongListToTensors(JNIEnv* env, jobject tensor_handles) {
   return tensors;
 }
 
-BufferErrorReporter* convertLongToErrorReporter(JNIEnv* env, jlong handle) {
+BufferErrorReporter* ConvertLongToErrorReporter(JNIEnv* env, jlong handle) {
   return CastLongToPointer<BufferErrorReporter>(env, handle);
 }
 

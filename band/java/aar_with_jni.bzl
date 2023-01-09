@@ -52,6 +52,7 @@ EOF
     srcs = [
         android_library + ".aar",
         name + "_dummy_app_for_so_unsigned.apk",
+        "//:LICENSE",
     ]
 
     cmd = """

@@ -2,7 +2,8 @@ package org.mrsnu.band;
 
 import java.util.List;
 
-public class NativeEngineWrapper extends NativeWrapper implements AutoCloseable {
+public class NativeEngineWrapper implements AutoCloseable {
+  private long nativeHandle = 0;
   private long errorHandle;
   private static final int ERROR_BUFFER_SIZE = 512;
 
@@ -13,50 +14,32 @@ public class NativeEngineWrapper extends NativeWrapper implements AutoCloseable 
   }
 
   private void init(long errorHandle, Config config) {
-    long configHandle = config.getNativeWrapper(nativeKey).getNativeHandle();
-    this.errorHandle = errorHandle;
-    this.nativeHandle = createEngine(configHandle);
   }
 
   @Override
   public void close() {
-    deleteErrorReporter(errorHandle);
-    deleteEngine(nativeHandle);
-    errorHandle = 0;
-    nativeHandle = 0;
   }
 
   public void registerModel(Model model) {
-    long modelHandle = model.getNativeWrapper(nativeKey).getNativeHandle();
-    registerModel(nativeHandle, modelHandle);
   }
 
   public int getNumInputTensors(Model model) {
-    long modelHandle = model.getNativeWrapper(nativeKey).getNativeHandle();
-    return getNumInputTensors(nativeHandle, modelHandle);
+    return 0;
   }
 
   public int getNumOutputTensors(Model model) {
-    long modelHandle = model.getNativeWrapper(nativeKey).getNativeHandle();
-    return getNumOutputTensors(nativeHandle, modelHandle);
+    return 0;
   }
 
   public long createInputTensor(Model model, int index) {
-    long modelHandle = model.getNativeWrapper(nativeKey).getNativeHandle();
-    return createInputTensor(nativeHandle, modelHandle, index);
+    return 0;
   }
 
   public long createOutputTensor(Model model, int index) {
-    long modelHandle = model.getNativeWrapper(nativeKey).getNativeHandle();
-    return createOutputTensor(nativeHandle, modelHandle, index);
+    return 0;
   }
 
   public void requestSync(Model model, List<Tensor> inputTensors, List<Tensor> outputTensors) {
-    for (Tensor tensor : inputTensors) {
-      
-    }
-    long modelHandle = model.getNativeWrapper(nativeKey).getNativeHandle();
-    requestSync(nativeHandle, modelHandle, null, null);
   }
 
   public void requestAsync(Model model, List<Tensor> inputTensors) {

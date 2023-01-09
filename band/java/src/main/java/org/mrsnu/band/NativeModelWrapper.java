@@ -3,7 +3,9 @@ package org.mrsnu.band;
 import java.util.Set;
 import java.util.List;
 
-public class NativeModelWrapper extends NativeWrapper implements AutoCloseable {
+public class NativeModelWrapper implements AutoCloseable {
+  private long nativeHandle = 0;
+
   NativeModelWrapper() {
     nativeHandle = createModel();
   }

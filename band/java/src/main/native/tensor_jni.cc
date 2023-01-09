@@ -4,7 +4,7 @@
 #include "band/tensor.h"
 
 using Band::Tensor;
-using Band::jni::convertLongToTensor;
+using Band::jni::ConvertLongToTensor;
 
 JNIEXPORT jint JNICALL
 Java_org_mrsnu_band_TensorImpl_getType(JNIEnv* env, jclass clazz, jlong tensor_jandle) {

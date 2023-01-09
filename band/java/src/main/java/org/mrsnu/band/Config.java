@@ -1,21 +1,16 @@
 package org.mrsnu.band;
 
-import org.mrsnu.band.BandInterface;
+public class Config implements AutoCloseable {
+  private long nativeHandle = 0;
 
-public class Config implements BandInterface, AutoCloseable {
-  private NativeConfigWrapper wrapper;
-
-  Config() {
-    wrapper = new NativeConfigWrapper();
+  private Config(long nativeHandle) {
+    this.nativeHandle = nativeHandle;
   }
 
   @Override
   public void close() {
-    
+    deleteConfig(nativeHandle);
   }
 
-  @Override
-  public NativeConfigWrapper getNativeWrapper(NativeWrapper.NativeKey key) {
-    return (NativeConfigWrapper) wrapper;
-  }
+  private native void deleteConfig(long configHandle);
 }

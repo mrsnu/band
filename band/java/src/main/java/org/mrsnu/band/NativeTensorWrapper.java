@@ -2,8 +2,8 @@ package org.mrsnu.band;
 
 import java.util.List;
 
-public class NativeTensorWrapper extends NativeWrapper implements AutoCloseable {
-  private long nativeHandle;
+public class NativeTensorWrapper implements AutoCloseable {
+  private long nativeHandle = 0;
 
   @Override
   public void close() {
