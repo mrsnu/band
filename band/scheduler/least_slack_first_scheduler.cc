@@ -24,35 +24,39 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
   WorkerWaitingTime waiting_time = context.GetWorkerWaitingTime();
 
   int64_t current_time = Time::NowMicros();
+  // Sort jobs by slack time
   SortBySlackTime(context, requests, window_size, current_time);
 
   std::set<int> job_indices_to_erase;
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
     Job job = *it;
 
-    BAND_NOT_IMPLEMENTED;
-    // std::pair<std::vector<int>, int> best_subgraph =
-    //     GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
+    // Get current job's fastest subgraph execution plan + latency
+    std::pair<std::vector<SubgraphKey>, int> best_exec_plan =
+        context.GetSubgraphWithShortestLatency(job, waiting_time);
+    // Get first executable subgraph plan
+    SubgraphKey target_subgraph_key = best_exec_plan.first.front();
 
-    // int target_subgraph_idx = best_subgraph.first.front();
-    // Subgraph* target_subgraph =
-    // GetInterpreter()->subgraph(target_subgraph_idx); if (job.slo_us > 0 &&
-    //     current_time + best_subgraph.second > job.enqueue_time + job.slo_us)
-    //     {
-    //   job.status = kBandJobSLOViolation;
-    //   EnqueueAction(job, target_subgraph);
-    //   job_indices_to_erase.insert(it - requests.begin());
-    //   continue;
-    // }
+    // Change job status and schedule if the execution plan already exceeded SLO
+    if (job.slo_us > 0 &&
+        current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
+      job.status = kBandJobSLOViolation;
+      action[target_subgraph_key.GetWorkerId()].push_back(
+          {job, target_subgraph_key});
+      job_indices_to_erase.insert(it - requests.begin());
+      continue;
+    }
 
-    // int worker_id = target_subgraph->GetKey().worker_id;
-    // if (idle_workers.find(worker_id) != idle_workers.end()) {
-    //   waiting_time[worker_id] +=
-    //       GetInterpreter()->GetExpectedLatency(target_subgraph_idx);
-    //   EnqueueAction(job, target_subgraph);
-    //   job_indices_to_erase.insert(it - requests.begin());
-    //   continue;
-    // }
+    // Schedule job if there is a valid idle worker
+    int worker_id = target_subgraph_key.GetWorkerId();
+    if (idle_workers.find(worker_id) != idle_workers.end()) {
+      // Update worker's waiting time as if it will execute the job
+      waiting_time[worker_id] += context.GetExpected(target_subgraph_key);
+      action[target_subgraph_key.GetWorkerId()].push_back(
+          {job, target_subgraph_key});
+      job_indices_to_erase.insert(it - requests.begin());
+      continue;
+    }
   }
 
   for (auto it = job_indices_to_erase.rbegin();
