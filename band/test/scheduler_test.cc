@@ -6,6 +6,7 @@
 #include "band/config.h"
 #include "band/model.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
+#include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/test/test_util.h"
 
@@ -30,13 +31,35 @@ struct MockContext : public MockContextBase {
     return SubgraphKey(model_id, worker_id, {0});
   }
 
+  std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
+      Job& job, const WorkerWaitingTime& worker_waiting) const override {
+    return std::pair<std::vector<SubgraphKey>, int64_t>(
+        {SubgraphKey(job.model_id, *idle_workers_.begin(), {0})},
+        0 /*shortest expected latency*/);
+  }
+
   WorkerId GetModelWorker(ModelId model_id) const override {
     if (w > list_idle_workers_.size())
       return -1;
     else
       return list_idle_workers_[w++];
   }
+
+  WorkerWaitingTime GetWorkerWaitingTime() const override {
+    WorkerWaitingTime map;
+    for (auto worker_id : list_idle_workers_) {
+      map[worker_id] = 0;
+    }
+    return map;
+  }
+
+  int64_t GetExpected(const SubgraphKey& key) const override { return 10; }
 };
+
+// <request model ids, request slos, available workers>
+struct LSTTestsFixture
+    : public testing::TestWithParam<
+          std::tuple<std::deque<int>, std::deque<int>, std::set<int>>> {};
 
 // <request model ids, available workers>
 struct ModelLevelTestsFixture
@@ -47,6 +70,40 @@ struct ModelLevelTestsFixture
 struct ConfigLevelTestsFixture
     : public testing::TestWithParam<
           std::tuple<std::deque<int>, std::set<int>>> {};
+
+TEST_P(LSTTestsFixture, LSTTest) {
+  std::deque<int> request_models = std::get<0>(GetParam());
+  std::deque<int> request_slos = std::get<1>(GetParam());
+  std::set<int> available_workers = std::get<2>(GetParam());
+
+  assert(request_models.size() == request_slos.size());
+
+  std::deque<Job> requests;
+  for (int i = 0; i < request_models.size(); i++) {
+    requests.emplace_back(Job(request_models[i], request_slos[i]));
+  }
+  const int count_requests = requests.size();
+
+  MockContext context(available_workers);
+  LeastSlackFirstScheduler lst_scheduler(5);
+  auto action = lst_scheduler.Schedule(context, requests);
+
+  int count_scheduled = 0;
+  for (auto scheduled_models : action) {
+    count_scheduled += scheduled_models.second.size();
+  }
+
+  EXPECT_EQ(count_scheduled,
+            std::min(available_workers.size(), request_models.size()));
+  EXPECT_EQ(count_requests, requests.size() + count_scheduled);
+  if (request_slos[0] == 0) {  // No SLOs
+    EXPECT_EQ(action.at(0)[0].first.model_id, 0);
+    EXPECT_EQ(action.at(0)[1].first.model_id, 1);
+  } else {  // SLOs
+    EXPECT_EQ(action.at(0)[0].first.model_id, 1);
+    EXPECT_EQ(action.at(0)[1].first.model_id, 0);
+  }
+}
 
 TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
   std::deque<int> request_models = std::get<0>(GetParam());
@@ -152,6 +209,15 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
     EXPECT_NE(scheduled_models.find((*it)), scheduled_models.end());
   }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    LSTTests, LSTTestsFixture,
+    testing::Values(
+        std::make_tuple(std::deque<int>{0, 1}, std::deque<int>{100, 80},
+                        std::set<int>{0, 1, 2}),  // With SLO
+        std::make_tuple(std::deque<int>{0, 1}, std::deque<int>{0, 0},
+                        std::set<int>{0, 1, 2})  // Without SLO
+        ));
 
 INSTANTIATE_TEST_SUITE_P(
     RoundRobinTests, ModelLevelTestsFixture,
