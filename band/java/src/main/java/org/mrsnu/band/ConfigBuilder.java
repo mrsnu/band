@@ -3,7 +3,7 @@ package org.mrsnu.band;
 public class ConfigBuilder {
   private NativeConfigBuilderWrapper wrapper;
   
-  ConfigBuilder() {
+  public ConfigBuilder() {
     this.wrapper = new NativeConfigBuilderWrapper();
   }
 

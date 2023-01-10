@@ -5,25 +5,6 @@ package(
     licenses = ["notice"],
 )
 
-cc_library(
-    name = "native_framework_only",
-    srcs = [
-        ":native_framework_only_srcs",
-    ],
-    hdrs = [":native_hdrs"],
-    deps = [
-        "//band/java/jni",
-    ],
-    alwayslink = 1,
-)
-
-filegroup(
-    name = "native_framework_only_srcs",
-    srcs = [
-        "nativeenginewrapper_jni.cc",
-    ]
-)
-
 filegroup(
     name = "native_hdrs",
     srcs = [
@@ -34,14 +15,11 @@ filegroup(
 filegroup(
     name = "native_srcs",
     srcs = [
-        "nativeenginewrapper_jni.cc",
-    ],
-)
-
-filegroup(
-    name = "native_api_srcs",
-    srcs = [
+        "jni_utils.cc",
         "band_jni.cc",
+        "config_builder_jni.cc",
+        "config_jni.cc",
+        "nativeenginewrapper_jni.cc",
     ],
 )
 

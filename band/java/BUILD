@@ -66,7 +66,7 @@ band_jni_binary(
     linkopts = band_jni_linkopts() + ["-Wl,--no-undefined"],
     linkscript = ":band_version_script.lds",
     deps = [
-        "//band/java/src/main/native",
         "//band/c:c_api",
+        "//band/java/src/main/native",
     ],
 )

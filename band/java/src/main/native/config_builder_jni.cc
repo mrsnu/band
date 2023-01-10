@@ -24,6 +24,8 @@ std::vector<T> ConvertIntArrayTo(JNIEnv* env, jintArray array) {
 
 }  // anonymous namespace
 
+extern "C" {
+
 JNIEXPORT jlong JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_createConfigBuilder(
     JNIEnv* env, jclass clazz) {
@@ -187,7 +189,9 @@ JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
   static jmethodID config_ctor = env->GetMethodID(config_cls, "<init>", "(J)V");
   RuntimeConfigBuilder* b =
       ConvertLongToConfigBuilder(env, configBuilderHandle);
-  return env->CallObjectMethod(
+  return env->NewObject(
       config_cls, config_ctor,
       reinterpret_cast<jlong>(new JNIRuntimeConfig(b->Build())));
 }
+
+}  // extern "C"

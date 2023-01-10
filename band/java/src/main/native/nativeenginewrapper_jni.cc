@@ -14,7 +14,7 @@ using Band::RuntimeConfigBuilder;
 using Band::Tensor;
 using Band::Tensors;
 using Band::jni::BufferErrorReporter;
-using Band::jni::convertLongListToTensors;
+using Band::jni::ConvertLongListToTensors;
 using Band::jni::ConvertLongToConfig;
 using Band::jni::ConvertLongToEngine;
 using Band::jni::ConvertLongToJobId;
@@ -24,7 +24,8 @@ using Band::jni::ConvertLongToTensor;
 // TODO(widiba03304): error reporter should be adopted to check null for
 // pointers
 
-// private static native long createErrorReporter(int size);
+extern "C" {
+
 JNIEXPORT jlong JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_createErrorReporter(JNIEnv* env,
                                                             jclass clazz,
@@ -126,8 +127,8 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
   Engine* engine = ConvertLongToEngine(env, engine_handle);
   Model* model = ConvertLongToModel(env, model_handle);
   engine->RequestSync(model->GetId(), BandGetDefaultRequestOption(),
-                      convertLongListToTensors(env, input_tensor_handles),
-                      convertLongListToTensors(env, output_tensor_handles));
+                      ConvertLongListToTensors(env, input_tensor_handles),
+                      ConvertLongListToTensors(env, output_tensor_handles));
 }
 
 // private static native long requestAsync(long engineHandle, long modelHandle,
@@ -139,7 +140,7 @@ JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
   Model* model = ConvertLongToModel(env, model_handle);
   auto job_id =
       engine->RequestAsync(model->GetId(), BandGetDefaultRequestOption(),
-                           convertLongListToTensors(env, input_tensor_handles));
+                           ConvertLongListToTensors(env, input_tensor_handles));
   return static_cast<jint>(job_id);
 }
 
@@ -148,5 +149,7 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_wait(
     jobject output_tensor_handles) {
   Engine* engine = ConvertLongToEngine(env, engine_handle);
   engine->Wait(static_cast<int>(request_handle),
-               convertLongListToTensors(env, output_tensor_handles));
+               ConvertLongListToTensors(env, output_tensor_handles));
 }
+
+}  // extern "C"

@@ -1,7 +1,10 @@
 package org.mrsnu.band;
 
+import java.util.logging.Logger;
+
 /** Static utility methods for loading the Band runtime and native code. */
 public final class Band {
+  private static final Logger logger = Logger.getLogger("mylogger");
   private static final String BAND_RUNTIME_LIBNAME = "band_jni";
 
   private static final Throwable LOAD_LIBRARY_EXCEPTION;
@@ -11,7 +14,9 @@ public final class Band {
     Throwable loadLibraryException = null;
     try {
       System.loadLibrary(BAND_RUNTIME_LIBNAME);
+      logger.info("Loaded");
     } catch (UnsatisfiedLinkError e) {
+      logger.info("didn't loaded");
       if (loadLibraryException == null) {
         loadLibraryException = e;
       } else {
