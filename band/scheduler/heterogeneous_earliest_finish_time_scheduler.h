@@ -7,7 +7,7 @@ namespace Band {
 
 class HEFTScheduler : public IScheduler {
  public:
-  ScheduleAction Schedule(const Context& context) override;
+  ScheduleAction Schedule(const Context& context, JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
