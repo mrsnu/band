@@ -10,13 +10,13 @@ namespace Band {
 namespace TfLite {
 class TfLiteInterpreter : public Interface::IInterpreter {
  public:
-  TfLiteInterpreter() = default;
+  TfLiteInterpreter(ModelId model_id, WorkerId worker_id,
+                    BandDeviceFlags device_flag);
   ~TfLiteInterpreter() override;
 
   ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
-  // TODO: add a set of ops
-  BandStatus FromModel(Interface::IModel* model, WorkerId worker_id,
-                       BandDeviceFlags device, std::set<int> ops = {}) override;
+  BandStatus PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
+                             std::set<int> unit_indices = {}) override;
 
   BandBackendType GetBackendType() const override;
   const std::vector<int>& GetInputs(const SubgraphKey& key) const override;
@@ -29,7 +29,7 @@ class TfLiteInterpreter : public Interface::IInterpreter {
   std::shared_ptr<Interface::ITensorView> GetTensorView(const SubgraphKey& key,
                                                         int index) override;
 
-  SubgraphKey GetModelSubgraphKey(ModelId model_id) const override;
+  SubgraphKey GetLargestSubgraphKey() const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
 
   BandStatus InvokeSubgraph(const SubgraphKey& key) override;
@@ -37,21 +37,20 @@ class TfLiteInterpreter : public Interface::IInterpreter {
  private:
   friend class TfLiteUtil;
 
-  WorkerId worker_id_ = -1;
-
   tflite::Interpreter* GetInterpreter(const SubgraphKey& key);
   const tflite::Interpreter* GetInterpreter(const SubgraphKey& key) const;
 
   std::unique_ptr<tflite::Interpreter> CreateTfLiteInterpreter(
       Interface::IModel* model, BandDeviceFlags device,
       std::set<int> op_indices = {});
-  std::pair<BandStatus, TfLiteDelegate*> GetDeviceDelegate(
+  static std::pair<BandStatus, TfLiteDelegate*> GetDeviceDelegate(
       BandDeviceFlags device);
 
   std::unordered_map<SubgraphKey, std::unique_ptr<tflite::Interpreter>,
                      SubgraphHash>
       interpreters_;
-  std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr> delegates_;
+  static std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
+      delegates_;
 };
 }  // namespace TfLite
 }  // namespace Band

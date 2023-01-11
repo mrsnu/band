@@ -89,14 +89,7 @@ TfLiteQuantization GetQuantizationFromLegacy(
 Interpreter::Interpreter(ErrorReporter* error_reporter)
     : error_reporter_(error_reporter ? error_reporter
                                      : DefaultErrorReporter()) {
-  // TODO(b/128420794): Include the TFLite runtime version in the log.
-  // Prod logging is useful for mobile platforms where scraping console logs is
-  // critical for debugging.
-#if defined(TFLITE_IS_MOBILE_PLATFORM)
-  TFLITE_LOG_PROD_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#else
   TFLITE_LOG_ONCE(TFLITE_LOG_INFO, "Initialized TensorFlow Lite runtime.");
-#endif
 
   // There's always at least 1 subgraph which is the primary subgraph.
   AddSubgraphs(1);

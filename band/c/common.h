@@ -23,6 +23,8 @@ typedef enum BandStatus {
   kBandDelegateError = 2
 } BandStatus;
 
+const char* BandStatusGetName(BandStatus status);
+
 typedef enum {
   kBandAll = 0,
   kBandLittle = 1,
@@ -49,11 +51,13 @@ typedef enum BandSchedulerType {
 
 typedef enum BandSubgraphPreparationType {
   kBandNoFallbackSubgraph = 0,
-  kBandFallbackPerDevice = 1,
+  kBandFallbackPerWorker = 1,
   kBandUnitSubgraph = 2,
   kBandMergeUnitSubgraph = 3,
   kBandNumSubgraphPreparationType = 4,
 } BandSubgraphPreparationType;
+
+const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type);
 
 // Fixed size list of integers. Used for dimensions and inputs/outputs tensor
 // indices
@@ -256,6 +260,8 @@ typedef struct BandQuantization {
   // below.
   void* params;
 } BandQuantization;
+
+void BandQuantizationFree(BandQuantization* quantization);
 
 // Legacy. Will be deprecated in favor of BandAffineQuantization.
 // If per-layer quantization is specified this field will still be populated in

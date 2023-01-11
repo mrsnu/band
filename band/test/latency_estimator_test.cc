@@ -15,8 +15,15 @@ namespace Test {
 struct CustomWorkerMockContext : public MockContextBase {
   CustomWorkerMockContext() { model_spec.path = "dummy"; }
   Worker* GetWorker(WorkerId id) override { return worker; }
-  size_t GetNumWorkers() const { return 1; }
-  const ModelSpec* GetModelSpec(ModelId model_id) { return &model_spec; }
+  size_t GetNumWorkers() const override { return 1; }
+  const ModelSpec* GetModelSpec(ModelId model_id) const override {
+    return &model_spec;
+  }
+  SubgraphKey GetLargestSubgraphKey(ModelId model_id,
+                                    WorkerId worker_id) const override {
+    return SubgraphKey(0, 0);
+  }
+  bool HasSubgraph(const SubgraphKey& key) const override { return true; }
 
   Worker* worker;
   ModelSpec model_spec;
@@ -28,7 +35,6 @@ struct CustomInvokeMockContext : public CustomWorkerMockContext {
       : invoke_lambda(invoke_lambda) {}
 
   std::function<BandStatus(const SubgraphKey&)> invoke_lambda;
-
   BandStatus Invoke(const Band::SubgraphKey& subgraph_key) override {
     return invoke_lambda(subgraph_key);
   }
@@ -47,7 +53,7 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   ProfileConfig config =
       b.AddNumRuns(50).AddNumWarmups(3).AddOnline(true).Build();
 
-  TypeParam worker(&context, kBandCPU);
+  TypeParam worker(&context, 0, kBandCPU);
   context.worker = &worker;
 
   worker.Start();
@@ -84,7 +90,7 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   ProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
-  DeviceQueueWorker worker(&context, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, kBandCPU);
   // Explicitly assign worker to mock context
   context.worker = &worker;
   // Update worker thread affinity
@@ -114,7 +120,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   ProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
-  DeviceQueueWorker worker(&context, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, kBandCPU);
   // Explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();
@@ -136,7 +142,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     return kBandOk;
   });
 
-  DeviceQueueWorker worker(&context, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, kBandCPU);
   // explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();
@@ -186,7 +192,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     return kBandOk;
   });
 
-  DeviceQueueWorker worker(&context, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, kBandCPU);
   // explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();

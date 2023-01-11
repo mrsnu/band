@@ -6,10 +6,10 @@ Each configuration field is optional or required. If a field is optional, then i
 
 ### Enumeration Types
 - `BandSchedulerType`:
-  - `kBandFixedDevice`: 
+  - `kBandFixedDeviceFixedWorker`: 
   - `kBandRoundRobin`: 
   - `kBandShortestExpectedLatency`: 
-  - `kBandFixedDeviceGlobalQueue`: 
+  - `kBandFixedDeviceFixedWorkerGlobalQueue`: 
   - `kBandHeterogeneousEarliestFinishTime`: 
   - `kBandLeastSlackTimeFirst`: 
   - `kBandHeterogeneousEarliestFinishTimeReserved`
@@ -28,7 +28,7 @@ Each configuration field is optional or required. If a field is optional, then i
 
 - `BandSubgraphPreparationType`: 
   - `kBandNoFallbackSubgraph`
-  - `kBandFallbackPerDevice`
+  - `kBandFallbackPerWorker`
   - `kBandUnitSubgraph`
   - `kBandMergeUnitSubgraph`
 

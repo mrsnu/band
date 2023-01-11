@@ -3,17 +3,33 @@
 #include <cstring>
 
 #include "band/logger.h"
+#include "tensor.h"
 
 namespace Band {
 namespace Interface {
 
+std::vector<int> ITensor::GetDimsVector() const {
+  return std::vector<int>(GetDims(), GetDims() + GetNumDims());
+}
+
+bool ITensor::operator==(const ITensor& rhs) const {
+  if ((GetType() == rhs.GetType()) && (GetDimsVector() == rhs.GetDimsVector()))
+    return true;
+  else {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s != %s %s", GetName(),
+                  BandTypeGetName(GetType()), rhs.GetName(),
+                  BandTypeGetName(rhs.GetType()));
+    return false;
+  }
+}
+
 BandStatus ITensor::CopyDataFrom(const ITensor& rhs) {
-  if (GetType() != rhs.GetType() && GetDims() != rhs.GetDims()) {
+  if (*this == rhs) {
+    memcpy(GetData(), rhs.GetData(), GetBytes());
+    return kBandOk;
+  } else {
     return kBandError;
   }
-
-  memcpy(GetData(), rhs.GetData(), GetBytes());
-  return kBandOk;
 }
 
 BandStatus ITensor::CopyDataFrom(const ITensor* rhs) {

@@ -46,13 +46,14 @@ class Context {
   virtual std::set<WorkerId> GetIdleWorkers() const = 0;
 
   /* subgraph */
-  virtual SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                          WorkerId worker_id) const = 0;
+  virtual SubgraphKey GetLargestSubgraphKey(ModelId model_id,
+                                            WorkerId worker_id) const = 0;
   virtual bool IsEnd(const SubgraphKey& key) const = 0;
+  virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual BandStatus Invoke(const SubgraphKey& key) = 0;
 
   /* model */
-  virtual const ModelSpec* GetModelSpec(ModelId model_id) = 0;
+  virtual const ModelSpec* GetModelSpec(ModelId model_id) const = 0;
   virtual WorkerId GetModelWorker(ModelId model_id) const = 0;
 
   /* scheduling */
@@ -65,9 +66,8 @@ class Context {
 
   // TODO: replace subgraph idx to subgraph key in below functions
   virtual std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      int model_id, std::set<int> resolved_tensors, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting,
-      SubgraphKey preceded_subgraph_index = {}) const = 0;
+      int model_id, int start_unit_idx, int64_t start_time,
+      const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
@@ -96,7 +96,10 @@ class Context {
   virtual void EnqueueFinishedJob(Job& job) = 0;
 
   /* getters */
-  virtual ErrorReporter* GetErrorReporter() { return error_reporter_; }
+  virtual const ErrorReporter* GetErrorReporter() const {
+    return error_reporter_;
+  }
+  virtual const Worker* GetWorker(WorkerId id) const = 0;
   virtual Worker* GetWorker(WorkerId id) = 0;
   virtual size_t GetNumWorkers() const = 0;
 

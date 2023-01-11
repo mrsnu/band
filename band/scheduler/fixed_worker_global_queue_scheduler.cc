@@ -7,7 +7,7 @@ namespace Band {
 ScheduleAction FixedWorkerGlobalQueueScheduler::Schedule(const Context& context,
                                                          JobQueue& requests) {
   ScheduleAction action;
-  // TODO: fallback subgraphs for FixedDevicePlanner?
+  // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   std::set<int> idle_workers = context.GetIdleWorkers();
   if (idle_workers.empty()) {
     // no device is idle; wait for next iteration

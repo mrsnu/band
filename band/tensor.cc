@@ -2,9 +2,12 @@
 
 #include <string.h>
 
+#include "band/logger.h"
+
 namespace Band {
 Tensor::Tensor(ITensor* tensor_view)
     : type_(tensor_view->GetType()),
+      quantization_({kBandNoQuantization, nullptr}),
       num_bytes_(tensor_view->GetBytes()),
       dims_(tensor_view->GetDims(),
             tensor_view->GetDims() + tensor_view->GetNumDims()),
@@ -13,7 +16,10 @@ Tensor::Tensor(ITensor* tensor_view)
   SetQuantization(tensor_view->GetQuantization());
 }
 
-Tensor::~Tensor() { delete[] data_; }
+Tensor::~Tensor() {
+  delete[] data_;
+  BandQuantizationFree(&quantization_);
+}
 
 BandType Tensor::GetType() const { return type_; }
 
@@ -40,12 +46,18 @@ BandQuantization Tensor::GetQuantization() const { return quantization_; }
 void Tensor::SetQuantization(BandQuantization quantization) {
   quantization_.type = BandQuantizationType(quantization.type);
   if (quantization_.type == kBandAffineQuantization) {
-    BandAffineQuantization* input_q_params =
-        (BandAffineQuantization*)(quantization_.params);
+    if (quantization_.params != nullptr) {
+      BandQuantizationFree(&quantization_);
+    }
+
+    const BandAffineQuantization* input_q_params =
+        (BandAffineQuantization*)(quantization.params);
 
     BandAffineQuantization* q_params =
-        (BandAffineQuantization*)(quantization_.params);
-
+        reinterpret_cast<BandAffineQuantization*>(
+            malloc(sizeof(BandAffineQuantization)));
+    q_params->scale = BandFloatArrayCreate(input_q_params->scale->size);
+    q_params->zero_point = BandIntArrayCreate(input_q_params->zero_point->size);
     q_params->quantized_dimension = input_q_params->quantized_dimension;
 
     memcpy(

@@ -13,6 +13,7 @@ BandBackendType TfLiteModel::GetBackendType() const { return kBandTfLite; }
 BandStatus TfLiteModel::FromPath(const char* filename) {
   // TODO: Add Band TFLBackend error reporter
   flat_buffer_model_ = tflite::FlatBufferModel::BuildFromFile(filename);
+  path_ = filename;
   return flat_buffer_model_ ? kBandOk : kBandError;
 }
 

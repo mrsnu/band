@@ -22,6 +22,9 @@ cc_library(
     # force to link Band::TfLiteRegisterCreators (in backend.cc)
     # to override the weak symbol in //band:backend_factory
     alwayslink = True,
+    copts = [
+        "-DTF_LITE_STRIP_ERROR_STRINGS"
+    ],
     deps = [
         "//band:framework",
         "//tensorflow/lite:framework",

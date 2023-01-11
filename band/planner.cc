@@ -7,7 +7,7 @@
 //#include
 //"band/scheduler/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 //#include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
-//#include "band/scheduler/least_slack_first_scheduler.h"
+#include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 //#include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/logger.h"
@@ -81,8 +81,7 @@ BandStatus Planner::Init(const PlannerConfig& config) {
       // schedulers_.emplace_back(new
       // HeterogeneousEarliestFinishTimeScheduler());
     } else if (schedulers[i] == kBandLeastSlackTimeFirst) {
-      BAND_NOT_IMPLEMENTED;
-      // schedulers_.emplace_back(new LeastSlackFirstScheduler());
+      schedulers_.emplace_back(new LeastSlackFirstScheduler(schedule_window_size_));
     } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTimeReserved) {
       BAND_NOT_IMPLEMENTED;
       // schedulers_.emplace_back(

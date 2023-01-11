@@ -56,6 +56,8 @@ class Engine : public Context {
       ErrorReporter* error_reporter = DefaultErrorReporter());
 
   BandStatus RegisterModel(Model* model);
+  BandStatus UnregisterModel(Model* model);
+
   Tensor* CreateTensor(ModelId model_id, int tensor_index);
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
@@ -88,8 +90,8 @@ class Engine : public Context {
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
-  SubgraphKey GetModelSubgraphKey(ModelId model_id,
-                                  WorkerId worker_id) const override;
+  SubgraphKey GetLargestSubgraphKey(ModelId model_id,
+                                    WorkerId worker_id) const override;
 
  private:
   /* context */
@@ -97,17 +99,18 @@ class Engine : public Context {
   void UpdateWorkerWaitingTime() const override;
   const WorkerWaitingTime& GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
+
   bool IsEnd(const SubgraphKey& key) const override;
+  bool HasSubgraph(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
-  const ModelSpec* GetModelSpec(ModelId model_id) {
-    return &model_specs_[model_id];
-  }
+
+  const ModelSpec* GetModelSpec(ModelId model_id) const override;
   WorkerId GetModelWorker(ModelId model_id) const override;
 
+  /* utility funtions for unit-level scheduling */
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      int model_id, std::set<int> resolved_tensors, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting,
-      SubgraphKey preceded_subgraph_index = {}) const override;
+      int model_id, int start_unit_idx, int64_t start_time,
+      const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
@@ -121,9 +124,11 @@ class Engine : public Context {
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
+
   /* latency estimator */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
   int64_t GetWorst(ModelId model_id) const;
+
   /* planner */
   void Trigger() override;
   JobId EnqueueRequest(Job job, bool push_front = false) override;
@@ -132,6 +137,7 @@ class Engine : public Context {
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
   /* getters */
+  const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
   /* tensor communication */
   BandStatus TryCopyInputTensors(const Job& job) override;
@@ -149,17 +155,9 @@ class Engine : public Context {
   Engine& operator=(const Engine&) = delete;
   Engine& operator=(const Engine&&) = delete;
 
-  struct ModelOption {
-    // Minimum subgraph size.
-    // Will not create subgraph if num operators < minimum_subgraph_size.
-    int minimum_subgraph_size_;
+  ModelConfig model_config_;
 
-    // Subgraph preparation type
-    // "fallback_per_device", "unit_subgraph"
-    std::string subgraph_preparation_type_;
-  } model_option_;
-
-  std::map<std::pair<WorkerId, ModelId>,
+  std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<Interface::IInterpreter>>
       interpreters_;
   std::vector<std::unique_ptr<Worker>> workers_;
@@ -168,14 +166,9 @@ class Engine : public Context {
   std::unique_ptr<Planner> planner_;
 
   // Models
-  // Model instances (used only for benchmark tools)
-  std::map<ModelId, std::shared_ptr<Model>> models_;  // index is ModelId
-  // Maps to each modelid to its index in config.model_config. No usage right
-  // now, but might be useful later.
-  std::map<ModelId, int> model_configs_idx_;
+
   // Maps to model spec
   std::map<ModelId, ModelSpec> model_specs_;
-
   std::map<ModelId, std::unique_ptr<TensorRingBuffer>> model_input_buffer_;
   std::map<ModelId, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
 

@@ -23,20 +23,18 @@ TEST(TFLiteBackend, BackendInvoke) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.bin");
 
-  TfLite::TfLiteInterpreter interpreter;
-  EXPECT_EQ(interpreter.FromModel(&bin_model, 0, kBandCPU), kBandOk);
-
-  SubgraphKey key(bin_model.GetId(), 0);
-  EXPECT_EQ(interpreter.InvokeSubgraph(key), kBandOk);
+  TfLite::TfLiteInterpreter interpreter(0, 0, kBandCPU);
+  EXPECT_EQ(interpreter.PrepareSubgraph(&bin_model), kBandOk);
+  EXPECT_EQ(interpreter.InvokeSubgraph(interpreter.GetLargestSubgraphKey()),
+            kBandOk);
 }
 
 TEST(TFLiteBackend, ModelSpec) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.bin");
 
-  TfLite::TfLiteInterpreter interpreter;
-  ModelSpec model_spec;
-  model_spec = interpreter.InvestigateModelSpec(&bin_model);
+  TfLite::TfLiteInterpreter interpreter(0, 0, kBandCPU);
+  ModelSpec model_spec = interpreter.InvestigateModelSpec(&bin_model);
 
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
   EXPECT_EQ(model_spec.num_ops, 1);
@@ -61,10 +59,11 @@ TEST(TFLiteBackend, InterfaceInvoke) {
   IModel* bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
   bin_model->FromPath("band/test/data/add.bin");
 
-  IInterpreter* interpreter = BackendFactory::CreateInterpreter(kBandTfLite);
-  EXPECT_EQ(interpreter->FromModel(bin_model, 0, kBandCPU), kBandOk);
+  IInterpreter* interpreter =
+      BackendFactory::CreateInterpreter(kBandTfLite, 0, 0, kBandCPU);
+  EXPECT_EQ(interpreter->PrepareSubgraph(bin_model), kBandOk);
 
-  SubgraphKey key = interpreter->GetModelSubgraphKey(bin_model->GetId());
+  SubgraphKey key = interpreter->GetLargestSubgraphKey();
 
   EXPECT_EQ(interpreter->GetInputs(key).size(), 1);
   EXPECT_EQ(interpreter->GetOutputs(key).size(), 1);
@@ -166,10 +165,10 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
-  EXPECT_GT(engine->GetProfiled(engine->GetModelSubgraphKey(model.GetId(), 0)),
-            0);
-  EXPECT_GT(engine->GetExpected(engine->GetModelSubgraphKey(model.GetId(), 0)),
-            0);
+  EXPECT_GT(
+      engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
+  EXPECT_GT(
+      engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {

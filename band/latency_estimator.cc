@@ -48,89 +48,87 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
       // wait for workers to finish current job
       worker->Wait();
 
-      // TODO(dostos): find largest subgraph after subgraph-support (L878-,
-      // tensorflow_band/lite/interpreter.cc)
       Job largest_subgraph_job(model_id);
-      SubgraphKey subgraph_key(model_id, worker_id);
+      SubgraphKey subgraph_key =
+          context_->GetLargestSubgraphKey(model_id, worker_id);
       largest_subgraph_job.subgraph_key = subgraph_key;
 
-      Profiler average_profiler;
-      // invoke target subgraph in an isolated thread
-      std::thread profile_thread([&]() {
-        if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
-            SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
-                kBandOk) {
-          BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                            "Failed to propagate thread affinity of worker id "
-                            "%d to profile thread",
-                            worker_id);
-          return;
-        }
-
-        // TODO(BAND-20): propagate affinity to CPU backend if necessary
-        // (L1143-,tensorflow_band/lite/interpreter.cc)
-
-        for (int i = 0; i < profile_num_warmups_; i++) {
-          if (context_->Invoke(subgraph_key) != kBandOk) {
-            BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
+      if (context_->HasSubgraph(subgraph_key)) {
+        Profiler average_profiler;
+        // invoke target subgraph in an isolated thread
+        std::thread profile_thread([&]() {
+          if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
+              SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
+                  kBandOk) {
+            BAND_LOG_INTERNAL(
+                BAND_LOG_ERROR,
+                "Failed to propagate thread affinity of worker id "
+                "%d to profile thread",
+                worker_id);
             return;
           }
-        }
 
-        for (int i = 0; i < profile_num_runs_; i++) {
-          const size_t event_id = average_profiler.BeginEvent();
-          if (context_->Invoke(subgraph_key) != kBandOk) {
-            BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
-            return;
+          // TODO(BAND-20): propagate affinity to CPU backend if necessary
+          // (L1143-,tensorflow_band/lite/interpreter.cc)
+
+          for (int i = 0; i < profile_num_warmups_; i++) {
+            if (context_->Invoke(subgraph_key) != kBandOk) {
+              BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                                "Profiler failed to invoke largest subgraph of "
+                                "model %d in worker %d",
+                                model_id, worker_id);
+              return;
+            }
           }
-          average_profiler.EndEvent(event_id);
-        }
-      });
-      profile_thread.join();
 
-      // TODO(dostos): estimate latency with largest subgraph latency (L926-,
-      // tensorflow_band/lite/interpreter.cc)
-      if (average_profiler.GetNumEvents() != profile_num_runs_) {
-        return kBandError;
+          for (int i = 0; i < profile_num_runs_; i++) {
+            const size_t event_id = average_profiler.BeginEvent();
+            if (context_->Invoke(subgraph_key) != kBandOk) {
+              BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                                "Profiler failed to invoke largest subgraph of "
+                                "model %d in worker %d",
+                                model_id, worker_id);
+              return;
+            }
+            average_profiler.EndEvent(event_id);
+          }
+        });
+        profile_thread.join();
+
+        if (average_profiler.GetNumEvents() != profile_num_runs_) {
+          return kBandError;
+        }
+
+        const int64_t latency =
+            average_profiler.GetAverageElapsedTime<std::chrono::microseconds>();
+
+        profile_database_[subgraph_key] = {latency, latency};
+
+        BAND_LOG_PROD(BAND_LOG_INFO,
+                      "Profiled latency of subgraph (%s device=%s) avg=%d us",
+                      subgraph_key.ToString().c_str(),
+                      BandDeviceGetName(worker->GetDeviceFlag()), latency);
       }
-
-      const int64_t latency =
-          average_profiler.GetAverageElapsedTime<std::chrono::microseconds>();
-
-      profile_database_[subgraph_key] = {latency, latency};
 
       // resume worker
       worker->Resume();
-
-      BAND_LOG_INTERNAL(
-          BAND_LOG_INFO,
-          "Estimated Latency\n model=%d avg=%d us worker=%d device=%s "
-          "start=%s end=%s.",
-          model_id, latency, worker_id,
-          BandDeviceGetName(worker->GetDeviceFlag()),
-          subgraph_key.GetInputOpsString().c_str(),
-          subgraph_key.GetOutputOpsString().c_str());
     }
   } else {
-    const std::string model_name = context_->GetModelSpec(model_id)->path;
-    auto model_profile = JsonToModelProfile(model_name, model_id);
-    if (model_profile.size() > 0) {
-      profile_database_.insert(model_profile.begin(), model_profile.end());
-      BAND_LOG_INTERNAL(
-          BAND_LOG_INFO,
-          "Successfully found %d profile entries for model (%s, %d).",
-          model_profile.size(), model_name.c_str(), model_id);
-    } else {
-      BAND_LOG_INTERNAL(
-          BAND_LOG_WARNING,
-          "Failed to find profile entries for given model name %s.",
-          model_name.c_str());
+    if (context_ && context_->GetModelSpec(model_id)) {
+      const std::string model_name = context_->GetModelSpec(model_id)->path;
+      auto model_profile = JsonToModelProfile(model_name, model_id);
+      if (model_profile.size() > 0) {
+        profile_database_.insert(model_profile.begin(), model_profile.end());
+        BAND_LOG_INTERNAL(
+            BAND_LOG_INFO,
+            "Successfully found %d profile entries for model (%s, %d).",
+            model_profile.size(), model_name.c_str(), model_id);
+      } else {
+        BAND_LOG_INTERNAL(
+            BAND_LOG_WARNING,
+            "Failed to find profile entries for given model name %s.",
+            model_name.c_str());
+      }
     }
   }
   return kBandOk;
@@ -184,7 +182,7 @@ size_t LatencyEstimator::GetProfileHash() const {
 std::map<SubgraphKey, LatencyEstimator::Latency>
 LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
                                      const int model_id) {
-  auto string_to_node_indices = [](std::string index_string) {
+  auto string_to_indices = [](std::string index_string) {
     std::set<int> node_indices;
     std::stringstream ss(index_string);
 
@@ -224,15 +222,8 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
     const Json::Value idx_profile = *profile_it;
     for (auto idx_profile_it = idx_profile.begin();
          idx_profile_it != idx_profile.end(); ++idx_profile_it) {
-      std::string idx = idx_profile_it.key().asString();
-
-      // parse the key to retrieve start/end indices
-      // e.g., "25/50" --> delim_pos = 2
-      auto delim_pos = idx.find("/");
-      std::set<int> root_indices =
-          string_to_node_indices(idx.substr(0, delim_pos));
-      std::set<int> leaf_indices = string_to_node_indices(
-          idx.substr(delim_pos + 1, idx.length() - delim_pos - 1));
+      std::string unit_indices_string = idx_profile_it.key().asString();
+      std::set<int> unit_indices = string_to_indices(unit_indices_string);
 
       const Json::Value device_profile = *idx_profile_it;
       for (auto device_profile_it = device_profile.begin();
@@ -246,7 +237,7 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
           continue;
         }
 
-        SubgraphKey key(model_id, worker_id, root_indices, leaf_indices);
+        SubgraphKey key(model_id, worker_id, unit_indices);
         id_profile[key] = {profiled_latency, profiled_latency};
       }
     }
@@ -260,19 +251,14 @@ Json::Value LatencyEstimator::ProfileToJson() {
   for (auto& pair : profile_database_) {
     SubgraphKey key = pair.first;
     const int model_id = key.GetModelId();
-    const std::string start_indices = key.GetInputOpsString();
-    const std::string end_indices = key.GetOutputOpsString();
     const int64_t profiled_latency = pair.second.profiled;
 
     // check the string name of this model id
     auto model_spec = context_->GetModelSpec(model_id);
     if (model_spec && !model_spec->path.empty()) {
       // copy all entries in id_profile --> database_json
-      // as an ad-hoc method, we simply concat the start/end indices to form
-      // the level-two key in the final json value
-      const std::string index_key = start_indices + "/" + end_indices;
-      name_profile[model_spec->path][index_key][key.GetWorkerId()] =
-          profiled_latency;
+      name_profile[model_spec->path][key.GetUnitIndicesString()]
+                  [key.GetWorkerId()] = profiled_latency;
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                         "Cannot find model %d from "

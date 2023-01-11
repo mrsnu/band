@@ -28,6 +28,7 @@ limitations under the License.
 
 #include "flatbuffers/flatbuffers.h"  // from @flatbuffers
 #include "tensorflow/lite/c/c_api_types.h"
+#include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/core/api/flatbuffer_conversions.h"
 #include "tensorflow/lite/core/api/op_resolver.h"
@@ -321,13 +322,13 @@ class MallocDataAllocator : public BuiltinDataAllocator {
 
 TfLiteStatus InterpreterBuilder::ParseNodes(
     const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
-    Subgraph* subgraph) {
+    Subgraph* subgraph, std::set<int> op_indices) {
   TfLiteStatus status = kTfLiteOk;
 
   // Reduce the number of redundant allocations
-  subgraph->ReserveNodes(operators->size());
+  subgraph->ReserveNodes(op_indices.size());
 
-  for (int i = 0; i < operators->size(); ++i) {
+  for (int i : op_indices) {
     const auto* op = operators->Get(i);
     int index = op->opcode_index();
     if (index < 0 || index >= flatbuffer_op_index_to_registration_.size()) {
@@ -564,7 +565,7 @@ TfLiteStatus InterpreterBuilder::ParseSignatureDefs(
 TfLiteStatus InterpreterBuilder::ParseTensors(
     const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
     const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-    Subgraph* subgraph) {
+    Subgraph* subgraph, std::set<int> subgraph_tensors) {
   TfLiteStatus status = kTfLiteOk;
 
   // A little helper to get the names of inputs and outputs. Note that they
@@ -577,6 +578,10 @@ TfLiteStatus InterpreterBuilder::ParseTensors(
 
   num_fp32_tensors_ = 0;
   for (int i = 0; i < tensors->size(); ++i) {
+    if (subgraph_tensors.find(i) == subgraph_tensors.end()) {
+      continue;
+    }
+
     const auto* tensor = tensors->Get(i);
     std::vector<int> dims = FlatBufferIntArrayToVector(tensor->shape());
 
@@ -788,19 +793,122 @@ TfLiteStatus InterpreterBuilder::operator()(
     if (modified_subgraph->AddTensors(tensors->size()) != kTfLiteOk) {
       return cleanup_and_error();
     }
-    // Parse inputs/outputs
-    modified_subgraph->SetInputs(
-        FlatBufferIntArrayToVector(subgraph->inputs()));
-    modified_subgraph->SetOutputs(
-        FlatBufferIntArrayToVector(subgraph->outputs()));
 
-    // Finally setup nodes and tensors
-    // Parse tensors before nodes as ParseNodes checks input tensors for the
-    // nodes.
-    if (ParseTensors(buffers, tensors, modified_subgraph) != kTfLiteOk)
+    std::set<int> op_indices = options_.GetTargetNodes();
+    if (op_indices.size() == 0) {
+      for (int i = 0; i < operators->size(); ++i) {
+        op_indices.insert(i);
+      }
+    }
+
+    if (operators &&
+        ParseNodes(operators, modified_subgraph, op_indices) != kTfLiteOk)
       return cleanup_and_error();
-    if (operators && ParseNodes(operators, modified_subgraph) != kTfLiteOk)
+
+    // Collect all input/output tensors for individual nodes.
+    // these include intermediate tensors that may be consumed by other
+    // nodes in the same model, as well as parameters tensors that aren't
+    // really "input" tensors
+    std::set<int> node_inputs, node_outputs;
+    auto nodes_and_registration = modified_subgraph->nodes_and_registration();
+    for (int node_index : modified_subgraph->execution_plan()) {
+      TfLiteNode node = nodes_and_registration[node_index].first;
+      for (int input_tensor : TfLiteIntArrayView(node.inputs)) {
+        node_inputs.insert(input_tensor);
+      }
+      for (int output_tensor : TfLiteIntArrayView(node.outputs)) {
+        node_outputs.insert(output_tensor);
+      }
+    }
+
+    // merge inputs and outputs to call ParseTensors()
+    std::set<int> subgraph_tensors;
+    std::set_union(node_inputs.begin(), node_inputs.end(), node_outputs.begin(),
+                   node_outputs.end(),
+                   std::inserter(subgraph_tensors, subgraph_tensors.end()));
+
+    if (ParseTensors(buffers, tensors, modified_subgraph, subgraph_tensors) !=
+        kTfLiteOk)
       return cleanup_and_error();
+
+    // now filter out the intermediate tensors from node_input_tensors so we
+    // only have external inputs that are required from outside,
+    // as well as parameter tensors
+    std::set<int> external_inputs_params;
+    std::set_difference(
+        node_inputs.begin(), node_inputs.end(), node_outputs.begin(),
+        node_outputs.end(),
+        std::inserter(external_inputs_params, external_inputs_params.begin()));
+
+    // Next, we need to filter out param tensors from external_inputs_params.
+    // there is no way of directly checking if a tensor is a parameter or not,
+    // so instead we collect all non-parameter tensors and exclude the param
+    // tensors in external_inputs_params that are not in the non-param list
+    // NOTE: need to check #65 (Tensor communications between subgraphs)
+    std::set<int> non_param_tensors;
+
+    std::vector<int> subgraph_input_vec =
+        FlatBufferIntArrayToVector(subgraph->inputs());
+    std::set<int> subgraph_inputs =
+        std::set<int>(subgraph_input_vec.begin(), subgraph_input_vec.end());
+    std::set<int> all_node_outputs;
+
+    for (int i = 0; i < operators->size(); i++) {
+      const auto* op = operators->Get(i);
+      auto output_vec = FlatBufferIntArrayToVector(op->outputs());
+      all_node_outputs.insert(output_vec.begin(), output_vec.end());
+    }
+
+    std::vector<int> subgraph_output_vec =
+        FlatBufferIntArrayToVector(subgraph->outputs());
+    std::set<int> subgraph_outputs =
+        std::set<int>(subgraph_output_vec.begin(), subgraph_output_vec.end());
+    std::set_union(all_node_outputs.begin(), all_node_outputs.end(),
+                   subgraph_inputs.begin(), subgraph_inputs.end(),
+                   std::inserter(non_param_tensors, non_param_tensors.end()));
+
+    std::set<int> real_inputs;
+    std::set_intersection(non_param_tensors.begin(), non_param_tensors.end(),
+                          external_inputs_params.begin(),
+                          external_inputs_params.end(),
+                          std::inserter(real_inputs, real_inputs.begin()));
+
+    std::set<int> real_outputs;
+    if (op_indices.size() == operators->size()) {
+      // Entire model case doesn't need to consider external nodes
+      std::set_difference(node_outputs.begin(), node_outputs.end(),
+                          node_inputs.begin(), node_inputs.end(),
+                          std::inserter(real_outputs, real_outputs.begin()));
+    } else {
+      // See if current subgraph outputs model's output tensor
+      std::set_intersection(subgraph_outputs.begin(), subgraph_outputs.end(),
+                            node_outputs.begin(), node_outputs.end(),
+                            std::inserter(real_outputs, real_outputs.begin()));
+
+      // Find reference from external nodes to internal nodes to find real
+      // output of current subgraph.
+      for (size_t i = 0; i < operators->size(); ++i) {
+        // Skip internal nodes
+        if (options_.GetTargetNodes().find(i) !=
+            options_.GetTargetNodes().end()) {
+          continue;
+        }
+
+        const auto* op = operators->Get(i);
+        auto op_inputs = FlatBufferIntArrayToVector(op->inputs());
+
+        for (auto external_op_input : op_inputs) {
+          if (node_outputs.find(external_op_input) != node_outputs.end()) {
+            real_outputs.insert(external_op_input);
+          }
+        }
+      }
+    }
+
+    modified_subgraph->SetInputs(
+        std::vector<int>(real_inputs.begin(), real_inputs.end()));
+    modified_subgraph->SetOutputs(
+        std::vector<int>(real_outputs.begin(), real_outputs.end()));
 
     std::vector<int> variables;
     for (int i = 0; i < modified_subgraph->tensors_size(); ++i) {
