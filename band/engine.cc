@@ -232,9 +232,9 @@ BandStatus Engine::RegisterModel(Model* model) {
     if (planner_->NeedProfile()) {
       latency_estimator_->ProfileModel(model_id);
     }
-
-    return kBandOk;
   }
+
+  return kBandOk;
 }
 
 BandStatus Engine::UnregisterModel(Model* model) {
