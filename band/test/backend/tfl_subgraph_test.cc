@@ -6,13 +6,13 @@
 #include <fstream>
 #include <vector>
 
-#include "band/backend/tfl/interpreter.h"
 #include "band/backend/tfl/model.h"
+#include "band/backend/tfl/model_executor.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend_factory.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
-#include "band/interface/interpreter.h"
+#include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/model.h"
 #include "band/tensor.h"

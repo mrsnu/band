@@ -6,8 +6,8 @@
 
 #include "band/backend_factory.h"
 #include "band/context.h"
-#include "band/interface/interpreter.h"
 #include "band/interface/model.h"
+#include "band/interface/model_executor.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/worker.h"
@@ -163,8 +163,8 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
       need_fallback_subgraph_(need_fallback_subgraph),
       model_config_(model_config),
       backend_type_(backend_type) {
-  std::unique_ptr<Interface::IInterpreter> interpreter(
-      BackendFactory::CreateInterpreter(backend_type, model->GetId(), 0,
+  std::unique_ptr<Interface::IModelExecutor> interpreter(
+      BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
                                         kBandCPU));
   model_spec_ = std::make_shared<ModelSpec>(
       interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)));

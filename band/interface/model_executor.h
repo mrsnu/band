@@ -1,6 +1,7 @@
-#ifndef BAND_INTERFACE_INTERPRETER_H_
-#define BAND_INTERFACE_INTERPRETER_H_
+#ifndef BAND_INTERFACE_MODEL_EXECUTOR_H_
+#define BAND_INTERFACE_MODEL_EXECUTOR_H_
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -11,16 +12,16 @@
 namespace Band {
 namespace Interface {
 /*
-  Interpreter for specific <IModel, Worker>
+  Model executor for specific <IModel, Worker>
 */
 
 class ITensorView;
-class IInterpreter : public IBackendSpecific {
+class IModelExecutor : public IBackendSpecific {
  public:
-  IInterpreter(ModelId model_id, WorkerId worker_id,
-               BandDeviceFlags device_flag)
+  IModelExecutor(ModelId model_id, WorkerId worker_id,
+                 BandDeviceFlags device_flag)
       : model_id_(model_id), worker_id_(worker_id), device_flag_(device_flag) {}
-  virtual ~IInterpreter() = default;
+  virtual ~IModelExecutor() = default;
 
   virtual ModelSpec InvestigateModelSpec(IModel* model) = 0;
   virtual BandStatus PrepareSubgraph(IModel* model, std::set<int> ops = {},
@@ -40,7 +41,9 @@ class IInterpreter : public IBackendSpecific {
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual SubgraphKey GetLargestSubgraphKey() const = 0;
 
-  virtual BandStatus InvokeSubgraph(const SubgraphKey& key) = 0;
+  virtual BandStatus ExecuteSubgraph(const SubgraphKey& key) = 0;
+  virtual void IterateSubgraphs(
+      std::function<void(const SubgraphKey&)> iterator) = 0;
 
  protected:
   const ModelId model_id_;
@@ -49,10 +52,10 @@ class IInterpreter : public IBackendSpecific {
 
  private:
   // Disable copy due to complexity
-  IInterpreter(const IInterpreter&) = delete;
-  IInterpreter(const IInterpreter&&) = delete;
-  IInterpreter& operator=(const IInterpreter&) = delete;
-  IInterpreter& operator=(const IInterpreter&&) = delete;
+  IModelExecutor(const IModelExecutor&) = delete;
+  IModelExecutor(const IModelExecutor&&) = delete;
+  IModelExecutor& operator=(const IModelExecutor&) = delete;
+  IModelExecutor& operator=(const IModelExecutor&&) = delete;
 };
 }  // namespace Interface
 }  // namespace Band

@@ -7,14 +7,14 @@ cc_library(
     name = "tfl_backend",
     srcs = [
         "backend.cc",
-        "interpreter.cc",
+        "model_executor.cc",
         "model.cc",
         "tensor.cc",
         "util.cc",
     ],
     hdrs = [
         "backend.h",
-        "interpreter.h",
+        "model_executor.h",
         "model.h",
         "tensor.h",
         "util.h",

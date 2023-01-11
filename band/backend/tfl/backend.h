@@ -1,8 +1,8 @@
 #ifndef BAND_BACKEND_TFL_BACKEND_H
 #define BAND_BACKEND_TFL_BACKEND_H
 
-#include "band/backend/tfl/interpreter.h"
 #include "band/backend/tfl/model.h"
+#include "band/backend/tfl/model_executor.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend/tfl/util.h"
 #include "band/backend_factory.h"
@@ -11,12 +11,12 @@
 namespace Band {
 using namespace Interface;
 namespace TfLite {
-class InterpreterCreator
-    : public Creator<IInterpreter, ModelId, WorkerId, BandDeviceFlags> {
+class ModelExecutorCreator
+    : public Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags> {
  public:
-  IInterpreter* Create(ModelId model_id, WorkerId worker_id,
-                       BandDeviceFlags device_flag) const override {
-    return new TfLiteInterpreter(model_id, worker_id, device_flag);
+  IModelExecutor* Create(ModelId model_id, WorkerId worker_id,
+                         BandDeviceFlags device_flag) const override {
+    return new TfLiteModelExecutor(model_id, worker_id, device_flag);
   }
 };
 

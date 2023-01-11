@@ -32,22 +32,20 @@ void RegisterBackendInternal() {
   });
 }
 
-std::map<
-    BandBackendType,
-    std::shared_ptr<Creator<IInterpreter, ModelId, WorkerId, BandDeviceFlags>>>
-    BackendFactory::interpreter_creators_ = {};
+std::map<BandBackendType, std::shared_ptr<Creator<IModelExecutor, ModelId,
+                                                  WorkerId, BandDeviceFlags>>>
+    BackendFactory::model_executor_creators_ = {};
 std::map<BandBackendType, std::shared_ptr<Creator<IModel, ModelId>>>
     BackendFactory::model_creators_ = {};
 std::map<BandBackendType, std::shared_ptr<Creator<IBackendUtil>>>
     BackendFactory::util_creators_ = {};
 
-IInterpreter* BackendFactory::CreateInterpreter(BandBackendType backend,
-                                                ModelId model_id,
-                                                WorkerId worker_id,
-                                                BandDeviceFlags device_flag) {
+IModelExecutor* BackendFactory::CreateModelExecutor(
+    BandBackendType backend, ModelId model_id, WorkerId worker_id,
+    BandDeviceFlags device_flag) {
   RegisterBackendInternal();
-  auto it = interpreter_creators_.find(backend);
-  return it != interpreter_creators_.end()
+  auto it = model_executor_creators_.find(backend);
+  return it != model_executor_creators_.end()
              ? it->second->Create(model_id, worker_id, device_flag)
              : nullptr;
 }
@@ -69,8 +67,8 @@ std::vector<BandBackendType> BackendFactory::GetAvailableBackends() {
   // assume static creators are all valid - after instantiation to reach here
   std::vector<BandBackendType> valid_backends;
 
-  for (auto type_interpretor_creator : interpreter_creators_) {
-    valid_backends.push_back(type_interpretor_creator.first);
+  for (auto type_model_executor_creator : model_executor_creators_) {
+    valid_backends.push_back(type_model_executor_creator.first);
   }
 
   return valid_backends;
@@ -78,13 +76,13 @@ std::vector<BandBackendType> BackendFactory::GetAvailableBackends() {
 
 void BackendFactory::RegisterBackendCreators(
     BandBackendType backend,
-    Creator<IInterpreter, ModelId, WorkerId, BandDeviceFlags>*
-        interpreter_creator,
+    Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
+        model_executor_creator,
     Creator<IModel, ModelId>* model_creator,
     Creator<IBackendUtil>* util_creator) {
-  interpreter_creators_[backend] = std::shared_ptr<
-      Creator<IInterpreter, ModelId, WorkerId, BandDeviceFlags>>(
-      interpreter_creator);
+  model_executor_creators_[backend] = std::shared_ptr<
+      Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags>>(
+      model_executor_creator);
   model_creators_[backend] =
       std::shared_ptr<Creator<IModel, ModelId>>(model_creator);
   util_creators_[backend] =

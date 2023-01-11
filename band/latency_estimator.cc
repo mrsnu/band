@@ -69,7 +69,7 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
           }
 
           // TODO(BAND-20): propagate affinity to CPU backend if necessary
-          // (L1143-,tensorflow_band/lite/interpreter.cc)
+          // (L1143-,tensorflow_band/lite/model_executor.cc)
 
           for (int i = 0; i < profile_num_warmups_; i++) {
             if (context_->Invoke(subgraph_key) != kBandOk) {
