@@ -75,15 +75,15 @@ BandStatus Engine::RegisterModel(Model* model) {
             model_spec.unavailable_devices.end()) {
           std::unique_ptr<Interface::IModelExecutor> model_executor(
               BackendFactory::CreateModelExecutor(backend_type, model_id,
-                                                worker_id,
-                                                GetWorkerDevice(worker_id)));
+                                                  worker_id,
+                                                  GetWorkerDevice(worker_id)));
           model_executors_[{model_id, worker_id}] = std::move(model_executor);
           added_once = true;
           BAND_LOG_INTERNAL(BAND_LOG_INFO,
                             "Create model executor for model %d worker %s (%s)",
                             model_id,
                             BandDeviceGetName(GetWorkerDevice(worker_id)),
-              BandStatusGetName(status));
+                            BandStatusGetName(status));
         }
       }
 
@@ -134,10 +134,6 @@ BandStatus Engine::RegisterModel(Model* model) {
                         std::includes(all_outputs.begin(), all_outputs.end(),
                                       model_executor->GetOutputs(key).begin(),
                                       model_executor->GetOutputs(key).end()));
-            unit_subgraphs_to_subgraph_keys_
-                [model_id][*subgraph_def.unit_subgraph_indices.begin()]
-                [*subgraph_def.unit_subgraph_indices.rbegin()]
-                    .push_back(key);
           }
         }
       }
@@ -174,9 +170,9 @@ BandStatus Engine::RegisterModel(Model* model) {
 
             for (int common_tensor_index : common_tensors) {
               if (!(*lhs_model_executor->GetTensorView(lhs_key,
-                                                    common_tensor_index) ==
+                                                       common_tensor_index) ==
                     *rhs_model_executor->GetTensorView(rhs_key,
-                                                    common_tensor_index))) {
+                                                       common_tensor_index))) {
                 BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s %d != %s %s %d",
                               BandDeviceGetName(GetWorkerDevice(lhs.worker_id)),
                               lhs.ToString().c_str(), common_tensor_index,
@@ -282,7 +278,7 @@ std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
   const Interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetOutputs(model_subgraph_key)
-                     : std::vector<int>();
+                        : std::vector<int>();
 }
 
 std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
@@ -291,7 +287,7 @@ std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
   const Interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetInputs(model_subgraph_key)
-                     : std::vector<int>();
+                        : std::vector<int>();
 }
 
 size_t Engine::GetNumWorkers() const { return workers_.size(); }

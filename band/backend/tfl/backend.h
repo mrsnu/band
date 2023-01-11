@@ -11,7 +11,7 @@
 namespace Band {
 using namespace Interface;
 namespace TfLite {
-class InterpreterCreator
+class ModelExecutorCreator
     : public Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags> {
  public:
   IModelExecutor* Create(ModelId model_id, WorkerId worker_id,

@@ -33,7 +33,7 @@ class BackendFactory {
   static void RegisterBackendCreators(
       BandBackendType backend,
       Creator<Interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
-          interpreter_creator,
+          model_executor_creator,
       Creator<Interface::IModel, ModelId>* model_creator,
       Creator<Interface::IBackendUtil>* util_creator);
 
@@ -43,7 +43,7 @@ class BackendFactory {
   static std::map<BandBackendType,
                   std::shared_ptr<Creator<Interface::IModelExecutor, ModelId,
                                           WorkerId, BandDeviceFlags>>>
-      interpreter_creators_;
+      model_executor_creators_;
   static std::map<BandBackendType,
                   std::shared_ptr<Creator<Interface::IModel, ModelId>>>
       model_creators_;
