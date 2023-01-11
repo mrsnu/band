@@ -134,8 +134,7 @@ class WorkerConfigBuilder {
   int availability_check_interval_ms_ = 30000;
 };
 
-// Delegate for InterpreterConfigBuilder, PlannerConfigBuilder,
-// and WorkerConfigBuilder
+// Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
   // Add ProfileConfig
@@ -157,7 +156,6 @@ class RuntimeConfigBuilder {
     return *this;
   }
 
-  // Add InterpreterConfig
   RuntimeConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
     profile_config_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;

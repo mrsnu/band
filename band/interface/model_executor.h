@@ -1,5 +1,5 @@
-#ifndef BAND_INTERFACE_INTERPRETER_H_
-#define BAND_INTERFACE_INTERPRETER_H_
+#ifndef BAND_INTERFACE_MODEL_EXECUTOR_H_
+#define BAND_INTERFACE_MODEL_EXECUTOR_H_
 
 #include <functional>
 #include <memory>
@@ -12,7 +12,7 @@
 namespace Band {
 namespace Interface {
 /*
-  Interpreter for specific <IModel, Worker>
+  Model executor for specific <IModel, Worker>
 */
 
 class ITensorView;

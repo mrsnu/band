@@ -23,18 +23,19 @@ TEST(TFLiteBackend, BackendInvoke) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.bin");
 
-  TfLite::TfLiteModelExecutor interpreter(0, 0, kBandCPU);
-  EXPECT_EQ(interpreter.PrepareSubgraph(&bin_model), kBandOk);
-  EXPECT_EQ(interpreter.ExecuteSubgraph(interpreter.GetLargestSubgraphKey()),
-            kBandOk);
+  TfLite::TfLiteModelExecutor model_executor(0, 0, kBandCPU);
+  EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), kBandOk);
+  EXPECT_EQ(
+      model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey()),
+      kBandOk);
 }
 
 TEST(TFLiteBackend, ModelSpec) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.bin");
 
-  TfLite::TfLiteModelExecutor interpreter(0, 0, kBandCPU);
-  ModelSpec model_spec = interpreter.InvestigateModelSpec(&bin_model);
+  TfLite::TfLiteModelExecutor model_executor(0, 0, kBandCPU);
+  ModelSpec model_spec = model_executor.InvestigateModelSpec(&bin_model);
 
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
   EXPECT_EQ(model_spec.num_ops, 1);
@@ -59,29 +60,29 @@ TEST(TFLiteBackend, InterfaceInvoke) {
   IModel* bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
   bin_model->FromPath("band/test/data/add.bin");
 
-  IModelExecutor* interpreter =
+  IModelExecutor* model_executor =
       BackendFactory::CreateModelExecutor(kBandTfLite, 0, 0, kBandCPU);
-  EXPECT_EQ(interpreter->PrepareSubgraph(bin_model), kBandOk);
+  EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), kBandOk);
 
-  SubgraphKey key = interpreter->GetLargestSubgraphKey();
+  SubgraphKey key = model_executor->GetLargestSubgraphKey();
 
-  EXPECT_EQ(interpreter->GetInputs(key).size(), 1);
-  EXPECT_EQ(interpreter->GetOutputs(key).size(), 1);
+  EXPECT_EQ(model_executor->GetInputs(key).size(), 1);
+  EXPECT_EQ(model_executor->GetOutputs(key).size(), 1);
 
   std::array<float, 2> input = {1.f, 3.f};
-  memcpy(interpreter->GetTensorView(key, interpreter->GetInputs(key)[0])
+  memcpy(model_executor->GetTensorView(key, model_executor->GetInputs(key)[0])
              ->GetData(),
          input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(interpreter->ExecuteSubgraph(key), kBandOk);
+  EXPECT_EQ(model_executor->ExecuteSubgraph(key), kBandOk);
 
   auto output_tensor =
-      interpreter->GetTensorView(key, interpreter->GetOutputs(key)[0]);
+      model_executor->GetTensorView(key, model_executor->GetOutputs(key)[0]);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
   delete bin_model;
-  delete interpreter;
+  delete model_executor;
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
