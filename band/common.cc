@@ -1,15 +1,12 @@
 #include "band/common.h"
+
+#include "common.h"
 namespace Band {
 SubgraphKey::SubgraphKey() {}
 // special case - entire model subgraph
-SubgraphKey::SubgraphKey(ModelId model_id, WorkerId worker_id)
-    : model_id(model_id), worker_id(worker_id) {}
 SubgraphKey::SubgraphKey(ModelId model_id, WorkerId worker_id,
-                         std::set<int> input_ops, std::set<int> output_ops)
-    : model_id(model_id),
-      worker_id(worker_id),
-      input_ops(input_ops),
-      output_ops(output_ops) {}
+                         std::set<int> unit_indices)
+    : model_id(model_id), worker_id(worker_id), unit_indices(unit_indices) {}
 
 bool SubgraphKey::operator<(const SubgraphKey& key) const {
   if (model_id != key.GetModelId()) {
@@ -20,33 +17,33 @@ bool SubgraphKey::operator<(const SubgraphKey& key) const {
     return worker_id < key.GetWorkerId();
   }
 
-  if (input_ops != key.input_ops) {
-    return input_ops < key.input_ops;
-  }
-
-  return output_ops < key.output_ops;
+  return unit_indices < key.unit_indices;
 }
 
 bool SubgraphKey::operator==(const SubgraphKey& key) const {
   return (model_id == key.GetModelId()) && (worker_id == key.GetWorkerId()) &&
-         (input_ops == key.input_ops) && (output_ops == key.output_ops);
+         (unit_indices == key.unit_indices);
 }
 
 std::string IndexSetToString(const std::set<int>& indices) {
   std::string result;
-  for (const int& index : indices) {
-    result += std::to_string(index) + ",";
+  if (indices.size()) {
+    for (const int& index : indices) {
+      result += std::to_string(index) + ",";
+    }
+    result.pop_back();
   }
-  if (result.size()) result.pop_back();
   return result;
 }
 
-std::string SubgraphKey::GetInputOpsString() const {
-  return IndexSetToString(input_ops);
+std::string SubgraphKey::GetUnitIndicesString() const {
+  return IndexSetToString(unit_indices);
 }
 
-std::string SubgraphKey::GetOutputOpsString() const {
-  return IndexSetToString(output_ops);
+std::string SubgraphKey::ToString() const {
+  return "Model id " + std::to_string(model_id) + " Worker id " +
+         std::to_string(worker_id) + " Unit indices (" +
+         GetUnitIndicesString() + ")";
 }
 
 bool SubgraphKey::IsValid() const {
@@ -61,8 +58,7 @@ std::size_t SubgraphHash::operator()(const SubgraphKey& p) const {
     for (int e : set) hash ^= hash_func(e);
   };
 
-  hash_set(p.GetInputOps());
-  hash_set(p.GetOutputOps());
+  hash_set(p.GetUnitIndices());
 
   return hash;
 }
@@ -74,6 +70,37 @@ std::size_t PairHash::operator()(const std::pair<int, std::set<int>>& p) const {
     hash ^= hash_func(e);
   }
   return hash;
+}
+
+std::set<int> ModelSpec::GetPureInputTensors(
+    const std::set<int>& op_indices) const {
+  // {all input tensors in ops} - {all output tensors in ops}
+  std::set<int> input_tensors;
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& inputs = op_input_tensors[op_index];
+    input_tensors.insert(inputs.begin(), inputs.end());
+  }
+
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& outputs = op_output_tensors[op_index];
+    for (int output_index : outputs) {
+      input_tensors.erase(output_index);
+    }
+  }
+
+  return input_tensors;
+}
+
+std::set<int> ModelSpec::GetOutputTensors(
+    const std::set<int>& op_indices) const {
+  // {all output tensors in ops}
+  std::set<int> output_tensors;
+  for (const auto& op_index : op_indices) {
+    const std::set<int>& outputs = op_output_tensors[op_index];
+    output_tensors.insert(outputs.begin(), outputs.end());
+  }
+
+  return output_tensors;
 }
 
 }  // namespace Band

@@ -7,14 +7,14 @@ cc_library(
     name = "tfl_backend",
     srcs = [
         "backend.cc",
-        "interpreter.cc",
+        "model_executor.cc",
         "model.cc",
         "tensor.cc",
         "util.cc",
     ],
     hdrs = [
         "backend.h",
-        "interpreter.h",
+        "model_executor.h",
         "model.h",
         "tensor.h",
         "util.h",
@@ -22,6 +22,9 @@ cc_library(
     # force to link Band::TfLiteRegisterCreators (in backend.cc)
     # to override the weak symbol in //band:backend_factory
     alwayslink = True,
+    copts = [
+        "-DTF_LITE_STRIP_ERROR_STRINGS"
+    ],
     deps = [
         "//band:framework",
         "//tensorflow/lite:framework",

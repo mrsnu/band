@@ -51,21 +51,22 @@ typedef struct DeviceWorkerAffinityPair {
   int worker;
 } DeviceWorkerAffinityPair;
 
+struct ModelConfig {
+  int minimum_subgraph_size = 7;
+  BandSubgraphPreparationType subgraph_preparation_type =
+      kBandMergeUnitSubgraph;
+};
+
 struct RuntimeConfig {
-  int minimum_subgraph_size;
-  BandSubgraphPreparationType subgraph_preparation_type;
   BandCPUMaskFlags cpu_mask;
+  ModelConfig model_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
 
  private:
   friend class RuntimeConfigBuilder;
-  RuntimeConfig() {
-    minimum_subgraph_size = 7;
-    subgraph_preparation_type = kBandMergeUnitSubgraph;
-    cpu_mask = kBandAll;
-  };
+  RuntimeConfig() { cpu_mask = kBandAll; };
 };
 
 }  // namespace Band

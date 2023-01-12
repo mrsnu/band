@@ -14,13 +14,13 @@ ScheduleAction RoundRobinScheduler::Schedule(const Context& context,
       auto available_job = std::find_if(
           requests.begin(), requests.end(),
           [this, &context, worker_id](const Job& job) {
-            return context.GetModelSubgraphKey(job.model_id, worker_id)
+            return context.GetLargestSubgraphKey(job.model_id, worker_id)
                 .IsValid();
           });
       if (available_job != requests.end()) {
         Job to_execute = *available_job;
         SubgraphKey key =
-            context.GetModelSubgraphKey(to_execute.model_id, worker_id);
+            context.GetLargestSubgraphKey(to_execute.model_id, worker_id);
         action[worker_id].push_back({to_execute, key});
 
         requests.erase(available_job);

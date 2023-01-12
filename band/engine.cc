@@ -1,23 +1,27 @@
 #include "band/engine.h"
 
+#include <algorithm>
+
 #include "band/backend_factory.h"
 #include "band/context.h"
 #include "band/interface/tensor_view.h"
 #include "band/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
+#include "band/model_analyzer.h"
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
+#include "engine.h"
 
 namespace Band {
 Engine::~Engine() {
-  for (auto& worker : workers_) {
-    worker->End();
+  for (auto& model_executor : model_executors_) {
+    model_executor.second.reset();
   }
 
-  for (auto& interpreter : interpreters_) {
-    interpreter.second.reset();
+  for (auto& worker : workers_) {
+    worker->End();
   }
 
   for (auto& worker : workers_) {
@@ -35,80 +39,220 @@ std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
 
 BandStatus Engine::RegisterModel(Model* model) {
   if (!model || model->GetSupportedBackends().size() == 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register model.");
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register model");
     return kBandError;
   }
 
   const ModelId model_id = model->GetId();
 
-  // Create internal interpreter per each supported backends
   for (BandBackendType backend_type : model->GetSupportedBackends()) {
-    // Analyze model spec
+    // Analyze model & generate subgraphs per backend type
+    ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
+                           model_config_, model, backend_type);
+    const auto result = analyzer.CreateSubgraphs();
+    // TODO: replace with a std::tie?
+    const BandStatus status = std::get<0>(result);
+    const ModelSpec model_spec = std::get<1>(result);
+    const std::vector<SubgraphDef> subgraph_defs = std::get<2>(result);
+
+    if (status != kBandOk) {
+      BAND_REPORT_ERROR(
+          error_reporter_,
+          "Failed to create subgraphs for model %d with subgraph option %s",
+          model_id,
+          BandSubgraphPreparationGetName(
+              model_config_.subgraph_preparation_type));
+      // TODO(BAND-49): unregister for specific backend
+      UnregisterModel(model);
+      return kBandError;
+    }
+
+    // Create internal model_executor per each supported backends
     {
-      std::unique_ptr<Interface::IInterpreter> interpreter(
-          BackendFactory::CreateInterpreter(backend_type));
-      model_specs_[model_id] = interpreter->InvestigateModelSpec(
-          model->GetBackendModel(backend_type));
-    }
+      bool added_once = false;
+      for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
+        if (model_spec.unavailable_devices.find(GetWorkerDevice(worker_id)) ==
+            model_spec.unavailable_devices.end()) {
+          std::unique_ptr<Interface::IModelExecutor> model_executor(
+              BackendFactory::CreateModelExecutor(backend_type, model_id,
+                                                  worker_id,
+                                                  GetWorkerDevice(worker_id)));
+          model_executors_[{model_id, worker_id}] = std::move(model_executor);
+          added_once = true;
+          BAND_LOG_INTERNAL(BAND_LOG_INFO,
+                            "Create model executor for model %d worker %s (%s)",
+                            model_id,
+                            BandDeviceGetName(GetWorkerDevice(worker_id)),
+                            BandStatusGetName(status));
+        }
+      }
 
-    // Add whole-model subgraphs
-    for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
-      std::unique_ptr<Interface::IInterpreter> interpreter(
-          BackendFactory::CreateInterpreter(backend_type));
-      if (interpreter->FromModel(
-              model->GetBackendModel(backend_type), worker_id,
-              workers_[worker_id]->GetDeviceFlag()) == kBandOk) {
-        BAND_LOG_INTERNAL(
-            BAND_LOG_INFO, "Create interpreter for model %d worker %s",
-            model_id, BandDeviceGetName(workers_[worker_id]->GetDeviceFlag()));
-        interpreters_[{worker_id, model_id}] = std::move(interpreter);
+      if (!added_once) {
+        BAND_REPORT_ERROR(
+            error_reporter_,
+            "Failed to create model executor on all worker types");
+        // TODO(BAND-49): unregister for specific backend
+        UnregisterModel(model);
+        return kBandError;
       }
     }
 
-    bool need_fallback_subgraph =
-        planner_->NeedFallbackSubgraphs() &&
-        model_option_.subgraph_preparation_type_ != "no_fallback_subgraph";
-    // TODO: Create a interpreter that represents <Interface::IModel,
-    // DeviceFlag>
+    model_specs_.insert({model_id, model_spec});
 
-    // Initialize tensor ring buffer
-    // Assumption: each backend model in Band::Model has the same input / output
-    // tensor shapes
+    // Prepare execution of subgraph definitions per each model_executor
     {
-      std::vector<std::shared_ptr<Interface::ITensor>> input_tensors;
-      std::vector<std::shared_ptr<Interface::ITensor>> output_tensors;
+      for (const SubgraphDef& subgraph_def : subgraph_defs) {
+        const std::pair<ModelId, WorkerId> model_executor_key = {
+            model_id, subgraph_def.worker_id};
+        const SubgraphKey key = {model_id, subgraph_def.worker_id,
+                                 subgraph_def.unit_subgraph_indices};
 
-      auto model_subgraph_key =
-          GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
-      Interface::IInterpreter* primary_interpreter =
-          GetInterpreter(model_subgraph_key);
-
-      for (int input_tensor :
-           primary_interpreter->GetInputs(model_subgraph_key)) {
-        input_tensors.push_back(primary_interpreter->GetTensorView(
-            model_subgraph_key, input_tensor));
+        if (model_executors_.find(model_executor_key) ==
+            model_executors_.end()) {
+          BAND_REPORT_ERROR(error_reporter_,
+                            "Subgraph logic created a subgraph for worker %d "
+                            "that does not supports model %d",
+                            subgraph_def.worker_id, model_id);
+        } else {
+          auto& model_executor =
+              model_executors_[{model_id, subgraph_def.worker_id}];
+          BandStatus status = model_executor->PrepareSubgraph(
+              model->GetBackendModel(backend_type), subgraph_def.op_indices,
+              subgraph_def.unit_subgraph_indices);
+          if (status == kBandOk) {
+            // Verify generated subgraphs
+            BAND_ENSURE(error_reporter_, model_executor->HasSubgraph(key));
+            const std::set<int> inputs =
+                model_spec.GetPureInputTensors(subgraph_def.op_indices);
+            const std::set<int> all_outputs =
+                model_spec.GetOutputTensors(subgraph_def.op_indices);
+            BAND_ENSURE(error_reporter_,
+                        std::equal(model_executor->GetInputs(key).begin(),
+                                   model_executor->GetInputs(key).end(),
+                                   inputs.begin()));
+            BAND_ENSURE(error_reporter_,
+                        std::includes(all_outputs.begin(), all_outputs.end(),
+                                      model_executor->GetOutputs(key).begin(),
+                                      model_executor->GetOutputs(key).end()));
+          }
+        }
       }
 
-      for (int output_tensor :
-           primary_interpreter->GetOutputs(model_subgraph_key)) {
-        output_tensors.push_back(primary_interpreter->GetTensorView(
-            model_subgraph_key, output_tensor));
+      // Verify equality of all tensor pairs
+      for (const SubgraphDef& lhs : subgraph_defs) {
+        const std::pair<ModelId, WorkerId> lhs_model_executor_key = {
+            model_id, lhs.worker_id};
+        auto& lhs_model_executor = model_executors_[{model_id, lhs.worker_id}];
+        const SubgraphKey lhs_key = {model_id, lhs.worker_id,
+                                     lhs.unit_subgraph_indices};
+
+        std::set<int> lhs_outputs{
+            lhs_model_executor->GetOutputs(lhs_key).begin(),
+            lhs_model_executor->GetOutputs(lhs_key).end()};
+
+        for (const SubgraphDef& rhs : subgraph_defs) {
+          const std::pair<ModelId, WorkerId> rhs_model_executor_key = {
+              model_id, rhs.worker_id};
+          auto& rhs_model_executor =
+              model_executors_[{model_id, rhs.worker_id}];
+          const SubgraphKey rhs_key = {model_id, rhs.worker_id,
+                                       rhs.unit_subgraph_indices};
+          if ((lhs.worker_id != rhs.worker_id) && (&lhs != &rhs)) {
+            std::set<int> rhs_inputs{
+                rhs_model_executor->GetInputs(rhs_key).begin(),
+                rhs_model_executor->GetInputs(rhs_key).end()};
+
+            std::set<int> common_tensors;
+            std::set_intersection(
+                lhs_outputs.begin(), lhs_outputs.end(), rhs_inputs.begin(),
+                rhs_inputs.end(),
+                std::inserter(common_tensors, common_tensors.end()));
+
+            for (int common_tensor_index : common_tensors) {
+              if (!(*lhs_model_executor->GetTensorView(lhs_key,
+                                                       common_tensor_index) ==
+                    *rhs_model_executor->GetTensorView(rhs_key,
+                                                       common_tensor_index))) {
+                BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s %d != %s %s %d",
+                              BandDeviceGetName(GetWorkerDevice(lhs.worker_id)),
+                              lhs.ToString().c_str(), common_tensor_index,
+                              BandDeviceGetName(GetWorkerDevice(rhs.worker_id)),
+                              rhs.ToString().c_str(), common_tensor_index);
+              }
+            }
+          }
+        }
       }
 
-      model_input_buffer_.emplace(
-          model->GetId(),
-          std::make_unique<TensorRingBuffer>(
-              error_reporter_, input_tensors,
-              primary_interpreter->GetInputs(model_subgraph_key)));
-      model_output_buffer_.emplace(
-          model_id, std::make_unique<TensorRingBuffer>(
-                        error_reporter_, output_tensors,
-                        primary_interpreter->GetOutputs(model_subgraph_key)));
+      // todo: connect prev / next && unit indices
+
+      // Initialize tensor ring buffer
+      // Assumption: each backend model in Band::Model has the same input /
+      // output tensor shapes
+      {
+        std::vector<std::shared_ptr<Interface::ITensor>> input_tensors;
+        std::vector<std::shared_ptr<Interface::ITensor>> output_tensors;
+
+        auto model_subgraph_key =
+            GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+        Interface::IModelExecutor* primary_model_executor =
+            GetModelExecutor(model_subgraph_key);
+
+        for (int input_tensor : model_spec.input_tensors) {
+          input_tensors.push_back(primary_model_executor->GetTensorView(
+              model_subgraph_key, input_tensor));
+        }
+
+        for (int output_tensor : model_spec.output_tensors) {
+          output_tensors.push_back(primary_model_executor->GetTensorView(
+              model_subgraph_key, output_tensor));
+        }
+
+        const std::vector<int> input_indices{model_spec.input_tensors.begin(),
+                                             model_spec.input_tensors.end()};
+        const std::vector<int> output_indices{model_spec.output_tensors.begin(),
+                                              model_spec.output_tensors.end()};
+
+        model_input_buffer_.emplace(
+            model->GetId(), std::make_unique<TensorRingBuffer>(
+                                error_reporter_, input_tensors, input_indices));
+        model_output_buffer_.emplace(
+            model_id, std::make_unique<TensorRingBuffer>(
+                          error_reporter_, output_tensors, output_indices));
+      }
     }
+
+    if (planner_->NeedProfile()) {
+      latency_estimator_->ProfileModel(model_id);
+    }
+
+    return kBandOk;
+  }
+}
+
+BandStatus Engine::UnregisterModel(Model* model) {
+  if (!model) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to unregister null model.");
+    return kBandError;
   }
 
-  if (planner_->NeedProfile()) {
-    latency_estimator_->ProfileModel(model_id);
+  for (auto it = model_executors_.begin(); it != model_executors_.end();) {
+    (it->first.second == model->GetId()) ? model_executors_.erase(it++)
+                                         : (++it);
+  }
+
+  for (auto it = model_specs_.begin(); it != model_specs_.end();) {
+    (it->first == model->GetId()) ? model_specs_.erase(it++) : (++it);
+  }
+
+  for (auto it = model_input_buffer_.begin();
+       it != model_input_buffer_.end();) {
+    (it->first == model->GetId()) ? model_input_buffer_.erase(it++) : (++it);
+  }
+
+  for (auto it = model_output_buffer_.begin();
+       it != model_output_buffer_.end();) {
+    (it->first == model->GetId()) ? model_output_buffer_.erase(it++) : (++it);
   }
 
   return kBandOk;
@@ -117,12 +261,12 @@ BandStatus Engine::RegisterModel(Model* model) {
 Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
   // TODO: What if there are multiple backends?
   SubgraphKey model_subgraph_key =
-      GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
 
-  if (Interface::IInterpreter* interpreter =
-          GetInterpreter(model_subgraph_key)) {
+  if (Interface::IModelExecutor* model_executor =
+          GetModelExecutor(model_subgraph_key)) {
     return new Tensor(
-        interpreter->GetTensorView(model_subgraph_key, tensor_index).get());
+        model_executor->GetTensorView(model_subgraph_key, tensor_index).get());
   } else {
     return nullptr;
   }
@@ -130,20 +274,20 @@ Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
 
 std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
-      GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
-  const Interface::IInterpreter* interpreter =
-      GetInterpreter(model_subgraph_key);
-  return interpreter ? interpreter->GetOutputs(model_subgraph_key)
-                     : std::vector<int>();
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+  const Interface::IModelExecutor* model_executor =
+      GetModelExecutor(model_subgraph_key);
+  return model_executor ? model_executor->GetOutputs(model_subgraph_key)
+                        : std::vector<int>();
 }
 
 std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
-      GetModelSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
-  const Interface::IInterpreter* interpreter =
-      GetInterpreter(model_subgraph_key);
-  return interpreter ? interpreter->GetInputs(model_subgraph_key)
-                     : std::vector<int>();
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+  const Interface::IModelExecutor* model_executor =
+      GetModelExecutor(model_subgraph_key);
+  return model_executor ? model_executor->GetInputs(model_subgraph_key)
+                        : std::vector<int>();
 }
 
 size_t Engine::GetNumWorkers() const { return workers_.size(); }
@@ -314,10 +458,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
   BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
 
-  // TODO: Update interpreter config to something
   {
-    model_option_.minimum_subgraph_size_ = config.minimum_subgraph_size;
-    model_option_.subgraph_preparation_type_ = config.subgraph_preparation_type;
+    model_config_ = config.model_config;
 
     if (planner_->NeedProfile()) {
       latency_estimator_ = std::make_unique<LatencyEstimator>(this);
@@ -349,15 +491,16 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
       if (planner_->GetWorkerType() == kBandGlobalQueue) {
-        worker = std::make_unique<GlobalQueueWorker>(this, device_flag);
+        worker = std::make_unique<GlobalQueueWorker>(this, workers_.size(),
+                                                     device_flag);
       } else {
-        worker = std::make_unique<DeviceQueueWorker>(this, device_flag);
+        worker = std::make_unique<DeviceQueueWorker>(this, workers_.size(),
+                                                     device_flag);
       }
-      WorkerId worker_id = workers_.size();
-      if (worker->Init(config.worker_config, worker_id) != kBandOk) {
+      if (worker->Init(config.worker_config) != kBandOk) {
         error_reporter_->Report("Worker::Init() failed for worker : %s.",
                                 BandDeviceGetName(device_flag));
-        exit(-1);
+        return kBandError;
       }
 
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
@@ -396,14 +539,21 @@ std::set<int> Engine::GetIdleWorkers() const {
   return idle_workers;
 }
 
-SubgraphKey Engine::GetModelSubgraphKey(ModelId model_id,
-                                        WorkerId worker_id) const {
-  auto interpreter_it = interpreters_.find({worker_id, model_id});
-  if (interpreter_it != interpreters_.end()) {
-    return interpreter_it->second->GetModelSubgraphKey(model_id);
+SubgraphKey Engine::GetLargestSubgraphKey(ModelId model_id,
+                                          WorkerId worker_id) const {
+  auto model_executor_it = model_executors_.find({model_id, worker_id});
+  if (model_executor_it != model_executors_.end()) {
+    return model_executor_it->second->GetLargestSubgraphKey();
   } else {
-    // TODO: report error
     return SubgraphKey();
+  }
+}
+
+const ModelSpec* Engine::GetModelSpec(ModelId model_id) const {
+  if (model_specs_.find(model_id) == model_specs_.end()) {
+    return nullptr;
+  } else {
+    return &model_specs_.at(model_id);
   }
 }
 
@@ -412,15 +562,26 @@ WorkerId Engine::GetModelWorker(ModelId model_id) const {
 }
 
 bool Engine::IsEnd(const SubgraphKey& key) const {
-  // TODO: subgraph support
-  return true;
+  const ModelSpec* model_spec = GetModelSpec(key.GetModelId());
+  // check whether key has the last unit subgraph
+  return model_spec &&
+             (key.GetUnitIndices().find(model_spec->unit_subgraph_ops.size() -
+                                        1) != key.GetUnitIndices().end()) ||
+         (key.GetUnitIndices().size() == 0);
+}
+
+bool Engine::HasSubgraph(const SubgraphKey& key) const {
+  auto model_executor_it =
+      model_executors_.find({key.GetModelId(), key.GetWorkerId()});
+  return model_executor_it != model_executors_.end() &&
+         model_executor_it->second->HasSubgraph(key);
 }
 
 BandStatus Engine::Invoke(const SubgraphKey& key) {
-  auto interpreter_it =
-      interpreters_.find({key.GetWorkerId(), key.GetModelId()});
-  if (interpreter_it != interpreters_.end()) {
-    return interpreter_it->second->InvokeSubgraph(key);
+  auto model_executor_it =
+      model_executors_.find({key.GetModelId(), key.GetWorkerId()});
+  if (model_executor_it != model_executors_.end()) {
+    return model_executor_it->second->ExecuteSubgraph(key);
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a subgraph key");
     return kBandError;
@@ -428,10 +589,24 @@ BandStatus Engine::Invoke(const SubgraphKey& key) {
 }
 
 std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
-    int model_id, std::set<int> resolved_tensors, int64_t start_time,
-    const std::map<WorkerId, int64_t>& worker_waiting,
-    SubgraphKey preceded_subgraph_index) const {
+    int model_id, int start_unit_idx, int64_t start_time,
+    const std::map<WorkerId, int64_t>& worker_waiting) const {
   BAND_NOT_IMPLEMENTED;
+  // if (model_config_.subgraph_preparation_type == kBandFallbackPerDevice) {
+  //   int preceded_subgraph_index = job.previous_subgraph_indices.empty()
+  //                                     ? -1
+  //                                     : job.previous_subgraph_indices.back();
+  //   auto pair = GetShortestLatency(job.model_id, job.resolved_tensors, 0,
+  //                                  worker_waiting, preceded_subgraph_index);
+  //   std::pair<std::vector<int>, int64_t> ret =
+  //       std::pair<std::vector<int>, int64_t>({}, pair.second);
+  //   ret.first.push_back(pair.first);
+  //   return ret;
+  // } else {
+  //   return GetShortestLatencyWithUnitSubgraph(job.model_id,
+  //   job.start_unit_idx,
+  //                                             worker_waiting);
+  // }
   return {};
 }
 
@@ -490,6 +665,14 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
+const Worker* Engine::GetWorker(WorkerId id) const {
+  if (id >= 0 && id < workers_.size()) {
+    return workers_.at(id).get();
+  } else {
+    return nullptr;
+  }
+}
+
 Worker* Engine::GetWorker(WorkerId id) {
   if (id >= 0 && id < workers_.size()) {
     return workers_[id].get();
@@ -506,9 +689,9 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
 
   // TODO: Subgraph execution
   const SubgraphKey& key = job.subgraph_key;
-  auto interpeter = GetInterpreter(job.subgraph_key);
-  std::set<int> unresolved_tensors(interpeter->GetInputs(key).begin(),
-                                   interpeter->GetInputs(key).end());
+  auto model_executor = GetModelExecutor(job.subgraph_key);
+  std::set<int> unresolved_tensors(model_executor->GetInputs(key).begin(),
+                                   model_executor->GetInputs(key).end());
 
   // // Intermediate tensor communication
   // for (auto subgraph_it = job.previous_subgraph_indices.cbegin();
@@ -516,7 +699,7 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
   //      ++subgraph_it) {
   //   int preceded_subgraph_index = *subgraph_it;
   //   Subgraph *preceded_subgraph =
-  //       interpreter->subgraph(preceded_subgraph_index);
+  //       model_executor->subgraph(preceded_subgraph_index);
 
   //   for (int tensor_index : preceded_subgraph->outputs()) {
   //     if (unresolved_tensors.find(tensor_index) !=
@@ -552,8 +735,8 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
     int tensor_index = *tensor_it;
     if (input_buffer->IsTensorIndexValid(tensor_index)) {
       if (input_buffer->GetTensorFromHandle(
-              interpeter->GetTensorView(key, tensor_index).get(), tensor_index,
-              job.input_handle) != kBandOk) {
+              model_executor->GetTensorView(key, tensor_index).get(),
+              tensor_index, job.input_handle) != kBandOk) {
         BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                           "Failed to copy input tensor %d for model %d",
                           tensor_index, job.model_id);
@@ -583,7 +766,7 @@ BandStatus Engine::TryCopyOutputTensors(const Job& job) {
   }
 
   const SubgraphKey& key = job.subgraph_key;
-  auto interpeter = GetInterpreter(job.subgraph_key);
+  auto model_executor = GetModelExecutor(job.subgraph_key);
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR,
@@ -593,11 +776,11 @@ BandStatus Engine::TryCopyOutputTensors(const Job& job) {
   }
 
   auto output_buffer = model_output_buffer_[job.model_id].get();
-  for (int tensor_index : interpeter->GetOutputs(key)) {
+  for (int tensor_index : model_executor->GetOutputs(key)) {
     if (output_buffer->IsTensorIndexValid(tensor_index)) {
       if (output_buffer->PutTensorToHandle(
-              interpeter->GetTensorView(key, tensor_index).get(), tensor_index,
-              job.output_handle) != kBandOk) {
+              model_executor->GetTensorView(key, tensor_index).get(),
+              tensor_index, job.output_handle) != kBandOk) {
         BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                           "Failed to copy output tensor %d for model %d",
                           tensor_index, job.model_id);
@@ -620,14 +803,14 @@ WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
   return -1;
 }
 
-Interface::IInterpreter* Engine::GetInterpreter(const SubgraphKey& key) {
-  auto it = interpreters_.find({key.GetWorkerId(), key.GetModelId()});
-  return it != interpreters_.end() ? it->second.get() : nullptr;
+Interface::IModelExecutor* Engine::GetModelExecutor(const SubgraphKey& key) {
+  auto it = model_executors_.find({key.GetModelId(), key.GetWorkerId()});
+  return it != model_executors_.end() ? it->second.get() : nullptr;
 }
 
-const Interface::IInterpreter* Engine::GetInterpreter(
+const Interface::IModelExecutor* Engine::GetModelExecutor(
     const SubgraphKey& key) const {
-  auto it = interpreters_.find({key.GetWorkerId(), key.GetModelId()});
-  return it != interpreters_.end() ? it->second.get() : nullptr;
+  auto it = model_executors_.find({key.GetModelId(), key.GetWorkerId()});
+  return it != model_executors_.end() ? it->second.get() : nullptr;
 }
 }  // namespace Band

@@ -3,8 +3,8 @@
 
 #include "band/backend_factory.h"
 #include "band/common.h"
-#include "band/interface/interpreter.h"
 #include "band/interface/model.h"
+#include "band/interface/model_executor.h"
 
 // Expected workflow (per each backend)
 // 1. Implement creators
@@ -23,14 +23,17 @@ struct Creator {
 
 class BackendFactory {
  public:
-  static Interface::IInterpreter* CreateInterpreter(BandBackendType backend);
+  static Interface::IModelExecutor* CreateModelExecutor(
+      BandBackendType backend, ModelId model_id, WorkerId worker_id,
+      BandDeviceFlags device_flag);
   static Interface::IModel* CreateModel(BandBackendType backend, ModelId id);
   static Interface::IBackendUtil* GetBackendUtil(BandBackendType backend);
   static std::vector<BandBackendType> GetAvailableBackends();
 
   static void RegisterBackendCreators(
       BandBackendType backend,
-      Creator<Interface::IInterpreter>* interpreter_creator,
+      Creator<Interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
+          model_executor_creator,
       Creator<Interface::IModel, ModelId>* model_creator,
       Creator<Interface::IBackendUtil>* util_creator);
 
@@ -38,8 +41,9 @@ class BackendFactory {
   BackendFactory() = default;
 
   static std::map<BandBackendType,
-                  std::shared_ptr<Creator<Interface::IInterpreter>>>
-      interpreter_creators_;
+                  std::shared_ptr<Creator<Interface::IModelExecutor, ModelId,
+                                          WorkerId, BandDeviceFlags>>>
+      model_executor_creators_;
   static std::map<BandBackendType,
                   std::shared_ptr<Creator<Interface::IModel, ModelId>>>
       model_creators_;

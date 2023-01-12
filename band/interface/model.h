@@ -22,7 +22,7 @@ struct IModel : public IBackendSpecific {
   ModelId GetId() const { return id_; }
   const std::string& GetPath() const { return path_; }
 
- private:
+ protected:
   std::string path_;
   const ModelId id_;
 };

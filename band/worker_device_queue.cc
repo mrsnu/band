@@ -64,7 +64,9 @@ void DeviceQueueWorker::EndEnqueue() {
   requests_.pop_front();
 
   if (allow_work_steal_ && requests_.empty()) {
-    TryWorkSteal();
+    // TODO: call this function once we re-implement
+    // and test TryWorkSteal()
+    // TryWorkSteal();
   }
 }
 
@@ -100,7 +102,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     Planner"; return;
     }
 
-    Interpreter* interpreter_ptr = planner_ptr->GetInterpreter();
+    Interpreter* interpreter_ptr = planner_ptr->GetModelExecutor();
     int64_t max_latency_gain = -1;
     int max_latency_gain_worker = -1;
     int max_latency_gain_subgraph_idx = -1;

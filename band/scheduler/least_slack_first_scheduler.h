@@ -9,9 +9,9 @@ class LeastSlackFirstScheduler : public IScheduler {
  public:
   explicit LeastSlackFirstScheduler(int window_size);
 
-  ScheduleAction Schedule(const Context& context) override;
+  ScheduleAction Schedule(const Context& context, JobQueue& requests) override;
   bool NeedProfile() override { return true; }
-  bool NeedFallbackSubgraphs() override { return false; }
+  bool NeedFallbackSubgraphs() override { return true; }
   BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
 
  private:

@@ -7,7 +7,7 @@ namespace Band {
 ScheduleAction FixedWorkerGlobalQueueScheduler::Schedule(const Context& context,
                                                          JobQueue& requests) {
   ScheduleAction action;
-  // TODO: fallback subgraphs for FixedDevicePlanner?
+  // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   std::set<int> idle_workers = context.GetIdleWorkers();
   if (idle_workers.empty()) {
     // no device is idle; wait for next iteration
@@ -21,7 +21,7 @@ ScheduleAction FixedWorkerGlobalQueueScheduler::Schedule(const Context& context,
   //   int model_id = subgraph_key.GetModelId();
 
   //   int worker_id;
-  //   if (worker_id >= 0 && GetInterpreter()->GetNumWorkers()) {
+  //   if (worker_id >= 0 && GetModelExecutor()->GetNumWorkers()) {
   //     worker_id = to_execute.worker_id;
   //   } else {
   //     worker_id = planner_->GetModelWorkerMap()[model_id];
@@ -35,10 +35,10 @@ ScheduleAction FixedWorkerGlobalQueueScheduler::Schedule(const Context& context,
   //   }
 
   //   int subgraph_idx = context.GetSubgraphIdx(model_id, worker_id);
-  //   Subgraph *subgraph = GetInterpreter()->subgraph(subgraph_idx);
+  //   Subgraph *subgraph = GetModelExecutor()->subgraph(subgraph_idx);
   //   to_execute.expected_latency =
   //       GetWorkerWaitingTime()[worker_id] +
-  //       GetInterpreter()->GetExpectedLatency(subgraph_idx);
+  //       GetModelExecutor()->GetExpectedLatency(subgraph_idx);
   //   EnqueueAction(to_execute, subgraph);
 
   //   // delete this job from our request queue and

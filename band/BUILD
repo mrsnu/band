@@ -129,8 +129,8 @@ cc_library(
     ],
     hdrs = [
         "interface/backend.h",
-        "interface/interpreter.h",
         "interface/model.h",
+        "interface/model_executor.h",
         "interface/tensor.h",
         "interface/tensor_view.h",
     ],
@@ -211,6 +211,23 @@ cc_library(
 )
 
 cc_library(
+    name = "model_analyzer",
+    srcs = [
+        "model_analyzer.cc",
+    ],
+    hdrs = [
+        "model_analyzer.h",
+    ],
+    deps = [
+        ":backend_factory",
+        ":common",
+        ":interface",
+        ":model",
+        ":worker",
+    ],
+)
+
+cc_library(
     name = "worker",
     srcs = [
         "worker.cc",
@@ -232,11 +249,13 @@ cc_library(
     name = "scheduler",
     srcs = [
         "scheduler/fixed_worker_global_queue_scheduler.cc",
+        "scheduler/least_slack_first_scheduler.cc",
         "scheduler/fixed_worker_scheduler.cc",
         "scheduler/round_robin_scheduler.cc",
     ],
     hdrs = [
         "scheduler/fixed_worker_scheduler.h",
+        "scheduler/least_slack_first_scheduler.h",
         "scheduler/round_robin_scheduler.h",
         "scheduler/scheduler.h",
     ],
@@ -315,6 +334,7 @@ cc_library(
             ":json_util",
             ":latency_estimator",
             ":model",
+            ":model_analyzer",
             ":planner",
             ":scheduler",
             ":tensor",

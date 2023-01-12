@@ -17,12 +17,13 @@ struct MockContextBase : public Context {
   MOCK_CONST_METHOD0(GetIdleWorkers, std::set<WorkerId>(void));
 
   /* subgraph */
-  MOCK_CONST_METHOD2(GetModelSubgraphKey, SubgraphKey(ModelId, WorkerId));
+  MOCK_CONST_METHOD2(GetLargestSubgraphKey, SubgraphKey(ModelId, WorkerId));
   MOCK_CONST_METHOD1(IsEnd, bool(const SubgraphKey&));
+  MOCK_CONST_METHOD1(HasSubgraph, bool(const SubgraphKey&));
   MOCK_METHOD1(Invoke, BandStatus(const SubgraphKey&));
 
   /* model */
-  MOCK_METHOD1(GetModelSpec, const ModelSpec*(ModelId));
+  MOCK_CONST_METHOD1(GetModelSpec, const ModelSpec*(ModelId));
   MOCK_CONST_METHOD1(GetModelWorker, WorkerId(ModelId));
 
   /* scheduling */
@@ -31,10 +32,9 @@ struct MockContextBase : public Context {
       std::pair<std::vector<SubgraphKey>, int64_t>;
   using SubgraphWithShortestLatency =
       std::pair<std::vector<SubgraphKey>, int64_t>;
-  MOCK_CONST_METHOD5(GetShortestLatency,
-                     std::pair<SubgraphKey, int64_t>(int, std::set<int>,
-                                                     int64_t, WorkerWaiting,
-                                                     SubgraphKey));
+  MOCK_CONST_METHOD4(GetShortestLatency,
+                     std::pair<SubgraphKey, int64_t>(int, int, int64_t,
+                                                     WorkerWaiting));
 
   MOCK_CONST_METHOD3(GetShortestLatencyWithUnitSubgraph,
                      ShortestLatencyWithUnitSubgraph(int, int, WorkerWaiting));
@@ -59,6 +59,7 @@ struct MockContextBase : public Context {
   /* getters */
   ErrorReporter* GetErrorReporter() { return DefaultErrorReporter(); }
   MOCK_METHOD1(GetWorker, Worker*(WorkerId));
+  MOCK_CONST_METHOD1(GetWorker, const Worker*(WorkerId));
   MOCK_CONST_METHOD0(GetNumWorkers, size_t());
 
   /* tensor communication */

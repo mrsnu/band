@@ -3,6 +3,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
+
+const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
+  switch (type) {
+    case kBandNoFallbackSubgraph:
+      return "NoFallbackSubgraph";
+    case kBandFallbackPerWorker:
+      return "FallbackPerWorker";
+    case kBandUnitSubgraph:
+      return "UnitSubgraph";
+    case kBandMergeUnitSubgraph:
+      return "MergeUnitSubgraph";
+  }
+  return "Unknown type";
+}
+
 int BandIntArrayGetSizeInBytes(int size) {
   static BandIntArray dummy;
   return sizeof(dummy) + sizeof(dummy.data[0]) * size;
@@ -56,7 +72,7 @@ BandFloatArray* BandFloatArrayCreate(int size) {
 void BandFloatArrayFree(BandFloatArray* a) { free(a); }
 
 void BandQuantizationFree(BandQuantization* quantization) {
-  if (quantization->type == kBandAffineQuantization) {
+  if (quantization->type == kBandAffineQuantization && quantization->params) {
     BandAffineQuantization* q_params =
         (BandAffineQuantization*)(quantization->params);
     if (q_params->scale) {
@@ -145,4 +161,16 @@ const BandBackendType BandBackendGetType(const char* name) {
     }
   }
   return kBandNumBackendTypes;
+}
+
+const char* BandStatusGetName(BandStatus status) {
+  switch (status) {
+    case kBandOk:
+      return "Ok";
+    case kBandDelegateError:
+      return "DelegateError";
+    case kBandError:
+      return "Error";
+  }
+  return "Unknown type";
 }

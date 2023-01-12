@@ -112,11 +112,11 @@ class InterpreterBuilder {
   TfLiteStatus BuildLocalIndexToRegistrationMapping();
   TfLiteStatus ParseNodes(
       const flatbuffers::Vector<flatbuffers::Offset<Operator>>* operators,
-      Subgraph* subgraph);
+      Subgraph* subgraph, std::set<int> op_indices);
   TfLiteStatus ParseTensors(
       const flatbuffers::Vector<flatbuffers::Offset<Buffer>>* buffers,
       const flatbuffers::Vector<flatbuffers::Offset<Tensor>>* tensors,
-      Subgraph* subgraph);
+      Subgraph* subgraph, std::set<int> subgraph_tensors);
   TfLiteStatus ApplyDelegates(Interpreter* interpreter);
   TfLiteStatus ParseQuantization(const QuantizationParameters* src_quantization,
                                  TfLiteQuantization* quantization,
