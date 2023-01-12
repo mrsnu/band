@@ -1,20 +1,28 @@
 package org.mrsnu.band;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
-public class Model implements AutoCloseable {
+public class Model {
   private NativeModelWrapper wrapper;
   
-  Model(BackendType backendType, String filePath) {
+  public Model(BackendType backendType, String filePath) {
+    Band.init();
+    wrapper = new NativeModelWrapper();
     wrapper.loadFromFile(backendType, filePath);
   }
-
-  @Override
-  public void close() {
-    
+  
+  public Model(BackendType backendType, ByteBuffer modelBuffer) {
+    Band.init();
+    wrapper = new NativeModelWrapper();
+    wrapper.loadFromBuffer(backendType, modelBuffer);
   }
 
   public List<BackendType> getSupportedBackends() {
-    return ((NativeModelWrapper) wrapper).getSupportedBackends();
+    return wrapper.getSupportedBackends();
+  }
+
+  public long getNativeHandle() {
+    return wrapper.getNativeHandle();
   }
 }

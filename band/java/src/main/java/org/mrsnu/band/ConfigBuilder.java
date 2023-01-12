@@ -4,6 +4,7 @@ public class ConfigBuilder {
   private NativeConfigBuilderWrapper wrapper;
   
   public ConfigBuilder() {
+    Band.init();
     this.wrapper = new NativeConfigBuilderWrapper();
   }
 

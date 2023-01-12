@@ -7,6 +7,10 @@ public class Config implements AutoCloseable {
     this.nativeHandle = nativeHandle;
   }
 
+  private long getNativeHandle() {
+    return nativeHandle;
+  }
+
   @Override
   public void close() {
     deleteConfig(nativeHandle);

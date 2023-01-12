@@ -2,50 +2,47 @@ package org.mrsnu.band;
 
 import java.util.List;
 
-public class Tensor implements AutoCloseable {
+public class Tensor {
   private NativeTensorWrapper wrapper;
 
-  Tensor() {
-    
-  }
-
-  @Override
-  public void close() {
+  Tensor(long nativeHandle) {
+    Band.init();
+    wrapper = new NativeTensorWrapper(nativeHandle);
   }
   
   public DataType getType() {
-    return null;
+    return wrapper.getType();
   }
 
   public void setType(DataType dataType) {
-
+    wrapper.setType(dataType);
   }
 
   public byte[] getData() {
-    return null;
+    return wrapper.getData();
   }
 
   public List<Integer> getDims() {
-    return null;
+    return wrapper.getDims();
   }
 
   public void setDims(int[] dims) {
-
+    wrapper.setDims(dims);
   }
 
   public int getBytes() {
-    return 0;
+    return wrapper.getBytes();
   }
 
   public String getName() {
-    return null;
+    return wrapper.getName();
   }
 
   public Quantization getQuantization() {
-    return null;
+    return wrapper.getQuantization();
   }
 
   public void setQuantization(Quantization quantization) {
-
+    wrapper.setQuantization(quantization);
   }
 }

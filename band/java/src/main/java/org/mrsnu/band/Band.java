@@ -14,9 +14,7 @@ public final class Band {
     Throwable loadLibraryException = null;
     try {
       System.loadLibrary(BAND_RUNTIME_LIBNAME);
-      logger.info("Loaded");
     } catch (UnsatisfiedLinkError e) {
-      logger.info("didn't loaded");
       if (loadLibraryException == null) {
         loadLibraryException = e;
       } else {

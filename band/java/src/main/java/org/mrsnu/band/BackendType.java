@@ -12,4 +12,12 @@ public enum BackendType {
   public int getValue() {
     return value;
   }
+
+  public static BackendType fromValue(int value) {
+    if (value == 0) {
+      return TFLITE;
+    } else {
+      return null;
+    }
+  }
 }

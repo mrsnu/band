@@ -1,6 +1,7 @@
 package org.mrsnu.band;
 
-import java.util.Set;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
 public class NativeModelWrapper implements AutoCloseable {
@@ -16,20 +17,25 @@ public class NativeModelWrapper implements AutoCloseable {
     nativeHandle = 0;
   }
 
-  public long getNativeHandle() {
-    return nativeHandle;
-  }
-
   public void loadFromFile(BackendType backendType, String filePath) {
     loadFromFile(nativeHandle, backendType.getValue(), filePath);
   }
+  
+  public void loadFromBuffer(BackendType backendType, ByteBuffer modelBuffer) {
+    loadFromBuffer(nativeHandle, backendType.getValue(), modelBuffer);
+  }
 
   public List<BackendType> getSupportedBackends() throws IllegalStateException {
-    if (nativeHandle == 0) {
-      // TODO(widiba03304): define proper exceptions for java frontend.
-      throw new IllegalStateException("This `Model` object has been closed.");
+    List<BackendType> ret = new ArrayList<>();
+    int[] nativeSupportedBackends = getSupportedBackends(nativeHandle);
+    for (int i = 0; i < nativeSupportedBackends.length; i++) {
+      ret.add(BackendType.fromValue(nativeSupportedBackends[i]));
     }
-    return getSupportedBackends(nativeHandle);
+    return ret;
+  }
+
+  public long getNativeHandle() {
+    return nativeHandle;
   }
 
   private static native long createModel();
@@ -38,5 +44,7 @@ public class NativeModelWrapper implements AutoCloseable {
 
   private static native void loadFromFile(long modelHandle, int backendType, String filePath);
 
-  private static native List<BackendType> getSupportedBackends(long modelHandle);
+  private static native void loadFromBuffer(long modelHandle, int backendType, ByteBuffer modelBuffer);
+
+  private static native int[] getSupportedBackends(long modelHandle);
 }

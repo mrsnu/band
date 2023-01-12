@@ -5,13 +5,13 @@ import java.util.List;
 public class NativeTensorWrapper implements AutoCloseable {
   private long nativeHandle = 0;
 
-  @Override
-  public void close() {
-
+  NativeTensorWrapper(long nativeHandle) {
+    this.nativeHandle = nativeHandle;
   }
 
-  public long getNativeHandle() {
-    return nativeHandle;
+  @Override
+  public void close() {
+    
   }
 
   public DataType getType() {
@@ -47,6 +47,10 @@ public class NativeTensorWrapper implements AutoCloseable {
   }
 
   public void setQuantization(Quantization quantization) {
+  }
+
+  public long getNativeHandle() {
+    return nativeHandle;
   }
 
   private native int getType(long tensorHandle);

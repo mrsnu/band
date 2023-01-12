@@ -53,7 +53,9 @@ xcuserdata
 # test
 log.csv
 log.tsv
+band.aar
 
 # build_c_api
 /bin
 /test_bin
+

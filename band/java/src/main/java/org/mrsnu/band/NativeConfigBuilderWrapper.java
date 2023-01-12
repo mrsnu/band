@@ -3,7 +3,7 @@ package org.mrsnu.band;
 public class NativeConfigBuilderWrapper implements AutoCloseable {
   private long nativeHandle = 0;
 
-  public NativeConfigBuilderWrapper() {
+  NativeConfigBuilderWrapper() {
     nativeHandle = createConfigBuilder();
   }
 
@@ -101,6 +101,10 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
 
   public boolean isValid() {
     return isValid(nativeHandle);
+  }
+
+  public long getNativeHandle() {
+    return nativeHandle;
   }
 
   @Override

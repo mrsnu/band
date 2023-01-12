@@ -1,6 +1,6 @@
 load(":build_defs.bzl", "JAVACOPTS")
 load("//band/java:aar_with_jni.bzl", "aar_with_jni", "aar_without_jni")
-load("//band:band.bzl", "band_jni_linkopts", "band_jni_binary")
+load("//band:band.bzl", "clean_dep", "band_jni_linkopts", "band_jni_binary")
 load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 
 package(
@@ -41,7 +41,7 @@ android_library(
         ":band_native",
         ":band_api",
         "@org_checkerframework_qual", # Java checker framework
-    ]
+    ],
 )
 
 android_library(
@@ -68,5 +68,10 @@ band_jni_binary(
     deps = [
         "//band/c:c_api",
         "//band/java/src/main/native",
-    ],
+    ] + select({
+        clean_dep("//band:tflite"): [
+            "//band/backend/tfl:tfl_backend",
+        ],
+        "//conditions:default": [],
+    }),
 )

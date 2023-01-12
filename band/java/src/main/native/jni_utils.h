@@ -30,7 +30,7 @@ class BufferErrorReporter : public ErrorReporter {
  public:
   BufferErrorReporter(JNIEnv* env, int limit);
   ~BufferErrorReporter() override;
-  int Report(const char* format, va_list args) override;
+  int Report(const char* format, va_list args);
   const char* CachedErrorMessage();
   using ErrorReporter::Report;
 

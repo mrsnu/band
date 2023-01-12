@@ -4,74 +4,69 @@ import java.util.List;
 
 public class NativeEngineWrapper implements AutoCloseable {
   private long nativeHandle = 0;
-  private long errorHandle;
   private static final int ERROR_BUFFER_SIZE = 512;
 
   NativeEngineWrapper(Config config) {
     Band.init();
-    long errorHandle = createErrorReporter(ERROR_BUFFER_SIZE);
-    init(errorHandle, config);
-  }
-
-  private void init(long errorHandle, Config config) {
+    nativeHandle = createEngine(config);
   }
 
   @Override
   public void close() {
+    deleteEngine(nativeHandle);
+    nativeHandle = 0;
   }
 
   public void registerModel(Model model) {
+    registerModel(nativeHandle, model);
   }
 
   public int getNumInputTensors(Model model) {
-    return 0;
+    return getNumInputTensors(nativeHandle, model);
   }
 
   public int getNumOutputTensors(Model model) {
-    return 0;
+    return getNumOutputTensors(nativeHandle, model);
   }
 
-  public long createInputTensor(Model model, int index) {
-    return 0;
+  public Tensor createInputTensor(Model model, int index) {
+    return new Tensor(createInputTensor(nativeHandle, model, index));
   }
 
-  public long createOutputTensor(Model model, int index) {
-    return 0;
+  public Tensor createOutputTensor(Model model, int index) {
+    return new Tensor(createOutputTensor(nativeHandle, model, index));
   }
 
   public void requestSync(Model model, List<Tensor> inputTensors, List<Tensor> outputTensors) {
+    requestSync(nativeHandle, model, null, null);
   }
 
   public void requestAsync(Model model, List<Tensor> inputTensors) {
-
+    requestAsync(nativeHandle, model, inputTensors);
   }
 
   public void wait(Request request, List<Tensor> outputTensors) {
-
+    wait(nativeHandle, request.getJobId(), outputTensors);
   }
 
-  private static native long createErrorReporter(int size);
-
-  private static native void deleteErrorReporter(long errorHandle);
-
-  private static native long createEngine(long configHandle);
+  private static native long createEngine(Config config);
 
   private static native void deleteEngine(long engineHandle);
 
-  private static native void registerModel(long engineHandle, long modelHandle);
+  private static native void registerModel(long engineHandle, Model model);
 
-  private static native int getNumInputTensors(long engineHandle, long modelHandle);
+  private static native int getNumInputTensors(long engineHandle, Model model);
 
-  private static native int getNumOutputTensors(long engineHandle, long modelHandle);
+  private static native int getNumOutputTensors(long engineHandle, Model model);
 
-  private static native long createInputTensor(long engineHandle, long modelHandle, int index);
+  private static native long createInputTensor(long engineHandle, Model model, int index);
 
-  private static native long createOutputTensor(long engineHandle, long modelHandle, int index);
+  private static native long createOutputTensor(long engineHandle, Model model, int index);
 
-  private static native void requestSync(long engineHandle, long modelHandle, List<Long> inputTensorHandles,
-      List<Long> outputTensorHandles);
+  private static native void requestSync(long engineHandle, Model model, List<Tensor> inputTensors,
+      List<Tensor> outputTensors);
 
-  private static native int requestAsync(long engineHandle, long modelHandle, List<Long> inputTensorHandles);
+  private static native int requestAsync(long engineHandle, Model model, List<Tensor> inputTensors);
 
-  private static native void wait(long engineHandle, long requestHandle, List<Long> outputTensorHandles);
+  private static native void wait(long engineHandle, int jobId, List<Tensor> outputTensors);
 }

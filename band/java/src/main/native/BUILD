@@ -17,9 +17,10 @@ filegroup(
     srcs = [
         "jni_utils.cc",
         "band_jni.cc",
-        "config_builder_jni.cc",
         "config_jni.cc",
+        "nativeconfigbuilderwrapper_jni.cc",
         "nativeenginewrapper_jni.cc",
+        "nativemodelwrapper_jni.cc",
     ],
 )
 
