@@ -136,6 +136,11 @@ BandStatus Engine::RegisterModel(Model* model) {
                         std::includes(all_outputs.begin(), all_outputs.end(),
                                       model_executor->GetOutputs(key).begin(),
                                       model_executor->GetOutputs(key).end()));
+
+            unit_subgraphs_to_subgraph_keys_
+                [model_id][*subgraph_def.unit_subgraph_indices.begin()]
+                [*subgraph_def.unit_subgraph_indices.rbegin()]
+                    .push_back(key);
           }
         }
       }
@@ -227,9 +232,9 @@ BandStatus Engine::RegisterModel(Model* model) {
     if (planner_->NeedProfile()) {
       latency_estimator_->ProfileModel(model_id);
     }
-
-    return kBandOk;
   }
+
+  return kBandOk;
 }
 
 BandStatus Engine::UnregisterModel(Model* model) {
