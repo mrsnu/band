@@ -19,6 +19,7 @@ class Worker;
 class Planner;
 class RuntimeConfig;
 class Tensor;
+class ModelSpec;
 
 // Type definition for the device waiting time.
 // The unit of time is ms.
@@ -41,13 +42,13 @@ class Context {
   };
 
   /* worker */
-  virtual void UpdateWorkerWaitingTime() const = 0;
-  virtual const WorkerWaitingTime& GetWorkerWaitingTime() const = 0;
+  virtual WorkerWaitingTime GetWorkerWaitingTime() const = 0;
   virtual std::set<WorkerId> GetIdleWorkers() const = 0;
 
   /* subgraph */
   virtual SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                             WorkerId worker_id) const = 0;
+  virtual bool IsBegin(const SubgraphKey& key) const = 0;
   virtual bool IsEnd(const SubgraphKey& key) const = 0;
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual BandStatus Invoke(const SubgraphKey& key) = 0;
@@ -66,7 +67,7 @@ class Context {
 
   // TODO: replace subgraph idx to subgraph key in below functions
   virtual std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      int model_id, int start_unit_idx, int64_t start_time,
+      int model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, int64_t>

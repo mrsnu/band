@@ -1,6 +1,7 @@
 #include "band/engine.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "band/backend_factory.h"
 #include "band/context.h"
@@ -9,6 +10,7 @@
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/model_analyzer.h"
+#include "band/model_spec.h"
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
@@ -134,6 +136,11 @@ BandStatus Engine::RegisterModel(Model* model) {
                         std::includes(all_outputs.begin(), all_outputs.end(),
                                       model_executor->GetOutputs(key).begin(),
                                       model_executor->GetOutputs(key).end()));
+
+            unit_subgraphs_to_subgraph_keys_
+                [model_id][*subgraph_def.unit_subgraph_indices.begin()]
+                [*subgraph_def.unit_subgraph_indices.rbegin()]
+                    .push_back(key);
           }
         }
       }
@@ -225,9 +232,9 @@ BandStatus Engine::RegisterModel(Model* model) {
     if (planner_->NeedProfile()) {
       latency_estimator_->ProfileModel(model_id);
     }
-
-    return kBandOk;
   }
+
+  return kBandOk;
 }
 
 BandStatus Engine::UnregisterModel(Model* model) {
@@ -518,22 +525,21 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
 Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
 
-void Engine::UpdateWorkerWaitingTime() const {
+WorkerWaitingTime Engine::GetWorkerWaitingTime() const {
+  WorkerWaitingTime waiting_time;
   for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
-    workers_waiting_[worker_id] = workers_[worker_id]->GetWaitingTime();
+    waiting_time[worker_id] = workers_[worker_id]->GetWaitingTime();
   }
-}
 
-const WorkerWaitingTime& Engine::GetWorkerWaitingTime() const {
-  return workers_waiting_;
+  return waiting_time;
 }
 
 std::set<int> Engine::GetIdleWorkers() const {
   std::set<int> idle_workers;
-
-  for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
-    if (!workers_[worker_id]->HasJob()) {
-      idle_workers.insert(worker_id);
+  auto waiting_time = GetWorkerWaitingTime();
+  for (auto worker_waiting : waiting_time) {
+    if (worker_waiting.second == 0) {
+      idle_workers.insert(worker_waiting.first);
     }
   }
   return idle_workers;
@@ -561,13 +567,28 @@ WorkerId Engine::GetModelWorker(ModelId model_id) const {
   return planner_->GetModelWorkerMap()[model_id];
 }
 
+bool Engine::IsBegin(const SubgraphKey& key) const {
+  const ModelSpec* model_spec = GetModelSpec(key.GetModelId());
+  if (!model_spec) {
+    return false;
+  }
+
+  // if any of unit subgraph requires dependency, return false
+  for (auto unit_index : key.GetUnitIndicesSet()) {
+    if (model_spec->GetUnitSubgraphDependency(unit_index).any()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool Engine::IsEnd(const SubgraphKey& key) const {
   const ModelSpec* model_spec = GetModelSpec(key.GetModelId());
   // check whether key has the last unit subgraph
   return model_spec &&
-             (key.GetUnitIndices().find(model_spec->unit_subgraph_ops.size() -
-                                        1) != key.GetUnitIndices().end()) ||
-         (key.GetUnitIndices().size() == 0);
+         (key.GetUnitIndices().test(model_spec->GetNumUnitSubgraphs() - 1) ||
+          key.GetUnitIndices().none());
 }
 
 bool Engine::HasSubgraph(const SubgraphKey& key) const {
@@ -589,49 +610,224 @@ BandStatus Engine::Invoke(const SubgraphKey& key) {
 }
 
 std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
-    int model_id, int start_unit_idx, int64_t start_time,
+    ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
     const std::map<WorkerId, int64_t>& worker_waiting) const {
-  BAND_NOT_IMPLEMENTED;
-  // if (model_config_.subgraph_preparation_type == kBandFallbackPerDevice) {
-  //   int preceded_subgraph_index = job.previous_subgraph_indices.empty()
-  //                                     ? -1
-  //                                     : job.previous_subgraph_indices.back();
-  //   auto pair = GetShortestLatency(job.model_id, job.resolved_tensors, 0,
-  //                                  worker_waiting, preceded_subgraph_index);
-  //   std::pair<std::vector<int>, int64_t> ret =
-  //       std::pair<std::vector<int>, int64_t>({}, pair.second);
-  //   ret.first.push_back(pair.first);
-  //   return ret;
-  // } else {
-  //   return GetShortestLatencyWithUnitSubgraph(job.model_id,
-  //   job.start_unit_idx,
-  //                                             worker_waiting);
-  // }
-  return {};
+  // lookup key for cache
+  std::pair<ModelId, BitMask> cache_key = {model_id, resolved_unit_subgraphs};
+
+  // check if it is safe to lookup the cache:
+  // are all waiting times < start_time ?
+  bool wait_time_is_stale = true;
+  for (auto& pair : worker_waiting) {
+    auto wait_time = pair.second;
+    if (wait_time > start_time) {
+      wait_time_is_stale = false;
+    }
+  }
+
+  if (wait_time_is_stale) {
+    auto it = cache_.find(cache_key);
+    if (it != cache_.end()) {
+      auto& pair = it->second;
+      // the stored latency value assumes a start_time of 0,
+      // so we need to add our own start_time to the stored value to get the
+      // correct return value
+      return {pair.first, pair.second + start_time};
+    }
+  }
+
+  std::vector<SubgraphKey> candidates =
+      GetSubgraphCandidates(model_id, resolved_unit_subgraphs);
+
+  auto bit_mask_comparator = [](const BitMask& lhs, const BitMask& rhs) {
+    return lhs.to_ullong() < rhs.to_ullong();
+  };
+
+  std::map<BitMask, std::vector<SubgraphKey>, decltype(bit_mask_comparator)>
+      unit_indicies_subgraphs(bit_mask_comparator);
+  // group by unit indices
+  for (const SubgraphKey& key : candidates) {
+    unit_indicies_subgraphs[key.GetUnitIndices()].push_back(key);
+  }
+
+  std::pair<SubgraphKey, int64_t> subgraph_min_latency{
+      {}, std::numeric_limits<int64_t>::max()};
+  for (const auto& it : unit_indicies_subgraphs) {
+    // first, filter out the subgraphs that take longer than others with the
+    // same start/end indices, since there's no reason to pick them
+    std::pair<SubgraphKey, int64_t> target_subgraph =
+        GetShortestSubgraphKey(it.second, start_time, worker_waiting);
+
+    std::pair<SubgraphKey, int64_t> local_min;
+    if (IsEnd(target_subgraph.first)) {
+      local_min = target_subgraph;
+    } else {
+      local_min = GetShortestLatency(
+          model_id,
+          resolved_unit_subgraphs | target_subgraph.first.GetUnitIndices(),
+          target_subgraph.second, worker_waiting);
+    }
+
+    // check if this subgraph is better than the best one
+    if (local_min.second < subgraph_min_latency.second) {
+      // note the subgraph to return is the next immediate one (start_idx, XX),
+      // but the latency to return is that of the final subgraph (XX, #ops)
+      // hence, target_subgraph.first & local_min.second
+      subgraph_min_latency.first = target_subgraph.first;
+      subgraph_min_latency.second = local_min.second;
+    }
+  }
+
+  if (wait_time_is_stale) {
+    // if we've reached this point, then there shouldn't be an entry
+    // for this key in the cache
+    assert(cache_.find(cache_key) == cache_.end());
+    // we are going to store the latency value for start_time == 0,
+    // so do a sanity check for latency - start_time
+    assert(subgraph_min_latency.second >= start_time);
+
+    cache_[cache_key] = {subgraph_min_latency.first,
+                         subgraph_min_latency.second - start_time};
+  }
+
+  return subgraph_min_latency;
 }
 
 std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetShortestLatencyWithUnitSubgraph(
-    int model_id, int start_unit_idx,
+    ModelId model_id, int start_unit_idx,
     const std::map<WorkerId, int64_t>& worker_waiting) const {
-  std::pair<std::vector<SubgraphKey>, int64_t> result;
-  BAND_NOT_IMPLEMENTED;
-  return result;
+  const ModelSpec* model_spec = GetModelSpec(model_id);
+  // vector for memoization during scheduling.
+  // Each element is a pair of subgraph indices list and shortest latency.
+  std::vector<std::pair<std::vector<SubgraphKey>, int64_t>> memo;
+  memo.resize(model_spec->GetNumUnitSubgraphs());
+
+  // `i` and `j` refer to an unit subgraph idx.
+  // A subgraph(i, j) consists of the unit subgraphs in [i, j].
+  // The goal of the algorithm is to find the minimum expected latency;
+  // `memo[k].second` is the minimum expected latency of the
+  // subgraph(start_unit_idx, k). `memo[k].first` is the list of subgraph
+  // indices of the best execution plan. So, the shortest expected latency of a
+  // subgraph(start_unit_idx, num_unit_subgraphs - 1) is
+  // `memo[num_unit_subgraphs - 1].second`.
+  for (int j = start_unit_idx; j < model_spec->GetNumUnitSubgraphs(); ++j) {
+    std::pair<std::vector<SubgraphKey>, int64_t> local_min =
+        std::make_pair<std::vector<SubgraphKey>, int64_t>({}, -1);
+    for (int i = j; i >= start_unit_idx; --i) {
+      // Search from the profile result of the unit subgraph.
+      const auto& subgraph_keys =
+          unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).at(j);
+      int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
+      std::pair<SubgraphKey, int64_t> target_subgraph =
+          GetShortestSubgraphKey(subgraph_keys, start, worker_waiting);
+
+      if (local_min.second == -1 || target_subgraph.second < local_min.second) {
+        if (i > start_unit_idx) {
+          local_min.first = memo[i - 1].first;
+          local_min.first.push_back(target_subgraph.first);
+          local_min.second = target_subgraph.second;
+        } else {
+          local_min.first.clear();
+          local_min.first.push_back(target_subgraph.first);
+          local_min.second = target_subgraph.second;
+        }
+      }
+    }
+    memo[j] = local_min;
+  }
+
+  return memo[model_spec->GetNumUnitSubgraphs() - 1];
 }
 
 std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetSubgraphWithShortestLatency(
     Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
-  std::pair<std::vector<SubgraphKey>, int64_t> result;
-  BAND_NOT_IMPLEMENTED;
-  return result;
+  // TODO(dostos): figure out why we return a vector of keys?
+  if (model_config_.subgraph_preparation_type == kBandFallbackPerWorker) {
+    auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
+                                   worker_waiting);
+    std::pair<std::vector<SubgraphKey>, int64_t> ret =
+        std::pair<std::vector<SubgraphKey>, int64_t>({}, pair.second);
+    ret.first.push_back(pair.first);
+    return ret;
+  } else {
+    int start_unit_idx = 0;
+    for (int i = 0; i < model_specs_.at(job.model_id).GetNumUnitSubgraphs();
+         i++) {
+      if (job.resolved_unit_subgraphs.test(i)) {
+        start_unit_idx = i + 1;
+      }
+    }
+    return GetShortestLatencyWithUnitSubgraph(job.model_id, start_unit_idx,
+                                              worker_waiting);
+  }
 }
 
 SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
     Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
     const std::set<WorkerId>& idle_workers) const {
+  // TODO: implement this with SLO-based scheduler e.g., LSF
   BAND_NOT_IMPLEMENTED;
   return {};
+}
+
+std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
+    ModelId model_id, BitMask resolved_unit_subgraphs) const {
+  std::vector<SubgraphKey> candidates;
+  if (resolved_unit_subgraphs.none()) {
+    for (const auto& model_executor : model_executors_) {
+      if (model_executor.first.first == model_id) {
+        model_executor.second->IterateSubgraphs(
+            [this, &candidates](const SubgraphKey& key) {
+              if (IsBegin(key)) {
+                candidates.push_back(key);
+              }
+            });
+      }
+    }
+  } else {
+    for (const auto& model_executor : model_executors_) {
+      if (model_executor.first.first == model_id) {
+        model_executor.second->IterateSubgraphs([&](const SubgraphKey& key) {
+          // skip if already executed
+          if ((key.GetUnitIndices() & resolved_unit_subgraphs).any()) {
+            return;
+          }
+          const BitMask external_dependencies =
+              GetModelSpec(model_id)->GetUnitSubgraphDependency(
+                  key.GetUnitIndices());
+          // include if all external dependencies are resolved
+          if (external_dependencies ==
+              (external_dependencies & resolved_unit_subgraphs)) {
+            candidates.push_back(key);
+          }
+        });
+      }
+    }
+  }
+  return candidates;
+}
+
+std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
+    const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
+    const std::map<WorkerId, int64_t>& worker_waiting) const {
+  int64_t min_latency = std::numeric_limits<int64_t>::max();
+  SubgraphKey min_key = {};
+
+  for (const auto& key : subgraph_keys) {
+    // TODO: safety check to avoid contention with profiler?
+    int64_t waiting_time = worker_waiting.at(key.GetWorkerId());
+    int64_t expected_latency = GetExpected(key);
+    int64_t total = expected_latency + std::max(waiting_time, start_time);
+
+    if (min_latency > total) {
+      min_latency = total;
+      min_key = key;
+    }
+  }
+
+  return {min_key, min_latency};
 }
 
 void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
