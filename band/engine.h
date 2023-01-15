@@ -19,7 +19,6 @@
 namespace Band {
 
 class Model;
-class ModelSpec;
 class LatencyEstimator;
 
 typedef std::vector<Interface::ITensor*> Tensors;
@@ -97,10 +96,10 @@ class Engine : public Context {
  private:
   /* context */
   BandStatus Init(const RuntimeConfig& config) override;
-  WorkerWaitingTime GetWorkerWaitingTime() const override;
+  void UpdateWorkerWaitingTime() const override;
+  const WorkerWaitingTime& GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
 
-  bool IsBegin(const SubgraphKey& key) const override;
   bool IsEnd(const SubgraphKey& key) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
@@ -110,12 +109,12 @@ class Engine : public Context {
 
   /* utility funtions for unit-level scheduling */
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
+      int model_id, int start_unit_idx, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
-      ModelId model_id, int start_unit_idx,
+      int model_id, int start_unit_idx,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
@@ -125,13 +124,6 @@ class Engine : public Context {
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
-
-  std::vector<SubgraphKey> GetSubgraphCandidates(
-      ModelId model_id, BitMask resolved_unit_subgraphs) const;
-
-  std::pair<SubgraphKey, int64_t> GetShortestSubgraphKey(
-      const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting) const;
 
   /* latency estimator */
   void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
@@ -183,15 +175,14 @@ class Engine : public Context {
 
   // Scheduling
   // cache for GetShortestLatency()
-  mutable std::unordered_map<std::pair<ModelId, BitMask>,
-                             std::pair<SubgraphKey, int64_t>, CacheHash>
+  std::unordered_map<std::pair<int, std::set<int>>, std::pair<int, int64_t>,
+                     PairHash>
       cache_;
-
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
   // NOTE: we assume every subgraph consists of unit subgraphs with the
   // continuous unit subgraph indices.
-  std::map<int, std::map<int, std::map<int, std::vector<SubgraphKey>>>>
-      unit_subgraphs_to_subgraph_keys_;
+  std::map<int, std::map<int, std::map<int, std::vector<int>>>>
+      unit_subgraphs_to_subgraph_indices_;
 };  // namespace Band
 }  // namespace Band
 

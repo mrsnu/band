@@ -8,8 +8,7 @@ namespace Band {
 LeastSlackFirstScheduler::LeastSlackFirstScheduler(int window_size)
     : window_size_(window_size) {}
 
-ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
-                                                  JobQueue& requests) {
+ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context, JobQueue& requests) {
   ScheduleAction action;
   int window_size = std::min(window_size_, (int)requests.size());
   if (window_size <= 0) {
@@ -21,13 +20,15 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
     return {};
   }
 
+  context.UpdateWorkerWaitingTime();
   WorkerWaitingTime waiting_time = context.GetWorkerWaitingTime();
 
   int64_t current_time = Time::NowMicros();
   SortBySlackTime(context, requests, window_size, current_time);
 
   std::set<int> job_indices_to_erase;
-  for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
+  for (auto it = requests.begin();
+       it != requests.begin() + window_size; ++it) {
     Job job = *it;
 
     BAND_NOT_IMPLEMENTED;
@@ -35,10 +36,9 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
     //     GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
 
     // int target_subgraph_idx = best_subgraph.first.front();
-    // Subgraph* target_subgraph =
-    // GetInterpreter()->subgraph(target_subgraph_idx); if (job.slo_us > 0 &&
-    //     current_time + best_subgraph.second > job.enqueue_time + job.slo_us)
-    //     {
+    // Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
+    // if (job.slo_us > 0 &&
+    //     current_time + best_subgraph.second > job.enqueue_time + job.slo_us) {
     //   job.status = kBandJobSLOViolation;
     //   EnqueueAction(job, target_subgraph);
     //   job_indices_to_erase.insert(it - requests.begin());

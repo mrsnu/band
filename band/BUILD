@@ -100,7 +100,6 @@ cc_library(
         "common.cc",
         "error_reporter.cc",
         "logger.cc",
-        "model_spec.cc",
     ],
     hdrs = [
         "common.h",
@@ -109,7 +108,6 @@ cc_library(
         "cpu.h",
         "error_reporter.h",
         "logger.h",
-        "model_spec.h",
     ],
     copts = band_copts(),
     linkopts = select({
@@ -251,19 +249,15 @@ cc_library(
     name = "scheduler",
     srcs = [
         "scheduler/fixed_worker_global_queue_scheduler.cc",
-        "scheduler/fixed_worker_scheduler.cc",
-        "scheduler/heterogeneous_earliest_finish_time_reserved_scheduler.cc",
         "scheduler/least_slack_first_scheduler.cc",
+        "scheduler/fixed_worker_scheduler.cc",
         "scheduler/round_robin_scheduler.cc",
-        "scheduler/shortest_expected_latency_scheduler.cc",
     ],
     hdrs = [
         "scheduler/fixed_worker_scheduler.h",
-        "scheduler/heterogeneous_earliest_finish_time_reserved_scheduler.h",
         "scheduler/least_slack_first_scheduler.h",
         "scheduler/round_robin_scheduler.h",
         "scheduler/scheduler.h",
-        "scheduler/shortest_expected_latency_scheduler.h",
     ],
     deps = [
         ":common",

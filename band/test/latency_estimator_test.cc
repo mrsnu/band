@@ -6,7 +6,6 @@
 #include "band/config_builder.h"
 #include "band/context.h"
 #include "band/cpu.h"
-#include "band/model_spec.h"
 #include "band/test/test_util.h"
 #include "band/time.h"
 #include "band/worker.h"

@@ -12,12 +12,12 @@ namespace Test {
 struct MockContextBase : public Context {
   MockContextBase() = default;
 
-  MOCK_CONST_METHOD0(GetWorkerWaitingTime, WorkerWaitingTime(void));
+  MOCK_CONST_METHOD0(UpdateWorkerWaitingTime, void(void));
+  MOCK_CONST_METHOD0(GetWorkerWaitingTime, const WorkerWaitingTime&(void));
   MOCK_CONST_METHOD0(GetIdleWorkers, std::set<WorkerId>(void));
 
   /* subgraph */
   MOCK_CONST_METHOD2(GetLargestSubgraphKey, SubgraphKey(ModelId, WorkerId));
-  MOCK_CONST_METHOD1(IsBegin, bool(const SubgraphKey&));
   MOCK_CONST_METHOD1(IsEnd, bool(const SubgraphKey&));
   MOCK_CONST_METHOD1(HasSubgraph, bool(const SubgraphKey&));
   MOCK_METHOD1(Invoke, BandStatus(const SubgraphKey&));
@@ -33,12 +33,11 @@ struct MockContextBase : public Context {
   using SubgraphWithShortestLatency =
       std::pair<std::vector<SubgraphKey>, int64_t>;
   MOCK_CONST_METHOD4(GetShortestLatency,
-                     std::pair<SubgraphKey, int64_t>(ModelId, BitMask, int64_t,
+                     std::pair<SubgraphKey, int64_t>(int, int, int64_t,
                                                      WorkerWaiting));
 
   MOCK_CONST_METHOD3(GetShortestLatencyWithUnitSubgraph,
-                     ShortestLatencyWithUnitSubgraph(ModelId, int,
-                                                     WorkerWaiting));
+                     ShortestLatencyWithUnitSubgraph(int, int, WorkerWaiting));
   MOCK_CONST_METHOD2(GetSubgraphWithShortestLatency,
                      SubgraphWithShortestLatency(Job&, WorkerWaiting));
   MOCK_CONST_METHOD3(GetSubgraphIdxSatisfyingSLO,

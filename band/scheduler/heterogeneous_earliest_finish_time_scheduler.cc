@@ -2,7 +2,8 @@
 
 namespace Band {
 
-void HEFTScheduler::Schedule(JobQueue& context.requests_) {
+void HeterogeneousEarliestFinishTimeScheduler::Schedule(
+    JobQueue& context.requests_) {
   int window_size =
       std::min(planner_->GetWindowSize(), (int)context.requests_.size());
   // stop if there are no idle devices OR there's nothing in `context.requests_`
@@ -48,12 +49,11 @@ void HEFTScheduler::Schedule(JobQueue& context.requests_) {
         }
 
         std::pair<std::vector<int>, int64_t> best_subgraph =
-            GetModelExecutor()->GetSubgraphWithShortestLatency(job,
-                                                               waiting_time);
+            GetInterpreter()->GetSubgraphWithShortestLatency(job, waiting_time);
 
         if (largest_shortest_latency < best_subgraph.second) {
           Subgraph* target_subgraph =
-              GetModelExecutor()->subgraph(best_subgraph.first.front());
+              GetInterpreter()->subgraph(best_subgraph.first.front());
 
           largest_shortest_latency = best_subgraph.second;
           target_subgraph_idx = best_subgraph.first.front();
@@ -69,11 +69,11 @@ void HEFTScheduler::Schedule(JobQueue& context.requests_) {
       // skip this job if we can't schedule it immediately,
       // even if this job is the "most urgent" one
       Subgraph* target_subgraph =
-          GetModelExecutor()->subgraph(target_subgraph_idx);
+          GetInterpreter()->subgraph(target_subgraph_idx);
       int worker_id = target_subgraph->GetKey().worker_id;
       if (idle_workers.find(worker_id) == idle_workers.end()) {
         waiting_time[worker_id] +=
-            GetModelExecutor()->GetExpectedLatency(target_subgraph_idx);
+            GetInterpreter()->GetExpectedLatency(target_subgraph_idx);
         auto context.requests__it = context.requests_.begin() + target_job_idx;
         Job job = *context.requests__it;
         jobs_to_yield.insert(job.job_id);
@@ -90,8 +90,7 @@ void HEFTScheduler::Schedule(JobQueue& context.requests_) {
     context.requests_.erase(context.requests__it);
     window_size--;
 
-    Subgraph* target_subgraph =
-        GetModelExecutor()->subgraph(target_subgraph_idx);
+    Subgraph* target_subgraph = GetInterpreter()->subgraph(target_subgraph_idx);
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
     if (target_subgraph->IsStart()) {
