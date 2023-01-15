@@ -8,6 +8,7 @@
 #include "band/common.h"
 #include "band/interface/backend.h"
 #include "band/interface/model.h"
+#include "band/model_spec.h"
 
 namespace Band {
 namespace Interface {

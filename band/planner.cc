@@ -3,14 +3,14 @@
 #include <fstream>
 
 #include "band/context.h"
+#include "band/model_spec.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
-//#include
-//"band/scheduler/heterogeneous_earliest_finish_time_reserved_scheduler.h"
+#include "band/scheduler/heterogeneous_earliest_finish_time_reserved_scheduler.h"
 //#include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
+#include "band/logger.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
-//#include "band/scheduler/shortest_expected_latency_scheduler.h"
-#include "band/logger.h"
+#include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
 
 namespace Band {
@@ -63,6 +63,7 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     return kBandError;
   }
 
+  bool allow_fallback = false;
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
@@ -74,18 +75,18 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     } else if (schedulers[i] == kBandRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler());
     } else if (schedulers[i] == kBandShortestExpectedLatency) {
-      BAND_NOT_IMPLEMENTED;
-      // schedulers_.emplace_back(new ShortestExpectedLatencyScheduler());
+      schedulers_.emplace_back(
+          new ShortestExpectedLatencyScheduler(schedule_window_size_));
     } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTime) {
       BAND_NOT_IMPLEMENTED;
       // schedulers_.emplace_back(new
-      // HeterogeneousEarliestFinishTimeScheduler());
+      // HEFTScheduler());
     } else if (schedulers[i] == kBandLeastSlackTimeFirst) {
-      schedulers_.emplace_back(new LeastSlackFirstScheduler(schedule_window_size_));
+      schedulers_.emplace_back(
+          new LeastSlackFirstScheduler(schedule_window_size_));
     } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTimeReserved) {
-      BAND_NOT_IMPLEMENTED;
-      // schedulers_.emplace_back(
-      //    new HeterogeneousEarliestFinishTimeReservedScheduler());
+      schedulers_.emplace_back(
+          new HEFTReservedScheduler(schedule_window_size_));
     } else {
       return kBandError;
     }
@@ -94,11 +95,11 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     // fallback subgraphs.
     // Currently, we do not allow using schedulers with different requirements
     // for the fallback subgraphs.
-    // if (i == 0) {
-    //   allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
-    // } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
-    //   return kBandError;
-    // }
+    if (i == 0) {
+      allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
+    } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
+      return kBandError;
+    }
   }
 
   // All schedulers must have the same worker type.
@@ -138,8 +139,6 @@ std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
     }
     if (job.job_id == -1) {
       job.job_id = num_submitted_jobs_++;
-      job.resolved_tensors =
-          context_->GetModelSpec(job.model_id)->input_tensors;
     }
     job_ids[i] = job.job_id;
   }
@@ -316,9 +315,10 @@ void Planner::FlushFinishedJobs() {
 
       std::string prev_subgraphs;
 
-      for (int i : job.previous_subgraph_indices) {
-        prev_subgraphs += std::to_string(i) + " ";
-      }
+      // TODO: how to log these??
+      // for (int i : job.previous_subgraph_indices) {
+      //   prev_subgraphs += std::to_string(i) + " ";
+      // }
 
       // write all timestamp statistics to log file
       log_file << job.sched_id << "\t" << job.job_id << "\t" << job.model_fname
@@ -372,7 +372,13 @@ void Planner::EnqueueToWorkers(ScheduleAction& action) {
     }
 
     Worker* worker = context_->GetWorker(worker_id);
-    if (worker == nullptr) return;
+    if (worker == nullptr) {
+      BAND_REPORT_ERROR(
+          context_->GetErrorReporter(),
+          "EnqueueToWorkers failed. Requests scheduled to null worker id %d",
+          worker_id);
+      return;
+    }
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
       for (auto request : requests) {
@@ -429,6 +435,7 @@ void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.sched_id = IssueSchedId();
   job.profiled_execution_time = context_->GetProfiled(target_key);
   job.expected_execution_time = context_->GetExpected(target_key);
+  job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
   if (!context_->IsEnd(target_key)) {
     Job remaining_ops(job.model_id);
@@ -441,7 +448,6 @@ void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
     remaining_ops.job_id = job.job_id;
     remaining_ops.input_handle = job.input_handle;
     remaining_ops.output_handle = job.output_handle;
-    remaining_ops.resolved_tensors = job.resolved_tensors;
 
     // TODO: Update below
 

@@ -165,7 +165,7 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
       backend_type_(backend_type) {
   std::unique_ptr<Interface::IModelExecutor> interpreter(
       BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
-                                        kBandCPU));
+                                          kBandCPU));
   model_spec_ = std::make_shared<ModelSpec>(
       interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)));
 
@@ -293,8 +293,6 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     }
   } else {
     const int num_ops = model_spec_->num_ops;
-
-    using BitMask = uint32_t;
     if (num_workers > 8 * sizeof(BitMask)) {
       BAND_REPORT_ERROR(context_.GetErrorReporter(),
                         "Number of workers is larger than BitMask %d",
@@ -412,7 +410,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
         if (!IsWorkerValid(worker_id)) {
           continue;
         }
-        if (support_workers & (1 << worker_id)) {
+        if (support_workers.test(worker_id)) {
           unit_subgraphs.push_back(
               {worker_id, unit_subgraph_ops, {unit_subgraph_index}});
         }
@@ -433,12 +431,15 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
         *subgraph_def.unit_subgraph_indices.begin());
   }
 
-  model_spec_->unit_subgraph_ops.resize(unique_unit_subgraph_indices.size());
+  std::vector<std::set<int>> unit_subgraph_defs;
+
+  unit_subgraph_defs.resize(unique_unit_subgraph_indices.size());
   for (const auto& unit_subgraph_def : unit_subgraphs) {
-    model_spec_
-        ->unit_subgraph_ops[*unit_subgraph_def.unit_subgraph_indices.begin()] =
+    unit_subgraph_defs[*unit_subgraph_def.unit_subgraph_indices.begin()] =
         unit_subgraph_def.op_indices;
   }
+
+  BAND_ENSURE_STATUS(model_spec_->SetUnitSubgraphs(unit_subgraph_defs));
 
   for (const auto& lhs : unit_subgraphs) {
     for (const auto& rhs : unit_subgraphs) {
@@ -474,25 +475,6 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
         }
       }
     }
-  }
-
-  // Verify whether unit subgraph covers all ops
-  std::set<int> ops;
-  for (const auto& unit_subgraph_def : unit_subgraphs) {
-    ops.insert(unit_subgraph_def.op_indices.begin(),
-               unit_subgraph_def.op_indices.end());
-  }
-
-  if ((ops.size() != model_spec_->num_ops) ||
-      (*ops.rbegin() != model_spec_->num_ops - 1)) {
-    BAND_LOG_PROD(
-        BAND_LOG_ERROR,
-        "Failed to create unit subgraph. Unit subgraph does not covers "
-        "all operators for model %s and mode %s",
-        model_spec_->path.c_str(),
-        BandSubgraphPreparationGetName(
-            model_config_.subgraph_preparation_type));
-    return kBandError;
   }
 
   BAND_LOG_PROD(BAND_LOG_INFO,

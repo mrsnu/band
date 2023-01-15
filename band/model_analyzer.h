@@ -5,6 +5,8 @@
 #include <memory>
 
 #include "band/context.h"
+#include "band/model_spec.h"
+
 
 namespace Band {
 class Model;
