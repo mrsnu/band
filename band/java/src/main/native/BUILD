@@ -21,6 +21,7 @@ filegroup(
         "nativeconfigbuilderwrapper_jni.cc",
         "nativeenginewrapper_jni.cc",
         "nativemodelwrapper_jni.cc",
+        "nativetensorwrapper_jni.cc",
     ],
 )
 
