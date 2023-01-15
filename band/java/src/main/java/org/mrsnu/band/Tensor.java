@@ -22,6 +22,10 @@ public class Tensor {
     return wrapper.getData();
   }
 
+  public void setData(byte[] data) {
+    wrapper.setData(data);
+  }
+
   public List<Integer> getDims() {
     return wrapper.getDims();
   }
@@ -44,5 +48,9 @@ public class Tensor {
 
   public void setQuantization(Quantization quantization) {
     wrapper.setQuantization(quantization);
+  }
+
+  private long getNativeHandle() {
+    return wrapper.getNativeHandle();
   }
 }

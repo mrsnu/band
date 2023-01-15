@@ -35,12 +35,10 @@ public class Engine {
   }
 
   public Tensor createInputTensor(Model model, int index) {
-    wrapper.createInputTensor(model, index);
-    return null;
+    return wrapper.createInputTensor(model, index);
   }
 
   public Tensor createOutputTensor(Model model, int index) {
-    wrapper.createOutputTensor(model, index);
-    return null;
+    return wrapper.createOutputTensor(model, index);
   }
 }

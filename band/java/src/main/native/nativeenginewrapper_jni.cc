@@ -24,25 +24,6 @@ using Band::jni::ConvertLongToTensor;
 
 namespace {
 
-#define JNI_DEFINE_CLS(tag, cls)                                            \
-  static jclass tag##_cls = env->FindClass(cls);                            \
-  if (tag##_cls == nullptr) {                                               \
-    BAND_LOG_INTERNAL(Band::BAND_LOG_ERROR, "Canont find class named `%s`", \
-                      cls);                                                 \
-  }
-
-#define JNI_DEFINE_MTD(tag, cls_var, mtd, sig)                             \
-  static jmethodID tag##_mtd = env->GetMethodID(cls_var, mtd, sig);        \
-  if (tag##_mtd == nullptr) {                                              \
-    BAND_LOG_INTERNAL(Band::BAND_LOG_ERROR,                                \
-                      "Cannot find method named `%s` with signature `%s`", \
-                      mtd, sig);                                           \
-  }
-
-#define JNI_DEFINE_CLS_AND_MTD(tag, cls, mtd, sig) \
-  JNI_DEFINE_CLS(tag, cls)                         \
-  JNI_DEFINE_MTD(tag, tag##_cls, mtd, sig);
-
 RuntimeConfig* ConvertJobjectToConfig(JNIEnv* env, jobject config) {
   JNI_DEFINE_CLS_AND_MTD(cfg, "org/mrsnu/band/Config", "getNativeHandle",
                          "()J");
@@ -50,10 +31,7 @@ RuntimeConfig* ConvertJobjectToConfig(JNIEnv* env, jobject config) {
 }
 
 Model* ConvertJobjectToModel(JNIEnv* env, jobject model) {
-  // JNI_DEFINE_CLS_AND_MTD(mdl, "org/mrsnu/band/Model", "getNativeHandle", "()J");
-  static jclass mdl_cls = env->FindClass("org/mrsnu/band/Model");
-  BAND_LOG_INTERNAL(Band::BAND_LOG_ERROR, "%p", mdl_cls);
-  static jmethodID mdl_mtd = env->GetMethodID(mdl_cls, "getNativeHandle", "()J");
+  JNI_DEFINE_CLS_AND_MTD(mdl, "org/mrsnu/band/Model", "getNativeHandle", "()J");
   return ConvertLongToModel(env, env->CallLongMethod(model, mdl_mtd));
 }
 
@@ -62,7 +40,7 @@ Tensors ConvertJobjectToTensors(JNIEnv* env, jobject tensor_list) {
                          "()J");
   JNI_DEFINE_CLS(list, "java/util/List");
   JNI_DEFINE_MTD(list_size, list_cls, "size", "()I");
-  JNI_DEFINE_MTD(list_get, list_cls, "get", "(I)Lorg/mrsnu/band/Tensor;");
+  JNI_DEFINE_MTD(list_get, list_cls, "get", "(I)Ljava/lang/Object;");
 
   jint size = env->CallIntMethod(tensor_list, list_size_mtd);
   Tensors tensors;
@@ -94,7 +72,6 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_deleteEngine(
 // modelHandle);
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model) {
-  BAND_LOG_INTERNAL(Band::BAND_LOG_ERROR, "%p", engineHandle);
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
   engine->RegisterModel(native_model);
@@ -160,8 +137,8 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
   engine->RequestSync(native_model->GetId(), BandGetDefaultRequestOption(),
-                      ConvertLongListToTensors(env, input_tensor_handles),
-                      ConvertLongListToTensors(env, output_tensor_handles));
+                      ConvertJobjectToTensors(env, input_tensor_handles),
+                      ConvertJobjectToTensors(env, output_tensor_handles));
 }
 
 // private static native long requestAsync(long engineHandle, long modelHandle,

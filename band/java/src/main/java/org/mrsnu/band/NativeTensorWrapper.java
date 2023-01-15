@@ -11,7 +11,6 @@ public class NativeTensorWrapper implements AutoCloseable {
 
   @Override
   public void close() {
-    
   }
 
   public DataType getType() {
@@ -24,6 +23,10 @@ public class NativeTensorWrapper implements AutoCloseable {
 
   public byte[] getData() {
     return getData(nativeHandle);
+  }
+
+  public void setData(byte[] data) {
+    setData(nativeHandle, data);
   }
 
   public List<Integer> getDims() {
@@ -43,10 +46,11 @@ public class NativeTensorWrapper implements AutoCloseable {
   }
 
   public Quantization getQuantization() {
-    return null;
+    return getQuantization(nativeHandle);
   }
 
   public void setQuantization(Quantization quantization) {
+    setQuantization(nativeHandle, quantization);
   }
 
   public long getNativeHandle() {
@@ -59,6 +63,8 @@ public class NativeTensorWrapper implements AutoCloseable {
 
   private native byte[] getData(long tensorHandle);
 
+  private native void setData(long tensorHandle, byte[] data);
+
   private native List<Integer> getDims(long tensorHandle);
 
   private native void setDims(long tensorHandle, int[] dims);
@@ -67,7 +73,7 @@ public class NativeTensorWrapper implements AutoCloseable {
 
   private native String getName(long tensorHandle);
 
-  private native int getQuantization(long tensorHandle);
+  private native Quantization getQuantization(long tensorHandle);
 
-  private native void setQuantization(long tensorHandle, long quantizationHandle);
+  private native void setQuantization(long tensorHandle, Quantization quantization);
 }

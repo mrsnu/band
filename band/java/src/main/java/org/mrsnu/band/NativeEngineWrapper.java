@@ -38,7 +38,7 @@ public class NativeEngineWrapper implements AutoCloseable {
   }
 
   public void requestSync(Model model, List<Tensor> inputTensors, List<Tensor> outputTensors) {
-    requestSync(nativeHandle, model, null, null);
+    requestSync(nativeHandle, model, inputTensors, outputTensors);
   }
 
   public void requestAsync(Model model, List<Tensor> inputTensors) {
