@@ -4,7 +4,7 @@ import java.util.logging.Logger;
 
 /** Static utility methods for loading the Band runtime and native code. */
 public final class Band {
-  private static final Logger logger = Logger.getLogger("mylogger");
+  private static final Logger logger = Logger.getLogger(Band.class.getName());
   private static final String BAND_RUNTIME_LIBNAME = "band_jni";
 
   private static final Throwable LOAD_LIBRARY_EXCEPTION;
