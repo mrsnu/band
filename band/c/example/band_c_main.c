@@ -176,7 +176,7 @@ int main() {
 
   BandModel* model = pBandModelCreate();
   printf("BandModelCreate\n");
-  pBandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin");
+  pBandModelAddFromFile(model, kBandTfLite, "band/test/data/add.tflite");
   printf("BandModelAddFromFile\n");
 
   BandEngine* engine = pBandEngineCreate(config);

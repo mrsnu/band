@@ -59,3 +59,5 @@ band.aar
 /bin
 /test_bin
 
+# mac icloud
+*.icloud
