@@ -2,6 +2,7 @@
 
 #include "band/config_builder.h"
 #include "band/java/src/main/native/jni_utils.h"
+#include "band/logger.h"
 
 using Band::RuntimeConfigBuilder;
 using Band::jni::ConvertJstringToString;

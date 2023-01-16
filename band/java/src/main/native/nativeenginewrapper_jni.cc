@@ -129,16 +129,17 @@ Java_org_mrsnu_band_NativeEngineWrapper_createOutputTensor(
   return reinterpret_cast<jlong>(output_tensor);
 }
 
-// private static native long requestSync(long engineHandle, long modelHandle,
-// List<Long> inputTensors, List<Long> outputTensors);
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model,
     jobject input_tensor_handles, jobject output_tensor_handles) {
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
+  Tensors input_tensors = ConvertJobjectToTensors(env, input_tensor_handles);
+  Tensors output_tensors = ConvertJobjectToTensors(env, output_tensor_handles);
+  float* input_raw = reinterpret_cast<float*>(input_tensors[0]->GetData());
+  float* output_raw = reinterpret_cast<float*>(output_tensors[0]->GetData());
   engine->RequestSync(native_model->GetId(), BandGetDefaultRequestOption(),
-                      ConvertJobjectToTensors(env, input_tensor_handles),
-                      ConvertJobjectToTensors(env, output_tensor_handles));
+                      input_tensors, output_tensors);
 }
 
 // private static native long requestAsync(long engineHandle, long modelHandle,

@@ -73,62 +73,69 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_setType(
   tensor->SetType(static_cast<BandType>(dataType));
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getData(
+JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getData(
     JNIEnv* env, jclass clazz, jlong tensorHandle) {
   Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  return ConvertNativeToByteArray(env, tensor->GetBytes(), tensor->GetData());
+  return env->NewDirectByteBuffer(static_cast<void*>(tensor->GetData()),
+                                  static_cast<jlong>(tensor->GetBytes()));
 }
 
+// Only direct buffer is permitted.
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_setData(
-    JNIEnv* env, jclass clazz, jlong tensorHandle, jbyteArray data) {
+    JNIEnv* env, jclass clazz, jlong tensorHandle, jobject buffer) {
   Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
   void* tensor_buffer = tensor->GetData();
-  memcpy(tensor_buffer,
-         static_cast<void*>(env->GetByteArrayElements(data, NULL)),
-         tensor->GetBytes());
+  void* input_buffer = env->GetDirectBufferAddress(buffer);
+                reinterpret_cast<float*>(input_buffer)[0],
+                reinterpret_cast<float*>(input_buffer)[1]);
+                memcpy(tensor_buffer, input_buffer, tensor->GetBytes());
 }
 
 JNIEXPORT jintArray JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getDims(
     JNIEnv* env, jclass clazz, jlong tensorHandle) {
-  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  return ConvertNativeToIntArray(env, tensor->GetNumDims(), tensor->GetDims());
+                Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+                return ConvertNativeToIntArray(env, tensor->GetNumDims(),
+                                               tensor->GetDims());
 }
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_setDims(
     JNIEnv* env, jclass clazz, jlong tensorHandle, jintArray dims) {
-  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  jsize size = env->GetArrayLength(dims);
-  std::vector<int> native_dims;
-  for (int i = 0; i < size; i++) {
-    native_dims.push_back(env->GetIntArrayElements(dims, nullptr)[i]);
-  }
-  tensor->SetDims(native_dims);
+                Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+                jsize size = env->GetArrayLength(dims);
+                std::vector<int> native_dims;
+                for (int i = 0; i < size; i++) {
+                  native_dims.push_back(
+                      env->GetIntArrayElements(dims, nullptr)[i]);
+                }
+                tensor->SetDims(native_dims);
 }
 
 JNIEXPORT int JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getBytes(
     JNIEnv* env, jclass clazz, jlong tensorHandle) {
-  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  return tensor->GetBytes();
+                Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+                return tensor->GetBytes();
 }
 
 JNIEXPORT jstring JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getName(
     JNIEnv* env, jclass clazz, jlong tensorHandle) {
-  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  return env->NewStringUTF(tensor->GetName());
+                Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+                return env->NewStringUTF(tensor->GetName());
 }
 
 JNIEXPORT jobject JNICALL
 Java_org_mrsnu_band_NativeTensorWrapper_getQuantization(JNIEnv* env,
                                                         jclass clazz,
                                                         jlong tensorHandle) {
-  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  return ConvertNativeToQuantization(env, tensor->GetQuantization());
+                Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+                return ConvertNativeToQuantization(env,
+                                                   tensor->GetQuantization());
 }
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_setQuantization(
     JNIEnv* env, jclass clazz, jlong tensorHandle, jobject quantization) {
-  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  tensor->SetQuantization(ConvertQuantizationToNative(env, quantization));
+                Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+                tensor->SetQuantization(
+                    ConvertQuantizationToNative(env, quantization));
 }
 
 }  // extern "C"

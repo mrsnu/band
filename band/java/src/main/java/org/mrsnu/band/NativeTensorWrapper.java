@@ -1,6 +1,7 @@
 package org.mrsnu.band;
 
 import java.util.List;
+import java.nio.ByteBuffer;
 
 public class NativeTensorWrapper implements AutoCloseable {
   private long nativeHandle = 0;
@@ -21,15 +22,15 @@ public class NativeTensorWrapper implements AutoCloseable {
     setType(nativeHandle, dataType.getValue());
   }
 
-  public byte[] getData() {
+  public ByteBuffer getData() {
     return getData(nativeHandle);
   }
 
-  public void setData(byte[] data) {
+  public void setData(ByteBuffer data) {
     setData(nativeHandle, data);
   }
 
-  public List<Integer> getDims() {
+  public int[] getDims() {
     return getDims(nativeHandle);
   }
 
@@ -61,11 +62,11 @@ public class NativeTensorWrapper implements AutoCloseable {
 
   private native void setType(long tensorHandle, int dataType);
 
-  private native byte[] getData(long tensorHandle);
+  private native ByteBuffer getData(long tensorHandle);
 
-  private native void setData(long tensorHandle, byte[] data);
+  private native void setData(long tensorHandle, ByteBuffer data);
 
-  private native List<Integer> getDims(long tensorHandle);
+  private native int[] getDims(long tensorHandle);
 
   private native void setDims(long tensorHandle, int[] dims);
 

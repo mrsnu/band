@@ -1,6 +1,7 @@
 package org.mrsnu.band;
 
 import java.util.List;
+import java.nio.ByteBuffer;
 
 public class Tensor {
   private NativeTensorWrapper wrapper;
@@ -18,15 +19,15 @@ public class Tensor {
     wrapper.setType(dataType);
   }
 
-  public byte[] getData() {
+  public ByteBuffer getData() {
     return wrapper.getData();
   }
 
-  public void setData(byte[] data) {
+  public void setData(ByteBuffer data) {
     wrapper.setData(data);
   }
 
-  public List<Integer> getDims() {
+  public int[] getDims() {
     return wrapper.getDims();
   }
 
