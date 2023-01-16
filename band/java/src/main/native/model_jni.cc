@@ -25,7 +25,7 @@ jobject convertCcSetToJavaSet(JNIEnv* env, std::set<BandBackendType> cc_set) {
   return java_set;
 }
   
-}  // anonymouse namepsace
+}  // anonymous namepsace
 
 JNIEXPORT jlong JNICALL
 Java_org_mrsnu_band_NativeModelWrapper_createModel(JNIEnv* env, jclass clazz) {
