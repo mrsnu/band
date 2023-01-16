@@ -26,8 +26,8 @@ public class Engine {
     wrapper.requestSync(model, inputTensors, outputTensors);
   }
 
-  public void requestAsync(Model model, List<Tensor> inputTensors) {
-    wrapper.requestAsync(model, inputTensors);
+  public Request requestAsync(Model model, List<Tensor> inputTensors) {
+    return wrapper.requestAsync(model, inputTensors);
   }
 
   public void wait(Request request, List<Tensor> outputTensors) {

@@ -41,8 +41,8 @@ public class NativeEngineWrapper implements AutoCloseable {
     requestSync(nativeHandle, model, inputTensors, outputTensors);
   }
 
-  public void requestAsync(Model model, List<Tensor> inputTensors) {
-    requestAsync(nativeHandle, model, inputTensors);
+  public Request requestAsync(Model model, List<Tensor> inputTensors) {
+    return new Request(requestAsync(nativeHandle, model, inputTensors));
   }
 
   public void wait(Request request, List<Tensor> outputTensors) {

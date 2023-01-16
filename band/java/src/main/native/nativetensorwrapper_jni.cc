@@ -61,6 +61,12 @@ jintArray ConvertNativeToIntArray(JNIEnv* env, int length, const int* array) {
 
 extern "C" {
 
+JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_deleteTensor(
+    JNIEnv* env, jclass clazz, jlong tensorHandle) {
+  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+  delete tensor;
+}
+
 JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getType(
     JNIEnv* env, jclass clazz, jlong tensorHandle) {
   Tensor* tensor = ConvertLongToTensor(env, tensorHandle);

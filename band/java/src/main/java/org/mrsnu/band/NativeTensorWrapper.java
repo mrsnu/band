@@ -12,6 +12,7 @@ public class NativeTensorWrapper implements AutoCloseable {
 
   @Override
   public void close() {
+    deleteTensor(nativeHandle);
   }
 
   public DataType getType() {
@@ -57,6 +58,8 @@ public class NativeTensorWrapper implements AutoCloseable {
   public long getNativeHandle() {
     return nativeHandle;
   }
+
+  private native void deleteTensor(long tensorHandle);
 
   private native int getType(long tensorHandle);
 
