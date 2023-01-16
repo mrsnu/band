@@ -86,9 +86,7 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_setData(
   Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
   void* tensor_buffer = tensor->GetData();
   void* input_buffer = env->GetDirectBufferAddress(buffer);
-                reinterpret_cast<float*>(input_buffer)[0],
-                reinterpret_cast<float*>(input_buffer)[1]);
-                memcpy(tensor_buffer, input_buffer, tensor->GetBytes());
+  memcpy(tensor_buffer, input_buffer, tensor->GetBytes());
 }
 
 JNIEXPORT jintArray JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getDims(
