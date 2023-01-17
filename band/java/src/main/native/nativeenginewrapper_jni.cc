@@ -1,5 +1,7 @@
 #include <jni.h>
 
+#include <algorithm>
+
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
@@ -10,12 +12,13 @@
 
 using Band::Engine;
 using Band::Model;
+using Band::ModelId;
 using Band::RuntimeConfig;
 using Band::RuntimeConfigBuilder;
 using Band::Tensor;
 using Band::Tensors;
 using Band::jni::BufferErrorReporter;
-using Band::jni::ConvertLongListToTensors;
+using Band::jni::ConvertListToVectorOfPointer;
 using Band::jni::ConvertLongToConfig;
 using Band::jni::ConvertLongToEngine;
 using Band::jni::ConvertLongToJobId;
@@ -35,21 +38,10 @@ Model* ConvertJobjectToModel(JNIEnv* env, jobject model) {
   return ConvertLongToModel(env, env->CallLongMethod(model, mdl_mtd));
 }
 
-Tensors ConvertJobjectToTensors(JNIEnv* env, jobject tensor_list) {
-  JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
-                         "()J");
-  JNI_DEFINE_CLS(list, "java/util/List");
-  JNI_DEFINE_MTD(list_size, list_cls, "size", "()I");
-  JNI_DEFINE_MTD(list_get, list_cls, "get", "(I)Ljava/lang/Object;");
-
-  jint size = env->CallIntMethod(tensor_list, list_size_mtd);
-  Tensors tensors;
-  for (int i = 0; i < size; i++) {
-    jobject tensor = env->CallObjectMethod(tensor_list, list_get_mtd, i);
-    jlong tensor_handle = env->CallLongMethod(tensor, tnr_mtd);
-    tensors.push_back(ConvertLongToTensor(env, tensor_handle));
-  }
-  return tensors;
+jintArray ConvertNativeToIntArray(JNIEnv* env, jsize length, const int* array) {
+  jintArray arr = env->NewIntArray(length);
+  env->SetIntArrayRegion(arr, 0, length, reinterpret_cast<const int*>(array));
+  return arr;
 }
 
 }  // anonymous namespace
@@ -134,8 +126,16 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
     jobject input_tensor_handles, jobject output_tensor_handles) {
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
-  Tensors input_tensors = ConvertJobjectToTensors(env, input_tensor_handles);
-  Tensors output_tensors = ConvertJobjectToTensors(env, output_tensor_handles);
+
+  JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
+                         "()J");
+  Tensors input_tensors =
+      ConvertListToVectorOfPointer<Band::Interface::ITensor>(
+          env, input_tensor_handles, tnr_mtd);
+  Tensors output_tensors =
+      ConvertListToVectorOfPointer<Band::Interface::ITensor>(
+          env, output_tensor_handles, tnr_mtd);
+
   float* input_raw = reinterpret_cast<float*>(input_tensors[0]->GetData());
   float* output_raw = reinterpret_cast<float*>(output_tensors[0]->GetData());
   engine->RequestSync(native_model->GetId(), BandGetDefaultRequestOption(),
@@ -147,20 +147,59 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
 JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model,
     jobject input_tensor_handles) {
+  JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
+                         "()J");
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
-  auto job_id =
-      engine->RequestAsync(native_model->GetId(), BandGetDefaultRequestOption(),
-                           ConvertLongListToTensors(env, input_tensor_handles));
+  auto job_id = engine->RequestAsync(
+      native_model->GetId(), BandGetDefaultRequestOption(),
+      ConvertListToVectorOfPointer<Band::Interface::ITensor>(env, input_tensor_handles, tnr_mtd));
   return static_cast<jint>(job_id);
 }
 
-JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_wait(
-    JNIEnv* env, jclass clazz, jlong engineHandle, jlong request_handle,
-    jobject output_tensor_handles) {
+JNIEXPORT jintArray JNICALL
+Java_org_mrsnu_band_NativeEngineWrapper_requestAsyncBatch(
+    JNIEnv* env, jclass clazz, jlong engineHandle, jobject models,
+    jobject inputTensorsList) {
   Engine* engine = ConvertLongToEngine(env, engineHandle);
-  engine->Wait(static_cast<int>(request_handle),
-               ConvertLongListToTensors(env, output_tensor_handles));
+  JNI_DEFINE_CLS_AND_MTD(mdl, "org/mrsnu/band/Model", "getNativeHandle", "()J");
+  JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
+                         "()J");
+  JNI_DEFINE_CLS(list, "java/util/List");
+  JNI_DEFINE_MTD(list_size, list_cls, "size", "()I");
+  JNI_DEFINE_MTD(list_get, list_cls, "get", "(I)Ljava/lang/Object;");
+
+  std::vector<Model*> model_list =
+      ConvertListToVectorOfPointer<Model>(env, models, mdl_mtd);
+  std::vector<ModelId> model_ids;
+  for (Model* model : model_list) {
+    model_ids.push_back(model->GetId());
+  }
+  std::vector<BandRequestOption> request_options(model_list.size(),
+                                                 BandGetDefaultRequestOption());
+
+  std::vector<Band::Tensors> input_lists;
+  jint size = env->CallIntMethod(inputTensorsList, list_size_mtd);
+  for (int i = 0; i < size; i++) {
+    jobject input_list =
+        env->CallObjectMethod(inputTensorsList, list_get_mtd, i);
+    input_lists.push_back(
+        ConvertListToVectorOfPointer<Band::Interface::ITensor>(env, input_list,
+                                                               tnr_mtd));
+  }
+  std::vector<int> ret =
+      engine->RequestAsync(model_ids, request_options, input_lists);
+  return ConvertNativeToIntArray(env, ret.size(), ret.data());
+}
+
+JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_wait(
+    JNIEnv* env, jclass clazz, jlong engineHandle, jint jobId,
+    jobject outputTensors) {
+  JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
+                         "()J");
+  Engine* engine = ConvertLongToEngine(env, engineHandle);
+  engine->Wait(jobId, ConvertListToVectorOfPointer<Band::Interface::ITensor>(
+                          env, outputTensors, tnr_mtd));
 }
 
 }  // extern "C"

@@ -9,6 +9,7 @@
 #include "band/model.h"
 #include "band/tensor.h"
 #include "band/error_reporter.h"
+#include "band/logger.h"
 
 namespace Band {
 namespace jni {
@@ -69,6 +70,22 @@ T* CastLongToPointer(JNIEnv* env, jlong handle) {
   return reinterpret_cast<T*>(handle);
 }
 
+template <typename T>
+std::vector<T*> ConvertListToVectorOfPointer(JNIEnv* env, jobject object, jmethodID mtd) {
+  JNI_DEFINE_CLS(list, "java/util/List");
+  JNI_DEFINE_MTD(list_size, list_cls, "size", "()I");
+  JNI_DEFINE_MTD(list_get, list_cls, "get", "(I)Ljava/lang/Object;");
+
+  jint size = env->CallIntMethod(object, list_size_mtd);
+  std::vector<T*> result;
+  for (int i = 0; i < size; i++) {
+    jobject element = env->CallObjectMethod(object, list_get_mtd, i);
+    jlong native_handle = env->CallLongMethod(element, mtd);
+    result.push_back(CastLongToPointer<T>(env, native_handle));
+  }
+  return result;
+}
+
 std::string ConvertJstringToString(JNIEnv* env, jstring jstr);
 
 Engine* ConvertLongToEngine(JNIEnv* env, jlong handle);
@@ -82,8 +99,6 @@ Model* ConvertLongToModel(JNIEnv* env, jlong handle);
 Tensor* ConvertLongToTensor(JNIEnv* env, jlong handle);
 
 int ConvertLongToJobId(jint request_handle);
-
-Tensors ConvertLongListToTensors(JNIEnv* env, jobject tensor_handles);
 
 BufferErrorReporter* ConvertLongToErrorReporter(JNIEnv* env, jlong handle);
 

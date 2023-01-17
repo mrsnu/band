@@ -30,6 +30,10 @@ public class Engine {
     return wrapper.requestAsync(model, inputTensors);
   }
 
+  public List<Request> requestAsyncBatch(List<Model> models, List<List<Tensor>> inputTensorLists) {
+    return wrapper.requestAsyncBatch(models, inputTensorLists);
+  }
+
   public void wait(Request request, List<Tensor> outputTensors) {
     wrapper.wait(request, outputTensors);
   }

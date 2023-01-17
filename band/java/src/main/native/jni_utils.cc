@@ -99,66 +99,6 @@ int ConvertLongToJobId(jint request_handle) {
   return static_cast<int>(request_handle);
 }
 
-Tensors ConvertLongListToTensors(JNIEnv* env, jobject tensor_handles) {
-  static jclass list_class = env->FindClass("java/util/List");
-  if (list_class == nullptr) {
-    if (!env->ExceptionCheck()) {
-      // TODO(widiba03304): handle error
-    }
-  }
-  static jmethodID list_size_method =
-      env->GetMethodID(list_class, "size", "()I");
-  if (list_size_method == nullptr) {
-    if (!env->ExceptionCheck()) {
-      // TODO(widiba03304): handle error
-    }
-  }
-  static jmethodID list_get_method =
-      env->GetMethodID(list_class, "get", "(I)Ljava/lang/Object;");
-  if (list_get_method == nullptr) {
-    if (!env->ExceptionCheck()) {
-      // TODO(widiba03304): handle error
-    }
-  }
-  static jclass long_class = env->FindClass("java/lang/Long");
-  if (long_class == nullptr) {
-    if (!env->ExceptionCheck()) {
-      // TODO(widiba03304): handle error
-    }
-  }
-  static jmethodID long_value_method =
-      env->GetMethodID(long_class, "longValue", "()J");
-  if (long_value_method == nullptr) {
-    if (!env->ExceptionCheck()) {
-      // TODO(widiba03304): handle error
-    }
-  }
-
-  jint size = env->CallIntMethod(tensor_handles, list_size_method);
-  Tensors tensors;
-  for (jint i = 0; i < size; i++) {
-    jobject jtensor_handle =
-        env->CallObjectMethod(tensor_handles, list_get_method, i);
-    if (jtensor_handle == nullptr) {
-      if (!env->ExceptionCheck()) {
-        // TODO(widiba03304): handle error
-      }
-      return tensors;
-    }
-    jlong tensor_handle =
-        env->CallLongMethod(jtensor_handle, long_value_method);
-    if (tensor_handle == 0) {
-      if (!env->ExceptionCheck()) {
-        // TODO(widiba03304): handle error
-      }
-      return tensors;
-    }
-    Tensor* tensor = reinterpret_cast<Tensor*>(tensor_handle);
-    tensors.push_back(tensor);
-  }
-  return tensors;
-}
-
 BufferErrorReporter* ConvertLongToErrorReporter(JNIEnv* env, jlong handle) {
   return CastLongToPointer<BufferErrorReporter>(env, handle);
 }

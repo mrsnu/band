@@ -1,5 +1,6 @@
 package org.mrsnu.band;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class NativeEngineWrapper implements AutoCloseable {
@@ -45,6 +46,15 @@ public class NativeEngineWrapper implements AutoCloseable {
     return new Request(requestAsync(nativeHandle, model, inputTensors));
   }
 
+  public List<Request> requestAsyncBatch(List<Model> models, List<List<Tensor>> inputTensors) {
+    List<Request> ret = new ArrayList<>();
+    int[] results = requestAsyncBatch(nativeHandle, models, inputTensors);
+    for (int jobId : results) {
+      ret.add(new Request(jobId));
+    }
+    return ret;
+  }
+
   public void wait(Request request, List<Tensor> outputTensors) {
     wait(nativeHandle, request.getJobId(), outputTensors);
   }
@@ -67,6 +77,8 @@ public class NativeEngineWrapper implements AutoCloseable {
       List<Tensor> outputTensors);
 
   private static native int requestAsync(long engineHandle, Model model, List<Tensor> inputTensors);
+
+  private static native int[] requestAsyncBatch(long engineHandle, List<Model> models, List<List<Tensor>> inputTensorsList);
 
   private static native void wait(long engineHandle, int jobId, List<Tensor> outputTensors);
 }
