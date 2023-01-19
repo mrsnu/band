@@ -1,16 +1,16 @@
 package org.mrsnu.band.example;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import org.mrsnu.band.BackendType;
 import org.mrsnu.band.Band;
-import org.mrsnu.band.ConfigBuilder;
 import org.mrsnu.band.Config;
+import org.mrsnu.band.ConfigBuilder;
 import org.mrsnu.band.CpuMaskFlags;
 import org.mrsnu.band.Device;
 import org.mrsnu.band.Engine;
@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
             Log.i("RESULT", "output size: " + dim_string);
 
             for (int i = 0; i < size; i++) {
-                Log.i("RESULT", String.format("output[%d]: %d", i, outputByteBuffer.get(i)));
+                Log.i("RESULT", String.format("output[%d]: %f", i, outputByteBuffer.asFloatBuffer().get(i)));
             }
         } catch (IOException e) {
             e.printStackTrace();
