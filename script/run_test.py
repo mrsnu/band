@@ -35,9 +35,10 @@ def get_dst_path(target_platform, debug):
         path = path.replace('\\', '/')
     return path
 
-def test_local(enable_xnnpack=False, debug=False):
+def test_local(enable_xnnpack=False, debug=False, build_only=False):
+    target_option = 'build' if build_only else 'test'
     run_cmd(
-        f'bazel test {get_options(enable_xnnpack, debug)} band/test/...')
+        f'bazel {target_option} {get_options(enable_xnnpack, debug)} band/test/...')
 
 
 def test_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False, filter=""):
@@ -89,8 +90,10 @@ if __name__ == '__main__':
                         help='Build with XNNPACK')
     parser.add_argument('-d', '--debug', action="store_true", default=False,
                         help='Build debug (default = release)')
+    parser.add_argument('-b', '--build', action="store_true", default=False,
+                        help='Build only, only affects to local (default = false)')
     parser.add_argument('-r', '--rebuild', action="store_true", default=False,
-                        help='Re-build test target')
+                        help='Re-build test target, only affects to android ')
     parser.add_argument('-f', '--filter', default="",
                         help='Run specific test that contains given string (only for android)')
     
@@ -103,4 +106,4 @@ if __name__ == '__main__':
         test_android(args.xnnpack, args.debug, args.docker, args.rebuild, args.filter)
     else:
         print(f'Test {platform_name}')
-        test_local(args.xnnpack, args.debug)
+        test_local(args.xnnpack, args.debug, args.build)
