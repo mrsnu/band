@@ -21,7 +21,7 @@ namespace Band {
 using namespace Interface;
 TEST(TFLiteBackend, BackendInvoke) {
   TfLite::TfLiteModel bin_model(0);
-  bin_model.FromPath("band/test/data/add.bin");
+  bin_model.FromPath("band/test/data/add.tflite");
 
   TfLite::TfLiteModelExecutor model_executor(0, 0, kBandCPU);
   EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), kBandOk);
@@ -32,7 +32,7 @@ TEST(TFLiteBackend, BackendInvoke) {
 
 TEST(TFLiteBackend, ModelSpec) {
   TfLite::TfLiteModel bin_model(0);
-  bin_model.FromPath("band/test/data/add.bin");
+  bin_model.FromPath("band/test/data/add.tflite");
 
   TfLite::TfLiteModelExecutor model_executor(0, 0, kBandCPU);
   ModelSpec model_spec = model_executor.InvestigateModelSpec(&bin_model);
@@ -58,7 +58,7 @@ TEST(TFLiteBackend, Registration) {
 TEST(TFLiteBackend, InterfaceInvoke) {
   auto backends = BackendFactory::GetAvailableBackends();
   IModel* bin_model = BackendFactory::CreateModel(kBandTfLite, 0);
-  bin_model->FromPath("band/test/data/add.bin");
+  bin_model->FromPath("band/test/data/add.tflite");
 
   IModelExecutor* model_executor =
       BackendFactory::CreateModelExecutor(kBandTfLite, 0, 0, kBandCPU);
@@ -110,7 +110,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.tflite"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -163,7 +163,7 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.tflite"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   EXPECT_GT(
@@ -197,7 +197,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.tflite"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -252,7 +252,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.tflite"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -310,7 +310,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.bin"), kBandOk);
+  EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.tflite"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
   int execution_count = 0;

@@ -1,7 +1,7 @@
 load("//band:band.bzl", "band_cc_android_test")
 
 exports_files(glob([
-    "data/*.bin",
+    "data/*.tflite",
     "data/*.json",
 ]))
 
@@ -101,7 +101,7 @@ band_cc_android_test(
         "-DTF_LITE_STRIP_ERROR_STRINGS"
     ],
     data = [
-        "//band/test:data/add.bin",
+        "//band/test:data/add.tflite",
         "//band/test:data/config.json",
         "//band/test:data/config_fixed_device.json",
     ],
@@ -136,7 +136,7 @@ band_cc_android_test(
     size = "small",
     srcs = ["c/c_api_test.cc"],
     data = [
-        "//band/test:data/add.bin",
+        "//band/test:data/add.tflite",
         "//band/test:data/config.json",
         "//band/test:data/config_fixed_device.json",
     ],

@@ -401,9 +401,7 @@ std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
 
     jobs.push_back(job);
   }
-
-  for (ModelId model_id : model_ids) {
-  }
+  
   return EnqueueBatch(jobs);
 }
 

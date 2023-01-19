@@ -41,7 +41,7 @@ TEST(CApi, ModelLoad) {
   BandModel* model = BandModelCreate();
   EXPECT_NE(model, nullptr);
 #ifdef BAND_TFLITE
-  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin"),
+  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.tflite"),
             kBandOk);
 #endif  // BAND_TFLITE
   BandModelDelete(model);
@@ -79,7 +79,7 @@ TEST(CApi, EngineSimpleInvoke) {
   BandModel* model = BandModelCreate();
   EXPECT_NE(model, nullptr);
 #ifdef BAND_TFLITE
-  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin"),
+  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.tflite"),
             kBandOk);
   EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
   EXPECT_EQ(BandEngineGetNumInputTensors(engine, model), 1);
@@ -125,7 +125,7 @@ TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
 #ifdef BAND_TFLITE
   BandModel* model = BandModelCreate();
   EXPECT_NE(model, nullptr);
-  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.bin"),
+  EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.tflite"),
             kBandOk);
   EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
   EXPECT_EQ(BandEngineGetNumInputTensors(engine, model), 1);

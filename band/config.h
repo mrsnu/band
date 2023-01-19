@@ -46,11 +46,6 @@ struct WorkerConfig {
   int availability_check_interval_ms = 30000;
 };
 
-typedef struct DeviceWorkerAffinityPair {
-  BandDeviceFlags device;
-  int worker;
-} DeviceWorkerAffinityPair;
-
 struct ModelConfig {
   int minimum_subgraph_size = 7;
   BandSubgraphPreparationType subgraph_preparation_type =

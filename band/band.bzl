@@ -95,6 +95,7 @@ def band_jni_linkopts_unstripped():
     # negligible, and created potential compatibility problems.
     return select({
         clean_dep("//band:android"): [
+            "-ldl",
             "-latomic",  # Required for some uses of ISO C++11 <atomic> in x86.
             "-Wl,--gc-sections",  # Eliminate unused code and data.
             "-Wl,--as-needed",  # Don't link unused libs.
@@ -259,3 +260,40 @@ def band_cc_shared_object(
             }),
             visibility = visibility,
         )
+
+EXPORTED_SYMBOLS = clean_dep("//band/java/src/main/native:exported_symbols.lds")
+LINKER_SCRIPT = clean_dep("//band/java/src/main/native:version_script.lds")
+
+def band_jni_binary(
+        name,
+        copts = band_copts(),
+        linkopts = band_jni_linkopts(),
+        linkscript = LINKER_SCRIPT,
+        exported_symbols = EXPORTED_SYMBOLS,
+        linkshared = 1,
+        linkstatic = 1,
+        testonly = 0,
+        deps = [],
+        tags = [],
+        srcs = [],
+        visibility = None):  # 'None' means use the default visibility.
+    """Builds a jni binary for TFLite."""
+    linkopts = linkopts + select({
+        clean_dep("//band:windows"): [],
+        "//conditions:default": [
+            "-Wl,--version-script,$(location {})".format(linkscript),
+            "-Wl,-soname," + name,
+        ],
+    })
+    native.cc_binary(
+        name = name,
+        copts = copts,
+        linkshared = linkshared,
+        linkstatic = linkstatic,
+        deps = deps + [linkscript, exported_symbols],
+        srcs = srcs,
+        tags = tags,
+        linkopts = linkopts,
+        testonly = testonly,
+        visibility = visibility,
+    )

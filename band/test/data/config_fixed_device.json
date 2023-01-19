@@ -1,14 +1,14 @@
 {
     "models": [
         {
-            "graph": "band/test/data/add.bin",
+            "graph": "band/test/data/add.tflite",
             "period_ms": 30,
             "batch_size": 3,
             "slo_us": 30000,
             "device": "CPU"
         },
         {
-            "graph": "band/test/data/add.bin",
+            "graph": "band/test/data/add.tflite",
             "period_ms": 30,
             "batch_size": 3,
             "slo_us": 30000,

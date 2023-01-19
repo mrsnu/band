@@ -49,6 +49,13 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
   // backend's model
   Interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
+  if (backend_model == nullptr) {
+    BAND_LOG_INTERNAL(
+        BAND_LOG_ERROR,
+        "The given backend type `%s` is not registered in the binary.",
+        BandBackendGetName(backend_type));
+    return kBandError;
+  }
   if (backend_model->FromBuffer(buffer, buffer_size) == kBandOk) {
     backend_models_[backend_type] = backend_model;
     return kBandOk;
