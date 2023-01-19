@@ -15,15 +15,16 @@ import org.mrsnu.band.CpuMaskFlags;
 import org.mrsnu.band.Device;
 import org.mrsnu.band.Engine;
 import org.mrsnu.band.Model;
+import org.mrsnu.band.Request;
 import org.mrsnu.band.SchedulerType;
 import org.mrsnu.band.SubgraphPreparationType;
 import org.mrsnu.band.Tensor;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
         b.addPlannerCPUMask(CpuMaskFlags.PRIMARY);
         b.addWorkers(new Device[] {Device.CPU, Device.GPU, Device.DSP, Device.NPU});
         b.addWorkerNumThreads(new int[] {1, 1, 1, 1});
-        b.addWorkerCPUMasks(new CpuMaskFlags[] {CpuMaskFlags.BIG, CpuMaskFlags.LITTLE, CpuMaskFlags.ALL, CpuMaskFlags.ALL});
+        b.addWorkerCPUMasks(new CpuMaskFlags[] {CpuMaskFlags.ALL, CpuMaskFlags.ALL, CpuMaskFlags.ALL, CpuMaskFlags.ALL});
         b.addSmoothingFactor(0.1f);
         b.addProfileDataPath("/data/data/org.mrsnu.band.example/profile.json");
         b.addOnline(true);
@@ -57,7 +58,6 @@ public class MainActivity extends AppCompatActivity {
         b.addScheduleWindowSize(10);
         Config config = b.build();
         engine = new Engine(config);
-        AssetManager am = getAssets();
 
         List<Tensor> inputTensors = new ArrayList<>();
         List<Tensor> outputTensors = new ArrayList<>();
@@ -75,15 +75,37 @@ public class MainActivity extends AppCompatActivity {
             }
             Log.i("BAND_JAVA", String.format("Successfully created input (%d) / output (%d) tensors.", numInputs, numOutputs));
 
-            int[] data = { 100, 200 };
-            ByteBuffer inputByteBuffer = ByteBuffer.allocate(data.length * 4);
-            IntBuffer inputIntBuffer = inputByteBuffer.asIntBuffer();
-            inputIntBuffer.put(data);
-            byte[] array = inputByteBuffer.array();
-            inputTensors.get(0).setData(array);
-            engine.requestSync(model, inputTensors, outputTensors);
-            byte[] outputArray = outputTensors.get(0).getData();
-            Log.i("RESULT", String.format("%d", outputArray.length));
+            float[] data = new float[2];
+            data[0] = 1.f;
+            data[1] = 2.f;
+            ByteBuffer inputByteBuffer = ByteBuffer.allocateDirect(data.length * 4);
+            inputByteBuffer.order(ByteOrder.nativeOrder());
+            FloatBuffer inputFloatBuffer = inputByteBuffer.asFloatBuffer();
+            inputFloatBuffer.put(data);
+            inputTensors.get(0).setData(inputByteBuffer);
+
+            List<Model> models = new ArrayList<>();
+            models.add(model);
+            List<List<Tensor>> inputTensorLists = new ArrayList<>();
+            inputTensorLists.add(inputTensors);
+            List<Request> reqs = engine.requestAsyncBatch(models, inputTensorLists);
+            Log.i("BAND", "Requested!");
+            engine.wait(reqs.get(0), outputTensors);
+
+            ByteBuffer outputByteBuffer = outputTensors.get(0).getData();
+            outputByteBuffer.order(ByteOrder.nativeOrder());
+            int size = 1;
+            String dim_string = "(";
+            for (int dim : outputTensors.get(0).getDims()) {
+                dim_string += String.format("%d, ", dim);
+                size *= dim;
+            }
+            dim_string += ")";
+            Log.i("RESULT", "output size: " + dim_string);
+
+            for (int i = 0; i < size; i++) {
+                Log.i("RESULT", String.format("output[%f]: %", i, outputByteBuffer.get(i)));
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
