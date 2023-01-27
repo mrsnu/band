@@ -1,0 +1,4 @@
+
+
+# Load rc file for Band engine
+try-import %workspace%/.band_configure.bazelrc

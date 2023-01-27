@@ -583,9 +583,6 @@ build:elinux_armhf --copt -mfp16-format=ieee
 # Load rc file written by ./configure.
 try-import %workspace%/.tf_configure.bazelrc
 
-# Load rc file for Band engine.
-try-import %workspace%/.band_configure.bazelrc
-
 # Load rc file with user-specific options.
 try-import %workspace%/.bazelrc.user
 
