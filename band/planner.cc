@@ -63,6 +63,7 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     return kBandError;
   }
 
+  bool allow_fallback = false;
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
@@ -93,11 +94,11 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     // fallback subgraphs.
     // Currently, we do not allow using schedulers with different requirements
     // for the fallback subgraphs.
-    // if (i == 0) {
-    //   allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
-    // } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
-    //   return kBandError;
-    // }
+    if (i == 0) {
+      allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
+    } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
+      return kBandError;
+    }
   }
 
   // All schedulers must have the same worker type.
