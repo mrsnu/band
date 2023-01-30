@@ -154,21 +154,21 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   RuntimeConfigBuilder builder;
   // Profile config
   {
-    if (root["num_warmups"].isNumeric()) {
-      builder.AddSmoothingFactor(root["num_warmups"].asFloat());
+    if (root["profile_warmup_runs"].isNumeric()) {
+      builder.AddNumWarmups(root["profile_warmup_runs"].asFloat());
     }
-    if (root["num_runs"].isInt()) {
-      builder.AddNumRuns(root["num_runs"].asInt());
+    if (root["profile_num_runs"].isInt()) {
+      builder.AddNumRuns(root["profile_num_runs"].asInt());
     }
-    if (root["copy_computation_ratio"].isNumeric()) {
+    if (root["profile_copy_computation_ratio"].isNumeric()) {
       std::vector<int> copy_computation_ratio;
-      for (auto ratio : root["copy_computation_ratio"]) {
+      for (auto ratio : root["profile_copy_computation_ratio"]) {
         copy_computation_ratio.push_back(ratio.asInt());
       }
       builder.AddCopyComputationRatio(copy_computation_ratio);
     }
-    if (root["smoothing_factor"].isNumeric()) {
-      builder.AddSmoothingFactor(root["smoothing_factor"].asFloat());
+    if (root["profile_smoothing_factor"].isNumeric()) {
+      builder.AddSmoothingFactor(root["profile_smoothing_factor"].asFloat());
     }
     if (root["profile_data_path"].isString()) {
       builder.AddProfileDataPath(root["profile_data_path"].asCString());
@@ -226,10 +226,6 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
       builder.AddWorkerNumThreads(num_threads);
     }
 
-    if (root["allow_worksteal"].isBool()) {
-      builder.AddAllowWorkSteal(root["allow_worksteal"].asBool());
-    }
-
     if (root["availability_check_interval_ms"].isInt()) {
       builder.AddAvailabilityCheckIntervalMs(
           root["availability_check_interval_ms"].asInt());
@@ -247,8 +243,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
           root["subgraph_preparation_type"].asCString()));
     }
 
-    if (root["cpu_mask"].isString()) {
-      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_mask"].asCString()));
+    if (root["cpu_masks"].isString()) {
+      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
     }
   }
 
