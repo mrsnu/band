@@ -144,7 +144,6 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
         1000,
         1000,
         1000,
-        1000,
         1000
     ],
     "availability_check_interval_ms": 30000,
