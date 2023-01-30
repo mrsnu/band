@@ -54,7 +54,7 @@ struct SubgraphConfig {
 
 struct RuntimeConfig {
   BandCPUMaskFlags cpu_mask;
-  SubgraphConfig model_config;
+  SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;

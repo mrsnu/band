@@ -26,7 +26,7 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
 class ModelAnalyzer {
  public:
   ModelAnalyzer(const Context& context, bool need_subgraph,
-                SubgraphConfig model_config, Model* model,
+                SubgraphConfig subgraph_config, Model* model,
                 BandBackendType backend_type);
 
   std::tuple<BandStatus, ModelSpec, std::vector<SubgraphDef>> CreateSubgraphs();
@@ -50,7 +50,7 @@ class ModelAnalyzer {
 
   const Context& context_;
   const bool need_fallback_subgraph_;
-  const SubgraphConfig model_config_;
+  const SubgraphConfig subgraph_config_;
   const BandBackendType backend_type_;
   std::shared_ptr<ModelSpec> model_spec_;
 };

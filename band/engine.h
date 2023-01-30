@@ -170,7 +170,7 @@ class Engine : public Context {
   Engine& operator=(const Engine&) = delete;
   Engine& operator=(const Engine&&) = delete;
 
-  SubgraphConfig model_config_;
+  SubgraphConfig subgraph_config_;
 
   std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<Interface::IModelExecutor>>

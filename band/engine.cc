@@ -50,7 +50,7 @@ BandStatus Engine::RegisterModel(Model* model) {
   for (BandBackendType backend_type : model->GetSupportedBackends()) {
     // Analyze model & generate subgraphs per backend type
     ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
-                           model_config_, model, backend_type);
+                           subgraph_config_, model, backend_type);
     const auto result = analyzer.CreateSubgraphs();
     // TODO: replace with a std::tie?
     const BandStatus status = std::get<0>(result);
@@ -63,7 +63,7 @@ BandStatus Engine::RegisterModel(Model* model) {
           "Failed to create subgraphs for model %d with subgraph option %s",
           model_id,
           BandSubgraphPreparationGetName(
-              model_config_.subgraph_preparation_type));
+              subgraph_config_.subgraph_preparation_type));
       // TODO(BAND-49): unregister for specific backend
       UnregisterModel(model);
       return kBandError;
@@ -468,7 +468,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
   BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
 
   {
-    model_config_ = config.model_config;
+    subgraph_config_ = config.subgraph_config;
 
     if (planner_->NeedProfile()) {
       latency_estimator_ = std::make_unique<LatencyEstimator>(this);
@@ -763,7 +763,7 @@ std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetSubgraphWithShortestLatency(
     const Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
-  if (model_config_.subgraph_preparation_type == kBandFallbackPerWorker) {
+  if (subgraph_config_.subgraph_preparation_type == kBandFallbackPerWorker) {
     auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
                                    worker_waiting);
     std::pair<std::vector<SubgraphKey>, int64_t> ret =
