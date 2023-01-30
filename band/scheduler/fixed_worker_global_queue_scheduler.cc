@@ -4,19 +4,19 @@
 
 namespace Band {
 
-ScheduleAction FixedWorkerGlobalQueueScheduler::Schedule(const Context& context,
-                                                         JobQueue& requests) {
-  ScheduleAction action;
+void FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
   // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
-  std::set<int> idle_workers = context.GetIdleWorkers();
+  std::set<int> idle_workers = context_->GetIdleWorkers();
   if (idle_workers.empty()) {
     // no device is idle; wait for next iteration
-    return action;
+    return;
   }
 
   BAND_REPORT_ERROR(DefaultErrorReporter(), "NOT IMPLEMENTED");
-  return action;
-  // for (auto it = context.requests_.begin(); it != context.requests_.end();) {
+  return;
+  // for (auto it = context_->requests_.begin(); it !=
+  // context_->requests_.end();)
+  // {
   //   Job &to_execute = *it;
   //   int model_id = subgraph_key.GetModelId();
 
@@ -34,7 +34,7 @@ ScheduleAction FixedWorkerGlobalQueueScheduler::Schedule(const Context& context,
   //     continue;
   //   }
 
-  //   int subgraph_idx = context.GetSubgraphIdx(model_id, worker_id);
+  //   int subgraph_idx = context_->GetSubgraphIdx(model_id, worker_id);
   //   Subgraph *subgraph = GetModelExecutor()->subgraph(subgraph_idx);
   //   to_execute.expected_latency =
   //       GetWorkerWaitingTime()[worker_id] +
@@ -43,7 +43,7 @@ ScheduleAction FixedWorkerGlobalQueueScheduler::Schedule(const Context& context,
 
   //   // delete this job from our request queue and
   //   // delete this device from our idle_workers set
-  //   it = context.requests_.erase(it);
+  //   it = context_->requests_.erase(it);
   //   idle_workers.erase(idle_workers_it);
 
   //   if (idle_workers.empty()) {

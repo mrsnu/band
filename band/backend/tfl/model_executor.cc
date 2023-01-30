@@ -32,7 +32,6 @@ TfLiteModelExecutor::~TfLiteModelExecutor() {
   // explicitly remove interpreters first
   // since delegates own interpreter.
   interpreters_.clear();
-  delegates_.clear();
 }
 
 ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {

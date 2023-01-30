@@ -12,6 +12,7 @@ namespace Test {
 struct MockContextBase : public Context {
   MockContextBase() = default;
 
+  MOCK_CONST_METHOD0(UpdateWorkersWaiting, void(void));
   MOCK_CONST_METHOD0(GetWorkerWaitingTime, WorkerWaitingTime(void));
   MOCK_CONST_METHOD0(GetIdleWorkers, std::set<WorkerId>(void));
 
@@ -20,6 +21,8 @@ struct MockContextBase : public Context {
   MOCK_CONST_METHOD1(IsBegin, bool(const SubgraphKey&));
   MOCK_CONST_METHOD1(IsEnd, bool(const SubgraphKey&));
   MOCK_CONST_METHOD1(HasSubgraph, bool(const SubgraphKey&));
+  MOCK_CONST_METHOD1(IterateSubgraphs,
+                     void(std::function<void(const SubgraphKey&)>));
   MOCK_METHOD1(Invoke, BandStatus(const SubgraphKey&));
 
   /* model */
@@ -40,9 +43,9 @@ struct MockContextBase : public Context {
                      ShortestLatencyWithUnitSubgraph(ModelId, int,
                                                      WorkerWaiting));
   MOCK_CONST_METHOD2(GetSubgraphWithShortestLatency,
-                     SubgraphWithShortestLatency(Job&, WorkerWaiting));
+                     SubgraphWithShortestLatency(const Job&, WorkerWaiting));
   MOCK_CONST_METHOD3(GetSubgraphIdxSatisfyingSLO,
-                     SubgraphKey(Job&, WorkerWaiting,
+                     SubgraphKey(const Job&, WorkerWaiting,
                                  const std::set<WorkerId>&));
 
   /* profiler */
@@ -56,6 +59,8 @@ struct MockContextBase : public Context {
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
   MOCK_METHOD1(PrepareReenqueue, void(Job&));
   MOCK_METHOD1(EnqueueFinishedJob, void(Job&));
+  MOCK_METHOD1(EnqueueToWorker, void(const ScheduleAction&));
+  MOCK_METHOD1(EnqueueToWorkerBatch, void(const std::vector<ScheduleAction>&));
 
   /* getters */
   ErrorReporter* GetErrorReporter() { return DefaultErrorReporter(); }

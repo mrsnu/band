@@ -48,6 +48,8 @@ class Planner {
   // A worker calls the method.
   void EnqueueFinishedJob(Job& job);
   void PrepareReenqueue(Job& job);
+  // Enqueue the request to the worker.
+  void EnqueueToWorker(const std::vector<ScheduleAction>& action);
   void Trigger() { planner_safe_bool_.notify(); }
   int IssueSchedId() { return sched_id_++; }
 
@@ -82,8 +84,6 @@ class Planner {
   // Copy the Job instances from the `requests_` to the local queue.
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueues();
-  // Enqueue the request to the worker.
-  void EnqueueToWorkers(ScheduleAction& action);
   // Check if the job violated the specified SLO.
   // This func assumes that workers_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.

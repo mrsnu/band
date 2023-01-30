@@ -6,18 +6,17 @@
 
 namespace Band {
 ShortestExpectedLatencyScheduler::ShortestExpectedLatencyScheduler(
-    int window_size)
-    : window_size_(window_size) {}
+    Context* context, int window_size)
+    : IScheduler(context), window_size_(window_size) {}
 
-ScheduleAction ShortestExpectedLatencyScheduler::Schedule(
-    const Context& context, JobQueue& requests) {
-  ScheduleAction action;
+void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
   JobQueue local_jobs;
   int window_size = std::min(window_size_, (int)requests.size());
   local_jobs.insert(local_jobs.begin(), requests.begin(),
                     requests.begin() + window_size);
   requests.erase(requests.begin(), requests.begin() + window_size);
   while (!local_jobs.empty()) {
+    context_->UpdateWorkersWaiting();
     // First, find the most urgent job -- the one with the
     // largest shortest latency (no, that's not a typo).
     // Put that job into some worker, and repeat this whole loop until we've
@@ -36,7 +35,7 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(
     int64_t largest_shortest_latency = -1;
     int target_job_idx;
     SubgraphKey target_subgraph_key;
-    WorkerWaitingTime worker_waiting = context.GetWorkerWaitingTime();
+    WorkerWaitingTime worker_waiting = context_->GetWorkerWaitingTime();
 
     std::unordered_set<std::pair<int, BitMask>, CacheHash> searched_jobs;
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
@@ -51,7 +50,7 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(
       }
 
       std::pair<std::vector<SubgraphKey>, int64_t> best_subgraph =
-          context.GetSubgraphWithShortestLatency(next_job, worker_waiting);
+          context_->GetSubgraphWithShortestLatency(next_job, worker_waiting);
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;
@@ -67,13 +66,11 @@ ScheduleAction ShortestExpectedLatencyScheduler::Schedule(
     // remove the job from the queue so that we don't meet it in the next loop
     local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-    if (context.IsBegin(most_urgent_job.subgraph_key)) {
+    if (context_->IsBegin(most_urgent_job.subgraph_key)) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
     }
-    action[target_subgraph_key.GetWorkerId()].push_back(
-        {most_urgent_job, target_subgraph_key});
+    context_->EnqueueToWorker({most_urgent_job, target_subgraph_key});
   }
-  return action;
 }
 }  // namespace Band

@@ -5,27 +5,26 @@
 #include "band/time.h"
 
 namespace Band {
-LeastSlackFirstScheduler::LeastSlackFirstScheduler(int window_size)
-    : window_size_(window_size) {}
+LeastSlackFirstScheduler::LeastSlackFirstScheduler(Context* context,
+                                                   int window_size)
+    : IScheduler(context), window_size_(window_size) {}
 
-ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
-                                                  JobQueue& requests) {
-  ScheduleAction action;
+void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
+  context_->UpdateWorkersWaiting();
   int window_size = std::min(window_size_, (int)requests.size());
   if (window_size <= 0) {
-    return {};
+    return;
   }
 
-  std::set<int> idle_workers = context.GetIdleWorkers();
+  std::set<int> idle_workers = context_->GetIdleWorkers();
   if (idle_workers.empty()) {
-    return {};
+    return;
   }
 
-  WorkerWaitingTime waiting_time = context.GetWorkerWaitingTime();
+  WorkerWaitingTime waiting_time = context_->GetWorkerWaitingTime();
 
   int64_t current_time = Time::NowMicros();
-  // Sort jobs by slack time
-  SortBySlackTime(context, requests, window_size, current_time);
+  SortBySlackTime(requests, window_size, current_time);
 
   std::set<int> job_indices_to_erase;
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
@@ -33,7 +32,7 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
 
     // Get current job's fastest subgraph execution plan + latency
     std::pair<std::vector<SubgraphKey>, int> best_exec_plan =
-        context.GetSubgraphWithShortestLatency(job, waiting_time);
+        context_->GetSubgraphWithShortestLatency(job, waiting_time);
     // Get first executable subgraph plan
     SubgraphKey target_subgraph_key = best_exec_plan.first.front();
 
@@ -41,8 +40,7 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
     if (job.slo_us > 0 &&
         current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
       job.status = kBandJobSLOViolation;
-      action[target_subgraph_key.GetWorkerId()].push_back(
-          {job, target_subgraph_key});
+      context_->EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
     }
@@ -51,9 +49,8 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
     int worker_id = target_subgraph_key.GetWorkerId();
     if (idle_workers.find(worker_id) != idle_workers.end()) {
       // Update worker's waiting time as if it will execute the job
-      waiting_time[worker_id] += context.GetExpected(target_subgraph_key);
-      action[target_subgraph_key.GetWorkerId()].push_back(
-          {job, target_subgraph_key});
+      waiting_time[worker_id] += context_->GetExpected(target_subgraph_key);
+      context_->EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
     }
@@ -63,8 +60,6 @@ ScheduleAction LeastSlackFirstScheduler::Schedule(const Context& context,
        it != job_indices_to_erase.rend(); ++it) {
     requests.erase(requests.begin() + *it);
   }
-
-  return action;
 }
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
@@ -78,11 +73,10 @@ int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
   }
 }
 
-void LeastSlackFirstScheduler::SortBySlackTime(const Context& context,
-                                               JobQueue& requests,
+void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests,
                                                int window_size,
                                                int64_t current_time) {
-  UpdateExpectedLatency(context, requests, window_size);
+  UpdateExpectedLatency(requests, window_size);
   std::sort(requests.begin(), requests.begin() + window_size,
             [&](const Job& first, const Job& second) -> bool {
               return GetSlackTime(current_time, first) <
@@ -90,14 +84,13 @@ void LeastSlackFirstScheduler::SortBySlackTime(const Context& context,
             });
 }
 
-void LeastSlackFirstScheduler::UpdateExpectedLatency(const Context& context,
-                                                     JobQueue& requests,
+void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests,
                                                      int window_size) {
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
-    it->expected_latency =
-        context
-            .GetSubgraphWithShortestLatency(*it, context.GetWorkerWaitingTime())
-            .second;
+    it->expected_latency = context_
+                               ->GetSubgraphWithShortestLatency(
+                                   *it, context_->GetWorkerWaitingTime())
+                               .second;
   }
 }
 

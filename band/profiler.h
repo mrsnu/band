@@ -13,7 +13,7 @@ class Profiler {
   size_t GetNumEvents() const;
 
   template <typename T>
-  uint64_t GetElapsedTimeAt(size_t index) {
+  double GetElapsedTimeAt(size_t index) const {
     static_assert(is_chrono_duration<T>::value,
                   "T must be a std::chrono::duration");
     if (timeline_vector_.size() > index) {
@@ -25,11 +25,11 @@ class Profiler {
   }
 
   template <typename T>
-  uint64_t GetAverageElapsedTime() {
+  double GetAverageElapsedTime() const {
     static_assert(is_chrono_duration<T>::value,
                   "T must be a std::chrono::duration");
 
-    uint64_t accumulated_time = 0;
+    double accumulated_time = 0;
     for (size_t i = 0; i < timeline_vector_.size(); i++) {
       accumulated_time += GetElapsedTimeAt<T>(i);
     }

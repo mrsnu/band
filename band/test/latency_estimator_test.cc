@@ -20,9 +20,9 @@ struct CustomWorkerMockContext : public MockContextBase {
   const ModelSpec* GetModelSpec(ModelId model_id) const override {
     return &model_spec;
   }
-  SubgraphKey GetLargestSubgraphKey(ModelId model_id,
-                                    WorkerId worker_id) const override {
-    return SubgraphKey(0, 0);
+  void IterateSubgraphs(
+      std::function<void(const SubgraphKey&)> iterator) const override {
+    iterator(SubgraphKey(0, 0));
   }
   bool HasSubgraph(const SubgraphKey& key) const override { return true; }
 
@@ -143,6 +143,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     return kBandOk;
   });
 
+  const std::string profile_path = testing::TempDir() + "log.json";
+
   DeviceQueueWorker worker(&context, 0, kBandCPU);
   // explicitly assign worker to mock context
   context.worker = &worker;
@@ -154,12 +156,11 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     LatencyEstimator latency_estimator(&context);
 
     ProfileConfigBuilder b;
-    ProfileConfig config =
-        b.AddNumRuns(3)
-            .AddNumWarmups(3)
-            .AddOnline(true)
-            .AddProfileDataPath(testing::TempDir() + "log.json")
-            .Build();
+    ProfileConfig config = b.AddNumRuns(3)
+                               .AddNumWarmups(3)
+                               .AddOnline(true)
+                               .AddProfileDataPath(profile_path)
+                               .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), kBandOk);
     EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
@@ -171,18 +172,19 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     LatencyEstimator latency_estimator(&context);
 
     ProfileConfigBuilder b;
-    ProfileConfig config =
-        b.AddNumRuns(3)
-            .AddNumWarmups(3)
-            .AddOnline(false)
-            .AddProfileDataPath(testing::TempDir() + "log.json")
-            .Build();
+    ProfileConfig config = b.AddNumRuns(3)
+                               .AddNumWarmups(3)
+                               .AddOnline(false)
+                               .AddProfileDataPath(profile_path)
+                               .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), kBandOk);
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
     EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
     EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
   }
+
+  std::remove(profile_path.c_str());
 
   worker.End();
 }
@@ -192,6 +194,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return kBandOk;
   });
+
+  const std::string profile_path = testing::TempDir() + "log.json";
 
   DeviceQueueWorker worker(&context, 0, kBandCPU);
   // explicitly assign worker to mock context
@@ -204,12 +208,11 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     LatencyEstimator latency_estimator(&context);
 
     ProfileConfigBuilder b;
-    ProfileConfig config =
-        b.AddNumRuns(3)
-            .AddNumWarmups(3)
-            .AddOnline(true)
-            .AddProfileDataPath(testing::TempDir() + "log.json")
-            .Build();
+    ProfileConfig config = b.AddNumRuns(3)
+                               .AddNumWarmups(3)
+                               .AddOnline(true)
+                               .AddProfileDataPath(profile_path)
+                               .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), kBandOk);
     EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
@@ -223,12 +226,11 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     LatencyEstimator latency_estimator(&context);
 
     ProfileConfigBuilder b;
-    ProfileConfig config =
-        b.AddNumRuns(3)
-            .AddNumWarmups(3)
-            .AddOnline(false)
-            .AddProfileDataPath(testing::TempDir() + "log.json")
-            .Build();
+    ProfileConfig config = b.AddNumRuns(3)
+                               .AddNumWarmups(3)
+                               .AddOnline(false)
+                               .AddProfileDataPath(profile_path)
+                               .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), kBandOk);
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
@@ -236,6 +238,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     // fails to load due to worker update
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
   }
+
+  std::remove(profile_path.c_str());
 
   worker.End();
 }

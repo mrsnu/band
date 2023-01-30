@@ -17,6 +17,7 @@ struct MockContext : public MockContextBase {
   std::set<WorkerId> idle_workers_;
   std::vector<WorkerId> list_idle_workers_;
   std::map<ModelId, WorkerId> model_worker_map_;
+  std::vector<ScheduleAction> action_;
   mutable int w;
 
   MockContext(std::set<WorkerId> idle_workers) : idle_workers_(idle_workers) {
@@ -32,7 +33,7 @@ struct MockContext : public MockContextBase {
   }
 
   std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
-      Job& job, const WorkerWaitingTime& worker_waiting) const override {
+      const Job& job, const WorkerWaitingTime& worker_waiting) const override {
     return std::pair<std::vector<SubgraphKey>, int64_t>(
         {SubgraphKey(job.model_id, *idle_workers_.begin(), {0})},
         0 /*shortest expected latency*/);
@@ -54,6 +55,15 @@ struct MockContext : public MockContextBase {
   }
 
   int64_t GetExpected(const SubgraphKey& key) const override { return 10; }
+  void EnqueueToWorker(const ScheduleAction& action) override {
+    action_.push_back(action);
+  }
+
+  void EnqueueToWorkerBatch(
+      const std::vector<ScheduleAction>& schedule_action) override {
+    action_.insert(action_.end(), schedule_action.begin(),
+                   schedule_action.end());
+  }
 };
 
 // <request model ids, request slos, available workers>
@@ -85,23 +95,23 @@ TEST_P(LSTTestsFixture, LSTTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  LeastSlackFirstScheduler lst_scheduler(5);
-  auto action = lst_scheduler.Schedule(context, requests);
+  LeastSlackFirstScheduler lst_scheduler(&context, 5);
+  lst_scheduler.Schedule(requests);
 
   int count_scheduled = 0;
-  for (auto scheduled_models : action) {
-    count_scheduled += scheduled_models.second.size();
+  for (auto scheduled_models : context.action_) {
+    count_scheduled++;
   }
 
   EXPECT_EQ(count_scheduled,
             std::min(available_workers.size(), request_models.size()));
   EXPECT_EQ(count_requests, requests.size() + count_scheduled);
   if (request_slos[0] == 0) {  // No SLOs
-    EXPECT_EQ(action.at(0)[0].first.model_id, 0);
-    EXPECT_EQ(action.at(0)[1].first.model_id, 1);
+    EXPECT_EQ(context.action_[0].second.GetModelId(), 0);
+    EXPECT_EQ(context.action_[1].second.GetModelId(), 1);
   } else {  // SLOs
-    EXPECT_EQ(action.at(0)[0].first.model_id, 1);
-    EXPECT_EQ(action.at(0)[1].first.model_id, 0);
+    EXPECT_EQ(context.action_[0].second.GetModelId(), 1);
+    EXPECT_EQ(context.action_[1].second.GetModelId(), 0);
   }
 }
 
@@ -116,12 +126,12 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  RoundRobinScheduler rr_scheduler;
-  auto action = rr_scheduler.Schedule(context, requests);
+  RoundRobinScheduler rr_scheduler(&context);
+  rr_scheduler.Schedule(requests);
 
   int count_scheduled = 0;
-  for (auto scheduled_models : action) {
-    count_scheduled += scheduled_models.second.size();
+  for (auto scheduled_models : context.action_) {
+    count_scheduled++;
   }
 
   EXPECT_EQ(count_scheduled,
@@ -141,12 +151,12 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  FixedWorkerScheduler fd_scheduler;
-  auto action = fd_scheduler.Schedule(context, requests);
+  FixedWorkerScheduler fd_scheduler(&context);
+  fd_scheduler.Schedule(requests);
 
   int count_scheduled = 0;
-  for (auto scheduled_jobs : action) {
-    count_scheduled += scheduled_jobs.second.size();
+  for (auto scheduled_models : context.action_) {
+    count_scheduled++;
   }
 
   // Each model made a single request and should be scheduled once
@@ -154,13 +164,11 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerTest) {
   // requests should be deleted
   EXPECT_EQ(requests.size(), 0);
 
-  std::set<ModelId> scheduled_models;
+  std::map<ModelId, int> scheduled_models;
   // each worker should have a single model scheduled
-  for (auto scheduled_model : action) {
-    EXPECT_EQ(scheduled_model.second.size(), 1);
-    if (scheduled_model.second.size() == 1) {
-      scheduled_models.insert(scheduled_model.second.at(0).first.model_id);
-    }
+  for (auto action : context.action_) {
+    scheduled_models[action.second.GetModelId()]++;
+    EXPECT_EQ(scheduled_models[action.second.GetModelId()], 1);
   }
   // Each requested model should be scheduled
   for (auto it = request_models.begin(); it != request_models.end(); it++) {
@@ -183,12 +191,12 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  FixedWorkerScheduler fd_scheduler;
-  auto action = fd_scheduler.Schedule(context, requests);
+  FixedWorkerScheduler fd_scheduler(&context);
+  fd_scheduler.Schedule(requests);
 
   int count_scheduled = 0;
-  for (auto scheduled_jobs : action) {
-    count_scheduled += scheduled_jobs.second.size();
+  for (auto scheduled_jobs : context.action_) {
+    count_scheduled++;
   }
 
   // Each model made a single request and should be scheduled once
@@ -196,12 +204,12 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
   // requests should be deleted
   EXPECT_EQ(requests.size(), 0);
 
-  std::set<ModelId> scheduled_models;
+  std::map<ModelId, int> scheduled_models;
   // each worker should have a single model scheduled
-  EXPECT_EQ(action[target_worker].size(), count_requests);
-  for (auto scheduled_model : action) {
-    for (auto job_key : scheduled_model.second) {
-      scheduled_models.insert(job_key.first.model_id);
+  EXPECT_EQ(context.action_.size(), count_requests);
+  for (auto scheduled_model : context.action_) {
+    for (auto action : context.action_) {
+      scheduled_models[action.second.GetModelId()]++;
     }
   }
   // Each requested model should be scheduled

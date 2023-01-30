@@ -2,6 +2,7 @@
 #define BAND_MODEL_H_
 
 #include <map>
+#include <memory>
 
 #include "band/common.h"
 
@@ -27,7 +28,7 @@ class Model {
   static ModelId next_model_id_;
   const ModelId model_id_;
 
-  std::map<BandBackendType, Interface::IModel*> backend_models_;
+  std::map<BandBackendType, std::shared_ptr<Interface::IModel>> backend_models_;
 };
 }  // namespace Band
 

@@ -46,7 +46,7 @@ struct WorkerConfig {
   int availability_check_interval_ms = 30000;
 };
 
-struct ModelConfig {
+struct SubgraphConfig {
   int minimum_subgraph_size = 7;
   BandSubgraphPreparationType subgraph_preparation_type =
       kBandMergeUnitSubgraph;
@@ -54,7 +54,7 @@ struct ModelConfig {
 
 struct RuntimeConfig {
   BandCPUMaskFlags cpu_mask;
-  ModelConfig model_config;
+  SubgraphConfig model_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;

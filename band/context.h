@@ -1,6 +1,7 @@
 #ifndef BAND_CONTEXT_H_
 #define BAND_CONTEXT_H_
 
+#include <functional>
 #include <map>
 #include <queue>
 #include <unordered_map>
@@ -25,6 +26,9 @@ class ModelSpec;
 // The unit of time is ms.
 using WorkerWaitingTime = std::map<WorkerId, int64_t>;
 
+// Decision from a scheduler. Run subgraph key for a specific job.
+using ScheduleAction = std::pair<Job, SubgraphKey>;
+
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
 
@@ -42,6 +46,7 @@ class Context {
   };
 
   /* worker */
+  virtual void UpdateWorkersWaiting() const = 0;
   virtual WorkerWaitingTime GetWorkerWaitingTime() const = 0;
   virtual std::set<WorkerId> GetIdleWorkers() const = 0;
 
@@ -51,6 +56,8 @@ class Context {
   virtual bool IsBegin(const SubgraphKey& key) const = 0;
   virtual bool IsEnd(const SubgraphKey& key) const = 0;
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
+  virtual void IterateSubgraphs(
+      std::function<void(const SubgraphKey&)> iterator) const = 0;
   virtual BandStatus Invoke(const SubgraphKey& key) = 0;
 
   /* model */
@@ -77,10 +84,11 @@ class Context {
 
   virtual std::pair<std::vector<SubgraphKey>, int64_t>
   GetSubgraphWithShortestLatency(
-      Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
+      const Job& job,
+      const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
-      Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+      const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* profiler */
@@ -95,6 +103,9 @@ class Context {
                                           bool push_front = false) = 0;
   virtual void PrepareReenqueue(Job& job) = 0;
   virtual void EnqueueFinishedJob(Job& job) = 0;
+  virtual void EnqueueToWorker(const ScheduleAction& schedule_action) = 0;
+  virtual void EnqueueToWorkerBatch(
+      const std::vector<ScheduleAction>& schedule_action) = 0;
 
   /* getters */
   virtual const ErrorReporter* GetErrorReporter() const {

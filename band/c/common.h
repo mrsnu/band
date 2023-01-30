@@ -46,8 +46,11 @@ typedef enum BandSchedulerType {
   kBandHeterogeneousEarliestFinishTime = 4,
   kBandLeastSlackTimeFirst = 5,
   kBandHeterogeneousEarliestFinishTimeReserved = 6,
-  kNumSchedulerTypes = 7
+  kBandNumSchedulerTypes = 7
 } BandSchedulerType;
+
+const char* BandSchedulerGetName(BandSchedulerType type);
+BandSchedulerType BandSchedulerGetType(const char* name);
 
 typedef enum BandSubgraphPreparationType {
   kBandNoFallbackSubgraph = 0,
@@ -58,6 +61,7 @@ typedef enum BandSubgraphPreparationType {
 } BandSubgraphPreparationType;
 
 const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type);
+BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name);
 
 // Fixed size list of integers. Used for dimensions and inputs/outputs tensor
 // indices

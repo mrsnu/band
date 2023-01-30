@@ -7,7 +7,6 @@
 #include "band/context.h"
 #include "band/model_spec.h"
 
-
 namespace Band {
 class Model;
 
@@ -27,7 +26,7 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
 class ModelAnalyzer {
  public:
   ModelAnalyzer(const Context& context, bool need_subgraph,
-                ModelConfig model_config, Model* model,
+                SubgraphConfig model_config, Model* model,
                 BandBackendType backend_type);
 
   std::tuple<BandStatus, ModelSpec, std::vector<SubgraphDef>> CreateSubgraphs();
@@ -51,7 +50,7 @@ class ModelAnalyzer {
 
   const Context& context_;
   const bool need_fallback_subgraph_;
-  const ModelConfig model_config_;
+  const SubgraphConfig model_config_;
   const BandBackendType backend_type_;
   std::shared_ptr<ModelSpec> model_spec_;
 };

@@ -42,7 +42,7 @@ TYPED_TEST(WokrerSuite, JobHelper) {
   EXPECT_FALSE(worker.HasJob());
   EXPECT_EQ(worker.GetCurrentJobId(), -1);
 
-  EXPECT_TRUE(worker.GiveJob(job));
+  EXPECT_TRUE(worker.EnqueueJob(job));
   EXPECT_TRUE(worker.HasJob());
   EXPECT_EQ(worker.GetCurrentJobId(), job.job_id);
 
@@ -65,7 +65,7 @@ TYPED_TEST(WokrerSuite, Wait) {
   EXPECT_EQ(worker.GetCurrentJobId(), -1);
 
   auto now0 = Time::NowMicros();
-  EXPECT_TRUE(worker.GiveJob(job));
+  EXPECT_TRUE(worker.EnqueueJob(job));
   worker.Wait();
   auto now1 = Time::NowMicros();
   EXPECT_GE(now1, now0 + 50);

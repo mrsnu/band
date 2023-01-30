@@ -4,6 +4,7 @@
 #include "band/common.h"
 #include "band/logger.h"
 #include "band/time.h"
+#include "worker.h"
 
 namespace Band {
 Worker::Worker(Context* context, WorkerId worker_id,
@@ -76,7 +77,7 @@ void Worker::WaitUntilDeviceAvailable(SubgraphKey& subgraph) {
   }
 }
 
-bool Worker::IsAvailable() { return !is_throttling_ && !is_paused_; }
+bool Worker::IsAvailable() const { return !is_throttling_ && !is_paused_; }
 
 void Worker::Start() {
   std::call_once(device_cpu_start_flag_, [&]() {
@@ -114,6 +115,8 @@ void Worker::Wait() {
 const CpuSet& Worker::GetWorkerThreadAffinity() const { return cpu_set_; }
 
 int Worker::GetNumThreads() const { return num_threads_; }
+
+bool Worker::IsEnqueueReady() const { return IsAvailable(); }
 
 JobQueue& Worker::GetDeviceRequests() {
   JobQueue queue;
