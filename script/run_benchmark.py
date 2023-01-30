@@ -21,11 +21,6 @@ def benchmark_local(enable_xnnpack, debug, build_only, config_path):
 
 
 def benchmark_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False, config_path=""):
-    # TODO
-    # 1. build benchmark
-    # 2. prep (copy benchmark, copy files -- from benchmark config)
-    # 3. execute
-
     target_base_dir = BASE_DIR
     # build android targets only (specified in band_cc_android_test tags)
     build_command = f'{"bazel clean &&" if rebuild else ""} bazel build {get_bazel_options(enable_xnnpack, debug, True)} band/tool:band_benchmark'
