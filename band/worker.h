@@ -43,8 +43,6 @@ class Worker {
   virtual int GetCurrentJobId() = 0;
   virtual int64_t GetWaitingTime() = 0;
   // Make sure the worker lock is acquired before calling below functions.
-  // Currently, `Planner::Plan()` is the only user of the method, and `Plan()`
-  // calls `EnqueueJob` with the lock.
   virtual bool EnqueueJob(Job& job) = 0;
   virtual bool IsEnqueueReady() const;
   virtual bool HasJob() = 0;
