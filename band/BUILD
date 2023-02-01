@@ -354,7 +354,7 @@ cc_library(
     srcs = ["json_util.cc"],
     hdrs = ["json_util.h"],
     linkopts = select({
-        "//tensorflow:windows": [],
+        "//band:windows": [],
         "//conditions:default": [
             "-lm",
             "-ldl",

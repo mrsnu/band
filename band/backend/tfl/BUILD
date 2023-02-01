@@ -27,7 +27,7 @@ cc_library(
     ],
     deps = [
         "//band:framework",
-        "//tensorflow/lite:framework",
+        "@band_tensorflow//lite:framework",
         "//tensorflow/lite/c:c_api",
         "//tensorflow/lite/c:c_api_experimental",
     ] + select({

@@ -1,44 +1,22 @@
 workspace(name = "org_band")
 
-load("//third_party/absl:workspace.bzl", absl = "repo")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-def _remote_repo_impl(ctx):
-    ctx.download_and_extract(
-        url = ctx.attr.urls,
-        sha256 = ctx.attr.sha256,
-        type = ctx.attr.type,
-        stripPrefix = ctx.attr.strip_predix,
-    )
-    patch_files = ctx.attr.patch_files
-    if patch_files:
-        for patch_file in patch_files:
-            patch_file = ctx.path(Label(patch_file)) if patch_file else None
-            if patch_file:
-                ctx.patch(patch_file, strip = True)
-
-_remote_repo = repository_rule(
-    implementation = _remote_repo_impl,
-    attrs = {
-        "sha256": attr.string(mandatory = True),
-        "urls": attr.string_list(mandatory = True),
-        "strip_prefix": attr.string(),
-        "type": attr.string(),
-        "patch_files": attr.string_list(),
-    }
+http_archive(
+    name = "com_google_absl",
+    url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.0.tar.gz",
+    sha256 = "3ea49a7d97421b88a8c48a0de16c16048e17725c7ec0f1d3ea2683a2a75adc21",
+    strip_prefix = "abseil-cpp-20230125.0",
 )
 
-def remote_repository_rule(name, sha256, urls **kwargs):
-    _remote_repo(
-        name = name,
-        sha256 = sha256,
-        urls = urls,
-        **kwargs,
-    )
-    
-def remote_patch_repository_rule(name, sha256, urls, patch_files, **kwargs):
-    _remote_repo(
-        name = name,
-        sha256 = sha256,
-        urls = urls,
-        patch_files = patch_files,
-    )
+http_archive(
+    name = "build_bazel_rules_android",
+    url = "https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip",
+    sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
+    strip_prefix = "rules_android-0.1.1",
+)
+
+local_repository(
+    name = "band_tensorflow",
+    path = "third_party/tensorflow",
+)
