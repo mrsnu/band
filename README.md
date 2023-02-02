@@ -6,81 +6,82 @@
   <h2 align="center">Band: Multi-DNN Framework for Mobile-Cloud Platform </h2>
 </div>
 
-### Introduction
+## Introduction
 
-[Band](https://dl.acm.org/doi/10.1145/3498361.3538948) is an efficient deep learning platform for mobile-cloud collaborative support for multiple DNNs. It supports coordination of multi-DNN requests on heterogeneous processors in mobile device to cloud GPU. Band is backed by following backend frameworks.
+[Band](https://dl.acm.org/doi/10.1145/3498361.3538948) is an efficient deep learning platform for mobile-cloud collaborative support for multiple DNNs. 
+Band supports backend-agnostic coordination of DNN requests on heterogeneous processors in mobile device (planned) to cloud GPU. 
+Band is currently backed by following backend machine learning frameworks.
 
-<!-- Add more .. -->
-* Tensorflow Lite
+|         | [Tensorflow v2.9.2](https://github.com/tensorflow/tensorflow/tree/v2.9.2)    | ... |
+|---------|--------------------|-----|
+| Android  |  &#9745; |     |
+| iOS     |  &#9744; |     |
 
+Band provides Java and C APIs, as well as an official plugin for [Unreal Engine](https://www.unrealengine.com/).
 
-### Codebase
+## Useful Links
+
+* Examples (requires update)
+* [Unreal Engine Plugin](https://github.com/mrsnu/ue4-plugin)
+
+## Codebase
 
 ```
 [root]/band
-├── backend 
-├── c
+├── backend <backend-specific implementation of `interface`>
+├── c <C api>
 ├── docs
-├── interface
-├── java
+├── interface <backend-agnostic interfaces. each backend (e.g., Tensorflow Lite, MNN, ...) should implement them to communicate with a Band core>
+├── java <Java api>
 ├── scheduler
 ├── test
 └── testdata
     └── testdata    
-[root]/tensorflow <Same as TF v2.9.2>
 ```
-* Tensorflow Lite in [Tensorflow v2.9.2](https://github.com/tensorflow/tensorflow/tree/v2.9.2) 
-* Among files and directories located in `[root]/tensorflow`, files unrelated to TF Lite are deleted.
-  * The following directories are necessary to build `benchmark tool` and `Android library`.
 
 
-
-
-<!-- GETTING STARTED -->
-### Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+## Getting Started
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
+* Install Android SDK 28, NDK v19.2.53456 
+    * or create [Visual Studio Code Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) using `[root]/.devcontainer`
+    * or utilize `[root]/.devcontainer/Dockerfile`
+
+* Fetch submodules (e.g., [`Ruy`](https://github.com/mrsnu/ruy) for Tensorflow Lite CPU Backend)
   ```sh
-  npm install npm@latest -g
+  git submodule update --init --recursive
+  ```
+* Configure Android SDK, NDK for build system (Bazel)
+  ```sh
+  python configure.py
   ```
 
-### Installation
+### How to Build / Run
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+Refer to detailed instructions in `[root]/script`
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/your_username_/Project-Name.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-   
-### How to Run
+* Run test 
+  ```sh
+  python script/run_test.py -android 
+  ```
 
-Run below script to start the app
-```sh
-bash run.sh
-```
+* Build Android AAR
+  ```sh
+  sh script/build_aar_armv8.sh
+  ```
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+* Build C API
+  ```sh
+  python script/build_c_api.py -android 
+  ```
 
+* Run benchmark -- check `[root]/docs/benchmark.md`
 
 ### Citation
 
 If you find our work useful, please cite our paper below!
+The original codebase for paper submission is archived [here](https://github.com/mrsnu/band/releases/tag/v0.0.0)
 ```
 @inproceedings{jeong2022band,
   title={Band: coordinated multi-DNN inference on heterogeneous mobile processors},
@@ -92,11 +93,10 @@ If you find our work useful, please cite our paper below!
 ```
 
 
-<p align="right">(<a href="#top">back to top</a>)</p>
-
 <!-- ACKNOWLEDGMENTS -->
 ### Acknowledgments
 
 * [Tensorflow](https://github.com/tensorflow/tensorflow)
+* [NCNN](https://github.com/Tencent/ncnn) - CPU affinity control
 
 <p align="right">(<a href="#top">back to top</a>)</p>
