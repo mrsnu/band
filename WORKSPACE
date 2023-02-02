@@ -19,4 +19,4 @@ load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
 workspace()
 
 load("//third_party/android:android.bzl", "init_android")
-init_android()
+init_android(name = "android_config")
