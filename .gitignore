@@ -55,8 +55,9 @@ log.csv
 log.tsv
 band.aar
 
-# build_c_api
+# script/
 /bin
+/benchmark
 /test_bin
 
 # mac icloud

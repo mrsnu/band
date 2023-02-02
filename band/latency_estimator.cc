@@ -37,8 +37,8 @@ void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
         (1 - profile_smoothing_factor_) * prev_latency;
   } else {
     BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::UpdateLatency] The given SubgraphKey "
-                  "cannot be found. %s ",
+                  "[LatencyEstimator::UpdateLatency] The given SubgraphKey %s "
+                  "cannot be found.",
                   key.ToString().c_str());
   }
 }

@@ -368,12 +368,14 @@ void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
           target_key.GetWorkerId());
       return;
     }
+
+    if (IsSLOViolated(job)) {
+      HandleSLOViolatedJob(job);
+      continue;
+    }
+
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-      if (IsSLOViolated(job)) {
-        HandleSLOViolatedJob(job);
-        continue;
-      }
 
       if (worker->IsEnqueueReady()) {
         UpdateJobScheduleStatus(job, target_key);
@@ -382,6 +384,7 @@ void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
         EnqueueRequest(job, true);
       }
     }
+
     worker->GetRequestCv().notify_one();
   }
 }

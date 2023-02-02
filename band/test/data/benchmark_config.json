@@ -1,0 +1,57 @@
+{
+    "models": [
+        {
+            "graph": "band/test/data/add.tflite",
+            "period_ms": 30,
+            "batch_size": 3,
+            "slo_us": 30000,
+            "device": "CPU"
+        },
+        {
+            "graph": "band/test/data/add.tflite",
+            "period_ms": 30,
+            "batch_size": 3,
+            "slo_us": 30000,
+            "device": "CPU"
+        }
+    ],
+    "log_path": "band/test/data/log.csv",
+    "schedulers": [
+        "round_robin"
+    ],
+    "minimum_subgraph_size": 7,
+    "subgraph_preparation_type": "merge_unit_subgraph",
+    "execution_mode": "periodic",
+    "cpu_masks": "ALL",
+    "num_threads": 1,
+    "planner_cpu_masks": "PRIMARY",
+    "workers": [
+        {
+            "device": "CPU",
+            "num_threads": 3,
+            "cpu_masks": "BIG",
+            "profile_copy_computation_ratio": 10
+        },
+        {
+            "device": "CPU",
+            "num_threads": 4,
+            "cpu_masks": "LITTLE",
+            "profile_copy_computation_ratio": 10
+        }
+    ],
+    "running_time_ms": 500,
+    "profile_smoothing_factor": 0.1,
+    "profile_data_path": "band/test/data/profile.json",
+    "profile_online": true,
+    "profile_warmup_runs": 1,
+    "profile_num_runs": 1,
+    "profile_copy_computation_ratio": [
+        1000,
+        1000,
+        1000,
+        1000
+    ],
+    "allow_work_steal": true,
+    "availability_check_interval_ms": 30000,
+    "schedule_window_size": 10
+}
