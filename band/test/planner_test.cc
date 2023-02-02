@@ -45,8 +45,8 @@ planner -> scheduler -> worker -> planner
 
 TEST(PlannerSuite, SingleQueue) {
   MockContext context;
-  Planner planner(&context);
-  planner.AddScheduler(std::make_unique<MockScheduler>(&context));
+  Planner planner(context);
+  planner.AddScheduler(std::make_unique<MockScheduler>(context));
   // TODO: Add tests!
   EXPECT_TRUE(true);
 }

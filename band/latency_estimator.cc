@@ -64,11 +64,11 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
           return;
         }
 
-        context_->IterateSubgraphs([&](const SubgraphKey& subgraph_key) {
+        context_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) {
           if (subgraph_key.GetWorkerId() == worker_id &&
               subgraph_key.GetModelId() == model_id) {
             Profiler average_profiler;
-            // TODO(BAND-20): propagate affinity to CPU backend if necessary
+            // TODO(#238): propagate affinity to CPU backend if necessary
             // (L1143-,tensorflow_band/lite/model_executor.cc)
 
             for (int i = 0; i < profile_num_warmups_; i++) {

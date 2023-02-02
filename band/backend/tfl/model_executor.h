@@ -32,7 +32,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   bool HasSubgraph(const SubgraphKey& key) const override;
 
   BandStatus ExecuteSubgraph(const SubgraphKey& key) override;
-  void IterateSubgraphs(
+  void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) override;
 
  private:

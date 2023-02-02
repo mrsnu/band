@@ -28,7 +28,8 @@ const char* BandSchedulerGetName(BandSchedulerType type) {
 BandSchedulerType BandSchedulerGetType(const char* name) {
   for (int i = 0; i < kBandNumSchedulerTypes; i++) {
     BandSchedulerType type = (BandSchedulerType)i;
-    if (strcmp(BandSchedulerGetName(type), name) == 0) {
+    if (strncmp(BandSchedulerGetName(type), name,
+                strlen(BandSchedulerGetName(type))) == 0) {
       return type;
     }
   }
@@ -52,7 +53,8 @@ const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
 BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name) {
   for (int i = 0; i < kBandNumSubgraphPreparationType; i++) {
     BandSubgraphPreparationType type = (BandSubgraphPreparationType)i;
-    if (strcmp(BandSubgraphPreparationGetName(type), name) == 0) {
+    if (strncmp(BandSubgraphPreparationGetName(type), name,
+                strlen(BandSubgraphPreparationGetName(type))) == 0) {
       return type;
     }
   }
@@ -176,7 +178,8 @@ const char* BandDeviceGetName(BandDeviceFlags flag) {
 BandDeviceFlags BandDeviceGetFlag(const char* name) {
   for (int i = 0; i < kBandNumDevices; i++) {
     BandDeviceFlags flag = (BandDeviceFlags)i;
-    if (strcmp(BandDeviceGetName(flag), name) == 0) {
+    if (strncmp(BandDeviceGetName(flag), name,
+                strlen(BandDeviceGetName(flag))) == 0) {
       return flag;
     }
   }

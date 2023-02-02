@@ -7,7 +7,7 @@ namespace Band {
 
 class ShortestExpectedLatencyScheduler : public IScheduler {
  public:
-  explicit ShortestExpectedLatencyScheduler(Context* context, int window_size);
+  explicit ShortestExpectedLatencyScheduler(Context& context, int window_size);
 
   void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }

@@ -5,23 +5,23 @@
 #include "band/time.h"
 
 namespace Band {
-LeastSlackFirstScheduler::LeastSlackFirstScheduler(Context* context,
+LeastSlackFirstScheduler::LeastSlackFirstScheduler(Context& context,
                                                    int window_size)
     : IScheduler(context), window_size_(window_size) {}
 
 void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
-  context_->UpdateWorkersWaiting();
+  context_.UpdateWorkersWaiting();
   int window_size = std::min(window_size_, (int)requests.size());
   if (window_size <= 0) {
     return;
   }
 
-  std::set<int> idle_workers = context_->GetIdleWorkers();
+  std::set<int> idle_workers = context_.GetIdleWorkers();
   if (idle_workers.empty()) {
     return;
   }
 
-  WorkerWaitingTime waiting_time = context_->GetWorkerWaitingTime();
+  WorkerWaitingTime waiting_time = context_.GetWorkerWaitingTime();
 
   int64_t current_time = Time::NowMicros();
   SortBySlackTime(requests, window_size, current_time);
@@ -32,7 +32,7 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
     // Get current job's fastest subgraph execution plan + latency
     std::pair<std::vector<SubgraphKey>, int> best_exec_plan =
-        context_->GetSubgraphWithShortestLatency(job, waiting_time);
+        context_.GetSubgraphWithShortestLatency(job, waiting_time);
     // Get first executable subgraph plan
     SubgraphKey target_subgraph_key = best_exec_plan.first.front();
 
@@ -40,7 +40,7 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     if (job.slo_us > 0 &&
         current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
       job.status = kBandJobSLOViolation;
-      context_->EnqueueToWorker({job, target_subgraph_key});
+      context_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
     }
@@ -49,8 +49,8 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     int worker_id = target_subgraph_key.GetWorkerId();
     if (idle_workers.find(worker_id) != idle_workers.end()) {
       // Update worker's waiting time as if it will execute the job
-      waiting_time[worker_id] += context_->GetExpected(target_subgraph_key);
-      context_->EnqueueToWorker({job, target_subgraph_key});
+      waiting_time[worker_id] += context_.GetExpected(target_subgraph_key);
+      context_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
     }
@@ -88,8 +88,8 @@ void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests,
                                                      int window_size) {
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
     it->expected_latency = context_
-                               ->GetSubgraphWithShortestLatency(
-                                   *it, context_->GetWorkerWaitingTime())
+                               .GetSubgraphWithShortestLatency(
+                                   *it, context_.GetWorkerWaitingTime())
                                .second;
   }
 }

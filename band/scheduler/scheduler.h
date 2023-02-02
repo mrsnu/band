@@ -11,7 +11,7 @@ class Planner;
 
 class IScheduler {
  public:
-  IScheduler(Context* context) : context_(context) {}
+  explicit IScheduler(Context& context) : context_(context) {}
   virtual ~IScheduler() = default;
   // A Schedule() function is expected to do the followings:
   // For the given requests, selected requests to schedule and
@@ -23,7 +23,7 @@ class IScheduler {
   virtual BandWorkerType GetWorkerType() = 0;
 
  protected:
-  Context* context_;
+  Context& context_;
 };
 }  // namespace Band
 

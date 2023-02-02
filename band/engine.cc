@@ -463,7 +463,7 @@ void Engine::SetOnEndRequest(
 }
 
 BandStatus Engine::Init(const RuntimeConfig& config) {
-  planner_ = std::make_unique<Planner>(this);
+  planner_ = std::make_unique<Planner>(*this);
 
   BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
 
@@ -602,10 +602,10 @@ bool Engine::HasSubgraph(const SubgraphKey& key) const {
          model_executor_it->second->HasSubgraph(key);
 }
 
-void Engine::IterateSubgraphs(
+void Engine::ForEachSubgraph(
     std::function<void(const SubgraphKey&)> iterator) const {
   for (auto& model_executor : model_executors_) {
-    model_executor.second->IterateSubgraphs(iterator);
+    model_executor.second->ForEachSubgraph(iterator);
   }
 }
 
@@ -797,7 +797,7 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
   if (resolved_unit_subgraphs.none()) {
     for (const auto& model_executor : model_executors_) {
       if (model_executor.first.first == model_id) {
-        model_executor.second->IterateSubgraphs(
+        model_executor.second->ForEachSubgraph(
             [this, &candidates](const SubgraphKey& key) {
               if (IsBegin(key)) {
                 candidates.push_back(key);
@@ -808,7 +808,7 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
   } else {
     for (const auto& model_executor : model_executors_) {
       if (model_executor.first.first == model_id) {
-        model_executor.second->IterateSubgraphs([&](const SubgraphKey& key) {
+        model_executor.second->ForEachSubgraph([&](const SubgraphKey& key) {
           // skip if already executed
           if ((key.GetUnitIndices() & resolved_unit_subgraphs).any()) {
             return;

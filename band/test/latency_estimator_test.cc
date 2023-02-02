@@ -20,7 +20,7 @@ struct CustomWorkerMockContext : public MockContextBase {
   const ModelSpec* GetModelSpec(ModelId model_id) const override {
     return &model_spec;
   }
-  void IterateSubgraphs(
+  void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) const override {
     iterator(SubgraphKey(0, 0));
   }
@@ -76,7 +76,7 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
     if (GetCPUThreadAffinity(thread_cpu_set) != kBandOk) {
       return kBandError;
     }
-    // TODO(BAND-20): propagate affinity to CPU backend, and set number of
+    // TODO(#238): propagate affinity to CPU backend, and set number of
     // threads
     CpuSet target_set = BandCPUMaskGetSet(GetParam());
     if (target_set.NumEnabled() == 0) {

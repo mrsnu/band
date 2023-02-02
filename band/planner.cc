@@ -14,7 +14,7 @@
 #include "planner.h"
 
 namespace Band {
-Planner::Planner(Context* context) : num_submitted_jobs_(0), context_(context) {
+Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
   planner_thread_ = std::thread([this] { this->Plan(); });
 }
 
@@ -33,7 +33,7 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     // and the metrics are only for ShortestExpectedLatency Planner.
     std::ofstream log_file(log_path_);
     if (!log_file.is_open()) {
-      BAND_REPORT_ERROR(context_->GetErrorReporter(),
+      BAND_REPORT_ERROR(context_.GetErrorReporter(),
                         "[Planner] Failed to open log path %s",
                         log_path_.c_str());
       return kBandError;
@@ -57,7 +57,7 @@ BandStatus Planner::Init(const PlannerConfig& config) {
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
-    BAND_REPORT_ERROR(context_->GetErrorReporter(),
+    BAND_REPORT_ERROR(context_.GetErrorReporter(),
                       "[Planner] Not supported for %d schedulers",
                       schedulers_.size());
     return kBandError;
@@ -194,7 +194,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
 
   // record finished / failed job
-  if (context_->IsEnd(job.subgraph_key) || job.status != kBandJobSuccess) {
+  if (context_.IsEnd(job.subgraph_key) || job.status != kBandJobSuccess) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
 
@@ -203,7 +203,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
 
   // report end invoke using callback
   if (on_end_request_ && job.require_callback &&
-      context_->IsEnd(job.subgraph_key)) {
+      context_.IsEnd(job.subgraph_key)) {
     on_end_request_(job.job_id,
                     job.status == kBandJobSuccess ? kBandOk : kBandError);
   }
@@ -265,7 +265,7 @@ void Planner::Plan() {
 
     if (need_cpu_update_) {
       if (SetCPUThreadAffinity(cpu_set_) != kBandOk) {
-        BAND_REPORT_ERROR(context_->GetErrorReporter(),
+        BAND_REPORT_ERROR(context_.GetErrorReporter(),
                           "[Planner] Failed to set cpu thread affinity");
         // TODO #21: Handle errors in multi-thread environment
       }
@@ -289,7 +289,7 @@ void Planner::FlushFinishedJobs() {
       Job job = jobs_finished_.queue.front();
       jobs_finished_.queue.pop_front();
 
-      bool is_final_subgraph = context_->IsEnd(job.subgraph_key);
+      bool is_final_subgraph = context_.IsEnd(job.subgraph_key);
 
       if (job.slo_us > 0 && is_final_subgraph &&
           job.status == kBandJobSuccess) {
@@ -322,7 +322,7 @@ void Planner::FlushFinishedJobs() {
     }
     log_file.close();
   } else {
-    BAND_REPORT_ERROR(context_->GetErrorReporter(),
+    BAND_REPORT_ERROR(context_.GetErrorReporter(),
                       "[Planner] Invalid log file path %s", log_path_.c_str());
   }
 }
@@ -360,10 +360,10 @@ void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 
     std::tie(job, target_key) = action;
 
-    Worker* worker = context_->GetWorker(target_key.GetWorkerId());
+    Worker* worker = context_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
       BAND_REPORT_ERROR(
-          context_->GetErrorReporter(),
+          context_.GetErrorReporter(),
           "EnqueueToWorker failed. Requests scheduled to null worker id %d",
           target_key.GetWorkerId());
       return;
@@ -392,7 +392,7 @@ bool Planner::IsSLOViolated(Job& job) {
   }
   // this job has an SLO; check if it's not too late already
   if (job.slo_us > 0) {
-    WorkerWaitingTime workers_waiting = context_->GetWorkerWaitingTime();
+    WorkerWaitingTime workers_waiting = context_.GetWorkerWaitingTime();
     int64_t current_time = Time::NowMicros();
     int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
                                job.expected_execution_time;
@@ -422,11 +422,11 @@ void Planner::HandleSLOViolatedJob(Job& job) {
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = context_->GetProfiled(target_key);
-  job.expected_execution_time = context_->GetExpected(target_key);
+  job.profiled_execution_time = context_.GetProfiled(target_key);
+  job.expected_execution_time = context_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
-  if (!context_->IsEnd(target_key)) {
+  if (!context_.IsEnd(target_key)) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
     remaining_ops.slo_us = job.slo_us;

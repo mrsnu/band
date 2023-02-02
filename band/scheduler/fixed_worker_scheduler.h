@@ -1,5 +1,5 @@
-#ifndef BAND_SCHEDULER_fixed_worker_scheduler_H_
-#define BAND_SCHEDULER_fixed_worker_scheduler_H_
+#ifndef BAND_SCHEDULER_FIXED_WORKER_SCHEDULER_H_
+#define BAND_SCHEDULER_FIXED_WORKER_SCHEDULER_H_
 
 #include "band/scheduler/scheduler.h"
 

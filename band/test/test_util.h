@@ -21,7 +21,7 @@ struct MockContextBase : public Context {
   MOCK_CONST_METHOD1(IsBegin, bool(const SubgraphKey&));
   MOCK_CONST_METHOD1(IsEnd, bool(const SubgraphKey&));
   MOCK_CONST_METHOD1(HasSubgraph, bool(const SubgraphKey&));
-  MOCK_CONST_METHOD1(IterateSubgraphs,
+  MOCK_CONST_METHOD1(ForEachSubgraph,
                      void(std::function<void(const SubgraphKey&)>));
   MOCK_METHOD1(Invoke, BandStatus(const SubgraphKey&));
 

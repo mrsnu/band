@@ -7,7 +7,7 @@ namespace Band {
 
 class LeastSlackFirstScheduler : public IScheduler {
  public:
-  explicit LeastSlackFirstScheduler(Context* context, int window_size);
+  explicit LeastSlackFirstScheduler(Context& context, int window_size);
 
   void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }
@@ -16,9 +16,9 @@ class LeastSlackFirstScheduler : public IScheduler {
 
  private:
   int64_t GetSlackTime(int64_t current_time, const Job& job);
-  void SortBySlackTime(JobQueue& requests_, int window_size,
+  void SortBySlackTime(JobQueue& requests, int window_size,
                        int64_t current_time);
-  void UpdateExpectedLatency(JobQueue& requests_, int window_size);
+  void UpdateExpectedLatency(JobQueue& requests, int window_size);
   const int window_size_;
 };
 

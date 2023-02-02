@@ -56,7 +56,7 @@ class Context {
   virtual bool IsBegin(const SubgraphKey& key) const = 0;
   virtual bool IsEnd(const SubgraphKey& key) const = 0;
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
-  virtual void IterateSubgraphs(
+  virtual void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) const = 0;
   virtual BandStatus Invoke(const SubgraphKey& key) = 0;
 

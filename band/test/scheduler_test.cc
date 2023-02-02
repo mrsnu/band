@@ -95,7 +95,7 @@ TEST_P(LSTTestsFixture, LSTTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  LeastSlackFirstScheduler lst_scheduler(&context, 5);
+  LeastSlackFirstScheduler lst_scheduler(context, 5);
   lst_scheduler.Schedule(requests);
 
   int count_scheduled = 0;
@@ -126,7 +126,7 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  RoundRobinScheduler rr_scheduler(&context);
+  RoundRobinScheduler rr_scheduler(context);
   rr_scheduler.Schedule(requests);
 
   int count_scheduled = 0;
@@ -151,7 +151,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  FixedWorkerScheduler fd_scheduler(&context);
+  FixedWorkerScheduler fd_scheduler(context);
   fd_scheduler.Schedule(requests);
 
   int count_scheduled = 0;
@@ -191,7 +191,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
   const int count_requests = requests.size();
 
   MockContext context(available_workers);
-  FixedWorkerScheduler fd_scheduler(&context);
+  FixedWorkerScheduler fd_scheduler(context);
   fd_scheduler.Schedule(requests);
 
   int count_scheduled = 0;

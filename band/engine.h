@@ -105,7 +105,7 @@ class Engine : public Context {
   bool IsBegin(const SubgraphKey& key) const override;
   bool IsEnd(const SubgraphKey& key) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
-  void IterateSubgraphs(
+  void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
 
