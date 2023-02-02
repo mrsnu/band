@@ -7,6 +7,9 @@ bazel-testlogs
 # Configuration files
 .band_android_config.bazelrc
 
+# Python cache
+__pycache__/
+
 # vscode
 .vscode/
 

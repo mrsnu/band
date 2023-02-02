@@ -1,22 +1,30 @@
 # Use C++14 as a default language.
 build --cxxopt=-std=c++14
-build:linux --host_cxxopt=-std=c++14
+build --host_cxxopt=-std=c++14
+build:windows --cxxopt=/std:c++14
+build:windows --host_cxxopt=/std:c++14
+test --cxxopt=-std=c++14
+test --host_cxxopt=-std=c++14
+test:windows --cxxopt=/std:c++14
+test:windows --host_cxxopt=/std:c++14
 
 # Suppress C++ compiler warnings
 build --copt=-w
 build --host_copt=-w
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
 build:windows --copt=/W0
+test --copt=-w
+test --host_copt=-w
+test:windows --copt=/W0
 
 # Band build config for backend setting.
 build:tflite --define tflite=true
 build:tflite --copt=-DBAND_TFLITE
 build:tflite --cxxopt=-DBAND_TFLITE
 build:tflite --experimental_repo_remote_exec
-
-# Band test config for backend setting.
 test:tflite --define tflite=true
+test:tflite --copt=-DBAND_TFLITE
+test:tflite --cxxopt=-DBAND_TFLITE
+test:tflite --experimental_repo_remote_exec
 
 # Android build config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
