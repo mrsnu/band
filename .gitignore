@@ -4,3 +4,8 @@ bazel-bin
 bazel-out
 bazel-testlogs
 
+# Configuration files
+.band_android_config.bazelrc
+
+# vscode
+.vscode/

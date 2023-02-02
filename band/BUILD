@@ -362,7 +362,7 @@ cc_library(
     }),
     deps = [
         ":common",
-        "@jsoncpp_git//:jsoncpp",
+        "@jsoncpp//:jsoncpp",
     ],
 )
 

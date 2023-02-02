@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import platform
 import argparse
@@ -42,6 +43,7 @@ def validate_android_tools(sdk_path, ndk_path):
         return False
     return True
 
+
 def validate_android_build_tools(sdk_path, version):
     build_tools_path = os.path.exists(os.path.join(sdk_path, 'build-tools'))
     if not build_tools_path:
@@ -51,16 +53,38 @@ def validate_android_build_tools(sdk_path, version):
         return False
     return True
 
+
 def validate_android_api_level(sdk_path, api_level):
     if not os.path.exists(os.path.join(sdk_path, 'android-' + api_level)):
         return False
     return True
 
+
+class BazelConfig(object):
+    def __init__(self):
+        self.build_configs = {}
+
+    def add_config(self, env_var, value):
+        self.build_configs[env_var] = value
+
+    def get_bazel_build_config(self):
+        result = ""
+        for k, v in self.build_configs.items():
+            result += f"build --action_env {k}=\"{v}\"" + "\n"
+        return result
+
+    def save(self, filename=".band_android_config.bazelrc"):
+        with open(filename, "w") as f:
+            f.write(self.get_bazel_build_config())
+
+
 def main():
     global env
     parser = argparse.ArgumentParser()
     parser.add_argument('--workspace', type=str,
-                        default=os.path.abspath(os.path.dirname(__file__)))
+                        default=os.path.abspath(os.path.dirname(__file__)), required=False)
+    parser.add_argument('--output', type=str,
+                        default=".band_android_config.bazelrc", required=False)
     args = parser.parse_args()
 
     ROOT_DIR = args.workspace
@@ -87,6 +111,16 @@ def main():
 
     # ANDROID_NDK_API_LEVEL
     android_ndk_api_level = get_var("ANDROID_NDK_API_LEVEL", "21")
+    
+    config_file_path = os.path.join(ROOT_DIR, args.output)
+    bazel_config = BazelConfig()
+    bazel_config.add_config("ANDROID_BUILD_TOOLS_VERSION", android_build_tools_version)
+    bazel_config.add_config("ANDROID_SDK_API_LEVEL", android_api_level)
+    bazel_config.add_config("ANDROID_SDK_HOME", android_sdk_path)
+    bazel_config.add_config("ANDROID_NDK_API_LEVEL", android_ndk_api_level)
+    bazel_config.add_config("ANDROID_NDK_HOME", android_ndk_path)
+    bazel_config.save(config_file_path)
+    print(f"Successfully saved Android configuration to {config_file_path}")
 
 
 if __name__ == "__main__":

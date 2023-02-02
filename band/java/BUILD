@@ -1,4 +1,3 @@
-load(":build_defs.bzl")
 load("//band/java:aar_with_jni.bzl", "aar_with_jni")
 load("//band:band.bzl", "clean_dep", "band_jni_linkopts", "band_jni_binary")
 load("@build_bazel_rules_android//android:rules.bzl", "android_library")

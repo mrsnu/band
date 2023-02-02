@@ -1,3 +1,5 @@
+"""Build options for JAVA compilation"""
+
 JAVA_VERSION_OPTS = []
 
 # A more robust set of lint and errorprone checks when building
