@@ -9,7 +9,7 @@
 ## Introduction
 
 [Band](https://dl.acm.org/doi/10.1145/3498361.3538948) is an efficient deep learning platform for mobile-cloud collaborative support for multiple DNNs. 
-Band supports backend-agnostic coordination of DNN requests on heterogeneous processors in mobile device (planned) to cloud GPU. 
+Band supports backend-agnostic coordination of DNN requests on heterogeneous processors in a mobile device to <s>cloud server</s>.
 Band is currently backed by following backend machine learning frameworks.
 
 |         | [Tensorflow v2.9.2](https://github.com/tensorflow/tensorflow/tree/v2.9.2)    | ... |
@@ -78,7 +78,7 @@ Refer to detailed instructions in `[root]/script`
 
 * Run benchmark -- check `[root]/docs/benchmark.md`
 
-### Citation
+## Citation
 
 If you find our work useful, please cite our paper below!
 The original codebase for paper submission is archived [here](https://github.com/mrsnu/band/releases/tag/v0.0.0)
@@ -92,9 +92,8 @@ The original codebase for paper submission is archived [here](https://github.com
 }
 ```
 
-
 <!-- ACKNOWLEDGMENTS -->
-### Acknowledgments
+## Acknowledgments
 
 * [Tensorflow](https://github.com/tensorflow/tensorflow)
 * [NCNN](https://github.com/Tencent/ncnn) - CPU affinity control
