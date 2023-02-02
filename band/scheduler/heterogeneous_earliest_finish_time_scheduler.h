@@ -7,10 +7,18 @@ namespace Band {
 
 class HEFTScheduler : public IScheduler {
  public:
-  ScheduleAction Schedule(const Context& context) override;
+  explicit HEFTScheduler(Context& context, int window_size, bool reserve);
+
+  void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
+
+ private:
+  // job_id --> subgraph_key
+  std::map<int, SubgraphKey> reserved_;
+  const int window_size_;
+  const bool reserve_;
 };
 
 }  // namespace Band

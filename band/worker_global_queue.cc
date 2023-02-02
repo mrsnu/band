@@ -3,11 +3,12 @@
 #include "band/common.h"
 #include "band/time.h"
 #include "band/worker.h"
+#include "worker.h"
 
 namespace Band {
 
-bool GlobalQueueWorker::GiveJob(Job& job) {
-  if (is_busy_ || !IsAvailable()) {
+bool GlobalQueueWorker::EnqueueJob(Job& job) {
+  if (!IsEnqueueReady()) {
     return false;
   }
 
@@ -15,6 +16,10 @@ bool GlobalQueueWorker::GiveJob(Job& job) {
   is_busy_ = true;
   request_cv_.notify_one();
   return true;
+}
+
+bool GlobalQueueWorker::IsEnqueueReady() const {
+  return !is_busy_ && IsAvailable();
 }
 
 bool GlobalQueueWorker::HasJob() { return is_busy_; }

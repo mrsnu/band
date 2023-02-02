@@ -43,7 +43,7 @@ class IModelExecutor : public IBackendSpecific {
   virtual SubgraphKey GetLargestSubgraphKey() const = 0;
 
   virtual BandStatus ExecuteSubgraph(const SubgraphKey& key) = 0;
-  virtual void IterateSubgraphs(
+  virtual void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) = 0;
 
  protected:

@@ -28,7 +28,7 @@ class Worker {
   BandStatus UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                 int num_threads);
   void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
-  bool IsAvailable();
+  bool IsAvailable() const;
 
   void Start();
   void End();
@@ -42,10 +42,9 @@ class Worker {
   int GetNumThreads() const;
   virtual int GetCurrentJobId() = 0;
   virtual int64_t GetWaitingTime() = 0;
-  // Make sure the worker lock is acquired before calling the function.
-  // Currently, `Planner::Plan()` is the only user of the method, and `Plan()`
-  // calls `GiveJob` with the lock.
-  virtual bool GiveJob(Job& job) = 0;
+  // Make sure the worker lock is acquired before calling below functions.
+  virtual bool EnqueueJob(Job& job) = 0;
+  virtual bool IsEnqueueReady() const;
   virtual bool HasJob() = 0;
 
   // DeviceQueueWorker methods
@@ -92,7 +91,7 @@ class DeviceQueueWorker : public Worker {
       : Worker(context, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
-  bool GiveJob(Job& job) override;
+  bool EnqueueJob(Job& job) override;
   bool HasJob() override;
   JobQueue& GetDeviceRequests() override;
   void AllowWorkSteal() override;
@@ -116,7 +115,8 @@ class GlobalQueueWorker : public Worker {
       : Worker(context, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
-  bool GiveJob(Job& job) override;
+  bool EnqueueJob(Job& job) override;
+  bool IsEnqueueReady() const override;
   bool HasJob() override;
 
  protected:

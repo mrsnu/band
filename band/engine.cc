@@ -50,7 +50,7 @@ BandStatus Engine::RegisterModel(Model* model) {
   for (BandBackendType backend_type : model->GetSupportedBackends()) {
     // Analyze model & generate subgraphs per backend type
     ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
-                           model_config_, model, backend_type);
+                           subgraph_config_, model, backend_type);
     const auto result = analyzer.CreateSubgraphs();
     // TODO: replace with a std::tie?
     const BandStatus status = std::get<0>(result);
@@ -63,7 +63,7 @@ BandStatus Engine::RegisterModel(Model* model) {
           "Failed to create subgraphs for model %d with subgraph option %s",
           model_id,
           BandSubgraphPreparationGetName(
-              model_config_.subgraph_preparation_type));
+              subgraph_config_.subgraph_preparation_type));
       // TODO(BAND-49): unregister for specific backend
       UnregisterModel(model);
       return kBandError;
@@ -312,6 +312,7 @@ BandStatus Engine::RequestSync(ModelId model_id, BandRequestOption options,
                                Tensors inputs, Tensors outputs) {
   JobId job_id = RequestAsync(model_id, options, inputs);
   if (job_id == -1) {
+    BAND_REPORT_ERROR(error_reporter_, "Invalid job id");
     return kBandError;
   } else {
     return Wait(job_id, outputs);
@@ -323,7 +324,8 @@ BandStatus Engine::RequestSync(std::vector<ModelId> model_ids,
                                std::vector<Tensors> inputs,
                                std::vector<Tensors> outputs) {
   std::vector<JobId> job_ids = RequestAsync(model_ids, options, inputs);
-  if (job_ids.size() > 0) {
+  if (job_ids.size() == 0) {
+    BAND_REPORT_ERROR(error_reporter_, "Invalid requests, job_ids.size() == 0");
     return kBandError;
   } else {
     return Wait(job_ids, outputs);
@@ -401,7 +403,7 @@ std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
 
     jobs.push_back(job);
   }
-  
+
   return EnqueueBatch(jobs);
 }
 
@@ -421,6 +423,8 @@ BandStatus Engine::Wait(std::vector<JobId> job_ids,
   }
   return kBandOk;
 }
+
+void Engine::WaitAll() { planner_->WaitAll(); }
 
 BandStatus Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   Job job = planner_->GetFinishedJob(job_id);
@@ -459,12 +463,12 @@ void Engine::SetOnEndRequest(
 }
 
 BandStatus Engine::Init(const RuntimeConfig& config) {
-  planner_ = std::make_unique<Planner>(this);
+  planner_ = std::make_unique<Planner>(*this);
 
   BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
 
   {
-    model_config_ = config.model_config;
+    subgraph_config_ = config.subgraph_config;
 
     if (planner_->NeedProfile()) {
       latency_estimator_ = std::make_unique<LatencyEstimator>(this);
@@ -512,6 +516,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
                         BandDeviceGetName(device_flag));
       worker->Start();
       workers_.push_back(std::move(worker));
+      workers_waiting_[i] = 0;
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         BandDeviceGetName(device_flag));
@@ -523,13 +528,14 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
 Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
 
-WorkerWaitingTime Engine::GetWorkerWaitingTime() const {
-  WorkerWaitingTime waiting_time;
+void Engine::UpdateWorkersWaiting() const {
   for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
-    waiting_time[worker_id] = workers_[worker_id]->GetWaitingTime();
+    workers_waiting_[worker_id] = workers_[worker_id]->GetWaitingTime();
   }
+}
 
-  return waiting_time;
+WorkerWaitingTime Engine::GetWorkerWaitingTime() const {
+  return workers_waiting_;
 }
 
 std::set<int> Engine::GetIdleWorkers() const {
@@ -594,6 +600,13 @@ bool Engine::HasSubgraph(const SubgraphKey& key) const {
       model_executors_.find({key.GetModelId(), key.GetWorkerId()});
   return model_executor_it != model_executors_.end() &&
          model_executor_it->second->HasSubgraph(key);
+}
+
+void Engine::ForEachSubgraph(
+    std::function<void(const SubgraphKey&)> iterator) const {
+  for (auto& model_executor : model_executors_) {
+    model_executor.second->ForEachSubgraph(iterator);
+  }
 }
 
 BandStatus Engine::Invoke(const SubgraphKey& key) {
@@ -699,7 +712,15 @@ Engine::GetShortestLatencyWithUnitSubgraph(
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
   std::vector<std::pair<std::vector<SubgraphKey>, int64_t>> memo;
-  memo.resize(model_spec->GetNumUnitSubgraphs());
+  const size_t num_unit_subgraphs = model_spec->GetNumUnitSubgraphs();
+  memo.resize(num_unit_subgraphs);
+
+  assert(start_unit_idx < num_unit_subgraphs);
+
+  // Initialize memo.
+  for (int i = 0; i < num_unit_subgraphs; ++i) {
+    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>({}, INT_MAX);
+  }
 
   // `i` and `j` refer to an unit subgraph idx.
   // A subgraph(i, j) consists of the unit subgraphs in [i, j].
@@ -709,7 +730,7 @@ Engine::GetShortestLatencyWithUnitSubgraph(
   // indices of the best execution plan. So, the shortest expected latency of a
   // subgraph(start_unit_idx, num_unit_subgraphs - 1) is
   // `memo[num_unit_subgraphs - 1].second`.
-  for (int j = start_unit_idx; j < model_spec->GetNumUnitSubgraphs(); ++j) {
+  for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
     std::pair<std::vector<SubgraphKey>, int64_t> local_min =
         std::make_pair<std::vector<SubgraphKey>, int64_t>({}, -1);
     for (int i = j; i >= start_unit_idx; --i) {
@@ -735,14 +756,14 @@ Engine::GetShortestLatencyWithUnitSubgraph(
     memo[j] = local_min;
   }
 
-  return memo[model_spec->GetNumUnitSubgraphs() - 1];
+  return memo[num_unit_subgraphs - 1];
 }
 
 std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetSubgraphWithShortestLatency(
-    Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
+    const Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
-  if (model_config_.subgraph_preparation_type == kBandFallbackPerWorker) {
+  if (subgraph_config_.subgraph_preparation_type == kBandFallbackPerWorker) {
     auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
                                    worker_waiting);
     std::pair<std::vector<SubgraphKey>, int64_t> ret =
@@ -763,7 +784,7 @@ Engine::GetSubgraphWithShortestLatency(
 }
 
 SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
-    Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+    const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
     const std::set<WorkerId>& idle_workers) const {
   // TODO: implement this with SLO-based scheduler e.g., LSF
   BAND_NOT_IMPLEMENTED;
@@ -776,7 +797,7 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
   if (resolved_unit_subgraphs.none()) {
     for (const auto& model_executor : model_executors_) {
       if (model_executor.first.first == model_id) {
-        model_executor.second->IterateSubgraphs(
+        model_executor.second->ForEachSubgraph(
             [this, &candidates](const SubgraphKey& key) {
               if (IsBegin(key)) {
                 candidates.push_back(key);
@@ -787,7 +808,7 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
   } else {
     for (const auto& model_executor : model_executors_) {
       if (model_executor.first.first == model_id) {
-        model_executor.second->IterateSubgraphs([&](const SubgraphKey& key) {
+        model_executor.second->ForEachSubgraph([&](const SubgraphKey& key) {
           // skip if already executed
           if ((key.GetUnitIndices() & resolved_unit_subgraphs).any()) {
             return;
@@ -859,6 +880,15 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
+void Engine::EnqueueToWorker(const ScheduleAction& action) {
+  EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
+}
+
+void Engine::EnqueueToWorkerBatch(
+    const std::vector<ScheduleAction>& schedule_action) {
+  planner_->EnqueueToWorker(schedule_action);
+}
+
 const Worker* Engine::GetWorker(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id).get();
@@ -881,43 +911,42 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
     return kBandOk;
   }
 
-  // TODO: Subgraph execution
   const SubgraphKey& key = job.subgraph_key;
   auto model_executor = GetModelExecutor(job.subgraph_key);
   std::set<int> unresolved_tensors(model_executor->GetInputs(key).begin(),
                                    model_executor->GetInputs(key).end());
 
-  // // Intermediate tensor communication
-  // for (auto subgraph_it = job.previous_subgraph_indices.cbegin();
-  //      subgraph_it != job.previous_subgraph_indices.cend();
-  //      ++subgraph_it) {
-  //   int preceded_subgraph_index = *subgraph_it;
-  //   Subgraph *preceded_subgraph =
-  //       model_executor->subgraph(preceded_subgraph_index);
+  // Intermediate tensor communication
+  for (auto subgraph_it = job.previous_subgraph_keys.cbegin();
+       subgraph_it != job.previous_subgraph_keys.cend(); ++subgraph_it) {
+    SubgraphKey preceded_subgraph_key = *subgraph_it;
+    auto preceded_model_executor = GetModelExecutor(preceded_subgraph_key);
 
-  //   for (int tensor_index : preceded_subgraph->outputs()) {
-  //     if (unresolved_tensors.find(tensor_index) !=
-  //     unresolved_tensors.end())
-  //     {
-  //       const ITensorView *src = preceded_subgraph->tensor(tensor_index);
-  //       ITensorView *dst = subgraph->tensor(tensor_index);
+    for (int tensor_index :
+         preceded_model_executor->GetOutputs(preceded_subgraph_key)) {
+      if (unresolved_tensors.find(tensor_index) != unresolved_tensors.end()) {
+        std::shared_ptr<Interface::ITensorView> src =
+            preceded_model_executor->GetTensorView(preceded_subgraph_key,
+                                                   tensor_index);
+        std::shared_ptr<Interface::ITensorView> dst =
+            model_executor->GetTensorView(key, tensor_index);
 
-  //       if (ITensorDataCopy(src, dst) == kBandError) {
-  //         BAND_REPORT_ERROR(GetErrorReporter(),
-  //                           "Tensor data copy failure from %s to %s",
-  //                           src->name, dst->name);
-  //         return kBandError;
-  //       }
+        if (dst->CopyDataFrom(src.get()) == kBandError) {
+          BAND_LOG_PROD(BAND_LOG_ERROR,
+                        "Tensor data copy failure from %s to %s",
+                        src->GetName(), dst->GetName());
+          return kBandError;
+        }
 
-  //       unresolved_tensors.erase(tensor_index);
-  //     }
-  //   }
-  // }
+        unresolved_tensors.erase(tensor_index);
+      }
+    }
+  }
 
   if (model_input_buffer_.find(job.model_id) == model_input_buffer_.end()) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                      "Failed to find input tensor ring buffer for model %d",
-                      job.model_id);
+    BAND_LOG_PROD(BAND_LOG_ERROR,
+                  "Failed to find input tensor ring buffer for model %d",
+                  job.model_id);
     return kBandError;
   }
 
@@ -931,9 +960,9 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
       if (input_buffer->GetTensorFromHandle(
               model_executor->GetTensorView(key, tensor_index).get(),
               tensor_index, job.input_handle) != kBandOk) {
-        BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                          "Failed to copy input tensor %d for model %d",
-                          tensor_index, job.model_id);
+        BAND_LOG_PROD(BAND_LOG_ERROR,
+                      "Failed to copy input tensor %d for model %d",
+                      tensor_index, job.model_id);
         return kBandError;
       }
       tensor_it = unresolved_tensors.erase(tensor_it);

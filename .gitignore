@@ -9,3 +9,11 @@ bazel-testlogs
 
 # vscode
 .vscode/
+
+# script/
+/bin
+/benchmark
+/test_bin
+
+# mac icloud
+*.icloud

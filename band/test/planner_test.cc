@@ -26,7 +26,9 @@ struct MockContext : public MockContextBase {
 };
 
 class MockScheduler : public IScheduler {
-  MOCK_METHOD2(Schedule, ScheduleAction(const Context&, JobQueue&));
+  using IScheduler::IScheduler;
+
+  MOCK_METHOD1(Schedule, void(JobQueue&));
   MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
   // MOCK_METHOD0(GetWorkerType, BandWorkerType());
@@ -43,9 +45,8 @@ planner -> scheduler -> worker -> planner
 
 TEST(PlannerSuite, SingleQueue) {
   MockContext context;
-  Planner planner(&context);
-
-  planner.AddScheduler(std::make_unique<MockScheduler>());
+  Planner planner(context);
+  planner.AddScheduler(std::make_unique<MockScheduler>(context));
   // TODO: Add tests!
   EXPECT_TRUE(true);
 }

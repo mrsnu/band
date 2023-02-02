@@ -2,60 +2,33 @@
 # https://github.com/asus4/tf-lite-unity-sample/blob/master/build_tflite.py
 
 import argparse
-import os
-import platform
-import shutil
-import shlex
-import subprocess
-import multiprocessing
+from util import *
 
 BASE_DIR = 'bin'
 
-def run_cmd(cmd):
-    args = shlex.split(cmd)
-    subprocess.call(args, cwd=os.getcwd())
-
-def copy(src, dst):
-    subprocess.call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
-    # append filename to dst directory
-    dst = os.path.join(dst, os.path.basename(src))
-    shutil.copytree(src, dst)
-
-def get_options(enable_xnnpack, debug):
-    option_xnnpack = 'true' if enable_xnnpack else 'false'
-    debug_option = 'dbg' if debug else 'opt'
-    strip_option = 'never' if debug else 'always'
-    return f'--jobs={multiprocessing.cpu_count()} {" --test_output=all" if debug else ""} -c {debug_option} --strip {strip_option} --config tflite --define tflite_with_xnnpack={option_xnnpack}'
-
-def get_dst_path(target_platform, debug):
-    build = 'debug' if debug else 'release'
-    path = os.path.join(BASE_DIR, target_platform, build)
-    if platform.system() == 'Windows':
-        path = path.replace('\\', '/')
-    return path
 
 def build_windows(enable_xnnpack=False, debug=False):
     run_cmd(
-        f'bazel build {get_options(enable_xnnpack, debug)} band/c:band_c')
+        f'bazel build {get_bazel_options(enable_xnnpack, debug)} band/c:band_c')
     copy('bazel-bin/band/c/band_c.dll',
-         get_dst_path('windows', debug))
+         get_dst_path(BASE_DIR, 'windows', debug))
     if debug:
         copy('bazel-bin/band/c/band_c.pdb',
-             get_dst_path('windows', debug))
+             get_dst_path(BASE_DIR, 'windows', debug))
 
 
 def build_linux(debug=False):
     run_cmd(
-        f'bazel build {get_options(False, debug)} --cxxopt=--std=c++11 band/c:band_c')
+        f'bazel build {get_bazel_options(False, debug)} --cxxopt=--std=c++11 band/c:band_c')
     copy('bazel-bin/band/c/libband_c.so',
-         get_dst_path('linux', debug))
+         get_dst_path(BASE_DIR, 'linux', debug))
 
 
 def build_android(enable_xnnpack=False, debug=False):
     run_cmd(
-        f'bazel build --config=android_arm64 --strip always {get_options(enable_xnnpack, debug)} band/c:band_c')
+        f'bazel build {get_bazel_options(enable_xnnpack, debug, True)} band/c:band_c')
     copy('bazel-bin/band/c/libband_c.so',
-         get_dst_path('armv8-a', debug))
+         get_dst_path(BASE_DIR, 'armv8-a', debug))
 
 
 if __name__ == '__main__':
@@ -69,7 +42,7 @@ if __name__ == '__main__':
                         help='Build Android')
     parser.add_argument('-xnnpack', action="store_true", default=False,
                         help='Build with XNNPACK')
-    parser.add_argument('-debug', action="store_true", default=False,
+    parser.add_argument('-d', '--debug', action="store_true", default=False,
                         help='Build debug (default = release)')
 
     args = parser.parse_args()

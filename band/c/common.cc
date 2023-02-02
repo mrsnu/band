@@ -5,18 +5,60 @@
 
 #include "common.h"
 
+const char* BandSchedulerGetName(BandSchedulerType type) {
+  switch (type) {
+    case kBandFixedWorker:
+      return "fixed_worker";
+    case kBandRoundRobin:
+      return "round_robin";
+    case kBandShortestExpectedLatency:
+      return "shortest_expected_latency";
+    case kBandFixedWorkerGlobalQueue:
+      return "fixed_worker_global_queue";
+    case kBandHeterogeneousEarliestFinishTime:
+      return "heterogeneous_earliest_finish_time";
+    case kBandLeastSlackTimeFirst:
+      return "least_slack_time_first";
+    case kBandHeterogeneousEarliestFinishTimeReserved:
+      return "heterogeneous_earliest_finish_time_reserved";
+  }
+  return "Unknown type";
+}
+
+BandSchedulerType BandSchedulerGetType(const char* name) {
+  for (int i = 0; i < kBandNumSchedulerTypes; i++) {
+    BandSchedulerType type = (BandSchedulerType)i;
+    if (strncmp(BandSchedulerGetName(type), name,
+                strlen(BandSchedulerGetName(type))) == 0) {
+      return type;
+    }
+  }
+  return kBandNumSchedulerTypes;
+}
+
 const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
   switch (type) {
     case kBandNoFallbackSubgraph:
-      return "NoFallbackSubgraph";
+      return "no_fallback_subgraph";
     case kBandFallbackPerWorker:
-      return "FallbackPerWorker";
+      return "fallback_per_worker";
     case kBandUnitSubgraph:
-      return "UnitSubgraph";
+      return "unit_subgraph";
     case kBandMergeUnitSubgraph:
-      return "MergeUnitSubgraph";
+      return "merge_unit_subgraph";
   }
   return "Unknown type";
+}
+
+BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name) {
+  for (int i = 0; i < kBandNumSubgraphPreparationType; i++) {
+    BandSubgraphPreparationType type = (BandSubgraphPreparationType)i;
+    if (strncmp(BandSubgraphPreparationGetName(type), name,
+                strlen(BandSubgraphPreparationGetName(type))) == 0) {
+      return type;
+    }
+  }
+  return kBandNumSubgraphPreparationType;
 }
 
 int BandIntArrayGetSizeInBytes(int size) {
@@ -136,7 +178,8 @@ const char* BandDeviceGetName(BandDeviceFlags flag) {
 BandDeviceFlags BandDeviceGetFlag(const char* name) {
   for (int i = 0; i < kBandNumDevices; i++) {
     BandDeviceFlags flag = (BandDeviceFlags)i;
-    if (strcmp(BandDeviceGetName(flag), name) == 0) {
+    if (strncmp(BandDeviceGetName(flag), name,
+                strlen(BandDeviceGetName(flag))) == 0) {
       return flag;
     }
   }
