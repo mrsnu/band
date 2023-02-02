@@ -3,18 +3,18 @@
 #include <fstream>
 
 #include "band/context.h"
+#include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
-#include "band/scheduler/heterogeneous_earliest_finish_time_reserved_scheduler.h"
-//#include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
-#include "band/logger.h"
+#include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
+#include "planner.h"
 
 namespace Band {
-Planner::Planner(Context* context) : num_submitted_jobs_(0), context_(context) {
+Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
   planner_thread_ = std::thread([this] { this->Plan(); });
 }
 
@@ -33,7 +33,7 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     // and the metrics are only for ShortestExpectedLatency Planner.
     std::ofstream log_file(log_path_);
     if (!log_file.is_open()) {
-      BAND_REPORT_ERROR(context_->GetErrorReporter(),
+      BAND_REPORT_ERROR(context_.GetErrorReporter(),
                         "[Planner] Failed to open log path %s",
                         log_path_.c_str());
       return kBandError;
@@ -57,7 +57,7 @@ BandStatus Planner::Init(const PlannerConfig& config) {
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
-    BAND_REPORT_ERROR(context_->GetErrorReporter(),
+    BAND_REPORT_ERROR(context_.GetErrorReporter(),
                       "[Planner] Not supported for %d schedulers",
                       schedulers_.size());
     return kBandError;
@@ -69,24 +69,23 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
     if (schedulers[i] == kBandFixedWorker) {
-      schedulers_.emplace_back(new FixedWorkerScheduler());
+      schedulers_.emplace_back(new FixedWorkerScheduler(context_));
     } else if (schedulers[i] == kBandFixedWorkerGlobalQueue) {
-      schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler());
+      schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(context_));
     } else if (schedulers[i] == kBandRoundRobin) {
-      schedulers_.emplace_back(new RoundRobinScheduler());
+      schedulers_.emplace_back(new RoundRobinScheduler(context_));
     } else if (schedulers[i] == kBandShortestExpectedLatency) {
-      schedulers_.emplace_back(
-          new ShortestExpectedLatencyScheduler(schedule_window_size_));
+      schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
+          context_, schedule_window_size_));
     } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTime) {
-      BAND_NOT_IMPLEMENTED;
-      // schedulers_.emplace_back(new
-      // HEFTScheduler());
+      schedulers_.emplace_back(
+          new HEFTScheduler(context_, schedule_window_size_, false));
     } else if (schedulers[i] == kBandLeastSlackTimeFirst) {
       schedulers_.emplace_back(
-          new LeastSlackFirstScheduler(schedule_window_size_));
+          new LeastSlackFirstScheduler(context_, schedule_window_size_));
     } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
-          new HEFTReservedScheduler(schedule_window_size_));
+          new HEFTScheduler(context_, schedule_window_size_, true));
     } else {
       return kBandError;
     }
@@ -128,6 +127,7 @@ JobId Planner::EnqueueRequest(Job job, bool push_front) {
 
 std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
                                          bool push_front) {
+  std::unique_lock<std::mutex> request_lock(requests_.mtx);
   std::vector<JobId> job_ids(jobs.size());
   auto enqueue_time = Time::NowMicros();
   for (int i = 0; i < jobs.size(); i++) {
@@ -143,7 +143,6 @@ std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
     job_ids[i] = job.job_id;
   }
 
-  std::unique_lock<std::mutex> request_lock(requests_.mtx);
   auto insert_position =
       push_front ? requests_.queue.begin() : requests_.queue.end();
   requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
@@ -195,7 +194,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
 
   // record finished / failed job
-  if (context_->IsEnd(job.subgraph_key) || job.status != kBandJobSuccess) {
+  if (context_.IsEnd(job.subgraph_key) || job.status != kBandJobSuccess) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
 
@@ -204,7 +203,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
 
   // report end invoke using callback
   if (on_end_request_ && job.require_callback &&
-      context_->IsEnd(job.subgraph_key)) {
+      context_.IsEnd(job.subgraph_key)) {
     on_end_request_(job.job_id,
                     job.status == kBandJobSuccess ? kBandOk : kBandError);
   }
@@ -213,6 +212,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
 void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
+  job.resolved_unit_subgraphs = 0;
   job.following_jobs.clear();
 }
 
@@ -265,26 +265,17 @@ void Planner::Plan() {
 
     if (need_cpu_update_) {
       if (SetCPUThreadAffinity(cpu_set_) != kBandOk) {
-        BAND_REPORT_ERROR(context_->GetErrorReporter(),
+        BAND_REPORT_ERROR(context_.GetErrorReporter(),
                           "[Planner] Failed to set cpu thread affinity");
         // TODO #21: Handle errors in multi-thread environment
       }
       need_cpu_update_ = false;
     }
     CopyToLocalQueues();
-    // TODO: Remove if this is not necessary for fixed device scheduler
-    TryUpdateModelWorkerMapping();
     do {
       need_reschedule_ = false;
       for (size_t i = 0; i < local_queues_.size(); ++i) {
-        auto workers_actions =
-            schedulers_[i]->Schedule(*context_, local_queues_[i]);
-        for (auto& actions : workers_actions) {
-          for (auto& action : actions.second) {
-            UpdateJobScheduleStatus(action.first, action.second);
-          }
-        }
-        EnqueueToWorkers(workers_actions);
+        schedulers_[i]->Schedule(local_queues_[i]);
       }
     } while (need_reschedule_);
   }
@@ -298,7 +289,7 @@ void Planner::FlushFinishedJobs() {
       Job job = jobs_finished_.queue.front();
       jobs_finished_.queue.pop_front();
 
-      bool is_final_subgraph = context_->IsEnd(job.subgraph_key);
+      bool is_final_subgraph = context_.IsEnd(job.subgraph_key);
 
       if (job.slo_us > 0 && is_final_subgraph &&
           job.status == kBandJobSuccess) {
@@ -331,7 +322,7 @@ void Planner::FlushFinishedJobs() {
     }
     log_file.close();
   } else {
-    BAND_REPORT_ERROR(context_->GetErrorReporter(),
+    BAND_REPORT_ERROR(context_.GetErrorReporter(),
                       "[Planner] Invalid log file path %s", log_path_.c_str());
   }
 }
@@ -362,38 +353,36 @@ void Planner::CopyToLocalQueues() {
   request_lock.unlock();
 }
 
-void Planner::EnqueueToWorkers(ScheduleAction& action) {
-  for (auto& queue : action) {
-    auto worker_id = queue.first;
-    auto& requests = queue.second;
+void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
+  for (auto& action : actions) {
+    Job job;
+    SubgraphKey target_key;
 
-    if (requests.empty()) {
-      continue;
-    }
+    std::tie(job, target_key) = action;
 
-    Worker* worker = context_->GetWorker(worker_id);
+    Worker* worker = context_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
       BAND_REPORT_ERROR(
-          context_->GetErrorReporter(),
-          "EnqueueToWorkers failed. Requests scheduled to null worker id %d",
-          worker_id);
+          context_.GetErrorReporter(),
+          "EnqueueToWorker failed. Requests scheduled to null worker id %d",
+          target_key.GetWorkerId());
       return;
     }
     {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
-      for (auto request : requests) {
-        if (IsSLOViolated(request.first)) {
-          HandleSLOViolatedJob(request.first);
-          continue;
-        }
-        if (!worker->GiveJob(request.first)) {
-          PrepareReenqueue(request.first);
-          EnqueueRequest(request.first, true);
-        }
+      if (IsSLOViolated(job)) {
+        HandleSLOViolatedJob(job);
+        continue;
       }
-      worker->GetRequestCv().notify_one();
+
+      if (worker->IsEnqueueReady()) {
+        UpdateJobScheduleStatus(job, target_key);
+        worker->EnqueueJob(job);
+      } else {
+        EnqueueRequest(job, true);
+      }
     }
-    requests.clear();
+    worker->GetRequestCv().notify_one();
   }
 }
 
@@ -403,10 +392,10 @@ bool Planner::IsSLOViolated(Job& job) {
   }
   // this job has an SLO; check if it's not too late already
   if (job.slo_us > 0) {
+    WorkerWaitingTime workers_waiting = context_.GetWorkerWaitingTime();
     int64_t current_time = Time::NowMicros();
-    int64_t expected_latency =
-        context_->GetWorkerWaitingTime().at(job.subgraph_key.GetWorkerId()) +
-        job.expected_execution_time;
+    int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
+                               job.expected_execution_time;
 
     if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
       return true;
@@ -433,11 +422,11 @@ void Planner::HandleSLOViolatedJob(Job& job) {
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = context_->GetProfiled(target_key);
-  job.expected_execution_time = context_->GetExpected(target_key);
+  job.profiled_execution_time = context_.GetProfiled(target_key);
+  job.expected_execution_time = context_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
-  if (!context_->IsEnd(target_key)) {
+  if (!context_.IsEnd(target_key)) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
     remaining_ops.slo_us = job.slo_us;
@@ -448,70 +437,13 @@ void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
     remaining_ops.job_id = job.job_id;
     remaining_ops.input_handle = job.input_handle;
     remaining_ops.output_handle = job.output_handle;
-
-    // TODO: Update below
-
-    // remaining_ops.previous_subgraph_indices = job.previous_subgraph_indices;
-    // remaining_ops.previous_subgraph_indices.emplace_back(job.subgraph_idx);
-    // // The next start_unit_idx is the next one from the current max unit
-    // index. remaining_ops.start_unit_idx = *target_key.unit_indices.rbegin() +
-    // 1;
-
-    // for (int output_index : target_subgraph->outputs()) {
-    //   remaining_ops.resolved_tensors.insert(output_index);
-    // }
+    remaining_ops.resolved_unit_subgraphs = job.resolved_unit_subgraphs;
+    remaining_ops.previous_subgraph_keys = job.previous_subgraph_keys;
+    remaining_ops.previous_subgraph_keys.emplace_back(job.subgraph_key);
 
     job.following_jobs.clear();
     job.following_jobs.push_back(remaining_ops);
   }
-}
-
-void Planner::TryUpdateModelWorkerMapping() {
-  // TODO: Fixed device scheduler
-  // std::set<int> models = context_->models();
-  // const int num_workers = context_->GetNumWorkers();
-  // if (models.size() > model_worker_map_.size()) {
-  //   // (# of available workers, vector of model_id)
-  //   std::map<int, std::set<int>> workers_per_models_map;
-  //   for (auto model_id : models) {
-  //     int count = 0;
-  //     for (int worker_id = 0; worker_id < num_workers; ++worker_id) {
-  //       if (context_->GetSubgraphIdx(model_id, worker_id) != -1) {
-  //         count++;
-  //       }
-  //     }
-  //     workers_per_models_map[count].insert(model_id);
-  //   }
-
-  //   int worker_id = 0;
-  //   while (workers_per_models_map.size()) {
-  //     // Loop through models in ascending order
-  //     // based on # of available devices
-  //     // (Assign models that has limited support first)
-  //     int selected_model_id = -1;
-  //     for (auto &workers_per_models : workers_per_models_map) {
-  //       for (int model_id : workers_per_models.second) {
-  //         if (context_->GetSubgraphIdx(model_id, worker_id) != -1) {
-  //           selected_model_id = model_id;
-  //           break;
-  //         }
-  //       }
-
-  //       if (selected_model_id != -1) {
-  //         workers_per_models.second.erase(selected_model_id);
-  //         if (workers_per_models.second.size() == 0)
-  //           workers_per_models_map.erase(workers_per_models.first);
-  //         break;
-  //       }
-  //     }
-
-  //     if (selected_model_id != -1) {
-  //       model_worker_map_[selected_model_id] = worker_id;
-  //     }
-
-  //     worker_id = (worker_id + 1) % num_workers;
-  //   };
-  // }
 }
 
 bool Planner::IsJobIdValid(int job_id) {

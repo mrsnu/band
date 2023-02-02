@@ -25,7 +25,6 @@
 
 #include "band/c/common.h"
 
-
 #if defined __ANDROID__ || defined __linux__
 #define _BAND_SUPPORT_THREAD_AFFINITY
 #endif
@@ -69,7 +68,7 @@ BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag);
 const char* BandCPUMaskGetName(BandCPUMaskFlags flag);
-const BandCPUMaskFlags BandCPUMaskGetMask(const char* name);
+const BandCPUMaskFlags BandCPUMaskGetFlag(const char* name);
 
 }  // namespace Band
 

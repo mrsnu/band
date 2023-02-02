@@ -8,7 +8,8 @@ namespace Band {
 // assigns requested model to devices in a Round-robin manner.
 class RoundRobinScheduler : public IScheduler {
  public:
-  ScheduleAction Schedule(const Context& context, JobQueue& requests) override;
+  using IScheduler::IScheduler;
+  void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
   BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }

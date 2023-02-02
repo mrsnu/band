@@ -151,8 +151,8 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   ProfileConfig profile_config = profile_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
-  runtime_config.model_config = {minimum_subgraph_size_,
-                                 subgraph_preparation_type_};
+  runtime_config.subgraph_config = {minimum_subgraph_size_,
+                                    subgraph_preparation_type_};
 
   runtime_config.cpu_mask = cpu_mask_;
   runtime_config.profile_config = profile_config;

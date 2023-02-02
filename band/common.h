@@ -95,8 +95,10 @@ struct Job {
   JobStatus status = kBandJobQueued;
   SubgraphKey subgraph_key;
   std::vector<Job> following_jobs;
-  // see Interpreter::MakeSubgraphsForFallbackOps for details on this field
+
+  // Resolved unit subgraphs and executed subgraph keys
   BitMask resolved_unit_subgraphs;
+  std::list<SubgraphKey> previous_subgraph_keys;
 };
 
 // hash function to use pair<int, BitMask> as map key in cache_

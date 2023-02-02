@@ -1,5 +1,5 @@
-#ifndef BAND_SCHEDULER_fixed_worker_scheduler_H_
-#define BAND_SCHEDULER_fixed_worker_scheduler_H_
+#ifndef BAND_SCHEDULER_FIXED_WORKER_SCHEDULER_H_
+#define BAND_SCHEDULER_FIXED_WORKER_SCHEDULER_H_
 
 #include "band/scheduler/scheduler.h"
 
@@ -9,7 +9,8 @@ namespace Band {
 // or model_id.
 class FixedWorkerScheduler : public IScheduler {
  public:
-  ScheduleAction Schedule(const Context& context, JobQueue& requests) override;
+  using IScheduler::IScheduler;
+  void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
   BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }
@@ -17,7 +18,8 @@ class FixedWorkerScheduler : public IScheduler {
 
 class FixedWorkerGlobalQueueScheduler : public IScheduler {
  public:
-  ScheduleAction Schedule(const Context& context, JobQueue& requests) override;
+  using IScheduler::IScheduler;
+  void Schedule(JobQueue& requests) override;
   // Required for checking SLO violation.
   // We could add an option to this planner for skipping the SLO check,
   // in which case this function can return false.

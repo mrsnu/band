@@ -32,7 +32,6 @@ TfLiteModelExecutor::~TfLiteModelExecutor() {
   // explicitly remove interpreters first
   // since delegates own interpreter.
   interpreters_.clear();
-  delegates_.clear();
 }
 
 ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {
@@ -235,7 +234,7 @@ BandStatus TfLiteModelExecutor::ExecuteSubgraph(const SubgraphKey& key) {
   return status;
 }
 
-void TfLiteModelExecutor::IterateSubgraphs(
+void TfLiteModelExecutor::ForEachSubgraph(
     std::function<void(const SubgraphKey&)> iterator) {
   for (const auto& interpreter : interpreters_) {
     iterator(interpreter.first);

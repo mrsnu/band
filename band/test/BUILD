@@ -61,9 +61,22 @@ band_cc_android_test(
 )
 
 band_cc_android_test(
+    name = "benchmark_test",
+    srcs = ["tool/benchmark_test.cc"],
+    data = [
+        "//band/test:data/add.tflite",
+        "//band/test:data/benchmark_config.json",
+    ],
+    deps = [
+        ":test_util",
+        "//band/tool:benchmark",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
     name = "config_builder_test",
     srcs = ["config_builder_test.cc"],
-    data = ["//band/test:data/config.json"],
     deps = [
         ":test_util",
         "//band:config_builder",
@@ -98,12 +111,10 @@ band_cc_android_test(
     name = "tfl_minimal_test",
     srcs = ["backend/tfl_minimal_test.cc"],
     copts = [
-        "-DTF_LITE_STRIP_ERROR_STRINGS"
+        "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
     data = [
         "//band/test:data/add.tflite",
-        "//band/test:data/config.json",
-        "//band/test:data/config_fixed_device.json",
     ],
     deps = [
         "//band:config_builder",
@@ -116,7 +127,7 @@ band_cc_android_test(
     name = "tfl_subgraph_test",
     srcs = ["backend/tfl_subgraph_test.cc"],
     copts = [
-        "-DTF_LITE_STRIP_ERROR_STRINGS"
+        "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
     data = [
         "//band/test:data/ICN_quant.tflite",
@@ -137,8 +148,6 @@ band_cc_android_test(
     srcs = ["c/c_api_test.cc"],
     data = [
         "//band/test:data/add.tflite",
-        "//band/test:data/config.json",
-        "//band/test:data/config_fixed_device.json",
     ],
     deps = [
         "//band:framework",

@@ -341,7 +341,7 @@ const char* BandCPUMaskGetName(BandCPUMaskFlags flag) {
   }
 }
 
-const BandCPUMaskFlags BandCPUMaskGetMask(const char* name) {
+const BandCPUMaskFlags BandCPUMaskGetFlag(const char* name) {
   for (int i = 0; i < kBandNumCpuMasks; i++) {
     const auto flag = static_cast<BandCPUMaskFlags>(i);
     if (strcmp(name, BandCPUMaskGetName(flag)) == 0) {

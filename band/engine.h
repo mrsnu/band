@@ -84,6 +84,7 @@ class Engine : public Context {
   BandStatus Wait(JobId job_id, Tensors outputs = {});
   BandStatus Wait(std::vector<JobId> job_ids,
                   std::vector<Tensors> outputs = {});
+  void WaitAll();
   BandStatus GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
@@ -97,12 +98,15 @@ class Engine : public Context {
  private:
   /* context */
   BandStatus Init(const RuntimeConfig& config) override;
+  void UpdateWorkersWaiting() const override;
   WorkerWaitingTime GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
 
   bool IsBegin(const SubgraphKey& key) const override;
   bool IsEnd(const SubgraphKey& key) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
+  void ForEachSubgraph(
+      std::function<void(const SubgraphKey&)> iterator) const override;
   BandStatus Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
@@ -119,11 +123,11 @@ class Engine : public Context {
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
-      Job& job,
+      const Job& job,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
-      Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+      const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
 
   std::vector<SubgraphKey> GetSubgraphCandidates(
@@ -144,7 +148,9 @@ class Engine : public Context {
                                   bool push_front = false) override;
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
-  /* getters */
+  void EnqueueToWorker(const ScheduleAction& schedule_action) override;
+  void EnqueueToWorkerBatch(
+      const std::vector<ScheduleAction>& schedule_action) override;
   const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
   /* tensor communication */
@@ -164,7 +170,7 @@ class Engine : public Context {
   Engine& operator=(const Engine&) = delete;
   Engine& operator=(const Engine&&) = delete;
 
-  ModelConfig model_config_;
+  SubgraphConfig subgraph_config_;
 
   std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<Interface::IModelExecutor>>

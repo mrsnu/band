@@ -7,6 +7,13 @@
 
 namespace Band {
 namespace Interface {
+size_t ITensor::GetNumElements() const {
+  size_t num_elements = 1;
+  for (auto dim : GetDimsVector()) {
+    num_elements *= dim;
+  }
+  return num_elements;
+}
 
 std::vector<int> ITensor::GetDimsVector() const {
   return std::vector<int>(GetDims(), GetDims() + GetNumDims());

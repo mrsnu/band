@@ -17,6 +17,7 @@ struct ITensor {
   virtual char* GetData() = 0;
   virtual const int* GetDims() const = 0;
   virtual size_t GetNumDims() const = 0;
+  size_t GetNumElements() const;
   std::vector<int> GetDimsVector() const;
   virtual void SetDims(const std::vector<int>& dims) = 0;
   virtual size_t GetBytes() const = 0;

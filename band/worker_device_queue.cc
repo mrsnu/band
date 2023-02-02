@@ -46,8 +46,8 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   return total;
 }
 
-bool DeviceQueueWorker::GiveJob(Job& job) {
-  if (!IsAvailable()) {
+bool DeviceQueueWorker::EnqueueJob(Job& job) {
+  if (!IsEnqueueReady()) {
     return false;
   }
 

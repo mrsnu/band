@@ -157,11 +157,11 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
 
 ModelAnalyzer::ModelAnalyzer(const Context& context,
                              bool need_fallback_subgraph,
-                             ModelConfig model_config, Model* model,
+                             SubgraphConfig subgraph_config, Model* model,
                              BandBackendType backend_type)
     : context_(context),
       need_fallback_subgraph_(need_fallback_subgraph),
-      model_config_(model_config),
+      subgraph_config_(subgraph_config),
       backend_type_(backend_type) {
   std::unique_ptr<Interface::IModelExecutor> interpreter(
       BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
@@ -190,7 +190,7 @@ ModelAnalyzer::CreateSubgraphs() {
     return {kBandError, {}, {}};
   }
 
-  switch (model_config_.subgraph_preparation_type) {
+  switch (subgraph_config_.subgraph_preparation_type) {
     case kBandFallbackPerWorker: {
       for (WorkerId worker_id = 0; worker_id < context_.GetNumWorkers();
            worker_id++) {
@@ -254,23 +254,24 @@ ModelAnalyzer::CreateSubgraphs() {
                       subgraph_def.ToString().c_str(),
                       model_spec_->path.c_str(),
                       BandSubgraphPreparationGetName(
-                          model_config_.subgraph_preparation_type));
+                          subgraph_config_.subgraph_preparation_type));
         return {kBandError, {}, {}};
       }
     }
   }
 
   const std::string subgraph_summary =
-      model_config_.subgraph_preparation_type != kBandFallbackPerWorker
+      subgraph_config_.subgraph_preparation_type != kBandFallbackPerWorker
           ? SummarizeSubgraphs(subgraph_defs)
           : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
                                                 subgraph_defs);
 
-  BAND_LOG_PROD(
-      BAND_LOG_INFO, "Create %d subgraphs for model %s with mode %s %s",
-      subgraph_defs.size(), model_spec_->path.c_str(),
-      BandSubgraphPreparationGetName(model_config_.subgraph_preparation_type),
-      subgraph_summary.c_str());
+  BAND_LOG_PROD(BAND_LOG_INFO,
+                "Create %d subgraphs for model %s with mode %s %s",
+                subgraph_defs.size(), model_spec_->path.c_str(),
+                BandSubgraphPreparationGetName(
+                    subgraph_config_.subgraph_preparation_type),
+                subgraph_summary.c_str());
 
   return {kBandOk, *model_spec_, subgraph_defs};
 }
@@ -310,7 +311,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
           continue;
         }
         if (worker_and_ops.op_indices.size() <
-            model_config_.minimum_subgraph_size) {
+            subgraph_config_.minimum_subgraph_size) {
           for (auto op : worker_and_ops.op_indices) {
             op_sets_to_ignore[worker_id].insert(op);
           }
@@ -698,7 +699,8 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
 
 bool ModelAnalyzer::NeedFallbackSubgraph() const {
   return need_fallback_subgraph_ &&
-         (model_config_.subgraph_preparation_type != kBandNoFallbackSubgraph);
+         (subgraph_config_.subgraph_preparation_type !=
+          kBandNoFallbackSubgraph);
 }
 
 bool ModelAnalyzer::IsWorkerValid(WorkerId worker_id) const {
