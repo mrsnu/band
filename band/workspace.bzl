@@ -1,15 +1,15 @@
-"""Remote repositories"""
+"""Workspaces"""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 def band_workspace():
-    ###### Register remote repos ######
-    http_archive(
-        name = "com_google_absl",
-        url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.0.tar.gz",
-        sha256 = "3ea49a7d97421b88a8c48a0de16c16048e17725c7ec0f1d3ea2683a2a75adc21",
-        strip_prefix = "abseil-cpp-20230125.0",
-    )
+    # TODO(widiba03304): Uncomment when abseil comes
+    # http_archive(
+    #     name = "com_google_absl",
+    #     url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.0.tar.gz",
+    #     sha256 = "3ea49a7d97421b88a8c48a0de16c16048e17725c7ec0f1d3ea2683a2a75adc21",
+    #     strip_prefix = "abseil-cpp-20230125.0",
+    # )
 
     http_archive(
         name = "build_bazel_rules_android",
