@@ -20,11 +20,10 @@ test:windows --copt=/W0
 build:tflite --define tflite=true
 build:tflite --copt=-DBAND_TFLITE
 build:tflite --cxxopt=-DBAND_TFLITE
-build:tflite --experimental_repo_remote_exec
+build:tflite --action_env BAND_TFLITE=true
 test:tflite --define tflite=true
 test:tflite --copt=-DBAND_TFLITE
 test:tflite --cxxopt=-DBAND_TFLITE
-test:tflite --experimental_repo_remote_exec
 
 # Android build config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
