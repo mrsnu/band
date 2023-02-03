@@ -7,8 +7,21 @@ bazel-testlogs
 # Configuration files
 .band_android_config.bazelrc
 
+# Android
+.gradle
+.idea
+*.iml
+local.properties
+gradleBuild
+.aar
+
 # Python cache
 __pycache__/
+
+# test
+log.csv
+log.tsv
+band.aar
 
 # vscode
 .vscode/
