@@ -29,6 +29,9 @@ TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
 }  // namespace Band
 
 int main(int argc, char** argv) {
+#ifdef BAND_TFLITE
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
+#endif  // BAND_TFLITE
+  return 0;
 }
