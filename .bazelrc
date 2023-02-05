@@ -1,19 +1,27 @@
 # Use C++14 as a default language.
-build --cxxopt=-std=c++14
-build --host_cxxopt=-std=c++14
+build:linux --cxxopt=-std=c++14
+build:linux --host_cxxopt=-std=c++14
+build:android --cxxopt=-std=c++14
+build:android --host_cxxopt=-std=c++14
 build:windows --cxxopt=/std:c++14
 build:windows --host_cxxopt=/std:c++14
-test --cxxopt=-std=c++14
-test --host_cxxopt=-std=c++14
+test:linux --cxxopt=-std=c++14
+test:linux --host_cxxopt=-std=c++14
+test:android --cxxopt=-std=c++14
+test:android --host_cxxopt=-std=c++14
 test:windows --cxxopt=/std:c++14
 test:windows --host_cxxopt=/std:c++14
 
 # Suppress C++ compiler warnings
-build --copt=-w
-build --host_copt=-w
+build:linux --copt=-w
+build:linux --host_copt=-w
+build:android --copt=-w
+build:android --host_copt=-w
 build:windows --copt=/W0
-test --copt=-w
-test --host_copt=-w
+test:linux --copt=-w
+test:linux --host_copt=-w
+test:android --copt=-w
+test:android --host_copt=-w
 test:windows --copt=/W0
 
 # Band build config for backend setting.
