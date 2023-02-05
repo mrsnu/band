@@ -33,6 +33,18 @@ test:tflite --define tflite=true
 test:tflite --copt=-DBAND_TFLITE
 test:tflite --cxxopt=-DBAND_TFLITE
 
+# Linux build config for Band Engine.
+build:linux_k8 --config=linux
+build:linux_k8 --cpu=k8
+build:linux_k8_tflite --config=linux_k8
+build:linux_k8_tflite --config=tflite
+
+# Linux test config for Band Engine.
+test:linux_k8 --config=linux
+test:linux_k8 --cpu=k8
+test:linux_k8_tflite --config=linux_k8
+test:linux_k8_tflite --config=tflite
+
 # Android build config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
 build:android --host_crosstool_top=@bazel_tools//tools/cpp:toolchain

@@ -41,6 +41,32 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+# Linux config settings
+config_setting(
+    name = "linux",
+    flag_values = {},
+    values = {},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_k8",
+    flag_values = {},
+    values = {"cpu": "k8"},
+    visibility = ["//visibility:public"],
+)
+
+
+config_setting(
+    name = "linux_k8_tflite",
+    define_values = {
+        "tflite": "true",
+    },
+    flag_values = {},
+    values = {"cpu": "k8"},
+    visibility = ["//visibility:public"],
+)
+
 # Android config settings
 config_setting(
     name = "android",
