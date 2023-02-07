@@ -34,16 +34,16 @@ test:tflite --copt=-DBAND_TFLITE
 test:tflite --cxxopt=-DBAND_TFLITE
 
 # Linux build config for Band Engine.
-build:linux_k8 --config=linux
-build:linux_k8 --cpu=k8
-build:linux_k8_tflite --config=linux_k8
-build:linux_k8_tflite --config=tflite
+build:linux_x86_64 --config=linux
+build:linux_x86_64 --cpu=k8
+build:linux_x86_64_tflite --config=linux_x86_64
+build:linux_x86_64_tflite --config=tflite
 
 # Linux test config for Band Engine.
-test:linux_k8 --config=linux
-test:linux_k8 --cpu=k8
-test:linux_k8_tflite --config=linux_k8
-test:linux_k8_tflite --config=tflite
+test:linux_x86_64 --config=linux
+test:linux_x86_64 --cpu=k8
+test:linux_x86_64_tflite --config=linux_x86_64
+test:linux_x86_64_tflite --config=tflite
 
 # Android build config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
@@ -65,25 +65,25 @@ test:android_arm64_tflite --config=tflite
 
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
-build:windows --config=monolithic
 build:windows --copt=-DWIN32_LEAN_AND_MEAN
 build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
 build:windows --copt=-DNOGDI
 build:windows --host_copt=-DNOGDI
-# MSVC (Windows): Standards-conformant preprocessor mode
 build:windows --copt=/Zc:preprocessor
 build:windows --host_copt=/Zc:preprocessor
-# Misc build options we need for windows.
 build:windows --linkopt=/OPT:REF
 build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
 build:windows --verbose_failures
-# Work around potential issues with large command lines on windows.
 build:windows --features=compiler_param_file
-# On windows, we never cross compile
 build:windows --distinct_host_configuration=false
 test:windows --enable_runfiles
+
+build:windows_tflite --config windows
+build:windows_tflite --define tflite=true
+test:windows_tflite --config windows
+test:windows_tflite --define tflite=true
 
 try-import %workspace%/.band_android_config.bazelrc
 try-import %workspace%/.tflite_config.bazelrc

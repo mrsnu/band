@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # base code borrowed from below
 # https://github.com/asus4/tf-lite-unity-sample/blob/master/build_tflite.py
 

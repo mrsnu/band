@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import tempfile
 import shutil
@@ -5,12 +6,12 @@ import shutil
 from util import *
 
 BASE_DIR = 'benchmark'
+TARGET = "//band/tool:band_benchmark"
 
-
-def benchmark_local(enable_xnnpack, debug, build_only, config_path):
-    target_option = 'build' if build_only else 'test'
+def benchmark_local(debug, config_path):
+    build_cmd = make_cmd(build_only, debug, )
     run_cmd(
-        f'bazel {target_option} {get_bazel_options(enable_xnnpack, debug)} band/tool:band_benchmark')
+        f'bazel {target_option} {get_bazel_options(debug)} band/tool:band_benchmark')
     copy('bazel-bin/band/tool/band_benchmark', BASE_DIR)
     run_cmd(
         f'chmod 777 {BASE_DIR}/band_benchmark'
@@ -20,10 +21,10 @@ def benchmark_local(enable_xnnpack, debug, build_only, config_path):
     )
 
 
-def benchmark_android(enable_xnnpack=False, debug=False, docker=False, rebuild=False, config_path=""):
+def benchmark_android(debug=False, docker=False, rebuild=False, config_path=""):
     target_base_dir = BASE_DIR
     # build android targets only (specified in band_cc_android_test tags)
-    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build {get_bazel_options(enable_xnnpack, debug, True)} band/tool:band_benchmark'
+    build_command = f'{"bazel clean &&" if rebuild else ""} bazel build {get_bazel_options(debug, True)} band/tool:band_benchmark'
     if docker:
         run_cmd(f'sh script/docker_util.sh -r {build_command}')
         # create a local path
@@ -41,27 +42,13 @@ def benchmark_android(enable_xnnpack=False, debug=False, docker=False, rebuild=F
 
 
 if __name__ == '__main__':
-    platform_name = platform.system()
-    parser = argparse.ArgumentParser(
-        description=f'Run Band benchmarks for specific target platform(default: {platform_name}).\
-        The user should prepare/specify dependent files either absolute path or relative path depending on an execution mode.\
-        This script executes the benchmark from (Android: /data/local/tmp, Other: current working directory)')
-    parser.add_argument('-android', action="store_true", default=False,
-                        help='Test on Android (with adb)')
-    # TODO: add support for arbitrary docker container name and directory
-    parser.add_argument('-docker', action="store_true", default=False,
-                        help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker context has devcontainer built with a /.devcontainer')
+    parser = get_argument_parser("Run Band benchmarks for specific target platform. "
+                                 "The user should prepare/specify dependent files either absolute path or relative path depending on an execution mode. "
+                                 "This script executes the benchmark from (Android: /data/local/tmp, Other: current working directory)")
+    
     # TODO: add support for arbitrary ssh endpoint
-    parser.add_argument('-xnnpack', action="store_true", default=False,
-                        help='Build with XNNPACK')
     parser.add_argument('-c', '--config', default='band/test/data/benchmark_config.json',
                         help='Target config (default = band/test/data/benchmark_config.json)')
-    parser.add_argument('-d', '--debug', action="store_true", default=False,
-                        help='Build debug (default = release)')
-    parser.add_argument('-b', '--build', action="store_true", default=False,
-                        help='Build only, only affects to local (default = false)')
-    parser.add_argument('-r', '--rebuild', action="store_true", default=False,
-                        help='Re-build test target, only affects to android ')
 
     args = parser.parse_args()
     
@@ -71,8 +58,8 @@ if __name__ == '__main__':
     if args.android:
         # Need to set Android build option in ./configure
         print('Benchmark Android')
-        benchmark_android(args.xnnpack, args.debug,
+        benchmark_android(args.debug,
                           args.docker, args.rebuild, args.config)
     else:
         print(f'Benchmark {platform_name}')
-        benchmark_local(args.xnnpack, args.debug, args.build, args.config)
+        benchmark_local(args.debug, args.build, args.config)

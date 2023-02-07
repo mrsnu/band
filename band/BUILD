@@ -32,15 +32,6 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-# MNN backend setting.
-config_setting(
-    name = "mnn",
-    define_values = {
-        "mnn": "true",
-    },
-    visibility = ["//visibility:public"],
-)
-
 # Linux config settings
 config_setting(
     name = "linux",
@@ -50,7 +41,7 @@ config_setting(
 )
 
 config_setting(
-    name = "linux_k8",
+    name = "linux_x86_64",
     flag_values = {},
     values = {"cpu": "k8"},
     visibility = ["//visibility:public"],
@@ -58,7 +49,7 @@ config_setting(
 
 
 config_setting(
-    name = "linux_k8_tflite",
+    name = "linux_x86_64_tflite",
     define_values = {
         "tflite": "true",
     },
@@ -100,21 +91,19 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+# Windows config settings
 config_setting(
-    name = "android_arm64_mnn",
-    define_values = {
-        "mnn": "true",
-    },
+    name = "windows",
     flag_values = {},
-    values = dict(
-        {"crosstool_top": "//external:android/crosstool"},
-        cpu = "arm64-v8a",
-    ),
+    values = {"cpu": "x64_windows"},
     visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name = "windows",
+    name = "windows_tflite",
+    define_values = {
+        "tflite": "true",
+    },
     flag_values = {},
     values = {"cpu": "x64_windows"},
     visibility = ["//visibility:public"],
