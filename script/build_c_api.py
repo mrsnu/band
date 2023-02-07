@@ -3,64 +3,52 @@
 # https://github.com/asus4/tf-lite-unity-sample/blob/master/build_tflite.py
 
 import argparse
-from util import *
+from utils import *
 
 BASE_DIR = 'bin'
+TARGET = 'band/c:band_c'
 
 
-def build_windows(enable_xnnpack=False, debug=False):
-    run_cmd(
-        f'bazel build {get_bazel_options(enable_xnnpack, debug)} band/c:band_c')
-    copy('bazel-bin/band/c/band_c.dll',
-         get_dst_path(BASE_DIR, 'windows', debug))
-    if debug:
-        copy('bazel-bin/band/c/band_c.pdb',
+def copy_lib(debug, platform, android, docker):
+    if platform == 'windows':
+        copy('bazel-bin/band/c/band_c.dll',
              get_dst_path(BASE_DIR, 'windows', debug))
+        if debug:
+            copy('bazel-bin/band/c/band_c.pdb',
+                 get_dst_path(BASE_DIR, 'windows', debug))
+        return
 
+    if android:
+        if docker:
+            copy_docker('bazel-bin/band/c/libband_c.so',
+                        get_dst_path(BASE_DIR, 'armv8-a', debug))
+        else:
+            copy('bazel-bin/band/c/libband_c.so',
+                 get_dst_path(BASE_DIR, 'armv8-a', debug))
+        return
 
-def build_linux(debug=False):
-    run_cmd(
-        f'bazel build {get_bazel_options(False, debug)} --cxxopt=--std=c++11 band/c:band_c')
-    copy('bazel-bin/band/c/libband_c.so',
-         get_dst_path(BASE_DIR, 'linux', debug))
+    if platform == "linux":
+        copy('bazel-bin/band/c/libband_c.so',
+             get_dst_path(BASE_DIR, 'linux', debug))
+        return
 
-
-def build_android(enable_xnnpack=False, debug=False):
-    run_cmd(
-        f'bazel build {get_bazel_options(enable_xnnpack, debug, True)} band/c:band_c')
-    copy('bazel-bin/band/c/libband_c.so',
-         get_dst_path(BASE_DIR, 'armv8-a', debug))
+    raise ValueError(f"Platform {platform} is not supported.")
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Build Band c apis for specific target platform')
-    parser.add_argument('-windows', action="store_true", default=False,
-                        help='Build Windows')
-    parser.add_argument('-linux', action="store_true", default=False,
-                        help='Build Linux')
-    parser.add_argument('-android', action="store_true", default=False,
-                        help='Build Android')
-    parser.add_argument('-xnnpack', action="store_true", default=False,
-                        help='Build with XNNPACK')
-    parser.add_argument('-d', '--debug', action="store_true", default=False,
-                        help='Build debug (default = release)')
-
+    parser = get_argument_parser(
+        desc='Build Band C apis for specific target platform')
     args = parser.parse_args()
 
-    platform_name = platform.system()
-
-    if args.windows:
-        assert platform_name == 'Windows', f'-windows not suppoted on the platfrom: {platform_name}'
-        print('Build Windows')
-        build_windows(args.xnnpack, args.debug)
-
-    if args.linux:
-        assert platform_name == 'Linux', f'-linux not suppoted on the platfrom: {platform_name}'
-        print('Build Linux')
-        build_linux(args.debug)
-
-    if args.android:
-        # Need to set Android build option in ./configure
-        print('Build Android')
-        build_android(args.xnnpack, args.debug)
+    build_cmd = make_cmd(
+        build_only=True,
+        debug=args.debug,
+        platform="android" if args.android else args.platform,
+        backend=args.backend,
+        target=TARGET
+    )
+    if args.docker:
+        run_cmd_docker(build_cmd)
+    else:
+        run_cmd(build_cmd)
+    copy_lib(args.debug, args.platform, args.android, args.docker)

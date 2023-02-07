@@ -1,17 +1,37 @@
 from genericpath import isfile
 import os
 import argparse
-import platform
+import platform as plf
 import shlex
 import shutil
 import subprocess
 import multiprocessing
+from .docker import run_cmd_docker
 
 PLATFORM = {
     "linux": "linux_x86_64",
     "windows": "windows",
     "android": "android_arm64",
 }
+
+
+def is_windows():
+    return plf.system() == "Windows"
+
+
+def is_linux():
+    return plf.system() == "Linux"
+
+
+def is_cygwin():
+    return plf.system().startswith("CYGWIN_NT")
+
+
+def canon_path(path):
+    if is_windows() or is_cygwin():
+        return path.replace('\\', '/')
+    return path
+        
 
 def run_cmd(cmd):
     args = shlex.split(cmd)
@@ -25,7 +45,11 @@ def copy(src, dst):
     if os.path.isdir(src):
         shutil.copytree(src, dst)
     else:
-        shutil.copy(src, dst)
+        try:
+            shutil.copy(src, dst)
+        except FileNotFoundError:
+            print(dst)
+            shutil.copy(src + ".exe", dst + ".exe")
 
 
 def get_bazel_options(
@@ -47,7 +71,7 @@ def make_cmd(
         target: str,
     ):
     cmd = "bazel" + " "
-    cmd += "build" if build_only else "test" + " "
+    cmd += ("build" if build_only else "test") + " "
     cmd += get_bazel_options(debug, platform, backend)
     cmd += target
     return cmd
@@ -56,9 +80,7 @@ def make_cmd(
 def get_dst_path(base_dir, target_platform, debug):
     build = 'debug' if debug else 'release'
     path = os.path.join(base_dir, target_platform, build)
-    if platform.system() == 'Windows':
-        path = path.replace('\\', '/')
-    return path
+    return canon_path(path)
 
 
 ANDROID_BASE = '/data/local/tmp/'
@@ -76,11 +98,10 @@ def run_binary_android(basepath, path, option=''):
 
 def get_argument_parser(desc: str):
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('-p', '--platform', type=str, required=True, help='Platform <linux|android|windows>')
+    parser.add_argument('-p', '--platform', type=str, required=True, help='Host platform <linux|windows>')
     parser.add_argument('-B', '--backend', type=str, required=True, help='Backend <tflite|none>')
     parser.add_argument('-android', action="store_true", default=False,
                         help='Test on Android (with adb)')
-    # TODO: add support for arbitrary docker container name and directory
     parser.add_argument('-docker', action="store_true", default=False,
                         help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker context has devcontainer built with a /.devcontainer')
     parser.add_argument('-s', '--ssh', required=False, default=None, help="SSH host name (e.g. dev@ssh.band.org)")
@@ -91,3 +112,9 @@ def get_argument_parser(desc: str):
     parser.add_argument('-b', '--build', action="store_true", default=False,
                         help='Build only, only affects to local (default = false)')
     return parser
+
+def clean_bazel(docker):
+    if docker:
+        run_cmd_docker('bazel clean')
+    else:
+        run_cmd('bazel clean')
