@@ -17,8 +17,8 @@ class Tensor : public Interface::ITensor {
   explicit Tensor(Interface::ITensor* tensor_view);
   ~Tensor();
 
-  BandType GetType() const override;
-  void SetType(BandType type) override;
+  DataType GetType() const override;
+  void SetType(DataType type) override;
   const char* GetData() const override;
   char* GetData() override;
   const int* GetDims() const override;
@@ -30,7 +30,7 @@ class Tensor : public Interface::ITensor {
   void SetQuantization(BandQuantization quantization) override;
 
  private:
-  BandType type_;
+  DataType type_;
   BandQuantization quantization_;
   size_t num_bytes_;
   std::vector<int> dims_;

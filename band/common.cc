@@ -55,6 +55,7 @@ std::string GetName(SchedulerType scheduler_type) {
   }
 }
 
+template<>
 SchedulerType FromString(std::string str) {
   for (int i = 0; i < kBandNumSchedulerTypes; i++) {
     SchedulerType type = static_cast<SchedulerType>(i);
@@ -81,6 +82,17 @@ std::string GetName(SubgraphPreparationType subgraph_preparation_type) {
     } break;
   }
 }
+
+template<>
+SubgraphPreparationType FromString(std::string str) {
+  for (int i = 0; i < kBandNumSubgraphPreparationType; i++) {
+    SubgraphPreparationType type = static_cast<SubgraphPreparationType>(i);
+    if (GetName(type) == str) {
+      return type;
+    }
+  }
+}
+
 std::string GetName(DataType data_type) {
   switch (data_type) {
     case DataType::NoType: {

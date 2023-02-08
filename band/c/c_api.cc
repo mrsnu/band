@@ -112,7 +112,7 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     case BAND_SUBGRAPH_PREPARATION_TYPE: {
       int arg = va_arg(vl, int);
       b->impl.AddSubgraphPreparationType(
-          static_cast<BandSubgraphPreparationType>(arg));
+          static_cast<Band::SubgraphPreparationType>(arg));
     } break;
     case BAND_CPU_MASK: {
       int arg = va_arg(vl, int);
@@ -151,7 +151,7 @@ BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
 void BandTensorDelete(BandTensor* tensor) { delete tensor; }
 
 BandType BandTensorGetType(BandTensor* tensor) {
-  return tensor->impl->GetType();
+  return static_cast<BandType>(tensor->impl->GetType());
 }
 
 void* BandTensorGetData(BandTensor* tensor) { return tensor->impl->GetData(); }

@@ -21,9 +21,9 @@ Tensor::~Tensor() {
   BandQuantizationFree(&quantization_);
 }
 
-BandType Tensor::GetType() const { return type_; }
+DataType Tensor::GetType() const { return type_; }
 
-void Tensor::SetType(BandType type) { type_ = type; }
+void Tensor::SetType(DataType type) { type_ = type; }
 
 const char* Tensor::GetData() const { return data_; }
 

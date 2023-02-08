@@ -63,7 +63,7 @@ BandStatus Engine::RegisterModel(Model* model) {
           error_reporter_,
           "Failed to create subgraphs for model %d with subgraph option %s",
           model_id,
-          BandSubgraphPreparationGetName(
+          GetName(
               subgraph_config_.subgraph_preparation_type));
       // TODO(BAND-49): unregister for specific backend
       UnregisterModel(model);
@@ -766,7 +766,7 @@ std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetSubgraphWithShortestLatency(
     const Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
-  if (subgraph_config_.subgraph_preparation_type == kBandFallbackPerWorker) {
+  if (subgraph_config_.subgraph_preparation_type == SubgraphPreparationType::FallbackPerWorker) {
     auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
                                    worker_waiting);
     std::pair<std::vector<SubgraphKey>, int64_t> ret =

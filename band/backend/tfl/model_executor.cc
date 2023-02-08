@@ -38,7 +38,7 @@ TfLiteModelExecutor::~TfLiteModelExecutor() {
 ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {
   int num_ops;
   int num_tensors;
-  std::vector<BandType> tensor_types;
+  std::vector<DataType> tensor_types;
   std::set<int> input_tensor_indices;
   std::set<int> output_tensor_indices;
   std::vector<std::set<int>> op_input_tensors;

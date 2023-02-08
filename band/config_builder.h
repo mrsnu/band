@@ -213,7 +213,7 @@ class RuntimeConfigBuilder {
     return *this;
   }
   RuntimeConfigBuilder& AddSubgraphPreparationType(
-      BandSubgraphPreparationType subgraph_preparation_type) {
+      SubgraphPreparationType subgraph_preparation_type) {
     subgraph_preparation_type_ = subgraph_preparation_type;
     return *this;
   }
@@ -230,8 +230,8 @@ class RuntimeConfigBuilder {
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
   int minimum_subgraph_size_ = 7;
-  BandSubgraphPreparationType subgraph_preparation_type_ =
-      kBandMergeUnitSubgraph;
+  SubgraphPreparationType subgraph_preparation_type_ =
+      SubgraphPreparationType::MergeUnitSubgraph;
   CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
 };
 

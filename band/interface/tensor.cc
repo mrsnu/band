@@ -24,8 +24,8 @@ bool ITensor::operator==(const ITensor& rhs) const {
     return true;
   else {
     BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s != %s %s", GetName(),
-                  BandTypeGetName(GetType()), rhs.GetName(),
-                  BandTypeGetName(rhs.GetType()));
+                  Band::GetName(GetType()), rhs.GetName(),
+                  Band::GetName(rhs.GetType()));
     return false;
   }
 }

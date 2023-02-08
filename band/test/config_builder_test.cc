@@ -68,7 +68,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/config.json")
           .AddMinimumSubgraphSize(5)
-          .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
+          .AddSubgraphPreparationType(SubgraphPreparationType::MergeUnitSubgraph)
           .AddPlannerLogPath("band/test/data/config.json")
           .AddScheduleWindowSize(1)
           .AddSchedulers({SchedulerType::FixedWorker})
@@ -92,7 +92,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
             "band/test/data/config.json");
   EXPECT_EQ(config_ok.subgraph_config.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_config.subgraph_preparation_type,
-            kBandMergeUnitSubgraph);
+            SubgraphPreparationType::MergeUnitSubgraph);
   EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlags::Primary);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
@@ -134,7 +134,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.worker_config.availability_check_interval_ms, 30000);
   EXPECT_EQ(config_ok.subgraph_config.minimum_subgraph_size, 7);
   EXPECT_EQ(config_ok.subgraph_config.subgraph_preparation_type,
-            kBandMergeUnitSubgraph);
+            SubgraphPreparationType::MergeUnitSubgraph);
   EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlags::All);
 }
 

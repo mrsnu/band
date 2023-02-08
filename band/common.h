@@ -24,6 +24,10 @@ static size_t kBandNumSchedulerTypes = 7;
 static size_t kBandNumSubgraphPreparationType = 4;
 static size_t kBandNumDevices = 4;
 
+// Empty template.
+template<typename T>
+T FromString(std::string str) {}
+
 enum class BackendType : int {
   TfLite = 0
 };
@@ -47,6 +51,7 @@ enum class SchedulerType : int {
   HeterogeneousEarliestFinishTimeReserved = 6
 };
 std::string GetName(SchedulerType scheduler_type);
+template<>
 SchedulerType FromString(std::string str);
 
 enum class SubgraphPreparationType : int {
@@ -56,20 +61,22 @@ enum class SubgraphPreparationType : int {
   MergeUnitSubgraph = 3
 };
 std::string GetName(SubgraphPreparationType subgraph_preparation_type);
+template<>
+SubgraphPreparationType FromString(std::string str);
 
-enum class DataType {
-  NoType,
-  Float32,
-  Int32,
-  UInt8,
-  Int64,
-  String,
-  Bool,
-  Int16,
-  Complex64,
-  Int8,
-  Float16,
-  Float64
+enum class DataType : int {
+  NoType = 0,
+  Float32 = 1,
+  Int32 = 2,
+  UInt8 = 3,
+  Int64 = 4,
+  String = 5,
+  Bool = 6,
+  Int16 = 7,
+  Complex64 = 8,
+  Int8 = 9,
+  Float16 = 10,
+  Float64 = 11
 };
 std::string GetName(DataType data_type);
 

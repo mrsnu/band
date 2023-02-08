@@ -191,7 +191,7 @@ ModelAnalyzer::CreateSubgraphs() {
   }
 
   switch (subgraph_config_.subgraph_preparation_type) {
-    case kBandFallbackPerWorker: {
+    case SubgraphPreparationType::FallbackPerWorker: {
       for (WorkerId worker_id = 0; worker_id < context_.GetNumWorkers();
            worker_id++) {
         std::vector<SubgraphDef> worker_subgraphs =
@@ -222,12 +222,12 @@ ModelAnalyzer::CreateSubgraphs() {
       }
       break;
     }
-    case kBandNoFallbackSubgraph:
-    case kBandUnitSubgraph: {
+    case SubgraphPreparationType::NoFallbackSubgraph:
+    case SubgraphPreparationType::UnitSubgraph: {
       subgraph_defs = unit_subgraph_defs;
       break;
     }
-    case kBandMergeUnitSubgraph: {
+    case SubgraphPreparationType::MergeUnitSubgraph: {
       // Add merged atomic subgraphs
       // Note that each merged subgraph consists of unit subgraphs with
       // continuous unit subgraph indices.
@@ -253,15 +253,15 @@ ModelAnalyzer::CreateSubgraphs() {
                       "subgraph %s are not continous for model %s and mode %s",
                       subgraph_def.ToString().c_str(),
                       model_spec_->path.c_str(),
-                      BandSubgraphPreparationGetName(
-                          subgraph_config_.subgraph_preparation_type));
+                      GetName(subgraph_config_.subgraph_preparation_type));
         return {kBandError, {}, {}};
       }
     }
   }
 
   const std::string subgraph_summary =
-      subgraph_config_.subgraph_preparation_type != kBandFallbackPerWorker
+      subgraph_config_.subgraph_preparation_type !=
+              SubgraphPreparationType::FallbackPerWorker
           ? SummarizeSubgraphs(subgraph_defs)
           : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
                                                 subgraph_defs);
@@ -269,8 +269,7 @@ ModelAnalyzer::CreateSubgraphs() {
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d subgraphs for model %s with mode %s %s",
                 subgraph_defs.size(), model_spec_->path.c_str(),
-                BandSubgraphPreparationGetName(
-                    subgraph_config_.subgraph_preparation_type),
+                GetName(subgraph_config_.subgraph_preparation_type),
                 subgraph_summary.c_str());
 
   return {kBandOk, *model_spec_, subgraph_defs};
@@ -700,7 +699,7 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
 bool ModelAnalyzer::NeedFallbackSubgraph() const {
   return need_fallback_subgraph_ &&
          (subgraph_config_.subgraph_preparation_type !=
-          kBandNoFallbackSubgraph);
+          SubgraphPreparationType::NoFallbackSubgraph);
 }
 
 bool ModelAnalyzer::IsWorkerValid(WorkerId worker_id) const {

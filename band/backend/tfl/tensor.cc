@@ -11,9 +11,9 @@ TfLiteTensorView::TfLiteTensorView(TfLiteTensor* tensor) : tensor_(tensor) {}
 
 BackendType TfLiteTensorView::GetBackendType() const { return BackendType::TfLite; }
 
-BandType TfLiteTensorView::GetType() const { return BandType(tensor_->type); }
+DataType TfLiteTensorView::GetType() const { return DataType(tensor_->type); }
 
-void TfLiteTensorView::SetType(BandType type) {
+void TfLiteTensorView::SetType(DataType type) {
   tensor_->type = TfLiteType(type);
 }
 

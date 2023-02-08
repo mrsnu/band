@@ -48,8 +48,8 @@ struct WorkerConfig {
 
 struct SubgraphConfig {
   int minimum_subgraph_size = 7;
-  BandSubgraphPreparationType subgraph_preparation_type =
-      kBandMergeUnitSubgraph;
+  SubgraphPreparationType subgraph_preparation_type =
+      SubgraphPreparationType::MergeUnitSubgraph;
 };
 
 struct RuntimeConfig {

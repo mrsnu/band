@@ -14,7 +14,7 @@ class ModelSpec {
   // explicitly remove default ctor, to force initialization of required
   // params
   ModelSpec() : ModelSpec(0, 0, {}, {}, {}, {}, {}, {}, {}) {}
-  ModelSpec(int num_ops, int num_tensors, std::vector<BandType> tensor_types,
+  ModelSpec(int num_ops, int num_tensors, std::vector<DataType> tensor_types,
             std::set<int> input_tensors, std::set<int> output_tensors,
             std::vector<std::set<int>> op_input_tensors,
             std::vector<std::set<int>> op_output_tensors,
@@ -50,7 +50,7 @@ class ModelSpec {
   /* from Interpreter::InvestigateModelSpec */
   const int num_ops;
   const int num_tensors;
-  const std::vector<BandType> tensor_types;
+  const std::vector<DataType> tensor_types;
   // indices to input / output tensors
   const std::set<int> input_tensors;
   const std::set<int> output_tensors;

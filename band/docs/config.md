@@ -26,11 +26,11 @@ Each configuration field is optional or required. If a field is optional, then i
   - `kBandDSP`
   - `kBandNPU`
 
-- `BandSubgraphPreparationType`: 
-  - `kBandNoFallbackSubgraph`
-  - `kBandFallbackPerWorker`
-  - `kBandUnitSubgraph`
-  - `kBandMergeUnitSubgraph`
+- `SubgraphPreparationType`: 
+  - `SubgraphPreparationType::NoFallbackSubgraph`
+  - `SubgraphPreparationType::FallbackPerWorker`
+  - `SubgraphPreparationType::UnitSubgraph`
+  - `SubgraphPreparationType::MergeUnitSubgraph`
 
 ## `ProfileConfig`
 - `online` [type: `bool`, default: `true`]: Profile online if true, offline if false.
@@ -56,7 +56,7 @@ Each configuration field is optional or required. If a field is optional, then i
 ## `RuntimeConfig`
 - `RuntimeConfig` contains `ProfileConfig`, `PlannerConfig` and `WorkerConfig`.
 - `minimum_subgraph_size` [type: `int`, default: `7`]: The minimum subgraph size. If candidate subgraph size is smaller than this, the subgraph will not be created.
-- `subgraph_preparation_type` [type: `BandSubgraphPreparationType`, default: `kBandMergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
+- `subgraph_preparation_type` [type: `SubgraphPreparationType`, default: `SubgraphPreparationType::MergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
 - `cpu_mask` [type: `CPUMaskFlags`, default: `CPUMaskFlags::All`]: The CPU mask for Band Engine.
 
 ## `RuntimeConfigBuilder` API
@@ -89,5 +89,5 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddAllowWorkSteal(bool allow_worksteal)`
 - `AddAvailabilityCheckIntervalMs(int32_t availability_check_interval_ms)`
 - `AddMinimumSubgraphSize(int minimum_subgraph_size)`
-- `AddSubgraphPreparationType(BandSubgraphPreparationType subgraph_preparation_type)`
+- `AddSubgraphPreparationType(SubgraphPreparationType subgraph_preparation_type)`
 - `AddCPUMask(CPUMaskFlags cpu_mask)`

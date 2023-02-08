@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "band/c/common.h"
+#include "band/common.h"
 
 namespace Band {
 namespace Interface {
@@ -11,8 +11,8 @@ struct ITensor {
  public:
   virtual ~ITensor() = default;
 
-  virtual BandType GetType() const = 0;
-  virtual void SetType(BandType type) = 0;
+  virtual DataType GetType() const = 0;
+  virtual void SetType(DataType type) = 0;
   virtual const char* GetData() const = 0;
   virtual char* GetData() = 0;
   virtual const int* GetDims() const = 0;

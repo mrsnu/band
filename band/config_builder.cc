@@ -74,10 +74,10 @@ bool RuntimeConfigBuilder::IsValid(
   bool result = true;
   REPORT_IF_FALSE(RuntimeConfigBuilder, minimum_subgraph_size_ > 0);
   REPORT_IF_FALSE(RuntimeConfigBuilder,
-                  subgraph_preparation_type_ == kBandNoFallbackSubgraph ||
-                      subgraph_preparation_type_ == kBandFallbackPerWorker ||
-                      subgraph_preparation_type_ == kBandUnitSubgraph ||
-                      subgraph_preparation_type_ == kBandMergeUnitSubgraph);
+                  subgraph_preparation_type_ == SubgraphPreparationType::NoFallbackSubgraph ||
+                      subgraph_preparation_type_ == SubgraphPreparationType::FallbackPerWorker ||
+                      subgraph_preparation_type_ == SubgraphPreparationType::UnitSubgraph ||
+                      subgraph_preparation_type_ == SubgraphPreparationType::MergeUnitSubgraph);
   REPORT_IF_FALSE(RuntimeConfigBuilder,
                   cpu_mask_ == CPUMaskFlags::All || cpu_mask_ == CPUMaskFlags::Little ||
                       cpu_mask_ == CPUMaskFlags::Big || cpu_mask_ == CPUMaskFlags::Primary);

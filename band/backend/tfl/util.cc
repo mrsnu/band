@@ -10,7 +10,7 @@ namespace Band {
 namespace TfLite {
 
 BandStatus GetBandStatus(TfLiteStatus status) { return BandStatus(status); }
-BandType GetBandType(TfLiteType type) { return BandType(type); }
+DataType GetBandType(TfLiteType type) { return DataType(type); }
 std::set<BandDeviceFlags> TfLiteUtil::GetAvailableDevices() const {
   static std::set<BandDeviceFlags> valid_devices = {};
   static std::once_flag once_flag;

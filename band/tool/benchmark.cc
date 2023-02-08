@@ -188,7 +188,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
                       "Please check if given scheduler is valid");
         return false;
       }
-      schedulers.push_back(FromString(scheduler.asCString()));
+      schedulers.push_back(FromString<SchedulerType>(scheduler.asCString()));
     }
     builder.AddSchedulers(schedulers);
 
@@ -239,7 +239,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
 
     if (root["subgraph_preparation_type"].isString()) {
-      builder.AddSubgraphPreparationType(BandSubgraphPreparationGetType(
+      builder.AddSubgraphPreparationType(FromString<SubgraphPreparationType>(
           root["subgraph_preparation_type"].asCString()));
     }
 
@@ -318,37 +318,37 @@ BandStatus Benchmark::Initialize(int argc, const char** argv) {
           engine_->CreateTensor(model_id, input_index);
       // random value ranges borrowed from tensorflow/lite/tools/benchmark
       switch (input_tensor->GetType()) {
-        case kBandUInt8:
+        case DataType::UInt8:
           CreateRandomTensorData<uint8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 254));
           break;
-        case kBandInt8:
+        case DataType::Int8:
           CreateRandomTensorData<int8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(-127, 127));
           break;
-        case kBandInt16:
+        case DataType::Int16:
           CreateRandomTensorData<int16_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int16_t>(0, 99));
           break;
-        case kBandInt32:
+        case DataType::Int32:
           CreateRandomTensorData<int32_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 99));
           break;
-        case kBandInt64:
+        case DataType::Int64:
           CreateRandomTensorData<int64_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int64_t>(0, 99));
           break;
-        case kBandFloat32:
+        case DataType::Float32:
           CreateRandomTensorData<float>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<float>(-0.5, 0.5));
           break;
-        case kBandFloat64:
+        case DataType::Float64:
           CreateRandomTensorData<double>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<double>(-0.5, 0.5));
