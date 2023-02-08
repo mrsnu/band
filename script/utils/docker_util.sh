@@ -5,7 +5,7 @@ case "$1" in
     HASH=$2
     FROM=$3
     TO=$4
-    echo "Download from docker image ${HASH} from ${FROM} to ${TO}"
+    echo "Copy from ${HASH}:${FROM} to ${TO}"
     docker cp ${HASH}://workspaces/band/${FROM} ${TO}
     ;;
 
