@@ -97,12 +97,12 @@ class WorkerConfigBuilder {
  public:
   WorkerConfigBuilder() {
     for (int i = 0; i < kBandNumDevices; i++) {
-      workers_.push_back(static_cast<BandDeviceFlags>(i));
+      workers_.push_back(static_cast<DeviceFlags>(i));
     }
     cpu_masks_ = std::vector<CPUMaskFlags>(kBandNumDevices, CPUMaskFlags::All);
     num_threads_ = std::vector<int>(kBandNumDevices, 1);
   }
-  WorkerConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
+  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
     workers_ = workers;
     return *this;
   }
@@ -127,7 +127,7 @@ class WorkerConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  std::vector<BandDeviceFlags> workers_;
+  std::vector<DeviceFlags> workers_;
   std::vector<CPUMaskFlags> cpu_masks_;
   std::vector<int> num_threads_;
   bool allow_worksteal_ = false;
@@ -185,7 +185,7 @@ class RuntimeConfigBuilder {
   }
 
   // Add WorkerConfig
-  RuntimeConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
+  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
     worker_config_builder_.AddWorkers(workers);
     return *this;
   }

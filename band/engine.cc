@@ -85,7 +85,7 @@ BandStatus Engine::RegisterModel(Model* model) {
           BAND_LOG_INTERNAL(BAND_LOG_INFO,
                             "Create model executor for model %d worker %s (%s)",
                             model_id,
-                            BandDeviceGetName(GetWorkerDevice(worker_id)),
+                            GetName(GetWorkerDevice(worker_id)),
                             BandStatusGetName(status));
         }
       }
@@ -182,9 +182,9 @@ BandStatus Engine::RegisterModel(Model* model) {
                     *rhs_model_executor->GetTensorView(rhs_key,
                                                        common_tensor_index))) {
                 BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s %d != %s %s %d",
-                              BandDeviceGetName(GetWorkerDevice(lhs.worker_id)),
+                              GetName(GetWorkerDevice(lhs.worker_id)),
                               lhs.ToString().c_str(), common_tensor_index,
-                              BandDeviceGetName(GetWorkerDevice(rhs.worker_id)),
+                              GetName(GetWorkerDevice(rhs.worker_id)),
                               rhs.ToString().c_str(), common_tensor_index);
               }
             }
@@ -202,7 +202,7 @@ BandStatus Engine::RegisterModel(Model* model) {
         std::vector<std::shared_ptr<Interface::ITensor>> output_tensors;
 
         auto model_subgraph_key =
-            GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+            GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
         Interface::IModelExecutor* primary_model_executor =
             GetModelExecutor(model_subgraph_key);
 
@@ -269,7 +269,7 @@ BandStatus Engine::UnregisterModel(Model* model) {
 Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
   // TODO: What if there are multiple backends?
   SubgraphKey model_subgraph_key =
-      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
 
   if (Interface::IModelExecutor* model_executor =
           GetModelExecutor(model_subgraph_key)) {
@@ -282,7 +282,7 @@ Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
 
 std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
-      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
   const Interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetOutputs(model_subgraph_key)
@@ -291,7 +291,7 @@ std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
 
 std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
-      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(kBandCPU));
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
   const Interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetInputs(model_subgraph_key)
@@ -300,7 +300,7 @@ std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
 
 size_t Engine::GetNumWorkers() const { return workers_.size(); }
 
-BandDeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
+DeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id)->GetDeviceFlag();
   } 
@@ -489,7 +489,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
   }
 
   // Search for all available backends, devices
-  std::set<BandDeviceFlags> valid_devices;
+  std::set<DeviceFlags> valid_devices;
   auto valid_backends = BackendFactory::GetAvailableBackends();
   for (auto backend : valid_backends) {
     auto backend_devices =
@@ -499,7 +499,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
 
   auto& potential_workers = config.worker_config.workers;
   for (int i = 0; i < potential_workers.size(); i++) {
-    BandDeviceFlags device_flag = potential_workers[i];
+    DeviceFlags device_flag = potential_workers[i];
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
       if (planner_->GetWorkerType() == kBandGlobalQueue) {
@@ -511,18 +511,18 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       }
       if (worker->Init(config.worker_config) != kBandOk) {
         error_reporter_->Report("Worker::Init() failed for worker : %s.",
-                                BandDeviceGetName(device_flag));
+                                GetName(device_flag));
         return kBandError;
       }
 
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
-                        BandDeviceGetName(device_flag));
+                        GetName(device_flag));
       worker->Start();
       workers_.push_back(std::move(worker));
       workers_waiting_[i] = 0;
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
-                        BandDeviceGetName(device_flag));
+                        GetName(device_flag));
     }
   }
 
@@ -1018,14 +1018,14 @@ BandStatus Engine::TryCopyOutputTensors(const Job& job) {
   return kBandOk;
 }
 
-WorkerId Engine::GetDeviceWorkerId(BandDeviceFlags flag) const {
+WorkerId Engine::GetDeviceWorkerId(DeviceFlags flag) const {
   for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
     if (workers_[worker_id]->GetDeviceFlag() == flag) {
       return worker_id;
     }
   }
   BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a worker for %s",
-                    BandDeviceGetName(flag));
+                    GetName(flag));
   return -1;
 }
 

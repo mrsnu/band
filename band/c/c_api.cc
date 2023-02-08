@@ -76,10 +76,10 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       b->impl.AddPlannerLogPath(arg);
     } break;
     case BAND_WORKER_WORKERS: {
-      std::vector<BandDeviceFlags> workers(count);
+      std::vector<Band::DeviceFlags> workers(count);
       for (int i = 0; i < count; i++) {
         int temp = va_arg(vl, int);
-        workers[i] = static_cast<BandDeviceFlags>(temp);
+        workers[i] = static_cast<Band::DeviceFlags>(temp);
       }
       b->impl.AddWorkers(workers);
     } break;
@@ -207,7 +207,7 @@ int BandEngineGetNumWorkers(BandEngine* engine) {
 }
 
 BandDeviceFlags BandEngineGetWorkerDevice(BandEngine* engine, int worker_id) {
-  return engine->impl->GetWorkerDevice(worker_id);
+  return static_cast<BandDeviceFlags>(engine->impl->GetWorkerDevice(worker_id));
 }
 
 BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,

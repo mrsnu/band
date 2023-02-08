@@ -25,14 +25,14 @@ class BackendFactory {
  public:
   static Interface::IModelExecutor* CreateModelExecutor(
       BackendType backend, ModelId model_id, WorkerId worker_id,
-      BandDeviceFlags device_flag);
+      DeviceFlags device_flag);
   static Interface::IModel* CreateModel(BackendType backend, ModelId id);
   static Interface::IBackendUtil* GetBackendUtil(BackendType backend);
   static std::vector<BackendType> GetAvailableBackends();
 
   static void RegisterBackendCreators(
       BackendType backend,
-      Creator<Interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
+      Creator<Interface::IModelExecutor, ModelId, WorkerId, DeviceFlags>*
           model_executor_creator,
       Creator<Interface::IModel, ModelId>* model_creator,
       Creator<Interface::IBackendUtil>* util_creator);
@@ -42,7 +42,7 @@ class BackendFactory {
 
   static std::map<BackendType,
                   std::shared_ptr<Creator<Interface::IModelExecutor, ModelId,
-                                          WorkerId, BandDeviceFlags>>>
+                                          WorkerId, DeviceFlags>>>
       model_executor_creators_;
   static std::map<BackendType,
                   std::shared_ptr<Creator<Interface::IModel, ModelId>>>

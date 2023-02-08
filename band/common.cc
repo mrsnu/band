@@ -91,6 +91,7 @@ SubgraphPreparationType FromString(std::string str) {
       return type;
     }
   }
+  // TODO(widiba03304): absl refactor
 }
 
 std::string GetName(DataType data_type) {
@@ -149,6 +150,17 @@ std::string GetName(DeviceFlags device_flags) {
       return "NPU";
     } break;
   }
+}
+
+template<>
+DeviceFlags FromString(std::string str) {
+  for (int i = 0; i < kBandNumDevices; i++) {
+    DeviceFlags flag = static_cast<DeviceFlags>(i);
+    if (GetName(flag) == str) {
+      return flag;
+    }
+  }
+  // TODO(widiba03304): absl refactor
 }
 
 std::string GetName(JobStatus job_status) {

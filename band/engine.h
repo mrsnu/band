@@ -64,7 +64,7 @@ class Engine : public Context {
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
   size_t GetNumWorkers() const override;
-  BandDeviceFlags GetWorkerDevice(WorkerId id) const;
+  DeviceFlags GetWorkerDevice(WorkerId id) const;
 
   BandStatus RequestSync(
       ModelId model_id,
@@ -158,7 +158,7 @@ class Engine : public Context {
   BandStatus TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
-  WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const;
+  WorkerId GetDeviceWorkerId(DeviceFlags flag) const;
   Interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
   const Interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;

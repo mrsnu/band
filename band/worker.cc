@@ -8,7 +8,7 @@
 
 namespace Band {
 Worker::Worker(Context* context, WorkerId worker_id,
-               BandDeviceFlags device_flag)
+               DeviceFlags device_flag)
     : context_(context), worker_id_(worker_id), device_flag_(device_flag) {}
 
 Worker::~Worker() {
@@ -25,7 +25,7 @@ BandStatus Worker::Init(const WorkerConfig& config) {
   BAND_LOG_INTERNAL(
       BAND_LOG_INFO,
       "Set affinity of worker (%d,%s) to %s cores for %d threads.", worker_id_,
-      BandDeviceGetName(device_flag_),
+      GetName(device_flag_),
       BandCPUMaskGetName(config.cpu_masks[worker_id_]),
       config.num_threads[worker_id_]);
 
@@ -155,7 +155,7 @@ BandStatus Worker::TryUpdateWorkerThread() {
     if (SetCPUThreadAffinity(cpu_set_) != kBandOk) {
       BAND_REPORT_ERROR(GetErrorReporter(),
                         "Worker (%d, %s) failed to set cpu thread affinity",
-                        worker_id_, BandDeviceGetName(device_flag_));
+                        worker_id_, GetName(device_flag_));
       return kBandError;
     }
   }
@@ -185,7 +185,7 @@ void Worker::Work() {
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
                         "enqueue time %d, invoke time %d, end time %d)",
-                        BandDeviceGetName(device_flag_), current_job->model_id,
+                        GetName(device_flag_), current_job->model_id,
                         current_job->subgraph_key.IsValid(),
                         current_job->subgraph_key.GetModelId(),
                         current_job->subgraph_key.GetWorkerId(),
@@ -231,7 +231,7 @@ void Worker::Work() {
       }
     } else {
       BAND_REPORT_ERROR(GetErrorReporter(), "%s worker failed to copy input",
-                        BandDeviceGetName(device_flag_));
+                        GetName(device_flag_));
       // TODO #21: Handle errors in multi-thread environment
       current_job->status = JobStatus::InputCopyFailure;
     }

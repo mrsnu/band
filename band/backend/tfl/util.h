@@ -13,7 +13,7 @@ DataType GetBandType(TfLiteType type);
 
 class TfLiteUtil : public Interface::IBackendUtil {
  public:
-  std::set<BandDeviceFlags> GetAvailableDevices() const override;
+  std::set<DeviceFlags> GetAvailableDevices() const override;
 };
 
 }  // namespace TfLite

@@ -34,7 +34,7 @@ Job GetEmptyJob() {
 
 TYPED_TEST(WokrerSuite, JobHelper) {
   MockContext context;
-  TypeParam worker(&context, 0, kBandCPU);
+  TypeParam worker(&context, 0, DeviceFlags::CPU);
   Job job = GetEmptyJob();
 
   worker.Start();
@@ -56,7 +56,7 @@ TYPED_TEST(WokrerSuite, Wait) {
   EXPECT_CALL(context, TryCopyInputTensors).Times(testing::AtLeast(1));
   EXPECT_CALL(context, TryCopyOutputTensors).Times(testing::AtLeast(1));
 
-  TypeParam worker(&context, 0, kBandCPU);
+  TypeParam worker(&context, 0, DeviceFlags::CPU);
   Job job = GetEmptyJob();
 
   worker.Start();

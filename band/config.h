@@ -34,12 +34,12 @@ struct WorkerConfig {
   WorkerConfig() {
     // Add one default worker per device
     for (int i = 0; i < kBandNumDevices; i++) {
-      workers.push_back(static_cast<BandDeviceFlags>(i));
+      workers.push_back(static_cast<DeviceFlags>(i));
     }
     cpu_masks = std::vector<CPUMaskFlags>(kBandNumDevices, CPUMaskFlags::All);
     num_threads = std::vector<int>(kBandNumDevices, 1);
   }
-  std::vector<BandDeviceFlags> workers;
+  std::vector<DeviceFlags> workers;
   std::vector<CPUMaskFlags> cpu_masks;
   std::vector<int> num_threads;
   bool allow_worksteal = false;

@@ -18,8 +18,8 @@ class ModelSpec {
             std::set<int> input_tensors, std::set<int> output_tensors,
             std::vector<std::set<int>> op_input_tensors,
             std::vector<std::set<int>> op_output_tensors,
-            std::map<BandDeviceFlags, std::set<int>> unsupported_ops,
-            std::set<BandDeviceFlags> unavailable_devices)
+            std::map<DeviceFlags, std::set<int>> unsupported_ops,
+            std::set<DeviceFlags> unavailable_devices)
       : num_ops(num_ops),
         num_tensors(num_tensors),
         tensor_types(tensor_types),
@@ -61,8 +61,8 @@ class ModelSpec {
   // e.g., kTfLiteMmapRo in Tensorflow Lite
   const std::vector<std::set<int>> op_input_tensors;
   const std::vector<std::set<int>> op_output_tensors;
-  const std::map<BandDeviceFlags, std::set<int>> unsupported_ops;
-  const std::set<BandDeviceFlags> unavailable_devices;
+  const std::map<DeviceFlags, std::set<int>> unsupported_ops;
+  const std::set<DeviceFlags> unavailable_devices;
 
   std::string path;
 

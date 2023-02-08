@@ -87,6 +87,8 @@ enum class DeviceFlags : int {
   NPU = 3
 };
 std::string GetName(DeviceFlags device_flags);
+template<>
+DeviceFlags FromString(std::string str);
 
 enum class JobStatus {
   Queued,

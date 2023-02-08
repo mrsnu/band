@@ -54,7 +54,7 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   ProfileConfig config =
       b.AddNumRuns(50).AddNumWarmups(3).AddOnline(true).Build();
 
-  TypeParam worker(&context, 0, kBandCPU);
+  TypeParam worker(&context, 0, DeviceFlags::CPU);
   context.worker = &worker;
 
   worker.Start();
@@ -91,7 +91,7 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   ProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
-  DeviceQueueWorker worker(&context, 0, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, DeviceFlags::CPU);
   // Explicitly assign worker to mock context
   context.worker = &worker;
   // Update worker thread affinity
@@ -121,7 +121,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   ProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
-  DeviceQueueWorker worker(&context, 0, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, DeviceFlags::CPU);
   // Explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();
@@ -145,7 +145,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 
   const std::string profile_path = testing::TempDir() + "log.json";
 
-  DeviceQueueWorker worker(&context, 0, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, DeviceFlags::CPU);
   // explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();
@@ -197,7 +197,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
 
   const std::string profile_path = testing::TempDir() + "log.json";
 
-  DeviceQueueWorker worker(&context, 0, kBandCPU);
+  DeviceQueueWorker worker(&context, 0, DeviceFlags::CPU);
   // explicitly assign worker to mock context
   context.worker = &worker;
   worker.Start();

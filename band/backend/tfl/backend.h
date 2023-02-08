@@ -12,10 +12,10 @@ namespace Band {
 using namespace Interface;
 namespace TfLite {
 class ModelExecutorCreator
-    : public Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags> {
+    : public Creator<IModelExecutor, ModelId, WorkerId, DeviceFlags> {
  public:
   IModelExecutor* Create(ModelId model_id, WorkerId worker_id,
-                         BandDeviceFlags device_flag) const override {
+                         DeviceFlags device_flag) const override {
     return new TfLiteModelExecutor(model_id, worker_id, device_flag);
   }
 };

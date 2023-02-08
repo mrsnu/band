@@ -20,11 +20,11 @@ Each configuration field is optional or required. If a field is optional, then i
    - `CPUMaskFlags::Big`
    - `CPUMaskFlags::Primary`
   
-- `BandDeviceFlags`: 
-  - `kBandCPU`
-  - `kBandGPU`
-  - `kBandDSP`
-  - `kBandNPU`
+- `DeviceFlags`: 
+  - `DeviceFlags::CPU`
+  - `DeviceFlags::GPU`
+  - `DeviceFlags::DSP`
+  - `DeviceFlags::NPU`
 
 - `SubgraphPreparationType`: 
   - `SubgraphPreparationType::NoFallbackSubgraph`
@@ -47,7 +47,7 @@ Each configuration field is optional or required. If a field is optional, then i
 - `log_path` [type: `std::string`, default: `""`]: The output path to the file for planner's log. If not specified, this will be ignored and will not generate the result file. 
 
 ## `WorkerConfig`
-- `workers` [type: `std::vector<BandDeviceFlags>`, default: `[kBandCPU, kBandGPU, ...]`]: The list of target devices. By default, one worker per device is generated.
+- `workers` [type: `std::vector<DeviceFlags>`, default: `[DeviceFlags::CPU, DeviceFlags::GPU, ...]`]: The list of target devices. By default, one worker per device is generated.
 - `cpu_masks` [type: `std::vector<CPUMaskFlags>`, default: `[CPUMaskFlags::All, CPUMaskFlags::All, ...]`]: CPU masks to set CPU affinity. The size of the list must be the same as the size of `workers`.
 - `num_threads` [type: `std::vector<int>`, default: `[1, 1, ...]`]: The number of threads. The size of the list must be the same as the size of `workers`.
 - `allow_worksteal` [type: `bool`, default: `false`]: Work-stealing is enabled if true, disabled if false.
@@ -83,7 +83,7 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddScheduleWindowSize(int schedule_window_size)`
 - `AddSchedulers(std::vector<SchedulerType> schedulers)`
 - `AddPlannerCPUMask(CPUMaskFlags cpu_masks)`
-- `AddWorkers(std::vector<BandDeviceFlags> workers)`
+- `AddWorkers(std::vector<DeviceFlags> workers)`
 - `AddWorkerCPUMasks(std::vector<CPUMaskFlags> cpu_masks)`
 - `AddWorkerNumThreads(std::vector<int> num_threads)`
 - `AddAllowWorkSteal(bool allow_worksteal)`

@@ -49,8 +49,8 @@ bool WorkerConfigBuilder::IsValid(
   bool result = true;
   for (int i = 0; i < workers_.size(); i++) {
     REPORT_IF_FALSE(WorkerConfigBuilder,
-                    workers_[i] == kBandCPU || workers_[i] == kBandGPU ||
-                        workers_[i] == kBandDSP || workers_[i] == kBandNPU);
+                    workers_[i] == DeviceFlags::CPU || workers_[i] == DeviceFlags::GPU ||
+                        workers_[i] == DeviceFlags::DSP || workers_[i] == DeviceFlags::NPU);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {

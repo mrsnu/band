@@ -20,7 +20,7 @@ class ITensorView;
 class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(ModelId model_id, WorkerId worker_id,
-                 BandDeviceFlags device_flag)
+                 DeviceFlags device_flag)
       : model_id_(model_id), worker_id_(worker_id), device_flag_(device_flag) {}
   virtual ~IModelExecutor() = default;
 
@@ -49,7 +49,7 @@ class IModelExecutor : public IBackendSpecific {
  protected:
   const ModelId model_id_;
   const WorkerId worker_id_;
-  const BandDeviceFlags device_flag_;
+  const DeviceFlags device_flag_;
 
  private:
   // Disable copy due to complexity

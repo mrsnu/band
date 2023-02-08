@@ -11,7 +11,7 @@ namespace TfLite {
 class TfLiteModelExecutor : public Interface::IModelExecutor {
  public:
   TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
-                      BandDeviceFlags device_flag);
+                      DeviceFlags device_flag);
   ~TfLiteModelExecutor() override;
 
   ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
@@ -42,15 +42,15 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   const tflite::Interpreter* GetInterpreter(const SubgraphKey& key) const;
 
   std::unique_ptr<tflite::Interpreter> CreateTfLiteInterpreter(
-      Interface::IModel* model, BandDeviceFlags device,
+      Interface::IModel* model, DeviceFlags device,
       std::set<int> op_indices = {});
   static std::pair<BandStatus, TfLiteDelegate*> GetDeviceDelegate(
-      BandDeviceFlags device);
+      DeviceFlags device);
 
   std::unordered_map<SubgraphKey, std::unique_ptr<tflite::Interpreter>,
                      SubgraphHash>
       interpreters_;
-  static std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
+  static std::map<DeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
       delegates_;
 };
 }  // namespace TfLite

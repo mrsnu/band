@@ -36,7 +36,7 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .AddSubgraphPreparationType(subgraph_type)
           .AddCPUMask(CPUMaskFlags::All)
           .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({kBandCPU, kBandCPU, kBandDSP, kBandNPU, kBandGPU})
+          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP, DeviceFlags::NPU, DeviceFlags::GPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
           .AddWorkerCPUMasks(
               {CPUMaskFlags::Big, CPUMaskFlags::Little, CPUMaskFlags::All, CPUMaskFlags::All, CPUMaskFlags::All})

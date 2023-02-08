@@ -18,7 +18,7 @@ class IBackendSpecific {
 
 class IBackendUtil {
  public:
-  virtual std::set<BandDeviceFlags> GetAvailableDevices() const = 0;
+  virtual std::set<DeviceFlags> GetAvailableDevices() const = 0;
 };
 
 }  // namespace Interface

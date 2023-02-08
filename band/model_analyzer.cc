@@ -165,19 +165,19 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
       backend_type_(backend_type) {
   std::unique_ptr<Interface::IModelExecutor> interpreter(
       BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
-                                          kBandCPU));
+                                          DeviceFlags::CPU));
   model_spec_ = std::make_shared<ModelSpec>(
       interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)));
 
   for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
     BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
                   SetToString(device_unsupported_ops.second).c_str(),
-                  BandDeviceGetName(device_unsupported_ops.first));
+                  GetName(device_unsupported_ops.first));
   }
 
   for (auto device : model_spec_->unavailable_devices) {
     BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s",
-                  BandDeviceGetName(device));
+                  GetName(device));
   }
 }
 
@@ -306,7 +306,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
       std::vector<SubgraphDef> worker_op_sets =
           GetSubgraphsForFallbackOps(worker_id);
       for (auto worker_and_ops : worker_op_sets) {
-        if (context_.GetWorker(worker_id)->GetDeviceFlag() == kBandCPU) {
+        if (context_.GetWorker(worker_id)->GetDeviceFlag() == DeviceFlags::CPU) {
           continue;
         }
         if (worker_and_ops.op_indices.size() <
@@ -332,18 +332,19 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
 
     for (int op_index = 0; op_index < num_ops; op_index++) {
       for (WorkerId worker_id = 0; worker_id < num_workers; ++worker_id) {
-        BandDeviceFlags device_flag =
+        DeviceFlags device_flag =
             context_.GetWorker(worker_id)->GetDeviceFlag();
-        if (device_flag == kBandCPU) {
+        if (device_flag == DeviceFlags::CPU) {
           op_support_table[op_index] |= 1 << worker_id;
           continue;
         }
 
-        if (unsupported_ops.find(device_flag) == unsupported_ops.end() ||
-            unsupported_ops.at(device_flag).find(op_index) ==
-                unsupported_ops.at(device_flag).end()) {
-          if (op_sets_to_ignore[device_flag].find(op_index) ==
-              op_sets_to_ignore[device_flag].end()) {
+        WorkerId tmp_worker_id = static_cast<int>(device_flag);
+        if (unsupported_ops.find(tmp_worker_id) == unsupported_ops.end() ||
+            unsupported_ops.at(tmp_worker_id).find(op_index) ==
+                unsupported_ops.at(tmp_worker_id).end()) {
+          if (op_sets_to_ignore[tmp_worker_id].find(op_index) ==
+              op_sets_to_ignore[tmp_worker_id].end()) {
             op_support_table[op_index] |= 1 << worker_id;
           }
         }
@@ -507,7 +508,7 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
 
   std::vector<SubgraphDef> subgraph_defs;
   const int num_ops = model_spec_->num_ops;
-  const BandDeviceFlags device_flag =
+  const DeviceFlags device_flag =
       context_.GetWorker(worker_id)->GetDeviceFlag();
   const std::set<int>& unsupported_ops =
       model_spec_->unsupported_ops.at(device_flag);
@@ -515,7 +516,7 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
   std::set<int> cpu_worker_ids;
   for (WorkerId worker_id = 0; worker_id < context_.GetNumWorkers();
        worker_id++) {
-    if (context_.GetWorker(worker_id)->GetDeviceFlag() == kBandCPU) {
+    if (context_.GetWorker(worker_id)->GetDeviceFlag() == DeviceFlags::CPU) {
       cpu_worker_ids.insert(worker_id);
     }
   }
@@ -564,7 +565,7 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     std::set<int> operator_set;
     bool found = true;
     // Switch between device and fallback
-    BandDeviceFlags current_device = is_fallback ? kBandCPU : device_flag;
+    DeviceFlags current_device = is_fallback ? DeviceFlags::CPU : device_flag;
 
     // Get all op that has resolvable dependency to specific device
     while (found) {
@@ -605,7 +606,7 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     }
 
     if (operator_set.size()) {
-      if (current_device == kBandCPU && device_flag != kBandCPU) {
+      if (current_device == DeviceFlags::CPU && device_flag != DeviceFlags::CPU) {
         for (auto cpu_worker_id : cpu_worker_ids) {
           subgraph_defs.push_back({cpu_worker_id, operator_set, {}});
         }

@@ -42,7 +42,7 @@ TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   WorkerConfigBuilder b;
   WorkerConfig config_ok = b.AddAllowWorkSteal(false)
                                .AddAvailabilityCheckIntervalMs(1000)
-                               .AddWorkers({kBandCPU, kBandDSP})
+                               .AddWorkers({DeviceFlags::CPU, DeviceFlags::DSP})
                                .AddCPUMasks({CPUMaskFlags::All, CPUMaskFlags::All})
                                .AddNumThreads({1, 1})
                                .Build();
@@ -52,9 +52,9 @@ TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   EXPECT_EQ(config_ok.cpu_masks.size(), config_ok.workers.size());
   EXPECT_EQ(config_ok.num_threads.size(), config_ok.workers.size());
 
-  b.AddWorkers({kBandCPU});
+  b.AddWorkers({DeviceFlags::CPU});
   EXPECT_FALSE(b.IsValid());
-  b.AddWorkers({kBandCPU, kBandGPU});
+  b.AddWorkers({DeviceFlags::CPU, DeviceFlags::GPU});
   EXPECT_TRUE(b.IsValid());
 }
 
@@ -98,7 +98,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
   EXPECT_EQ(config_ok.planner_config.schedulers[0], SchedulerType::FixedWorker);
   EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlags::Big);
-  EXPECT_EQ(config_ok.worker_config.workers[0], kBandCPU);
+  EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlags::CPU);
   EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlags::All);
   EXPECT_EQ(config_ok.worker_config.num_threads[0], 1);
   EXPECT_EQ(config_ok.worker_config.allow_worksteal, true);
@@ -118,10 +118,10 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.planner_config.schedulers[0], SchedulerType::FixedWorker);
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);
   EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlags::All);
-  EXPECT_EQ(config_ok.worker_config.workers[0], kBandCPU);
-  EXPECT_EQ(config_ok.worker_config.workers[1], kBandGPU);
-  EXPECT_EQ(config_ok.worker_config.workers[2], kBandDSP);
-  EXPECT_EQ(config_ok.worker_config.workers[3], kBandNPU);
+  EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlags::CPU);
+  EXPECT_EQ(config_ok.worker_config.workers[1], DeviceFlags::GPU);
+  EXPECT_EQ(config_ok.worker_config.workers[2], DeviceFlags::DSP);
+  EXPECT_EQ(config_ok.worker_config.workers[3], DeviceFlags::NPU);
   EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlags::All);
   EXPECT_EQ(config_ok.worker_config.cpu_masks[1], CPUMaskFlags::All);
   EXPECT_EQ(config_ok.worker_config.cpu_masks[2], CPUMaskFlags::All);

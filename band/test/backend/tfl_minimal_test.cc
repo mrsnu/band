@@ -23,7 +23,7 @@ TEST(TFLiteBackend, BackendInvoke) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.tflite");
 
-  TfLite::TfLiteModelExecutor model_executor(0, 0, kBandCPU);
+  TfLite::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
   EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), kBandOk);
   EXPECT_EQ(
       model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey()),
@@ -34,7 +34,7 @@ TEST(TFLiteBackend, ModelSpec) {
   TfLite::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.tflite");
 
-  TfLite::TfLiteModelExecutor model_executor(0, 0, kBandCPU);
+  TfLite::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
   ModelSpec model_spec = model_executor.InvestigateModelSpec(&bin_model);
 
 #ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
@@ -61,7 +61,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
   bin_model->FromPath("band/test/data/add.tflite");
 
   IModelExecutor* model_executor =
-      BackendFactory::CreateModelExecutor(BackendType::TfLite, 0, 0, kBandCPU);
+      BackendFactory::CreateModelExecutor(BackendType::TfLite, 0, 0, DeviceFlags::CPU);
   EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), kBandOk);
 
   SubgraphKey key = model_executor->GetLargestSubgraphKey();
@@ -93,7 +93,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
                              .AddSubgraphPreparationType(SubgraphPreparationType::MergeUnitSubgraph)
                              .AddCPUMask(CPUMaskFlags::All)
                              .AddPlannerCPUMask(CPUMaskFlags::Primary)
-                             .AddWorkers({kBandCPU, kBandCPU})
+                             .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
                              .AddWorkerNumThreads({3, 4})
                              .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
                              .AddSmoothingFactor(0.1)
@@ -146,7 +146,7 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
                              .AddSubgraphPreparationType(SubgraphPreparationType::MergeUnitSubgraph)
                              .AddCPUMask(CPUMaskFlags::All)
                              .AddPlannerCPUMask(CPUMaskFlags::Primary)
-                             .AddWorkers({kBandCPU, kBandCPU})
+                             .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
                              .AddWorkerNumThreads({3, 4})
                              .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
                              .AddSmoothingFactor(0.1)
@@ -180,7 +180,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
                              .AddSubgraphPreparationType(SubgraphPreparationType::MergeUnitSubgraph)
                              .AddCPUMask(CPUMaskFlags::All)
                              .AddPlannerCPUMask(CPUMaskFlags::Primary)
-                             .AddWorkers({kBandCPU, kBandCPU})
+                             .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
                              .AddWorkerNumThreads({3, 4})
                              .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
                              .AddSmoothingFactor(0.1)
@@ -234,7 +234,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
           .AddSubgraphPreparationType(SubgraphPreparationType::MergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlags::All)
           .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({kBandCPU, kBandCPU, kBandDSP, kBandNPU, kBandGPU})
+          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP, DeviceFlags::NPU, DeviceFlags::GPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
           .AddWorkerCPUMasks(
               {CPUMaskFlags::Big, CPUMaskFlags::Little, CPUMaskFlags::All, CPUMaskFlags::All, CPUMaskFlags::All})
@@ -268,7 +268,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   std::cout << "Num workers " << engine->GetNumWorkers() << std::endl;
   for (int worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
     std::cout << "Run on worker (device: "
-              << BandDeviceGetName(engine->GetWorkerDevice(worker_id)) << ")"
+              << GetName(engine->GetWorkerDevice(worker_id)) << ")"
               << std::endl;
     EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true, -1, -1},
                                   {input_tensor}, {output_tensor}),
@@ -292,7 +292,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
           .AddSubgraphPreparationType(SubgraphPreparationType::MergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlags::All)
           .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({kBandCPU, kBandCPU, kBandDSP, kBandNPU, kBandGPU})
+          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP, DeviceFlags::NPU, DeviceFlags::GPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
           .AddWorkerCPUMasks(
               {CPUMaskFlags::Big, CPUMaskFlags::Little, CPUMaskFlags::All, CPUMaskFlags::All, CPUMaskFlags::All})

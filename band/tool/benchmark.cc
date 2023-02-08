@@ -204,13 +204,14 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   // Worker config
   {
     if (!root["workers"].isNull()) {
-      std::vector<BandDeviceFlags> workers;
+      std::vector<DeviceFlags> workers;
       std::vector<CPUMaskFlags> cpu_masks;
       std::vector<int> num_threads;
 
       for (auto worker : root["workers"]) {
         if (worker["device"].isString()) {
-          workers.push_back(BandDeviceGetFlag(worker["device"].asCString()));
+          workers.push_back(
+              FromString<DeviceFlags>(worker["device"].asCString()));
         }
         if (worker["num_threads"].isInt()) {
           num_threads.push_back(worker["num_threads"].asInt());
