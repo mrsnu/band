@@ -194,7 +194,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
 
   // record finished / failed job
-  if (context_.IsEnd(job.subgraph_key) || job.status != kBandJobSuccess) {
+  if (context_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
 
@@ -205,7 +205,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
   if (on_end_request_ && job.require_callback &&
       context_.IsEnd(job.subgraph_key)) {
     on_end_request_(job.job_id,
-                    job.status == kBandJobSuccess ? kBandOk : kBandError);
+                    job.status == JobStatus::Success ? kBandOk : kBandError);
   }
 }
 
@@ -292,11 +292,11 @@ void Planner::FlushFinishedJobs() {
       bool is_final_subgraph = context_.IsEnd(job.subgraph_key);
 
       if (job.slo_us > 0 && is_final_subgraph &&
-          job.status == kBandJobSuccess) {
+          job.status == JobStatus::Success) {
         // check if slo has been violated or not
         auto latency = job.end_time - job.enqueue_time;
         job.status =
-            latency > job.slo_us ? kBandJobSLOViolation : kBandJobSuccess;
+            latency > job.slo_us ? JobStatus::SLOViolation : JobStatus::Success;
       }
 
       if (is_final_subgraph) {
@@ -390,7 +390,7 @@ void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 }
 
 bool Planner::IsSLOViolated(Job& job) {
-  if (job.status == kBandJobSLOViolation) {
+  if (job.status == JobStatus::SLOViolation) {
     return true;
   }
   // this job has an SLO; check if it's not too late already
@@ -409,7 +409,7 @@ bool Planner::IsSLOViolated(Job& job) {
 
 void Planner::HandleSLOViolatedJob(Job& job) {
   // no point in running this job anymore
-  job.status = kBandJobSLOViolation;
+  job.status = JobStatus::SLOViolation;
 
   // mark this as -1 to differentiate it from the default value, 0
   job.invoke_time = -1;

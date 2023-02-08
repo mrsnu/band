@@ -7,7 +7,7 @@ namespace Band {
 namespace Interface {
 class IBackendSpecific {
  public:
-  virtual BandBackendType GetBackendType() const = 0;
+  virtual BackendType GetBackendType() const = 0;
   bool IsCompatible(const IBackendSpecific& rhs) const {
     return IsCompatible(&rhs);
   }

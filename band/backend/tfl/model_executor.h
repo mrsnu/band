@@ -18,7 +18,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   BandStatus PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
                              std::set<int> unit_indices = {}) override;
 
-  BandBackendType GetBackendType() const override;
+  BackendType GetBackendType() const override;
   const std::vector<int>& GetInputs(const SubgraphKey& key) const override;
   const std::vector<int>& GetOutputs(const SubgraphKey& key) const override;
   const char* GetInputName(const SubgraphKey& key, int index) const override;

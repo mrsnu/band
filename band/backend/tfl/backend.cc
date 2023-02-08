@@ -3,7 +3,7 @@
 namespace Band {
 bool TfLiteRegisterCreators() {
   BackendFactory::RegisterBackendCreators(
-      kBandTfLite, new TfLite::ModelExecutorCreator, new TfLite::ModelCreator,
+      BackendType::TfLite, new TfLite::ModelExecutorCreator, new TfLite::ModelCreator,
       new TfLite::UtilCreator);
   return true;
 }

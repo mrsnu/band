@@ -17,18 +17,18 @@ class Model {
   ~Model();
   ModelId GetId() const;
 
-  BandStatus FromPath(BandBackendType backend_type, const char* filename);
-  BandStatus FromBuffer(BandBackendType backend_type, const char* buffer,
+  BandStatus FromPath(BackendType backend_type, const char* filename);
+  BandStatus FromBuffer(BackendType backend_type, const char* buffer,
                         size_t buffer_size);
 
-  Interface::IModel* GetBackendModel(BandBackendType backend_type);
-  std::set<BandBackendType> GetSupportedBackends() const;
+  Interface::IModel* GetBackendModel(BackendType backend_type);
+  std::set<BackendType> GetSupportedBackends() const;
 
  private:
   static ModelId next_model_id_;
   const ModelId model_id_;
 
-  std::map<BandBackendType, std::shared_ptr<Interface::IModel>> backend_models_;
+  std::map<BackendType, std::shared_ptr<Interface::IModel>> backend_models_;
 };
 }  // namespace Band
 

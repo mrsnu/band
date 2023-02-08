@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "band/common.h"
 #include "band/backend_factory.h"
 #include "band/context.h"
 #include "band/interface/tensor_view.h"
@@ -47,7 +48,7 @@ BandStatus Engine::RegisterModel(Model* model) {
 
   const ModelId model_id = model->GetId();
 
-  for (BandBackendType backend_type : model->GetSupportedBackends()) {
+  for (BackendType backend_type : model->GetSupportedBackends()) {
     // Analyze model & generate subgraphs per backend type
     ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
                            subgraph_config_, model, backend_type);
@@ -302,10 +303,12 @@ size_t Engine::GetNumWorkers() const { return workers_.size(); }
 BandDeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id)->GetDeviceFlag();
-  } else {
-    BAND_REPORT_ERROR(error_reporter_, "Invalid worker id %d", id);
-    return kBandNumDevices;
-  }
+  } 
+  // TODO(widiba03304): absl refactor
+  // else {
+  //   BAND_REPORT_ERROR(error_reporter_, "Invalid worker id %d", id);
+  //   return kBandNumDevices;
+  // }
 }
 
 BandStatus Engine::RequestSync(ModelId model_id, BandRequestOption options,

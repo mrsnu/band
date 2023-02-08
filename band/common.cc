@@ -1,7 +1,174 @@
 #include "band/common.h"
 
-#include "common.h"
 namespace Band {
+
+std::string GetName(BackendType backend_type) {
+  switch (backend_type) {
+    case BackendType::TfLite: {
+      return "Tensorflow Lite";
+    } break;
+      // Note: the `default` case is deliberately not implemented to generate a
+      // compiler warning for unused case.
+  }
+}
+
+std::string GetName(CPUMaskFlags cpu_mask_flags) {
+  switch (cpu_mask_flags) {
+    case CPUMaskFlags::DeviceQueue: {
+      return "DeviceQueue";
+    } break;
+    case CPUMaskFlags::GlobalQueue: {
+      return "GlobalQueue";
+    } break;
+  }
+}
+
+std::string GetName(SchedulerType scheduler_type) {
+  switch (scheduler_type) {
+    case SchedulerType::FixedWorker: {
+      return "fixed_worker";
+    } break;
+    case SchedulerType::RoundRobin: {
+      return "round_robin";
+    } break;
+    case SchedulerType::ShortestExpectedLatency: {
+      return "shortest_expected_latency";
+    } break;
+    case SchedulerType::FixedWorkerGlobalQueue: {
+      return "fixed_worker_global_queue";
+    } break;
+    case SchedulerType::HeterogeneousEarliestFinishTime: {
+      return "heterogeneous_earliest_finish_time";
+    } break;
+    case SchedulerType::LeastSlackTimeFirst: {
+      return "least_slack_time_first";
+    } break;
+    case SchedulerType::HeterogeneousEarliestFinishTimeReserved: {
+      return "heterogeneous_earliest_finish_time_reserved";
+    } break;
+  }
+}
+
+std::string GetName(SubgraphPreparationType subgraph_preparation_type) {
+  switch (subgraph_preparation_type) {
+    case SubgraphPreparationType::NoFallbackSubgraph: {
+      return "no_fallback_subgraph";
+    } break;
+    case SubgraphPreparationType::FallbackPerWorker: {
+      return "fallback_per_worker";
+    } break;
+    case SubgraphPreparationType::UnitSubgraph: {
+      return "unit_subgraph";
+    } break;
+    case SubgraphPreparationType::MergeUnitSubgraph: {
+      return "merge_unit_subgraph";
+    } break;
+  }
+}
+std::string GetName(DataType data_type) {
+  switch (data_type) {
+    case DataType::NoType: {
+      return "NOTYPE";
+    } break;
+    case DataType::Float32: {
+      return "FLOAT32";
+    } break;
+    case DataType::Int16: {
+      return "INT16";
+    } break;
+    case DataType::Int32: {
+      return "INT32";
+    } break;
+    case DataType::UInt8: {
+      return "UINT8";
+    } break;
+    case DataType::Int8: {
+      return "INT8";
+    } break;
+    case DataType::Int64: {
+      return "INT64";
+    } break;
+    case DataType::Bool: {
+      return "BOOL";
+    } break;
+    case DataType::Complex64: {
+      return "COMPLEX64";
+    } break;
+    case DataType::String: {
+      return "STRING";
+    } break;
+    case DataType::Float16: {
+      return "FLOAT16";
+    } break;
+    case DataType::Float64: {
+      return "FLOAT64";
+    } break;
+  }
+}
+
+std::string GetName(DeviceFlags device_flags) {
+  switch (device_flags) {
+    case DeviceFlags::CPU: {
+      return "CPU";
+    } break;
+    case DeviceFlags::GPU: {
+      return "GPU";
+    } break;
+    case DeviceFlags::DSP: {
+      return "DSP";
+    } break;
+    case DeviceFlags::NPU: {
+      return "NPU";
+    } break;
+  }
+}
+
+std::string GetName(JobStatus job_status) {
+  switch (job_status) {
+    case JobStatus::Queued: {
+      return "Queued";
+    } break;
+    case JobStatus::Success: {
+      return "Success";
+    } break;
+    case JobStatus::SLOViolation: {
+      return "SLOViolation";
+    } break;
+    case JobStatus::InputCopyFailure: {
+      return "InputCopyFailure";
+    } break;
+    case JobStatus::OutputCopyFailure: {
+      return "OutputCopyFailure";
+    } break;
+    case JobStatus::InvokeFailure: {
+      return "InvokeFailure";
+    } break;
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
+  switch (status) {
+    case JobStatus::Queued: {
+      return os << "Queued";
+    } break;
+    case JobStatus::Success: {
+      return os << "Success";
+    } break;
+    case JobStatus::SLOViolation: {
+      return os << "SLOViolation";
+    } break;
+    case JobStatus::InputCopyFailure: {
+      return os << "InputCopyFailure";
+    } break;
+    case JobStatus::OutputCopyFailure: {
+      return os << "OutputCopyFailure";
+    } break;
+    case JobStatus::InvokeFailure: {
+      return os << "InvokeFailure";
+    } break;
+  }
+}
+
 SubgraphKey::SubgraphKey() {}
 // special case - entire model subgraph
 SubgraphKey::SubgraphKey(ModelId model_id, WorkerId worker_id,
@@ -87,4 +254,5 @@ std::size_t CacheHash::operator()(const std::pair<int, BitMask>& p) const {
   auto hash_func = std::hash<int>();
   return hash_func(p.first) ^ hash_func(p.second.to_ullong());
 }
+
 }  // namespace Band

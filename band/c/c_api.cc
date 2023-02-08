@@ -4,6 +4,16 @@
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 
+namespace {
+
+Band::BackendType ConvertToBackendType(BandBackendType backend_type) {
+  switch (backend_type) {
+    case kBandTfLite: {
+      return Band::BackendType::TfLite;
+    } break;
+  }
+}
+
 std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
     BandTensor** tensors, int num_tensors) {
   std::vector<Band::Interface::ITensor*> vec(num_tensors);
@@ -12,6 +22,8 @@ std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
   }
   return vec;
 }
+
+}  // anonymous namespace
 
 #ifdef __cplusplus
 extern "C" {
@@ -135,13 +147,13 @@ void BandModelDelete(BandModel* model) { delete model; }
 BandStatus BandModelAddFromBuffer(BandModel* model,
                                   BandBackendType backend_type,
                                   const void* model_data, size_t model_size) {
-  return model->impl->FromBuffer(backend_type, (const char*)model_data,
+  return model->impl->FromBuffer(ConvertToBackendType(backend_type), (const char*)model_data,
                                  model_size);
 }
 
 BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
                                 const char* model_path) {
-  return model->impl->FromPath(backend_type, model_path);
+  return model->impl->FromPath(ConvertToBackendType(backend_type), model_path);
 }
 
 void BandTensorDelete(BandTensor* tensor) { delete tensor; }

@@ -10,7 +10,7 @@ class TfLiteTensorView : public Interface::ITensorView {
  public:
   TfLiteTensorView(TfLiteTensor* tensor);
 
-  BandBackendType GetBackendType() const override;
+  BackendType GetBackendType() const override;
   BandType GetType() const override;
   void SetType(BandType type) override;
   const char* GetData() const override;

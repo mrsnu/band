@@ -9,7 +9,7 @@ namespace Band {
 namespace TfLite {
 TfLiteTensorView::TfLiteTensorView(TfLiteTensor* tensor) : tensor_(tensor) {}
 
-BandBackendType TfLiteTensorView::GetBackendType() const { return kBandTfLite; }
+BackendType TfLiteTensorView::GetBackendType() const { return BackendType::TfLite; }
 
 BandType TfLiteTensorView::GetType() const { return BandType(tensor_->type); }
 

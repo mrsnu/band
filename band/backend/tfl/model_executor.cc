@@ -1,11 +1,13 @@
 #include "band/backend/tfl/model_executor.h"
 
+#include "band/common.h"
 #include "band/backend/tfl/model.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend/tfl/util.h"
 #include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/worker.h"
+
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/subgraph.h"
 
@@ -14,7 +16,6 @@
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/nnapi/nnapi_util.h"
 #endif  // __ANDROID__
-#include "model_executor.h"
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 
@@ -171,8 +172,8 @@ BandStatus TfLiteModelExecutor::PrepareSubgraph(Interface::IModel* model,
   }
 }
 
-BandBackendType TfLiteModelExecutor::GetBackendType() const {
-  return kBandTfLite;
+BackendType TfLiteModelExecutor::GetBackendType() const {
+  return BackendType::TfLite;
 }
 
 const std::vector<int>& TfLiteModelExecutor::GetInputs(
@@ -299,7 +300,8 @@ BandDeviceFlags GetNNAPIDeviceFlag(std::string name) {
   // 1. Add additional NPU / TPU names
   // 2. Is 'hta' belongs to dsp or npu?
 
-  return kBandNumDevices;
+  // TODO(widiba03304): absl refactor
+  // return kBandNumDevices;
 }
 
 std::unique_ptr<tflite::Interpreter>

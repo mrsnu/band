@@ -1,6 +1,7 @@
 #ifndef BAND_COMMON_H_
 #define BAND_COMMON_H_
 
+#include <iostream>
 #include <bitset>
 #include <list>
 #include <map>
@@ -11,11 +12,81 @@
 #include "band/c/common.h"
 
 namespace Band {
+
 typedef int WorkerId;
 typedef int ModelId;
 typedef int JobId;
 
 using BitMask = std::bitset<64>;
+
+static size_t kBandNumCpuMasks = 4;
+static size_t kBandNumSchedulerTypes = 7;
+static size_t kBandNumSubgraphPreparationType = 4;
+static size_t kBandNumDevices = 4;
+
+enum class BackendType {
+  TfLite
+};
+std::string GetName(BackendType backend_type);
+
+enum class CPUMaskFlags {
+  DeviceQueue,
+  GlobalQueue
+};
+std::string GetName(CPUMaskFlags cpu_mask_flags);
+
+enum class SchedulerType {
+  FixedWorker,
+  RoundRobin,
+  ShortestExpectedLatency,
+  FixedWorkerGlobalQueue,
+  HeterogeneousEarliestFinishTime,
+  LeastSlackTimeFirst,
+  HeterogeneousEarliestFinishTimeReserved
+};
+std::string GetName(SchedulerType scheduler_type);
+
+enum class SubgraphPreparationType {
+  NoFallbackSubgraph,
+  FallbackPerWorker,
+  UnitSubgraph,
+  MergeUnitSubgraph
+};
+std::string GetName(SubgraphPreparationType subgraph_preparation_type);
+
+enum class DataType {
+  NoType,
+  Float32,
+  Int32,
+  UInt8,
+  Int64,
+  String,
+  Bool,
+  Int16,
+  Complex64,
+  Int8,
+  Float16,
+  Float64
+};
+std::string GetName(DataType data_type);
+
+enum class DeviceFlags {
+  CPU,
+  GPU,
+  DSP,
+  NPU
+};
+std::string GetName(DeviceFlags device_flags);
+
+enum class JobStatus {
+  Queued,
+  Success,
+  SLOViolation,
+  InputCopyFailure,
+  OutputCopyFailure,
+  InvokeFailure
+};
+std::string GetName(JobStatus job_status);
 
 // data structure for identifying subgraphs within whole models
 class SubgraphKey {
@@ -49,14 +120,7 @@ struct SubgraphHash {
   std::size_t operator()(const SubgraphKey& p) const;
 };
 
-enum JobStatus {
-  kBandJobQueued,
-  kBandJobSuccess,
-  kBandJobSLOViolation,
-  kBandJobInputCopyFailure,
-  kBandJobOutputCopyFailure,
-  kBandJobInvokeFailure
-};
+std::ostream& operator<<(std::ostream& os, const JobStatus& status);
 
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
@@ -92,7 +156,7 @@ struct Job {
   bool require_callback = true;
 
   // Current status for execution (Valid after planning)
-  JobStatus status = kBandJobQueued;
+  JobStatus status = JobStatus::Queued;
   SubgraphKey subgraph_key;
   std::vector<Job> following_jobs;
 

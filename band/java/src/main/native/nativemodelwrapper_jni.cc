@@ -8,12 +8,12 @@ using Band::jni::ConvertLongToModel;
 
 namespace {
 
-int ConvertBackendTypeToInt(BandBackendType backend_type) {
+int ConvertBackendTypeToInt(Band::BackendType backend_type) {
   return static_cast<int>(backend_type);
 }
 
-BandBackendType ConvertJintToBackendType(jint backend_type) {
-  return static_cast<BandBackendType>(backend_type);
+Band::BackendType ConvertJintToBackendType(jint backend_type) {
+  return static_cast<Band::BackendType>(backend_type);
 }
 
 }  // anonymous namespace

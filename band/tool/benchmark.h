@@ -12,7 +12,7 @@ namespace Band {
 namespace tool {
 class Benchmark {
  public:
-  Benchmark(BandBackendType target_backend = kBandTfLite);
+  Benchmark(BackendType target_backend = BackendType::TfLite);
   ~Benchmark();
   BandStatus Initialize(int argc, const char** argv);
   BandStatus Run();
@@ -46,7 +46,7 @@ class Benchmark {
 
   BandStatus LogResults();
 
-  const BandBackendType target_backend_;
+  const BackendType target_backend_;
   BenchmarkConfig benchmark_config_;
   RuntimeConfig* runtime_config_ = nullptr;
   std::unique_ptr<Engine> engine_ = nullptr;

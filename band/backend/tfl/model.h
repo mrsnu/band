@@ -11,7 +11,7 @@ namespace TfLite {
 class TfLiteModel : public Interface::IModel {
  public:
   TfLiteModel(ModelId id);
-  BandBackendType GetBackendType() const override;
+  BackendType GetBackendType() const override;
   BandStatus FromPath(const char* filename) override;
   BandStatus FromBuffer(const char* buffer, size_t buffer_size) override;
   bool IsInitialized() const override;

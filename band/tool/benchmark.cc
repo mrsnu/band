@@ -16,7 +16,7 @@
 
 namespace Band {
 namespace tool {
-Benchmark::Benchmark(BandBackendType target_backend)
+Benchmark::Benchmark(BackendType target_backend)
     : target_backend_(target_backend) {}
 
 Benchmark::~Benchmark() {

@@ -54,7 +54,7 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(kBandTfLite, model_name.c_str()), kBandOk);
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 }
 

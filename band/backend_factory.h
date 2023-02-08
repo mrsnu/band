@@ -24,14 +24,14 @@ struct Creator {
 class BackendFactory {
  public:
   static Interface::IModelExecutor* CreateModelExecutor(
-      BandBackendType backend, ModelId model_id, WorkerId worker_id,
+      BackendType backend, ModelId model_id, WorkerId worker_id,
       BandDeviceFlags device_flag);
-  static Interface::IModel* CreateModel(BandBackendType backend, ModelId id);
-  static Interface::IBackendUtil* GetBackendUtil(BandBackendType backend);
-  static std::vector<BandBackendType> GetAvailableBackends();
+  static Interface::IModel* CreateModel(BackendType backend, ModelId id);
+  static Interface::IBackendUtil* GetBackendUtil(BackendType backend);
+  static std::vector<BackendType> GetAvailableBackends();
 
   static void RegisterBackendCreators(
-      BandBackendType backend,
+      BackendType backend,
       Creator<Interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
           model_executor_creator,
       Creator<Interface::IModel, ModelId>* model_creator,
@@ -40,14 +40,14 @@ class BackendFactory {
  private:
   BackendFactory() = default;
 
-  static std::map<BandBackendType,
+  static std::map<BackendType,
                   std::shared_ptr<Creator<Interface::IModelExecutor, ModelId,
                                           WorkerId, BandDeviceFlags>>>
       model_executor_creators_;
-  static std::map<BandBackendType,
+  static std::map<BackendType,
                   std::shared_ptr<Creator<Interface::IModel, ModelId>>>
       model_creators_;
-  static std::map<BandBackendType,
+  static std::map<BackendType,
                   std::shared_ptr<Creator<Interface::IBackendUtil>>>
       util_creators_;
 };

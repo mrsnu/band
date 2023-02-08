@@ -217,7 +217,7 @@ void Worker::Work() {
           context_->EnqueueBatch(current_job->following_jobs);
         }
         context_->TryCopyOutputTensors(*current_job);
-        current_job->status = kBandJobSuccess;
+        current_job->status = JobStatus::Success;
       } else if (status == kBandDelegateError) {
         HandleDeviceError(*current_job);
         context_->Trigger();
@@ -227,13 +227,13 @@ void Worker::Work() {
         // !requests_.empty(), so it's safe to update it w/o grabbing the lock
         current_job->end_time = Time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
-        current_job->status = kBandJobInvokeFailure;
+        current_job->status = JobStatus::InvokeFailure;
       }
     } else {
       BAND_REPORT_ERROR(GetErrorReporter(), "%s worker failed to copy input",
                         BandDeviceGetName(device_flag_));
       // TODO #21: Handle errors in multi-thread environment
-      current_job->status = kBandJobInputCopyFailure;
+      current_job->status = JobStatus::InputCopyFailure;
     }
     context_->EnqueueFinishedJob(*current_job);
 

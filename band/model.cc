@@ -12,11 +12,11 @@ Model::~Model() {}
 
 ModelId Model::GetId() const { return model_id_; }
 
-BandStatus Model::FromPath(BandBackendType backend_type, const char* filename) {
+BandStatus Model::FromPath(BackendType backend_type, const char* filename) {
   if (GetBackendModel(backend_type)) {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                       "Tried to create %s model again for model id %d",
-                      BandBackendGetName(backend_type), GetId());
+                      GetName(backend_type), GetId());
     return kBandError;
   }
   // TODO: check whether new model shares input / output shapes with existing
@@ -29,17 +29,17 @@ BandStatus Model::FromPath(BandBackendType backend_type, const char* filename) {
     return kBandOk;
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to create %s model from %s",
-                      BandBackendGetName(backend_type), filename);
+                      GetName(backend_type), filename);
     return kBandError;
   }
 }
 
-BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
+BandStatus Model::FromBuffer(BackendType backend_type, const char* buffer,
                              size_t buffer_size) {
   if (GetBackendModel(backend_type)) {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                       "Tried to create %s model again for model id %d",
-                      BandBackendGetName(backend_type), GetId());
+                      GetName(backend_type), GetId());
     return kBandError;
   }
   // TODO: check whether new model shares input / output shapes with existing
@@ -50,7 +50,7 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
     BAND_LOG_INTERNAL(
         BAND_LOG_ERROR,
         "The given backend type `%s` is not registered in the binary.",
-        BandBackendGetName(backend_type));
+        GetName(backend_type));
     return kBandError;
   }
   if (backend_model->FromBuffer(buffer, buffer_size) == kBandOk) {
@@ -59,12 +59,12 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
     return kBandOk;
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to create %s model from buffer",
-                      BandBackendGetName(backend_type));
+                      GetName(backend_type));
     return kBandError;
   }
 }
 
-Interface::IModel* Model::GetBackendModel(BandBackendType backend_type) {
+Interface::IModel* Model::GetBackendModel(BackendType backend_type) {
   if (backend_models_.find(backend_type) != backend_models_.end()) {
     return backend_models_[backend_type].get();
   } else {
@@ -72,8 +72,8 @@ Interface::IModel* Model::GetBackendModel(BandBackendType backend_type) {
   }
 }
 
-std::set<BandBackendType> Model::GetSupportedBackends() const {
-  std::set<BandBackendType> backends;
+std::set<BackendType> Model::GetSupportedBackends() const {
+  std::set<BackendType> backends;
   for (auto it : backend_models_) {
     backends.insert(it.first);
   }
