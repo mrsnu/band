@@ -23,7 +23,7 @@
 
 #include <vector>
 
-#include "band/c/common.h"
+#include "band/common.h"
 
 #if defined __ANDROID__ || defined __linux__
 #define _BAND_SUPPORT_THREAD_AFFINITY
@@ -43,7 +43,7 @@ class CpuSet {
   void DisableAll();
   bool IsEnabled(int cpu) const;
   int NumEnabled() const;
-  BandCPUMaskFlags GetCPUMaskFlag() const;
+  CPUMaskFlags GetCPUMaskFlag() const;
   const unsigned long* GetMaskBits() const;
   bool operator==(const CpuSet& rhs) const;
 
@@ -66,9 +66,9 @@ BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
-const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag);
-const char* BandCPUMaskGetName(BandCPUMaskFlags flag);
-const BandCPUMaskFlags BandCPUMaskGetFlag(const char* name);
+const CpuSet& BandCPUMaskGetSet(CPUMaskFlags flag);
+const char* BandCPUMaskGetName(CPUMaskFlags flag);
+const CPUMaskFlags BandCPUMaskGetFlag(const char* name);
 
 }  // namespace Band
 

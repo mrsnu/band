@@ -26,7 +26,7 @@ struct ProfileConfig {
 struct PlannerConfig {
   int schedule_window_size = INT_MAX;
   std::vector<BandSchedulerType> schedulers;
-  BandCPUMaskFlags cpu_mask = kBandAll;
+  CPUMaskFlags cpu_mask = CPUMaskFlags::All;
   std::string log_path = "";
 };
 
@@ -36,11 +36,11 @@ struct WorkerConfig {
     for (int i = 0; i < kBandNumDevices; i++) {
       workers.push_back(static_cast<BandDeviceFlags>(i));
     }
-    cpu_masks = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
+    cpu_masks = std::vector<CPUMaskFlags>(kBandNumDevices, CPUMaskFlags::All);
     num_threads = std::vector<int>(kBandNumDevices, 1);
   }
   std::vector<BandDeviceFlags> workers;
-  std::vector<BandCPUMaskFlags> cpu_masks;
+  std::vector<CPUMaskFlags> cpu_masks;
   std::vector<int> num_threads;
   bool allow_worksteal = false;
   int availability_check_interval_ms = 30000;
@@ -53,7 +53,7 @@ struct SubgraphConfig {
 };
 
 struct RuntimeConfig {
-  BandCPUMaskFlags cpu_mask;
+  CPUMaskFlags cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
@@ -61,7 +61,7 @@ struct RuntimeConfig {
 
  private:
   friend class RuntimeConfigBuilder;
-  RuntimeConfig() { cpu_mask = kBandAll; };
+  RuntimeConfig() { cpu_mask = CPUMaskFlags::All; };
 };
 
 }  // namespace Band

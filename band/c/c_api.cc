@@ -6,14 +6,6 @@
 
 namespace {
 
-Band::BackendType ConvertToBackendType(BandBackendType backend_type) {
-  switch (backend_type) {
-    case kBandTfLite: {
-      return Band::BackendType::TfLite;
-    } break;
-  }
-}
-
 std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
     BandTensor** tensors, int num_tensors) {
   std::vector<Band::Interface::ITensor*> vec(num_tensors);
@@ -77,7 +69,7 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_PLANNER_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddPlannerCPUMask(static_cast<BandCPUMaskFlags>(arg));
+      b->impl.AddPlannerCPUMask(static_cast<Band::CPUMaskFlags>(arg));
     } break;
     case BAND_PLANNER_LOG_PATH: {
       char* arg = va_arg(vl, char*);
@@ -92,9 +84,9 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       b->impl.AddWorkers(workers);
     } break;
     case BAND_WORKER_CPU_MASKS: {
-      std::vector<BandCPUMaskFlags> cpu_masks(count);
+      std::vector<Band::CPUMaskFlags> cpu_masks(count);
       for (int i = 0; i < count; i++) {
-        cpu_masks[i] = static_cast<BandCPUMaskFlags>(va_arg(vl, int));
+        cpu_masks[i] = static_cast<Band::CPUMaskFlags>(va_arg(vl, int));
       }
       b->impl.AddWorkerCPUMasks(cpu_masks);
     } break;
@@ -124,7 +116,7 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddCPUMask(static_cast<BandCPUMaskFlags>(arg));
+      b->impl.AddCPUMask(static_cast<Band::CPUMaskFlags>(arg));
     } break;
   }
   va_end(vl);
@@ -147,13 +139,13 @@ void BandModelDelete(BandModel* model) { delete model; }
 BandStatus BandModelAddFromBuffer(BandModel* model,
                                   BandBackendType backend_type,
                                   const void* model_data, size_t model_size) {
-  return model->impl->FromBuffer(ConvertToBackendType(backend_type), (const char*)model_data,
-                                 model_size);
+  return model->impl->FromBuffer(static_cast<Band::BackendType>(backend_type),
+                                 (const char*)model_data, model_size);
 }
 
 BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
                                 const char* model_path) {
-  return model->impl->FromPath(ConvertToBackendType(backend_type), model_path);
+  return model->impl->FromPath(static_cast<Band::BackendType>(backend_type), model_path);
 }
 
 void BandTensorDelete(BandTensor* tensor) { delete tensor; }

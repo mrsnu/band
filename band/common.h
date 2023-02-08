@@ -24,33 +24,35 @@ static size_t kBandNumSchedulerTypes = 7;
 static size_t kBandNumSubgraphPreparationType = 4;
 static size_t kBandNumDevices = 4;
 
-enum class BackendType {
-  TfLite
+enum class BackendType : int {
+  TfLite = 0
 };
 std::string GetName(BackendType backend_type);
 
-enum class CPUMaskFlags {
-  DeviceQueue,
-  GlobalQueue
+enum class CPUMaskFlags : int {
+  All = 0,
+  Little = 1,
+  Big = 2,
+  Primary = 3
 };
 std::string GetName(CPUMaskFlags cpu_mask_flags);
 
-enum class SchedulerType {
-  FixedWorker,
-  RoundRobin,
-  ShortestExpectedLatency,
-  FixedWorkerGlobalQueue,
-  HeterogeneousEarliestFinishTime,
-  LeastSlackTimeFirst,
-  HeterogeneousEarliestFinishTimeReserved
+enum class SchedulerType : int {
+  FixedWorker = 0,
+  RoundRobin = 1,
+  ShortestExpectedLatency = 2,
+  FixedWorkerGlobalQueue = 3,
+  HeterogeneousEarliestFinishTime = 4,
+  LeastSlackTimeFirst = 5,
+  HeterogeneousEarliestFinishTimeReserved = 6
 };
 std::string GetName(SchedulerType scheduler_type);
 
-enum class SubgraphPreparationType {
-  NoFallbackSubgraph,
-  FallbackPerWorker,
-  UnitSubgraph,
-  MergeUnitSubgraph
+enum class SubgraphPreparationType : int {
+  NoFallbackSubgraph = 0,
+  FallbackPerWorker = 1,
+  UnitSubgraph = 2,
+  MergeUnitSubgraph = 3
 };
 std::string GetName(SubgraphPreparationType subgraph_preparation_type);
 
@@ -70,11 +72,11 @@ enum class DataType {
 };
 std::string GetName(DataType data_type);
 
-enum class DeviceFlags {
-  CPU,
-  GPU,
-  DSP,
-  NPU
+enum class DeviceFlags : int {
+  CPU = 0,
+  GPU = 1,
+  DSP = 2,
+  NPU = 3
 };
 std::string GetName(DeviceFlags device_flags);
 

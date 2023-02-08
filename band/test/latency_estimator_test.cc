@@ -67,7 +67,7 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   worker.End();
 }
 
-struct AffinityMasksFixture : public testing::TestWithParam<BandCPUMaskFlags> {
+struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlags> {
 };
 
 TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
@@ -108,8 +108,8 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
-                         testing::Values(kBandAll, kBandLittle, kBandBig,
-                                         kBandPrimary));
+                         testing::Values(CPUMaskFlags::All, CPUMaskFlags::Little, CPUMaskFlags::Big,
+                                         CPUMaskFlags::Primary));
 
 TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {

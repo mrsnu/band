@@ -478,8 +478,8 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       BAND_ENSURE_STATUS(latency_estimator_->Init(config.profile_config));
     }
 
-    const BandCPUMaskFlags cpu_mask =
-        static_cast<BandCPUMaskFlags>(config.cpu_mask);
+    const CPUMaskFlags cpu_mask =
+        static_cast<CPUMaskFlags>(config.cpu_mask);
     auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
 
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",

@@ -14,11 +14,11 @@ Each configuration field is optional or required. If a field is optional, then i
   - `kBandLeastSlackTimeFirst`: 
   - `kBandHeterogeneousEarliestFinishTimeReserved`
 
-- `BandCPUMaskFlags`: 
-   - `kBandAll`
-   - `kBandLittle`
-   - `kBandBig`
-   - `kBandPrimary`
+- `CPUMaskFlags`: 
+   - `CPUMaskFlags::All`
+   - `CPUMaskFlags::Little`
+   - `CPUMaskFlags::Big`
+   - `CPUMaskFlags::Primary`
   
 - `BandDeviceFlags`: 
   - `kBandCPU`
@@ -43,12 +43,12 @@ Each configuration field is optional or required. If a field is optional, then i
 ## `PlannerConfig`
 - `schedule_window_size` [type: `int`, default: `INT_MAX`]: The size of window that scheduler will use.
 - `schedulers` [type: `std::vector<BandSchedulerType>`, __required__]: The types of schedulers. If `N` schedulers are specified, `N` queues will be generated.
-- `cpu_mask` [type: `BandCPUMaskFlags`, default: `kBandAll`]: CPU masks to set CPU affinity.
+- `cpu_mask` [type: `CPUMaskFlags`, default: `CPUMaskFlags::All`]: CPU masks to set CPU affinity.
 - `log_path` [type: `std::string`, default: `""`]: The output path to the file for planner's log. If not specified, this will be ignored and will not generate the result file. 
 
 ## `WorkerConfig`
 - `workers` [type: `std::vector<BandDeviceFlags>`, default: `[kBandCPU, kBandGPU, ...]`]: The list of target devices. By default, one worker per device is generated.
-- `cpu_masks` [type: `std::vector<BandCPUMaskFlags>`, default: `[kBandAll, kBandAll, ...]`]: CPU masks to set CPU affinity. The size of the list must be the same as the size of `workers`.
+- `cpu_masks` [type: `std::vector<CPUMaskFlags>`, default: `[CPUMaskFlags::All, CPUMaskFlags::All, ...]`]: CPU masks to set CPU affinity. The size of the list must be the same as the size of `workers`.
 - `num_threads` [type: `std::vector<int>`, default: `[1, 1, ...]`]: The number of threads. The size of the list must be the same as the size of `workers`.
 - `allow_worksteal` [type: `bool`, default: `false`]: Work-stealing is enabled if true, disabled if false.
 - `availability_check_interval_ms` [type: `int`, default: `30_000`]: The interval for checking availability of devices. Used for detecting thermal throttling.
@@ -57,7 +57,7 @@ Each configuration field is optional or required. If a field is optional, then i
 - `RuntimeConfig` contains `ProfileConfig`, `PlannerConfig` and `WorkerConfig`.
 - `minimum_subgraph_size` [type: `int`, default: `7`]: The minimum subgraph size. If candidate subgraph size is smaller than this, the subgraph will not be created.
 - `subgraph_preparation_type` [type: `BandSubgraphPreparationType`, default: `kBandMergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
-- `cpu_mask` [type: `BandCPUMaskFlags`, default: `kBandAll`]: The CPU mask for Band Engine.
+- `cpu_mask` [type: `CPUMaskFlags`, default: `CPUMaskFlags::All`]: The CPU mask for Band Engine.
 
 ## `RuntimeConfigBuilder` API
 `RuntimeConfigBuilder` delegates all builder that inherits `ConfigBuilder`.
@@ -82,12 +82,12 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddPlannerLogPath(std::string planner_log_path)`
 - `AddScheduleWindowSize(int schedule_window_size)`
 - `AddSchedulers(std::vector<BandSchedulerType> schedulers)`
-- `AddPlannerCPUMask(BandCPUMaskFlags cpu_masks)`
+- `AddPlannerCPUMask(CPUMaskFlags cpu_masks)`
 - `AddWorkers(std::vector<BandDeviceFlags> workers)`
-- `AddWorkerCPUMasks(std::vector<BandCPUMaskFlags> cpu_masks)`
+- `AddWorkerCPUMasks(std::vector<CPUMaskFlags> cpu_masks)`
 - `AddWorkerNumThreads(std::vector<int> num_threads)`
 - `AddAllowWorkSteal(bool allow_worksteal)`
 - `AddAvailabilityCheckIntervalMs(int32_t availability_check_interval_ms)`
 - `AddMinimumSubgraphSize(int minimum_subgraph_size)`
 - `AddSubgraphPreparationType(BandSubgraphPreparationType subgraph_preparation_type)`
-- `AddCPUMask(BandCPUMaskFlags cpu_mask)`
+- `AddCPUMask(CPUMaskFlags cpu_mask)`

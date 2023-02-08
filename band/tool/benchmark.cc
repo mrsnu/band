@@ -205,7 +205,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   {
     if (!root["workers"].isNull()) {
       std::vector<BandDeviceFlags> workers;
-      std::vector<BandCPUMaskFlags> cpu_masks;
+      std::vector<CPUMaskFlags> cpu_masks;
       std::vector<int> num_threads;
 
       for (auto worker : root["workers"]) {

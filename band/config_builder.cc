@@ -39,8 +39,8 @@ bool PlannerConfigBuilder::IsValid(
   REPORT_IF_FALSE(PlannerConfigBuilder, schedule_window_size_ > 0);
   REPORT_IF_FALSE(PlannerConfigBuilder, schedulers_.size() > 0);
   REPORT_IF_FALSE(PlannerConfigBuilder,
-                  cpu_mask_ == kBandAll || cpu_mask_ == kBandLittle ||
-                      cpu_mask_ == kBandBig || cpu_mask_ == kBandPrimary);
+                  cpu_mask_ == CPUMaskFlags::All || cpu_mask_ == CPUMaskFlags::Little ||
+                      cpu_mask_ == CPUMaskFlags::Big || cpu_mask_ == CPUMaskFlags::Primary);
   return result;
 }
 
@@ -54,10 +54,10 @@ bool WorkerConfigBuilder::IsValid(
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
-    REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_[i] == kBandAll ||
-                                             cpu_masks_[i] == kBandLittle ||
-                                             cpu_masks_[i] == kBandBig ||
-                                             cpu_masks_[i] == kBandPrimary);
+    REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_[i] == CPUMaskFlags::All ||
+                                             cpu_masks_[i] == CPUMaskFlags::Little ||
+                                             cpu_masks_[i] == CPUMaskFlags::Big ||
+                                             cpu_masks_[i] == CPUMaskFlags::Primary);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, num_threads_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
@@ -79,8 +79,8 @@ bool RuntimeConfigBuilder::IsValid(
                       subgraph_preparation_type_ == kBandUnitSubgraph ||
                       subgraph_preparation_type_ == kBandMergeUnitSubgraph);
   REPORT_IF_FALSE(RuntimeConfigBuilder,
-                  cpu_mask_ == kBandAll || cpu_mask_ == kBandLittle ||
-                      cpu_mask_ == kBandBig || cpu_mask_ == kBandPrimary);
+                  cpu_mask_ == CPUMaskFlags::All || cpu_mask_ == CPUMaskFlags::Little ||
+                      cpu_mask_ == CPUMaskFlags::Big || cpu_mask_ == CPUMaskFlags::Primary);
 
   // Independent validation
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());

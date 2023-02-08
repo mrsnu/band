@@ -71,7 +71,7 @@ class PlannerConfigBuilder {
     schedulers_ = schedulers;
     return *this;
   }
-  PlannerConfigBuilder& AddCPUMask(BandCPUMaskFlags cpu_mask) {
+  PlannerConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -86,7 +86,7 @@ class PlannerConfigBuilder {
  private:
   int schedule_window_size_ = INT_MAX;
   std::vector<BandSchedulerType> schedulers_;
-  BandCPUMaskFlags cpu_mask_ = kBandAll;
+  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
   std::string log_path_ = "";
 };
 
@@ -99,14 +99,14 @@ class WorkerConfigBuilder {
     for (int i = 0; i < kBandNumDevices; i++) {
       workers_.push_back(static_cast<BandDeviceFlags>(i));
     }
-    cpu_masks_ = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
+    cpu_masks_ = std::vector<CPUMaskFlags>(kBandNumDevices, CPUMaskFlags::All);
     num_threads_ = std::vector<int>(kBandNumDevices, 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
     workers_ = workers;
     return *this;
   }
-  WorkerConfigBuilder& AddCPUMasks(std::vector<BandCPUMaskFlags> cpu_masks) {
+  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
     cpu_masks_ = cpu_masks;
     return *this;
   }
@@ -128,7 +128,7 @@ class WorkerConfigBuilder {
 
  private:
   std::vector<BandDeviceFlags> workers_;
-  std::vector<BandCPUMaskFlags> cpu_masks_;
+  std::vector<CPUMaskFlags> cpu_masks_;
   std::vector<int> num_threads_;
   bool allow_worksteal_ = false;
   int availability_check_interval_ms_ = 30000;
@@ -179,7 +179,7 @@ class RuntimeConfigBuilder {
     planner_config_builder_.AddSchedulers(schedulers);
     return *this;
   }
-  RuntimeConfigBuilder& AddPlannerCPUMask(BandCPUMaskFlags cpu_masks) {
+  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlags cpu_masks) {
     planner_config_builder_.AddCPUMask(cpu_masks);
     return *this;
   }
@@ -190,7 +190,7 @@ class RuntimeConfigBuilder {
     return *this;
   }
   RuntimeConfigBuilder& AddWorkerCPUMasks(
-      std::vector<BandCPUMaskFlags> cpu_masks) {
+      std::vector<CPUMaskFlags> cpu_masks) {
     worker_config_builder_.AddCPUMasks(cpu_masks);
     return *this;
   }
@@ -217,7 +217,7 @@ class RuntimeConfigBuilder {
     subgraph_preparation_type_ = subgraph_preparation_type;
     return *this;
   }
-  RuntimeConfigBuilder& AddCPUMask(BandCPUMaskFlags cpu_mask) {
+  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -232,7 +232,7 @@ class RuntimeConfigBuilder {
   int minimum_subgraph_size_ = 7;
   BandSubgraphPreparationType subgraph_preparation_type_ =
       kBandMergeUnitSubgraph;
-  BandCPUMaskFlags cpu_mask_ = kBandAll;
+  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
 };
 
 }  // namespace Band

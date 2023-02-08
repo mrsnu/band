@@ -14,11 +14,17 @@ std::string GetName(BackendType backend_type) {
 
 std::string GetName(CPUMaskFlags cpu_mask_flags) {
   switch (cpu_mask_flags) {
-    case CPUMaskFlags::DeviceQueue: {
-      return "DeviceQueue";
+    case CPUMaskFlags::All: {
+      return "ALL";
     } break;
-    case CPUMaskFlags::GlobalQueue: {
-      return "GlobalQueue";
+    case CPUMaskFlags::Little: {
+      return "LITTLE";
+    } break;
+    case CPUMaskFlags::Big: {
+      return "BIG";
+    } break;
+    case CPUMaskFlags::Primary: {
+      return "PRIMARY";
     } break;
   }
 }

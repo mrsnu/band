@@ -5,7 +5,7 @@
 
 namespace Band {
 namespace Test {
-struct AffinityMasksFixture : public testing::TestWithParam<BandCPUMaskFlags> {
+struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlags> {
 };
 
 #ifdef _BAND_SUPPORT_THREAD_AFFINITY
@@ -26,7 +26,7 @@ TEST_P(AffinityMasksFixture, AffinitySetTest) {
 }
 
 TEST(CPUTest, DisableTest) {
-  CpuSet set = BandCPUMaskGetSet(kBandAll);
+  CpuSet set = BandCPUMaskGetSet(CPUMaskFlags::All);
   EXPECT_EQ(SetCPUThreadAffinity(set), kBandOk);
 
   for (size_t i = 0; i < GetCPUCount(); i++) {
@@ -46,12 +46,12 @@ TEST(CPUTest, EnableTest) {
 
   EXPECT_EQ(SetCPUThreadAffinity(set), kBandOk);
   EXPECT_EQ(GetCPUThreadAffinity(set), kBandOk);
-  EXPECT_EQ(set, BandCPUMaskGetSet(kBandAll));
+  EXPECT_EQ(set, BandCPUMaskGetSet(CPUMaskFlags::All));
 }
 
 INSTANTIATE_TEST_SUITE_P(AffinitySetTests, AffinityMasksFixture,
-                         testing::Values(kBandAll, kBandLittle, kBandBig,
-                                         kBandPrimary));
+                         testing::Values(CPUMaskFlags::All, CPUMaskFlags::Little, CPUMaskFlags::Big,
+                                         CPUMaskFlags::Primary));
 #else
 
 TEST_P(AffinityMasksFixture, DummyTest) {
@@ -62,8 +62,8 @@ TEST_P(AffinityMasksFixture, DummyTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(DummyTest, AffinityMasksFixture,
-                         testing::Values(kBandAll, kBandLittle, kBandBig,
-                                         kBandPrimary));
+                         testing::Values(CPUMaskFlags::All, CPUMaskFlags::Little, CPUMaskFlags::Big,
+                                         CPUMaskFlags::Primary));
 #endif
 
 }  // namespace Test

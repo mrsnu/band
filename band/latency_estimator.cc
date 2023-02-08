@@ -172,8 +172,8 @@ size_t LatencyEstimator::GetProfileHash() const {
   for (int i = 0; i < context_->GetNumWorkers(); i++) {
     hash ^= hash_func(context_->GetWorker(i)->GetDeviceFlag());
     hash ^= hash_func(context_->GetWorker(i)->GetNumThreads());
-    hash ^= hash_func(
-        context_->GetWorker(i)->GetWorkerThreadAffinity().GetCPUMaskFlag());
+    hash ^= hash_func(static_cast<int>(
+        context_->GetWorker(i)->GetWorkerThreadAffinity().GetCPUMaskFlag()));
   }
   return hash;
 }
