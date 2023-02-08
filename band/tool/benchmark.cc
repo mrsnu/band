@@ -181,14 +181,14 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
       builder.AddScheduleWindowSize(root["schedule_window_size"].asInt());
     }
 
-    std::vector<BandSchedulerType> schedulers;
+    std::vector<SchedulerType> schedulers;
     for (auto scheduler : root["schedulers"]) {
       if (!scheduler.isString()) {
         BAND_LOG_PROD(BAND_LOG_ERROR,
                       "Please check if given scheduler is valid");
         return false;
       }
-      schedulers.push_back(BandSchedulerGetType(scheduler.asCString()));
+      schedulers.push_back(FromString(scheduler.asCString()));
     }
     builder.AddSchedulers(schedulers);
 

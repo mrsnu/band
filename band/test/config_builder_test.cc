@@ -28,7 +28,7 @@ TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
   PlannerConfigBuilder b;
   PlannerConfig config_ok = b.AddLogPath("band/test/data/config.json")
                                 .AddScheduleWindowSize(5)
-                                .AddSchedulers({kBandFixedWorker})
+                                .AddSchedulers({SchedulerType::FixedWorker})
                                 .Build();
   EXPECT_EQ(config_ok.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.schedule_window_size, 5);
@@ -71,7 +71,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
           .AddPlannerLogPath("band/test/data/config.json")
           .AddScheduleWindowSize(1)
-          .AddSchedulers({kBandFixedWorker})
+          .AddSchedulers({SchedulerType::FixedWorker})
           .AddPlannerCPUMask(CPUMaskFlags::Big)
           .AddWorkers({})
           .AddWorkerCPUMasks({})
@@ -96,7 +96,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlags::Primary);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
-  EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedWorker);
+  EXPECT_EQ(config_ok.planner_config.schedulers[0], SchedulerType::FixedWorker);
   EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlags::Big);
   EXPECT_EQ(config_ok.worker_config.workers[0], kBandCPU);
   EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlags::All);
@@ -107,7 +107,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
 
 TEST(ConfigBuilderTest, DefaultValueTest) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config_ok = b.AddSchedulers({kBandFixedWorker}).Build();
+  RuntimeConfig config_ok = b.AddSchedulers({SchedulerType::FixedWorker}).Build();
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
@@ -115,7 +115,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.profile_config.profile_data_path, "");
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");
-  EXPECT_EQ(config_ok.planner_config.schedulers[0], kBandFixedWorker);
+  EXPECT_EQ(config_ok.planner_config.schedulers[0], SchedulerType::FixedWorker);
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);
   EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlags::All);
   EXPECT_EQ(config_ok.worker_config.workers[0], kBandCPU);

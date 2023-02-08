@@ -31,7 +31,7 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.csv")
-          .AddSchedulers({kBandLeastSlackTimeFirst})
+          .AddSchedulers({SchedulerType::LeastSlackTimeFirst})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(subgraph_type)
           .AddCPUMask(CPUMaskFlags::All)

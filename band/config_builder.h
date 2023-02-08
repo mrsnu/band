@@ -67,7 +67,7 @@ class PlannerConfigBuilder {
     return *this;
   }
   PlannerConfigBuilder& AddSchedulers(
-      std::vector<BandSchedulerType> schedulers) {
+      std::vector<SchedulerType> schedulers) {
     schedulers_ = schedulers;
     return *this;
   }
@@ -85,7 +85,7 @@ class PlannerConfigBuilder {
 
  private:
   int schedule_window_size_ = INT_MAX;
-  std::vector<BandSchedulerType> schedulers_;
+  std::vector<SchedulerType> schedulers_;
   CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
   std::string log_path_ = "";
 };
@@ -175,7 +175,7 @@ class RuntimeConfigBuilder {
     return *this;
   }
   RuntimeConfigBuilder& AddSchedulers(
-      std::vector<BandSchedulerType> schedulers) {
+      std::vector<SchedulerType> schedulers) {
     planner_config_builder_.AddSchedulers(schedulers);
     return *this;
   }

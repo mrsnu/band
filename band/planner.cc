@@ -68,22 +68,22 @@ BandStatus Planner::Init(const PlannerConfig& config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == kBandFixedWorker) {
+    if (schedulers[i] == SchedulerType::FixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(context_));
-    } else if (schedulers[i] == kBandFixedWorkerGlobalQueue) {
+    } else if (schedulers[i] == SchedulerType::FixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(context_));
-    } else if (schedulers[i] == kBandRoundRobin) {
+    } else if (schedulers[i] == SchedulerType::RoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(context_));
-    } else if (schedulers[i] == kBandShortestExpectedLatency) {
+    } else if (schedulers[i] == SchedulerType::ShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
           context_, schedule_window_size_));
-    } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTime) {
+    } else if (schedulers[i] == SchedulerType::HeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
           new HEFTScheduler(context_, schedule_window_size_, false));
-    } else if (schedulers[i] == kBandLeastSlackTimeFirst) {
+    } else if (schedulers[i] == SchedulerType::LeastSlackTimeFirst) {
       schedulers_.emplace_back(
           new LeastSlackFirstScheduler(context_, schedule_window_size_));
-    } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTimeReserved) {
+    } else if (schedulers[i] == SchedulerType::HeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(context_, schedule_window_size_, true));
     } else {

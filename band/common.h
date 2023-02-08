@@ -47,6 +47,7 @@ enum class SchedulerType : int {
   HeterogeneousEarliestFinishTimeReserved = 6
 };
 std::string GetName(SchedulerType scheduler_type);
+SchedulerType FromString(std::string str);
 
 enum class SubgraphPreparationType : int {
   NoFallbackSubgraph = 0,

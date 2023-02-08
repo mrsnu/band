@@ -88,7 +88,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
-                             .AddSchedulers({kBandRoundRobin})
+                             .AddSchedulers({SchedulerType::RoundRobin})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
                              .AddCPUMask(CPUMaskFlags::All)
@@ -141,7 +141,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 TEST(TFLiteBackend, SimpleEngineProfile) {
   RuntimeConfigBuilder b;
   RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
-                             .AddSchedulers({kBandFixedWorkerGlobalQueue})
+                             .AddSchedulers({SchedulerType::FixedWorkerGlobalQueue})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
                              .AddCPUMask(CPUMaskFlags::All)
@@ -175,7 +175,7 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
-                             .AddSchedulers({kBandShortestExpectedLatency})
+                             .AddSchedulers({SchedulerType::ShortestExpectedLatency})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
                              .AddCPUMask(CPUMaskFlags::All)
@@ -229,7 +229,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.csv")
-          .AddSchedulers({kBandFixedWorker})
+          .AddSchedulers({SchedulerType::FixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlags::All)
@@ -287,7 +287,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.csv")
-          .AddSchedulers({kBandFixedWorker})
+          .AddSchedulers({SchedulerType::FixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlags::All)

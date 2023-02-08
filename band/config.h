@@ -25,7 +25,7 @@ struct ProfileConfig {
 
 struct PlannerConfig {
   int schedule_window_size = INT_MAX;
-  std::vector<BandSchedulerType> schedulers;
+  std::vector<SchedulerType> schedulers;
   CPUMaskFlags cpu_mask = CPUMaskFlags::All;
   std::string log_path = "";
 };

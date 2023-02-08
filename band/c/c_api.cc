@@ -61,9 +61,9 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       b->impl.AddScheduleWindowSize(arg);
     } break;
     case BAND_PLANNER_SCHEDULERS: {
-      std::vector<BandSchedulerType> schedulers(count);
+      std::vector<Band::SchedulerType> schedulers(count);
       for (int i = 0; i < count; i++) {
-        schedulers[i] = static_cast<BandSchedulerType>(va_arg(vl, int));
+        schedulers[i] = static_cast<Band::SchedulerType>(va_arg(vl, int));
       }
       b->impl.AddSchedulers(schedulers);
     } break;

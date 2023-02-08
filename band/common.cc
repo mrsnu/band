@@ -55,6 +55,16 @@ std::string GetName(SchedulerType scheduler_type) {
   }
 }
 
+SchedulerType FromString(std::string str) {
+  for (int i = 0; i < kBandNumSchedulerTypes; i++) {
+    SchedulerType type = static_cast<SchedulerType>(i);
+    if (GetName(type) == str) {
+      return type;
+    }
+  }
+  // TODO(widiba03304): absl refactor
+}
+
 std::string GetName(SubgraphPreparationType subgraph_preparation_type) {
   switch (subgraph_preparation_type) {
     case SubgraphPreparationType::NoFallbackSubgraph: {
