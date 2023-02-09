@@ -102,7 +102,6 @@ def run_binary_android(basepath, path, option=''):
 
 def get_argument_parser(desc: str):
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('-p', '--platform', type=str, help='Host platform <linux|windows>')
     parser.add_argument('-B', '--backend', type=str, default='tflite', help='Backend <tflite|none>')
     parser.add_argument('-android', action="store_true", default=False,
                         help='Test on Android (with adb)')
