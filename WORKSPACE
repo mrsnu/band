@@ -1,13 +1,16 @@
 workspace(name = "org_band")
 
 load("//band:workspace_repo.bzl", "workspace_repo")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 workspace_repo()
 
 # Note: This repo should lie here to respect TensorFlow's build dependency.
-local_repository(
+http_archive(
     name = "org_tensorflow",
-    path = "third_party/tensorflow/tensorflow",
+    sha256 = "a6e1b0fb73fbdac983ee093e5b3d1066866f317b0bd83305766e2a02a350910c",
+    strip_prefix = "tensorflow-2.9.2",
+    url = "https://github.com/mrsnu/tensorflow/archive/refs/tags/v2.9.2.zip"
 )
 
 load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
