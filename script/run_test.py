@@ -18,7 +18,7 @@ if __name__ == '__main__':
                         help='Run specific test that contains given string (only for android)')
     args = parser.parse_args()
 
-    print(f"Test {args.platform}")
+    print(f"Test {get_platform()}")
     if args.rebuild: 
         clean_bazel(args.docker)
     
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         cmd = make_cmd(
                 args.build, 
                 args.debug, 
-                args.platform,
+                get_platform(),
                 args.backend, 
                 TARGET
             )

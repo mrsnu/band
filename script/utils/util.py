@@ -27,6 +27,10 @@ def is_cygwin():
     return plf.system().startswith("CYGWIN_NT")
 
 
+def get_platform():
+    return plf.system().lower()
+
+
 def canon_path(path):
     if is_windows() or is_cygwin():
         return path.replace('\\', '/')
@@ -41,7 +45,7 @@ def run_cmd(cmd):
 def copy(src, dst):
     subprocess.call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
     # append filename to dst directory
-    dst = os.path.join(dst, os.path.basename(src))
+    dst = canon_path(os.path.join(dst, os.path.basename(src)))
     if os.path.isdir(src):
         shutil.copytree(src, dst)
     else:
@@ -98,8 +102,8 @@ def run_binary_android(basepath, path, option=''):
 
 def get_argument_parser(desc: str):
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('-p', '--platform', type=str, required=True, help='Host platform <linux|windows>')
-    parser.add_argument('-B', '--backend', type=str, required=True, help='Backend <tflite|none>')
+    parser.add_argument('-p', '--platform', type=str, help='Host platform <linux|windows>')
+    parser.add_argument('-B', '--backend', type=str, default='tflite', help='Backend <tflite|none>')
     parser.add_argument('-android', action="store_true", default=False,
                         help='Test on Android (with adb)')
     parser.add_argument('-docker', action="store_true", default=False,
