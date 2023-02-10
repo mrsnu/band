@@ -34,7 +34,6 @@ genrule(
 genrule(
     name = "copy_jni_md_h",
     srcs = select({
-        "//tensorflow:macos": ["@bazel_tools//tools/jdk:jni_md_header-darwin"],
         "//conditions:default": ["@bazel_tools//tools/jdk:jni_md_header-linux"],
     }),
     outs = ["jni_md.h"],

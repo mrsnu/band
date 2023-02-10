@@ -32,12 +32,29 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-# MNN backend setting.
+# Linux config settings
 config_setting(
-    name = "mnn",
+    name = "linux",
+    flag_values = {},
+    values = {},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_x86_64",
+    flag_values = {},
+    values = {"cpu": "k8"},
+    visibility = ["//visibility:public"],
+)
+
+
+config_setting(
+    name = "linux_x86_64_tflite",
     define_values = {
-        "mnn": "true",
+        "tflite": "true",
     },
+    flag_values = {},
+    values = {"cpu": "k8"},
     visibility = ["//visibility:public"],
 )
 
@@ -74,21 +91,19 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+# Windows config settings
 config_setting(
-    name = "android_arm64_mnn",
-    define_values = {
-        "mnn": "true",
-    },
+    name = "windows",
     flag_values = {},
-    values = dict(
-        {"crosstool_top": "//external:android/crosstool"},
-        cpu = "arm64-v8a",
-    ),
+    values = {"cpu": "x64_windows"},
     visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name = "windows",
+    name = "windows_tflite",
+    define_values = {
+        "tflite": "true",
+    },
     flag_values = {},
     values = {"cpu": "x64_windows"},
     visibility = ["//visibility:public"],
@@ -354,7 +369,7 @@ cc_library(
     srcs = ["json_util.cc"],
     hdrs = ["json_util.h"],
     linkopts = select({
-        "//tensorflow:windows": [],
+        "//band:windows": [],
         "//conditions:default": [
             "-lm",
             "-ldl",
@@ -362,7 +377,7 @@ cc_library(
     }),
     deps = [
         ":common",
-        "@jsoncpp_git//:jsoncpp",
+        "@jsoncpp//:jsoncpp",
     ],
 )
 

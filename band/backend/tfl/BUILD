@@ -27,17 +27,17 @@ cc_library(
     ],
     deps = [
         "//band:framework",
-        "//tensorflow/lite:framework",
-        "//tensorflow/lite/c:c_api",
-        "//tensorflow/lite/c:c_api_experimental",
+        "@org_tensorflow//tensorflow/lite:framework",
+        "@org_tensorflow//tensorflow/lite/c:c_api",
+        "@org_tensorflow//tensorflow/lite/c:c_api_experimental",
     ] + select({
         "//band:android": [
-            "//tensorflow/lite/delegates/gpu:delegate",
-            "//tensorflow/lite/delegates/hexagon:hexagon_delegate",
+            "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
         ],
         "//band:android_arm64": [
-            "//tensorflow/lite/delegates/gpu:delegate",
-            "//tensorflow/lite/delegates/hexagon:hexagon_delegate",
+            "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
         ],
         "//conditions:default": [],
     }),

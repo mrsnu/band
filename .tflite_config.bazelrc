@@ -1,0 +1,6 @@
+build --experimental_repo_remote_exec
+build --define tflite_with_xnnpack=false
+
+test --experimental_repo_remote_exec
+test --define tflite_with_xnnpack=false
+
