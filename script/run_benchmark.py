@@ -75,8 +75,9 @@ if __name__ == '__main__':
     if args.android:
         # Need to set Android build option in ./configure
         print('Benchmark Android')
-        benchmark_android(args.debug, args.platform, args.backend,
+        benchmark_android(args.debug, get_platform(), args.backend,
                           args.docker, args.config)
     else:
-        print(f'Benchmark {args.platform}')
-        benchmark_local(args.debug, args.platform, args.backend, args.build, args.config)
+        print(f'Benchmark {get_platform()}')
+        benchmark_local(args.debug, get_platform(), args.backend, args.build, args.config)
+>>>>>>> master
