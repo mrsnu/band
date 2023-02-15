@@ -19,7 +19,7 @@ cc_library(
         "tensor.h",
         "util.h",
     ],
-    # force to link Band::TfLiteRegisterCreators (in backend.cc)
+    # force to link band::TfLiteRegisterCreators (in backend.cc)
     # to override the weak symbol in //band:backend_factory
     alwayslink = True,
     copts = [

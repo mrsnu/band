@@ -4,10 +4,10 @@
 #include "band/java/src/main/native/jni_utils.h"
 #include "band/logger.h"
 
-using Band::RuntimeConfigBuilder;
-using Band::jni::ConvertJstringToString;
-using Band::jni::ConvertLongToConfigBuilder;
-using Band::jni::JNIRuntimeConfig;
+using band::RuntimeConfigBuilder;
+using band::jni::ConvertJstringToString;
+using band::jni::ConvertLongToConfigBuilder;
+using band::jni::JNIRuntimeConfig;
 
 namespace {
 

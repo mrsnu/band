@@ -3,11 +3,11 @@
 
 #include <cstdint>
 
-namespace Band {
+namespace band {
 namespace Time {
 uint64_t NowMicros();
 uint64_t NowNanos();
 void SleepForMicros(uint64_t micros);
 }  // namespace Time
-}  // namespace Band
+}  // namespace band
 #endif  // BAND_TIME_H_

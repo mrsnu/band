@@ -9,11 +9,11 @@
 // Expected workflow (per each backend)
 // 1. Implement creators
 // 2. Register them with `RegisterBackendCreators` in arbitrary global function
-// (e.g., TfLite::RegisterCreators)
+// (e.g., tfl::RegisterCreators)
 // 3. Add an arbitrary global function to `RegisterBackendInternal` with
 // corresponding flag
 
-namespace Band {
+namespace band {
 
 template <typename Base, class... Args>
 struct Creator {
@@ -23,34 +23,34 @@ struct Creator {
 
 class BackendFactory {
  public:
-  static Interface::IModelExecutor* CreateModelExecutor(
+  static interface::IModelExecutor* CreateModelExecutor(
       BandBackendType backend, ModelId model_id, WorkerId worker_id,
       BandDeviceFlags device_flag);
-  static Interface::IModel* CreateModel(BandBackendType backend, ModelId id);
-  static Interface::IBackendUtil* GetBackendUtil(BandBackendType backend);
+  static interface::IModel* CreateModel(BandBackendType backend, ModelId id);
+  static interface::IBackendUtil* GetBackendUtil(BandBackendType backend);
   static std::vector<BandBackendType> GetAvailableBackends();
 
   static void RegisterBackendCreators(
       BandBackendType backend,
-      Creator<Interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
+      Creator<interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
           model_executor_creator,
-      Creator<Interface::IModel, ModelId>* model_creator,
-      Creator<Interface::IBackendUtil>* util_creator);
+      Creator<interface::IModel, ModelId>* model_creator,
+      Creator<interface::IBackendUtil>* util_creator);
 
  private:
   BackendFactory() = default;
 
   static std::map<BandBackendType,
-                  std::shared_ptr<Creator<Interface::IModelExecutor, ModelId,
+                  std::shared_ptr<Creator<interface::IModelExecutor, ModelId,
                                           WorkerId, BandDeviceFlags>>>
       model_executor_creators_;
   static std::map<BandBackendType,
-                  std::shared_ptr<Creator<Interface::IModel, ModelId>>>
+                  std::shared_ptr<Creator<interface::IModel, ModelId>>>
       model_creators_;
   static std::map<BandBackendType,
-                  std::shared_ptr<Creator<Interface::IBackendUtil>>>
+                  std::shared_ptr<Creator<interface::IBackendUtil>>>
       util_creators_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif

@@ -3,8 +3,8 @@
 
 #include "band/c/common.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 class IBackendSpecific {
  public:
   virtual BandBackendType GetBackendType() const = 0;
@@ -21,7 +21,7 @@ class IBackendUtil {
   virtual std::set<BandDeviceFlags> GetAvailableDevices() const = 0;
 };
 
-}  // namespace Interface
-}  // namespace Band
+}  // namespace interface
+}  // namespace band
 
 #endif  // BAND_INTERFACE_BACKEND_H_

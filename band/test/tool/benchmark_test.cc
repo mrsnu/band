@@ -2,8 +2,8 @@
 
 #include <gtest/gtest.h>
 
-namespace Band {
-namespace Test {
+namespace band {
+namespace test {
 
 TEST(BenchmarkTest, BenchmarkConfigLoadSuccess) {
   tool::Benchmark benchmark;
@@ -25,8 +25,8 @@ TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
   EXPECT_EQ(benchmark.Run(), kBandOk);
 }
 
-}  // namespace Test
-}  // namespace Band
+}  // namespace test
+}  // namespace band
 
 int main(int argc, char** argv) {
 #ifdef BAND_TFLITE

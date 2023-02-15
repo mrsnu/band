@@ -4,9 +4,9 @@
 #include "band/interface/tensor_view.h"
 #include "tensorflow/lite/c/common.h"
 
-namespace Band {
-namespace TfLite {
-class TfLiteTensorView : public Interface::ITensorView {
+namespace band {
+namespace tfl {
+class TfLiteTensorView : public interface::ITensorView {
  public:
   TfLiteTensorView(TfLiteTensor* tensor);
 
@@ -26,7 +26,7 @@ class TfLiteTensorView : public Interface::ITensorView {
  private:
   TfLiteTensor* tensor_ = nullptr;
 };
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
 
 #endif

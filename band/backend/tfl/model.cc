@@ -4,9 +4,9 @@
 
 #include "band/c/common.h"
 
-namespace Band {
-namespace TfLite {
-TfLiteModel::TfLiteModel(ModelId id) : Interface::IModel(id) {}
+namespace band {
+namespace tfl {
+TfLiteModel::TfLiteModel(ModelId id) : interface::IModel(id) {}
 
 BandBackendType TfLiteModel::GetBackendType() const { return kBandTfLite; }
 
@@ -28,5 +28,5 @@ bool TfLiteModel::IsInitialized() const {
   return flat_buffer_model_ != nullptr;
 }
 
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band

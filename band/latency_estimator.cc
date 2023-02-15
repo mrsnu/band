@@ -7,7 +7,7 @@
 #include "band/profiler.h"
 #include "band/worker.h"
 
-namespace Band {
+namespace band {
 LatencyEstimator::LatencyEstimator(Context* context) : context_(context) {}
 
 BandStatus LatencyEstimator::Init(const ProfileConfig& config) {
@@ -269,4 +269,4 @@ Json::Value LatencyEstimator::ProfileToJson() {
   return name_profile;
 }
 
-}  // namespace Band
+}  // namespace band

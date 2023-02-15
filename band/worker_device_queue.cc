@@ -4,7 +4,7 @@
 #include "band/time.h"
 #include "band/worker.h"
 
-namespace Band {
+namespace band {
 
 JobQueue& DeviceQueueWorker::GetDeviceRequests() { return requests_; }
 
@@ -183,4 +183,4 @@ void DeviceQueueWorker::TryWorkSteal() {
   */
 }
 
-}  // namespace Band
+}  // namespace band

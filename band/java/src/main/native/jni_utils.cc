@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-namespace Band {
+namespace band {
 namespace jni {
 
 const char kIllegalArgumentException[] = "java/lang/IllegalArgumentException";
@@ -60,10 +60,13 @@ std::string ConvertJstringToString(JNIEnv* env, jstring jstr) {
   if (!jstr) {
     return "";
   }
-  
+
   const jclass string_cls = env->GetObjectClass(jstr);
-  const jmethodID get_bytes_method = env->GetMethodID(string_cls, "getBytes", "(Ljava/lang/String;)[B");
-  const jbyteArray string_jbytes = static_cast<jbyteArray>(env->CallObjectMethod(jstr, get_bytes_method, env->NewStringUTF("UTF-8")));
+  const jmethodID get_bytes_method =
+      env->GetMethodID(string_cls, "getBytes", "(Ljava/lang/String;)[B");
+  const jbyteArray string_jbytes =
+      static_cast<jbyteArray>(env->CallObjectMethod(
+          jstr, get_bytes_method, env->NewStringUTF("UTF-8")));
 
   size_t length = static_cast<size_t>(env->GetArrayLength(string_jbytes));
   jbyte* bytes = env->GetByteArrayElements(string_jbytes, nullptr);
@@ -104,4 +107,4 @@ BufferErrorReporter* ConvertLongToErrorReporter(JNIEnv* env, jlong handle) {
 }
 
 }  // namespace jni
-}  // namespace Band
+}  // namespace band

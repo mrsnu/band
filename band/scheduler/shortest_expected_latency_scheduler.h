@@ -3,7 +3,7 @@
 
 #include "band/scheduler/scheduler.h"
 
-namespace Band {
+namespace band {
 
 class ShortestExpectedLatencyScheduler : public IScheduler {
  public:
@@ -18,6 +18,6 @@ class ShortestExpectedLatencyScheduler : public IScheduler {
   const int window_size_;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_SCHEDULER_SHORTEST_EXPECTED_LATENCY_SCHEDULER_H_

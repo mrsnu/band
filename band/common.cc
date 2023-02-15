@@ -1,7 +1,7 @@
 #include "band/common.h"
 
 #include "common.h"
-namespace Band {
+namespace band {
 SubgraphKey::SubgraphKey() {}
 // special case - entire model subgraph
 SubgraphKey::SubgraphKey(ModelId model_id, WorkerId worker_id,
@@ -87,4 +87,4 @@ std::size_t CacheHash::operator()(const std::pair<int, BitMask>& p) const {
   auto hash_func = std::hash<int>();
   return hash_func(p.first) ^ hash_func(p.second.to_ullong());
 }
-}  // namespace Band
+}  // namespace band

@@ -7,8 +7,8 @@
 #include "band/common.h"
 #include "band/interface/backend.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 /*
   Model interface for specific backend
 */
@@ -26,7 +26,7 @@ struct IModel : public IBackendSpecific {
   std::string path_;
   const ModelId id_;
 };
-}  // namespace Interface
-}  // namespace Band
+}  // namespace interface
+}  // namespace band
 
 #endif

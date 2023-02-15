@@ -3,7 +3,7 @@
 
 #include "band/scheduler/scheduler.h"
 
-namespace Band {
+namespace band {
 
 class LeastSlackFirstScheduler : public IScheduler {
  public:
@@ -22,6 +22,6 @@ class LeastSlackFirstScheduler : public IScheduler {
   const int window_size_;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_SCHEDULER_LEAST_SLACK_FIRST_SCHEDULER_H_

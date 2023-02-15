@@ -4,7 +4,7 @@
 #include "band/interface/model.h"
 #include "band/logger.h"
 
-namespace Band {
+namespace band {
 
 ModelId Model::next_model_id_ = 0;
 Model::Model() : model_id_(next_model_id_++) {}
@@ -21,11 +21,11 @@ BandStatus Model::FromPath(BandBackendType backend_type, const char* filename) {
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
-  Interface::IModel* backend_model =
+  interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model->FromPath(filename) == kBandOk) {
     backend_models_[backend_type] =
-        std::shared_ptr<Interface::IModel>(backend_model);
+        std::shared_ptr<interface::IModel>(backend_model);
     return kBandOk;
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to create %s model from %s",
@@ -44,7 +44,7 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
-  Interface::IModel* backend_model =
+  interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model == nullptr) {
     BAND_LOG_INTERNAL(
@@ -55,7 +55,7 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
   }
   if (backend_model->FromBuffer(buffer, buffer_size) == kBandOk) {
     backend_models_[backend_type] =
-        std::shared_ptr<Interface::IModel>(backend_model);
+        std::shared_ptr<interface::IModel>(backend_model);
     return kBandOk;
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to create %s model from buffer",
@@ -64,7 +64,7 @@ BandStatus Model::FromBuffer(BandBackendType backend_type, const char* buffer,
   }
 }
 
-Interface::IModel* Model::GetBackendModel(BandBackendType backend_type) {
+interface::IModel* Model::GetBackendModel(BandBackendType backend_type) {
   if (backend_models_.find(backend_type) != backend_models_.end()) {
     return backend_models_[backend_type].get();
   } else {
@@ -79,4 +79,4 @@ std::set<BandBackendType> Model::GetSupportedBackends() const {
   }
   return backends;
 }
-}  // namespace Band
+}  // namespace band

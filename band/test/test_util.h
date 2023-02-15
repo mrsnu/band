@@ -6,8 +6,8 @@
 
 #include "band/context.h"
 
-namespace Band {
-namespace Test {
+namespace band {
+namespace test {
 
 struct MockContextBase : public Context {
   MockContextBase() = default;
@@ -73,7 +73,7 @@ struct MockContextBase : public Context {
   MOCK_METHOD1(TryCopyOutputTensors, BandStatus(const Job&));
 };
 
-}  // namespace Test
-}  // namespace Band
+}  // namespace test
+}  // namespace band
 
 #endif  // BAND_TEST_TEST_UTIL_H_

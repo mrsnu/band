@@ -7,7 +7,7 @@
 #include "band/context.h"
 #include "band/model_spec.h"
 
-namespace Band {
+namespace band {
 class Model;
 
 struct SubgraphDef {
@@ -54,6 +54,6 @@ class ModelAnalyzer {
   const BandBackendType backend_type_;
   std::shared_ptr<ModelSpec> model_spec_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif

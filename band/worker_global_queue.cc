@@ -5,7 +5,7 @@
 #include "band/worker.h"
 #include "worker.h"
 
-namespace Band {
+namespace band {
 
 bool GlobalQueueWorker::EnqueueJob(Job& job) {
   if (!IsEnqueueReady()) {
@@ -97,4 +97,4 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   return std::max((long)(profiled_latency - progress), 0L);
 }
 
-}  // namespace Band
+}  // namespace band

@@ -33,7 +33,7 @@
 #include <sched.h>  // cpu_set_t
 #endif
 
-namespace Band {
+namespace band {
 
 class CpuSet {
  public:
@@ -70,6 +70,6 @@ const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag);
 const char* BandCPUMaskGetName(BandCPUMaskFlags flag);
 const BandCPUMaskFlags BandCPUMaskGetFlag(const char* name);
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_CPU_H_

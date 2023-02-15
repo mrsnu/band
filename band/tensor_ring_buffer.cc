@@ -9,13 +9,13 @@
 #include "band/interface/tensor_view.h"
 #include "band/tensor.h"
 
-namespace Band {
+namespace band {
 TensorRingBuffer::TensorRingBuffer(
     ErrorReporter* error_reporter,
-    std::vector<std::shared_ptr<Interface::ITensor>> tensors,
+    std::vector<std::shared_ptr<interface::ITensor>> tensors,
     std::vector<int> tensor_indices, int size)
     : error_reporter_(error_reporter),
-      tensors_(new std::vector<Interface::ITensor*>[size]),
+      tensors_(new std::vector<interface::ITensor*>[size]),
       size_(size) {
   assert(size_ > 0);
   for (size_t i = 0; i < size_; i++) {
@@ -57,7 +57,7 @@ bool TensorRingBuffer::IsHandleValid(int handle) const {
   return (handle >= 0) && (head_ - size_ <= handle) && (handle < head_);
 }
 
-BandStatus TensorRingBuffer::GetTensorFromHandle(Interface::ITensor* dst,
+BandStatus TensorRingBuffer::GetTensorFromHandle(interface::ITensor* dst,
                                                  int tensor_index,
                                                  int handle) const {
   if (!IsTensorIndexValid(tensor_index)) {
@@ -80,7 +80,7 @@ BandStatus TensorRingBuffer::GetTensorFromHandle(Interface::ITensor* dst,
       tensors_[GetIndex(handle)][tensor_to_buffer_.at(tensor_index)], dst);
 }
 
-BandStatus TensorRingBuffer::PutTensorToHandle(const Interface::ITensor* src,
+BandStatus TensorRingBuffer::PutTensorToHandle(const interface::ITensor* src,
                                                int tensor_index, int handle) {
   if (!IsTensorIndexValid(tensor_index)) {
     BAND_REPORT_ERROR(error_reporter_,
@@ -102,7 +102,7 @@ BandStatus TensorRingBuffer::PutTensorToHandle(const Interface::ITensor* src,
 }
 
 BandStatus TensorRingBuffer::GetTensorsFromHandle(
-    std::vector<Interface::ITensor*>& dst_tensors, int handle) const {
+    std::vector<interface::ITensor*>& dst_tensors, int handle) const {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsHandleValid(handle)) {
     BAND_REPORT_ERROR(
@@ -115,7 +115,7 @@ BandStatus TensorRingBuffer::GetTensorsFromHandle(
 }
 
 BandStatus TensorRingBuffer::PutTensorsToHandle(
-    const std::vector<Interface::ITensor*>& src_tensors, int handle) {
+    const std::vector<interface::ITensor*>& src_tensors, int handle) {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsHandleValid(handle)) {
     BAND_REPORT_ERROR(error_reporter_,
@@ -128,8 +128,8 @@ BandStatus TensorRingBuffer::PutTensorsToHandle(
 }
 
 BandStatus TensorRingBuffer::CopyTensors(
-    const std::vector<Interface::ITensor*>& src_tensors,
-    std::vector<Interface::ITensor*>& dst_tensors) const {
+    const std::vector<interface::ITensor*>& src_tensors,
+    std::vector<interface::ITensor*>& dst_tensors) const {
   const int tensors_length = GetTensorsLength();
   if (src_tensors.size() != tensors_length ||
       dst_tensors.size() != tensors_length) {
@@ -149,8 +149,8 @@ BandStatus TensorRingBuffer::CopyTensors(
   return kBandOk;
 }
 
-BandStatus TensorRingBuffer::CopyTensor(const Interface::ITensor* src,
-                                        Interface::ITensor* dst) const {
+BandStatus TensorRingBuffer::CopyTensor(const interface::ITensor* src,
+                                        interface::ITensor* dst) const {
   if (dst->CopyDataFrom(src) == kBandError) {
     BAND_REPORT_ERROR(error_reporter_,
                       "Tensor data copy failure. src name : %s, dst name : %s",
@@ -162,4 +162,4 @@ BandStatus TensorRingBuffer::CopyTensor(const Interface::ITensor* src,
 }
 
 int TensorRingBuffer::GetIndex(int handle) const { return handle % size_; }
-}  // namespace Band
+}  // namespace band

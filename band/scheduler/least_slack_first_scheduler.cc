@@ -4,7 +4,7 @@
 
 #include "band/time.h"
 
-namespace Band {
+namespace band {
 LeastSlackFirstScheduler::LeastSlackFirstScheduler(Context& context,
                                                    int window_size)
     : IScheduler(context), window_size_(window_size) {}
@@ -94,4 +94,4 @@ void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests,
   }
 }
 
-}  // namespace Band
+}  // namespace band

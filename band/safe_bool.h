@@ -3,7 +3,7 @@
 
 #include <condition_variable>
 #include <mutex>
-namespace Band {
+namespace band {
 class SafeBool {
  public:
   SafeBool() = default;
@@ -20,6 +20,6 @@ class SafeBool {
   std::condition_variable c;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_SAFE_BOOL_H_

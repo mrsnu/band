@@ -6,17 +6,17 @@
 #include "band/interface/backend.h"
 #include "tensorflow/lite/c/common.h"
 
-namespace Band {
-namespace TfLite {
+namespace band {
+namespace tfl {
 BandStatus GetBandStatus(TfLiteStatus status);
 BandType GetBandType(TfLiteType type);
 
-class TfLiteUtil : public Interface::IBackendUtil {
+class TfLiteUtil : public interface::IBackendUtil {
  public:
   std::set<BandDeviceFlags> GetAvailableDevices() const override;
 };
 
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
 
 #endif

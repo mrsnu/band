@@ -13,7 +13,7 @@
 #include "band/worker.h"
 #include "model_analyzer.h"
 
-namespace Band {
+namespace band {
 std::string SetToString(const std::set<int>& set) {
   auto range_to_string = [](int lhs, int rhs) {
     if (lhs == rhs) {
@@ -163,7 +163,7 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
       need_fallback_subgraph_(need_fallback_subgraph),
       subgraph_config_(subgraph_config),
       backend_type_(backend_type) {
-  std::unique_ptr<Interface::IModelExecutor> interpreter(
+  std::unique_ptr<interface::IModelExecutor> interpreter(
       BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
                                           kBandCPU));
   model_spec_ = std::make_shared<ModelSpec>(
@@ -485,7 +485,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
   return kBandOk;
 }
 
-std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
+std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     WorkerId worker_id) {
   const Worker* worker = context_.GetWorker(worker_id);
   if (!worker) {
@@ -719,4 +719,4 @@ bool ModelAnalyzer::IsResolved(const std::set<int> resolved_tensors,
   }
   return true;
 }
-}  // namespace Band
+}  // namespace band

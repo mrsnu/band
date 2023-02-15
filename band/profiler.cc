@@ -2,7 +2,7 @@
 
 #include "band/logger.h"
 
-namespace Band {
+namespace band {
 
 size_t Profiler::BeginEvent() {
   timeline_vector_.push_back({std::chrono::system_clock::now(), {}});
@@ -21,4 +21,4 @@ void Profiler::EndEvent(size_t event_handle) {
 }
 
 size_t Profiler::GetNumEvents() const { return timeline_vector_.size(); }
-}  // namespace Band
+}  // namespace band

@@ -10,7 +10,7 @@
 
 #include "band/c/common.h"
 
-namespace Band {
+namespace band {
 typedef int WorkerId;
 typedef int ModelId;
 typedef int JobId;
@@ -107,6 +107,6 @@ struct CacheHash {
   std::size_t operator()(const std::pair<int, BitMask>& p) const;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_COMMON_H_

@@ -2,7 +2,7 @@
 #include "band/scheduler/fixed_worker_scheduler.h"
 #include "band/time.h"
 
-namespace Band {
+namespace band {
 
 void FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
   // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
@@ -53,4 +53,4 @@ void FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
   // }
 }
 
-}  // namespace Band
+}  // namespace band

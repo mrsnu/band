@@ -6,7 +6,7 @@
 #include "band/logger.h"
 #include "model_spec.h"
 
-namespace Band {
+namespace band {
 std::set<int> ModelSpec::GetPureInputTensors(
     const std::set<int>& op_indices) const {
   // {all input tensors in ops} - {all output tensors in ops}
@@ -38,7 +38,7 @@ std::set<int> ModelSpec::GetOutputTensors(
   return output_tensors;
 }
 
-BandStatus Band::ModelSpec::SetUnitSubgraphs(std::vector<std::set<int>> ops) {
+BandStatus band::ModelSpec::SetUnitSubgraphs(std::vector<std::set<int>> ops) {
   unit_subgraph_ops = ops;
 
   // Verify whether unit subgraph covers all ops
@@ -102,4 +102,4 @@ BitMask ModelSpec::GetUnitSubgraphDependency(
   return external_dependencies;
 }
 
-}  // namespace Band
+}  // namespace band

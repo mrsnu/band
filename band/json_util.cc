@@ -6,7 +6,7 @@
 
 #include "band/logger.h"
 
-namespace Band {
+namespace band {
 namespace json {
 
 inline bool FileExists(const std::string& name) {
@@ -68,4 +68,4 @@ bool Validate(const Json::Value& root, std::vector<std::string> required) {
 }
 
 }  // namespace json
-}  // namespace Band
+}  // namespace band

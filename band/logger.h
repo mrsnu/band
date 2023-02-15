@@ -3,7 +3,7 @@
 
 #include <cstdarg>
 
-namespace Band {
+namespace band {
 enum LogSeverity {
   BAND_LOG_INFO = 0,
   BAND_LOG_WARNING = 1,
@@ -26,7 +26,7 @@ class Logger {
   static LogSeverity verbosity;
   static const char* GetSeverityName(LogSeverity severity);
 };
-}  // namespace Band
+}  // namespace band
 
 // Convenience macro for basic internal logging in production builds.
 // Note: This should never be used for debug-type logs, as it will *not* be
@@ -34,7 +34,7 @@ class Logger {
 // APIs for developer-facing errors, and only use this for diagnostic output
 // that should always be logged in user builds.
 #define BAND_LOG_PROD(severity, format, ...) \
-  Band::Logger::Log(severity, format, ##__VA_ARGS__);
+  band::Logger::Log(severity, format, ##__VA_ARGS__);
 
 // Convenience macro for logging a statement *once* for a given process lifetime
 // in production builds.

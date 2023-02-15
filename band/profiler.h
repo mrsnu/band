@@ -4,7 +4,7 @@
 #include <chrono>
 #include <vector>
 
-namespace Band {
+namespace band {
 
 class Profiler {
  public:
@@ -52,5 +52,5 @@ class Profiler {
                         std::chrono::system_clock::time_point>>
       timeline_vector_;
 };
-}  // namespace Band
+}  // namespace band
 #endif
