@@ -3,8 +3,8 @@
 #include "band/java/src/main/native/jni_utils.h"
 #include "band/model.h"
 
-using Band::Model;
-using Band::jni::ConvertLongToModel;
+using band::Model;
+using band::jni::ConvertLongToModel;
 
 namespace {
 
@@ -42,7 +42,8 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeModelWrapper_loadFromBuffer(
     JNIEnv* env, jclass clazz, jlong modelHandle, jint backendType,
     jobject modelBuffer) {
   Model* model = ConvertLongToModel(env, modelHandle);
-  const char* buf = static_cast<char*>(env->GetDirectBufferAddress(modelBuffer));
+  const char* buf =
+      static_cast<char*>(env->GetDirectBufferAddress(modelBuffer));
   size_t size = env->GetDirectBufferCapacity(modelBuffer);
   model->FromBuffer(ConvertJintToBackendType(backendType), buf, size);
 }

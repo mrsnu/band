@@ -8,9 +8,9 @@
 #include "band/backend_factory.h"
 #include "band/interface/backend.h"
 
-namespace Band {
-using namespace Interface;
-namespace TfLite {
+namespace band {
+using namespace interface;
+namespace tfl {
 class ModelExecutorCreator
     : public Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags> {
  public:
@@ -30,7 +30,7 @@ class UtilCreator : public Creator<IBackendUtil> {
   IBackendUtil* Create() const override { return new TfLiteUtil(); }
 };
 
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
 
 #endif

@@ -6,7 +6,7 @@
 
 #include "band/context.h"
 
-namespace Band {
+namespace band {
 namespace Test {
 
 struct MockContextBase : public Context {
@@ -74,6 +74,6 @@ struct MockContextBase : public Context {
 };
 
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_TEST_TEST_UTIL_H_

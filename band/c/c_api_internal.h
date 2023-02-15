@@ -11,31 +11,31 @@
 #include "band/tensor.h"
 
 struct BandConfigBuilder {
-  Band::RuntimeConfigBuilder impl;
+  band::RuntimeConfigBuilder impl;
 };
 
 struct BandConfig {
-  BandConfig(Band::RuntimeConfig config) : impl(config) {}
-  Band::RuntimeConfig impl;
+  BandConfig(band::RuntimeConfig config) : impl(config) {}
+  band::RuntimeConfig impl;
 };
 
 struct BandModel {
-  BandModel() : impl(std::make_shared<Band::Model>()) {}
-  std::shared_ptr<Band::Model> impl;
+  BandModel() : impl(std::make_shared<band::Model>()) {}
+  std::shared_ptr<band::Model> impl;
 };
 
 struct BandTensor {
-  BandTensor(Band::Tensor* tensor)
-      : impl(std::make_unique<Band::Tensor>(tensor)) {}
-  std::unique_ptr<Band::Tensor> impl;
+  BandTensor(band::Tensor* tensor)
+      : impl(std::make_unique<band::Tensor>(tensor)) {}
+  std::unique_ptr<band::Tensor> impl;
 };
 
 struct BandEngine {
-  BandEngine(std::unique_ptr<Band::Engine> engine) : impl(std::move(engine)) {}
+  BandEngine(std::unique_ptr<band::Engine> engine) : impl(std::move(engine)) {}
   // holds shared refs to registered models to guarantee the model's lifespan
   // matches with the engine.
-  std::list<std::shared_ptr<Band::Model>> models;
-  std::unique_ptr<Band::Engine> impl;
+  std::list<std::shared_ptr<band::Model>> models;
+  std::unique_ptr<band::Engine> impl;
 };
 
 #endif

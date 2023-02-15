@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-namespace Band {
+namespace band {
 namespace Test {
 
 TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
@@ -139,7 +139,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
 }
 
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

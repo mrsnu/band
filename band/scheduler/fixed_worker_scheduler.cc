@@ -2,7 +2,7 @@
 
 #include "band/error_reporter.h"
 
-namespace Band {
+namespace band {
 void FixedWorkerScheduler::Schedule(JobQueue& requests) {
   // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   while (!requests.empty()) {
@@ -21,4 +21,4 @@ void FixedWorkerScheduler::Schedule(JobQueue& requests) {
   }
 }
 
-}  // namespace Band
+}  // namespace band

@@ -8,7 +8,7 @@
 #include "band/profiler.h"
 #include "band/tool/benchmark_config.h"
 
-namespace Band {
+namespace band {
 namespace tool {
 class Benchmark {
  public:
@@ -55,6 +55,6 @@ class Benchmark {
   bool kill_app_ = false;
 };
 }  // namespace tool
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_TOOL_BENCHMARK_H_

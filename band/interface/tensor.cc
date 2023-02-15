@@ -5,8 +5,8 @@
 #include "band/logger.h"
 #include "tensor.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 size_t ITensor::GetNumElements() const {
   size_t num_elements = 1;
   for (auto dim : GetDimsVector()) {
@@ -47,5 +47,5 @@ BandStatus ITensor::CopyDataFrom(const ITensor* rhs) {
 
   return CopyDataFrom(*rhs);
 }
-}  // namespace Interface
-}  // namespace Band
+}  // namespace interface
+}  // namespace band

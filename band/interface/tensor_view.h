@@ -8,19 +8,19 @@
 #include "band/interface/backend.h"
 #include "band/interface/tensor.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 /*
   Tensor view interface for communication with
   backend specific / owned tensor types.
 
-  Band::Tensor
-    <- (deep cpy) Band::ITensorView view
+  band::Tensor
+    <- (deep cpy) band::ITensorView view
     <- (shallow cpy) Backend tensor
 */
 struct ITensorView : public IBackendSpecific, public ITensor {};
 
-}  // namespace Interface
-}  // namespace Band
+}  // namespace interface
+}  // namespace band
 
 #endif

@@ -2,7 +2,7 @@
 
 #include "band/macros.h"
 
-namespace Band {
+namespace band {
 
 #define REPORT_IF_FALSE(context, expr)                            \
   do {                                                            \
@@ -161,4 +161,4 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   return runtime_config;
 }
 
-}  // namespace Band
+}  // namespace band

@@ -6,8 +6,8 @@
 #include "band/backend/tfl/model_executor.h"
 #include "band/logger.h"
 
-namespace Band {
-namespace TfLite {
+namespace band {
+namespace tfl {
 
 BandStatus GetBandStatus(TfLiteStatus status) { return BandStatus(status); }
 BandType GetBandType(TfLiteType type) { return BandType(type); }
@@ -27,5 +27,5 @@ std::set<BandDeviceFlags> TfLiteUtil::GetAvailableDevices() const {
 
   return valid_devices;
 }
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band

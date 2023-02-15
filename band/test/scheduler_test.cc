@@ -10,7 +10,7 @@
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/test/test_util.h"
 
-namespace Band {
+namespace band {
 namespace Test {
 
 struct MockContext : public MockContextBase {
@@ -244,7 +244,7 @@ INSTANTIATE_TEST_SUITE_P(
                                     std::set<int>{0, 1, 2})));
 
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

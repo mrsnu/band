@@ -6,7 +6,7 @@
 #include "band/c/common.h"
 #include "band/context.h"
 
-namespace Band {
+namespace band {
 class Planner;
 
 class IScheduler {
@@ -25,6 +25,6 @@ class IScheduler {
  protected:
   Context& context_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif

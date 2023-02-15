@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-namespace Band {
+namespace band {
 namespace Time {
 namespace Test {
 
@@ -33,7 +33,7 @@ TEST(TimeTest, SleepForMicros) {
 
 }  // namespace Test
 }  // namespace Time
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

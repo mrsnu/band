@@ -11,7 +11,7 @@
 #include "band/time.h"
 #include "band/worker.h"
 
-namespace Band {
+namespace band {
 namespace Test {
 struct CustomWorkerMockContext : public MockContextBase {
   CustomWorkerMockContext() { model_spec.path = "dummy"; }
@@ -36,7 +36,7 @@ struct CustomInvokeMockContext : public CustomWorkerMockContext {
       : invoke_lambda(invoke_lambda) {}
 
   std::function<BandStatus(const SubgraphKey&)> invoke_lambda;
-  BandStatus Invoke(const Band::SubgraphKey& subgraph_key) override {
+  BandStatus Invoke(const band::SubgraphKey& subgraph_key) override {
     return invoke_lambda(subgraph_key);
   }
 };
@@ -71,7 +71,7 @@ struct AffinityMasksFixture : public testing::TestWithParam<BandCPUMaskFlags> {
 };
 
 TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
-  CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockContext context([](const band::SubgraphKey& subgraph_key) {
     CpuSet thread_cpu_set;
     if (GetCPUThreadAffinity(thread_cpu_set) != kBandOk) {
       return kBandError;
@@ -112,7 +112,7 @@ INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
                                          kBandPrimary));
 
 TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
-  CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockContext context([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return kBandOk;
   });
@@ -138,7 +138,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
 }
 
 TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
-  CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockContext context([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return kBandOk;
   });
@@ -190,7 +190,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 }
 
 TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
-  CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockContext context([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return kBandOk;
   });
@@ -245,7 +245,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
 }
 
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

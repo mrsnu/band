@@ -4,9 +4,9 @@
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 
-std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
+std::vector<band::interface::ITensor*> BandTensorArrayToVec(
     BandTensor** tensors, int num_tensors) {
-  std::vector<Band::Interface::ITensor*> vec(num_tensors);
+  std::vector<band::interface::ITensor*> vec(num_tensors);
   for (int i = 0; i < vec.size(); ++i) {
     vec[i] = tensors[i]->impl.get();
   }
@@ -173,7 +173,7 @@ BandQuantization BandTensorGetQuantization(BandTensor* tensor) {
 }
 
 BandEngine* BandEngineCreate(BandConfig* config) {
-  std::unique_ptr<Band::Engine> engine(Band::Engine::Create(config->impl));
+  std::unique_ptr<band::Engine> engine(band::Engine::Create(config->impl));
   return engine ? new BandEngine(std::move(engine)) : nullptr;
 }
 void BandEngineDelete(BandEngine* engine) {

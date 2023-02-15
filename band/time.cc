@@ -8,7 +8,7 @@
 #include <time.h>
 #endif
 
-namespace Band {
+namespace band {
 namespace Time {
 
 #if defined(_MSC_VER)
@@ -56,4 +56,4 @@ void SleepForMicros(uint64_t micros) {
 #endif  // defined(_MSC_VER)
 
 }  // namespace Time
-}  // namespace Band
+}  // namespace band

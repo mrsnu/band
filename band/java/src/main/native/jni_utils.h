@@ -6,25 +6,25 @@
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
-#include "band/model.h"
-#include "band/tensor.h"
 #include "band/error_reporter.h"
 #include "band/logger.h"
+#include "band/model.h"
+#include "band/tensor.h"
 
-namespace Band {
+namespace band {
 namespace jni {
 
 #define JNI_DEFINE_CLS(tag, cls)                                            \
   static jclass tag##_cls = env->FindClass(cls);                            \
   if (tag##_cls == nullptr) {                                               \
-    BAND_LOG_INTERNAL(Band::BAND_LOG_ERROR, "Canont find class named `%s`", \
+    BAND_LOG_INTERNAL(band::BAND_LOG_ERROR, "Canont find class named `%s`", \
                       cls);                                                 \
   }
 
 #define JNI_DEFINE_MTD(tag, cls_var, mtd, sig)                             \
   static jmethodID tag##_mtd = env->GetMethodID(cls_var, mtd, sig);        \
   if (tag##_mtd == nullptr) {                                              \
-    BAND_LOG_INTERNAL(Band::BAND_LOG_ERROR,                                \
+    BAND_LOG_INTERNAL(band::BAND_LOG_ERROR,                                \
                       "Cannot find method named `%s` with signature `%s`", \
                       mtd, sig);                                           \
   }
@@ -63,7 +63,7 @@ class BufferErrorReporter : public ErrorReporter {
 template <typename T>
 T* CastLongToPointer(JNIEnv* env, jlong handle) {
   if (handle == 0 || handle == -1) {
-    ThrowException(env, Band::jni::kIllegalArgumentException,
+    ThrowException(env, band::jni::kIllegalArgumentException,
                    "Internal error: Found invalid handle");
     return nullptr;
   }
@@ -71,7 +71,8 @@ T* CastLongToPointer(JNIEnv* env, jlong handle) {
 }
 
 template <typename T>
-std::vector<T*> ConvertListToVectorOfPointer(JNIEnv* env, jobject object, jmethodID mtd) {
+std::vector<T*> ConvertListToVectorOfPointer(JNIEnv* env, jobject object,
+                                             jmethodID mtd) {
   JNI_DEFINE_CLS(list, "java/util/List");
   JNI_DEFINE_MTD(list_size, list_cls, "size", "()I");
   JNI_DEFINE_MTD(list_get, list_cls, "get", "(I)Ljava/lang/Object;");
@@ -103,6 +104,6 @@ int ConvertLongToJobId(jint request_handle);
 BufferErrorReporter* ConvertLongToErrorReporter(JNIEnv* env, jlong handle);
 
 }  // namespace jni
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_JAVA_SRC_MAIN_NATIVE_JNI_UTILS_H_

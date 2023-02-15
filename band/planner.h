@@ -15,7 +15,7 @@
 #include "band/scheduler/scheduler.h"
 #include "band/worker.h"
 
-namespace Band {
+namespace band {
 
 // The maximum number of available job outputs at one time.
 #define NUM_FINISHED_RECORDS 1000
@@ -133,6 +133,6 @@ class Planner {
   bool need_reschedule_ = false;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_PLANNER_H_

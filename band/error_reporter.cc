@@ -5,7 +5,7 @@
 
 #include "band/logger.h"
 
-namespace Band {
+namespace band {
 
 int ErrorReporter::Report(const char* format, ...) const {
   va_list args;
@@ -35,4 +35,4 @@ ErrorReporter* DefaultErrorReporter() {
   return error_reporter;
 }
 
-}  // namespace Band
+}  // namespace band

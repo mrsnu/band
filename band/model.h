@@ -6,8 +6,8 @@
 
 #include "band/common.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 class IModel;
 }
 
@@ -21,15 +21,15 @@ class Model {
   BandStatus FromBuffer(BandBackendType backend_type, const char* buffer,
                         size_t buffer_size);
 
-  Interface::IModel* GetBackendModel(BandBackendType backend_type);
+  interface::IModel* GetBackendModel(BandBackendType backend_type);
   std::set<BandBackendType> GetSupportedBackends() const;
 
  private:
   static ModelId next_model_id_;
   const ModelId model_id_;
 
-  std::map<BandBackendType, std::shared_ptr<Interface::IModel>> backend_models_;
+  std::map<BandBackendType, std::shared_ptr<interface::IModel>> backend_models_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif

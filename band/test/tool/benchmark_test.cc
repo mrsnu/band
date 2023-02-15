@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-namespace Band {
+namespace band {
 namespace Test {
 
 TEST(BenchmarkTest, BenchmarkConfigLoadSuccess) {
@@ -26,7 +26,7 @@ TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
 }
 
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
 #ifdef BAND_TFLITE

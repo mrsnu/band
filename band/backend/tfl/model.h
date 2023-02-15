@@ -6,9 +6,9 @@
 #include "band/interface/model.h"
 #include "tensorflow/lite/model_builder.h"
 
-namespace Band {
-namespace TfLite {
-class TfLiteModel : public Interface::IModel {
+namespace band {
+namespace tfl {
+class TfLiteModel : public interface::IModel {
  public:
   TfLiteModel(ModelId id);
   BandBackendType GetBackendType() const override;
@@ -23,7 +23,7 @@ class TfLiteModel : public Interface::IModel {
  private:
   std::unique_ptr<tflite::FlatBufferModel> flat_buffer_model_;
 };
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
 
 #endif

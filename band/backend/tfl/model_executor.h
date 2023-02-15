@@ -6,16 +6,16 @@
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/interpreter.h"
 
-namespace Band {
-namespace TfLite {
-class TfLiteModelExecutor : public Interface::IModelExecutor {
+namespace band {
+namespace tfl {
+class TfLiteModelExecutor : public interface::IModelExecutor {
  public:
   TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
                       BandDeviceFlags device_flag);
   ~TfLiteModelExecutor() override;
 
-  ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
-  BandStatus PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
+  ModelSpec InvestigateModelSpec(interface::IModel* model) override;
+  BandStatus PrepareSubgraph(interface::IModel* model, std::set<int> ops = {},
                              std::set<int> unit_indices = {}) override;
 
   BandBackendType GetBackendType() const override;
@@ -26,7 +26,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   size_t GetNumTensors(const SubgraphKey& key) const override;
   size_t GetNumNodes(const SubgraphKey& key) const override;
 
-  std::shared_ptr<Interface::ITensorView> GetTensorView(const SubgraphKey& key,
+  std::shared_ptr<interface::ITensorView> GetTensorView(const SubgraphKey& key,
                                                         int index) override;
   SubgraphKey GetLargestSubgraphKey() const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
@@ -42,7 +42,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   const tflite::Interpreter* GetInterpreter(const SubgraphKey& key) const;
 
   std::unique_ptr<tflite::Interpreter> CreateTfLiteInterpreter(
-      Interface::IModel* model, BandDeviceFlags device,
+      interface::IModel* model, BandDeviceFlags device,
       std::set<int> op_indices = {});
   static std::pair<BandStatus, TfLiteDelegate*> GetDeviceDelegate(
       BandDeviceFlags device);
@@ -53,7 +53,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   static std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
       delegates_;
 };
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
 
 #endif  // BAND_BACKEND_TFL_MODEL_EXECUTOR_H_

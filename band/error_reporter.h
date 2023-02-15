@@ -4,7 +4,7 @@
 
 #include <cstdarg>
 
-namespace Band {
+namespace band {
 
 /// A functor that reports error to supporting system. Invoked similar to
 /// printf.
@@ -35,7 +35,7 @@ struct StderrReporter : public ErrorReporter {
 // Return the default error reporter (output to stderr).
 ErrorReporter* DefaultErrorReporter();
 
-}  // namespace Band
+}  // namespace band
 
 #if !defined(__PRETTY_FUNCTION__) && defined(_WIN32)
 #define __PRETTY_FUNCTION__ __FUNCSIG__

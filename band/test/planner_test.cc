@@ -8,7 +8,7 @@
 #include "band/time.h"
 #include "band/worker.h"
 
-namespace Band {
+namespace band {
 namespace Test {
 
 struct MockContext : public MockContextBase {
@@ -51,7 +51,7 @@ TEST(PlannerSuite, SingleQueue) {
   EXPECT_TRUE(true);
 }
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

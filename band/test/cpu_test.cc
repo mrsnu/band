@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-namespace Band {
+namespace band {
 namespace Test {
 struct AffinityMasksFixture : public testing::TestWithParam<BandCPUMaskFlags> {
 };
@@ -67,7 +67,7 @@ INSTANTIATE_TEST_SUITE_P(DummyTest, AffinityMasksFixture,
 #endif
 
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

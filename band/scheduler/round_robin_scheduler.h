@@ -3,7 +3,7 @@
 
 #include "band/scheduler/scheduler.h"
 
-namespace Band {
+namespace band {
 
 // assigns requested model to devices in a Round-robin manner.
 class RoundRobinScheduler : public IScheduler {
@@ -15,6 +15,6 @@ class RoundRobinScheduler : public IScheduler {
   BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_SCHEDULER_ROUND_ROBIN_SCHEDULER_H_

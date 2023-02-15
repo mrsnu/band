@@ -8,7 +8,7 @@
 #include "band/test/test_util.h"
 #include "band/time.h"
 
-namespace Band {
+namespace band {
 namespace Test {
 
 struct MockContext : public MockContextBase {
@@ -76,7 +76,7 @@ TYPED_TEST(WokrerSuite, Wait) {
 
 // TODO: throttling test
 }  // namespace Test
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

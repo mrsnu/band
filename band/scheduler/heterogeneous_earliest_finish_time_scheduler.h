@@ -3,7 +3,7 @@
 
 #include "band/scheduler/scheduler.h"
 
-namespace Band {
+namespace band {
 
 class HEFTScheduler : public IScheduler {
  public:
@@ -21,6 +21,6 @@ class HEFTScheduler : public IScheduler {
   const bool reserve_;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_SCHEDULER_HETEROGENEOUS_EARLIEST_FINISH_TIME_SCHEDULER_H_

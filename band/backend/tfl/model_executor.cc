@@ -18,8 +18,8 @@
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 
-namespace Band {
-namespace TfLite {
+namespace band {
+namespace tfl {
 
 std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
     TfLiteModelExecutor::delegates_ = {};
@@ -34,7 +34,7 @@ TfLiteModelExecutor::~TfLiteModelExecutor() {
   interpreters_.clear();
 }
 
-ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {
+ModelSpec TfLiteModelExecutor::InvestigateModelSpec(interface::IModel* model) {
   int num_ops;
   int num_tensors;
   std::vector<BandType> tensor_types;
@@ -147,7 +147,7 @@ ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {
   return model_spec;
 }
 
-BandStatus TfLiteModelExecutor::PrepareSubgraph(Interface::IModel* model,
+BandStatus TfLiteModelExecutor::PrepareSubgraph(interface::IModel* model,
                                                 std::set<int> ops,
                                                 std::set<int> unit_indices) {
   if (model_id_ != model->GetId()) {
@@ -203,7 +203,7 @@ size_t TfLiteModelExecutor::GetNumNodes(const SubgraphKey& key) const {
   return GetInterpreter(key)->nodes_size();
 }
 
-std::shared_ptr<Interface::ITensorView> TfLiteModelExecutor::GetTensorView(
+std::shared_ptr<interface::ITensorView> TfLiteModelExecutor::GetTensorView(
     const SubgraphKey& key, int index) {
   return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
 }
@@ -303,7 +303,7 @@ BandDeviceFlags GetNNAPIDeviceFlag(std::string name) {
 }
 
 std::unique_ptr<tflite::Interpreter>
-TfLiteModelExecutor::CreateTfLiteInterpreter(Interface::IModel* model,
+TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
                                              BandDeviceFlags device,
                                              std::set<int> op_indices) {
   std::unique_ptr<tflite::Interpreter> interpreter;
@@ -470,7 +470,7 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
                 ? delegates_.at(device).get()
                 : nullptr};
   }
-}  // namespace TfLite
+}  // namespace tfl
 
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
