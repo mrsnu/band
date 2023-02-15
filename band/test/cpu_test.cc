@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 namespace band {
-namespace Test {
+namespace test {
 struct AffinityMasksFixture : public testing::TestWithParam<BandCPUMaskFlags> {
 };
 
@@ -66,7 +66,7 @@ INSTANTIATE_TEST_SUITE_P(DummyTest, AffinityMasksFixture,
                                          kBandPrimary));
 #endif
 
-}  // namespace Test
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

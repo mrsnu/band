@@ -12,7 +12,7 @@
 #include "band/worker.h"
 
 namespace band {
-namespace Test {
+namespace test {
 struct CustomWorkerMockContext : public MockContextBase {
   CustomWorkerMockContext() { model_spec.path = "dummy"; }
   Worker* GetWorker(WorkerId id) override { return worker; }
@@ -244,7 +244,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
   worker.End();
 }
 
-}  // namespace Test
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

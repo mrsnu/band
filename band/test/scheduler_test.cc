@@ -11,7 +11,7 @@
 #include "band/test/test_util.h"
 
 namespace band {
-namespace Test {
+namespace test {
 
 struct MockContext : public MockContextBase {
   std::set<WorkerId> idle_workers_;
@@ -243,7 +243,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(std::make_tuple(std::deque<int>{0, 1, 2},
                                     std::set<int>{0, 1, 2})));
 
-}  // namespace Test
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

@@ -5,7 +5,7 @@
 
 namespace band {
 namespace Time {
-namespace Test {
+namespace test {
 
 TEST(TimeTest, NowMicros) {
   auto now0 = NowMicros();
@@ -31,7 +31,7 @@ TEST(TimeTest, SleepForMicros) {
   EXPECT_GE(now1, now0 + 1e6 + 50);
 }
 
-}  // namespace Test
+}  // namespace test
 }  // namespace Time
 }  // namespace band
 

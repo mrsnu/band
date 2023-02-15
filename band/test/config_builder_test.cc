@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 namespace band {
-namespace Test {
+namespace test {
 
 TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   ProfileConfigBuilder b;
@@ -138,7 +138,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.cpu_mask, kBandAll);
 }
 
-}  // namespace Test
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {
