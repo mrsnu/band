@@ -1,15 +1,16 @@
 #ifndef BAND_COMMON_H_
 #define BAND_COMMON_H_
 
-#include <iostream>
 #include <bitset>
+#include <iostream>
 #include <list>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
 
-#include "band/c/common.h"
+#include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 
 namespace Band {
 
@@ -25,20 +26,13 @@ static size_t kBandNumSubgraphPreparationType = 4;
 static size_t kBandNumDevices = 4;
 
 // Empty template.
-template<typename T>
+template <typename T>
 T FromString(std::string str) {}
 
-enum class BackendType : int {
-  TfLite = 0
-};
+enum class BackendType : int { TfLite = 0 };
 std::string GetName(BackendType backend_type);
 
-enum class CPUMaskFlags : int {
-  All = 0,
-  Little = 1,
-  Big = 2,
-  Primary = 3
-};
+enum class CPUMaskFlags : int { All = 0, Little = 1, Big = 2, Primary = 3 };
 std::string GetName(CPUMaskFlags cpu_mask_flags);
 
 enum class SchedulerType : int {
@@ -51,7 +45,7 @@ enum class SchedulerType : int {
   HeterogeneousEarliestFinishTimeReserved = 6
 };
 std::string GetName(SchedulerType scheduler_type);
-template<>
+template <>
 SchedulerType FromString(std::string str);
 
 enum class SubgraphPreparationType : int {
@@ -61,7 +55,7 @@ enum class SubgraphPreparationType : int {
   MergeUnitSubgraph = 3
 };
 std::string GetName(SubgraphPreparationType subgraph_preparation_type);
-template<>
+template <>
 SubgraphPreparationType FromString(std::string str);
 
 enum class DataType : int {
@@ -80,14 +74,9 @@ enum class DataType : int {
 };
 std::string GetName(DataType data_type);
 
-enum class DeviceFlags : int {
-  CPU = 0,
-  GPU = 1,
-  DSP = 2,
-  NPU = 3
-};
+enum class DeviceFlags : int { CPU = 0, GPU = 1, DSP = 2, NPU = 3 };
 std::string GetName(DeviceFlags device_flags);
-template<>
+template <>
 DeviceFlags FromString(std::string str);
 
 enum class JobStatus {
@@ -184,5 +173,22 @@ struct CacheHash {
 };
 
 }  // namespace Band
+
+#define BAND_RETURN_INTERNAL_ERROR_PROD(format, ...)        \
+  Band::Logger::Log(BAND_LOG_ERROR, format, ##__VA_ARGS__); \
+  return absl::InternalError(absl::StrFormat(format, ##__VA_ARGS__));
+
+#define BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(status, format, ...) \
+  do {                                                                \
+    if (!status.ok()) {                                               \
+      return status;                                                  \
+    }                                                                 \
+  } while (0);
+
+#ifndef NDEBUG
+#define BAND_RETURN_INTERNAL_ERROR_INTERNAL BAND_RETURN_INTERNAL_ERROR_PROD
+#else  // NDEBUG
+#define BAND_RETURN_INTERNAL_ERROR_INTERNAL(severity, format, ...)
+#endif  // NDEBUG
 
 #endif  // BAND_COMMON_H_

@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "band/c/common.h"
 #include "band/common.h"
 #include "band/cpu.h"
 #include "band/error_reporter.h"

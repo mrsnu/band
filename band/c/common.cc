@@ -208,7 +208,7 @@ const BandBackendType BandBackendGetType(const char* name) {
 
 const char* BandStatusGetName(BandStatus status) {
   switch (status) {
-    case kBandOk:
+    case absl::OkStatus():
       return "Ok";
     case kBandDelegateError:
       return "DelegateError";

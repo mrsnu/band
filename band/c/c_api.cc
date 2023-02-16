@@ -188,7 +188,7 @@ void BandEngineDelete(BandEngine* engine) {
 
 BandStatus BandEngineRegisterModel(BandEngine* engine, BandModel* model) {
   auto status = engine->impl->RegisterModel(model->impl.get());
-  if (status == kBandOk) {
+  if (status == absl::OkStatus()) {
     engine->models.push_back(model->impl);
   }
   return status;

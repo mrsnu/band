@@ -23,7 +23,7 @@ struct MockContextBase : public Context {
   MOCK_CONST_METHOD1(HasSubgraph, bool(const SubgraphKey&));
   MOCK_CONST_METHOD1(ForEachSubgraph,
                      void(std::function<void(const SubgraphKey&)>));
-  MOCK_METHOD1(Invoke, BandStatus(const SubgraphKey&));
+  MOCK_METHOD1(Invoke, absl::Status(const SubgraphKey&));
 
   /* model */
   MOCK_CONST_METHOD1(GetModelSpec, const ModelSpec*(ModelId));
@@ -69,8 +69,8 @@ struct MockContextBase : public Context {
   MOCK_CONST_METHOD0(GetNumWorkers, size_t());
 
   /* tensor communication */
-  MOCK_METHOD1(TryCopyInputTensors, BandStatus(const Job&));
-  MOCK_METHOD1(TryCopyOutputTensors, BandStatus(const Job&));
+  MOCK_METHOD1(TryCopyInputTensors, absl::Status(const Job&));
+  MOCK_METHOD1(TryCopyOutputTensors, absl::Status(const Job&));
 };
 
 }  // namespace Test

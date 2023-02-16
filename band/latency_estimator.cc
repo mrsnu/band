@@ -10,7 +10,7 @@
 namespace Band {
 LatencyEstimator::LatencyEstimator(Context* context) : context_(context) {}
 
-BandStatus LatencyEstimator::Init(const ProfileConfig& config) {
+absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   profile_data_path_ = config.profile_data_path;
   if (!config.online) {
     profile_database_json_ = json::LoadFromFile(config.profile_data_path);
@@ -25,7 +25,7 @@ BandStatus LatencyEstimator::Init(const ProfileConfig& config) {
   profile_num_runs_ = config.num_runs;
   profile_copy_computation_ratio_ = config.copy_computation_ratio;
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
@@ -43,7 +43,7 @@ void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
   }
 }
 
-BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
+absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
   if (profile_online_) {
     for (WorkerId worker_id = 0; worker_id < context_->GetNumWorkers();
          worker_id++) {
@@ -56,7 +56,7 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
       std::thread profile_thread([&]() {
         if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
             SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
-                kBandOk) {
+                absl::OkStatus()) {
           BAND_LOG_PROD(BAND_LOG_ERROR,
                         "Failed to propagate thread affinity of worker id "
                         "%d to profile thread",
@@ -72,24 +72,16 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
             // (L1143-,tensorflow_band/lite/model_executor.cc)
 
             for (int i = 0; i < profile_num_warmups_; i++) {
-              if (context_->Invoke(subgraph_key) != kBandOk) {
-                BAND_LOG_PROD(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
+              BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(context_->Invoke(subgraph_key), "Profiler failed to invoke largest subgraph of "
                               "model %d in worker %d",
                               model_id, worker_id);
-                return;
-              }
             }
 
             for (int i = 0; i < profile_num_runs_; i++) {
               const size_t event_id = average_profiler.BeginEvent();
-              if (context_->Invoke(subgraph_key) != kBandOk) {
-                BAND_LOG_PROD(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
+              BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(context_->Invoke(subgraph_key), "Profiler failed to invoke largest subgraph of "
                               "model %d in worker %d",
                               model_id, worker_id);
-                return;
-              }
               average_profiler.EndEvent(event_id);
             }
 
@@ -124,7 +116,7 @@ BandStatus LatencyEstimator::ProfileModel(ModelId model_id) {
       }
     }
   }
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
@@ -162,7 +154,7 @@ int64_t LatencyEstimator::GetWorst(ModelId model_id) const {
   return worst_model_latency;
 }
 
-BandStatus LatencyEstimator::DumpProfile() {
+absl::Status LatencyEstimator::DumpProfile() {
   return json::WriteToFile(ProfileToJson(), profile_data_path_);
 }
 

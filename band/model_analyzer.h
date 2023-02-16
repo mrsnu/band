@@ -29,7 +29,7 @@ class ModelAnalyzer {
                 SubgraphConfig subgraph_config, Model* model,
                 BackendType backend_type);
 
-  std::tuple<BandStatus, ModelSpec, std::vector<SubgraphDef>> CreateSubgraphs();
+  std::tuple<absl::Status, ModelSpec, std::vector<SubgraphDef>> CreateSubgraphs();
 
  private:
   // A model is partitioned into unit subgraphs.
@@ -37,7 +37,7 @@ class ModelAnalyzer {
   // topologically sorted. Note that there can be better way to assign unit
   // subgraph indices if there exists any unit subgraphs that can be executed in
   // parallel.
-  BandStatus GetUnitSubgraphs(std::vector<SubgraphDef>& unit_subgraphs);
+  absl::Status GetUnitSubgraphs(std::vector<SubgraphDef>& unit_subgraphs);
   // Generate subgraphs for fallback ops in provided model
   // This does not provides unit indices with a SubgraphDef
   std::vector<SubgraphDef> GetSubgraphsForFallbackOps(WorkerId worker_id);

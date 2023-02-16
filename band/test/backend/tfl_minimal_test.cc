@@ -24,10 +24,10 @@ TEST(TFLiteBackend, BackendInvoke) {
   bin_model.FromPath("band/test/data/add.tflite");
 
   TfLite::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
-  EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), kBandOk);
+  EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), absl::OkStatus());
   EXPECT_EQ(
       model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey()),
-      kBandOk);
+      absl::OkStatus());
 }
 
 TEST(TFLiteBackend, ModelSpec) {
@@ -62,7 +62,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 
   IModelExecutor* model_executor =
       BackendFactory::CreateModelExecutor(BackendType::TfLite, 0, 0, DeviceFlags::CPU);
-  EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), kBandOk);
+  EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), absl::OkStatus());
 
   SubgraphKey key = model_executor->GetLargestSubgraphKey();
 
@@ -74,7 +74,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
              ->GetData(),
          input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(model_executor->ExecuteSubgraph(key), kBandOk);
+  EXPECT_EQ(model_executor->ExecuteSubgraph(key), absl::OkStatus());
 
   auto output_tensor =
       model_executor->GetTensorView(key, model_executor->GetOutputs(key)[0]);
@@ -110,8 +110,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), absl::OkStatus());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
@@ -122,14 +122,14 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 
   int execution_count = 0;
   engine->SetOnEndRequest(
-      [&execution_count](int, BandStatus) { execution_count++; });
+      [&execution_count](int, absl::Status) { execution_count++; });
 
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
   EXPECT_EQ(engine->RequestSync(model.GetId(), BandGetDefaultRequestOption(),
                                 {input_tensor}, {output_tensor}),
-            kBandOk);
+            absl::OkStatus());
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
   EXPECT_EQ(execution_count, 1);
@@ -163,8 +163,8 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), absl::OkStatus());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   EXPECT_GT(
       engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
@@ -197,8 +197,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), absl::OkStatus());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
@@ -212,11 +212,11 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 
   int execution_count = 0;
   engine->SetOnEndRequest(
-      [&execution_count](int, BandStatus) { execution_count++; });
+      [&execution_count](int, absl::Status) { execution_count++; });
 
   JobId job_id = engine->RequestAsync(
       model.GetId(), BandGetDefaultRequestOption(), {input_tensor});
-  EXPECT_EQ(engine->Wait(job_id, {output_tensor}), kBandOk);
+  EXPECT_EQ(engine->Wait(job_id, {output_tensor}), absl::OkStatus());
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
   EXPECT_EQ(execution_count, 1);
@@ -252,8 +252,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), absl::OkStatus());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
@@ -272,7 +272,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
               << std::endl;
     EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true, -1, -1},
                                   {input_tensor}, {output_tensor}),
-              kBandOk);
+              absl::OkStatus());
     EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
     EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
@@ -310,19 +310,19 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), absl::OkStatus());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   int execution_count = 0;
   engine->SetOnEndRequest(
-      [&execution_count](int job_id, BandStatus status) { execution_count++; });
+      [&execution_count](int job_id, absl::Status status) { execution_count++; });
 
   for (int worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
     EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, true, -1, -1}),
-              kBandOk);
+              absl::OkStatus());
     EXPECT_EQ(execution_count, worker_id + 1);
     EXPECT_EQ(engine->RequestSync(model.GetId(), {worker_id, false, -1, -1}),
-              kBandOk);
+              absl::OkStatus());
     EXPECT_EQ(execution_count, worker_id + 1);
   }
 }

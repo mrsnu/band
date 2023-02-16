@@ -24,7 +24,7 @@ Planner::~Planner() {
   planner_thread_.join();
 }
 
-BandStatus Planner::Init(const PlannerConfig& config) {
+absl::Status Planner::Init(const PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
   if (log_path_.size()) {
@@ -77,13 +77,15 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     } else if (schedulers[i] == SchedulerType::ShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
           context_, schedule_window_size_));
-    } else if (schedulers[i] == SchedulerType::HeterogeneousEarliestFinishTime) {
+    } else if (schedulers[i] ==
+               SchedulerType::HeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
           new HEFTScheduler(context_, schedule_window_size_, false));
     } else if (schedulers[i] == SchedulerType::LeastSlackTimeFirst) {
       schedulers_.emplace_back(
           new LeastSlackFirstScheduler(context_, schedule_window_size_));
-    } else if (schedulers[i] == SchedulerType::HeterogeneousEarliestFinishTimeReserved) {
+    } else if (schedulers[i] ==
+               SchedulerType::HeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(context_, schedule_window_size_, true));
     } else {
@@ -111,14 +113,15 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     need_cpu_update_ = true;
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-BandStatus Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
+absl::Status Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
   schedulers_.emplace_back(std::move(scheduler));
   local_queues_.resize(schedulers_.size());
-  return GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue) ? kBandError
-                                                                  : kBandOk;
+  return GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue)
+             ? kBandError
+             : absl::OkStatus();
 }
 
 JobId Planner::EnqueueRequest(Job job, bool push_front) {
@@ -204,8 +207,9 @@ void Planner::EnqueueFinishedJob(Job& job) {
   // report end invoke using callback
   if (on_end_request_ && job.require_callback &&
       context_.IsEnd(job.subgraph_key)) {
-    on_end_request_(job.job_id,
-                    job.status == JobStatus::Success ? kBandOk : kBandError);
+    on_end_request_(job.job_id, job.status == JobStatus::Success
+                                    ? absl::OkStatus()
+                                    : kBandError);
   }
 }
 
@@ -245,7 +249,7 @@ Job Planner::GetFinishedJob(int job_id) {
 }
 
 void Planner::SetOnEndRequest(
-    std::function<void(int, BandStatus)> on_end_request) {
+    std::function<void(int, absl::Status)> on_end_request) {
   on_end_request_ = on_end_request;
 }
 
@@ -264,11 +268,9 @@ void Planner::Plan() {
     }
 
     if (need_cpu_update_) {
-      if (SetCPUThreadAffinity(cpu_set_) != kBandOk) {
-        BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                          "[Planner] Failed to set cpu thread affinity");
-        // TODO #21: Handle errors in multi-thread environment
-      }
+      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
+          SetCPUThreadAffinity(cpu_set_),
+          "[Planner] Failed to set cpu thread affinity");
       need_cpu_update_ = false;
     }
     CopyToLocalQueues();

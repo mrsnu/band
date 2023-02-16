@@ -6,7 +6,6 @@
 #include <queue>
 #include <unordered_map>
 
-#include "band/c/common.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/error_reporter.h"
@@ -40,9 +39,9 @@ class Context {
 
   virtual ~Context() = default;
 
-  virtual BandStatus Init(const RuntimeConfig& config) {
+  virtual absl::Status Init(const RuntimeConfig& config) {
     BAND_NOT_IMPLEMENTED;
-    return kBandOk;
+    return absl::OkStatus();
   };
 
   /* worker */
@@ -58,7 +57,7 @@ class Context {
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) const = 0;
-  virtual BandStatus Invoke(const SubgraphKey& key) = 0;
+  virtual absl::Status Invoke(const SubgraphKey& key) = 0;
 
   /* model */
   virtual const ModelSpec* GetModelSpec(ModelId model_id) const = 0;
@@ -116,8 +115,8 @@ class Context {
   virtual size_t GetNumWorkers() const = 0;
 
   /* tensor communication */
-  virtual BandStatus TryCopyInputTensors(const Job& job) = 0;
-  virtual BandStatus TryCopyOutputTensors(const Job& job) = 0;
+  virtual absl::Status TryCopyInputTensors(const Job& job) = 0;
+  virtual absl::Status TryCopyOutputTensors(const Job& job) = 0;
 
  protected:
   ErrorReporter* error_reporter_;

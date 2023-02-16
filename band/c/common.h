@@ -18,7 +18,7 @@ const char* BandBackendGetName(BandBackendType flag);
 const BandBackendType BandBackendGetType(const char* name);
 
 typedef enum BandStatus {
-  kBandOk = 0,
+  absl::OkStatus() = 0,
   kBandError = 1,
   kBandDelegateError = 2
 } BandStatus;
@@ -181,7 +181,7 @@ void BandFloatArrayFree(BandFloatArray* a);
 #define BAND_ENSURE_STATUS(a) \
   do {                        \
     const BandStatus s = (a); \
-    if (s != kBandOk) {       \
+    if (s != absl::OkStatus()) {       \
       return s;               \
     }                         \
   } while (0)
@@ -213,7 +213,7 @@ void BandFloatArrayFree(BandFloatArray* a);
 #define BAND_ENSURE_OK(context, status) \
   do {                                  \
     const BandStatus s = (status);      \
-    if ((s) != kBandOk) {               \
+    if ((s) != absl::OkStatus()) {               \
       return s;                         \
     }                                   \
   } while (0)

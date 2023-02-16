@@ -240,23 +240,25 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
 }
 #endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
-BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
+absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
-  if (ssaret != 0) return kBandError;
+  if (ssaret != 0) {
+    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to set the CPU affinity.");
+  }
 #endif
-
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
+absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
   int gsaret = GetSchedAffinity(thread_affinity_mask);
-  if (gsaret != 0) return kBandError;
+  if (gsaret != 0) {
+    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to get the CPU affinity.")
+  }
 #endif
-
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 int SetupThreadAffinityMasks() {

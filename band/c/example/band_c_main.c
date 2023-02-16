@@ -119,7 +119,7 @@ bool LoadBandLibrary() {
 }
 
 void on_end_request(void* user_data, int job_id, BandStatus status) {
-  if (job_id == 0 && status == kBandOk) {
+  if (job_id == 0 && status == absl::OkStatus()) {
    (*(int*)(user_data))++;
   }
 }

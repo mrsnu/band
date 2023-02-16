@@ -4,11 +4,10 @@
 
 #include "band/common.h"
 #include "band/interface/backend.h"
-#include "tensorflow/lite/c/common.h"
 
 namespace Band {
 namespace TfLite {
-BandStatus GetBandStatus(TfLiteStatus status);
+absl::Status Getabsl::Status(TfLiteStatus status);
 DataType GetBandType(TfLiteType type);
 
 class TfLiteUtil : public Interface::IBackendUtil {

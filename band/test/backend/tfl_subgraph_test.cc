@@ -54,8 +54,8 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()), kBandOk);
-  EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()), absl::OkStatus());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 }
 
 INSTANTIATE_TEST_SUITE_P(

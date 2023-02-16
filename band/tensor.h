@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "band/c/common.h"
 #include "band/interface/tensor.h"
 
 namespace Band {

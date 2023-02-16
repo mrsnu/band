@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "band/c/common.h"
 #include "band/config.h"
 #include "band/safe_bool.h"
 #include "band/scheduler/scheduler.h"
@@ -31,8 +30,8 @@ class Planner {
   explicit Planner(Context& context);
   ~Planner();
 
-  BandStatus Init(const PlannerConfig& config);
-  BandStatus AddScheduler(std::unique_ptr<IScheduler> scheduler);
+  absl::Status Init(const PlannerConfig& config);
+  absl::Status AddScheduler(std::unique_ptr<IScheduler> scheduler);
 
   // Enqueues a job to a worker request queue.
   JobId EnqueueRequest(Job job, bool push_front = false);
@@ -69,7 +68,7 @@ class Planner {
     return model_execution_count_;
   }
   // Sets the callback function pointer to report the end of invoke.
-  void SetOnEndRequest(std::function<void(int, BandStatus)> on_end_request);
+  void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
@@ -106,7 +105,7 @@ class Planner {
   ConcurrentJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
-  std::function<void(int, BandStatus)> on_end_request_;
+  std::function<void(int, absl::Status)> on_end_request_;
 
   // Request Queue
   ConcurrentJobQueue requests_;

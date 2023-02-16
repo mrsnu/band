@@ -1,9 +1,7 @@
 #ifndef BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 #define BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 
-#include "band/c/common.h"
 #include "band/interface/model_executor.h"
-#include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/interpreter.h"
 
 namespace Band {
@@ -15,7 +13,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   ~TfLiteModelExecutor() override;
 
   ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
-  BandStatus PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
+  absl::Status PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
                              std::set<int> unit_indices = {}) override;
 
   BackendType GetBackendType() const override;
@@ -31,7 +29,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   SubgraphKey GetLargestSubgraphKey() const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
 
-  BandStatus ExecuteSubgraph(const SubgraphKey& key) override;
+  absl::Status ExecuteSubgraph(const SubgraphKey& key) override;
   void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) override;
 
@@ -44,7 +42,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   std::unique_ptr<tflite::Interpreter> CreateTfLiteInterpreter(
       Interface::IModel* model, DeviceFlags device,
       std::set<int> op_indices = {});
-  static std::pair<BandStatus, TfLiteDelegate*> GetDeviceDelegate(
+  static std::pair<absl::Status, TfLiteDelegate*> GetDeviceDelegate(
       DeviceFlags device);
 
   std::unordered_map<SubgraphKey, std::unique_ptr<tflite::Interpreter>,

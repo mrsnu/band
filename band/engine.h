@@ -7,7 +7,6 @@
 #include <set>
 #include <vector>
 
-#include "band/c/common.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/context.h"
@@ -56,8 +55,8 @@ class Engine : public Context {
       const RuntimeConfig& config,
       ErrorReporter* error_reporter = DefaultErrorReporter());
 
-  BandStatus RegisterModel(Model* model);
-  BandStatus UnregisterModel(Model* model);
+  absl::Status RegisterModel(Model* model);
+  absl::Status UnregisterModel(Model* model);
 
   Tensor* CreateTensor(ModelId model_id, int tensor_index);
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
@@ -66,11 +65,11 @@ class Engine : public Context {
   size_t GetNumWorkers() const override;
   DeviceFlags GetWorkerDevice(WorkerId id) const;
 
-  BandStatus RequestSync(
+  absl::Status RequestSync(
       ModelId model_id,
       BandRequestOption options = BandGetDefaultRequestOption(),
       Tensors inputs = {}, Tensors outputs = {});
-  BandStatus RequestSync(std::vector<ModelId> model_ids,
+  absl::Status RequestSync(std::vector<ModelId> model_ids,
                          std::vector<BandRequestOption> options = {},
                          std::vector<Tensors> inputs = {},
                          std::vector<Tensors> outputs = {});
@@ -81,14 +80,14 @@ class Engine : public Context {
                                   std::vector<BandRequestOption> options = {},
                                   std::vector<Tensors> inputs = {});
 
-  BandStatus Wait(JobId job_id, Tensors outputs = {});
-  BandStatus Wait(std::vector<JobId> job_ids,
+  absl::Status Wait(JobId job_id, Tensors outputs = {});
+  absl::Status Wait(std::vector<JobId> job_ids,
                   std::vector<Tensors> outputs = {});
   void WaitAll();
-  BandStatus GetOutputTensors(JobId job_id, Tensors outputs = {});
+  absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetOnEndRequest(std::function<void(int, BandStatus)> on_end_request);
+  void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
@@ -97,7 +96,7 @@ class Engine : public Context {
 
  private:
   /* context */
-  BandStatus Init(const RuntimeConfig& config) override;
+  absl::Status Init(const RuntimeConfig& config) override;
   void UpdateWorkersWaiting() const override;
   WorkerWaitingTime GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
@@ -107,7 +106,7 @@ class Engine : public Context {
   bool HasSubgraph(const SubgraphKey& key) const override;
   void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) const override;
-  BandStatus Invoke(const SubgraphKey& key) override;
+  absl::Status Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
   WorkerId GetModelWorker(ModelId model_id) const override;
@@ -154,8 +153,8 @@ class Engine : public Context {
   const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
   /* tensor communication */
-  BandStatus TryCopyInputTensors(const Job& job) override;
-  BandStatus TryCopyOutputTensors(const Job& job) override;
+  absl::Status TryCopyInputTensors(const Job& job) override;
+  absl::Status TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
   WorkerId GetDeviceWorkerId(DeviceFlags flag) const;

@@ -176,19 +176,16 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
   }
 
   for (auto device : model_spec_->unavailable_devices) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s",
-                  GetName(device));
+    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", GetName(device));
   }
 }
 
-std::tuple<BandStatus, ModelSpec, std::vector<SubgraphDef>>
+absl::StatusOr<std::pair<ModelSpec>, std::vector<SubgraphDef>>
 ModelAnalyzer::CreateSubgraphs() {
   std::vector<SubgraphDef> subgraph_defs;
   std::vector<SubgraphDef> unit_subgraph_defs;
 
-  if (GetUnitSubgraphs(unit_subgraph_defs) != kBandOk) {
-    return {kBandError, {}, {}};
-  }
+  BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(GetUnitSubgraphs(unit_subgraph_defs));
 
   switch (subgraph_config_.subgraph_preparation_type) {
     case SubgraphPreparationType::FallbackPerWorker: {
@@ -220,13 +217,11 @@ ModelAnalyzer::CreateSubgraphs() {
         subgraph_defs.insert(subgraph_defs.end(), worker_subgraphs.begin(),
                              worker_subgraphs.end());
       }
-      break;
-    }
+    } break;
     case SubgraphPreparationType::NoFallbackSubgraph:
     case SubgraphPreparationType::UnitSubgraph: {
       subgraph_defs = unit_subgraph_defs;
-      break;
-    }
+    } break;
     case SubgraphPreparationType::MergeUnitSubgraph: {
       // Add merged atomic subgraphs
       // Note that each merged subgraph consists of unit subgraphs with
@@ -234,11 +229,7 @@ ModelAnalyzer::CreateSubgraphs() {
       // If we find any of the case that does not satisfy the condition,
       // we should re-implement the merging logic.
       subgraph_defs = MergeUnitSubgraphs(unit_subgraph_defs);
-      break;
-    }
-
-    default:
-      break;
+    } break;
   }
 
   // Verify subgraphs
@@ -248,13 +239,11 @@ ModelAnalyzer::CreateSubgraphs() {
       const int begin = *subgraph_def.unit_subgraph_indices.begin();
       const int end = *subgraph_def.unit_subgraph_indices.rbegin();
       if (end - begin != subgraph_def.unit_subgraph_indices.size() - 1) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                      "Failed to create subgraph. Unit subgraph indices in "
-                      "subgraph %s are not continous for model %s and mode %s",
-                      subgraph_def.ToString().c_str(),
-                      model_spec_->path.c_str(),
-                      GetName(subgraph_config_.subgraph_preparation_type));
-        return {kBandError, {}, {}};
+        BAND_RETURN_INTERNAL_ERROR_PROD(
+            "Failed to create subgraph. Unit subgraph indices in "
+            "subgraph %s are not continous for model %s and mode %s",
+            subgraph_def.ToString().c_str(), model_spec_->path.c_str(),
+            GetName(subgraph_config_.subgraph_preparation_type));
       }
     }
   }
@@ -272,10 +261,10 @@ ModelAnalyzer::CreateSubgraphs() {
                 GetName(subgraph_config_.subgraph_preparation_type),
                 subgraph_summary.c_str());
 
-  return {kBandOk, *model_spec_, subgraph_defs};
+  return {*model_spec_, subgraph_defs};
 }
 
-BandStatus ModelAnalyzer::GetUnitSubgraphs(
+absl::Status ModelAnalyzer::GetUnitSubgraphs(
     std::vector<SubgraphDef>& unit_subgraphs) {
   const int num_workers = context_.GetNumWorkers();
   unit_subgraphs.clear();
@@ -294,10 +283,8 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
   } else {
     const int num_ops = model_spec_->num_ops;
     if (num_workers > 8 * sizeof(BitMask)) {
-      BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                        "Number of workers is larger than BitMask %d",
-                        num_workers);
-      return kBandError;
+      BAND_RETURN_INTERNAL_ERROR_PROD(
+          "Number of workers is larger than BitMask %d", num_workers);
     }
 
     std::map<WorkerId, std::set<int>> op_sets_to_ignore;
@@ -306,7 +293,8 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
       std::vector<SubgraphDef> worker_op_sets =
           GetSubgraphsForFallbackOps(worker_id);
       for (auto worker_and_ops : worker_op_sets) {
-        if (context_.GetWorker(worker_id)->GetDeviceFlag() == DeviceFlags::CPU) {
+        if (context_.GetWorker(worker_id)->GetDeviceFlag() ==
+            DeviceFlags::CPU) {
           continue;
         }
         if (worker_and_ops.op_indices.size() <
@@ -420,8 +408,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
     }
 
     if (!remaining_ops.empty()) {
-      BAND_REPORT_ERROR(context_.GetErrorReporter(), "Not empty remaining ops");
-      return kBandError;
+      BAND_RETURN_INTERNAL_ERROR_PROD("Not empty remaining ops");
     }
   }
 
@@ -451,12 +438,10 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
       if (*lhs.unit_subgraph_indices.begin() ==
           *rhs.unit_subgraph_indices.begin()) {
         if (lhs.op_indices != rhs.op_indices) {
-          BAND_LOG_PROD(
-              BAND_LOG_ERROR,
+          BAND_RETURN_INTERNAL_ERROR_PROD(
               "Failed to create unit subgraph. Unit subgraph with same idx %d "
               "has different operators",
               *lhs.unit_subgraph_indices.begin());
-          return kBandError;
         }
       } else {
         std::set<int> intersection;
@@ -465,14 +450,13 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
             rhs.op_indices.begin(), rhs.op_indices.end(),
             std::inserter(intersection, intersection.begin()));
         if (intersection.size()) {
-          BAND_LOG_PROD(BAND_LOG_ERROR,
-                        "Failed to create unit subgraph. Unit subgraph with "
-                        "different idx %d, %d "
-                        "has common operators %s",
-                        *lhs.unit_subgraph_indices.begin(),
-                        *rhs.unit_subgraph_indices.begin(),
-                        SetToString(intersection).c_str());
-          return kBandError;
+          BAND_RETURN_INTERNAL_ERROR_PROD(
+              "Failed to create unit subgraph. Unit subgraph with "
+              "different idx %d, %d "
+              "has common operators %s",
+              *lhs.unit_subgraph_indices.begin(),
+              *rhs.unit_subgraph_indices.begin(),
+              SetToString(intersection).c_str());
         }
       }
     }
@@ -482,7 +466,7 @@ BandStatus ModelAnalyzer::GetUnitSubgraphs(
                 "Create %d unit subgraphs, planner requires subgraph %d",
                 unique_unit_subgraph_indices.size(), NeedFallbackSubgraph());
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
@@ -606,7 +590,8 @@ std::vector<SubgraphDef> Band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     }
 
     if (operator_set.size()) {
-      if (current_device == DeviceFlags::CPU && device_flag != DeviceFlags::CPU) {
+      if (current_device == DeviceFlags::CPU &&
+          device_flag != DeviceFlags::CPU) {
         for (auto cpu_worker_id : cpu_worker_ids) {
           subgraph_defs.push_back({cpu_worker_id, operator_set, {}});
         }

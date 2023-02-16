@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include "band/common.h"
 #include "band/backend_factory.h"
+#include "band/common.h"
 #include "band/context.h"
 #include "band/interface/tensor_view.h"
 #include "band/latency_estimator.h"
@@ -37,13 +37,16 @@ Engine::~Engine() {
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
                                        ErrorReporter* error_reporter) {
   std::unique_ptr<Engine> engine_ptr(new Engine(error_reporter));
-  return engine_ptr->Init(config) == kBandOk ? std::move(engine_ptr) : nullptr;
+  return engine_ptr->Init(config).ok() ? std::move(engine_ptr) : nullptr;
 }
 
-BandStatus Engine::RegisterModel(Model* model) {
-  if (!model || model->GetSupportedBackends().size() == 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register model");
-    return kBandError;
+absl::Status Engine::RegisterModel(Model* model) {
+  if (!model) {
+    BAND_RETURN_INTERNAL_ERROR_PROD("Model is empty.")
+  }
+
+  if (model->GetSupportedBackends().size() == 0) {
+    BAND_RETURN_INTERNAL_ERROR_PROD("No supported backends.")
   }
 
   const ModelId model_id = model->GetId();
@@ -54,20 +57,16 @@ BandStatus Engine::RegisterModel(Model* model) {
                            subgraph_config_, model, backend_type);
     const auto result = analyzer.CreateSubgraphs();
     // TODO: replace with a std::tie?
-    const BandStatus status = std::get<0>(result);
+    const absl::Status status = std::get<0>(result);
     const ModelSpec model_spec = std::get<1>(result);
     const std::vector<SubgraphDef> subgraph_defs = std::get<2>(result);
 
-    if (status != kBandOk) {
-      BAND_REPORT_ERROR(
-          error_reporter_,
-          "Failed to create subgraphs for model %d with subgraph option %s",
-          model_id,
-          GetName(
-              subgraph_config_.subgraph_preparation_type));
+    if (!status.ok()) {
       // TODO(BAND-49): unregister for specific backend
       UnregisterModel(model);
-      return kBandError;
+      BAND_RETURN_INTERNAL_ERROR_PROD(
+          "Failed to create subgraphs for model %d with subgraph option %s",
+          model_id, GetName(subgraph_config_.subgraph_preparation_type));
     }
 
     // Create internal model_executor per each supported backends
@@ -84,19 +83,16 @@ BandStatus Engine::RegisterModel(Model* model) {
           added_once = true;
           BAND_LOG_INTERNAL(BAND_LOG_INFO,
                             "Create model executor for model %d worker %s (%s)",
-                            model_id,
-                            GetName(GetWorkerDevice(worker_id)),
-                            BandStatusGetName(status));
+                            model_id, GetName(GetWorkerDevice(worker_id)),
+                            absl::StatusGetName(status));
         }
       }
 
       if (!added_once) {
-        BAND_REPORT_ERROR(
-            error_reporter_,
-            "Failed to create model executor on all worker types");
         // TODO(BAND-49): unregister for specific backend
         UnregisterModel(model);
-        return kBandError;
+        BAND_RETURN_INTERNAL_ERROR_PROD(
+            "Failed to create model executor on all worker types");
       }
     }
 
@@ -119,10 +115,10 @@ BandStatus Engine::RegisterModel(Model* model) {
         } else {
           auto& model_executor =
               model_executors_[{model_id, subgraph_def.worker_id}];
-          BandStatus status = model_executor->PrepareSubgraph(
+          absl::Status status = model_executor->PrepareSubgraph(
               model->GetBackendModel(backend_type), subgraph_def.op_indices,
               subgraph_def.unit_subgraph_indices);
-          if (status == kBandOk) {
+          if (status.ok()) {
             // Verify generated subgraphs
             BAND_ENSURE(error_reporter_, model_executor->HasSubgraph(key));
             const std::set<int> inputs =
@@ -201,8 +197,8 @@ BandStatus Engine::RegisterModel(Model* model) {
         std::vector<std::shared_ptr<Interface::ITensor>> input_tensors;
         std::vector<std::shared_ptr<Interface::ITensor>> output_tensors;
 
-        auto model_subgraph_key =
-            GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
+        auto model_subgraph_key = GetLargestSubgraphKey(
+            model_id, GetDeviceWorkerId(DeviceFlags::CPU));
         Interface::IModelExecutor* primary_model_executor =
             GetModelExecutor(model_subgraph_key);
 
@@ -235,13 +231,12 @@ BandStatus Engine::RegisterModel(Model* model) {
     }
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-BandStatus Engine::UnregisterModel(Model* model) {
+absl::Status Engine::UnregisterModel(Model* model) {
   if (!model) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to unregister null model.");
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to unregister null model.")
   }
 
   for (auto it = model_executors_.begin(); it != model_executors_.end();) {
@@ -263,7 +258,7 @@ BandStatus Engine::UnregisterModel(Model* model) {
     (it->first == model->GetId()) ? model_output_buffer_.erase(it++) : (++it);
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
@@ -303,7 +298,7 @@ size_t Engine::GetNumWorkers() const { return workers_.size(); }
 DeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id)->GetDeviceFlag();
-  } 
+  }
   // TODO(widiba03304): absl refactor
   // else {
   //   BAND_REPORT_ERROR(error_reporter_, "Invalid worker id %d", id);
@@ -311,28 +306,24 @@ DeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
   // }
 }
 
-BandStatus Engine::RequestSync(ModelId model_id, BandRequestOption options,
-                               Tensors inputs, Tensors outputs) {
+absl::Status Engine::RequestSync(ModelId model_id, BandRequestOption options,
+                                 Tensors inputs, Tensors outputs) {
   JobId job_id = RequestAsync(model_id, options, inputs);
   if (job_id == -1) {
-    BAND_REPORT_ERROR(error_reporter_, "Invalid job id");
-    return kBandError;
-  } else {
-    return Wait(job_id, outputs);
+    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid job id.");
   }
+  return Wait(job_id, outputs);
 }
 
-BandStatus Engine::RequestSync(std::vector<ModelId> model_ids,
-                               std::vector<BandRequestOption> options,
-                               std::vector<Tensors> inputs,
-                               std::vector<Tensors> outputs) {
+absl::Status Engine::RequestSync(std::vector<ModelId> model_ids,
+                                 std::vector<BandRequestOption> options,
+                                 std::vector<Tensors> inputs,
+                                 std::vector<Tensors> outputs) {
   std::vector<JobId> job_ids = RequestAsync(model_ids, options, inputs);
   if (job_ids.size() == 0) {
-    BAND_REPORT_ERROR(error_reporter_, "Invalid requests, job_ids.size() == 0");
-    return kBandError;
-  } else {
-    return Wait(job_ids, outputs);
+    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid requests, job_ids.size() == 0");
   }
+  return Wait(job_ids, outputs);
 }
 
 JobId Engine::RequestAsync(ModelId model_id, BandRequestOption options,
@@ -394,12 +385,10 @@ std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
 
     if (i < inputs.size()) {
       int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
-      if (model_input_buffer_[model_ids[i]]->PutTensorsToHandle(
-              inputs[i], input_handle) != kBandOk) {
-        BAND_REPORT_ERROR(error_reporter_, "Input copy failure for model %d",
-                          model_ids[i]);
-        return {};
-      }
+      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
+          model_input_buffer_[model_ids[i]]->PutTensorsToHandle(inputs[i],
+                                                                input_handle),
+          "Input copy failure for model %d", model_ids[i]);
       job.input_handle = input_handle;
       job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
     }
@@ -410,7 +399,7 @@ std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
   return EnqueueBatch(jobs);
 }
 
-BandStatus Engine::Wait(JobId job_id, Tensors outputs) {
+absl::Status Engine::Wait(JobId job_id, Tensors outputs) {
   std::vector<Tensors> output_tensors;
   if (outputs.size()) {
     output_tensors.push_back(outputs);
@@ -418,54 +407,52 @@ BandStatus Engine::Wait(JobId job_id, Tensors outputs) {
   return Wait(std::vector<JobId>({job_id}), output_tensors);
 }
 
-BandStatus Engine::Wait(std::vector<JobId> job_ids,
-                        std::vector<Tensors> outputs) {
+absl::Status Engine::Wait(std::vector<JobId> job_ids,
+                          std::vector<Tensors> outputs) {
   planner_->Wait(job_ids);
   for (size_t i = 0; i < outputs.size(); i++) {
     BAND_ENSURE_STATUS(GetOutputTensors(job_ids[i], outputs[i]));
   }
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 void Engine::WaitAll() { planner_->WaitAll(); }
 
-BandStatus Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
+absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   Job job = planner_->GetFinishedJob(job_id);
 
   if (outputs.empty() || job_id == -1) {
-    BAND_REPORT_ERROR(error_reporter_,
-                      "Invalid job id / num outputs to copy: (%d, %d)", job_id,
-                      outputs.size());
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD(
+        "Invalid job id / num outputs to copy: (%d, %d)", job_id,
+        outputs.size());
   }
 
   // Not finished or invalidated
   if (job.job_id == -1) {
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD(
+        "Invalid job id / not finished or invalidated.");
   }
 
   if (job.output_handle == -1) {
-    BAND_REPORT_ERROR(error_reporter_, "Invalid output handle : %d",
-                      job.output_handle);
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid output handle : %d",
+                                    job.output_handle);
   }
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
-    BAND_REPORT_ERROR(error_reporter_, "Invalid model id : %d", job.model_id);
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid model id : %d", job.model_id);
   }
 
   BAND_ENSURE_STATUS(model_output_buffer_.at(job.model_id)
                          ->GetTensorsFromHandle(outputs, job.output_handle));
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 void Engine::SetOnEndRequest(
-    std::function<void(int, BandStatus)> on_end_request) {
+    std::function<void(int, absl::Status)> on_end_request) {
   planner_->SetOnEndRequest(on_end_request);
 }
 
-BandStatus Engine::Init(const RuntimeConfig& config) {
+absl::Status Engine::Init(const RuntimeConfig& config) {
   planner_ = std::make_unique<Planner>(*this);
 
   BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
@@ -478,8 +465,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       BAND_ENSURE_STATUS(latency_estimator_->Init(config.profile_config));
     }
 
-    const CPUMaskFlags cpu_mask =
-        static_cast<CPUMaskFlags>(config.cpu_mask);
+    const CPUMaskFlags cpu_mask = static_cast<CPUMaskFlags>(config.cpu_mask);
     auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
 
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
@@ -509,11 +495,10 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
         worker = std::make_unique<DeviceQueueWorker>(this, workers_.size(),
                                                      device_flag);
       }
-      if (worker->Init(config.worker_config) != kBandOk) {
-        error_reporter_->Report("Worker::Init() failed for worker : %s.",
-                                GetName(device_flag));
-        return kBandError;
-      }
+
+      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
+          worker->Init(config.worker_config),
+          "Worker::Init() failed for worker : %s.", GetName(device_flag))
 
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         GetName(device_flag));
@@ -526,7 +511,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
     }
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
@@ -612,15 +597,13 @@ void Engine::ForEachSubgraph(
   }
 }
 
-BandStatus Engine::Invoke(const SubgraphKey& key) {
+absl::Status Engine::Invoke(const SubgraphKey& key) {
   auto model_executor_it =
       model_executors_.find({key.GetModelId(), key.GetWorkerId()});
-  if (model_executor_it != model_executors_.end()) {
-    return model_executor_it->second->ExecuteSubgraph(key);
-  } else {
-    BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a subgraph key");
-    return kBandError;
+  if (model_executor_it == model_executors_.end()) {
+    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to find a subgraph key");
   }
+  return model_executor_it->second->ExecuteSubgraph(key);
 }
 
 std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
@@ -766,7 +749,8 @@ std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetSubgraphWithShortestLatency(
     const Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
-  if (subgraph_config_.subgraph_preparation_type == SubgraphPreparationType::FallbackPerWorker) {
+  if (subgraph_config_.subgraph_preparation_type ==
+      SubgraphPreparationType::FallbackPerWorker) {
     auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
                                    worker_waiting);
     std::pair<std::vector<SubgraphKey>, int64_t> ret =
@@ -908,10 +892,10 @@ Worker* Engine::GetWorker(WorkerId id) {
   }
 }
 
-BandStatus Engine::TryCopyInputTensors(const Job& job) {
+absl::Status Engine::TryCopyInputTensors(const Job& job) {
   // Skip all tensor communication for compute only case.
   if (job.input_handle < 0) {
-    return kBandOk;
+    return absl::OkStatus();
   }
 
   const SubgraphKey& key = job.subgraph_key;
@@ -934,12 +918,10 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
         std::shared_ptr<Interface::ITensorView> dst =
             model_executor->GetTensorView(key, tensor_index);
 
-        if (dst->CopyDataFrom(src.get()) == kBandError) {
-          BAND_LOG_PROD(BAND_LOG_ERROR,
-                        "Tensor data copy failure from %s to %s",
-                        src->GetName(), dst->GetName());
-          return kBandError;
-        }
+        BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
+            dst->CopyDataFrom(src.get()),
+            "Tensor data copy failure from %s to %s", src->GetName(),
+            dst->GetName());
 
         unresolved_tensors.erase(tensor_index);
       }
@@ -947,10 +929,8 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
   }
 
   if (model_input_buffer_.find(job.model_id) == model_input_buffer_.end()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR,
-                  "Failed to find input tensor ring buffer for model %d",
-                  job.model_id);
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD(
+        "Failed to find input tensor ring buffer for model %d", job.model_id);
   }
 
   auto input_buffer = model_input_buffer_[job.model_id].get();
@@ -960,62 +940,54 @@ BandStatus Engine::TryCopyInputTensors(const Job& job) {
        tensor_it != unresolved_tensors.end();) {
     int tensor_index = *tensor_it;
     if (input_buffer->IsTensorIndexValid(tensor_index)) {
-      if (input_buffer->GetTensorFromHandle(
+      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
+          input_buffer->GetTensorFromHandle(
               model_executor->GetTensorView(key, tensor_index).get(),
-              tensor_index, job.input_handle) != kBandOk) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                      "Failed to copy input tensor %d for model %d",
-                      tensor_index, job.model_id);
-        return kBandError;
-      }
+              tensor_index, job.input_handle),
+          "Failed to copy input tensor %d for model %d", tensor_index,
+          job.model_id);
       tensor_it = unresolved_tensors.erase(tensor_it);
     } else {
       ++tensor_it;
     }
   }
 
-  if (unresolved_tensors.empty()) {
-    return kBandOk;
-  } else {
-    return kBandError;
+  if (!unresolved_tensors.empty()) {
+    BAND_RETURN_INTERNAL_ERROR_PROD("Some tensors fail to be resolved.");
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-BandStatus Engine::TryCopyOutputTensors(const Job& job) {
+absl::Status Engine::TryCopyOutputTensors(const Job& job) {
   // TODO: Subgraph execution
 
   // Compute only.
   if (job.output_handle < 0) {
-    return kBandOk;
+    return absl::OkStatus();
   }
 
   const SubgraphKey& key = job.subgraph_key;
   auto model_executor = GetModelExecutor(job.subgraph_key);
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                      "Failed to find output tensor ring buffer for model %d",
-                      job.model_id);
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD(
+        "Failed to find output tensor ring buffer for model %d", job.model_id);
   }
 
   auto output_buffer = model_output_buffer_[job.model_id].get();
   for (int tensor_index : model_executor->GetOutputs(key)) {
     if (output_buffer->IsTensorIndexValid(tensor_index)) {
-      if (output_buffer->PutTensorToHandle(
+      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
+          output_buffer->PutTensorToHandle(
               model_executor->GetTensorView(key, tensor_index).get(),
-              tensor_index, job.output_handle) != kBandOk) {
-        BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                          "Failed to copy output tensor %d for model %d",
-                          tensor_index, job.model_id);
-        return kBandError;
-      }
+              tensor_index, job.output_handle),
+          "Failed to copy output tensor %d for model %d", tensor_index,
+          job.model_id);
     }
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 WorkerId Engine::GetDeviceWorkerId(DeviceFlags flag) const {

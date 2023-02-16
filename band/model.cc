@@ -12,35 +12,31 @@ Model::~Model() {}
 
 ModelId Model::GetId() const { return model_id_; }
 
-BandStatus Model::FromPath(BackendType backend_type, const char* filename) {
+absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
   if (GetBackendModel(backend_type)) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                      "Tried to create %s model again for model id %d",
-                      GetName(backend_type), GetId());
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD(
+        "Tried to create %s model again for model id %d", GetName(backend_type),
+        GetId());
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
   Interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
-  if (backend_model->FromPath(filename) == kBandOk) {
-    backend_models_[backend_type] =
-        std::shared_ptr<Interface::IModel>(backend_model);
-    return kBandOk;
-  } else {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to create %s model from %s",
-                      GetName(backend_type), filename);
-    return kBandError;
-  }
+
+  BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(backend_model->FromPath(filename),
+                                          "Failed to create %s model from %s",
+                                          GetName(backend_type), filename);
+  backend_models_[backend_type] =
+      std::shared_ptr<Interface::IModel>(backend_model);
+  return absl::OkStatus();
 }
 
-BandStatus Model::FromBuffer(BackendType backend_type, const char* buffer,
-                             size_t buffer_size) {
+absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
+                               size_t buffer_size) {
   if (GetBackendModel(backend_type)) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                      "Tried to create %s model again for model id %d",
-                      GetName(backend_type), GetId());
-    return kBandError;
+    BAND_RETURN_INTERNAL_ERROR_PROD(
+        "Tried to create %s model again for model id %d", GetName(backend_type),
+        GetId());
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
@@ -53,10 +49,10 @@ BandStatus Model::FromBuffer(BackendType backend_type, const char* buffer,
         GetName(backend_type));
     return kBandError;
   }
-  if (backend_model->FromBuffer(buffer, buffer_size) == kBandOk) {
+  if (backend_model->FromBuffer(buffer, buffer_size).ok()) {
     backend_models_[backend_type] =
         std::shared_ptr<Interface::IModel>(backend_model);
-    return kBandOk;
+    return absl::OkStatus();
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to create %s model from buffer",
                       GetName(backend_type));

@@ -148,7 +148,7 @@ ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {
   return model_spec;
 }
 
-BandStatus TfLiteModelExecutor::PrepareSubgraph(Interface::IModel* model,
+absl::Status TfLiteModelExecutor::PrepareSubgraph(Interface::IModel* model,
                                                 std::set<int> ops,
                                                 std::set<int> unit_indices) {
   if (model_id_ != model->GetId()) {
@@ -168,7 +168,7 @@ BandStatus TfLiteModelExecutor::PrepareSubgraph(Interface::IModel* model,
   } else {
     interpreters_[SubgraphKey(model->GetId(), worker_id_, unit_indices)] =
         std::move(interpreter);
-    return kBandOk;
+    return absl::OkStatus();
   }
 }
 
@@ -227,11 +227,11 @@ bool TfLiteModelExecutor::HasSubgraph(const SubgraphKey& key) const {
   return interpreters_.find(key) != interpreters_.end();
 }
 
-BandStatus TfLiteModelExecutor::ExecuteSubgraph(const SubgraphKey& key) {
+absl::Status TfLiteModelExecutor::ExecuteSubgraph(const SubgraphKey& key) {
   if (!HasSubgraph(key)) {
     return kBandError;
   }
-  BandStatus status = GetBandStatus(interpreters_[key]->Invoke());
+  absl::Status status = Getabsl::Status(interpreters_[key]->Invoke());
   return status;
 }
 
@@ -350,11 +350,11 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(Interface::IModel* model,
   return interpreter;
 }
 
-std::pair<BandStatus, TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
+std::pair<absl::Status, TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
     DeviceFlags device) {
   auto delegate_it = delegates_.find(device);
   if (delegate_it != delegates_.end()) {
-    return {kBandOk, delegate_it->second.get()};
+    return {absl::OkStatus(), delegate_it->second.get()};
   } else {
     tflite::Interpreter::TfLiteDelegatePtr target_delegate =
         tflite::Interpreter::TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
@@ -364,7 +364,7 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
       case DeviceFlags::CPU: {
         // TODO #23: XNNPACK seems inefficient than default CPU
         // Only valid case to return Ok with nullptr
-        return {kBandOk, nullptr};
+        return {absl::OkStatus(), nullptr};
         break;
       }
 
@@ -467,7 +467,7 @@ std::pair<BandStatus, TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
       delegates_.insert({device, std::move(target_delegate)});
     }
 
-    return {success ? kBandOk : kBandError,
+    return {success ? absl::OkStatus() : kBandError,
             delegates_.find(device) != delegates_.end()
                 ? delegates_.at(device).get()
                 : nullptr};

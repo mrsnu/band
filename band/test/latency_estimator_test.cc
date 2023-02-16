@@ -32,11 +32,11 @@ struct CustomWorkerMockContext : public MockContextBase {
 
 struct CustomInvokeMockContext : public CustomWorkerMockContext {
   CustomInvokeMockContext(
-      std::function<BandStatus(const SubgraphKey&)> invoke_lambda)
+      std::function<absl::Status(const SubgraphKey&)> invoke_lambda)
       : invoke_lambda(invoke_lambda) {}
 
-  std::function<BandStatus(const SubgraphKey&)> invoke_lambda;
-  BandStatus Invoke(const Band::SubgraphKey& subgraph_key) override {
+  std::function<absl::Status(const SubgraphKey&)> invoke_lambda;
+  absl::Status Invoke(const Band::SubgraphKey& subgraph_key) override {
     return invoke_lambda(subgraph_key);
   }
 };
@@ -61,8 +61,8 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_EQ(latency_estimator.Init(config), kBandOk);
-  EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
 
   worker.End();
 }
@@ -73,17 +73,17 @@ struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlags> {
 TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
     CpuSet thread_cpu_set;
-    if (GetCPUThreadAffinity(thread_cpu_set) != kBandOk) {
-      return kBandError;
+    if (!GetCPUThreadAffinity(thread_cpu_set).ok()) {
+      return absl::InternalError("GetCPUThreadAffinity");
     }
     // TODO(#238): propagate affinity to CPU backend, and set number of
     // threads
     CpuSet target_set = BandCPUMaskGetSet(GetParam());
     if (target_set.NumEnabled() == 0) {
-      return kBandOk;
+      return absl::OkStatus();
     } else {
-      return thread_cpu_set == BandCPUMaskGetSet(GetParam()) ? kBandOk
-                                                             : kBandError;
+      return thread_cpu_set == BandCPUMaskGetSet(GetParam()) ? absl::OkStatus()
+                                                             : absl::InternalError();
     }
   });
 
@@ -100,9 +100,9 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
   // This will be kBandError if affinity propagation fails
-  EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
 
   worker.End();
 }
@@ -114,7 +114,7 @@ INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
 TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
-    return kBandOk;
+    return absl::OkStatus();
   });
 
   ProfileConfigBuilder b;
@@ -129,9 +129,9 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
   EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-  EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
   EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
 
   worker.End();
@@ -140,7 +140,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
 TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
   CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
-    return kBandOk;
+    return absl::OkStatus();
   });
 
   const std::string profile_path = testing::TempDir() + "log.json";
@@ -162,9 +162,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
-    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
-    EXPECT_EQ(latency_estimator.DumpProfile(), kBandOk);
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.DumpProfile(), absl::OkStatus());
   }
 
   {
@@ -178,9 +178,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
   }
 
@@ -192,7 +192,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
   CustomInvokeMockContext context([](const Band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
-    return kBandOk;
+    return absl::OkStatus();
   });
 
   const std::string profile_path = testing::TempDir() + "log.json";
@@ -214,9 +214,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
-    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
-    EXPECT_EQ(latency_estimator.DumpProfile(), kBandOk);
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.DumpProfile(), absl::OkStatus());
   }
 
   {
@@ -232,9 +232,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), kBandOk);
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-    EXPECT_EQ(latency_estimator.ProfileModel(0), kBandOk);
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     // fails to load due to worker update
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
   }

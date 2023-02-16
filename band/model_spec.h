@@ -7,6 +7,8 @@
 
 #include "band/common.h"
 
+#include "absl/status/status.h"
+
 namespace Band {
 // a convenient data structure for holding various model information
 class ModelSpec {
@@ -40,7 +42,7 @@ class ModelSpec {
   // connected to multiple ops across multiple subgraphs in Pixel 4 -- output
   // tensor #396).
   std::set<int> GetOutputTensors(const std::set<int>& op_indices) const;
-  BandStatus SetUnitSubgraphs(std::vector<std::set<int>> ops);
+  absl::Status SetUnitSubgraphs(std::vector<std::set<int>> ops);
 
   size_t GetNumUnitSubgraphs() const;
   const std::set<int>& GetUnitSubgraphOps(size_t index) const;

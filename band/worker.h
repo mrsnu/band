@@ -20,12 +20,12 @@ class Worker {
                   DeviceFlags device_flag);
   virtual ~Worker();
 
-  BandStatus Init(const WorkerConfig& config);
+  absl::Status Init(const WorkerConfig& config);
   DeviceFlags GetDeviceFlag() const { return device_flag_; }
   WorkerId GetId() const { return worker_id_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
-  BandStatus UpdateWorkerThread(const CpuSet thread_affinity_mask,
+  absl::Status UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                 int num_threads);
   void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
   bool IsAvailable() const;
@@ -54,7 +54,7 @@ class Worker {
  protected:
   const ErrorReporter* GetErrorReporter() const;
   bool IsValid(Job& job);
-  BandStatus TryUpdateWorkerThread();
+  absl::Status TryUpdateWorkerThread();
   void Work();
   // Helper functions that work utilizes
   virtual Job* GetCurrentJob() = 0;

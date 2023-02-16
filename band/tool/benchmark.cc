@@ -28,7 +28,7 @@ Benchmark::~Benchmark() {
   }
 }
 
-BandStatus Benchmark::Run() {
+absl::Status Benchmark::Run() {
   if (benchmark_config_.execution_mode == "periodic") {
     RunPeriodic();
   } else if (benchmark_config_.execution_mode == "stream") {
@@ -58,7 +58,7 @@ Benchmark::ModelContext::~ModelContext() {
   delete_tensors(model_inputs);
 }
 
-BandStatus Benchmark::ModelContext::PrepareInput() {
+absl::Status Benchmark::ModelContext::PrepareInput() {
   for (int batch_index = 0; batch_index < model_request_inputs.size();
        batch_index++) {
     for (int input_index = 0; input_index < model_inputs.size();
@@ -68,7 +68,7 @@ BandStatus Benchmark::ModelContext::PrepareInput() {
               model_inputs[input_index]));
     }
   }
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 bool Benchmark::ParseArgs(int argc, const char** argv) {
@@ -270,7 +270,7 @@ void CreateRandomTensorData(void* target_ptr, int num_elements,
   });
 }
 
-BandStatus Benchmark::Initialize(int argc, const char** argv) {
+absl::Status Benchmark::Initialize(int argc, const char** argv) {
   if (!ParseArgs(argc, argv)) {
     return kBandError;
   }
@@ -364,7 +364,7 @@ BandStatus Benchmark::Initialize(int argc, const char** argv) {
     model_contexts_.push_back(context);
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 void Benchmark::RunPeriodic() {
@@ -373,7 +373,7 @@ void Benchmark::RunPeriodic() {
     std::thread t(
         [this](ModelContext* model_context, const size_t period_us) {
           while (true) {
-            if (model_context->PrepareInput() != kBandOk) {
+            if (!model_context->PrepareInput().ok()) {
               std::cout << "Failed to copy input for model "
                         << model_context->model
                                .GetBackendModel(target_backend_)
@@ -423,7 +423,7 @@ void Benchmark::RunStream() {
     std::vector<Tensors> outputs;
 
     for (auto model_context : model_contexts_) {
-      if (model_context->PrepareInput() != kBandOk) {
+      if (!model_context->PrepareInput().ok()) {
         std::cout
             << "Failed to copy input for model "
             << model_context->model.GetBackendModel(target_backend_)->GetPath()
@@ -463,7 +463,7 @@ void PrintLine(std::string key, const T& value, size_t indent_level = 0) {
             << "] : " << std::right << value << std::endl;
 }
 
-BandStatus Benchmark::LogResults() {
+absl::Status Benchmark::LogResults() {
   const std::string header = "--\t\t Band Benchmark Tool \t\t--";
   size_t length = header.size();
   std::cout << std::setfill('-') << std::setw(length) << std::fixed;
@@ -512,7 +512,7 @@ BandStatus Benchmark::LogResults() {
     }
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 }  // namespace tool

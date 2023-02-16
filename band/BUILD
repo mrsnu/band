@@ -136,6 +136,8 @@ cc_library(
     }),
     deps = [
         "//band/c:common",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -379,11 +381,6 @@ cc_library(
         ":common",
         "@jsoncpp//:jsoncpp",
     ],
-)
-
-cc_library(
-    name = "macros",
-    hdrs = ["macros.h"],
 )
 
 cc_library(

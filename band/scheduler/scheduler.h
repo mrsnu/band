@@ -3,7 +3,6 @@
 
 #include <map>
 
-#include "band/c/common.h"
 #include "band/context.h"
 
 namespace Band {

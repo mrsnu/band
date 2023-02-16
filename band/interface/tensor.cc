@@ -30,16 +30,16 @@ bool ITensor::operator==(const ITensor& rhs) const {
   }
 }
 
-BandStatus ITensor::CopyDataFrom(const ITensor& rhs) {
+absl::Status ITensor::CopyDataFrom(const ITensor& rhs) {
   if (*this == rhs) {
     memcpy(GetData(), rhs.GetData(), GetBytes());
-    return kBandOk;
+    return absl::OkStatus();
   } else {
     return kBandError;
   }
 }
 
-BandStatus ITensor::CopyDataFrom(const ITensor* rhs) {
+absl::Status ITensor::CopyDataFrom(const ITensor* rhs) {
   if (!rhs) {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Tried to copy null tensor");
     return kBandError;

@@ -15,7 +15,7 @@ namespace json {
 // if there is no such file, then the json object will be empty
 Json::Value LoadFromFile(std::string file_path);
 // write json object
-BandStatus WriteToFile(const Json::Value& json_object, std::string file_path);
+absl::Status WriteToFile(const Json::Value& json_object, std::string file_path);
 // validate the root, returns true if root is valid and has all required fields
 bool Validate(const Json::Value& root, std::vector<std::string> required);
 template <typename T>

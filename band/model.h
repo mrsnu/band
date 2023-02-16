@@ -17,8 +17,8 @@ class Model {
   ~Model();
   ModelId GetId() const;
 
-  BandStatus FromPath(BackendType backend_type, const char* filename);
-  BandStatus FromBuffer(BackendType backend_type, const char* buffer,
+  absl::Status FromPath(BackendType backend_type, const char* filename);
+  absl::Status FromBuffer(BackendType backend_type, const char* buffer,
                         size_t buffer_size);
 
   Interface::IModel* GetBackendModel(BackendType backend_type);

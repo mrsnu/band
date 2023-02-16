@@ -26,8 +26,8 @@ struct ITensor {
   virtual void SetQuantization(BandQuantization quantization) = 0;
   bool operator==(const ITensor& rhs) const;
 
-  BandStatus CopyDataFrom(const ITensor& rhs);
-  BandStatus CopyDataFrom(const ITensor* rhs);
+  absl::Status CopyDataFrom(const ITensor& rhs);
+  absl::Status CopyDataFrom(const ITensor* rhs);
 };
 }  // namespace Interface
 }  // namespace Band
