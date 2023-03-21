@@ -29,6 +29,12 @@ def workspace():
         strip_prefix = "jsoncpp-1.9.5",
     )
 
+    http_archive(
+        name = "chrome_tracer",
+        url = "https://github.com/mrsnu/chrome-tracer/archive/refs/tags/v0.0.1.zip",
+        strip_prefix = "chrome-tracer-0.0.1",
+    )
+
     ######## Android repositories ########
     android(name = "android_repo")
 

@@ -36,6 +36,15 @@ test:tflite --define tflite=true
 test:tflite --copt=-DBAND_TFLITE
 test:tflite --cxxopt=-DBAND_TFLITE
 
+# Band build config for trace setting.
+build:trace --define trace=true
+build:trace --copt=-DBAND_TRACE
+build:trace --cxxopt=-DBAND_TRACE
+build:trace --action_env DBAND_TRACE=true
+test:trace --define trace=true
+test:trace --copt=-DBAND_TRACE
+test:trace --cxxopt=-DBAND_TRACE
+
 # Linux build config for Band Engine.
 build:linux_x86_64 --config=linux
 build:linux_x86_64 --cpu=k8
