@@ -32,6 +32,7 @@ def workspace():
     http_archive(
         name = "chrome_tracer",
         url = "https://github.com/mrsnu/chrome-tracer/archive/refs/tags/v0.0.1.zip",
+        sha256 = "6f6a02b413133dfdd0f1cc54994570561ac33588ee58c0be3cc0ab13fc0819a5",
         strip_prefix = "chrome-tracer-0.0.1",
     )
 

@@ -11,7 +11,6 @@
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
-#include "chrome_tracer/tracer.h"
 #include "planner.h"
 
 

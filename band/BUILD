@@ -310,17 +310,18 @@ cc_library(
         ":common",
         ":scheduler",
         ":worker",
+        ":job_tracer"
     ],
 )
 
 
 cc_library(
-    name = "tracer",
+    name = "job_tracer",
     srcs = [
-        "tracer.cc",
+        "job_tracer.cc",
     ],
     hdrs = [
-        "tracer.h",
+        "job_tracer.h",
     ],
     deps = [
         ":common",
