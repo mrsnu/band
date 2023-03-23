@@ -66,6 +66,8 @@ struct Job {
   explicit Job(ModelId model_id, int64_t slo)
       : model_id(model_id), slo_us(slo) {}
 
+  std::string ToJson() const;
+
   // For record (Valid after execution)
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;

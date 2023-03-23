@@ -2,6 +2,7 @@
 
 #include "band/c/common.h"
 #include "band/common.h"
+#include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/time.h"
 #include "worker.h"
@@ -206,6 +207,7 @@ void Worker::Work() {
       current_job->invoke_time = Time::NowMicros();
       lock.unlock();
 
+      BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
       BandStatus status = context_->Invoke(subgraph_key);
       if (status == kBandOk) {
         // end_time is never read/written by any other thread as long as
@@ -235,6 +237,7 @@ void Worker::Work() {
       // TODO #21: Handle errors in multi-thread environment
       current_job->status = kBandJobInputCopyFailure;
     }
+    BAND_TRACER_END_SUBGRAPH(*current_job);
     context_->EnqueueFinishedJob(*current_job);
 
     lock.lock();

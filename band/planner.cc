@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "band/context.h"
+#include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
@@ -13,7 +14,6 @@
 #include "band/time.h"
 #include "planner.h"
 
-
 namespace band {
 
 Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
@@ -22,6 +22,14 @@ Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
 
 Planner::~Planner() {
   FlushFinishedJobs();
+
+  if (log_path_.size()) {
+    // Dump the trace to a json file
+    std::string json_path =
+        log_path_.substr(0, log_path_.find_last_of('.')) + ".json";
+    BAND_TRACER_DUMP(json_path);
+  }
+
   planner_safe_bool_.terminate();
   planner_thread_.join();
 }

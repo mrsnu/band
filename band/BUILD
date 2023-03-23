@@ -269,6 +269,7 @@ cc_library(
         ":config",
         ":cpu",
         ":time",
+        ":job_tracer",
     ],
 )
 
@@ -325,7 +326,6 @@ cc_library(
     ],
     deps = [
         ":common",
-        ":scheduler",
         "@chrome_tracer//chrome_tracer",
     ],
 )
@@ -390,6 +390,7 @@ cc_library(
             ":tensor",
             ":time",
             ":worker",
+            ":job_tracer",
         ],
 )
 
