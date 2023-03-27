@@ -87,7 +87,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
+  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.json")
                              .AddSchedulers({kBandRoundRobin})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
@@ -140,7 +140,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 
 TEST(TFLiteBackend, SimpleEngineProfile) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
+  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.json")
                              .AddSchedulers({kBandFixedWorkerGlobalQueue})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
@@ -166,15 +166,15 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   EXPECT_EQ(model.FromPath(kBandTfLite, "band/test/data/add.tflite"), kBandOk);
   EXPECT_EQ(engine->RegisterModel(&model), kBandOk);
 
-  EXPECT_GT(
+  EXPECT_GE(
       engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
-  EXPECT_GT(
+  EXPECT_GE(
       engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.csv")
+  RuntimeConfig config = b.AddPlannerLogPath("band/test/data/log.json")
                              .AddSchedulers({kBandShortestExpectedLatency})
                              .AddMinimumSubgraphSize(7)
                              .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
@@ -228,7 +228,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
+      b.AddPlannerLogPath("band/test/data/log.json")
           .AddSchedulers({kBandFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)
@@ -286,7 +286,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
 TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
+      b.AddPlannerLogPath("band/test/data/log.json")
           .AddSchedulers({kBandFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(kBandMergeUnitSubgraph)

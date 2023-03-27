@@ -21,15 +21,9 @@ Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
 }
 
 Planner::~Planner() {
-  FlushFinishedJobs();
-
   if (log_path_.size()) {
-    // Dump the trace to a json file
-    std::string json_path =
-        log_path_.substr(0, log_path_.find_last_of('.')) + ".json";
-    BAND_TRACER_DUMP(json_path);
+    BAND_TRACER_DUMP(log_path_);
   }
-
   planner_safe_bool_.terminate();
   planner_thread_.join();
 }
@@ -37,33 +31,6 @@ Planner::~Planner() {
 BandStatus Planner::Init(const PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
-  if (log_path_.size()) {
-    // Open file to write per-request timestamps later
-    // NOTE: Columns starting `sched_id` are added for debugging purpose
-    // and the metrics are only for ShortestExpectedLatency Planner.
-    std::ofstream log_file(log_path_);
-    if (!log_file.is_open()) {
-      BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                        "[Planner] Failed to open log path %s",
-                        log_path_.c_str());
-      return kBandError;
-    }
-    log_file << "sched_id\t"
-             << "job_id\t"
-             << "model_name\t"
-             << "model_id\t"
-             << "worker_id\t"
-             << "enqueue_time\t"
-             << "invoke_time\t"
-             << "end_time\t"
-             << "profiled_execution_time\t"
-             << "expected_execution_time\t"
-             << "slo_us\t"
-             << "job_status\t"
-             << "is_final_subgraph\t"
-             << "prev_subgraphs\n";
-    log_file.close();
-  }
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
@@ -182,7 +149,6 @@ void Planner::Wait(std::vector<int> job_ids) {
   });
 
   request_lock.unlock();
-  FlushFinishedJobs();
 }
 
 void Planner::WaitAll() {
@@ -192,15 +158,9 @@ void Planner::WaitAll() {
   });
 
   request_lock.unlock();
-
-  FlushFinishedJobs();
 }
 
 void Planner::EnqueueFinishedJob(Job& job) {
-  std::unique_lock<std::mutex> lock(jobs_finished_.mtx);
-  jobs_finished_.queue.push_back(job);
-  lock.unlock();
-
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
 
   // record finished / failed job
@@ -288,52 +248,6 @@ void Planner::Plan() {
         schedulers_[i]->Schedule(local_queues_[i]);
       }
     } while (need_reschedule_);
-  }
-}
-
-void Planner::FlushFinishedJobs() {
-  std::lock_guard<std::mutex> queue_lock(jobs_finished_.mtx);
-  std::ofstream log_file(log_path_, std::ofstream::app);
-  if (log_file.is_open()) {
-    while (!jobs_finished_.queue.empty()) {
-      Job job = jobs_finished_.queue.front();
-      jobs_finished_.queue.pop_front();
-
-      bool is_final_subgraph = context_.IsEnd(job.subgraph_key);
-
-      if (job.slo_us > 0 && is_final_subgraph &&
-          job.status == kBandJobSuccess) {
-        // check if slo has been violated or not
-        auto latency = job.end_time - job.enqueue_time;
-        job.status =
-            latency > job.slo_us ? kBandJobSLOViolation : kBandJobSuccess;
-      }
-
-      if (is_final_subgraph) {
-        // update internal map to keep track of the # of inferences per model
-        model_execution_count_[job.model_id]++;
-      }
-
-      std::string prev_subgraphs;
-
-      // TODO: how to log these??
-      // for (int i : job.previous_subgraph_indices) {
-      //   prev_subgraphs += std::to_string(i) + " ";
-      // }
-
-      // write all timestamp statistics to log file
-      log_file << job.sched_id << "\t" << job.job_id << "\t" << job.model_fname
-               << "\t" << job.model_id << "\t" << job.subgraph_key.GetWorkerId()
-               << "\t" << job.enqueue_time << "\t" << job.invoke_time << "\t"
-               << job.end_time << "\t" << job.profiled_execution_time << "\t"
-               << job.expected_execution_time << "\t" << job.slo_us << "\t"
-               << job.status << "\t" << is_final_subgraph << "\t"
-               << prev_subgraphs << "\n";
-    }
-    log_file.close();
-  } else {
-    BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                      "[Planner] Invalid log file path %s", log_path_.c_str());
   }
 }
 

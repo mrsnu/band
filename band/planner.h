@@ -103,7 +103,6 @@ class Planner {
   SafeBool planner_safe_bool_;
 
   // Jobs Finished
-  ConcurrentJobQueue jobs_finished_;
   std::map<int, int> model_execution_count_;
 
   std::function<void(int, BandStatus)> on_end_request_;
