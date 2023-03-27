@@ -102,10 +102,9 @@ struct Job {
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
 };
-
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618
-struct CacheHash {
+struct JobIdBitMaskHash {
   std::size_t operator()(const std::pair<int, BitMask>& p) const;
 };
 

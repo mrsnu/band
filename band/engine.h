@@ -190,7 +190,7 @@ class Engine : public Context {
   // Scheduling
   // cache for GetShortestLatency()
   mutable std::unordered_map<std::pair<ModelId, BitMask>,
-                             std::pair<SubgraphKey, int64_t>, CacheHash>
+                             std::pair<SubgraphKey, int64_t>, JobIdBitMaskHash>
       cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).

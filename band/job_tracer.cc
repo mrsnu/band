@@ -24,12 +24,20 @@ JobTracer& JobTracer::Get() {
 }
 
 void JobTracer::BeginSubgraph(const Job& job) {
-  BeginEvent(GetStreamName(job.subgraph_key.GetWorkerId()), GetJobName(job));
+  job_to_handle_[{job.job_id, job.subgraph_key.GetUnitIndices()}] = BeginEvent(
+      GetStreamName(job.subgraph_key.GetWorkerId()), GetJobName(job));
 }
 
 void JobTracer::EndSubgraph(const Job& job) {
-  EndEvent(GetStreamName(job.subgraph_key.GetWorkerId()), GetJobName(job),
-           job.ToJson());
+  std::pair<size_t, BitMask> key = {job.job_id,
+                                    job.subgraph_key.GetUnitIndices()};
+  if (job_to_handle_.find(key) != job_to_handle_.end()) {
+    EndEvent(GetStreamName(job.subgraph_key.GetWorkerId()),
+             job_to_handle_.at(key), job.ToJson());
+  } else {
+    std::cout << "The given job does not exists. " << job.job_id << " "
+              << job.subgraph_key.GetUnitIndicesString() << std::endl;
+  }
 }
 
 void JobTracer::AddWorker(BandDeviceFlags device_flag, size_t id) {

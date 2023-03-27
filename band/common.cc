@@ -99,7 +99,8 @@ std::string Job::ToJson() const {
          ",\"job_id\":" + std::to_string(job_id) + "}";
 }
 
-std::size_t CacheHash::operator()(const std::pair<int, BitMask>& p) const {
+std::size_t JobIdBitMaskHash::operator()(
+    const std::pair<int, BitMask>& p) const {
   auto hash_func = std::hash<int>();
   return hash_func(p.first) ^ hash_func(p.second.to_ullong());
 }

@@ -1,6 +1,8 @@
 #ifndef BAND_TRACER_H_
 #define BAND_TRACER_H_
 
+#include <unordered_map>
+
 #include "band/common.h"
 #include "chrome_tracer/tracer.h"
 
@@ -21,6 +23,8 @@ class JobTracer : protected chrome_tracer::ChromeTracer {
   std::string GetJobName(const Job& job) const;
 
   std::map<size_t, std::string> id_to_streams_;
+  std::unordered_map<std::pair<size_t, BitMask>, int32_t, JobIdBitMaskHash>
+      job_to_handle_;
 };
 }  // namespace band
 
