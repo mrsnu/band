@@ -35,7 +35,7 @@ def canon_path(path):
     if is_windows() or is_cygwin():
         return path.replace('\\', '/')
     return path
-        
+
 
 def run_cmd(cmd):
     args = shlex.split(cmd)
@@ -81,7 +81,7 @@ def make_cmd(
     cmd += get_bazel_options(debug, trace, platform, backend)
     cmd += target
     return cmd
-    
+
 
 def get_dst_path(base_dir, target_platform, debug):
     build = 'debug' if debug else 'release'
@@ -102,9 +102,11 @@ def run_binary_android(basepath, path, option=''):
     run_cmd(
         f'adb -d shell cd {ANDROID_BASE}{basepath} && ./{path} {option}')
 
+
 def get_argument_parser(desc: str):
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('-B', '--backend', type=str, default='tflite', help='Backend <tflite|none>')
+    parser.add_argument('-B', '--backend', type=str,
+                        default='tflite', help='Backend <tflite|none>')
     parser.add_argument('-android', action="store_true", default=False,
                         help='Test on Android (with adb)')
     parser.add_argument('-docker', action="store_true", default=False,
@@ -118,6 +120,7 @@ def get_argument_parser(desc: str):
     parser.add_argument('-b', '--build', action="store_true", default=False,
                         help='Build only, only affects to local (default = false)')
     return parser
+
 
 def clean_bazel(docker):
     if docker:
