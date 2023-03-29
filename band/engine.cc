@@ -75,10 +75,11 @@ BandStatus Engine::RegisterModel(Model* model) {
       for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
         if (model_spec.unavailable_devices.find(GetWorkerDevice(worker_id)) ==
             model_spec.unavailable_devices.end()) {
+          const Worker* worker = workers_[worker_id].get();
           std::unique_ptr<interface::IModelExecutor> model_executor(
-              BackendFactory::CreateModelExecutor(backend_type, model_id,
-                                                  worker_id,
-                                                  GetWorkerDevice(worker_id)));
+              BackendFactory::CreateModelExecutor(
+                  backend_type, model_id, worker_id, GetWorkerDevice(worker_id),
+                  worker->GetWorkerThreadAffinity(), worker->GetNumThreads()));
           model_executors_[{model_id, worker_id}] = std::move(model_executor);
           added_once = true;
           BAND_LOG_INTERNAL(BAND_LOG_INFO,

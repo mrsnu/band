@@ -25,24 +25,27 @@ class BackendFactory {
  public:
   static interface::IModelExecutor* CreateModelExecutor(
       BandBackendType backend, ModelId model_id, WorkerId worker_id,
-      BandDeviceFlags device_flag);
+      BandDeviceFlags device_flag,
+      CpuSet thread_affinity_mask = BandCPUMaskGetSet(kBandAll),
+      int num_threads = -1);
   static interface::IModel* CreateModel(BandBackendType backend, ModelId id);
   static interface::IBackendUtil* GetBackendUtil(BandBackendType backend);
   static std::vector<BandBackendType> GetAvailableBackends();
 
   static void RegisterBackendCreators(
       BandBackendType backend,
-      Creator<interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
-          model_executor_creator,
+      Creator<interface::IModelExecutor, ModelId, WorkerId, BandDeviceFlags,
+              CpuSet, int>* model_executor_creator,
       Creator<interface::IModel, ModelId>* model_creator,
       Creator<interface::IBackendUtil>* util_creator);
 
  private:
   BackendFactory() = default;
 
-  static std::map<BandBackendType,
-                  std::shared_ptr<Creator<interface::IModelExecutor, ModelId,
-                                          WorkerId, BandDeviceFlags>>>
+  static std::map<
+      BandBackendType,
+      std::shared_ptr<Creator<interface::IModelExecutor, ModelId, WorkerId,
+                              BandDeviceFlags, CpuSet, int>>>
       model_executor_creators_;
   static std::map<BandBackendType,
                   std::shared_ptr<Creator<interface::IModel, ModelId>>>

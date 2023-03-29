@@ -32,8 +32,9 @@ void RegisterBackendInternal() {
   });
 }
 
-std::map<BandBackendType, std::shared_ptr<Creator<IModelExecutor, ModelId,
-                                                  WorkerId, BandDeviceFlags>>>
+std::map<BandBackendType,
+         std::shared_ptr<Creator<IModelExecutor, ModelId, WorkerId,
+                                 BandDeviceFlags, CpuSet, int>>>
     BackendFactory::model_executor_creators_ = {};
 std::map<BandBackendType, std::shared_ptr<Creator<IModel, ModelId>>>
     BackendFactory::model_creators_ = {};
@@ -42,11 +43,12 @@ std::map<BandBackendType, std::shared_ptr<Creator<IBackendUtil>>>
 
 IModelExecutor* BackendFactory::CreateModelExecutor(
     BandBackendType backend, ModelId model_id, WorkerId worker_id,
-    BandDeviceFlags device_flag) {
+    BandDeviceFlags device_flag, CpuSet thread_affinity_mask, int num_threads) {
   RegisterBackendInternal();
   auto it = model_executor_creators_.find(backend);
   return it != model_executor_creators_.end()
-             ? it->second->Create(model_id, worker_id, device_flag)
+             ? it->second->Create(model_id, worker_id, device_flag,
+                                  thread_affinity_mask, num_threads)
              : nullptr;
 }
 
@@ -76,12 +78,12 @@ std::vector<BandBackendType> BackendFactory::GetAvailableBackends() {
 
 void BackendFactory::RegisterBackendCreators(
     BandBackendType backend,
-    Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags>*
+    Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags, CpuSet, int>*
         model_executor_creator,
     Creator<IModel, ModelId>* model_creator,
     Creator<IBackendUtil>* util_creator) {
   model_executor_creators_[backend] = std::shared_ptr<
-      Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags>>(
+      Creator<IModelExecutor, ModelId, WorkerId, BandDeviceFlags, CpuSet, int>>(
       model_executor_creator);
   model_creators_[backend] =
       std::shared_ptr<Creator<IModel, ModelId>>(model_creator);
