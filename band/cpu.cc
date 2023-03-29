@@ -27,6 +27,8 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
+#include "cpu.h"
+
 #endif
 
 namespace band {
@@ -43,6 +45,12 @@ void CpuSet::DisableAll() { CPU_ZERO(&cpu_set_); }
 bool CpuSet::IsEnabled(int cpu) const { return CPU_ISSET(cpu, &cpu_set_); }
 
 const unsigned long* CpuSet::GetMaskBits() const { return cpu_set_.__bits; }
+
+std::vector<unsigned long> CpuSet::GetMaskBitsVector() const {
+  return std::vector<unsigned long>(
+      GetMaskBits(),
+      GetMaskBits() + sizeof(cpu_set_.__bits) / sizeof(__cpu_mask));
+}
 
 bool CpuSet::operator==(const CpuSet& rhs) const {
   return CPU_EQUAL(&cpu_set_, &rhs.cpu_set_) != 0;
@@ -67,6 +75,8 @@ void CpuSet::Disable(int /* cpu */) {}
 void CpuSet::DisableAll() {}
 
 const unsigned long* CpuSet::GetMaskBits() const { return nullptr; }
+
+std::vector<unsigned long> CpuSet::GetMaskBitsVector() const { return {}; }
 
 bool CpuSet::operator==(const CpuSet& rhs) const { return true; }
 

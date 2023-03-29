@@ -329,8 +329,10 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
     builder.AddDelegate(delegate.second);
   }
 
-  // TODO(dostos): set cpu set --> propagate to backend
   builder.SetNumThreads(num_threads_);
+  if (thread_affinity_mask_.GetMaskBitsVector().size() > 0) {
+    builder.SetCpuMasks(thread_affinity_mask_.GetMaskBitsVector());
+  }
 
   if (builder(&interpreter) != kTfLiteOk) {
     BAND_LOG_PROD(BAND_LOG_ERROR,

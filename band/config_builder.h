@@ -99,7 +99,7 @@ class WorkerConfigBuilder {
     for (int i = 0; i < kBandNumDevices; i++) {
       workers_.push_back(static_cast<BandDeviceFlags>(i));
     }
-    cpu_masks_ = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
+    cpu_mask_bits_ = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
     num_threads_ = std::vector<int>(kBandNumDevices, 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
@@ -107,7 +107,7 @@ class WorkerConfigBuilder {
     return *this;
   }
   WorkerConfigBuilder& AddCPUMasks(std::vector<BandCPUMaskFlags> cpu_masks) {
-    cpu_masks_ = cpu_masks;
+    cpu_mask_bits_ = cpu_masks;
     return *this;
   }
   WorkerConfigBuilder& AddNumThreads(std::vector<int> num_threads) {
@@ -128,7 +128,7 @@ class WorkerConfigBuilder {
 
  private:
   std::vector<BandDeviceFlags> workers_;
-  std::vector<BandCPUMaskFlags> cpu_masks_;
+  std::vector<BandCPUMaskFlags> cpu_mask_bits_;
   std::vector<int> num_threads_;
   bool allow_worksteal_ = false;
   int availability_check_interval_ms_ = 30000;
