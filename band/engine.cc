@@ -6,6 +6,7 @@
 #include "band/backend_factory.h"
 #include "band/context.h"
 #include "band/interface/tensor_view.h"
+#include "band/job_tracer.h"
 #include "band/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
@@ -517,6 +518,7 @@ BandStatus Engine::Init(const RuntimeConfig& config) {
       worker->Start();
       workers_.push_back(std::move(worker));
       workers_waiting_[i] = 0;
+      BAND_TRACER_ADD_WORKER(device_flag, workers_.back()->GetId());
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         BandDeviceGetName(device_flag));

@@ -31,7 +31,8 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
       target_job_index = -1;
 
       // only check up to `window_size` requests
-      std::unordered_set<std::pair<int, BitMask>, CacheHash> searched_jobs;
+      std::unordered_set<std::pair<int, BitMask>, JobIdBitMaskHash>
+          searched_jobs;
       for (auto it = requests.begin(); it != requests.begin() + window_size;
            ++it) {
         Job job = *it;

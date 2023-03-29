@@ -58,26 +58,27 @@ def copy(src, dst):
 
 def get_bazel_options(
         debug: bool,
+        trace: bool, 
         platform: str,
         backend: str):
     opt = ""
     opt += "-c " + ("dbg" if debug else "opt") + " "
     opt += "--strip " + ("never" if debug else "always") + " "
-    opt += "--config " + f"{PLATFORM[platform]}" + \
-        ("" if backend == "none" else f"_{backend}") + " "
+    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + ("" if trace == False else " --config trace") + " "
     return opt
 
 
 def make_cmd(
-    build_only: bool,
-    debug: bool,
-    platform: str,
-    backend: str,
-    target: str,
-):
+        build_only: bool, 
+        debug: bool,
+        trace: bool, 
+        platform: str, 
+        backend: str, 
+        target: str,
+    ):
     cmd = "bazel" + " "
     cmd += ("build" if build_only else "test") + " "
-    cmd += get_bazel_options(debug, platform, backend)
+    cmd += get_bazel_options(debug, trace, platform, backend)
     cmd += target
     return cmd
 
@@ -110,8 +111,8 @@ def get_argument_parser(desc: str):
                         help='Test on Android (with adb)')
     parser.add_argument('-docker', action="store_true", default=False,
                         help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker context has devcontainer built with a /.devcontainer')
-    parser.add_argument('-s', '--ssh', required=False, default=None,
-                        help="SSH host name (e.g. dev@ssh.band.org)")
+    parser.add_argument('-s', '--ssh', required=False, default=None, help="SSH host name (e.g. dev@ssh.band.org)")
+    parser.add_argument('-t', '--trace', action="store_true", default=True, help='Build with trace (default = True)')
     parser.add_argument('-d', '--debug', action="store_true", default=False,
                         help='Build debug (default = release)')
     parser.add_argument('-r', '--rebuild', action="store_true", default=False,
