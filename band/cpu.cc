@@ -49,7 +49,7 @@ const unsigned long* CpuSet::GetMaskBits() const { return cpu_set_.__bits; }
 std::vector<unsigned long> CpuSet::GetMaskBitsVector() const {
   return std::vector<unsigned long>(
       GetMaskBits(),
-      GetMaskBits() + sizeof(cpu_set_.__bits) / sizeof(__cpu_mask));
+      GetMaskBits() + sizeof(cpu_set_.__bits) / sizeof(*cpu_set_.__bits));
 }
 
 bool CpuSet::operator==(const CpuSet& rhs) const {
