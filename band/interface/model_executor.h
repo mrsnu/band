@@ -28,7 +28,7 @@ class IModelExecutor : public IBackendSpecific {
         worker_id_(worker_id),
         device_flag_(device_flag),
         thread_affinity_mask_(thread_affinity_mask),
-        num_threads_(num_threads) {}
+        num_threads_(num_threads > 0 ? num_threads : -1) {}
   virtual ~IModelExecutor() = default;
 
   virtual ModelSpec InvestigateModelSpec(IModel* model) = 0;
