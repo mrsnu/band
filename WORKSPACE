@@ -9,7 +9,7 @@ workspace_repo()
 http_archive(
     name = "org_tensorflow",
     strip_prefix = "tensorflow-2.9.2_thread_affinity",
-    sha256 = "2b1b1ec8456b692ad7e867499b09b1057cc169897ddf29dfc8be3017d39d596e",
+    sha256 = "26ec28d160a2c850c019c330e9b8ec280c9c2412d21440c9bde73eef8e0ff1fd",
     url = "https://github.com/mrsnu/tensorflow/archive/refs/tags/v2.9.2_thread_affinity.zip"
 )
 
