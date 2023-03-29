@@ -8,9 +8,9 @@ workspace_repo()
 # Note: This repo should lie here to respect TensorFlow's build dependency.
 http_archive(
     name = "org_tensorflow",
-    sha256 = "a6e1b0fb73fbdac983ee093e5b3d1066866f317b0bd83305766e2a02a350910c",
-    strip_prefix = "tensorflow-2.9.2",
-    url = "https://github.com/mrsnu/tensorflow/archive/refs/tags/v2.9.2.zip"
+    strip_prefix = "tensorflow-2.9.2_thread_affinity",
+    sha256 = "2b1b1ec8456b692ad7e867499b09b1057cc169897ddf29dfc8be3017d39d596e",
+    url = "https://github.com/mrsnu/tensorflow/archive/refs/tags/v2.9.2_thread_affinity.zip"
 )
 
 load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
