@@ -149,10 +149,11 @@ absl::Status Worker::TryUpdateWorkerThread() {
       return absl::OkStatus();
     }
 
-    BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-        SetCPUThreadAffinity(cpu_set_),
-        "Worker (%d, %s) failed to set cpu thread affinity", worker_id_,
-        GetName(device_flag_));
+    if (!SetCPUThreadAffinity(cpu_set_).ok()) {
+      return absl::InternalError(
+          absl::StrFormat("Worker (%d, %s) failed to set cpu thread affinity",
+                          worker_id_, GetName(device_flag_)));
+    }
   }
   return absl::OkStatus();
 }
@@ -213,7 +214,7 @@ void Worker::Work() {
         }
         context_->TryCopyOutputTensors(*current_job);
         current_job->status = JobStatus::Success;
-      } else if (status == kBandDelegateError) {
+      } else if (!status.ok()) {
         HandleDeviceError(*current_job);
         context_->Trigger();
         continue;

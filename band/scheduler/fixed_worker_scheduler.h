@@ -13,7 +13,7 @@ class FixedWorkerScheduler : public IScheduler {
   void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
-  BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }
+  WorkerType GetWorkerType() override { return WorkerType::DeviceQueue; }
 };
 
 class FixedWorkerGlobalQueueScheduler : public IScheduler {
@@ -25,7 +25,7 @@ class FixedWorkerGlobalQueueScheduler : public IScheduler {
   // in which case this function can return false.
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return false; }
-  BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
+  WorkerType GetWorkerType() override { return WorkerType::GlobalQueue; }
 };
 
 }  // namespace Band

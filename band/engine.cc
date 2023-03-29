@@ -42,11 +42,11 @@ std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
 
 absl::Status Engine::RegisterModel(Model* model) {
   if (!model) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Model is empty.")
+    return absl::InternalError("Model is empty.");
   }
 
   if (model->GetSupportedBackends().size() == 0) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("No supported backends.")
+    return absl::InternalError("No supported backends.");
   }
 
   const ModelId model_id = model->GetId();
@@ -55,19 +55,19 @@ absl::Status Engine::RegisterModel(Model* model) {
     // Analyze model & generate subgraphs per backend type
     ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
                            subgraph_config_, model, backend_type);
-    const auto result = analyzer.CreateSubgraphs();
-    // TODO: replace with a std::tie?
-    const absl::Status status = std::get<0>(result);
-    const ModelSpec model_spec = std::get<1>(result);
-    const std::vector<SubgraphDef> subgraph_defs = std::get<2>(result);
 
-    if (!status.ok()) {
+    const auto status_or_result = analyzer.CreateSubgraphs();
+    if (!status_or_result.ok()) {
       // TODO(BAND-49): unregister for specific backend
       UnregisterModel(model);
-      BAND_RETURN_INTERNAL_ERROR_PROD(
+      return absl::InternalError(absl::StrFormat(
           "Failed to create subgraphs for model %d with subgraph option %s",
-          model_id, GetName(subgraph_config_.subgraph_preparation_type));
+          model_id, GetName(subgraph_config_.subgraph_preparation_type)));
     }
+
+    const auto result = analyzer.CreateSubgraphs().value();
+    const ModelSpec model_spec = std::get<0>(result);
+    const std::vector<SubgraphDef> subgraph_defs = std::get<1>(result);
 
     // Create internal model_executor per each supported backends
     {
@@ -82,16 +82,15 @@ absl::Status Engine::RegisterModel(Model* model) {
           model_executors_[{model_id, worker_id}] = std::move(model_executor);
           added_once = true;
           BAND_LOG_INTERNAL(BAND_LOG_INFO,
-                            "Create model executor for model %d worker %s (%s)",
-                            model_id, GetName(GetWorkerDevice(worker_id)),
-                            absl::StatusGetName(status));
+                            "Create model executor for model %d worker %s",
+                            model_id, GetName(GetWorkerDevice(worker_id)));
         }
       }
 
       if (!added_once) {
         // TODO(BAND-49): unregister for specific backend
         UnregisterModel(model);
-        BAND_RETURN_INTERNAL_ERROR_PROD(
+        return absl::InternalError(
             "Failed to create model executor on all worker types");
       }
     }
@@ -120,19 +119,30 @@ absl::Status Engine::RegisterModel(Model* model) {
               subgraph_def.unit_subgraph_indices);
           if (status.ok()) {
             // Verify generated subgraphs
-            BAND_ENSURE(error_reporter_, model_executor->HasSubgraph(key));
+            if (model_executor->HasSubgraph(key) == false) {
+              return absl::InternalError(absl::StrFormat(
+                  "A subgraph for worker %d that does not exists",
+                  subgraph_def.worker_id));
+            }
             const std::set<int> inputs =
                 model_spec.GetPureInputTensors(subgraph_def.op_indices);
             const std::set<int> all_outputs =
                 model_spec.GetOutputTensors(subgraph_def.op_indices);
-            BAND_ENSURE(error_reporter_,
-                        std::equal(model_executor->GetInputs(key).begin(),
-                                   model_executor->GetInputs(key).end(),
-                                   inputs.begin()));
-            BAND_ENSURE(error_reporter_,
-                        std::includes(all_outputs.begin(), all_outputs.end(),
-                                      model_executor->GetOutputs(key).begin(),
-                                      model_executor->GetOutputs(key).end()));
+
+            if (std::equal(model_executor->GetInputs(key).begin(),
+                           model_executor->GetInputs(key).end(),
+                           inputs.begin())) {
+              return absl::InternalError(
+                  absl::StrFormat("Input format is not correct for worker %d",
+                                  subgraph_def.worker_id));
+            }
+            if (std::includes(all_outputs.begin(), all_outputs.end(),
+                              model_executor->GetOutputs(key).begin(),
+                              model_executor->GetOutputs(key).end())) {
+              return absl::InternalError(
+                  absl::StrFormat("Output format is not correct for worker %d",
+                                  subgraph_def.worker_id));
+            }
 
             unit_subgraphs_to_subgraph_keys_
                 [model_id][*subgraph_def.unit_subgraph_indices.begin()]
@@ -236,7 +246,7 @@ absl::Status Engine::RegisterModel(Model* model) {
 
 absl::Status Engine::UnregisterModel(Model* model) {
   if (!model) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to unregister null model.")
+    return absl::InternalError("Failed to unregister null model.");
   }
 
   for (auto it = model_executors_.begin(); it != model_executors_.end();) {
@@ -302,50 +312,53 @@ DeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
   // TODO(widiba03304): absl refactor
   // else {
   //   BAND_REPORT_ERROR(error_reporter_, "Invalid worker id %d", id);
-  //   return kBandNumDevices;
+  //   return kNumDevices;
   // }
 }
 
-absl::Status Engine::RequestSync(ModelId model_id, BandRequestOption options,
+absl::Status Engine::RequestSync(ModelId model_id, RequestOption options,
                                  Tensors inputs, Tensors outputs) {
-  JobId job_id = RequestAsync(model_id, options, inputs);
-  if (job_id == -1) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid job id.");
+  auto status_or_job_id = RequestAsync(model_id, options, inputs);
+  if (!status_or_job_id.ok()) {
+    return status_or_job_id.status();
   }
-  return Wait(job_id, outputs);
+  return Wait(status_or_job_id.value(), outputs);
 }
 
 absl::Status Engine::RequestSync(std::vector<ModelId> model_ids,
-                                 std::vector<BandRequestOption> options,
+                                 std::vector<RequestOption> options,
                                  std::vector<Tensors> inputs,
                                  std::vector<Tensors> outputs) {
-  std::vector<JobId> job_ids = RequestAsync(model_ids, options, inputs);
-  if (job_ids.size() == 0) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid requests, job_ids.size() == 0");
+  auto status_or_job_ids = RequestAsync(model_ids, options, inputs);
+  if (!status_or_job_ids.ok()) {
+    return status_or_job_ids.status();
   }
-  return Wait(job_ids, outputs);
+  return Wait(status_or_job_ids.value(), outputs);
 }
 
-JobId Engine::RequestAsync(ModelId model_id, BandRequestOption options,
-                           Tensors inputs) {
+absl::StatusOr<JobId> Engine::RequestAsync(ModelId model_id,
+                                           RequestOption options,
+                                           Tensors inputs) {
   std::vector<Tensors> input_tensors;
   if (inputs.size()) {
     input_tensors.push_back(inputs);
   }
-  auto job_ids = RequestAsync({model_id}, {options}, input_tensors);
-  return job_ids.size() == 1 ? job_ids[0] : -1;
+  auto status_or_job_ids = RequestAsync({model_id}, {options}, input_tensors);
+  if (!status_or_job_ids.ok()) {
+    return status_or_job_ids.status();
+  }
+  return status_or_job_ids.value()[0];
 }
 
-std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
-                                        std::vector<BandRequestOption> options,
-                                        std::vector<Tensors> inputs) {
+absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
+    std::vector<ModelId> model_ids, std::vector<RequestOption> options,
+    std::vector<Tensors> inputs) {
   std::vector<Job> jobs;
 
   if (model_ids.size() != options.size()) {
-    BAND_REPORT_ERROR(error_reporter_,
-                      "# Model requests (%llu) != # Worker ids (%llu)",
-                      model_ids.size(), options.size());
-    return {};
+    return absl::InternalError(
+        absl::StrFormat("# Model requests (%llu) != # Worker ids (%llu)",
+                        model_ids.size(), options.size()));
   }
 
   for (size_t i = 0; i < model_ids.size(); i++) {
@@ -356,10 +369,8 @@ std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
     int target_slo_us = options[i].slo_us;
     if (options[i].slo_scale != -1) {
       if (options[i].slo_scale <= 0) {
-        BAND_REPORT_ERROR(error_reporter_,
-                          "Specified slo_scale is invalid (%f <= 0)",
-                          options[i].slo_scale);
-        return {};
+        return absl::InternalError(absl::StrFormat(
+            "Specified slo_scale is invalid (%f <= 0)", options[i].slo_scale));
       }
 
       target_slo_us = GetWorst(model_ids[i]) * options[i].slo_scale;
@@ -375,20 +386,21 @@ std::vector<JobId> Engine::RequestAsync(std::vector<ModelId> model_ids,
     if (options[i].target_worker != -1) {
       Worker* target_worker = GetWorker(options[i].target_worker);
       if (target_worker == nullptr) {
-        BAND_REPORT_ERROR(error_reporter_,
-                          "Request assigned to invalid worker id (%d)",
-                          options[i]);
-        return {};
+        return absl::InternalError(
+            absl::StrFormat("Request assigned to invalid worker id (%d)",
+                            options[i].target_worker));
       }
       job.target_worker_id = options[i].target_worker;
     }
 
     if (i < inputs.size()) {
       int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
-      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-          model_input_buffer_[model_ids[i]]->PutTensorsToHandle(inputs[i],
-                                                                input_handle),
-          "Input copy failure for model %d", model_ids[i]);
+      if (!model_input_buffer_[model_ids[i]]
+               ->PutTensorsToHandle(inputs[i], input_handle)
+               .ok()) {
+        return absl::InternalError(
+            absl::StrFormat("Input copy failure for model %d", model_ids[i]));
+      }
       job.input_handle = input_handle;
       job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
     }
@@ -411,7 +423,10 @@ absl::Status Engine::Wait(std::vector<JobId> job_ids,
                           std::vector<Tensors> outputs) {
   planner_->Wait(job_ids);
   for (size_t i = 0; i < outputs.size(); i++) {
-    BAND_ENSURE_STATUS(GetOutputTensors(job_ids[i], outputs[i]));
+    auto status = GetOutputTensors(job_ids[i], outputs[i]);
+    if (!status.ok()) {
+      return status;
+    }
   }
   return absl::OkStatus();
 }
@@ -422,28 +437,31 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   Job job = planner_->GetFinishedJob(job_id);
 
   if (outputs.empty() || job_id == -1) {
-    BAND_RETURN_INTERNAL_ERROR_PROD(
-        "Invalid job id / num outputs to copy: (%d, %d)", job_id,
-        outputs.size());
+    return absl::InternalError(
+        absl::StrFormat("Invalid job id / num outputs to copy: (%d, %d)",
+                        job_id, outputs.size()));
   }
 
   // Not finished or invalidated
   if (job.job_id == -1) {
-    BAND_RETURN_INTERNAL_ERROR_PROD(
-        "Invalid job id / not finished or invalidated.");
+    return absl::InternalError("Invalid job id / not finished or invalidated.");
   }
 
   if (job.output_handle == -1) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid output handle : %d",
-                                    job.output_handle);
+    return absl::InternalError(
+        absl::StrFormat("Invalid output handle : %d", job.output_handle));
   }
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Invalid model id : %d", job.model_id);
+    return absl::InternalError(
+        absl::StrFormat("Invalid model id : %d", job.model_id));
   }
 
-  BAND_ENSURE_STATUS(model_output_buffer_.at(job.model_id)
-                         ->GetTensorsFromHandle(outputs, job.output_handle));
+  auto status = model_output_buffer_.at(job.model_id)
+                    ->GetTensorsFromHandle(outputs, job.output_handle);
+  if (!status.ok()) {
+    return status;
+  }
   return absl::OkStatus();
 }
 
@@ -455,14 +473,20 @@ void Engine::SetOnEndRequest(
 absl::Status Engine::Init(const RuntimeConfig& config) {
   planner_ = std::make_unique<Planner>(*this);
 
-  BAND_ENSURE_STATUS(planner_->Init(config.planner_config));
+  auto status = planner_->Init(config.planner_config);
+  if (!status.ok()) {
+    return status;
+  }
 
   {
     subgraph_config_ = config.subgraph_config;
 
     if (planner_->NeedProfile()) {
       latency_estimator_ = std::make_unique<LatencyEstimator>(this);
-      BAND_ENSURE_STATUS(latency_estimator_->Init(config.profile_config));
+      auto status = latency_estimator_->Init(config.profile_config);
+      if (!status.ok()) {
+        return status;
+      }
     }
 
     const CPUMaskFlags cpu_mask = static_cast<CPUMaskFlags>(config.cpu_mask);
@@ -471,7 +495,10 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
                       BandCPUMaskGetName(cpu_mask));
 
-    BAND_ENSURE_STATUS(SetCPUThreadAffinity(cpu_mask_set));
+    auto status = SetCPUThreadAffinity(cpu_mask_set);
+    if (!status.ok()) {
+      return status;
+    }
   }
 
   // Search for all available backends, devices
@@ -488,7 +515,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     DeviceFlags device_flag = potential_workers[i];
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
-      if (planner_->GetWorkerType() == kBandGlobalQueue) {
+      if (planner_->GetWorkerType() ==
+          static_cast<int>(WorkerType::GlobalQueue)) {
         worker = std::make_unique<GlobalQueueWorker>(this, workers_.size(),
                                                      device_flag);
       } else {
@@ -496,9 +524,10 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
                                                      device_flag);
       }
 
-      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-          worker->Init(config.worker_config),
-          "Worker::Init() failed for worker : %s.", GetName(device_flag))
+      if (!worker->Init(config.worker_config).ok()) {
+        return absl::InternalError(absl::StrFormat(
+            "Worker::Init() failed for worker : %s.", GetName(device_flag)));
+      }
 
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         GetName(device_flag));
@@ -601,7 +630,7 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
   auto model_executor_it =
       model_executors_.find({key.GetModelId(), key.GetWorkerId()});
   if (model_executor_it == model_executors_.end()) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to find a subgraph key");
+    return absl::InternalError("Failed to find a subgraph key");
   }
   return model_executor_it->second->ExecuteSubgraph(key);
 }
@@ -918,10 +947,11 @@ absl::Status Engine::TryCopyInputTensors(const Job& job) {
         std::shared_ptr<Interface::ITensorView> dst =
             model_executor->GetTensorView(key, tensor_index);
 
-        BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-            dst->CopyDataFrom(src.get()),
-            "Tensor data copy failure from %s to %s", src->GetName(),
-            dst->GetName());
+        if (!dst->CopyDataFrom(src.get()).ok()) {
+          return absl::InternalError(
+              absl::StrFormat("Tensor data copy failure from %s to %s",
+                              src->GetName(), dst->GetName()));
+        }
 
         unresolved_tensors.erase(tensor_index);
       }
@@ -929,8 +959,8 @@ absl::Status Engine::TryCopyInputTensors(const Job& job) {
   }
 
   if (model_input_buffer_.find(job.model_id) == model_input_buffer_.end()) {
-    BAND_RETURN_INTERNAL_ERROR_PROD(
-        "Failed to find input tensor ring buffer for model %d", job.model_id);
+    return absl::InternalError(absl::StrFormat(
+        "Failed to find input tensor ring buffer for model %d", job.model_id));
   }
 
   auto input_buffer = model_input_buffer_[job.model_id].get();
@@ -940,12 +970,15 @@ absl::Status Engine::TryCopyInputTensors(const Job& job) {
        tensor_it != unresolved_tensors.end();) {
     int tensor_index = *tensor_it;
     if (input_buffer->IsTensorIndexValid(tensor_index)) {
-      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-          input_buffer->GetTensorFromHandle(
-              model_executor->GetTensorView(key, tensor_index).get(),
-              tensor_index, job.input_handle),
-          "Failed to copy input tensor %d for model %d", tensor_index,
-          job.model_id);
+      if (!input_buffer
+               ->GetTensorFromHandle(
+                   model_executor->GetTensorView(key, tensor_index).get(),
+                   tensor_index, job.input_handle)
+               .ok()) {
+        return absl::InternalError(
+            absl::StrFormat("Failed to copy input tensor %d for model %d",
+                            tensor_index, job.model_id));
+      }
       tensor_it = unresolved_tensors.erase(tensor_it);
     } else {
       ++tensor_it;
@@ -953,7 +986,7 @@ absl::Status Engine::TryCopyInputTensors(const Job& job) {
   }
 
   if (!unresolved_tensors.empty()) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Some tensors fail to be resolved.");
+    return absl::InternalError("Some tensors fail to be resolved.");
   }
 
   return absl::OkStatus();
@@ -971,19 +1004,22 @@ absl::Status Engine::TryCopyOutputTensors(const Job& job) {
   auto model_executor = GetModelExecutor(job.subgraph_key);
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
-    BAND_RETURN_INTERNAL_ERROR_PROD(
-        "Failed to find output tensor ring buffer for model %d", job.model_id);
+    return absl::InternalError(absl::StrFormat(
+        "Failed to find output tensor ring buffer for model %d", job.model_id));
   }
 
   auto output_buffer = model_output_buffer_[job.model_id].get();
   for (int tensor_index : model_executor->GetOutputs(key)) {
     if (output_buffer->IsTensorIndexValid(tensor_index)) {
-      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-          output_buffer->PutTensorToHandle(
-              model_executor->GetTensorView(key, tensor_index).get(),
-              tensor_index, job.output_handle),
-          "Failed to copy output tensor %d for model %d", tensor_index,
-          job.model_id);
+      if (!output_buffer
+               ->PutTensorToHandle(
+                   model_executor->GetTensorView(key, tensor_index).get(),
+                   tensor_index, job.output_handle)
+               .ok()) {
+        return absl::InternalError(
+            absl::StrFormat("Failed to copy output tensor %d for model %d",
+                            tensor_index, job.model_id));
+      }
     }
   }
 

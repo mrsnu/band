@@ -16,7 +16,7 @@ std::set<DeviceFlags> TfLiteUtil::GetAvailableDevices() const {
   static std::once_flag once_flag;
 
   std::call_once(once_flag, [&]() {
-    for (int flag = 0; flag < kBandNumDevices; flag++) {
+    for (int flag = 0; flag < kNumDevices; flag++) {
       const DeviceFlags device_flag = static_cast<DeviceFlags>(flag);
       if (TfLiteModelExecutor::GetDeviceDelegate(device_flag).first ==
           absl::OkStatus()) {

@@ -76,14 +76,14 @@ int CpuSet::NumEnabled() const { return GetCPUCount(); }
 #endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
 CPUMaskFlags CpuSet::GetCPUMaskFlag() const {
-  for (int i = 0; i < kBandNumCpuMasks; i++) {
+  for (int i = 0; i < kNumCpuMasks; i++) {
     const CPUMaskFlags flag = static_cast<CPUMaskFlags>(i);
     if (BandCPUMaskGetSet(flag) == *this) {
       return flag;
     }
   }
   // TODO(widiba03304): absl refactor
-  // return kBandNumCpuMasks;
+  // return kNumCpuMasks;
 }
 
 static CpuSet g_thread_affinity_mask_all;
@@ -245,7 +245,7 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
   if (ssaret != 0) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to set the CPU affinity.");
+    return absl::InternalError("Failed to set the CPU affinity.");
   }
 #endif
   return absl::OkStatus();
@@ -255,7 +255,7 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
   int gsaret = GetSchedAffinity(thread_affinity_mask);
   if (gsaret != 0) {
-    BAND_RETURN_INTERNAL_ERROR_PROD("Failed to get the CPU affinity.")
+    return absl::InternalError("Failed to get the CPU affinity.");
   }
 #endif
   return absl::OkStatus();
@@ -345,7 +345,7 @@ const char* BandCPUMaskGetName(CPUMaskFlags flag) {
 }
 
 const CPUMaskFlags BandCPUMaskGetFlag(const char* name) {
-  for (int i = 0; i < kBandNumCpuMasks; i++) {
+  for (int i = 0; i < kNumCpuMasks; i++) {
     const auto flag = static_cast<CPUMaskFlags>(i);
     if (strcmp(name, BandCPUMaskGetName(flag)) == 0) {
       return flag;

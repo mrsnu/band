@@ -72,16 +72,23 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
             // (L1143-,tensorflow_band/lite/model_executor.cc)
 
             for (int i = 0; i < profile_num_warmups_; i++) {
-              BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(context_->Invoke(subgraph_key), "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
+              if (!context_->Invoke(subgraph_key).ok()) {
+                return absl::InternalError(absl::StrFormat(
+                    "Profiler failed to invoke largest subgraph of "
+                    "model %d in worker %d",
+                    model_id, worker_id));
+              }
             }
 
             for (int i = 0; i < profile_num_runs_; i++) {
               const size_t event_id = average_profiler.BeginEvent();
-              BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(context_->Invoke(subgraph_key), "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
+
+              if (!context_->Invoke(subgraph_key).ok()) {
+                return absl::InternalError(absl::StrFormat(
+                    "Profiler failed to invoke largest subgraph of "
+                    "model %d in worker %d",
+                    model_id, worker_id));
+              }
               average_profiler.EndEvent(event_id);
             }
 

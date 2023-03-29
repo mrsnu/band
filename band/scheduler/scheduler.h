@@ -19,7 +19,7 @@ class IScheduler {
   virtual void Schedule(JobQueue& requests) = 0;
   virtual bool NeedProfile() = 0;
   virtual bool NeedFallbackSubgraphs() = 0;
-  virtual BandWorkerType GetWorkerType() = 0;
+  virtual WorkerType GetWorkerType() = 0;
 
  protected:
   Context& context_;

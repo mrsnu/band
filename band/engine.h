@@ -67,22 +67,24 @@ class Engine : public Context {
 
   absl::Status RequestSync(
       ModelId model_id,
-      BandRequestOption options = BandGetDefaultRequestOption(),
+      RequestOption options = RequestOption::GetDefaultOption(),
       Tensors inputs = {}, Tensors outputs = {});
   absl::Status RequestSync(std::vector<ModelId> model_ids,
-                         std::vector<BandRequestOption> options = {},
-                         std::vector<Tensors> inputs = {},
-                         std::vector<Tensors> outputs = {});
-  JobId RequestAsync(ModelId model_id,
-                     BandRequestOption options = BandGetDefaultRequestOption(),
-                     Tensors inputs = {});
-  std::vector<JobId> RequestAsync(std::vector<ModelId> model_ids,
-                                  std::vector<BandRequestOption> options = {},
-                                  std::vector<Tensors> inputs = {});
+                           std::vector<RequestOption> options = {},
+                           std::vector<Tensors> inputs = {},
+                           std::vector<Tensors> outputs = {});
+  absl::StatusOr<JobId> RequestAsync(
+      ModelId model_id,
+      RequestOption options = RequestOption::GetDefaultOption(),
+      Tensors inputs = {});
+  absl::StatusOr<std::vector<JobId>> RequestAsync(
+      std::vector<ModelId> model_ids,
+      std::vector<RequestOption> options = {},
+      std::vector<Tensors> inputs = {});
 
   absl::Status Wait(JobId job_id, Tensors outputs = {});
   absl::Status Wait(std::vector<JobId> job_ids,
-                  std::vector<Tensors> outputs = {});
+                    std::vector<Tensors> outputs = {});
   void WaitAll();
   absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 

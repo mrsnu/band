@@ -180,12 +180,16 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
   }
 }
 
-absl::StatusOr<std::pair<ModelSpec>, std::vector<SubgraphDef>>
+absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>>
 ModelAnalyzer::CreateSubgraphs() {
   std::vector<SubgraphDef> subgraph_defs;
   std::vector<SubgraphDef> unit_subgraph_defs;
 
-  BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(GetUnitSubgraphs(unit_subgraph_defs));
+  // TODO(widiba03304): Add error propagation logic.
+  auto status = GetUnitSubgraphs(unit_subgraph_defs);
+  if (!status.ok()) {
+    return status;
+  }
 
   switch (subgraph_config_.subgraph_preparation_type) {
     case SubgraphPreparationType::FallbackPerWorker: {
@@ -239,11 +243,11 @@ ModelAnalyzer::CreateSubgraphs() {
       const int begin = *subgraph_def.unit_subgraph_indices.begin();
       const int end = *subgraph_def.unit_subgraph_indices.rbegin();
       if (end - begin != subgraph_def.unit_subgraph_indices.size() - 1) {
-        BAND_RETURN_INTERNAL_ERROR_PROD(
+        return absl::InternalError(absl::StrFormat(
             "Failed to create subgraph. Unit subgraph indices in "
             "subgraph %s are not continous for model %s and mode %s",
             subgraph_def.ToString().c_str(), model_spec_->path.c_str(),
-            GetName(subgraph_config_.subgraph_preparation_type));
+            GetName(subgraph_config_.subgraph_preparation_type)));
       }
     }
   }
@@ -261,7 +265,7 @@ ModelAnalyzer::CreateSubgraphs() {
                 GetName(subgraph_config_.subgraph_preparation_type),
                 subgraph_summary.c_str());
 
-  return {*model_spec_, subgraph_defs};
+  return std::make_pair(*model_spec_, subgraph_defs);
 }
 
 absl::Status ModelAnalyzer::GetUnitSubgraphs(
@@ -283,8 +287,8 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
   } else {
     const int num_ops = model_spec_->num_ops;
     if (num_workers > 8 * sizeof(BitMask)) {
-      BAND_RETURN_INTERNAL_ERROR_PROD(
-          "Number of workers is larger than BitMask %d", num_workers);
+      return absl::InternalError(absl::StrFormat(
+          "Number of workers is larger than BitMask %d", num_workers));
     }
 
     std::map<WorkerId, std::set<int>> op_sets_to_ignore;
@@ -408,7 +412,7 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
     }
 
     if (!remaining_ops.empty()) {
-      BAND_RETURN_INTERNAL_ERROR_PROD("Not empty remaining ops");
+      return absl::InternalError("Not empty remaining ops");
     }
   }
 
@@ -427,7 +431,11 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
         unit_subgraph_def.op_indices;
   }
 
-  BAND_ENSURE_STATUS(model_spec_->SetUnitSubgraphs(unit_subgraph_defs));
+  // TODO(widiba03304): Add error propagation logic.
+  auto status = model_spec_->SetUnitSubgraphs(unit_subgraph_defs);
+  if (!status.ok()) {
+    return status;
+  }
 
   for (const auto& lhs : unit_subgraphs) {
     for (const auto& rhs : unit_subgraphs) {
@@ -438,10 +446,10 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
       if (*lhs.unit_subgraph_indices.begin() ==
           *rhs.unit_subgraph_indices.begin()) {
         if (lhs.op_indices != rhs.op_indices) {
-          BAND_RETURN_INTERNAL_ERROR_PROD(
+          return absl::InternalError(absl::StrFormat(
               "Failed to create unit subgraph. Unit subgraph with same idx %d "
               "has different operators",
-              *lhs.unit_subgraph_indices.begin());
+              *lhs.unit_subgraph_indices.begin()));
         }
       } else {
         std::set<int> intersection;
@@ -450,13 +458,13 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
             rhs.op_indices.begin(), rhs.op_indices.end(),
             std::inserter(intersection, intersection.begin()));
         if (intersection.size()) {
-          BAND_RETURN_INTERNAL_ERROR_PROD(
+          return absl::InternalError(absl::StrFormat(
               "Failed to create unit subgraph. Unit subgraph with "
               "different idx %d, %d "
               "has common operators %s",
               *lhs.unit_subgraph_indices.begin(),
               *rhs.unit_subgraph_indices.begin(),
-              SetToString(intersection).c_str());
+              SetToString(intersection).c_str()));
         }
       }
     }

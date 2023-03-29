@@ -25,12 +25,12 @@ class Tensor : public Interface::ITensor {
   void SetDims(const std::vector<int>& dims) override;
   size_t GetBytes() const override;
   const char* GetName() const override;
-  BandQuantization GetQuantization() const override;
-  void SetQuantization(BandQuantization quantization) override;
+  Quantization GetQuantization() const override;
+  void SetQuantization(Quantization quantization) override;
 
  private:
   DataType type_;
-  BandQuantization quantization_;
+  Quantization quantization_;
   size_t num_bytes_;
   std::vector<int> dims_;
   char* data_;

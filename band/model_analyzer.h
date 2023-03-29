@@ -29,7 +29,7 @@ class ModelAnalyzer {
                 SubgraphConfig subgraph_config, Model* model,
                 BackendType backend_type);
 
-  std::tuple<absl::Status, ModelSpec, std::vector<SubgraphDef>> CreateSubgraphs();
+  absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>> CreateSubgraphs();
 
  private:
   // A model is partitioned into unit subgraphs.

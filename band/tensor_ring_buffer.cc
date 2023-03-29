@@ -61,19 +61,15 @@ absl::Status TensorRingBuffer::GetTensorFromHandle(Interface::ITensor* dst,
                                                    int tensor_index,
                                                    int handle) const {
   if (!IsTensorIndexValid(tensor_index)) {
-    BAND_REPORT_ERROR(error_reporter_,
-                      "GetTensorFromHandle: Invalid tensor index: %d.",
-                      tensor_index);
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "GetTensorFromHandle: Invalid tensor index: %d.", tensor_index));
   }
 
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsHandleValid(handle)) {
-    BAND_REPORT_ERROR(
-        error_reporter_,
+    return absl::InternalError(absl::StrFormat(
         "GetTensorFromHandle: Invalid memory handle: %d head: %d.", handle,
-        head_);
-    return kBandError;
+        head_));
   }
 
   return CopyTensor(
@@ -83,18 +79,15 @@ absl::Status TensorRingBuffer::GetTensorFromHandle(Interface::ITensor* dst,
 absl::Status TensorRingBuffer::PutTensorToHandle(const Interface::ITensor* src,
                                                  int tensor_index, int handle) {
   if (!IsTensorIndexValid(tensor_index)) {
-    BAND_REPORT_ERROR(error_reporter_,
-                      "PutTensorToHandle: Invalid tensor index: %d.",
-                      tensor_index);
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "PutTensorToHandle: Invalid tensor index: %d.", tensor_index));
   }
 
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsHandleValid(handle)) {
-    BAND_REPORT_ERROR(error_reporter_,
-                      "PutTensorToHandle: Invalid memory handle: %d head: %d.",
-                      handle, head_);
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "PutTensorToHandle: Invalid memory handle: %d head: %d.", handle,
+        head_));
   }
 
   return CopyTensor(
@@ -105,11 +98,9 @@ absl::Status TensorRingBuffer::GetTensorsFromHandle(
     std::vector<Interface::ITensor*>& dst_tensors, int handle) const {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsHandleValid(handle)) {
-    BAND_REPORT_ERROR(
-        error_reporter_,
+    return absl::InternalError(absl::StrFormat(
         "GetTensorsFromHandle: Invalid memory handle: %d head: %d.", handle,
-        head_);
-    return kBandError;
+        head_));
   }
   return CopyTensors(tensors_[GetIndex(handle)], dst_tensors);
 }
@@ -118,10 +109,9 @@ absl::Status TensorRingBuffer::PutTensorsToHandle(
     const std::vector<Interface::ITensor*>& src_tensors, int handle) {
   std::lock_guard<std::mutex> lock(head_mtx_);
   if (!IsHandleValid(handle)) {
-    BAND_REPORT_ERROR(error_reporter_,
-                      "PutTensorsToHandle: Invalid memory handle: %d head: %d.",
-                      handle, head_);
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "PutTensorsToHandle: Invalid memory handle: %d head: %d.", handle,
+        head_));
   }
 
   return CopyTensors(src_tensors, tensors_[GetIndex(handle)]);
@@ -133,16 +123,15 @@ absl::Status TensorRingBuffer::CopyTensors(
   const int tensors_length = GetTensorsLength();
   if (src_tensors.size() != tensors_length ||
       dst_tensors.size() != tensors_length) {
-    BAND_REPORT_ERROR(
-        error_reporter_,
+    return absl::InternalError(absl::StrFormat(
         "Invalid tensor length. src tensors: %d dst tensors: %d expected: %d",
-        src_tensors.size(), dst_tensors.size(), tensors_length);
-    return kBandError;
+        src_tensors.size(), dst_tensors.size(), tensors_length));
   }
 
   for (size_t i = 0; i < tensors_length; i++) {
-    BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-        CopyTensor(src_tensors[i], dst_tensors[i]), "Failed to copy tensors.");
+    if (!CopyTensor(src_tensors[i], dst_tensors[i]).ok()) {
+      return absl::InternalError("Failed to copy tensors.");
+    }
   }
 
   return absl::OkStatus();
@@ -150,12 +139,10 @@ absl::Status TensorRingBuffer::CopyTensors(
 
 absl::Status TensorRingBuffer::CopyTensor(const Interface::ITensor* src,
                                           Interface::ITensor* dst) const {
-  if (dst->CopyDataFrom(src) == kBandError) {
-    BAND_REPORT_ERROR(error_reporter_,
-                      "Tensor data copy failure. src name : %s, dst name : %s",
-                      src ? src->GetName() : "null",
-                      dst ? dst->GetName() : "null");
-    return kBandError;
+  if (!dst->CopyDataFrom(src).ok()) {
+    return absl::InternalError(absl::StrFormat(
+        "Tensor data copy failure. src name : %s, dst name : %s",
+        src ? src->GetName() : "null", dst ? dst->GetName() : "null"));
   }
   return absl::OkStatus();
 }

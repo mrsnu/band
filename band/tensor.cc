@@ -5,9 +5,10 @@
 #include "band/logger.h"
 
 namespace Band {
+
 Tensor::Tensor(ITensor* tensor_view)
     : type_(tensor_view->GetType()),
-      quantization_({kBandNoQuantization, nullptr}),
+      quantization_({QuantizationType::NoQuantization, nullptr}),
       num_bytes_(tensor_view->GetBytes()),
       dims_(tensor_view->GetDims(),
             tensor_view->GetDims() + tensor_view->GetNumDims()),
@@ -18,7 +19,6 @@ Tensor::Tensor(ITensor* tensor_view)
 
 Tensor::~Tensor() {
   delete[] data_;
-  BandQuantizationFree(&quantization_);
 }
 
 DataType Tensor::GetType() const { return type_; }
@@ -41,31 +41,22 @@ size_t Tensor::GetBytes() const { return num_bytes_; }
 
 const char* Tensor::GetName() const { return name_.c_str(); }
 
-BandQuantization Tensor::GetQuantization() const { return quantization_; }
+Quantization Tensor::GetQuantization() const { return quantization_; }
 
-void Tensor::SetQuantization(BandQuantization quantization) {
-  quantization_.type = BandQuantizationType(quantization.type);
-  if (quantization_.type == kBandAffineQuantization) {
-    if (quantization_.params != nullptr) {
-      BandQuantizationFree(&quantization_);
-    }
+void Tensor::SetQuantization(Quantization quantization) {
+  if (quantization_.GetType() == QuantizationType::AffineQuantization) {
+    AffineQuantizationParams* input_q_params =
+        (AffineQuantizationParams*)(quantization.GetParams());
 
-    const BandAffineQuantization* input_q_params =
-        (BandAffineQuantization*)(quantization.params);
+    AffineQuantizationParams* q_params =
+        reinterpret_cast<AffineQuantizationParams*>(
+            malloc(sizeof(AffineQuantizationParams)));
+    q_params->scale = FloatArray(input_q_params->scale.size());
+    q_params->zero_point = IntArray(input_q_params->zero_point.size());
 
-    BandAffineQuantization* q_params =
-        reinterpret_cast<BandAffineQuantization*>(
-            malloc(sizeof(BandAffineQuantization)));
-    q_params->scale = BandFloatArrayCreate(input_q_params->scale->size);
-    q_params->zero_point = BandIntArrayCreate(input_q_params->zero_point->size);
+    q_params->scale.CopyFrom(input_q_params->scale.size(), input_q_params->scale.data());
+    q_params->zero_point.CopyFrom(input_q_params->zero_point.size(), input_q_params->zero_point.data());
     q_params->quantized_dimension = input_q_params->quantized_dimension;
-
-    memcpy(
-        q_params->scale, input_q_params->scale->data,
-        sizeof(input_q_params->scale->data[0]) * input_q_params->scale->size);
-    memcpy(q_params->zero_point, input_q_params->zero_point->data,
-           sizeof(input_q_params->zero_point->data[0]) *
-               input_q_params->zero_point->size);
   }
 }
 

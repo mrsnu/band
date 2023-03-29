@@ -12,7 +12,7 @@ namespace Band {
 
 struct ProfileConfig {
   ProfileConfig() {
-    copy_computation_ratio = std::vector<int>(kBandNumDevices, 0);
+    copy_computation_ratio = std::vector<int>(kNumDevices, 0);
   }
   bool online = true;
   int num_warmups = 1;
@@ -32,11 +32,11 @@ struct PlannerConfig {
 struct WorkerConfig {
   WorkerConfig() {
     // Add one default worker per device
-    for (int i = 0; i < kBandNumDevices; i++) {
+    for (int i = 0; i < kNumDevices; i++) {
       workers.push_back(static_cast<DeviceFlags>(i));
     }
-    cpu_masks = std::vector<CPUMaskFlags>(kBandNumDevices, CPUMaskFlags::All);
-    num_threads = std::vector<int>(kBandNumDevices, 1);
+    cpu_masks = std::vector<CPUMaskFlags>(kNumDevices, CPUMaskFlags::All);
+    num_threads = std::vector<int>(kNumDevices, 1);
   }
   std::vector<DeviceFlags> workers;
   std::vector<CPUMaskFlags> cpu_masks;

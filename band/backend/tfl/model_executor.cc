@@ -109,7 +109,7 @@ ModelSpec TfLiteModelExecutor::InvestigateModelSpec(Interface::IModel* model) {
   }
 
   // also check unsupported ops to fill in model_spec.unsupported_ops
-  for (int i = 0; i < kBandNumDevices; ++i) {
+  for (int i = 0; i < kNumDevices; ++i) {
     DeviceFlags device_flag = static_cast<DeviceFlags>(i);
     unsupported_ops[device_flag] = {};
 
@@ -301,7 +301,7 @@ DeviceFlags GetNNAPIDeviceFlag(std::string name) {
   // 2. Is 'hta' belongs to dsp or npu?
 
   // TODO(widiba03304): absl refactor
-  // return kBandNumDevices;
+  // return kNumDevices;
 }
 
 std::unique_ptr<tflite::Interpreter>

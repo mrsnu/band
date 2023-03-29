@@ -33,10 +33,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
     // and the metrics are only for ShortestExpectedLatency Planner.
     std::ofstream log_file(log_path_);
     if (!log_file.is_open()) {
-      BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                        "[Planner] Failed to open log path %s",
-                        log_path_.c_str());
-      return kBandError;
+      return absl::InternalError(absl::StrFormat(
+          "[Planner] Failed to open log path %s", log_path_.c_str()));
     }
     log_file << "sched_id\t"
              << "job_id\t"
@@ -57,10 +55,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
-    BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                      "[Planner] Not supported for %d schedulers",
-                      schedulers_.size());
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "[Planner] Not supported for %d schedulers", schedulers_.size()));
   }
 
   bool allow_fallback = false;
@@ -89,7 +85,7 @@ absl::Status Planner::Init(const PlannerConfig& config) {
       schedulers_.emplace_back(
           new HEFTScheduler(context_, schedule_window_size_, true));
     } else {
-      return kBandError;
+      return absl::InternalError("[Planner] Unsupported scheduler type.");
     }
 
     // Checks if all the schedulers have the same requirements for the
@@ -99,13 +95,16 @@ absl::Status Planner::Init(const PlannerConfig& config) {
     if (i == 0) {
       allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
     } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
-      return kBandError;
+      return absl::InternalError(
+          "[Planner] Different type of scheduler requirements.");
     }
   }
 
   // All schedulers must have the same worker type.
-  if (GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue)) {
-    return kBandError;
+  if (GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
+                          static_cast<int>(WorkerType::GlobalQueue))) {
+    return absl::InternalError(
+        "All schedulers must have the same worker type.");
   }
 
   if (config.cpu_mask != CPUMaskFlags::All) {
@@ -119,8 +118,10 @@ absl::Status Planner::Init(const PlannerConfig& config) {
 absl::Status Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
   schedulers_.emplace_back(std::move(scheduler));
   local_queues_.resize(schedulers_.size());
-  return GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue)
-             ? kBandError
+  return GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
+                             static_cast<int>(WorkerType::GlobalQueue))
+             ? absl::InternalError(
+                   "All schedulers must have the same worker type.")
              : absl::OkStatus();
 }
 
@@ -130,29 +131,28 @@ JobId Planner::EnqueueRequest(Job job, bool push_front) {
 
 std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
                                          bool push_front) {
-  std::unique_lock<std::mutex> request_lock(requests_.mtx);
   std::vector<JobId> job_ids(jobs.size());
-  auto enqueue_time = Time::NowMicros();
-  for (int i = 0; i < jobs.size(); i++) {
-    Job& job = jobs[i];
-    if (job.enqueue_time == 0) {
-      // job.enqueue_time may already be set if this model contains a fallback
-      // op, in which case we do not overwrite the set value
-      job.enqueue_time = enqueue_time;
+  {
+    std::unique_lock<std::mutex> request_lock(requests_.mtx);
+    auto enqueue_time = Time::NowMicros();
+    for (int i = 0; i < jobs.size(); i++) {
+      Job& job = jobs[i];
+      if (job.enqueue_time == 0) {
+        // job.enqueue_time may already be set if this model contains a fallback
+        // op, in which case we do not overwrite the set value
+        job.enqueue_time = enqueue_time;
+      }
+      if (job.job_id == -1) {
+        job.job_id = num_submitted_jobs_++;
+      }
+      job_ids[i] = job.job_id;
     }
-    if (job.job_id == -1) {
-      job.job_id = num_submitted_jobs_++;
-    }
-    job_ids[i] = job.job_id;
+
+    auto insert_position =
+        push_front ? requests_.queue.begin() : requests_.queue.end();
+    requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
   }
-
-  auto insert_position =
-      push_front ? requests_.queue.begin() : requests_.queue.end();
-  requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
-  request_lock.unlock();
-
   planner_safe_bool_.notify();
-
   return job_ids;
 }
 
@@ -209,7 +209,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
       context_.IsEnd(job.subgraph_key)) {
     on_end_request_(job.job_id, job.status == JobStatus::Success
                                     ? absl::OkStatus()
-                                    : kBandError);
+                                    : absl::InternalError("Job failed."));
   }
 }
 
@@ -256,21 +256,24 @@ void Planner::SetOnEndRequest(
 int Planner::GetWorkerType() const {
   int worker_type = 0;
   for (int i = 0; i < schedulers_.size(); ++i) {
-    worker_type |= schedulers_[i]->GetWorkerType();
+    // TODO(widiba03304): Planner's worker type should not have an integer type.
+    // Fix it to have a categorical type.
+    worker_type |= static_cast<int>(schedulers_[i]->GetWorkerType());
   }
   return worker_type;
 }
 
-void Planner::Plan() {
+absl::Status Planner::Plan() {
   while (true) {
     if (planner_safe_bool_.wait()) {
-      return;
+      // TODO(widiba03304): Check correctness;
+      continue;
     }
 
     if (need_cpu_update_) {
-      BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(
-          SetCPUThreadAffinity(cpu_set_),
-          "[Planner] Failed to set cpu thread affinity");
+      if (!SetCPUThreadAffinity(cpu_set_).ok()) {
+        return absl::InternalError("[Planner] Failed to set cpu thread affinity");
+      }
       need_cpu_update_ = false;
     }
     CopyToLocalQueues();

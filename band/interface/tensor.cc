@@ -20,29 +20,32 @@ std::vector<int> ITensor::GetDimsVector() const {
 }
 
 bool ITensor::operator==(const ITensor& rhs) const {
-  if ((GetType() == rhs.GetType()) && (GetDimsVector() == rhs.GetDimsVector()))
-    return true;
-  else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s != %s %s", GetName(),
-                  Band::GetName(GetType()), rhs.GetName(),
-                  Band::GetName(rhs.GetType()));
+  if (GetType() != rhs.GetType()) {
     return false;
   }
+
+  if (GetDimsVector() != rhs.GetDimsVector()) {
+    return false;
+  }
+
+  return true;
+}
+
+bool ITensor::operator!=(const ITensor& rhs) const {
+  return !(*this == rhs);
 }
 
 absl::Status ITensor::CopyDataFrom(const ITensor& rhs) {
-  if (*this == rhs) {
-    memcpy(GetData(), rhs.GetData(), GetBytes());
-    return absl::OkStatus();
-  } else {
-    return kBandError;
+  if (*this != rhs) {
+    return absl::InternalError("");
   }
+  memcpy(GetData(), rhs.GetData(), GetBytes());
+  return absl::OkStatus();
 }
 
 absl::Status ITensor::CopyDataFrom(const ITensor* rhs) {
   if (!rhs) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Tried to copy null tensor");
-    return kBandError;
+    return absl::InternalError("Tried to copy null tensor");
   }
 
   return CopyDataFrom(*rhs);

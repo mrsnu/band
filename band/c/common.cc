@@ -26,14 +26,14 @@ const char* BandSchedulerGetName(BandSchedulerType type) {
 }
 
 BandSchedulerType BandSchedulerGetType(const char* name) {
-  for (int i = 0; i < kBandNumSchedulerTypes; i++) {
+  for (int i = 0; i < kNumSchedulerTypes; i++) {
     BandSchedulerType type = (BandSchedulerType)i;
     if (strncmp(BandSchedulerGetName(type), name,
                 strlen(BandSchedulerGetName(type))) == 0) {
       return type;
     }
   }
-  return kBandNumSchedulerTypes;
+  return kNumSchedulerTypes;
 }
 
 const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
@@ -51,14 +51,14 @@ const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
 }
 
 BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name) {
-  for (int i = 0; i < kBandNumSubgraphPreparationType; i++) {
+  for (int i = 0; i < kNumSubgraphPreparationType; i++) {
     BandSubgraphPreparationType type = (BandSubgraphPreparationType)i;
     if (strncmp(BandSubgraphPreparationGetName(type), name,
                 strlen(BandSubgraphPreparationGetName(type))) == 0) {
       return type;
     }
   }
-  return kBandNumSubgraphPreparationType;
+  return kNumSubgraphPreparationType;
 }
 
 int BandIntArrayGetSizeInBytes(int size) {
@@ -176,17 +176,15 @@ const char* BandDeviceGetName(BandDeviceFlags flag) {
 }
 
 BandDeviceFlags BandDeviceGetFlag(const char* name) {
-  for (int i = 0; i < kBandNumDevices; i++) {
+  for (int i = 0; i < kNumDevices; i++) {
     BandDeviceFlags flag = (BandDeviceFlags)i;
     if (strncmp(BandDeviceGetName(flag), name,
                 strlen(BandDeviceGetName(flag))) == 0) {
       return flag;
     }
   }
-  return kBandNumDevices;
+  return kNumDevices;
 }
-
-BandRequestOption BandGetDefaultRequestOption() { return {-1, true, -1, -1.f}; }
 
 const char* BandBackendGetName(BandBackendType flag) {
   switch (flag) {
@@ -208,7 +206,7 @@ const BandBackendType BandBackendGetType(const char* name) {
 
 const char* BandStatusGetName(BandStatus status) {
   switch (status) {
-    case absl::OkStatus():
+    case kBandOk:
       return "Ok";
     case kBandDelegateError:
       return "DelegateError";

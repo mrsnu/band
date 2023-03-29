@@ -47,7 +47,7 @@ absl::Status Band::ModelSpec::SetUnitSubgraphs(std::vector<std::set<int>> ops) {
   }
 
   if ((all_ops.size() != num_ops) || (*all_ops.rbegin() != num_ops - 1)) {
-    BAND_RETURN_INTERNAL_ERROR_PROD(
+    return absl::InternalError(
         "Failed to set unit subgraphs. Unit subgraph does not covers "
         "all operators");
   }

@@ -18,7 +18,7 @@ const char* BandBackendGetName(BandBackendType flag);
 const BandBackendType BandBackendGetType(const char* name);
 
 typedef enum BandStatus {
-  absl::OkStatus() = 0,
+  kBandOk = 0,
   kBandError = 1,
   kBandDelegateError = 2
 } BandStatus;
@@ -30,7 +30,7 @@ typedef enum {
   kBandLittle = 1,
   kBandBig = 2,
   kBandPrimary = 3,
-  kBandNumCpuMasks = 4
+  kNumCpuMasks = 4
 } BandCPUMaskFlags;
 
 typedef enum BandWorkerType {
@@ -46,7 +46,7 @@ typedef enum BandSchedulerType {
   kBandHeterogeneousEarliestFinishTime = 4,
   kBandLeastSlackTimeFirst = 5,
   kBandHeterogeneousEarliestFinishTimeReserved = 6,
-  kBandNumSchedulerTypes = 7
+  kNumSchedulerTypes = 7
 } BandSchedulerType;
 
 const char* BandSchedulerGetName(BandSchedulerType type);
@@ -57,7 +57,7 @@ typedef enum BandSubgraphPreparationType {
   kBandFallbackPerWorker = 1,
   kBandUnitSubgraph = 2,
   kBandMergeUnitSubgraph = 3,
-  kBandNumSubgraphPreparationType = 4,
+  kNumSubgraphPreparationType = 4,
 } BandSubgraphPreparationType;
 
 const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type);
@@ -291,24 +291,6 @@ typedef struct BandAffineQuantization {
   int32_t quantized_dimension;
 } BandAffineQuantization;
 
-// Optional parameters for model request
-// `target_worker`: designate the target worker for a request.
-// [default : -1 (not specified)] This option requires the FixedWorkerScheduler.
-// `require_callback`: report if OnEndRequest is specified in an engine
-// [default: true]
-// `slo_us` and `slo_scale`: specifying an SLO value for a model.
-// Setting `slo_scale` will make the SLO =  slo_scale * profiled latency of
-// that model. `slo_scale` will be ignored if `slo_us` is given
-// (i.e., no reason to specify both options). [default : -1 (not specified)]
-typedef struct BandRequestOption {
-  int target_worker;
-  bool require_callback;
-  int slo_us;
-  float slo_scale;
-} BandRequestOption;
-
-BandRequestOption BandGetDefaultRequestOption();
-
 // TODO #23, #30
 // Add additional devices for HTA, NPU
 typedef enum {
@@ -316,7 +298,7 @@ typedef enum {
   kBandGPU = 1,
   kBandDSP = 2,
   kBandNPU = 3,
-  kBandNumDevices = 4,
+  kNumDevices = 4,
 } BandDeviceFlags;
 
 const char* BandDeviceGetName(BandDeviceFlags flag);

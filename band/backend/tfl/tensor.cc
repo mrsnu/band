@@ -46,11 +46,11 @@ BandQuantization TfLiteTensorView::GetQuantization() const {
   return q;
 }
 
-void TfLiteTensorView::SetQuantization(BandQuantization quantization) {
+void TfLiteTensorView::SetQuantization(Quantization quantization) {
   tensor_->quantization.type = TfLiteQuantizationType(quantization.type);
   if (tensor_->quantization.type == kTfLiteAffineQuantization) {
-    BandAffineQuantization* input_q_params =
-        (BandAffineQuantization*)(tensor_->quantization.params);
+    AffineQuantizationParams* input_q_params =
+        (AffineQuantizationParams*)(tensor_->quantization.params);
 
     TfLiteAffineQuantization* q_params =
         (TfLiteAffineQuantization*)(tensor_->quantization.params);

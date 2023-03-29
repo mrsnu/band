@@ -57,7 +57,7 @@ std::string GetName(SchedulerType scheduler_type) {
 
 template<>
 SchedulerType FromString(std::string str) {
-  for (int i = 0; i < kBandNumSchedulerTypes; i++) {
+  for (int i = 0; i < kNumSchedulerTypes; i++) {
     SchedulerType type = static_cast<SchedulerType>(i);
     if (GetName(type) == str) {
       return type;
@@ -85,7 +85,7 @@ std::string GetName(SubgraphPreparationType subgraph_preparation_type) {
 
 template<>
 SubgraphPreparationType FromString(std::string str) {
-  for (int i = 0; i < kBandNumSubgraphPreparationType; i++) {
+  for (int i = 0; i < kNumSubgraphPreparationType; i++) {
     SubgraphPreparationType type = static_cast<SubgraphPreparationType>(i);
     if (GetName(type) == str) {
       return type;
@@ -154,7 +154,7 @@ std::string GetName(DeviceFlags device_flags) {
 
 template<>
 DeviceFlags FromString(std::string str) {
-  for (int i = 0; i < kBandNumDevices; i++) {
+  for (int i = 0; i < kNumDevices; i++) {
     DeviceFlags flag = static_cast<DeviceFlags>(i);
     if (GetName(flag) == str) {
       return flag;

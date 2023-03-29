@@ -14,18 +14,18 @@ ModelId Model::GetId() const { return model_id_; }
 
 absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
   if (GetBackendModel(backend_type)) {
-    BAND_RETURN_INTERNAL_ERROR_PROD(
-        "Tried to create %s model again for model id %d", GetName(backend_type),
-        GetId());
+    return absl::InternalError(
+        absl::StrFormat("Tried to create %s model again for model id %d",
+                        GetName(backend_type), GetId()));
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
   Interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
 
-  BAND_RETURN_INTERNAL_ERROR_PROD_IF_FAIL(backend_model->FromPath(filename),
-                                          "Failed to create %s model from %s",
-                                          GetName(backend_type), filename);
+  return absl::InternalError(absl::StrFormat(
+      (backend_model->FromPath(filename), "Failed to create %s model from %s",
+       GetName(backend_type), filename)));
   backend_models_[backend_type] =
       std::shared_ptr<Interface::IModel>(backend_model);
   return absl::OkStatus();
@@ -34,29 +34,26 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
 absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
                                size_t buffer_size) {
   if (GetBackendModel(backend_type)) {
-    BAND_RETURN_INTERNAL_ERROR_PROD(
-        "Tried to create %s model again for model id %d", GetName(backend_type),
-        GetId());
+    return absl::InternalError(
+        absl::StrFormat("Tried to create %s model again for model id %d",
+                        GetName(backend_type), GetId()));
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
   Interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model == nullptr) {
-    BAND_LOG_INTERNAL(
-        BAND_LOG_ERROR,
+    return absl::InternalError(absl::StrFormat(
         "The given backend type `%s` is not registered in the binary.",
-        GetName(backend_type));
-    return kBandError;
+        GetName(backend_type)));
   }
   if (backend_model->FromBuffer(buffer, buffer_size).ok()) {
     backend_models_[backend_type] =
         std::shared_ptr<Interface::IModel>(backend_model);
     return absl::OkStatus();
   } else {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to create %s model from buffer",
-                      GetName(backend_type));
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "Failed to create %s model from buffer", GetName(backend_type)));
   }
 }
 
