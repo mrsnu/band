@@ -266,8 +266,8 @@ int Planner::GetWorkerType() const {
 absl::Status Planner::Plan() {
   while (true) {
     if (planner_safe_bool_.wait()) {
-      // TODO(widiba03304): Check correctness;
-      continue;
+      // TODO(widiba03304): Check correctness of the following code.
+      return absl::OkStatus();
     }
 
     if (need_cpu_update_) {

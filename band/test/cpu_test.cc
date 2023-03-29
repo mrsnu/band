@@ -33,12 +33,12 @@ TEST(CPUTest, DisableTest) {
     set.Disable(i);
   }
 
-  EXPECT_EQ(!SetCPUThreadAffinity(set).ok());
+  EXPECT_TRUE(!SetCPUThreadAffinity(set).ok());
 }
 
 TEST(CPUTest, EnableTest) {
   CpuSet set;
-  EXPECT_EQ(!SetCPUThreadAffinity(set).ok());
+  EXPECT_TRUE(!SetCPUThreadAffinity(set).ok());
 
   for (size_t i = 0; i < GetCPUCount(); i++) {
     set.Enable(i);

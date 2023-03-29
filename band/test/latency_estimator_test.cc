@@ -83,7 +83,7 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
       return absl::OkStatus();
     } else {
       return thread_cpu_set == BandCPUMaskGetSet(GetParam()) ? absl::OkStatus()
-                                                             : absl::InternalError();
+                                                             : absl::InternalError("");
     }
   });
 
