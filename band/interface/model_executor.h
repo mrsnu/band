@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "band/common.h"
+#include "band/cpu.h"
 #include "band/interface/backend.h"
 #include "band/interface/model.h"
 #include "band/model_spec.h"
@@ -20,8 +21,14 @@ class ITensorView;
 class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(ModelId model_id, WorkerId worker_id,
-                 BandDeviceFlags device_flag)
-      : model_id_(model_id), worker_id_(worker_id), device_flag_(device_flag) {}
+                 BandDeviceFlags device_flag,
+                 CpuSet thread_affinity_mask = BandCPUMaskGetSet(kBandAll),
+                 int num_threads = -1)
+      : model_id_(model_id),
+        worker_id_(worker_id),
+        device_flag_(device_flag),
+        thread_affinity_mask_(thread_affinity_mask),
+        num_threads_(num_threads) {}
   virtual ~IModelExecutor() = default;
 
   virtual ModelSpec InvestigateModelSpec(IModel* model) = 0;
@@ -50,6 +57,8 @@ class IModelExecutor : public IBackendSpecific {
   const ModelId model_id_;
   const WorkerId worker_id_;
   const BandDeviceFlags device_flag_;
+  const CpuSet thread_affinity_mask_;
+  const int num_threads_;
 
  private:
   // Disable copy due to complexity

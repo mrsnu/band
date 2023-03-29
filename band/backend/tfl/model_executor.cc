@@ -3,6 +3,7 @@
 #include "band/backend/tfl/model.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend/tfl/util.h"
+#include "band/cpu.h"
 #include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/worker.h"
@@ -23,10 +24,6 @@ namespace tfl {
 
 std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
     TfLiteModelExecutor::delegates_ = {};
-
-TfLiteModelExecutor::TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
-                                         BandDeviceFlags device_flag)
-    : IModelExecutor(model_id, worker_id, device_flag) {}
 
 TfLiteModelExecutor::~TfLiteModelExecutor() {
   // explicitly remove interpreters first
@@ -331,6 +328,9 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
   if (delegate.second) {
     builder.AddDelegate(delegate.second);
   }
+
+  // TODO(dostos): set cpu set --> propagate to backend
+  builder.SetNumThreads(num_threads_);
 
   if (builder(&interpreter) != kTfLiteOk) {
     BAND_LOG_PROD(BAND_LOG_ERROR,

@@ -10,8 +10,7 @@ namespace band {
 namespace tfl {
 class TfLiteModelExecutor : public interface::IModelExecutor {
  public:
-  TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
-                      BandDeviceFlags device_flag);
+  using interface::IModelExecutor::IModelExecutor;
   ~TfLiteModelExecutor() override;
 
   ModelSpec InvestigateModelSpec(interface::IModel* model) override;
