@@ -55,13 +55,11 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
       // invoke target subgraph in an isolated thread
       std::thread profile_thread([&]() {
         if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
-            SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()) !=
-                absl::OkStatus()) {
-          BAND_LOG_PROD(BAND_LOG_ERROR,
-                        "Failed to propagate thread affinity of worker id "
-                        "%d to profile thread",
-                        worker_id);
-          return;
+            !SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()).ok()) {
+          return absl::InternalError(absl::StrFormat(
+              "Failed to propagate thread affinity of worker id "
+              "%d to profile thread",
+              worker_id));
         }
 
         context_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) {

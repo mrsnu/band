@@ -16,8 +16,8 @@ struct ModelConfig {
   int slo_us = -1;
   float slo_scale = -1.f;
 
-  const BandRequestOption GetRequestOption() const {
-    BandRequestOption option = BandGetDefaultRequestOption();
+  const RequestOption GetRequestOption() const {
+    RequestOption option = RequestOption::GetDefaultOption();
     if (worker_id >= 0) {
       option.target_worker = worker_id;
     }

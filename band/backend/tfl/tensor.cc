@@ -9,7 +9,9 @@ namespace Band {
 namespace TfLite {
 TfLiteTensorView::TfLiteTensorView(TfLiteTensor* tensor) : tensor_(tensor) {}
 
-BackendType TfLiteTensorView::GetBackendType() const { return BackendType::TfLite; }
+BackendType TfLiteTensorView::GetBackendType() const {
+  return BackendType::TfLite;
+}
 
 DataType TfLiteTensorView::GetType() const { return DataType(tensor_->type); }
 
@@ -39,30 +41,26 @@ size_t TfLiteTensorView::GetBytes() const { return tensor_->bytes; }
 
 const char* TfLiteTensorView::GetName() const { return tensor_->name; }
 
-BandQuantization TfLiteTensorView::GetQuantization() const {
-  BandQuantization q;
-  q.params = tensor_->quantization.params;
-  q.type = BandQuantizationType(tensor_->quantization.type);
-  return q;
+Quantization TfLiteTensorView::GetQuantization() const {
+  return {QuantizationType(tensor_->quantization.type),
+          tensor_->quantization.params};
 }
 
 void TfLiteTensorView::SetQuantization(Quantization quantization) {
-  tensor_->quantization.type = TfLiteQuantizationType(quantization.type);
+  tensor_->quantization.type = TfLiteQuantizationType(quantization.GetType());
   if (tensor_->quantization.type == kTfLiteAffineQuantization) {
     AffineQuantizationParams* input_q_params =
-        (AffineQuantizationParams*)(tensor_->quantization.params);
+        reinterpret_cast<AffineQuantizationParams*>(
+            tensor_->quantization.params);
 
     TfLiteAffineQuantization* q_params =
-        (TfLiteAffineQuantization*)(tensor_->quantization.params);
+        reinterpret_cast<TfLiteAffineQuantization*>(
+            tensor_->quantization.params);
 
+    input_q_params->scale.CopyTo(input_q_params->scale.size(), q_params->scale->data);
+    input_q_params->zero_point.CopyTo(input_q_params->zero_point.size(),
+                                      q_params->zero_point->data);
     q_params->quantized_dimension = input_q_params->quantized_dimension;
-
-    memcpy(
-        q_params->scale, input_q_params->scale->data,
-        sizeof(input_q_params->scale->data[0]) * input_q_params->scale->size);
-    memcpy(q_params->zero_point, input_q_params->zero_point->data,
-           sizeof(input_q_params->zero_point->data[0]) *
-               input_q_params->zero_point->size);
   }
 }
 }  // namespace TfLite

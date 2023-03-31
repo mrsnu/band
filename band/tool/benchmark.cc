@@ -63,9 +63,12 @@ absl::Status Benchmark::ModelContext::PrepareInput() {
        batch_index++) {
     for (int input_index = 0; input_index < model_inputs.size();
          input_index++) {
-      BAND_ENSURE_STATUS(
+      auto status =
           model_request_inputs[batch_index][input_index]->CopyDataFrom(
-              model_inputs[input_index]));
+              model_inputs[input_index]);
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
   return absl::OkStatus();
@@ -272,21 +275,30 @@ void CreateRandomTensorData(void* target_ptr, int num_elements,
 
 absl::Status Benchmark::Initialize(int argc, const char** argv) {
   if (!ParseArgs(argc, argv)) {
-    return kBandError;
+    return absl::InternalError("Failed to parse arguments");
   }
 
   engine_ = Engine::Create(*runtime_config_);
   if (!engine_) {
-    std::cout << "Failed to create engine" << std::endl;
-    return kBandError;
+    return absl::InternalError("Failed to create engine");
   }
 
   // load models
   for (auto benchmark_model : benchmark_config_.model_configs) {
     ModelContext* context = new ModelContext;
-    BAND_ENSURE_STATUS(
-        context->model.FromPath(target_backend_, benchmark_model.path.c_str()));
-    BAND_ENSURE_STATUS(engine_->RegisterModel(&context->model));
+    {
+      auto status = context->model.FromPath(target_backend_,
+                                            benchmark_model.path.c_str());
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    {
+      auto status = engine_->RegisterModel(&context->model);
+      if (!status.ok()) {
+        return status;
+      }
+    }
 
     const int model_id = context->model.GetId();
     const auto input_indices = engine_->GetInputTensorIndices(model_id);
@@ -309,7 +321,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
 
     context->model_ids =
         std::vector<ModelId>(benchmark_model.batch_size, model_id);
-    context->request_options = std::vector<BandRequestOption>(
+    context->request_options = std::vector<RequestOption>(
         benchmark_model.batch_size, benchmark_model.GetRequestOption());
 
     // pre-allocate random input tensor to feed in run-time
@@ -418,7 +430,7 @@ void Benchmark::RunStream() {
   int64_t start = Time::NowMicros();
   while (true) {
     std::vector<ModelId> model_ids;
-    std::vector<BandRequestOption> request_options;
+    std::vector<RequestOption> request_options;
     std::vector<Tensors> inputs;
     std::vector<Tensors> outputs;
 

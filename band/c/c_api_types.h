@@ -1,6 +1,102 @@
 #ifndef BAND_C_C_API_TYPE_H_
 #define BAND_C_C_API_TYPE_H_
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
+
+typedef enum BandBackendType {
+  kBandTfLite = 0,
+  kBandNumBackendTypes = 1
+} BandBackendType;
+
+typedef enum BandStatus {
+  kBandOk = 0,
+  kBandError = 1,
+  kBandDelegateError = 2
+} BandStatus;
+
+typedef enum BandWorkerType {
+  kBandDeviceQueue = 1 << 0,
+  kBandGlobalQueue = 1 << 1,
+} BandWorkerType;
+
+typedef enum BandSchedulerType {
+  kBandFixedWorker = 0,
+  kBandRoundRobin = 1,
+  kBandShortestExpectedLatency = 2,
+  kBandFixedWorkerGlobalQueue = 3,
+  kBandHeterogeneousEarliestFinishTime = 4,
+  kBandLeastSlackTimeFirst = 5,
+  kBandHeterogeneousEarliestFinishTimeReserved = 6,
+  kNumSchedulerTypes = 7
+} BandSchedulerType;
+
+typedef enum BandCPUMaskFlags {
+  kBandAll = 0,
+  kBandLittle = 1,
+  kBandBig = 2,
+  kBandPrimary = 3,
+  kNumCpuMasks = 4
+} BandCPUMaskFlags;
+
+typedef enum BandSubgraphPreparationType {
+  kBandNoFallbackSubgraph = 0,
+  kBandFallbackPerWorker = 1,
+  kBandUnitSubgraph = 2,
+  kBandMergeUnitSubgraph = 3,
+  kNumSubgraphPreparationType = 4,
+} BandSubgraphPreparationType;
+
+// Single-precision complex data type compatible with the C99 definition.
+typedef struct BandComplex64 {
+  float re, im;  // real and imaginary parts, respectively.
+} BandComplex64;
+
+// Half precision data type compatible with the C99 definition.
+typedef struct BandFloat16 {
+  uint16_t data;
+} BandFloat16;
+
+// Types supported by tensor
+typedef enum {
+  kBandNoType = 0,
+  kBandFloat32 = 1,
+  kBandInt32 = 2,
+  kBandUInt8 = 3,
+  kBandInt64 = 4,
+  kBandString = 5,
+  kBandBool = 6,
+  kBandInt16 = 7,
+  kBandComplex64 = 8,
+  kBandInt8 = 9,
+  kBandFloat16 = 10,
+  kBandFloat64 = 11,
+} BandType;
+
+// Supported Quantization Types.
+typedef enum BandQuantizationType {
+  // No quantization.
+  kBandNoQuantization = 0,
+  // Affine quantization (with support for per-channel quantization).
+  // Corresponds to BandAffineQuantization.
+  kBandAffineQuantization = 1,
+} BandQuantizationType;
+
+// TODO #23, #30
+// Add additional devices for HTA, NPU
+typedef enum BandDeviceFlags {
+  kBandCPU = 0,
+  kBandGPU = 1,
+  kBandDSP = 2,
+  kBandNPU = 3,
+  kNumDevices = 4,
+} BandDeviceFlags;
+
 typedef enum BandConfigField {
   BAND_PROFILE_ONLINE = 0,
   BAND_PROFILE_NUM_WARMUPS = 1,
@@ -22,4 +118,15 @@ typedef enum BandConfigField {
   BAND_CPU_MASK = 17,
 } BandConfigField;
 
-#endif
+typedef struct BandRequestOption {
+  int target_worker;
+  bool require_callback;
+  int slo_us;
+  float slo_scale;
+} BandRequestOption;
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
+
+#endif  // BAND_C_C_API_TYPE_H_

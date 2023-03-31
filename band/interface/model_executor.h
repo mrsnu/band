@@ -24,7 +24,7 @@ class IModelExecutor : public IBackendSpecific {
       : model_id_(model_id), worker_id_(worker_id), device_flag_(device_flag) {}
   virtual ~IModelExecutor() = default;
 
-  virtual ModelSpec InvestigateModelSpec(IModel* model) = 0;
+  virtual absl::StatusOr<ModelSpec> InvestigateModelSpec(IModel* model) = 0;
   virtual absl::Status PrepareSubgraph(IModel* model, std::set<int> ops = {},
                                      std::set<int> unit_indices = {}) = 0;
 

@@ -23,7 +23,8 @@ absl::Status Worker::Init(const WorkerConfig& config) {
   BAND_LOG_INTERNAL(
       BAND_LOG_INFO,
       "Set affinity of worker (%d,%s) to %s cores for %d threads.", worker_id_,
-      GetName(device_flag_), BandCPUMaskGetName(config.cpu_masks[worker_id_]),
+      GetName(device_flag_).c_str(),
+      BandCPUMaskGetName(config.cpu_masks[worker_id_]),
       config.num_threads[worker_id_]);
 
   const CpuSet worker_mask_set =
@@ -181,7 +182,7 @@ void Worker::Work() {
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
                         "enqueue time %d, invoke time %d, end time %d)",
-                        GetName(device_flag_), current_job->model_id,
+                        GetName(device_flag_).c_str(), current_job->model_id,
                         current_job->subgraph_key.IsValid(),
                         current_job->subgraph_key.GetModelId(),
                         current_job->subgraph_key.GetWorkerId(),
@@ -227,7 +228,7 @@ void Worker::Work() {
       }
     } else {
       BAND_REPORT_ERROR(GetErrorReporter(), "%s worker failed to copy input",
-                        GetName(device_flag_));
+                        GetName(device_flag_).c_str());
       // TODO #21: Handle errors in multi-thread environment
       current_job->status = JobStatus::InputCopyFailure;
     }

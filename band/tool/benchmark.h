@@ -27,7 +27,7 @@ class Benchmark {
     Profiler profiler;
     // pre-allocated model tensors for runtime requests
     std::vector<ModelId> model_ids;
-    std::vector<BandRequestOption> request_options;
+    std::vector<RequestOption> request_options;
     std::vector<Tensors> model_request_inputs;
     std::vector<Tensors> model_request_outputs;
     // randomly generated input

@@ -8,21 +8,21 @@ namespace Test {
 TEST(BenchmarkTest, BenchmarkConfigLoadSuccess) {
   tool::Benchmark benchmark;
   const char* argv[] = {"", "band/test/data/benchmark_config.json"};
-  EXPECT_EQ(benchmark.Initialize(2, argv), absl::OkStatus());
+  EXPECT_TRUE(benchmark.Initialize(2, argv).ok());
 }
 
 TEST(BenchmarkTest, BenchmarkConfigLoadFail) {
   tool::Benchmark benchmark;
   const char* argv[] = {"", ""};
-  EXPECT_EQ(!benchmark.Initialize(2, argv).ok());
-  EXPECT_EQ(!benchmark.Initialize(1, argv).ok());
+  EXPECT_TRUE(!benchmark.Initialize(2, argv).ok());
+  EXPECT_TRUE(!benchmark.Initialize(1, argv).ok());
 }
 
 TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
   tool::Benchmark benchmark;
   const char* argv[] = {"", "band/test/data/benchmark_config.json"};
-  EXPECT_EQ(benchmark.Initialize(2, argv), absl::OkStatus());
-  EXPECT_EQ(benchmark.Run(), absl::OkStatus());
+  EXPECT_TRUE(benchmark.Initialize(2, argv).ok());
+  EXPECT_TRUE(benchmark.Run().ok());
 }
 
 }  // namespace Test

@@ -45,7 +45,6 @@ cc_binary(
         ],
     }),
     deps = [
-        ":common",
         ":c_api",
     ] + select({
         clean_dep("//band:tflite"): [
@@ -54,16 +53,6 @@ cc_binary(
         "//conditions:default": [
         ],
     }),
-)
-
-cc_library(
-    name = "common",
-    srcs = [
-        "common.cc",
-    ],
-    hdrs = [
-        "common.h",
-    ],
 )
 
 cc_library(
@@ -79,7 +68,6 @@ cc_library(
         ":c_api_types",
         ":c_api_internal",
         "//band:config_builder",
-        "//band:common",
         "//band:framework",
     ],
     alwayslink = 1,
@@ -88,11 +76,11 @@ cc_library(
 cc_library(
     name = "c_api_internal",
     hdrs = ["c_api_internal.h"],
+    srcs = ["c_api_internal.cc"],
     visibility = ["//visibility:private"],
     deps = [
-        ":common",
+        ":c_api_types",
         "//band:framework",
-        "//band:common",
         "//band:config_builder",
     ],
 )

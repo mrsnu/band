@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "band/logger.h"
+
 namespace Band {
 
 void RoundRobinScheduler::Schedule(JobQueue& requests) {

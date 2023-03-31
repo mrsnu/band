@@ -15,7 +15,13 @@
 
 namespace Band {
 Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
-  planner_thread_ = std::thread([this] { this->Plan(); });
+  planner_thread_ = std::thread([this] {
+    auto status = this->Plan();
+    if (!status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Planner thread failed: %s",
+                    status.message());
+    }
+  });
 }
 
 Planner::~Planner() {
@@ -173,7 +179,6 @@ void Planner::Wait(std::vector<int> job_ids) {
     }
     return true;
   });
-
   request_lock.unlock();
   FlushFinishedJobs();
 }
@@ -195,12 +200,10 @@ void Planner::EnqueueFinishedJob(Job& job) {
   lock.unlock();
 
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
-
   // record finished / failed job
   if (context_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
-
     end_invoke_.notify_all();
   }
 
@@ -266,14 +269,13 @@ int Planner::GetWorkerType() const {
 absl::Status Planner::Plan() {
   while (true) {
     if (planner_safe_bool_.wait()) {
-      // TODO(widiba03304): Check correctness of the following code.
       return absl::OkStatus();
     }
 
     if (need_cpu_update_) {
-      if (!SetCPUThreadAffinity(cpu_set_).ok()) {
-        return absl::InternalError("[Planner] Failed to set cpu thread affinity");
-      }
+      // TODO(widiba03304): current set affinity fails for the first call. Don't
+      // know why...
+      SetCPUThreadAffinity(cpu_set_);
       need_cpu_update_ = false;
     }
     CopyToLocalQueues();
@@ -284,6 +286,7 @@ absl::Status Planner::Plan() {
       }
     } while (need_reschedule_);
   }
+  return absl::OkStatus();
 }
 
 void Planner::FlushFinishedJobs() {

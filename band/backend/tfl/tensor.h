@@ -2,6 +2,7 @@
 #define BAND_BACKEND_TFL_TENSOR_H_
 
 #include "band/interface/tensor_view.h"
+#include "tensorflow/lite/c/common.h"
 
 namespace Band {
 namespace TfLite {

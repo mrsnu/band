@@ -9,7 +9,14 @@
 namespace Band {
 namespace TfLite {
 
-absl::Status Getabsl::Status(TfLiteStatus status) { return absl::Status(status); }
+absl::Status GetBandStatus(TfLiteStatus status) { 
+  if (status == kTfLiteOk) {
+    return absl::OkStatus();
+  } else {
+    return absl::InternalError("TfLite Error");
+  }
+}
+
 DataType GetBandType(TfLiteType type) { return DataType(type); }
 std::set<DeviceFlags> TfLiteUtil::GetAvailableDevices() const {
   static std::set<DeviceFlags> valid_devices = {};
@@ -18,8 +25,7 @@ std::set<DeviceFlags> TfLiteUtil::GetAvailableDevices() const {
   std::call_once(once_flag, [&]() {
     for (int flag = 0; flag < kNumDevices; flag++) {
       const DeviceFlags device_flag = static_cast<DeviceFlags>(flag);
-      if (TfLiteModelExecutor::GetDeviceDelegate(device_flag).first ==
-          absl::OkStatus()) {
+      if (TfLiteModelExecutor::GetDeviceDelegate(device_flag).ok()) {
         valid_devices.insert(device_flag);
       }
     }

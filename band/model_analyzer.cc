@@ -166,17 +166,18 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
   std::unique_ptr<Interface::IModelExecutor> interpreter(
       BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
                                           DeviceFlags::CPU));
+  // TODO(widiba03304): Report error when it fails.
   model_spec_ = std::make_shared<ModelSpec>(
-      interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)));
+      interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)).value());
 
   for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
     BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
                   SetToString(device_unsupported_ops.second).c_str(),
-                  GetName(device_unsupported_ops.first));
+                  GetName(device_unsupported_ops.first).c_str());
   }
 
   for (auto device : model_spec_->unavailable_devices) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", GetName(device));
+    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", GetName(device).c_str());
   }
 }
 
@@ -262,7 +263,7 @@ ModelAnalyzer::CreateSubgraphs() {
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d subgraphs for model %s with mode %s %s",
                 subgraph_defs.size(), model_spec_->path.c_str(),
-                GetName(subgraph_config_.subgraph_preparation_type),
+                GetName(subgraph_config_.subgraph_preparation_type).c_str(),
                 subgraph_summary.c_str());
 
   return std::make_pair(*model_spec_, subgraph_defs);

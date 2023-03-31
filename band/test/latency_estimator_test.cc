@@ -61,8 +61,8 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
-  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+  EXPECT_TRUE(latency_estimator.Init(config).ok());
+  EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
 
   worker.End();
 }
@@ -100,9 +100,9 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+  EXPECT_TRUE(latency_estimator.Init(config).ok());
   // This will be kBandError if affinity propagation fails
-  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+  EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
 
   worker.End();
 }
@@ -129,9 +129,9 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+  EXPECT_TRUE(latency_estimator.Init(config).ok());
   EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+  EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
   EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
 
   worker.End();
@@ -162,9 +162,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
-    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
-    EXPECT_EQ(latency_estimator.DumpProfile(), absl::OkStatus());
+    EXPECT_TRUE(latency_estimator.Init(config).ok());
+    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
+    EXPECT_TRUE(latency_estimator.DumpProfile().ok());
   }
 
   {
@@ -178,9 +178,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+    EXPECT_TRUE(latency_estimator.Init(config).ok());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
     EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
   }
 
@@ -214,9 +214,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
-    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
-    EXPECT_EQ(latency_estimator.DumpProfile(), absl::OkStatus());
+    EXPECT_TRUE(latency_estimator.Init(config).ok());
+    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
+    EXPECT_TRUE(latency_estimator.DumpProfile().ok());
   }
 
   {
@@ -232,9 +232,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+    EXPECT_TRUE(latency_estimator.Init(config).ok());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
     // fails to load due to worker update
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
   }

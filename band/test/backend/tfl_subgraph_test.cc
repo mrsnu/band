@@ -36,10 +36,18 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .AddSubgraphPreparationType(subgraph_type)
           .AddCPUMask(CPUMaskFlags::All)
           .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP, DeviceFlags::NPU, DeviceFlags::GPU})
+#ifdef __ANDROID__
+          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP,
+                       DeviceFlags::NPU, DeviceFlags::GPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks(
-              {CPUMaskFlags::Big, CPUMaskFlags::Little, CPUMaskFlags::All, CPUMaskFlags::All, CPUMaskFlags::All})
+          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little,
+                              CPUMaskFlags::All, CPUMaskFlags::All,
+                              CPUMaskFlags::All})
+#else
+          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+          .AddWorkerNumThreads({3, 4})
+          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+#endif  // __ANDROID__
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
           .AddOnline(true)
@@ -54,8 +62,8 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()), absl::OkStatus());
-  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
+  EXPECT_TRUE(model.FromPath(BackendType::TfLite, model_name.c_str()).ok());
+  EXPECT_TRUE(engine->RegisterModel(&model).ok());
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -65,7 +73,8 @@ INSTANTIATE_TEST_SUITE_P(
                         SubgraphPreparationType::MergeUnitSubgraph),
         std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
                         SubgraphPreparationType::FallbackPerWorker),
-        std::make_tuple("ICN_quant.tflite", SubgraphPreparationType::MergeUnitSubgraph),
+        std::make_tuple("ICN_quant.tflite",
+                        SubgraphPreparationType::MergeUnitSubgraph),
         std::make_tuple(
             "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
             SubgraphPreparationType::MergeUnitSubgraph),

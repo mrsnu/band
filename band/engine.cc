@@ -62,7 +62,8 @@ absl::Status Engine::RegisterModel(Model* model) {
       UnregisterModel(model);
       return absl::InternalError(absl::StrFormat(
           "Failed to create subgraphs for model %d with subgraph option %s",
-          model_id, GetName(subgraph_config_.subgraph_preparation_type)));
+          model_id,
+          GetName(subgraph_config_.subgraph_preparation_type).c_str()));
     }
 
     const auto result = analyzer.CreateSubgraphs().value();
@@ -81,9 +82,9 @@ absl::Status Engine::RegisterModel(Model* model) {
                                                   GetWorkerDevice(worker_id)));
           model_executors_[{model_id, worker_id}] = std::move(model_executor);
           added_once = true;
-          BAND_LOG_INTERNAL(BAND_LOG_INFO,
-                            "Create model executor for model %d worker %s",
-                            model_id, GetName(GetWorkerDevice(worker_id)));
+          BAND_LOG_INTERNAL(
+              BAND_LOG_INFO, "Create model executor for model %d worker %s",
+              model_id, GetName(GetWorkerDevice(worker_id)).c_str());
         }
       }
 
@@ -129,16 +130,16 @@ absl::Status Engine::RegisterModel(Model* model) {
             const std::set<int> all_outputs =
                 model_spec.GetOutputTensors(subgraph_def.op_indices);
 
-            if (std::equal(model_executor->GetInputs(key).begin(),
-                           model_executor->GetInputs(key).end(),
-                           inputs.begin())) {
+            if (!std::equal(model_executor->GetInputs(key).begin(),
+                            model_executor->GetInputs(key).end(),
+                            inputs.begin())) {
               return absl::InternalError(
                   absl::StrFormat("Input format is not correct for worker %d",
                                   subgraph_def.worker_id));
             }
-            if (std::includes(all_outputs.begin(), all_outputs.end(),
-                              model_executor->GetOutputs(key).begin(),
-                              model_executor->GetOutputs(key).end())) {
+            if (!std::includes(all_outputs.begin(), all_outputs.end(),
+                               model_executor->GetOutputs(key).begin(),
+                               model_executor->GetOutputs(key).end())) {
               return absl::InternalError(
                   absl::StrFormat("Output format is not correct for worker %d",
                                   subgraph_def.worker_id));
@@ -187,11 +188,12 @@ absl::Status Engine::RegisterModel(Model* model) {
                                                        common_tensor_index) ==
                     *rhs_model_executor->GetTensorView(rhs_key,
                                                        common_tensor_index))) {
-                BAND_LOG_PROD(BAND_LOG_ERROR, "%s %s %d != %s %s %d",
-                              GetName(GetWorkerDevice(lhs.worker_id)),
-                              lhs.ToString().c_str(), common_tensor_index,
-                              GetName(GetWorkerDevice(rhs.worker_id)),
-                              rhs.ToString().c_str(), common_tensor_index);
+                return absl::InternalError(absl::StrFormat(
+                    "%s %s %d != %s %s %d",
+                    GetName(GetWorkerDevice(lhs.worker_id)).c_str(),
+                    lhs.ToString().c_str(), common_tensor_index,
+                    GetName(GetWorkerDevice(rhs.worker_id)).c_str(),
+                    rhs.ToString().c_str(), common_tensor_index));
               }
             }
           }
@@ -367,6 +369,7 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
     job.require_callback = options[i].require_callback;
 
     int target_slo_us = options[i].slo_us;
+    // TODO(widiba03304): absl::optional for implicit slo_scale default.
     if (options[i].slo_scale != -1) {
       if (options[i].slo_scale <= 0) {
         return absl::InternalError(absl::StrFormat(
@@ -407,7 +410,6 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
 
     jobs.push_back(job);
   }
-
   return EnqueueBatch(jobs);
 }
 
@@ -472,7 +474,6 @@ void Engine::SetOnEndRequest(
 
 absl::Status Engine::Init(const RuntimeConfig& config) {
   planner_ = std::make_unique<Planner>(*this);
-
   auto status = planner_->Init(config.planner_config);
   if (!status.ok()) {
     return status;
@@ -530,13 +531,13 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       }
 
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
-                        GetName(device_flag));
+                        GetName(device_flag).c_str());
       worker->Start();
       workers_.push_back(std::move(worker));
       workers_waiting_[i] = 0;
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
-                        GetName(device_flag));
+                        GetName(device_flag).c_str());
     }
   }
 
@@ -1033,7 +1034,7 @@ WorkerId Engine::GetDeviceWorkerId(DeviceFlags flag) const {
     }
   }
   BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a worker for %s",
-                    GetName(flag));
+                    GetName(flag).c_str());
   return -1;
 }
 

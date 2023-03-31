@@ -62,6 +62,7 @@ band_cc_android_test(
 
 band_cc_android_test(
     name = "benchmark_test",
+    size = "small",
     srcs = ["tool/benchmark_test.cc"],
     data = [
         "//band/test:data/add.tflite",
@@ -76,6 +77,7 @@ band_cc_android_test(
 
 band_cc_android_test(
     name = "config_builder_test",
+    size = "small",
     srcs = ["config_builder_test.cc"],
     deps = [
         ":test_util",
@@ -99,6 +101,7 @@ band_cc_android_test(
 
 band_cc_android_test(
     name = "cpu_test",
+    size = "small",
     srcs = ["cpu_test.cc"],
     data = [],
     deps = [
@@ -109,6 +112,7 @@ band_cc_android_test(
 
 band_cc_android_test(
     name = "tfl_minimal_test",
+    size = "small",
     srcs = ["backend/tfl_minimal_test.cc"],
     copts = [
         "-DTF_LITE_STRIP_ERROR_STRINGS",
@@ -125,6 +129,7 @@ band_cc_android_test(
 
 band_cc_android_test(
     name = "tfl_subgraph_test",
+    size = "enormous",
     srcs = ["backend/tfl_subgraph_test.cc"],
     copts = [
         "-DTF_LITE_STRIP_ERROR_STRINGS",

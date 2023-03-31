@@ -17,9 +17,7 @@ Tensor::Tensor(ITensor* tensor_view)
   SetQuantization(tensor_view->GetQuantization());
 }
 
-Tensor::~Tensor() {
-  delete[] data_;
-}
+Tensor::~Tensor() { delete[] data_; }
 
 DataType Tensor::GetType() const { return type_; }
 
@@ -46,7 +44,7 @@ Quantization Tensor::GetQuantization() const { return quantization_; }
 void Tensor::SetQuantization(Quantization quantization) {
   if (quantization_.GetType() == QuantizationType::AffineQuantization) {
     AffineQuantizationParams* input_q_params =
-        (AffineQuantizationParams*)(quantization.GetParams());
+        reinterpret_cast<AffineQuantizationParams*>(quantization.GetParams());
 
     AffineQuantizationParams* q_params =
         reinterpret_cast<AffineQuantizationParams*>(
@@ -54,8 +52,10 @@ void Tensor::SetQuantization(Quantization quantization) {
     q_params->scale = FloatArray(input_q_params->scale.size());
     q_params->zero_point = IntArray(input_q_params->zero_point.size());
 
-    q_params->scale.CopyFrom(input_q_params->scale.size(), input_q_params->scale.data());
-    q_params->zero_point.CopyFrom(input_q_params->zero_point.size(), input_q_params->zero_point.data());
+    q_params->scale.CopyFrom(input_q_params->scale.size(),
+                             input_q_params->scale.data());
+    q_params->zero_point.CopyFrom(input_q_params->zero_point.size(),
+                                  input_q_params->zero_point.data());
     q_params->quantized_dimension = input_q_params->quantized_dimension;
   }
 }

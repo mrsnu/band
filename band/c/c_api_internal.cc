@@ -1,9 +1,7 @@
-#include "band/c/common.h"
+#include "band/c/c_api_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-#include "common.h"
 
 const char* BandSchedulerGetName(BandSchedulerType type) {
   switch (type) {
@@ -59,76 +57,6 @@ BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name) {
     }
   }
   return kNumSubgraphPreparationType;
-}
-
-int BandIntArrayGetSizeInBytes(int size) {
-  static BandIntArray dummy;
-  return sizeof(dummy) + sizeof(dummy.data[0]) * size;
-}
-
-int BandIntArrayEqual(const BandIntArray* a, const BandIntArray* b) {
-  if (a == b) return 1;
-  if (a == NULL || b == NULL) return 0;
-  return BandIntArrayEqualsArray(a, b->size, b->data);
-}
-
-int BandIntArrayEqualsArray(const BandIntArray* a, int b_size,
-                            const int b_data[]) {
-  if (a == NULL) return (b_size == 0);
-  if (a->size != b_size) return 0;
-  int i = 0;
-  for (; i < a->size; i++)
-    if (a->data[i] != b_data[i]) return 0;
-  return 1;
-}
-
-BandIntArray* BandIntArrayCreate(int size) {
-  BandIntArray* ret = (BandIntArray*)malloc(BandIntArrayGetSizeInBytes(size));
-  ret->size = size;
-  return ret;
-}
-
-BandIntArray* BandIntArrayCopy(const BandIntArray* src) {
-  if (!src) return NULL;
-  BandIntArray* ret = BandIntArrayCreate(src->size);
-  if (ret) {
-    memcpy(ret->data, src->data, src->size * sizeof(int));
-  }
-  return ret;
-}
-
-void BandIntArrayFree(BandIntArray* a) { free(a); }
-
-int BandFloatArrayGetSizeInBytes(int size) {
-  static BandFloatArray dummy;
-  return sizeof(dummy) + sizeof(dummy.data[0]) * size;
-}
-
-BandFloatArray* BandFloatArrayCreate(int size) {
-  BandFloatArray* ret =
-      (BandFloatArray*)malloc(BandFloatArrayGetSizeInBytes(size));
-  ret->size = size;
-  return ret;
-}
-
-void BandFloatArrayFree(BandFloatArray* a) { free(a); }
-
-void BandQuantizationFree(BandQuantization* quantization) {
-  if (quantization->type == kBandAffineQuantization && quantization->params) {
-    BandAffineQuantization* q_params =
-        (BandAffineQuantization*)(quantization->params);
-    if (q_params->scale) {
-      BandFloatArrayFree(q_params->scale);
-      q_params->scale = NULL;
-    }
-    if (q_params->zero_point) {
-      BandIntArrayFree(q_params->zero_point);
-      q_params->zero_point = NULL;
-    }
-    free(q_params);
-  }
-  quantization->params = NULL;
-  quantization->type = kBandNoQuantization;
 }
 
 const char* BandTypeGetName(BandType type) {

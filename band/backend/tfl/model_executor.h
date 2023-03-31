@@ -12,9 +12,10 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
                       DeviceFlags device_flag);
   ~TfLiteModelExecutor() override;
 
-  ModelSpec InvestigateModelSpec(Interface::IModel* model) override;
+  absl::StatusOr<ModelSpec> InvestigateModelSpec(
+      Interface::IModel* model) override;
   absl::Status PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
-                             std::set<int> unit_indices = {}) override;
+                               std::set<int> unit_indices = {}) override;
 
   BackendType GetBackendType() const override;
   const std::vector<int>& GetInputs(const SubgraphKey& key) const override;
@@ -39,11 +40,10 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   tflite::Interpreter* GetInterpreter(const SubgraphKey& key);
   const tflite::Interpreter* GetInterpreter(const SubgraphKey& key) const;
 
-  std::unique_ptr<tflite::Interpreter> CreateTfLiteInterpreter(
+  absl::StatusOr<std::unique_ptr<tflite::Interpreter>> CreateTfLiteInterpreter(
       Interface::IModel* model, DeviceFlags device,
       std::set<int> op_indices = {});
-  static std::pair<absl::Status, TfLiteDelegate*> GetDeviceDelegate(
-      DeviceFlags device);
+  static absl::StatusOr<TfLiteDelegate*> GetDeviceDelegate(DeviceFlags device);
 
   std::unordered_map<SubgraphKey, std::unique_ptr<tflite::Interpreter>,
                      SubgraphHash>

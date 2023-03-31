@@ -42,7 +42,7 @@ TEST(CApi, ModelLoad) {
   EXPECT_NE(model, nullptr);
 #ifdef BAND_TFLITE
   EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.tflite"),
-            absl::OkStatus());
+            kBandOk);
 #endif  // BAND_TFLITE
   BandModelDelete(model);
 }
@@ -80,8 +80,8 @@ TEST(CApi, EngineSimpleInvoke) {
   EXPECT_NE(model, nullptr);
 #ifdef BAND_TFLITE
   EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.tflite"),
-            absl::OkStatus());
-  EXPECT_EQ(BandEngineRegisterModel(engine, model), absl::OkStatus());
+            kBandOk);
+  EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
   EXPECT_EQ(BandEngineGetNumInputTensors(engine, model), 1);
   EXPECT_EQ(BandEngineGetNumOutputTensors(engine, model), 1);
 
@@ -92,7 +92,7 @@ TEST(CApi, EngineSimpleInvoke) {
   memcpy(BandTensorGetData(input_tensor), input.data(),
          input.size() * sizeof(float));
   EXPECT_EQ(BandEngineRequestSync(engine, model, &input_tensor, &output_tensor),
-            absl::OkStatus());
+            kBandOk);
 
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[1], 9.f);
@@ -126,8 +126,8 @@ TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
   BandModel* model = BandModelCreate();
   EXPECT_NE(model, nullptr);
   EXPECT_EQ(BandModelAddFromFile(model, kBandTfLite, "band/test/data/add.tflite"),
-            absl::OkStatus());
-  EXPECT_EQ(BandEngineRegisterModel(engine, model), absl::OkStatus());
+            kBandOk);
+  EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
   EXPECT_EQ(BandEngineGetNumInputTensors(engine, model), 1);
   EXPECT_EQ(BandEngineGetNumOutputTensors(engine, model), 1);
 
@@ -137,11 +137,11 @@ TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(BandTensorGetData(input_tensor), input.data(),
          input.size() * sizeof(float));
-  BandRequestOption request_option = BandGetDefaultRequestOption();
+  BandRequestOption request_option = BandRequestOptionGetDefault();
   request_option.target_worker = 0;
   EXPECT_EQ(BandEngineRequestSyncOptions(engine, model, request_option,
                                          &input_tensor, &output_tensor),
-            absl::OkStatus());
+            kBandOk);
 
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(BandTensorGetData(output_tensor))[1], 9.f);

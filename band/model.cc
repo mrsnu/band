@@ -16,16 +16,18 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
   if (GetBackendModel(backend_type)) {
     return absl::InternalError(
         absl::StrFormat("Tried to create %s model again for model id %d",
-                        GetName(backend_type), GetId()));
+                        GetName(backend_type).c_str(), GetId()));
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
   Interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
 
-  return absl::InternalError(absl::StrFormat(
-      (backend_model->FromPath(filename), "Failed to create %s model from %s",
-       GetName(backend_type), filename)));
+  if (!backend_model->FromPath(filename).ok()) {
+    return absl::InternalError(
+        absl::StrFormat("Failed to create %s model from %s",
+                        GetName(backend_type).c_str(), filename));
+  }
   backend_models_[backend_type] =
       std::shared_ptr<Interface::IModel>(backend_model);
   return absl::OkStatus();
@@ -55,6 +57,7 @@ absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
     return absl::InternalError(absl::StrFormat(
         "Failed to create %s model from buffer", GetName(backend_type)));
   }
+  return absl::OkStatus();
 }
 
 Interface::IModel* Model::GetBackendModel(BackendType backend_type) {

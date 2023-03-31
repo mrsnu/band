@@ -208,11 +208,10 @@ int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
   if (syscallret != 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Set sched affinity error :%s",
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Set sched affinity error: %s",
                       strerror(err));
     return -1;
   }
-
   return 0;
 }
 
