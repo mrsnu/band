@@ -26,21 +26,21 @@ class TensorRingBuffer {
   int Alloc();
   bool IsTensorIndexValid(int tensor_index) const;
   bool IsHandleValid(int handle) const;
-  absl::Status GetTensorFromHandle(Interface::ITensor* dst, int tensor_index,
+  absl::Status GetTensorFromHandle(interface::ITensor* dst, int tensor_index,
                                  int handle) const;
-  absl::Status PutTensorToHandle(const Interface::ITensor* src, int tensor_index,
+  absl::Status PutTensorToHandle(const interface::ITensor* src, int tensor_index,
                                int handle);
-  absl::Status GetTensorsFromHandle(std::vector<Interface::ITensor*>& dst_tensors,
+  absl::Status GetTensorsFromHandle(std::vector<interface::ITensor*>& dst_tensors,
                                   int handle) const;
   absl::Status PutTensorsToHandle(
-      const std::vector<Interface::ITensor*>& src_tensors, int handle);
+      const std::vector<interface::ITensor*>& src_tensors, int handle);
 
  private:
   int GetIndex(int handle) const;
-  absl::Status CopyTensors(const std::vector<Interface::ITensor*>& src_tensors,
-                         std::vector<Interface::ITensor*>& dst_tensors) const;
-  absl::Status CopyTensor(const Interface::ITensor* src,
-                        Interface::ITensor* dst) const;
+  absl::Status CopyTensors(const std::vector<interface::ITensor*>& src_tensors,
+                         std::vector<interface::ITensor*>& dst_tensors) const;
+  absl::Status CopyTensor(const interface::ITensor* src,
+                        interface::ITensor* dst) const;
 
   mutable std::mutex head_mtx_;
   int head_ = 0;

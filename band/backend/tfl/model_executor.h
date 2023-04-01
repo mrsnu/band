@@ -13,8 +13,8 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
   ~TfLiteModelExecutor() override;
 
   absl::StatusOr<ModelSpec> InvestigateModelSpec(
-      Interface::IModel* model) override;
-  absl::Status PrepareSubgraph(Interface::IModel* model, std::set<int> ops = {},
+      interface::IModel* model) override;
+  absl::Status PrepareSubgraph(interface::IModel* model, std::set<int> ops = {},
                                std::set<int> unit_indices = {}) override;
 
   BackendType GetBackendType() const override;
@@ -41,7 +41,7 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
   const tflite::Interpreter* GetInterpreter(const SubgraphKey& key) const;
 
   absl::StatusOr<std::unique_ptr<tflite::Interpreter>> CreateTfLiteInterpreter(
-      Interface::IModel* model, DeviceFlags device,
+      interface::IModel* model, DeviceFlags device,
       std::set<int> op_indices = {});
   static absl::StatusOr<TfLiteDelegate*> GetDeviceDelegate(DeviceFlags device);
 

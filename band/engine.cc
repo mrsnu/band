@@ -18,7 +18,7 @@
 #include "engine.h"
 
 namespace band {
-  
+
 Engine::~Engine() {
   for (auto& model_executor : model_executors_) {
     model_executor.second.reset();
@@ -1049,4 +1049,5 @@ const interface::IModelExecutor* Engine::GetModelExecutor(
   auto it = model_executors_.find({key.GetModelId(), key.GetWorkerId()});
   return it != model_executors_.end() ? it->second.get() : nullptr;
 }
+
 }  // namespace band
