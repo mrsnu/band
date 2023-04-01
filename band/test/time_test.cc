@@ -3,9 +3,9 @@
 
 #include <gtest/gtest.h>
 
-namespace Band {
+namespace band {
 namespace Time {
-namespace Test {
+namespace test {
 
 TEST(TimeTest, NowMicros) {
   auto now0 = NowMicros();
@@ -31,9 +31,9 @@ TEST(TimeTest, SleepForMicros) {
   EXPECT_GE(now1, now0 + 1e6 + 50);
 }
 
-}  // namespace Test
+}  // namespace test
 }  // namespace Time
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

@@ -4,7 +4,7 @@
 #include "band/interface/model.h"
 #include "band/logger.h"
 
-namespace Band {
+namespace band {
 
 ModelId Model::next_model_id_ = 0;
 Model::Model() : model_id_(next_model_id_++) {}
@@ -20,7 +20,7 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
-  Interface::IModel* backend_model =
+  interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
 
   if (!backend_model->FromPath(filename).ok()) {
@@ -29,7 +29,7 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
                         GetName(backend_type).c_str(), filename));
   }
   backend_models_[backend_type] =
-      std::shared_ptr<Interface::IModel>(backend_model);
+      std::shared_ptr<interface::IModel>(backend_model);
   return absl::OkStatus();
 }
 
@@ -42,7 +42,7 @@ absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
-  Interface::IModel* backend_model =
+  interface::IModel* backend_model =
       BackendFactory::CreateModel(backend_type, model_id_);
   if (backend_model == nullptr) {
     return absl::InternalError(absl::StrFormat(
@@ -51,7 +51,7 @@ absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
   }
   if (backend_model->FromBuffer(buffer, buffer_size).ok()) {
     backend_models_[backend_type] =
-        std::shared_ptr<Interface::IModel>(backend_model);
+        std::shared_ptr<interface::IModel>(backend_model);
     return absl::OkStatus();
   } else {
     return absl::InternalError(absl::StrFormat(
@@ -60,7 +60,7 @@ absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
   return absl::OkStatus();
 }
 
-Interface::IModel* Model::GetBackendModel(BackendType backend_type) {
+interface::IModel* Model::GetBackendModel(BackendType backend_type) {
   if (backend_models_.find(backend_type) != backend_models_.end()) {
     return backend_models_[backend_type].get();
   } else {
@@ -75,4 +75,4 @@ std::set<BackendType> Model::GetSupportedBackends() const {
   }
   return backends;
 }
-}  // namespace Band
+}  // namespace band

@@ -4,8 +4,7 @@
 
 #include "band/logger.h"
 
-namespace Band {
-
+namespace band {
 Tensor::Tensor(ITensor* tensor_view)
     : type_(tensor_view->GetType()),
       quantization_({QuantizationType::NoQuantization, nullptr}),
@@ -60,4 +59,4 @@ void Tensor::SetQuantization(Quantization quantization) {
   }
 }
 
-}  // namespace Band
+}  // namespace band

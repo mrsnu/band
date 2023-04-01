@@ -6,14 +6,14 @@
 
 #include "band/interface/tensor.h"
 
-namespace Band {
+namespace band {
 /*
   Tensor interface that tensor view / band tensor shares
 */
 
-class Tensor : public Interface::ITensor {
+class Tensor : public interface::ITensor {
  public:
-  explicit Tensor(Interface::ITensor* tensor_view);
+  explicit Tensor(interface::ITensor* tensor_view);
   ~Tensor();
 
   DataType GetType() const override;
@@ -36,6 +36,6 @@ class Tensor : public Interface::ITensor {
   char* data_;
   std::string name_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_TENSOR_H_

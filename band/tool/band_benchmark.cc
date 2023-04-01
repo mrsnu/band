@@ -1,7 +1,7 @@
 #include "band/logger.h"
 #include "band/tool/benchmark.h"
 
-using namespace Band;
+using namespace band;
 
 int main(int argc, const char** argv) {
   tool::Benchmark benchmark;

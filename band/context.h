@@ -10,11 +10,11 @@
 #include "band/config.h"
 #include "band/error_reporter.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 class IModel;
 class IModelExecutor;
-}  // namespace Interface
+}  // namespace interface
 class Worker;
 class Planner;
 class RuntimeConfig;
@@ -121,6 +121,6 @@ class Context {
  protected:
   ErrorReporter* error_reporter_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_CONTEXT_H_

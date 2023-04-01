@@ -7,18 +7,18 @@
 
 #include "tensorflow/lite/c/common.h"
 
-namespace Band {
-namespace TfLite {
+namespace band {
+namespace tfl {
 
 absl::Status GetBandStatus(TfLiteStatus status);
 DataType GetBandType(TfLiteType type);
 
-class TfLiteUtil : public Interface::IBackendUtil {
+class TfLiteUtil : public interface::IBackendUtil {
  public:
   std::set<DeviceFlags> GetAvailableDevices() const override;
 };
 
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
 
 #endif

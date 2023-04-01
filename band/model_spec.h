@@ -9,7 +9,7 @@
 
 #include "absl/status/status.h"
 
-namespace Band {
+namespace band {
 // a convenient data structure for holding various model information
 class ModelSpec {
  public:
@@ -79,6 +79,6 @@ class ModelSpec {
   // Each element is a pair of subgraph indices list and shortest latency.
   std::vector<std::pair<std::vector<int>, int64_t>> latency_memo;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif

@@ -8,8 +8,8 @@
 #include "band/time.h"
 #include "band/worker.h"
 
-namespace Band {
-namespace Test {
+namespace band {
+namespace test {
 
 struct MockContext : public MockContextBase {
   void PrepareReenqueue(Job&) override{};
@@ -50,8 +50,8 @@ TEST(PlannerSuite, SingleQueue) {
   // TODO: Add tests!
   EXPECT_TRUE(true);
 }
-}  // namespace Test
-}  // namespace Band
+}  // namespace test
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

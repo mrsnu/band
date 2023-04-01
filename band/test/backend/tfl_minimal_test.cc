@@ -17,13 +17,13 @@
 #include "band/model.h"
 #include "band/tensor.h"
 
-namespace Band {
-using namespace Interface;
+namespace band {
+using namespace interface;
 TEST(TFLiteBackend, BackendInvoke) {
-  TfLite::TfLiteModel bin_model(0);
+  tfl::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.tflite");
 
-  TfLite::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
+  tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
   EXPECT_TRUE(model_executor.PrepareSubgraph(&bin_model).ok());
   EXPECT_TRUE(
       model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey())
@@ -31,10 +31,10 @@ TEST(TFLiteBackend, BackendInvoke) {
 }
 
 TEST(TFLiteBackend, ModelSpec) {
-  TfLite::TfLiteModel bin_model(0);
+  tfl::TfLiteModel bin_model(0);
   bin_model.FromPath("band/test/data/add.tflite");
 
-  TfLite::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
+  tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
   ModelSpec model_spec =
       model_executor.InvestigateModelSpec(&bin_model).value();
 
@@ -363,7 +363,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
     EXPECT_EQ(execution_count, worker_id + 1);
   }
 }
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
 #ifdef BAND_TFLITE

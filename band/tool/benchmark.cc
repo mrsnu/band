@@ -14,7 +14,7 @@
 #include "band/time.h"
 #include "benchmark.h"
 
-namespace Band {
+namespace band {
 namespace tool {
 Benchmark::Benchmark(BackendType target_backend)
     : target_backend_(target_backend) {}
@@ -327,7 +327,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
     // pre-allocate random input tensor to feed in run-time
     Tensors inputs;
     for (int input_index : input_indices) {
-      Interface::ITensor* input_tensor =
+      interface::ITensor* input_tensor =
           engine_->CreateTensor(model_id, input_index);
       // random value ranges borrowed from tensorflow/lite/tools/benchmark
       switch (input_tensor->GetType()) {
@@ -528,4 +528,4 @@ absl::Status Benchmark::LogResults() {
 }
 
 }  // namespace tool
-}  // namespace Band
+}  // namespace band

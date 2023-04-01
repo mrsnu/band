@@ -15,13 +15,13 @@
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
 
-namespace Band {
+namespace band {
 
 class Model;
 class ModelSpec;
 class LatencyEstimator;
 
-typedef std::vector<Interface::ITensor*> Tensors;
+typedef std::vector<interface::ITensor*> Tensors;
 
 /**
  * @brief The main entry point of the `Band`.
@@ -31,17 +31,17 @@ typedef std::vector<Interface::ITensor*> Tensors;
  *
  * Example usage:
  *
- * Band::RuntimeConfig config;
- * Band::ParseRuntimeConfigFromJson("band/test/data/config.json", config);
- * std::unique_ptr<Band::Engine> engine = Band::Engine::Create(config);
+ * band::RuntimeConfig config;
+ * band::ParseRuntimeConfigFromJson("band/test/data/config.json", config);
+ * std::unique_ptr<band::Engine> engine = band::Engine::Create(config);
  *
  * Band::Model model;
  * model.FromPath(BackendType::TfLite, "band/test/data/add.tflite");
  * engine->RegisterModel(&model);
  *
- * Band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),
+ * band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),
  * engine->GetInputTensorIndices(model.GetId())[0]);
- * Band::Tensor *output_tensor = engine->CreateTensor(model.GetId(),
+ * band::Tensor *output_tensor = engine->CreateTensor(model.GetId(),
  * engine->GetOutputTensorIndices(model.GetId())[0]);
  *
  * // Copy input data to input_tensor->GetData()
@@ -174,7 +174,7 @@ class Engine : public Context {
   SubgraphConfig subgraph_config_;
 
   std::map<std::pair<ModelId, WorkerId>,
-           std::unique_ptr<Interface::IModelExecutor>>
+           std::unique_ptr<interface::IModelExecutor>>
       model_executors_;
   std::vector<std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
@@ -199,7 +199,7 @@ class Engine : public Context {
   // continuous unit subgraph indices.
   std::map<int, std::map<int, std::map<int, std::vector<SubgraphKey>>>>
       unit_subgraphs_to_subgraph_keys_;
-};  // namespace Band
-}  // namespace Band
+};  // namespace band
+}  // namespace band
 
 #endif  // BAND_ENGINE_H

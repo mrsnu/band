@@ -6,9 +6,9 @@
 
 namespace {
 
-std::vector<Band::Interface::ITensor*> BandTensorArrayToVec(
+std::vector<band::interface::ITensor*> BandTensorArrayToVec(
     BandTensor** tensors, int num_tensors) {
-  std::vector<Band::Interface::ITensor*> vec(num_tensors);
+  std::vector<band::interface::ITensor*> vec(num_tensors);
   for (int i = 0; i < vec.size(); ++i) {
     vec[i] = tensors[i]->impl.get();
   }
@@ -31,8 +31,8 @@ BandStatus ToBandStatus(absl::Status&& status) {
   }
 }
 
-Band::RequestOption ToRequestOption(BandRequestOption& option) {
-  Band::RequestOption request_option;
+band::RequestOption ToRequestOption(BandRequestOption& option) {
+  band::RequestOption request_option;
   request_option.target_worker = option.target_worker;
   request_option.require_callback = option.require_callback;
   request_option.slo_scale = option.slo_scale;
@@ -86,32 +86,32 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       b->impl.AddScheduleWindowSize(arg);
     } break;
     case BAND_PLANNER_SCHEDULERS: {
-      std::vector<Band::SchedulerType> schedulers(count);
+      std::vector<band::SchedulerType> schedulers(count);
       for (int i = 0; i < count; i++) {
-        schedulers[i] = static_cast<Band::SchedulerType>(va_arg(vl, int));
+        schedulers[i] = static_cast<band::SchedulerType>(va_arg(vl, int));
       }
       b->impl.AddSchedulers(schedulers);
     } break;
     case BAND_PLANNER_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddPlannerCPUMask(static_cast<Band::CPUMaskFlags>(arg));
+      b->impl.AddPlannerCPUMask(static_cast<band::CPUMaskFlags>(arg));
     } break;
     case BAND_PLANNER_LOG_PATH: {
       char* arg = va_arg(vl, char*);
       b->impl.AddPlannerLogPath(arg);
     } break;
     case BAND_WORKER_WORKERS: {
-      std::vector<Band::DeviceFlags> workers(count);
+      std::vector<band::DeviceFlags> workers(count);
       for (int i = 0; i < count; i++) {
         int temp = va_arg(vl, int);
-        workers[i] = static_cast<Band::DeviceFlags>(temp);
+        workers[i] = static_cast<band::DeviceFlags>(temp);
       }
       b->impl.AddWorkers(workers);
     } break;
     case BAND_WORKER_CPU_MASKS: {
-      std::vector<Band::CPUMaskFlags> cpu_masks(count);
+      std::vector<band::CPUMaskFlags> cpu_masks(count);
       for (int i = 0; i < count; i++) {
-        cpu_masks[i] = static_cast<Band::CPUMaskFlags>(va_arg(vl, int));
+        cpu_masks[i] = static_cast<band::CPUMaskFlags>(va_arg(vl, int));
       }
       b->impl.AddWorkerCPUMasks(cpu_masks);
     } break;
@@ -137,11 +137,11 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     case BAND_SUBGRAPH_PREPARATION_TYPE: {
       int arg = va_arg(vl, int);
       b->impl.AddSubgraphPreparationType(
-          static_cast<Band::SubgraphPreparationType>(arg));
+          static_cast<band::SubgraphPreparationType>(arg));
     } break;
     case BAND_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddCPUMask(static_cast<Band::CPUMaskFlags>(arg));
+      b->impl.AddCPUMask(static_cast<band::CPUMaskFlags>(arg));
     } break;
   }
   va_end(vl);
@@ -165,14 +165,14 @@ BandStatus BandModelAddFromBuffer(BandModel* model,
                                   BandBackendType backend_type,
                                   const void* model_data, size_t model_size) {
   return ToBandStatus(
-      model->impl->FromBuffer(static_cast<Band::BackendType>(backend_type),
+      model->impl->FromBuffer(static_cast<band::BackendType>(backend_type),
                               (const char*)model_data, model_size));
 }
 
 BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
                                 const char* model_path) {
   return ToBandStatus(model->impl->FromPath(
-      static_cast<Band::BackendType>(backend_type), model_path));
+      static_cast<band::BackendType>(backend_type), model_path));
 }
 
 void BandTensorDelete(BandTensor* tensor) { delete tensor; }
@@ -213,7 +213,7 @@ BandRequestOption BandRequestOptionGetDefault() {
 }
 
 BandEngine* BandEngineCreate(BandConfig* config) {
-  std::unique_ptr<Band::Engine> engine(Band::Engine::Create(config->impl));
+  std::unique_ptr<band::Engine> engine(band::Engine::Create(config->impl));
   return engine ? new BandEngine(std::move(engine)) : nullptr;
 }
 void BandEngineDelete(BandEngine* engine) {
@@ -266,7 +266,7 @@ BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
                                  BandTensor** input_tensors,
                                  BandTensor** output_tensors) {
   return ToBandStatus(engine->impl->RequestSync(
-      model->impl->GetId(), Band::RequestOption::GetDefaultOption(),
+      model->impl->GetId(), band::RequestOption::GetDefaultOption(),
       BandTensorArrayToVec(input_tensors,
                            BandEngineGetNumInputTensors(engine, model)),
       BandTensorArrayToVec(output_tensors,
@@ -278,7 +278,7 @@ BandRequestHandle BandEngineRequestAsync(BandEngine* engine, BandModel* model,
   // TODO(widiba03304): error handling
   return engine->impl
       ->RequestAsync(
-          model->impl->GetId(), Band::RequestOption::GetDefaultOption(),
+          model->impl->GetId(), band::RequestOption::GetDefaultOption(),
           BandTensorArrayToVec(input_tensors,
                                BandEngineGetNumInputTensors(engine, model)))
       .value();

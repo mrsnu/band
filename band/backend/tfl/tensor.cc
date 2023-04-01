@@ -5,8 +5,8 @@
 // memcpy
 #include <string.h>
 
-namespace Band {
-namespace TfLite {
+namespace band {
+namespace tfl {
 TfLiteTensorView::TfLiteTensorView(TfLiteTensor* tensor) : tensor_(tensor) {}
 
 BackendType TfLiteTensorView::GetBackendType() const {
@@ -63,5 +63,5 @@ void TfLiteTensorView::SetQuantization(Quantization quantization) {
     q_params->quantized_dimension = input_q_params->quantized_dimension;
   }
 }
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band

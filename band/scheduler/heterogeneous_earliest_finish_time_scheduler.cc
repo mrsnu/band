@@ -4,7 +4,7 @@
 
 #include "band/logger.h"
 
-namespace Band {
+namespace band {
 HEFTScheduler::HEFTScheduler(Context& context, int window_size, bool reserve)
     : IScheduler(context), window_size_(window_size), reserve_(reserve) {}
 
@@ -119,4 +119,4 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
     }
   }
 }
-}  // namespace Band
+}  // namespace band

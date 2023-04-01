@@ -3,7 +3,7 @@
 
 #include "band/config.h"
 
-namespace Band {
+namespace band {
 namespace tool {
 
 struct ModelConfig {
@@ -38,6 +38,6 @@ struct BenchmarkConfig {
   // TODO: add workload simulator
 };
 }  // namespace tool
-}  // namespace Band
+}  // namespace band
 
 #endif

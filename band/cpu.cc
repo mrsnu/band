@@ -29,7 +29,7 @@
 
 #endif
 
-namespace Band {
+namespace band {
 
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
 CpuSet::CpuSet() { DisableAll(); }
@@ -354,4 +354,4 @@ const CPUMaskFlags BandCPUMaskGetFlag(const char* name) {
   return CPUMaskFlags::All;
 }
 
-}  // namespace Band
+}  // namespace band

@@ -8,7 +8,7 @@
 #include "band/cpu.h"
 #include "band/error_reporter.h"
 
-namespace Band {
+namespace band {
 
 struct ProfileConfig {
   ProfileConfig() {
@@ -63,5 +63,5 @@ struct RuntimeConfig {
   RuntimeConfig() { cpu_mask = CPUMaskFlags::All; };
 };
 
-}  // namespace Band
+}  // namespace band
 #endif  // BAND_CONFIG_H_

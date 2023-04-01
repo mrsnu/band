@@ -10,7 +10,7 @@
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 
-namespace Band {
+namespace band {
 
 class ErrorReporter;
 class Tensor;
@@ -18,7 +18,7 @@ class Tensor;
 class TensorRingBuffer {
  public:
   TensorRingBuffer(ErrorReporter* error_reporter,
-                   std::vector<std::shared_ptr<Interface::ITensor>> tensors,
+                   std::vector<std::shared_ptr<interface::ITensor>> tensors,
                    std::vector<int> tensor_indices, int size = 128);
   ~TensorRingBuffer();
 
@@ -45,11 +45,11 @@ class TensorRingBuffer {
   mutable std::mutex head_mtx_;
   int head_ = 0;
   const int size_;
-  std::vector<Interface::ITensor*>* tensors_;
+  std::vector<interface::ITensor*>* tensors_;
   // Model's tensor index to ring buffer's index
   std::map<int, int> tensor_to_buffer_;
   ErrorReporter* error_reporter_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_TENSOR_RING_BUFFER_H_

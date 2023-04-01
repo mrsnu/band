@@ -6,8 +6,8 @@
 #include "band/backend/tfl/model_executor.h"
 #include "band/logger.h"
 
-namespace Band {
-namespace TfLite {
+namespace band {
+namespace tfl {
 
 absl::Status GetBandStatus(TfLiteStatus status) { 
   if (status == kTfLiteOk) {
@@ -33,5 +33,5 @@ std::set<DeviceFlags> TfLiteUtil::GetAvailableDevices() const {
 
   return valid_devices;
 }
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band

@@ -9,7 +9,7 @@
 #include "band/common.h"
 #include "band/config.h"
 
-namespace Band {
+namespace band {
 class Context;
 class LatencyEstimator {
  public:
@@ -63,6 +63,6 @@ class LatencyEstimator {
 
   Context* const context_;
 };
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_LATENCY_ESTIMATOR_H_

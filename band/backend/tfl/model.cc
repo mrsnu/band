@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-namespace Band {
-namespace TfLite {
-TfLiteModel::TfLiteModel(ModelId id) : Interface::IModel(id) {}
+namespace band {
+namespace tfl {
+TfLiteModel::TfLiteModel(ModelId id) : interface::IModel(id) {}
 
 BackendType TfLiteModel::GetBackendType() const { return BackendType::TfLite; }
 
@@ -26,5 +26,5 @@ bool TfLiteModel::IsInitialized() const {
   return flat_buffer_model_ != nullptr;
 }
 
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band

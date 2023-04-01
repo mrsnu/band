@@ -1,8 +1,8 @@
 #ifndef BAND_INTERFACE_BACKEND_H_
 #define BAND_INTERFACE_BACKEND_H_
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 class IBackendSpecific {
  public:
   virtual BackendType GetBackendType() const = 0;
@@ -19,7 +19,7 @@ class IBackendUtil {
   virtual std::set<DeviceFlags> GetAvailableDevices() const = 0;
 };
 
-}  // namespace Interface
-}  // namespace Band
+}  // namespace interface
+}  // namespace band
 
 #endif  // BAND_INTERFACE_BACKEND_H_

@@ -9,7 +9,7 @@
 #include "band/common.h"
 #include "band/logger.h"
 
-namespace Band {
+namespace band {
 namespace json {
 // load data from the given file
 // if there is no such file, then the json object will be empty
@@ -28,6 +28,6 @@ bool AssignIfValid(T& lhs, const Json::Value& value, const char* key) {
   }
 }
 }  // namespace json
-}  // namespace Band
+}  // namespace band
 
 #endif

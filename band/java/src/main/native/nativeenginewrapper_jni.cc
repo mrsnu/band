@@ -10,20 +10,20 @@
 #include "band/model.h"
 #include "band/tensor.h"
 
-using Band::Engine;
-using Band::Model;
-using Band::ModelId;
-using Band::RuntimeConfig;
-using Band::RuntimeConfigBuilder;
-using Band::Tensor;
-using Band::Tensors;
-using Band::jni::BufferErrorReporter;
-using Band::jni::ConvertListToVectorOfPointer;
-using Band::jni::ConvertLongToConfig;
-using Band::jni::ConvertLongToEngine;
-using Band::jni::ConvertLongToJobId;
-using Band::jni::ConvertLongToModel;
-using Band::jni::ConvertLongToTensor;
+using band::Engine;
+using band::Model;
+using band::ModelId;
+using band::RuntimeConfig;
+using band::RuntimeConfigBuilder;
+using band::Tensor;
+using band::Tensors;
+using band::jni::BufferErrorReporter;
+using band::jni::ConvertListToVectorOfPointer;
+using band::jni::ConvertLongToConfig;
+using band::jni::ConvertLongToEngine;
+using band::jni::ConvertLongToJobId;
+using band::jni::ConvertLongToModel;
+using band::jni::ConvertLongToTensor;
 
 namespace {
 
@@ -130,10 +130,10 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
   JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
                          "()J");
   Tensors input_tensors =
-      ConvertListToVectorOfPointer<Band::Interface::ITensor>(
+      ConvertListToVectorOfPointer<band::interface::ITensor>(
           env, input_tensor_handles, tnr_mtd);
   Tensors output_tensors =
-      ConvertListToVectorOfPointer<Band::Interface::ITensor>(
+      ConvertListToVectorOfPointer<band::interface::ITensor>(
           env, output_tensor_handles, tnr_mtd);
 
   float* input_raw = reinterpret_cast<float*>(input_tensors[0]->GetData());
@@ -153,7 +153,8 @@ JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
   Model* native_model = ConvertJobjectToModel(env, model);
   auto job_id = engine->RequestAsync(
       native_model->GetId(), BandGetDefaultRequestOption(),
-      ConvertListToVectorOfPointer<Band::Interface::ITensor>(env, input_tensor_handles, tnr_mtd));
+      ConvertListToVectorOfPointer<band::interface::ITensor>(
+          env, input_tensor_handles, tnr_mtd));
   return static_cast<jint>(job_id);
 }
 
@@ -178,13 +179,13 @@ Java_org_mrsnu_band_NativeEngineWrapper_requestAsyncBatch(
   std::vector<BandRequestOption> request_options(model_list.size(),
                                                  BandGetDefaultRequestOption());
 
-  std::vector<Band::Tensors> input_lists;
+  std::vector<band::Tensors> input_lists;
   jint size = env->CallIntMethod(inputTensorsList, list_size_mtd);
   for (int i = 0; i < size; i++) {
     jobject input_list =
         env->CallObjectMethod(inputTensorsList, list_get_mtd, i);
     input_lists.push_back(
-        ConvertListToVectorOfPointer<Band::Interface::ITensor>(env, input_list,
+        ConvertListToVectorOfPointer<band::interface::ITensor>(env, input_list,
                                                                tnr_mtd));
   }
   std::vector<int> ret =
@@ -198,7 +199,7 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_wait(
   JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
                          "()J");
   Engine* engine = ConvertLongToEngine(env, engineHandle);
-  engine->Wait(jobId, ConvertListToVectorOfPointer<Band::Interface::ITensor>(
+  engine->Wait(jobId, ConvertListToVectorOfPointer<band::interface::ITensor>(
                           env, outputTensors, tnr_mtd));
 }
 

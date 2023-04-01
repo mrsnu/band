@@ -2,9 +2,7 @@
 
 #include <algorithm>
 
-#include "band/logger.h"
-
-namespace Band {
+namespace band {
 
 void RoundRobinScheduler::Schedule(JobQueue& requests) {
   std::set<WorkerId> idle_workers = context_.GetIdleWorkers();
@@ -27,4 +25,4 @@ void RoundRobinScheduler::Schedule(JobQueue& requests) {
   }
 }
 
-}  // namespace Band
+}  // namespace band

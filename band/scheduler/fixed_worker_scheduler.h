@@ -3,7 +3,7 @@
 
 #include "band/scheduler/scheduler.h"
 
-namespace Band {
+namespace band {
 
 // Assigns requested model to devices according to a direct request from engine
 // or model_id.
@@ -28,6 +28,6 @@ class FixedWorkerGlobalQueueScheduler : public IScheduler {
   WorkerType GetWorkerType() override { return WorkerType::GlobalQueue; }
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_SCHEDULER_fixed_worker_scheduler_H_

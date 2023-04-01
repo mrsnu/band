@@ -7,15 +7,15 @@
 #ifdef __ANDROID__
 #include <android/log.h>
 
-int LogSeverityToAndroid(Band::LogSeverity severity) {
+int LogSeverityToAndroid(band::LogSeverity severity) {
   switch (severity) {
-    case Band::BAND_LOG_INFO:
+    case band::BAND_LOG_INFO:
       return ANDROID_LOG_INFO;
       break;
-    case Band::BAND_LOG_WARNING:
+    case band::BAND_LOG_WARNING:
       return ANDROID_LOG_WARN;
       break;
-    case Band::BAND_LOG_ERROR:
+    case band::BAND_LOG_ERROR:
       return ANDROID_LOG_ERROR;
       break;
   }
@@ -23,7 +23,7 @@ int LogSeverityToAndroid(Band::LogSeverity severity) {
 }
 #endif
 
-namespace Band {
+namespace band {
 LogSeverity Logger::verbosity = BAND_LOG_INFO;
 
 void Logger::Log(LogSeverity severity, const char* format, ...) {
@@ -65,4 +65,4 @@ const char* Logger::GetSeverityName(LogSeverity severity) {
   return "<Unknown severity>";
 }
 
-}  // namespace Band
+}  // namespace band

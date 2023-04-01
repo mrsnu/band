@@ -8,8 +8,8 @@
 #include "band/test/test_util.h"
 #include "band/time.h"
 
-namespace Band {
-namespace Test {
+namespace band {
+namespace test {
 
 struct MockContext : public MockContextBase {
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
@@ -75,8 +75,8 @@ TYPED_TEST(WokrerSuite, Wait) {
 }
 
 // TODO: throttling test
-}  // namespace Test
-}  // namespace Band
+}  // namespace test
+}  // namespace band
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

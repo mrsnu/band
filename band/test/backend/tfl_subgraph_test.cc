@@ -17,8 +17,8 @@
 #include "band/model.h"
 #include "band/tensor.h"
 
-namespace Band {
-using namespace Interface;
+namespace band {
+using namespace interface;
 
 struct ModelPartitionTestsFixture
     : public testing::TestWithParam<
@@ -80,7 +80,7 @@ INSTANTIATE_TEST_SUITE_P(
             SubgraphPreparationType::MergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
                         SubgraphPreparationType::MergeUnitSubgraph)));
-}  // namespace Band
+}  // namespace band
 
 int main(int argc, char** argv) {
 #ifdef BAND_TFLITE

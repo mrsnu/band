@@ -18,8 +18,8 @@
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 
-namespace Band {
-namespace TfLite {
+namespace band {
+namespace tfl {
 
 std::map<DeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
     TfLiteModelExecutor::delegates_ = {};
@@ -35,7 +35,7 @@ TfLiteModelExecutor::~TfLiteModelExecutor() {
 }
 
 absl::StatusOr<ModelSpec> TfLiteModelExecutor::InvestigateModelSpec(
-    Interface::IModel* model) {
+    interface::IModel* model) {
   int num_ops;
   int num_tensors;
   std::vector<DataType> tensor_types;
@@ -153,7 +153,7 @@ absl::StatusOr<ModelSpec> TfLiteModelExecutor::InvestigateModelSpec(
   return model_spec;
 }
 
-absl::Status TfLiteModelExecutor::PrepareSubgraph(Interface::IModel* model,
+absl::Status TfLiteModelExecutor::PrepareSubgraph(interface::IModel* model,
                                                   std::set<int> ops,
                                                   std::set<int> unit_indices) {
   if (model_id_ != model->GetId()) {
@@ -206,7 +206,7 @@ size_t TfLiteModelExecutor::GetNumNodes(const SubgraphKey& key) const {
   return GetInterpreter(key)->nodes_size();
 }
 
-std::shared_ptr<Interface::ITensorView> TfLiteModelExecutor::GetTensorView(
+std::shared_ptr<interface::ITensorView> TfLiteModelExecutor::GetTensorView(
     const SubgraphKey& key, int index) {
   return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
 }
@@ -307,7 +307,7 @@ DeviceFlags GetNNAPIDeviceFlag(std::string name) {
 }
 
 absl::StatusOr<std::unique_ptr<tflite::Interpreter>>
-TfLiteModelExecutor::CreateTfLiteInterpreter(Interface::IModel* model,
+TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
                                              DeviceFlags device,
                                              std::set<int> op_indices) {
   std::unique_ptr<tflite::Interpreter> interpreter;
@@ -464,7 +464,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
 
     return delegates_.at(device).get();
   }
-}  // namespace TfLite
+}  // namespace tfl
 
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band

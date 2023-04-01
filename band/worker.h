@@ -10,7 +10,7 @@
 #include "band/context.h"
 #include "band/cpu.h"
 
-namespace Band {
+namespace band {
 
 class Planner;
 
@@ -129,6 +129,6 @@ class GlobalQueueWorker : public Worker {
   bool is_busy_ = false;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_WORKER_H_

@@ -4,7 +4,7 @@
 
 #include "band/time.h"
 
-namespace Band {
+namespace band {
 ShortestExpectedLatencyScheduler::ShortestExpectedLatencyScheduler(
     Context& context, int window_size)
     : IScheduler(context), window_size_(window_size) {}
@@ -73,4 +73,4 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     context_.EnqueueToWorker({most_urgent_job, target_subgraph_key});
   }
 }
-}  // namespace Band
+}  // namespace band

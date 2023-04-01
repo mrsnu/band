@@ -9,7 +9,7 @@
 #include "band/cpu.h"
 #include "band/error_reporter.h"
 
-namespace Band {
+namespace band {
 
 class ProfileConfigBuilder {
   friend class RuntimeConfigBuilder;  // TODO: Find a safer way for
@@ -235,6 +235,6 @@ class RuntimeConfigBuilder {
   CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_CONFIG_BUILDER_H_

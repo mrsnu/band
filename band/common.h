@@ -13,8 +13,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 
-namespace Band {
-
+namespace band {
 typedef int WorkerId;
 typedef int ModelId;
 typedef int JobId;
@@ -262,6 +261,6 @@ struct CacheHash {
   std::size_t operator()(const std::pair<int, BitMask>& p) const;
 };
 
-}  // namespace Band
+}  // namespace band
 
 #endif  // BAND_COMMON_H_

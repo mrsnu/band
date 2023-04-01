@@ -4,8 +4,8 @@
 
 #include "band/logger.h"
 
-namespace Band {
-using namespace Interface;
+namespace band {
+using namespace interface;
 
 #ifdef BAND_TFLITE
 #ifdef _WIN32
@@ -88,4 +88,4 @@ void BackendFactory::RegisterBackendCreators(
   util_creators_[backend] =
       std::shared_ptr<Creator<IBackendUtil>>(util_creator);
 }
-}  // namespace Band
+}  // namespace band

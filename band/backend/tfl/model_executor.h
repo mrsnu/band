@@ -4,9 +4,9 @@
 #include "band/interface/model_executor.h"
 #include "tensorflow/lite/interpreter.h"
 
-namespace Band {
-namespace TfLite {
-class TfLiteModelExecutor : public Interface::IModelExecutor {
+namespace band {
+namespace tfl {
+class TfLiteModelExecutor : public interface::IModelExecutor {
  public:
   TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
                       DeviceFlags device_flag);
@@ -25,7 +25,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   size_t GetNumTensors(const SubgraphKey& key) const override;
   size_t GetNumNodes(const SubgraphKey& key) const override;
 
-  std::shared_ptr<Interface::ITensorView> GetTensorView(const SubgraphKey& key,
+  std::shared_ptr<interface::ITensorView> GetTensorView(const SubgraphKey& key,
                                                         int index) override;
   SubgraphKey GetLargestSubgraphKey() const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
@@ -51,7 +51,7 @@ class TfLiteModelExecutor : public Interface::IModelExecutor {
   static std::map<DeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
       delegates_;
 };
-}  // namespace TfLite
-}  // namespace Band
+}  // namespace tfl
+}  // namespace band
 
 #endif  // BAND_BACKEND_TFL_MODEL_EXECUTOR_H_

@@ -10,8 +10,8 @@
 #include "band/interface/model.h"
 #include "band/model_spec.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 /*
   Model executor for specific <IModel, Worker>
 */
@@ -58,7 +58,7 @@ class IModelExecutor : public IBackendSpecific {
   IModelExecutor& operator=(const IModelExecutor&) = delete;
   IModelExecutor& operator=(const IModelExecutor&&) = delete;
 };
-}  // namespace Interface
-}  // namespace Band
+}  // namespace interface
+}  // namespace band
 
 #endif

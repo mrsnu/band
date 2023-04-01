@@ -1,6 +1,6 @@
 #include "band/safe_bool.h"
 
-namespace Band {
+namespace band {
 void SafeBool::notify() {
   std::lock_guard<std::mutex> lock(m);
   flag = true;
@@ -21,4 +21,4 @@ void SafeBool::terminate() {
   exit = true;
   c.notify_all();
 }
-}  // namespace Band
+}  // namespace band

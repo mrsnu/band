@@ -5,7 +5,7 @@
 #include "band/time.h"
 #include "worker.h"
 
-namespace Band {
+namespace band {
 Worker::Worker(Context* context, WorkerId worker_id, DeviceFlags device_flag)
     : context_(context), worker_id_(worker_id), device_flag_(device_flag) {}
 
@@ -242,4 +242,4 @@ void Worker::Work() {
   }
 }
 
-}  // namespace Band
+}  // namespace band

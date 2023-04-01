@@ -13,7 +13,7 @@
 #include "band/time.h"
 #include "planner.h"
 
-namespace Band {
+namespace band {
 Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
   planner_thread_ = std::thread([this] {
     auto status = this->Plan();
@@ -465,4 +465,4 @@ int Planner::GetJobRecordIndex(int job_id) const {
   return job_id % NUM_FINISHED_RECORDS;
 }
 
-}  // namespace Band
+}  // namespace band

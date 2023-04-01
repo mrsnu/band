@@ -1,6 +1,6 @@
 #include "band/common.h"
 
-namespace Band {
+namespace band {
 
 std::string GetName(BackendType backend_type) {
   switch (backend_type) {
@@ -294,5 +294,4 @@ std::size_t CacheHash::operator()(const std::pair<int, BitMask>& p) const {
   auto hash_func = std::hash<int>();
   return hash_func(p.first) ^ hash_func(p.second.to_ullong());
 }
-
-}  // namespace Band
+}  // namespace band

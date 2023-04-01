@@ -17,7 +17,8 @@
 #include "band/worker.h"
 #include "engine.h"
 
-namespace Band {
+namespace band {
+  
 Engine::~Engine() {
   for (auto& model_executor : model_executors_) {
     model_executor.second.reset();
@@ -76,7 +77,7 @@ absl::Status Engine::RegisterModel(Model* model) {
       for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
         if (model_spec.unavailable_devices.find(GetWorkerDevice(worker_id)) ==
             model_spec.unavailable_devices.end()) {
-          std::unique_ptr<Interface::IModelExecutor> model_executor(
+          std::unique_ptr<interface::IModelExecutor> model_executor(
               BackendFactory::CreateModelExecutor(backend_type, model_id,
                                                   worker_id,
                                                   GetWorkerDevice(worker_id)));
@@ -203,11 +204,11 @@ absl::Status Engine::RegisterModel(Model* model) {
       // todo: connect prev / next && unit indices
 
       // Initialize tensor ring buffer
-      // Assumption: each backend model in Band::Model has the same input /
+      // Assumption: each backend model in band::Model has the same input /
       // output tensor shapes
       {
-        std::vector<std::shared_ptr<Interface::ITensor>> input_tensors;
-        std::vector<std::shared_ptr<Interface::ITensor>> output_tensors;
+        std::vector<std::shared_ptr<interface::ITensor>> input_tensors;
+        std::vector<std::shared_ptr<interface::ITensor>> output_tensors;
 
         auto model_subgraph_key = GetLargestSubgraphKey(
             model_id, GetDeviceWorkerId(DeviceFlags::CPU));
@@ -278,7 +279,7 @@ Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
   SubgraphKey model_subgraph_key =
       GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
 
-  if (Interface::IModelExecutor* model_executor =
+  if (interface::IModelExecutor* model_executor =
           GetModelExecutor(model_subgraph_key)) {
     return new Tensor(
         model_executor->GetTensorView(model_subgraph_key, tensor_index).get());
@@ -942,10 +943,10 @@ absl::Status Engine::TryCopyInputTensors(const Job& job) {
     for (int tensor_index :
          preceded_model_executor->GetOutputs(preceded_subgraph_key)) {
       if (unresolved_tensors.find(tensor_index) != unresolved_tensors.end()) {
-        std::shared_ptr<Interface::ITensorView> src =
+        std::shared_ptr<interface::ITensorView> src =
             preceded_model_executor->GetTensorView(preceded_subgraph_key,
                                                    tensor_index);
-        std::shared_ptr<Interface::ITensorView> dst =
+        std::shared_ptr<interface::ITensorView> dst =
             model_executor->GetTensorView(key, tensor_index);
 
         if (!dst->CopyDataFrom(src.get()).ok()) {
@@ -1038,14 +1039,14 @@ WorkerId Engine::GetDeviceWorkerId(DeviceFlags flag) const {
   return -1;
 }
 
-Interface::IModelExecutor* Engine::GetModelExecutor(const SubgraphKey& key) {
+interface::IModelExecutor* Engine::GetModelExecutor(const SubgraphKey& key) {
   auto it = model_executors_.find({key.GetModelId(), key.GetWorkerId()});
   return it != model_executors_.end() ? it->second.get() : nullptr;
 }
 
-const Interface::IModelExecutor* Engine::GetModelExecutor(
+const interface::IModelExecutor* Engine::GetModelExecutor(
     const SubgraphKey& key) const {
   auto it = model_executors_.find({key.GetModelId(), key.GetWorkerId()});
   return it != model_executors_.end() ? it->second.get() : nullptr;
 }
-}  // namespace Band
+}  // namespace band

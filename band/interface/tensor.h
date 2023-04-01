@@ -5,8 +5,8 @@
 
 #include "band/common.h"
 
-namespace Band {
-namespace Interface {
+namespace band {
+namespace interface {
 struct ITensor {
  public:
   virtual ~ITensor() = default;
@@ -30,7 +30,7 @@ struct ITensor {
   absl::Status CopyDataFrom(const ITensor& rhs);
   absl::Status CopyDataFrom(const ITensor* rhs);
 };
-}  // namespace Interface
-}  // namespace Band
+}  // namespace interface
+}  // namespace band
 
 #endif
