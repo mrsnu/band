@@ -19,7 +19,7 @@ gradleBuild
 __pycache__/
 
 # test
-log.csv
+log.json
 log.tsv
 band.aar
 

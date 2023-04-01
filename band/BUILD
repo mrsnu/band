@@ -109,6 +109,16 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+# Tracer config setting
+
+config_setting(
+    name = "trace",
+    define_values = {
+        "trace": "true",
+    },
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "common",
     srcs = [
@@ -261,6 +271,7 @@ cc_library(
         ":config",
         ":cpu",
         ":time",
+        ":job_tracer",
     ],
 )
 
@@ -302,8 +313,26 @@ cc_library(
         ":common",
         ":scheduler",
         ":worker",
+        ":job_tracer"
     ],
 )
+
+
+cc_library(
+    name = "job_tracer",
+    srcs = [
+        "job_tracer.cc",
+    ],
+    hdrs = [
+        "job_tracer.h",
+    ],
+    deps = [
+        ":common",
+        "@chrome_tracer//chrome_tracer",
+    ],
+)
+
+
 
 cc_library(
     name = "tensor",
@@ -363,6 +392,7 @@ cc_library(
             ":tensor",
             ":time",
             ":worker",
+            ":job_tracer",
         ],
 )
 

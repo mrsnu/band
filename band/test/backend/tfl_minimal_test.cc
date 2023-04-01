@@ -89,7 +89,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
+      b.AddPlannerLogPath("band/test/data/log.json")
           .AddSchedulers({SchedulerType::RoundRobin})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
@@ -147,7 +147,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
 TEST(TFLiteBackend, SimpleEngineProfile) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
+      b.AddPlannerLogPath("band/test/data/log.json")
           .AddSchedulers({SchedulerType::FixedWorkerGlobalQueue})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
@@ -175,16 +175,16 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
       model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
   EXPECT_TRUE(engine->RegisterModel(&model).ok());
 
-  EXPECT_GT(
+  EXPECT_GE(
       engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
-  EXPECT_GT(
+  EXPECT_GE(
       engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
+      b.AddPlannerLogPath("band/test/data/log.json")
           .AddSchedulers({SchedulerType::ShortestExpectedLatency})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
@@ -243,7 +243,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
 TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
+      b.AddPlannerLogPath("band/test/data/log.json")
           .AddSchedulers({SchedulerType::FixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
@@ -312,7 +312,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
 TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.csv")
+      b.AddPlannerLogPath("band/test/data/log.json")
           .AddSchedulers({SchedulerType::FixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(

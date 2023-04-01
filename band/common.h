@@ -220,6 +220,8 @@ struct Job {
   explicit Job(ModelId model_id, int64_t slo)
       : model_id(model_id), slo_us(slo) {}
 
+  std::string ToJson() const;
+
   // For record (Valid after execution)
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
@@ -254,10 +256,9 @@ struct Job {
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
 };
-
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618
-struct CacheHash {
+struct JobIdBitMaskHash {
   std::size_t operator()(const std::pair<int, BitMask>& p) const;
 };
 

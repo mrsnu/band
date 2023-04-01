@@ -33,7 +33,7 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
   * `batch_size`: The number of model requests in a frame. [default: 1]
   * `worker_id`: **Optional** Specify the worker id to run in int. The argument is only effective with `fixed_device` scheduler.
   * `slo_us` and `slo_scale`: **Optional** fields for specifying an SLO value for a model. Setting `slo_scale` will make the SLO = worst profiled latency of that model * `slo_scale`. `slo_scale` will be ignored if `slo_us` is given (i.e., no reason to specify both options).
-* `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
+* `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.json`)
 * `schedulers`: The scheduler types in `list[string]`. If N schedulers are specified, then N queues are generated.
   * `fixed_worker`
   * `round_robin`
@@ -97,7 +97,7 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
             "batch_size": 3
         }
     ],
-    "log_path": "/data/local/tmp/log.csv",
+    "log_path": "/data/local/tmp/log.json",
     "schedulers": [
         "heterogeneous_earliest_finish_time_reserved"
     ],

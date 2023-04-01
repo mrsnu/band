@@ -39,10 +39,12 @@ if __name__ == '__main__':
     parser = get_argument_parser(
         desc='Build Band C apis for specific target platform')
     args = parser.parse_args()
+    platform = "android" if args.android else get_platform()
 
     build_cmd = make_cmd(
         build_only=True,
         debug=args.debug,
+        trace=args.trace,
         platform="android" if args.android else get_platform(),
         backend=args.backend,
         target=TARGET
@@ -51,4 +53,4 @@ if __name__ == '__main__':
         run_cmd_docker(build_cmd)
     else:
         run_cmd(build_cmd)
-    copy_lib(args.debug, get_platform(), args.android, args.docker)
+    copy_lib(args.debug, platform, args.android, args.docker)
