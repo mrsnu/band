@@ -1,8 +1,10 @@
+load("//band:band.bzl", "band_cc_library")
+
 package(
     default_visibility = ["//band:__subpackages__"],
 )
 
-cc_library(
+band_cc_library(
     name = "jni",
     hdrs = select({
         "//band:android": [],

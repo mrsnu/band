@@ -1,11 +1,11 @@
-load("//band:band.bzl", "band_cc_android_test")
+load("//band:band.bzl", "band_cc_library", "band_cc_android_test")
 
 exports_files(glob([
     "data/*.tflite",
     "data/*.json",
 ]))
 
-cc_library(
+band_cc_library(
     name = "test_util",
     hdrs = ["test_util.h"],
     deps = [
