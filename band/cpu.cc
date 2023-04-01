@@ -127,9 +127,13 @@ int GetCPUCount() {
   return count;
 }
 
-int GetLittleCPUCount() { return BandCPUMaskGetSet(CPUMaskFlags::Little).NumEnabled(); }
+int GetLittleCPUCount() {
+  return BandCPUMaskGetSet(CPUMaskFlags::Little).NumEnabled();
+}
 
-int GetBigCPUCount() { return BandCPUMaskGetSet(CPUMaskFlags::Big).NumEnabled(); }
+int GetBigCPUCount() {
+  return BandCPUMaskGetSet(CPUMaskFlags::Big).NumEnabled();
+}
 
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
 static int get_max_freq_khz(int cpuid) {
@@ -247,6 +251,8 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
     return absl::InternalError("Failed to set the CPU affinity.");
   }
 #endif
+  BAND_LOG_PROD(BAND_LOG_INFO, "Thread affinity control is off. Ignore mask %s",
+                GetName(thread_affinity_mask.GetCPUMaskFlag()).c_str());
   return absl::OkStatus();
 }
 

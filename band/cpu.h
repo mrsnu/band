@@ -27,7 +27,7 @@
 
 #include "band/common.h"
 
-#if defined __ANDROID__ || defined __linux__
+#if defined __ANDROID__
 #define _BAND_SUPPORT_THREAD_AFFINITY
 #endif
 
