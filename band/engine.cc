@@ -212,7 +212,7 @@ absl::Status Engine::RegisterModel(Model* model) {
 
         auto model_subgraph_key = GetLargestSubgraphKey(
             model_id, GetDeviceWorkerId(DeviceFlags::CPU));
-        Interface::IModelExecutor* primary_model_executor =
+        interface::IModelExecutor* primary_model_executor =
             GetModelExecutor(model_subgraph_key);
 
         for (int input_tensor : model_spec.input_tensors) {
@@ -291,7 +291,7 @@ Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
 std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
       GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
-  const Interface::IModelExecutor* model_executor =
+  const interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetOutputs(model_subgraph_key)
                         : std::vector<int>();
@@ -300,7 +300,7 @@ std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
 std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
       GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
-  const Interface::IModelExecutor* model_executor =
+  const interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetInputs(model_subgraph_key)
                         : std::vector<int>();

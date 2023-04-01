@@ -160,8 +160,8 @@ class Engine : public Context {
 
   /* helper functions */
   WorkerId GetDeviceWorkerId(DeviceFlags flag) const;
-  Interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
-  const Interface::IModelExecutor* GetModelExecutor(
+  interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
+  const interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;
 
   Engine() = delete;
