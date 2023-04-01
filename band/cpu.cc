@@ -82,8 +82,7 @@ CPUMaskFlags CpuSet::GetCPUMaskFlag() const {
       return flag;
     }
   }
-  // TODO(widiba03304): absl refactor
-  // return kNumCpuMasks;
+  return CPUMaskFlags::All;
 }
 
 static CpuSet g_thread_affinity_mask_all;

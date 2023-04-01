@@ -46,7 +46,7 @@ Quantization TfLiteTensorView::GetQuantization() const {
           tensor_->quantization.params};
 }
 
-void TfLiteTensorView::SetQuantization(Quantization quantization) {
+absl::Status TfLiteTensorView::SetQuantization(Quantization quantization) {
   tensor_->quantization.type = TfLiteQuantizationType(quantization.GetType());
   if (tensor_->quantization.type == kTfLiteAffineQuantization) {
     AffineQuantizationParams* input_q_params =

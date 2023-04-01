@@ -8,6 +8,11 @@ def band_copts():
             "/wd4018",
         ],
         "//conditions:default": [
+            "-Werror",
+            "-Wno-reorder",
+            "-Wno-comment",
+            "-Wno-unknown-pragmas",
+            "-Wno-unused-variable",
             "-Wno-sign-compare",
         ],
     }) + select({

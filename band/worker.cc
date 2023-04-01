@@ -117,14 +117,6 @@ int Worker::GetNumThreads() const { return num_threads_; }
 
 bool Worker::IsEnqueueReady() const { return IsAvailable(); }
 
-JobQueue& Worker::GetDeviceRequests() {
-  JobQueue queue;
-  BAND_NOT_IMPLEMENTED;
-  return queue;
-}
-
-void Worker::AllowWorkSteal() { BAND_NOT_IMPLEMENTED; }
-
 const ErrorReporter* Worker::GetErrorReporter() const {
   return context_->GetErrorReporter();
 }
@@ -215,7 +207,12 @@ void Worker::Work() {
         if (current_job->following_jobs.size() != 0) {
           context_->EnqueueBatch(current_job->following_jobs);
         }
-        context_->TryCopyOutputTensors(*current_job);
+        {
+          auto status = context_->TryCopyOutputTensors(*current_job);
+          if (!status.ok()) {
+            BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+          }
+        }
         current_job->status = JobStatus::Success;
       } else if (!status.ok()) {
         HandleDeviceError(*current_job);

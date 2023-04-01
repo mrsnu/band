@@ -1,3 +1,4 @@
+# Auto-detect the target platform except for Android.
 build --enable_platform_specific_config
 build:android --noenable_platform_specific_config
 
@@ -15,17 +16,21 @@ test:android --host_cxxopt=-std=c++14
 test:windows --cxxopt=/std:c++14
 test:windows --host_cxxopt=/std:c++14
 
-# Suppress C++ compiler warnings
-build:linux --copt=-w
-build:linux --host_copt=-w
-build:android --copt=-w
-build:android --host_copt=-w
-build:windows --copt=/W0
-test:linux --copt=-w
-test:linux --host_copt=-w
-test:android --copt=-w
-test:android --host_copt=-w
-test:windows --copt=/W0
+# Supress warnings from external libraries.
+build:linux --per_file_copt=external/.*@-w
+build:android --per_file_copt=external/.*@-w
+build:windows --per_file_copt=external/.*@/W0
+
+# build:linux --copt=-w
+# build:linux --host_copt=-w
+# build:android --copt=-w
+# build:android --host_copt=-w
+# build:windows --copt=/W0
+# test:linux --copt=-w
+# test:linux --host_copt=-w
+# test:android --copt=-w
+# test:android --host_copt=-w
+# test:windows --copt=/W0
 
 # Band build config for backend setting.
 build:tflite --define tflite=true

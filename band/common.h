@@ -173,9 +173,7 @@ struct RequestOption {
   int slo_us;
   float slo_scale;
 
-  static RequestOption GetDefaultOption() {
-    return {-1, true, -1, -1.f};
-  }
+  static RequestOption GetDefaultOption() { return {-1, true, -1, -1.f}; }
 };
 
 // data structure for identifying subgraphs within whole models
@@ -222,6 +220,16 @@ struct Job {
 
   std::string ToJson() const;
 
+  // Constant variables (Valid after invoke)
+  // TODO: better job life-cycle to change these to `const`
+  ModelId model_id;
+  int input_handle = -1;
+  int output_handle = -1;
+  JobId job_id = -1;
+  int sched_id = -1;
+  std::string model_fname;
+  bool require_callback = true;
+
   // For record (Valid after execution)
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
@@ -232,20 +240,10 @@ struct Job {
   int64_t expected_execution_time = 0;
   // Expected total latency
   int64_t expected_latency = 0;
-  int64_t slo_us = 0;
+  int64_t slo_us;
 
   // Target worker id (only for fixed worker request)
   WorkerId target_worker_id = -1;
-
-  // Constant variables (Valid after invoke)
-  // TODO: better job life-cycle to change these to `const`
-  ModelId model_id;
-  int input_handle = -1;
-  int output_handle = -1;
-  JobId job_id = -1;
-  int sched_id = -1;
-  std::string model_fname;
-  bool require_callback = true;
 
   // Current status for execution (Valid after planning)
   JobStatus status = JobStatus::Queued;

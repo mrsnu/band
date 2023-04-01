@@ -23,7 +23,7 @@ struct ITensor {
   virtual size_t GetBytes() const = 0;
   virtual const char* GetName() const = 0;
   virtual Quantization GetQuantization() const = 0;
-  virtual void SetQuantization(Quantization quantization) = 0;
+  virtual absl::Status SetQuantization(Quantization quantization) = 0;
   bool operator==(const ITensor& rhs) const;
   bool operator!=(const ITensor& rhs) const;
 

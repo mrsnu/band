@@ -13,7 +13,10 @@ Tensor::Tensor(ITensor* tensor_view)
             tensor_view->GetDims() + tensor_view->GetNumDims()),
       data_(new char[tensor_view->GetBytes()]),
       name_(tensor_view->GetName()) {
-  SetQuantization(tensor_view->GetQuantization());
+  auto status = SetQuantization(tensor_view->GetQuantization());
+  if (!status.ok()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s", status.message());
+  }
 }
 
 Tensor::~Tensor() { delete[] data_; }
@@ -40,7 +43,7 @@ const char* Tensor::GetName() const { return name_.c_str(); }
 
 Quantization Tensor::GetQuantization() const { return quantization_; }
 
-void Tensor::SetQuantization(Quantization quantization) {
+absl::Status Tensor::SetQuantization(Quantization quantization) {
   if (quantization_.GetType() == QuantizationType::AffineQuantization) {
     AffineQuantizationParams* input_q_params =
         reinterpret_cast<AffineQuantizationParams*>(quantization.GetParams());
@@ -51,12 +54,24 @@ void Tensor::SetQuantization(Quantization quantization) {
     q_params->scale = FloatArray(input_q_params->scale.size());
     q_params->zero_point = IntArray(input_q_params->zero_point.size());
 
-    q_params->scale.CopyFrom(input_q_params->scale.size(),
-                             input_q_params->scale.data());
-    q_params->zero_point.CopyFrom(input_q_params->zero_point.size(),
-                                  input_q_params->zero_point.data());
+    {
+      auto status = q_params->scale.CopyFrom(input_q_params->scale.size(),
+                                             input_q_params->scale.data());
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    {
+      auto status = q_params->zero_point.CopyFrom(input_q_params->zero_point.size(),
+                                                  input_q_params->zero_point.data());
+      if (!status.ok()) {
+        return status;
+      }
+    }
+                                    
     q_params->quantized_dimension = input_q_params->quantized_dimension;
   }
+  return absl::OkStatus();
 }
 
 }  // namespace band

@@ -395,10 +395,18 @@ void Benchmark::RunPeriodic() {
             }
 
             size_t id = model_context->profiler.BeginEvent();
-            engine_->RequestSync(model_context->model_ids,
-                                 model_context->request_options,
-                                 model_context->model_request_inputs,
-                                 model_context->model_request_outputs);
+            auto status = engine_->RequestSync(
+                model_context->model_ids, model_context->request_options,
+                model_context->model_request_inputs,
+                model_context->model_request_outputs);
+            if (!status.ok()) {
+              std::cout << "Failed to run model "
+                        << model_context->model
+                               .GetBackendModel(target_backend_)
+                               ->GetPath()
+                        << std::endl;
+              return;
+            }
             model_context->profiler.EndEvent(id);
 
             if (kill_app_) return;
@@ -455,7 +463,11 @@ void Benchmark::RunStream() {
     }
 
     size_t id = global_profiler_.BeginEvent();
-    engine_->RequestSync(model_ids, request_options, inputs, outputs);
+    auto status =
+        engine_->RequestSync(model_ids, request_options, inputs, outputs);
+    if (!status.ok()) {
+      std::cout << "Failed to run model: " << status.message() << std::endl;
+    }
     global_profiler_.EndEvent(id);
     int64_t current = Time::NowMicros();
     if (current - start >= run_duration_us) break;

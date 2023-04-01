@@ -62,7 +62,7 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
               worker_id));
         }
 
-        context_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) {
+        context_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
           if (subgraph_key.GetWorkerId() == worker_id &&
               subgraph_key.GetModelId() == model_id) {
             Profiler average_profiler;
@@ -71,10 +71,10 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
 
             for (int i = 0; i < profile_num_warmups_; i++) {
               if (!context_->Invoke(subgraph_key).ok()) {
-                return absl::InternalError(absl::StrFormat(
-                    "Profiler failed to invoke largest subgraph of "
-                    "model %d in worker %d",
-                    model_id, worker_id));
+                BAND_LOG_PROD(BAND_LOG_ERROR,
+                              "Profiler failed to invoke largest subgraph of "
+                              "model %d in worker %d",
+                              model_id, worker_id);
               }
             }
 
@@ -82,10 +82,10 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
               const size_t event_id = average_profiler.BeginEvent();
 
               if (!context_->Invoke(subgraph_key).ok()) {
-                return absl::InternalError(absl::StrFormat(
-                    "Profiler failed to invoke largest subgraph of "
-                    "model %d in worker %d",
-                    model_id, worker_id));
+                BAND_LOG_PROD(BAND_LOG_ERROR,
+                              "Profiler failed to invoke largest subgraph of "
+                              "model %d in worker %d",
+                              model_id, worker_id);
               }
               average_profiler.EndEvent(event_id);
             }
@@ -97,6 +97,7 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
             profile_database_[subgraph_key] = {latency, latency};
           }
         });
+        return absl::OkStatus();
       });
 
       profile_thread.join();

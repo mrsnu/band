@@ -67,8 +67,7 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   worker.End();
 }
 
-struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlags> {
-};
+struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlags> {};
 
 TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   CustomInvokeMockContext context([](const band::SubgraphKey& subgraph_key) {
@@ -82,8 +81,9 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
     if (target_set.NumEnabled() == 0) {
       return absl::OkStatus();
     } else {
-      return thread_cpu_set == BandCPUMaskGetSet(GetParam()) ? absl::OkStatus()
-                                                             : absl::InternalError("");
+      return thread_cpu_set == BandCPUMaskGetSet(GetParam())
+                 ? absl::OkStatus()
+                 : absl::InternalError("");
     }
   });
 
@@ -95,7 +95,8 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   // Explicitly assign worker to mock context
   context.worker = &worker;
   // Update worker thread affinity
-  worker.UpdateWorkerThread(BandCPUMaskGetSet(GetParam()), 3);
+  auto status = worker.UpdateWorkerThread(BandCPUMaskGetSet(GetParam()), 3);
+  EXPECT_TRUE(status.ok());
   worker.Start();
 
   LatencyEstimator latency_estimator(&context);
@@ -108,7 +109,9 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
-                         testing::Values(CPUMaskFlags::All, CPUMaskFlags::Little, CPUMaskFlags::Big,
+                         testing::Values(CPUMaskFlags::All,
+                                         CPUMaskFlags::Little,
+                                         CPUMaskFlags::Big,
                                          CPUMaskFlags::Primary));
 
 TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
@@ -220,8 +223,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
   }
 
   {
-    worker.UpdateWorkerThread(worker.GetWorkerThreadAffinity(),
-                              worker.GetNumThreads() + 1);
+    auto status = worker.UpdateWorkerThread(worker.GetWorkerThreadAffinity(),
+                                            worker.GetNumThreads() + 1);
+    EXPECT_TRUE(status.ok());
     // load on offline estimator
     LatencyEstimator latency_estimator(&context);
 

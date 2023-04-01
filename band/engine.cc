@@ -61,7 +61,12 @@ absl::Status Engine::RegisterModel(Model* model) {
     const auto status_or_result = analyzer.CreateSubgraphs();
     if (!status_or_result.ok()) {
       // TODO(BAND-49): unregister for specific backend
-      UnregisterModel(model);
+      auto status = UnregisterModel(model);
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR,
+                          "Failed to unregister model %d: %s", model_id,
+                          status.message());
+      }
       return absl::InternalError(absl::StrFormat(
           "Failed to create subgraphs for model %d with subgraph option %s",
           model_id,
@@ -92,7 +97,11 @@ absl::Status Engine::RegisterModel(Model* model) {
 
       if (!added_once) {
         // TODO(BAND-49): unregister for specific backend
-        UnregisterModel(model);
+        auto status = UnregisterModel(model);
+        if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to unregister model %d: %s",
+                        model_id, status.message());
+        }
         return absl::InternalError(
             "Failed to create model executor on all worker types");
       }
@@ -157,8 +166,6 @@ absl::Status Engine::RegisterModel(Model* model) {
 
       // Verify equality of all tensor pairs
       for (const SubgraphDef& lhs : subgraph_defs) {
-        const std::pair<ModelId, WorkerId> lhs_model_executor_key = {
-            model_id, lhs.worker_id};
         auto& lhs_model_executor = model_executors_[{model_id, lhs.worker_id}];
         const SubgraphKey lhs_key = {model_id, lhs.worker_id,
                                      lhs.unit_subgraph_indices};
@@ -168,8 +175,6 @@ absl::Status Engine::RegisterModel(Model* model) {
             lhs_model_executor->GetOutputs(lhs_key).end()};
 
         for (const SubgraphDef& rhs : subgraph_defs) {
-          const std::pair<ModelId, WorkerId> rhs_model_executor_key = {
-              model_id, rhs.worker_id};
           auto& rhs_model_executor =
               model_executors_[{model_id, rhs.worker_id}];
           const SubgraphKey rhs_key = {model_id, rhs.worker_id,
@@ -241,7 +246,10 @@ absl::Status Engine::RegisterModel(Model* model) {
     }
 
     if (planner_->NeedProfile()) {
-      latency_estimator_->ProfileModel(model_id);
+      auto status = latency_estimator_->ProfileModel(model_id);
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
 
@@ -313,11 +321,10 @@ DeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id)->GetDeviceFlag();
   }
-  // TODO(widiba03304): absl refactor
-  // else {
-  //   BAND_REPORT_ERROR(error_reporter_, "Invalid worker id %d", id);
-  //   return kNumDevices;
-  // }
+  BAND_LOG_PROD(
+      BAND_LOG_ERROR,
+      "Cannot find the device for the given worker: %d. Fallback to CPU", id);
+  return DeviceFlags::CPU;
 }
 
 absl::Status Engine::RequestSync(ModelId model_id, RequestOption options,

@@ -47,10 +47,6 @@ class Worker {
   virtual bool IsEnqueueReady() const;
   virtual bool HasJob() = 0;
 
-  // DeviceQueueWorker methods
-  virtual JobQueue& GetDeviceRequests();
-  virtual void AllowWorkSteal();
-
  protected:
   const ErrorReporter* GetErrorReporter() const;
   bool IsValid(Job& job);
@@ -93,8 +89,8 @@ class DeviceQueueWorker : public Worker {
   int64_t GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;
   bool HasJob() override;
-  JobQueue& GetDeviceRequests() override;
-  void AllowWorkSteal() override;
+  JobQueue& GetDeviceRequests();
+  void AllowWorkSteal();
 
  protected:
   Job* GetCurrentJob() override;

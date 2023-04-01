@@ -21,7 +21,7 @@ class TfLiteTensorView : public interface::ITensorView {
   size_t GetBytes() const override;
   const char* GetName() const override;
   Quantization GetQuantization() const override;
-  void SetQuantization(Quantization quantization) override;
+  absl::Status SetQuantization(Quantization quantization) override;
 
  private:
   TfLiteTensor* tensor_ = nullptr;

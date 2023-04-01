@@ -245,9 +245,12 @@ absl::Status Planner::Plan() {
     }
 
     if (need_cpu_update_) {
-      // TODO(widiba03304): current set affinity fails for the first call. Don't
-      // know why...
-      SetCPUThreadAffinity(cpu_set_);
+      {
+        auto status = SetCPUThreadAffinity(cpu_set_);
+        if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+        }
+      }
       need_cpu_update_ = false;
     }
     CopyToLocalQueues();
