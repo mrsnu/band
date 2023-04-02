@@ -27,11 +27,11 @@
 
 #include "band/common.h"
 
-#if defined __ANDROID__
+#ifdef __ANDROID__
 #define _BAND_SUPPORT_THREAD_AFFINITY
 #endif
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#ifdef _BAND_SUPPORT_THREAD_AFFINITY
 #include <sched.h>  // cpu_set_t
 #endif
 

@@ -57,11 +57,23 @@ absl::Status TfLiteTensorView::SetQuantization(Quantization quantization) {
         reinterpret_cast<TfLiteAffineQuantization*>(
             tensor_->quantization.params);
 
-    input_q_params->scale.CopyTo(input_q_params->scale.size(), q_params->scale->data);
-    input_q_params->zero_point.CopyTo(input_q_params->zero_point.size(),
-                                      q_params->zero_point->data);
+    {
+      auto status = input_q_params->scale.CopyTo(input_q_params->scale.size(),
+                                                 q_params->scale->data);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    {
+      auto status = input_q_params->zero_point.CopyTo(
+          input_q_params->zero_point.size(), q_params->zero_point->data);
+      if (!status.ok()) {
+        return status;
+      }
+    }
     q_params->quantized_dimension = input_q_params->quantized_dimension;
   }
+  return absl::OkStatus();
 }
 }  // namespace tfl
 }  // namespace band

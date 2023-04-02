@@ -21,10 +21,9 @@ namespace band {
 using namespace interface;
 TEST(TFLiteBackend, BackendInvoke) {
   tfl::TfLiteModel bin_model(0);
-  bin_model.FromPath("band/test/data/add.tflite");
-
+  EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
   tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
-  EXPECT_TRUE(model_executor.PrepareSubgraph(&bin_model).ok());
+  EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), absl::OkStatus());
   EXPECT_TRUE(
       model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey())
           .ok());
@@ -32,7 +31,7 @@ TEST(TFLiteBackend, BackendInvoke) {
 
 TEST(TFLiteBackend, ModelSpec) {
   tfl::TfLiteModel bin_model(0);
-  bin_model.FromPath("band/test/data/add.tflite");
+  EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
 
   tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU);
   ModelSpec model_spec =
@@ -59,11 +58,11 @@ TEST(TFLiteBackend, Registration) {
 TEST(TFLiteBackend, InterfaceInvoke) {
   auto backends = BackendFactory::GetAvailableBackends();
   IModel* bin_model = BackendFactory::CreateModel(BackendType::TfLite, 0);
-  bin_model->FromPath("band/test/data/add.tflite");
+  EXPECT_EQ(bin_model->FromPath("band/test/data/add.tflite"), absl::OkStatus());
 
   IModelExecutor* model_executor = BackendFactory::CreateModelExecutor(
       BackendType::TfLite, 0, 0, DeviceFlags::CPU);
-  EXPECT_TRUE(model_executor->PrepareSubgraph(bin_model).ok());
+  EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), absl::OkStatus());
 
   SubgraphKey key = model_executor->GetLargestSubgraphKey();
 
@@ -75,7 +74,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
              ->GetData(),
          input.data(), input.size() * sizeof(float));
 
-  EXPECT_TRUE(model_executor->ExecuteSubgraph(key).ok());
+  EXPECT_EQ(model_executor->ExecuteSubgraph(key), absl::OkStatus());
 
   auto output_tensor =
       model_executor->GetTensorView(key, model_executor->GetOutputs(key)[0]);
@@ -113,8 +112,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(
-      model.FromPath(BackendType::TfLite, "band/test/data/add.tflite"), absl::OkStatus());
+  EXPECT_TRUE(
+      model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -173,7 +172,7 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   Model model;
   EXPECT_TRUE(
       model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
-  EXPECT_TRUE(engine->RegisterModel(&model).ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   EXPECT_GE(
       engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
@@ -210,7 +209,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   Model model;
   EXPECT_TRUE(
       model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
-  EXPECT_TRUE(engine->RegisterModel(&model).ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
@@ -231,7 +230,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
           ->RequestAsync(model.GetId(), RequestOption::GetDefaultOption(),
                          {input_tensor})
           .value();
-  EXPECT_TRUE(engine->Wait(job_id, {output_tensor}).ok());
+  EXPECT_EQ(engine->Wait(job_id, {output_tensor}), absl::OkStatus());
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
   EXPECT_EQ(execution_count, 1);
@@ -278,7 +277,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   Model model;
   EXPECT_TRUE(
       model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
-  EXPECT_TRUE(engine->RegisterModel(&model).ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
@@ -347,7 +346,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   Model model;
   EXPECT_TRUE(
       model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
-  EXPECT_TRUE(engine->RegisterModel(&model).ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   int execution_count = 0;
   engine->SetOnEndRequest([&execution_count](int job_id, absl::Status status) {

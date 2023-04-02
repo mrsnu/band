@@ -67,10 +67,7 @@ absl::Status Engine::RegisterModel(Model* model) {
                           "Failed to unregister model %d: %s", model_id,
                           status.message());
       }
-      return absl::InternalError(absl::StrFormat(
-          "Failed to create subgraphs for model %d with subgraph option %s",
-          model_id,
-          GetName(subgraph_config_.subgraph_preparation_type).c_str()));
+      return status_or_result.status();
     }
 
     const auto result = analyzer.CreateSubgraphs().value();

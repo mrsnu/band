@@ -47,7 +47,7 @@ TEST(PlannerSuite, SingleQueue) {
   MockContext context;
   Planner planner(context);
   auto status = planner.AddScheduler(std::make_unique<MockScheduler>(context));
-  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(status, absl::OkStatus());
   // TODO: Add tests!
   EXPECT_TRUE(true);
 }
