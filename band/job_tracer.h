@@ -1,6 +1,7 @@
 #ifndef BAND_TRACER_H_
 #define BAND_TRACER_H_
 
+#include <mutex>
 #include <unordered_map>
 
 #include "band/common.h"
@@ -22,6 +23,7 @@ class JobTracer : protected chrome_tracer::ChromeTracer {
   std::string GetStreamName(size_t id) const;
   std::string GetJobName(const Job& job) const;
 
+  std::mutex mtx_;
   std::map<size_t, std::string> id_to_streams_;
   std::unordered_map<std::pair<size_t, BitMask>, int32_t, JobIdBitMaskHash>
       job_to_handle_;
