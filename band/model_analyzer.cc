@@ -11,7 +11,8 @@
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/worker.h"
-#include "model_analyzer.h"
+
+#include "absl/strings/str_format.h"
 
 namespace band {
 std::string SetToString(const std::set<int>& set) {

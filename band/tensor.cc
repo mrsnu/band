@@ -19,7 +19,12 @@ Tensor::Tensor(ITensor* tensor_view)
   }
 }
 
-Tensor::~Tensor() { delete[] data_; }
+Tensor::~Tensor() { 
+  delete[] data_;
+  if (quantization_.GetParams() != nullptr) {
+    free(quantization_.GetParams());
+  }
+}
 
 DataType Tensor::GetType() const { return type_; }
 
@@ -51,25 +56,20 @@ absl::Status Tensor::SetQuantization(Quantization quantization) {
     AffineQuantizationParams* q_params =
         reinterpret_cast<AffineQuantizationParams*>(
             malloc(sizeof(AffineQuantizationParams)));
-    q_params->scale = FloatArray(input_q_params->scale.size());
-    q_params->zero_point = IntArray(input_q_params->zero_point.size());
+    if (input_q_params == nullptr || q_params == nullptr) {
+      return absl::InternalError("Failed to allocate memory for quantization params");
+    }
 
-    {
-      auto status = q_params->scale.CopyFrom(input_q_params->scale.size(),
-                                             input_q_params->scale.data());
-      if (!status.ok()) {
-        return status;
-      }
-    }
-    {
-      auto status = q_params->zero_point.CopyFrom(input_q_params->zero_point.size(),
-                                                  input_q_params->zero_point.data());
-      if (!status.ok()) {
-        return status;
-      }
-    }
-                                    
+    q_params->scale = std::vector<float>(input_q_params->scale.size());
+    q_params->zero_point = std::vector<int>(input_q_params->zero_point.size());
+
+    q_params->scale.insert(q_params->scale.end(), input_q_params->scale.begin(),
+                            input_q_params->scale.end());
+    q_params->zero_point.insert(q_params->zero_point.end(),
+                                input_q_params->zero_point.begin(),
+                                input_q_params->zero_point.end());
     q_params->quantized_dimension = input_q_params->quantized_dimension;
+    quantization_.SetParams(q_params);
   }
   return absl::OkStatus();
 }

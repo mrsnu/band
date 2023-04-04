@@ -23,7 +23,7 @@ std::set<DeviceFlags> TfLiteUtil::GetAvailableDevices() const {
   static std::once_flag once_flag;
 
   std::call_once(once_flag, [&]() {
-    for (int flag = 0; flag < kNumDevices; flag++) {
+    for (size_t flag = 0; flag < GetSize<DeviceFlags>(); flag++) {
       const DeviceFlags device_flag = static_cast<DeviceFlags>(flag);
       if (TfLiteModelExecutor::GetDeviceDelegate(device_flag).ok()) {
         valid_devices.insert(device_flag);

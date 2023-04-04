@@ -18,8 +18,8 @@ bool ProfileConfigBuilder::IsValid(
   REPORT_IF_FALSE(ProfileConfigBuilder, num_warmups_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder, num_runs_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder,
-                  copy_computation_ratio_.size() == kNumDevices);
-  for (int i = 0; i < kNumDevices; i++) {
+                  copy_computation_ratio_.size() == GetSize<DeviceFlags>());
+  for (int i = 0; i < GetSize<DeviceFlags>(); i++) {
     REPORT_IF_FALSE(ProfileConfigBuilder, copy_computation_ratio_[i] >= 0);
   }
   REPORT_IF_FALSE(ProfileConfigBuilder,

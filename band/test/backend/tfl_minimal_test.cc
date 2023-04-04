@@ -291,7 +291,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
   std::cout << "Num workers " << engine->GetNumWorkers() << std::endl;
-  for (int worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
+  for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
     std::cout << "Run on worker (device: "
               << GetName(engine->GetWorkerDevice(worker_id)) << ")"
               << std::endl;
@@ -354,7 +354,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
     execution_count++;
   });
 
-  for (int worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
+  for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
     EXPECT_TRUE(
         engine->RequestSync(model.GetId(), {worker_id, true, -1, -1}).ok());
     EXPECT_EQ(execution_count, worker_id + 1);

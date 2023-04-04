@@ -17,7 +17,7 @@ class ProfileConfigBuilder {
                                       // variables
  public:
   ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(kNumDevices, 30000);
+    copy_computation_ratio_ = std::vector<int>(GetSize<DeviceFlags>(), 30000);
   }
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
@@ -96,11 +96,11 @@ class WorkerConfigBuilder {
 
  public:
   WorkerConfigBuilder() {
-    for (int i = 0; i < kNumDevices; i++) {
+    for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
       workers_.push_back(static_cast<DeviceFlags>(i));
     }
-    cpu_masks_ = std::vector<CPUMaskFlags>(kNumDevices, CPUMaskFlags::All);
-    num_threads_ = std::vector<int>(kNumDevices, 1);
+    cpu_masks_ = std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
+    num_threads_ = std::vector<int>(GetSize<DeviceFlags>(), 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
     workers_ = workers;

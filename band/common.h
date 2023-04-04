@@ -8,10 +8,7 @@
 #include <set>
 #include <string>
 #include <vector>
-
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/str_format.h"
+#include <type_traits>
 
 namespace band {
 typedef int WorkerId;
@@ -20,21 +17,39 @@ typedef int JobId;
 
 using BitMask = std::bitset<64>;
 
-static size_t kNumCpuMasks = 4;
-static size_t kNumSchedulerTypes = 7;
-static size_t kNumSubgraphPreparationType = 4;
-static size_t kNumDevices = 4;
+enum class SchedulerType : size_t;
+enum class SubgraphPreparationType : size_t;
+enum class DataType : size_t;
+enum class DeviceFlags : size_t;
 
 // Empty template.
 template <typename T>
-T FromString(std::string str) {}
+T FromString(std::string str) {
+  static_assert(std::is_same<T, SchedulerType>::value, "Unsupported");
+  static_assert(std::is_same<T, SubgraphPreparationType>::value, "Unsupported");
+  static_assert(std::is_same<T, DataType>::value, "Unsupported");
+  static_assert(std::is_same<T, DeviceFlags>::value, "Unsupported");
+}
+
+template <typename T>
+size_t GetSize() {
+  static_assert(std::is_same<T, SchedulerType>::value, "Unsupported");
+  static_assert(std::is_same<T, SubgraphPreparationType>::value, "Unsupported");
+  static_assert(std::is_same<T, DataType>::value, "Unsupported");
+  static_assert(std::is_same<T, DeviceFlags>::value, "Unsupported");
+  return -1;
+}
 
 enum class BackendType : size_t { TfLite = 0 };
 std::string GetName(BackendType backend_type);
 
+// NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class CPUMaskFlags : size_t { All = 0, Little = 1, Big = 2, Primary = 3 };
+template<>
+size_t GetSize<CPUMaskFlags>();
 std::string GetName(CPUMaskFlags cpu_mask_flags);
 
+// NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class SchedulerType : size_t {
   FixedWorker = 0,
   RoundRobin = 1,
@@ -44,20 +59,26 @@ enum class SchedulerType : size_t {
   LeastSlackTimeFirst = 5,
   HeterogeneousEarliestFinishTimeReserved = 6
 };
+template <>
+size_t GetSize<SchedulerType>();
 std::string GetName(SchedulerType scheduler_type);
 template <>
 SchedulerType FromString(std::string str);
 
+// NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class SubgraphPreparationType : size_t {
   NoFallbackSubgraph = 0,
   FallbackPerWorker = 1,
   UnitSubgraph = 2,
   MergeUnitSubgraph = 3
 };
+template <>
+size_t GetSize<SubgraphPreparationType>();
 std::string GetName(SubgraphPreparationType subgraph_preparation_type);
 template <>
 SubgraphPreparationType FromString(std::string str);
 
+// NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class DataType : size_t {
   NoType = 0,
   Float32 = 1,
@@ -72,16 +93,21 @@ enum class DataType : size_t {
   Float16 = 10,
   Float64 = 11
 };
+template <>
+size_t GetSize<DataType>();
 std::string GetName(DataType data_type);
 template <>
 DataType FromString(std::string str);
 
+// NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class DeviceFlags : size_t { CPU = 0, GPU = 1, DSP = 2, NPU = 3 };
+template <>
+size_t GetSize<DeviceFlags>();
 std::string GetName(DeviceFlags device_flags);
 template <>
 DeviceFlags FromString(std::string str);
 
-enum class WorkerType {
+enum class WorkerType : size_t{
   DeviceQueue = 1,
   GlobalQueue = 2,
 };
@@ -102,47 +128,9 @@ enum class QuantizationType {
 };
 std::string GetName(QuantizationType);
 
-template <typename T>
-class Array {
- public:
-  Array(size_t size) : size_(size) { data_ = new T[size]; }
-  ~Array() { delete data_; }
-
-  absl::StatusOr<T> Get(size_t index) {
-    if (index >= size_) {
-      return absl::InvalidArgumentError("Index out of bound.");
-    }
-    return data_[index];
-  }
-  absl::Status Set(size_t index, T value) {
-    if (index >= size_) {
-      return absl::InvalidArgumentError("Index out of bound.");
-    }
-    data_[index] = value;
-    return absl::OkStatus();
-  }
-  absl::Status CopyFrom(size_t size, T* data) {
-    memcpy(data_, data, sizeof(T) * size);
-    return absl::OkStatus();
-  }
-  absl::Status CopyTo(size_t size, T* data) {
-    memcpy(data, data_, sizeof(T) * size);
-    return absl::OkStatus();
-  }
-  size_t size() { return size_; }
-  T* data() { return data_; }
-
- private:
-  size_t size_;
-  T* data_;
-};
-
-using FloatArray = Array<float>;
-using IntArray = Array<int>;
-
 struct AffineQuantizationParams {
-  FloatArray scale;
-  IntArray zero_point;
+  std::vector<float> scale;
+  std::vector<int32_t> zero_point;
   int32_t quantized_dimension;
 };
 
@@ -152,6 +140,7 @@ class Quantization {
       : type_(type), params_(params) {}
   QuantizationType GetType() { return type_; }
   void* GetParams() { return params_; }
+  void SetParams(void* params) { params_ = params; }
 
  private:
   QuantizationType type_;

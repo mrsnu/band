@@ -9,6 +9,8 @@
 #include "band/common.h"
 #include "band/logger.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 namespace json {
 // load data from the given file

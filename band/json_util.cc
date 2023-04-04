@@ -6,6 +6,8 @@
 
 #include "band/logger.h"
 
+#include "absl/strings/str_format.h"
+
 namespace band {
 namespace json {
 

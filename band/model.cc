@@ -4,6 +4,8 @@
 #include "band/interface/model.h"
 #include "band/logger.h"
 
+#include "absl/strings/str_format.h"
+
 namespace band {
 
 ModelId Model::next_model_id_ = 0;

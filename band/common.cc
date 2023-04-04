@@ -4,6 +4,31 @@
 
 namespace band {
 
+template<>
+size_t GetSize<CPUMaskFlags>() {
+  return 4;
+}
+
+template<>
+size_t GetSize<SchedulerType>() {
+  return 7;
+}
+
+template<>
+size_t GetSize<SubgraphPreparationType>() {
+  return 4;
+}
+
+template<>
+size_t GetSize<DataType>() {
+  return 12;
+}
+
+template<>
+size_t GetSize<DeviceFlags>() {
+  return 4;
+}
+
 std::string GetName(BackendType backend_type) {
   switch (backend_type) {
     case BackendType::TfLite: {
@@ -63,7 +88,7 @@ std::string GetName(SchedulerType scheduler_type) {
 
 template <>
 SchedulerType FromString(std::string str) {
-  for (int i = 0; i < kNumSchedulerTypes; i++) {
+  for (int i = 0; i < GetSize<SchedulerType>(); i++) {
     SchedulerType type = static_cast<SchedulerType>(i);
     if (GetName(type) == str) {
       return type;
@@ -95,7 +120,7 @@ std::string GetName(SubgraphPreparationType subgraph_preparation_type) {
 
 template <>
 SubgraphPreparationType FromString(std::string str) {
-  for (int i = 0; i < kNumSubgraphPreparationType; i++) {
+  for (int i = 0; i < GetSize<SubgraphPreparationType>(); i++) {
     SubgraphPreparationType type = static_cast<SubgraphPreparationType>(i);
     if (GetName(type) == str) {
       return type;
@@ -172,7 +197,7 @@ std::string GetName(DeviceFlags device_flags) {
 
 template <>
 DeviceFlags FromString(std::string str) {
-  for (int i = 0; i < kNumDevices; i++) {
+  for (int i = 0; i < GetSize<DeviceFlags>(); i++) {
     DeviceFlags flag = static_cast<DeviceFlags>(i);
     if (GetName(flag) == str) {
       return flag;

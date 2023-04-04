@@ -9,6 +9,8 @@
 #include "band/interface/tensor_view.h"
 #include "band/tensor.h"
 
+#include "absl/strings/str_format.h"
+
 namespace band {
 TensorRingBuffer::TensorRingBuffer(
     ErrorReporter* error_reporter,

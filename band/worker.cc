@@ -4,7 +4,8 @@
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/time.h"
-#include "worker.h"
+
+#include "absl/strings/str_format.h"
 
 namespace band {
 Worker::Worker(Context* context, WorkerId worker_id, DeviceFlags device_flag)

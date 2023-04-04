@@ -7,6 +7,8 @@
 #include "band/profiler.h"
 #include "band/worker.h"
 
+#include "absl/strings/str_format.h"
+
 namespace band {
 LatencyEstimator::LatencyEstimator(Context* context) : context_(context) {}
 

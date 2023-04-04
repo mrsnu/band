@@ -25,14 +25,14 @@ const char* BandSchedulerGetName(BandSchedulerType type) {
 }
 
 BandSchedulerType BandSchedulerGetType(const char* name) {
-  for (int i = 0; i < kNumSchedulerTypes; i++) {
+  for (int i = 0; i < kBandNumSchedulerType; i++) {
     BandSchedulerType type = (BandSchedulerType)i;
     if (strncmp(BandSchedulerGetName(type), name,
                 strlen(BandSchedulerGetName(type))) == 0) {
       return type;
     }
   }
-  return kNumSchedulerTypes;
+  return kBandNumSchedulerType;
 }
 
 const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {

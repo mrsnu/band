@@ -16,7 +16,8 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
-#include "engine.h"
+
+#include "absl/strings/str_format.h"
 
 namespace band {
 

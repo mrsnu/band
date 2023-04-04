@@ -7,6 +7,8 @@
 
 #include "tensorflow/lite/c/common.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 namespace tfl {
 

@@ -18,6 +18,8 @@
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 
+#include "absl/strings/str_format.h"
+
 namespace band {
 namespace tfl {
 
@@ -114,7 +116,7 @@ absl::StatusOr<ModelSpec> TfLiteModelExecutor::InvestigateModelSpec(
   }
 
   // also check unsupported ops to fill in model_spec.unsupported_ops
-  for (int i = 0; i < kNumDevices; ++i) {
+  for (size_t i = 0; i < GetSize<DeviceFlags>(); ++i) {
     DeviceFlags device_flag = static_cast<DeviceFlags>(i);
     unsupported_ops[device_flag] = {};
 
@@ -303,7 +305,7 @@ DeviceFlags GetNNAPIDeviceFlag(std::string name) {
   // 2. Is 'hta' belongs to dsp or npu?
 
   // TODO(widiba03304): absl refactor
-  // return kNumDevices;
+  // return GetSize<DeviceFlags>();
 }
 
 absl::StatusOr<std::unique_ptr<tflite::Interpreter>>

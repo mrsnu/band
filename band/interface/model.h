@@ -7,6 +7,8 @@
 #include "band/common.h"
 #include "band/interface/backend.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 namespace interface {
 /*

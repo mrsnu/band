@@ -30,8 +30,8 @@ const int* TfLiteTensorView::GetDims() const { return tensor_->dims->data; }
 size_t TfLiteTensorView::GetNumDims() const { return tensor_->dims->size; }
 
 void TfLiteTensorView::SetDims(const std::vector<int>& dims) {
-  if (dims.size() == tensor_->dims->size) {
-    for (int i = 0; i < dims.size(); i++) {
+  if (dims.size() == static_cast<size_t>(tensor_->dims->size)) {
+    for (size_t i = 0; i < dims.size(); i++) {
       tensor_->dims->data[i] = dims[i];
     }
   }
@@ -48,20 +48,29 @@ Quantization TfLiteTensorView::GetQuantization() const {
 
 absl::Status TfLiteTensorView::SetQuantization(Quantization quantization) {
   tensor_->quantization.type = TfLiteQuantizationType(quantization.GetType());
-  if (tensor_->quantization.type == kTfLiteAffineQuantization) {
-    AffineQuantizationParams* input_q_params =
-        reinterpret_cast<AffineQuantizationParams*>(
-            tensor_->quantization.params);
+  switch (quantization.GetType()) {
+    case QuantizationType::AffineQuantization: {
+      AffineQuantizationParams* input_q_params =
+          reinterpret_cast<AffineQuantizationParams*>(
+              tensor_->quantization.params);
 
-    TfLiteAffineQuantization* q_params =
-        reinterpret_cast<TfLiteAffineQuantization*>(
-            tensor_->quantization.params);
+      TfLiteAffineQuantization* q_params =
+          reinterpret_cast<TfLiteAffineQuantization*>(
+              tensor_->quantization.params);
 
-    input_q_params->scale.CopyTo(input_q_params->scale.size(), q_params->scale->data);
-    input_q_params->zero_point.CopyTo(input_q_params->zero_point.size(),
-                                      q_params->zero_point->data);
-    q_params->quantized_dimension = input_q_params->quantized_dimension;
+      memcpy(q_params->scale->data, input_q_params->scale.data(),
+             input_q_params->scale.size() * sizeof(float));
+      memcpy(q_params->zero_point->data, input_q_params->zero_point.data(),
+             input_q_params->zero_point.size() * sizeof(int32_t));
+      q_params->quantized_dimension = input_q_params->quantized_dimension;
+    } break;
+    case QuantizationType::NoQuantization:
+      break;
+    default:
+      break;
   }
+  return absl::OkStatus();
 }
+
 }  // namespace tfl
 }  // namespace band

@@ -10,6 +10,9 @@
 #include "band/interface/model.h"
 #include "band/model_spec.h"
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+
 namespace band {
 namespace interface {
 /*

@@ -76,7 +76,7 @@ int CpuSet::NumEnabled() const { return GetCPUCount(); }
 #endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
 CPUMaskFlags CpuSet::GetCPUMaskFlag() const {
-  for (int i = 0; i < kNumCpuMasks; i++) {
+  for (int i = 0; i < GetSize<CPUMaskFlags>(); i++) {
     const CPUMaskFlags flag = static_cast<CPUMaskFlags>(i);
     if (BandCPUMaskGetSet(flag) == *this) {
       return flag;
@@ -349,7 +349,7 @@ const char* BandCPUMaskGetName(CPUMaskFlags flag) {
 }
 
 const CPUMaskFlags BandCPUMaskGetFlag(const char* name) {
-  for (int i = 0; i < kNumCpuMasks; i++) {
+  for (int i = 0; i < GetSize<CPUMaskFlags>(); i++) {
     const auto flag = static_cast<CPUMaskFlags>(i);
     if (strcmp(name, BandCPUMaskGetName(flag)) == 0) {
       return flag;

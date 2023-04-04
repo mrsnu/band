@@ -5,6 +5,8 @@
 
 #include "band/common.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 namespace interface {
 struct ITensor {

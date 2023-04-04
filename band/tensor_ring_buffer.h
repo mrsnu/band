@@ -10,6 +10,8 @@
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 
 class ErrorReporter;

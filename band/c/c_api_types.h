@@ -33,7 +33,7 @@ typedef enum BandSchedulerType {
   kBandHeterogeneousEarliestFinishTime = 4,
   kBandLeastSlackTimeFirst = 5,
   kBandHeterogeneousEarliestFinishTimeReserved = 6,
-  kNumSchedulerTypes = 7
+  kBandNumSchedulerType = 7
 } BandSchedulerType;
 
 typedef enum BandCPUMaskFlags {
