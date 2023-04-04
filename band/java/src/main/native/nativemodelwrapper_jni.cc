@@ -8,12 +8,12 @@ using band::jni::ConvertLongToModel;
 
 namespace {
 
-int ConvertBackendTypeToInt(Band::BackendType backend_type) {
-  return static_cast<int>(backend_type);
+int ConvertBackendTypeToInt(band::BackendType backend_type) {
+  return static_cast<size_t>(backend_type);
 }
 
-Band::BackendType ConvertJintToBackendType(jint backend_type) {
-  return static_cast<Band::BackendType>(backend_type);
+band::BackendType ConvertJintToBackendType(jint backend_type) {
+  return static_cast<band::BackendType>(backend_type);
 }
 
 }  // anonymous namespace
@@ -35,7 +35,11 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeModelWrapper_loadFromFile(
     jstring filePath) {
   Model* model = ConvertLongToModel(env, modelHandle);
   const char* nativeFilePath = env->GetStringUTFChars(filePath, nullptr);
-  model->FromPath(ConvertJintToBackendType(backendType), nativeFilePath);
+  auto status = model->FromPath(ConvertJintToBackendType(backendType), nativeFilePath);
+  if (!status.ok()) {
+    // TODO(widiba03304): refactor absl
+    return;
+  }
 }
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeModelWrapper_loadFromBuffer(
@@ -45,7 +49,11 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeModelWrapper_loadFromBuffer(
   const char* buf =
       static_cast<char*>(env->GetDirectBufferAddress(modelBuffer));
   size_t size = env->GetDirectBufferCapacity(modelBuffer);
-  model->FromBuffer(ConvertJintToBackendType(backendType), buf, size);
+  auto status = model->FromBuffer(ConvertJintToBackendType(backendType), buf, size);
+  if (!status.ok()) {
+    // TODO(widiba03304): refactor absl
+    return;
+  }
 }
 
 JNIEXPORT jintArray JNICALL

@@ -24,7 +24,6 @@ aar_with_jni(
     headers = [
         "//band/c:c_api.h",
         "//band/c:c_api_types.h",
-        "//band/c:common.h",
     ],
 )
 
