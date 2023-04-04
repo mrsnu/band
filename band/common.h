@@ -106,7 +106,7 @@ template <typename T>
 class Array {
  public:
   Array(size_t size) : size_(size) { data_ = new T[size]; }
-  ~Array() { delete data_; }
+  ~Array() { delete[] data_; }
 
   absl::StatusOr<T> Get(size_t index) {
     if (index >= size_) {
