@@ -16,7 +16,7 @@ TEST_P(AffinityMasksFixture, AffinitySetTest) {
 
   CpuSet current_set;
   // should always success
-  EXPECT_TRUE(GetCPUThreadAffinity(current_set).ok());
+  EXPECT_EQ(GetCPUThreadAffinity(current_set), absl::OkStatus());
   if (set_status.ok()) {
     EXPECT_EQ(target_set, current_set);
     EXPECT_EQ(target_set.NumEnabled(), current_set.NumEnabled());
@@ -27,7 +27,7 @@ TEST_P(AffinityMasksFixture, AffinitySetTest) {
 
 TEST(CPUTest, DisableTest) {
   CpuSet set = BandCPUMaskGetSet(CPUMaskFlags::All);
-  EXPECT_TRUE(SetCPUThreadAffinity(set).ok());
+  EXPECT_EQ(SetCPUThreadAffinity(set), absl::OkStatus());
 
   for (size_t i = 0; i < GetCPUCount(); i++) {
     set.Disable(i);
@@ -44,8 +44,8 @@ TEST(CPUTest, EnableTest) {
     set.Enable(i);
   }
 
-  EXPECT_TRUE(SetCPUThreadAffinity(set).ok());
-  EXPECT_TRUE(GetCPUThreadAffinity(set).ok());
+  EXPECT_EQ(SetCPUThreadAffinity(set), absl::OkStatus());
+  EXPECT_EQ(GetCPUThreadAffinity(set), absl::OkStatus());
   EXPECT_EQ(set, BandCPUMaskGetSet(CPUMaskFlags::All));
 }
 
@@ -57,8 +57,8 @@ INSTANTIATE_TEST_SUITE_P(AffinitySetTests, AffinityMasksFixture,
 TEST_P(AffinityMasksFixture, DummyTest) {
   CpuSet target_set = BandCPUMaskGetSet(GetParam());
   // always success, as this platform not supports thread affinity
-  EXPECT_TRUE(SetCPUThreadAffinity(target_set).ok());
-  EXPECT_TRUE(GetCPUThreadAffinity(target_set).ok());
+  EXPECT_EQ(SetCPUThreadAffinity(target_set), absl::OkStatus());
+  EXPECT_EQ(GetCPUThreadAffinity(target_set), absl::OkStatus());
 }
 
 INSTANTIATE_TEST_SUITE_P(DummyTest, AffinityMasksFixture,

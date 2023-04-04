@@ -249,9 +249,10 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
   if (ssaret != 0) {
     return absl::InternalError("Failed to set the CPU affinity.");
   }
-#endif
+#else
   BAND_LOG_PROD(BAND_LOG_INFO, "Thread affinity control is off. Ignore mask %s",
                 GetName(thread_affinity_mask.GetCPUMaskFlag()).c_str());
+#endif
   return absl::OkStatus();
 }
 

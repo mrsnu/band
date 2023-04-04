@@ -61,8 +61,8 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_TRUE(latency_estimator.Init(config).ok());
-  EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
+  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
 
   worker.End();
 }
@@ -96,14 +96,14 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   context.worker = &worker;
   // Update worker thread affinity
   auto status = worker.UpdateWorkerThread(BandCPUMaskGetSet(GetParam()), 3);
-  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(status, absl::OkStatus());
   worker.Start();
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_TRUE(latency_estimator.Init(config).ok());
+  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
   // This will be kBandError if affinity propagation fails
-  EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
+  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
 
   worker.End();
 }
@@ -132,9 +132,9 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
 
   LatencyEstimator latency_estimator(&context);
 
-  EXPECT_TRUE(latency_estimator.Init(config).ok());
+  EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
   EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-  EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
+  EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
   EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
 
   worker.End();
@@ -165,9 +165,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_TRUE(latency_estimator.Init(config).ok());
-    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
-    EXPECT_TRUE(latency_estimator.DumpProfile().ok());
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.DumpProfile(), absl::OkStatus());
   }
 
   {
@@ -181,9 +181,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_TRUE(latency_estimator.Init(config).ok());
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
   }
 
@@ -217,15 +217,15 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_TRUE(latency_estimator.Init(config).ok());
-    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
-    EXPECT_TRUE(latency_estimator.DumpProfile().ok());
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.DumpProfile(), absl::OkStatus());
   }
 
   {
     auto status = worker.UpdateWorkerThread(worker.GetWorkerThreadAffinity(),
                                             worker.GetNumThreads() + 1);
-    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(status, absl::OkStatus());
     // load on offline estimator
     LatencyEstimator latency_estimator(&context);
 
@@ -236,9 +236,9 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddProfileDataPath(profile_path)
                                .Build();
 
-    EXPECT_TRUE(latency_estimator.Init(config).ok());
+    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
-    EXPECT_TRUE(latency_estimator.ProfileModel(0).ok());
+    EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     // fails to load due to worker update
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
   }

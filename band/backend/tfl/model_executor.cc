@@ -304,8 +304,10 @@ DeviceFlags GetNNAPIDeviceFlag(std::string name) {
   // 1. Add additional NPU / TPU names
   // 2. Is 'hta' belongs to dsp or npu?
 
-  // TODO(widiba03304): absl refactor
-  // return GetSize<DeviceFlags>();
+  BAND_LOG_PROD(BAND_LOG_WARNING,
+                "Unknown NNAPI device name: %s. Fallback to CPU.",
+                name.c_str());
+  return DeviceFlags::CPU;
 }
 
 absl::StatusOr<std::unique_ptr<tflite::Interpreter>>
@@ -333,13 +335,15 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
   builder.AddDelegate(delegate);
 
   if (builder(&interpreter) != kTfLiteOk) {
-    return absl::InternalError(absl::StrFormat(
-        "Failed to build Tensorflow Lite interpreter for %s", GetName(device).c_str()));
+    return absl::InternalError(
+        absl::StrFormat("Failed to build Tensorflow Lite interpreter for %s",
+                        GetName(device).c_str()));
   }
 
   if (interpreter->AllocateTensors() != kTfLiteOk) {
-    return absl::InternalError(absl::StrFormat(
-        "Failed to build Tensorflow Lite interpreter for %s", GetName(device).c_str()));
+    return absl::InternalError(
+        absl::StrFormat("Failed to build Tensorflow Lite interpreter for %s",
+                        GetName(device).c_str()));
   }
   return std::move(interpreter);
 }
