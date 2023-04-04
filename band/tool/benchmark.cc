@@ -187,8 +187,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     std::vector<SchedulerType> schedulers;
     for (auto scheduler : root["schedulers"]) {
       if (!scheduler.isString()) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                      "Please check if given scheduler is valid");
+        BAND_LOG_ERROR("Please check if given scheduler is valid");
         return false;
       }
       schedulers.push_back(FromString<SchedulerType>(scheduler.asCString()));

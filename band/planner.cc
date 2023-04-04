@@ -2,6 +2,7 @@
 
 #include <fstream>
 
+#include "absl/strings/str_format.h"
 #include "band/context.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
@@ -13,16 +14,13 @@
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
 
-#include "absl/strings/str_format.h"
-
 namespace band {
 
 Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
   planner_thread_ = std::thread([this] {
     auto status = this->Plan();
     if (!status.ok()) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Planner thread failed: %s",
-                    status.message());
+      BAND_LOG_ERROR("Planner thread failed: %s", status.message());
     }
   });
 }
@@ -48,8 +46,7 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   bool allow_fallback = false;
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
-                      schedulers[i]);
+    BAND_LOG_INFO("[Planner] create scheduler %d.", schedulers[i]);
     if (schedulers[i] == SchedulerType::FixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(context_));
     } else if (schedulers[i] == SchedulerType::FixedWorkerGlobalQueue) {
@@ -249,7 +246,7 @@ absl::Status Planner::Plan() {
       {
         auto status = SetCPUThreadAffinity(cpu_set_);
         if (!status.ok()) {
-          BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+          BAND_LOG_WARNING("%s", status.message());
         }
       }
       need_cpu_update_ = false;

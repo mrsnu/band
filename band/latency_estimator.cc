@@ -1,13 +1,12 @@
 #include "band/latency_estimator.h"
 
+#include "absl/strings/str_format.h"
 #include "band/context.h"
 #include "band/json_util.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/profiler.h"
 #include "band/worker.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 LatencyEstimator::LatencyEstimator(Context* context) : context_(context) {}
@@ -38,10 +37,10 @@ void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
         profile_smoothing_factor_ * latency +
         (1 - profile_smoothing_factor_) * prev_latency;
   } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::UpdateLatency] The given SubgraphKey %s "
-                  "cannot be found.",
-                  key.ToString().c_str());
+    BAND_LOG_INFO(
+        "[LatencyEstimator::UpdateLatency] The given SubgraphKey %s "
+        "cannot be found.",
+        key.ToString().c_str());
   }
 }
 
@@ -73,10 +72,10 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
 
             for (int i = 0; i < profile_num_warmups_; i++) {
               if (!context_->Invoke(subgraph_key).ok()) {
-                BAND_LOG_PROD(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
+                BAND_LOG_ERROR(
+                    "Profiler failed to invoke largest subgraph of "
+                    "model %d in worker %d",
+                    model_id, worker_id);
               }
             }
 
@@ -84,10 +83,10 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
               const size_t event_id = average_profiler.BeginEvent();
 
               if (!context_->Invoke(subgraph_key).ok()) {
-                BAND_LOG_PROD(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
+                BAND_LOG_ERROR(
+                    "Profiler failed to invoke largest subgraph of "
+                    "model %d in worker %d",
+                    model_id, worker_id);
               }
               average_profiler.EndEvent(event_id);
             }
@@ -113,14 +112,14 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
       auto model_profile = JsonToModelProfile(model_name, model_id);
       if (model_profile.size() > 0) {
         profile_database_.insert(model_profile.begin(), model_profile.end());
-        BAND_LOG_PROD(
-            BAND_LOG_INFO,
+
+        BAND_LOG_INFO(
             "Successfully found %d profile entries for model (%s, %d).",
             model_profile.size(), model_name.c_str(), model_id);
       } else {
-        BAND_LOG_PROD(BAND_LOG_WARNING,
-                      "Failed to find profile entries for given model name %s.",
-                      model_name.c_str());
+        BAND_LOG_WARNING(
+            "Failed to find profile entries for given model name %s.",
+            model_name.c_str());
       }
     }
   }
@@ -132,8 +131,7 @@ int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
   if (it != profile_database_.end()) {
     return it->second.profiled;
   } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::GetProfiled] The given %s not found",
+    BAND_LOG_INFO("[LatencyEstimator::GetProfiled] The given %s not found",
                   key.ToString().c_str());
     return -1;
   }
@@ -144,8 +142,7 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
   if (it != profile_database_.end()) {
     return it->second.moving_averaged;
   } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::GetExpected] The given %s not found",
+    BAND_LOG_INFO("[LatencyEstimator::GetExpected] The given %s not found",
                   key.ToString().c_str());
     return -1;
   }
@@ -198,8 +195,7 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
 
   std::map<SubgraphKey, LatencyEstimator::Latency> id_profile;
   if (profile_database_json_["hash"].asUInt64() != GetProfileHash()) {
-    BAND_LOG_INTERNAL(
-        BAND_LOG_WARNING,
+    BAND_LOG_WARNING(
         "Current profile hash does not matches with a file (%s). Will ignore.",
         profile_data_path_.c_str());
     return id_profile;
@@ -260,10 +256,10 @@ Json::Value LatencyEstimator::ProfileToJson() {
       name_profile[model_spec->path][key.GetUnitIndicesString()]
                   [key.GetWorkerId()] = profiled_latency;
     } else {
-      BAND_LOG_INTERNAL(BAND_LOG_ERROR,
-                        "Cannot find model %d from "
-                        "model_configs. Will ignore.",
-                        model_id);
+      BAND_LOG_ERROR(
+          "Cannot find model %d from "
+          "model_configs. Will ignore.",
+          model_id);
       continue;
     }
   }

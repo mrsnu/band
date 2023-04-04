@@ -4,9 +4,8 @@
 
 #include <fstream>
 
-#include "band/logger.h"
-
 #include "absl/strings/str_format.h"
+#include "band/logger.h"
 
 namespace band {
 namespace json {
@@ -22,14 +21,13 @@ inline bool IsEmpty(std::ifstream& ifs) {
 
 Json::Value LoadFromFile(std::string file_path) {
   if (!FileExists(file_path)) {
-    BAND_LOG_PROD(BAND_LOG_WARNING, "There is no such file %s",
-                  file_path.c_str());
+    BAND_LOG_WARNING("There is no such file %s", file_path.c_str());
     return {};
   }
 
   std::ifstream in(file_path, std::ifstream::binary);
   if (IsEmpty(in)) {
-    BAND_LOG_PROD(BAND_LOG_WARNING, "File %s is empty", file_path.c_str());
+    BAND_LOG_WARNING("File %s is empty", file_path.c_str());
     return {};
   }
 
@@ -52,14 +50,13 @@ absl::Status WriteToFile(const Json::Value& json_object,
 
 bool Validate(const Json::Value& root, std::vector<std::string> required) {
   if (root.isNull()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Please validate the json config file");
+    BAND_LOG_ERROR("Please validate the json config file");
     return false;
   }
 
   for (auto key : required) {
     if (root[key].isNull()) {
-      BAND_LOG_PROD(
-          BAND_LOG_ERROR,
+      BAND_LOG_ERROR(
           "Please check if the argument %s is given in the config file",
           key.c_str());
       return false;

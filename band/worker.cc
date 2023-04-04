@@ -1,11 +1,10 @@
 #include "band/worker.h"
 
+#include "absl/strings/str_format.h"
 #include "band/common.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/time.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 Worker::Worker(Context* context, WorkerId worker_id, DeviceFlags device_flag)
@@ -13,8 +12,7 @@ Worker::Worker(Context* context, WorkerId worker_id, DeviceFlags device_flag)
 
 Worker::~Worker() {
   if (!kill_worker_) {
-    BAND_LOG_INTERNAL(
-        BAND_LOG_ERROR,
+    BAND_LOG_ERROR(
         "Worker should explicitly stop worker thread before destruction");
   }
 }
@@ -22,12 +20,10 @@ Worker::~Worker() {
 absl::Status Worker::Init(const WorkerConfig& config) {
   availability_check_interval_ms_ = config.availability_check_interval_ms;
 
-  BAND_LOG_INTERNAL(
-      BAND_LOG_INFO,
-      "Set affinity of worker (%d,%s) to %s cores for %d threads.", worker_id_,
-      GetName(device_flag_).c_str(),
-      BandCPUMaskGetName(config.cpu_masks[worker_id_]),
-      config.num_threads[worker_id_]);
+  BAND_LOG_INFO("Set affinity of worker (%d,%s) to %s cores for %d threads.",
+                worker_id_, GetName(device_flag_).c_str(),
+                BandCPUMaskGetName(config.cpu_masks[worker_id_]),
+                config.num_threads[worker_id_]);
 
   const CpuSet worker_mask_set =
       BandCPUMaskGetSet(config.cpu_masks[worker_id_]);
@@ -46,8 +42,7 @@ absl::Status Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
   CpuSet current_cpu_set;
   if (!GetCPUThreadAffinity(current_cpu_set).ok()) {
     // skip if not supports
-    BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                      "Set affinity failed - not supported by the platform");
+    BAND_LOG_WARNING("Set affinity failed - not supported by the platform");
     return absl::OkStatus();
   }
 
@@ -69,8 +64,7 @@ absl::Status Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
 void Worker::WaitUntilDeviceAvailable(SubgraphKey& subgraph) {
   while (true) {
     Time::SleepForMicros(1000 * availability_check_interval_ms_);
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Availability check at %d ms.",
-                      Time::NowMicros());
+    BAND_LOG_INFO("Availability check at %d ms.", Time::NowMicros());
     if (context_->Invoke(subgraph).ok()) {
       return;
     }
@@ -211,7 +205,7 @@ void Worker::Work() {
         {
           auto status = context_->TryCopyOutputTensors(*current_job);
           if (!status.ok()) {
-            BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+            BAND_LOG_WARNING("%s", status.message());
           }
         }
         current_job->status = JobStatus::Success;

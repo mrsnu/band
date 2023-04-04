@@ -1,23 +1,24 @@
 #ifndef BAND_LOGGER_H_
 #define BAND_LOGGER_H_
 
+#include <cstddef>
 #include <cstdarg>
 
 namespace band {
-enum LogSeverity {
-  BAND_LOG_INFO = 0,
-  BAND_LOG_WARNING = 1,
-  BAND_LOG_ERROR = 2,
+
+enum class LogSeverity : size_t {
+  DEBUG = 0,
+  INTERNAL = 1,
+  INFO = 2,
+  WARNING = 3,
+  ERROR = 4,
 };
 
 class Logger {
  public:
-  static void SetVerbosity(int severity);
+  static void SetVerbosity(LogSeverity severity);
 
-  // Logging hook that takes variadic args.
   static void Log(LogSeverity severity, const char* format, ...);
-
-  // Logging hook that takes a formatted va_list.
   static void LogFormatted(LogSeverity severity, const char* format,
                            va_list args);
 
@@ -26,38 +27,38 @@ class Logger {
   static LogSeverity verbosity;
   static const char* GetSeverityName(LogSeverity severity);
 };
+
 }  // namespace band
 
-// Convenience macro for basic internal logging in production builds.
-// Note: This should never be used for debug-type logs, as it will *not* be
-// stripped in release optimized builds. In general, prefer the error reporting
-// APIs for developer-facing errors, and only use this for diagnostic output
-// that should always be logged in user builds.
-#define BAND_LOG_PROD(severity, format, ...) \
+#define BAND_LOG_IMPL(severity, format, ...) \
   band::Logger::Log(severity, format, ##__VA_ARGS__);
 
-// Convenience macro for logging a statement *once* for a given process lifetime
-// in production builds.
-#define BAND_LOG_PROD_ONCE(severity, format, ...)    \
+#ifndef NDEBUG
+#define BAND_LOG_DEBUG(format, ...) \
+  BAND_LOG_IMPL(band::LogSeverity::DEBUG, format, ##__VA_ARGS__);
+#else
+#define BAND_LOG_DEBUG(format, ...) ;
+#endif  // NDEBUG
+
+#define BAND_LOG_INTERNAL(format, ...) \
+  BAND_LOG_IMPL(band::LogSeverity::INTERNAL, format, ##__VA_ARGS__);
+
+#define BAND_LOG_INFO(format, ...) \
+  BAND_LOG_IMPL(band::LogSeverity::INFO, format, ##__VA_ARGS__);
+
+#define BAND_LOG_WARNING(format, ...) \
+  BAND_LOG_IMPL(band::LogSeverity::WARNING, format, ##__VA_ARGS__);
+
+#define BAND_LOG_ERROR(format, ...) \
+  BAND_LOG_IMPL(band::LogSeverity::ERROR, format, ##__VA_ARGS__);
+
+#define BAND_LOG_ONCE(severity, format, ...)    \
   do {                                               \
     static const bool s_logged = [&] {               \
-      BAND_LOG_PROD(severity, format, ##__VA_ARGS__) \
+      BAND_LOG_IMPL(severity, format, ##__VA_ARGS__) \
       return true;                                   \
     }();                                             \
     (void)s_logged;                                  \
   } while (false);
 
-#ifndef NDEBUG
-// In debug builds, always log.
-#define BAND_LOG_INTERNAL BAND_LOG_PROD
-#define BAND_LOG_ONCE BAND_LOG_PROD_ONCE
-#else
-// In prod builds, never log, but ensure the code is well-formed and compiles.
-#define BAND_LOG_INTERNAL(severity, format, ...)    \
-  while (false) {                                   \
-    BAND_LOG_PROD(severity, format, ##__VA_ARGS__); \
-  }
-#define BAND_LOG_ONCE(severity, format, ...) ({ ; })
-#endif
-
-#endif
+#endif  // BAND_LOGGER_H_

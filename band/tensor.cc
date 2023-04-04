@@ -15,7 +15,7 @@ Tensor::Tensor(ITensor* tensor_view)
       name_(tensor_view->GetName()) {
   auto status = SetQuantization(tensor_view->GetQuantization());
   if (!status.ok()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s", status.message());
+    BAND_LOG_ERROR("Failed to set quantization: %s", status.message());
   }
 }
 

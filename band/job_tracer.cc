@@ -7,8 +7,7 @@ JobTracer::JobTracer() : chrome_tracer::ChromeTracer("Band") {}
 
 std::string JobTracer::GetStreamName(size_t id) const {
   if (id_to_streams_.find(id) == id_to_streams_.end()) {
-    band::Logger::Log(BAND_LOG_INFO, "The given worker id does not exists. %zd",
-                      id);
+    BAND_LOG_INFO("The given worker id does not exists. %zd", id);
     return "";
   }
   return id_to_streams_.at(id);
@@ -40,10 +39,8 @@ void JobTracer::EndSubgraph(const Job& job) {
     EndEvent(GetStreamName(job.subgraph_key.GetWorkerId()),
              job_to_handle_.at(key), job.ToJson());
   } else {
-    band::Logger::Log(BAND_LOG_INFO,
-                      "The given job does not exists. (id:%d, unit_indices:%s)",
-                      job.job_id,
-                      job.subgraph_key.GetUnitIndicesString().c_str());
+    BAND_LOG_INFO("The given job does not exists. (id:%d, unit_indices:%s)",
+                  job.job_id, job.subgraph_key.GetUnitIndicesString().c_str());
   }
 }
 
@@ -55,8 +52,7 @@ void JobTracer::AddWorker(DeviceFlags device_flag, size_t id) {
     id_to_streams_[id] = stream_name;
     chrome_tracer::ChromeTracer::AddStream(stream_name);
   } else {
-    band::Logger::Log(BAND_LOG_INFO, "The given worker id already exists. %zd",
-                      id);
+    BAND_LOG_INFO("The given worker id already exists. %zd", id);
   }
 }
 

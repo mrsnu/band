@@ -4,27 +4,13 @@
 #include <cstdarg>
 #include <cstdio>
 
-#ifdef __ANDROID__
-#include <android/log.h>
-
-int LogSeverityToAndroid(band::LogSeverity severity) {
-  switch (severity) {
-    case band::BAND_LOG_INFO:
-      return ANDROID_LOG_INFO;
-      break;
-    case band::BAND_LOG_WARNING:
-      return ANDROID_LOG_WARN;
-      break;
-    case band::BAND_LOG_ERROR:
-      return ANDROID_LOG_ERROR;
-      break;
-  }
-  return -1;
-}
-#endif
-
 namespace band {
-LogSeverity Logger::verbosity = BAND_LOG_INFO;
+
+#ifndef NDEBUG
+LogSeverity Logger::verbosity = LogSeverity::INFO;
+#else
+LogSeverity Logger::verbosity = LogSeverity::DEBUG;
+#endif  // NDEBUG
 
 void Logger::Log(LogSeverity severity, const char* format, ...) {
   if (verbosity <= severity) {
@@ -37,32 +23,34 @@ void Logger::Log(LogSeverity severity, const char* format, ...) {
 
 void Logger::LogFormatted(LogSeverity severity, const char* format,
                           va_list args) {
-  fprintf(stderr, "%s: ", GetSeverityName(severity));
+  fprintf(stdout, "[Band][%s]: ", GetSeverityName(severity));
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
-  vfprintf(stderr, format, args);
+  vfprintf(stdout, format, args);
 #pragma clang diagnostic pop
-  fputc('\n', stderr);
-
-#ifdef __ANDROID__
-  __android_log_vprint(LogSeverityToAndroid(severity), "BAND", format, args);
-#endif
+  fputc('\n', stdout);
 }
 
-void Logger::SetVerbosity(int severity) {
-  verbosity = static_cast<LogSeverity>(severity);
+void Logger::SetVerbosity(LogSeverity severity) {
+  verbosity = severity;
 }
 
 const char* Logger::GetSeverityName(LogSeverity severity) {
   switch (severity) {
-    case BAND_LOG_INFO:
+    case LogSeverity::DEBUG:
+      return "DEBUG";
+    case LogSeverity::INTERNAL:
+      return "INTERNAL";
+    case LogSeverity::INFO:
       return "INFO";
-    case BAND_LOG_WARNING:
+    case LogSeverity::WARNING:
       return "WARNING";
-    case BAND_LOG_ERROR:
+    case LogSeverity::ERROR:
       return "ERROR";
+    default:
+      return "UNKNOWN";
   }
-  return "<Unknown severity>";
+  return "UNKNOWN";
 }
 
 }  // namespace band

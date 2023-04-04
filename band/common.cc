@@ -4,27 +4,27 @@
 
 namespace band {
 
-template<>
+template <>
 size_t GetSize<CPUMaskFlags>() {
   return 4;
 }
 
-template<>
+template <>
 size_t GetSize<SchedulerType>() {
   return 7;
 }
 
-template<>
+template <>
 size_t GetSize<SubgraphPreparationType>() {
   return 4;
 }
 
-template<>
+template <>
 size_t GetSize<DataType>() {
   return 12;
 }
 
-template<>
+template <>
 size_t GetSize<DeviceFlags>() {
   return 4;
 }
@@ -35,7 +35,7 @@ std::string GetName(BackendType backend_type) {
       return "Tensorflow Lite";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown backend type: %d", backend_type);
+  BAND_LOG_ERROR("Unknown backend type: %d", backend_type);
   return "Unknown backend type";
 }
 
@@ -54,7 +54,7 @@ std::string GetName(CPUMaskFlags cpu_mask_flags) {
       return "PRIMARY";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown CPU mask flag: %d", cpu_mask_flags);
+  BAND_LOG_ERROR("Unknown CPU mask flag: %d", cpu_mask_flags);
   return "Unknown CPU mask flag";
 }
 
@@ -82,7 +82,7 @@ std::string GetName(SchedulerType scheduler_type) {
       return "heterogeneous_earliest_finish_time_reserved";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown scheduler type: %d", scheduler_type);
+  BAND_LOG_ERROR("Unknown scheduler type: %d", scheduler_type);
   return "Unknown scheduler type";
 }
 
@@ -94,7 +94,8 @@ SchedulerType FromString(std::string str) {
       return type;
     }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown scheduler type: %s. Fallback to fixed worker", str.c_str());
+  BAND_LOG_ERROR("Unknown scheduler type: %s. Fallback to fixed worker",
+                 str.c_str());
   return SchedulerType::FixedWorker;
 }
 
@@ -113,8 +114,8 @@ std::string GetName(SubgraphPreparationType subgraph_preparation_type) {
       return "merge_unit_subgraph";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown subgraph preparation type: %d",
-                subgraph_preparation_type);
+  BAND_LOG_ERROR("Unknown subgraph preparation type: %d",
+                 subgraph_preparation_type);
   return "Unknown subgraph preparation type";
 }
 
@@ -126,8 +127,7 @@ SubgraphPreparationType FromString(std::string str) {
       return type;
     }
   }
-  BAND_LOG_PROD(
-      BAND_LOG_ERROR,
+  BAND_LOG_ERROR(
       "Unknown subgraph preparation type: %s. Fallback to no_fallback_subgraph",
       str.c_str());
   return SubgraphPreparationType::NoFallbackSubgraph;
@@ -172,7 +172,7 @@ std::string GetName(DataType data_type) {
       return "FLOAT64";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown data type: %d", data_type);
+  BAND_LOG_ERROR("Unknown data type: %d", data_type);
   return "Unknown data type";
 }
 
@@ -191,7 +191,7 @@ std::string GetName(DeviceFlags device_flags) {
       return "NPU";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown device flag: %d", device_flags);
+  BAND_LOG_ERROR("Unknown device flag: %d", device_flags);
   return "Unknown device flag";
 }
 
@@ -203,8 +203,7 @@ DeviceFlags FromString(std::string str) {
       return flag;
     }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown device flag: %s. Fallback to CPU",
-                str.c_str());
+  BAND_LOG_ERROR("Unknown device flag: %s. Fallback to CPU", str.c_str());
   return DeviceFlags::CPU;
 }
 
@@ -229,7 +228,7 @@ std::string GetName(JobStatus job_status) {
       return "InvokeFailure";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", job_status);
+  BAND_LOG_ERROR("Unknown job status: %d", job_status);
   return "Unknown job status";
 }
 
@@ -254,7 +253,7 @@ std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
       return os << "InvokeFailure";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", status);
+  BAND_LOG_ERROR("Unknown job status: %d", status);
   return os;
 }
 

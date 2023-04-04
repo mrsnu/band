@@ -15,10 +15,9 @@
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/nnapi/nnapi_util.h"
 #endif  // __ANDROID__
+#include "absl/strings/str_format.h"
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 namespace tfl {
@@ -304,9 +303,8 @@ DeviceFlags GetNNAPIDeviceFlag(std::string name) {
   // 1. Add additional NPU / TPU names
   // 2. Is 'hta' belongs to dsp or npu?
 
-  BAND_LOG_PROD(BAND_LOG_WARNING,
-                "Unknown NNAPI device name: %s. Fallback to CPU.",
-                name.c_str());
+  BAND_LOG_WARNING("Unknown NNAPI device name: %s. Fallback to CPU.",
+                   name.c_str());
   return DeviceFlags::CPU;
 }
 

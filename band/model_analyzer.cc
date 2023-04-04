@@ -4,6 +4,7 @@
 #include <iterator>
 #include <memory>
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/context.h"
 #include "band/interface/model.h"
@@ -11,8 +12,6 @@
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/worker.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 std::string SetToString(const std::set<int>& set) {
@@ -169,16 +168,17 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
                                           DeviceFlags::CPU));
   // TODO(widiba03304): Report error when it fails.
   model_spec_ = std::make_shared<ModelSpec>(
-      interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)).value());
+      interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type))
+          .value());
 
   for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
+    BAND_LOG_INFO("Unsupported ops %s (%s)",
                   SetToString(device_unsupported_ops.second).c_str(),
                   GetName(device_unsupported_ops.first).c_str());
   }
 
   for (auto device : model_spec_->unavailable_devices) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", GetName(device).c_str());
+    BAND_LOG_INFO("Unsupported devices %s", GetName(device).c_str());
   }
 }
 
@@ -261,8 +261,7 @@ ModelAnalyzer::CreateSubgraphs() {
           : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
                                                 subgraph_defs);
 
-  BAND_LOG_PROD(BAND_LOG_INFO,
-                "Create %d subgraphs for model %s with mode %s %s",
+  BAND_LOG_INFO("Create %d subgraphs for model %s with mode %s %s",
                 subgraph_defs.size(), model_spec_->path.c_str(),
                 GetName(subgraph_config_.subgraph_preparation_type).c_str(),
                 subgraph_summary.c_str());
@@ -472,8 +471,7 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
     }
   }
 
-  BAND_LOG_PROD(BAND_LOG_INFO,
-                "Create %d unit subgraphs, planner requires subgraph %d",
+  BAND_LOG_INFO("Create %d unit subgraphs, planner requires subgraph %d",
                 unique_unit_subgraph_indices.size(), NeedFallbackSubgraph());
 
   return absl::OkStatus();
@@ -686,7 +684,7 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
     }
   }
 
-  BAND_LOG_PROD(BAND_LOG_INFO, "Create %d merged subgraphs",
+  BAND_LOG_INFO("Create %d merged subgraphs",
                 result_subgraphs.size() - num_subgraphs_before_merge);
 
   return result_subgraphs;

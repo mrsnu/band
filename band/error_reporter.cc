@@ -26,7 +26,7 @@ int ErrorReporter::ReportError(void*, const char* format, ...) const {
 }
 
 int StderrReporter::Report(const char* format, va_list args) const {
-  Logger::LogFormatted(LogSeverity::BAND_LOG_ERROR, format, args);
+  BAND_LOG_ERROR(format, args);
   return 0;
 }
 

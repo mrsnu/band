@@ -8,7 +8,7 @@ int main(int argc, const char** argv) {
   if (benchmark.Initialize(argc, argv).ok()) {
     benchmark.Run();
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Benchmark failed to initialize");
+    BAND_LOG_ERROR("Benchmark failed to initialize");
     return -1;
   }
   return 0;
