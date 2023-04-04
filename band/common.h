@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <type_traits>
+#include <cassert>
 
 namespace band {
 typedef int WorkerId;
@@ -25,18 +26,12 @@ enum class DeviceFlags : size_t;
 // Empty template.
 template <typename T>
 T FromString(std::string str) {
-  static_assert(std::is_same<T, SchedulerType>::value, "Unsupported");
-  static_assert(std::is_same<T, SubgraphPreparationType>::value, "Unsupported");
-  static_assert(std::is_same<T, DataType>::value, "Unsupported");
-  static_assert(std::is_same<T, DeviceFlags>::value, "Unsupported");
+  assert(false && "FromString not implemented for this type.");
 }
 
 template <typename T>
 size_t GetSize() {
-  static_assert(std::is_same<T, SchedulerType>::value, "Unsupported");
-  static_assert(std::is_same<T, SubgraphPreparationType>::value, "Unsupported");
-  static_assert(std::is_same<T, DataType>::value, "Unsupported");
-  static_assert(std::is_same<T, DeviceFlags>::value, "Unsupported");
+  assert(false && "GetSize not implemented for this type.");
   return -1;
 }
 
