@@ -45,7 +45,9 @@ def run_cmd(cmd):
 def copy(src, dst):
     subprocess.call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
     # append filename to dst directory
+
     dst = canon_path(os.path.join(dst, os.path.basename(src)))
+
     if os.path.isdir(src):
         shutil.copytree(src, dst)
     else:

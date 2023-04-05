@@ -9,11 +9,13 @@ namespace band {
 namespace tfl {
 TfLiteTensorView::TfLiteTensorView(TfLiteTensor* tensor) : tensor_(tensor) {}
 
-BandBackendType TfLiteTensorView::GetBackendType() const { return kBandTfLite; }
+BackendType TfLiteTensorView::GetBackendType() const {
+  return BackendType::TfLite;
+}
 
-BandType TfLiteTensorView::GetType() const { return BandType(tensor_->type); }
+DataType TfLiteTensorView::GetType() const { return DataType(tensor_->type); }
 
-void TfLiteTensorView::SetType(BandType type) {
+void TfLiteTensorView::SetType(DataType type) {
   tensor_->type = TfLiteType(type);
 }
 
@@ -28,8 +30,8 @@ const int* TfLiteTensorView::GetDims() const { return tensor_->dims->data; }
 size_t TfLiteTensorView::GetNumDims() const { return tensor_->dims->size; }
 
 void TfLiteTensorView::SetDims(const std::vector<int>& dims) {
-  if (dims.size() == tensor_->dims->size) {
-    for (int i = 0; i < dims.size(); i++) {
+  if (dims.size() == static_cast<size_t>(tensor_->dims->size)) {
+    for (size_t i = 0; i < dims.size(); i++) {
       tensor_->dims->data[i] = dims[i];
     }
   }
@@ -39,31 +41,36 @@ size_t TfLiteTensorView::GetBytes() const { return tensor_->bytes; }
 
 const char* TfLiteTensorView::GetName() const { return tensor_->name; }
 
-BandQuantization TfLiteTensorView::GetQuantization() const {
-  BandQuantization q;
-  q.params = tensor_->quantization.params;
-  q.type = BandQuantizationType(tensor_->quantization.type);
-  return q;
+Quantization TfLiteTensorView::GetQuantization() const {
+  return {QuantizationType(tensor_->quantization.type),
+          tensor_->quantization.params};
 }
 
-void TfLiteTensorView::SetQuantization(BandQuantization quantization) {
-  tensor_->quantization.type = TfLiteQuantizationType(quantization.type);
-  if (tensor_->quantization.type == kTfLiteAffineQuantization) {
-    BandAffineQuantization* input_q_params =
-        (BandAffineQuantization*)(tensor_->quantization.params);
+absl::Status TfLiteTensorView::SetQuantization(Quantization quantization) {
+  tensor_->quantization.type = TfLiteQuantizationType(quantization.GetType());
+  switch (quantization.GetType()) {
+    case QuantizationType::AffineQuantization: {
+      AffineQuantizationParams* input_q_params =
+          reinterpret_cast<AffineQuantizationParams*>(
+              tensor_->quantization.params);
 
-    TfLiteAffineQuantization* q_params =
-        (TfLiteAffineQuantization*)(tensor_->quantization.params);
+      TfLiteAffineQuantization* q_params =
+          reinterpret_cast<TfLiteAffineQuantization*>(
+              tensor_->quantization.params);
 
-    q_params->quantized_dimension = input_q_params->quantized_dimension;
-
-    memcpy(
-        q_params->scale, input_q_params->scale->data,
-        sizeof(input_q_params->scale->data[0]) * input_q_params->scale->size);
-    memcpy(q_params->zero_point, input_q_params->zero_point->data,
-           sizeof(input_q_params->zero_point->data[0]) *
-               input_q_params->zero_point->size);
+      memcpy(q_params->scale->data, input_q_params->scale.data(),
+             input_q_params->scale.size() * sizeof(float));
+      memcpy(q_params->zero_point->data, input_q_params->zero_point.data(),
+             input_q_params->zero_point.size() * sizeof(int32_t));
+      q_params->quantized_dimension = input_q_params->quantized_dimension;
+    } break;
+    case QuantizationType::NoQuantization:
+      break;
+    default:
+      break;
   }
+  return absl::OkStatus();
 }
+
 }  // namespace tfl
 }  // namespace band

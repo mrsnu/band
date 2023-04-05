@@ -10,9 +10,9 @@ class TfLiteTensorView : public interface::ITensorView {
  public:
   TfLiteTensorView(TfLiteTensor* tensor);
 
-  BandBackendType GetBackendType() const override;
-  BandType GetType() const override;
-  void SetType(BandType type) override;
+  BackendType GetBackendType() const override;
+  DataType GetType() const override;
+  void SetType(DataType type) override;
   const char* GetData() const override;
   char* GetData() override;
   const int* GetDims() const override;
@@ -20,8 +20,8 @@ class TfLiteTensorView : public interface::ITensorView {
   void SetDims(const std::vector<int>& dims) override;
   size_t GetBytes() const override;
   const char* GetName() const override;
-  BandQuantization GetQuantization() const override;
-  void SetQuantization(BandQuantization quantization) override;
+  Quantization GetQuantization() const override;
+  absl::Status SetQuantization(Quantization quantization) override;
 
  private:
   TfLiteTensor* tensor_ = nullptr;

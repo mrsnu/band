@@ -13,7 +13,7 @@ class JobTracer : protected chrome_tracer::ChromeTracer {
   static JobTracer& Get();
   void BeginSubgraph(const Job& job);
   void EndSubgraph(const Job& job);
-  void AddWorker(BandDeviceFlags device_flag, size_t id);
+  void AddWorker(DeviceFlags device_flag, size_t id);
   void Dump(std::string path) const;
 
  private:

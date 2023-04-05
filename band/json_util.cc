@@ -6,6 +6,8 @@
 
 #include "band/logger.h"
 
+#include "absl/strings/str_format.h"
+
 namespace band {
 namespace json {
 
@@ -36,16 +38,16 @@ Json::Value LoadFromFile(std::string file_path) {
   return json_object;
 }
 
-BandStatus WriteToFile(const Json::Value& json_object, std::string file_path) {
+absl::Status WriteToFile(const Json::Value& json_object,
+                         std::string file_path) {
   std::ofstream out_file(file_path, std::ios::out);
   if (!out_file.is_open()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Cannot save profiled results to  %s",
-                  file_path.c_str());
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "Cannot save profiled results to  %s", file_path.c_str()));
   }
 
   out_file << json_object;
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 bool Validate(const Json::Value& root, std::vector<std::string> required) {

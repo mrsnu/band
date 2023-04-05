@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "c_api_types.h"
-#include "common.h"
 
 #ifdef SWIG
 #define BAND_CAPI_EXPORT
@@ -63,8 +62,11 @@ BAND_CAPI_EXPORT extern size_t BandTensorGetNumDims(BandTensor* tensor);
 BAND_CAPI_EXPORT extern const int* BandTensorGetDims(BandTensor* tensor);
 BAND_CAPI_EXPORT extern size_t BandTensorGetBytes(BandTensor* tensor);
 BAND_CAPI_EXPORT extern const char* BandTensorGetName(BandTensor* tensor);
-BAND_CAPI_EXPORT extern BandQuantization BandTensorGetQuantization(
-    BandTensor* tensor);
+BAND_CAPI_EXPORT extern BandQuantizationType BandTensorGetQuantizationType(BandTensor* tensor);
+BAND_CAPI_EXPORT extern void* BandTensorGetQuantizationParams(BandTensor* tensor);
+
+/* request option */
+BAND_CAPI_EXPORT extern BandRequestOption BandRequestOptionGetDefault();
 
 /* engine */
 // TODO: Error reporter
@@ -126,7 +128,8 @@ typedef size_t (*PFN_BandTensorGetNumDims)(BandTensor*);
 typedef const int* (*PFN_BandTensorGetDims)(BandTensor*);
 typedef size_t (*PFN_BandTensorGetBytes)(BandTensor*);
 typedef const char* (*PFN_BandTensorGetName)(BandTensor*);
-typedef BandQuantization (*PFN_BandTensorGetQuantization)(BandTensor*);
+typedef BandQuantizationType (*PFN_BandTensorGetQuantizationType)(BandTensor*);
+typedef void* (*PFN_BandTensorGetQuantizationParams)(BandTensor*);
 typedef BandEngine* (*PFN_BandEngineCreate)(BandConfig*);
 typedef void (*PFN_BandEngineDelete)(BandEngine*);
 typedef BandStatus (*PFN_BandEngineRegisterModel)(BandEngine*, BandModel*);

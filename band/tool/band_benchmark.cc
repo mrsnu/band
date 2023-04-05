@@ -5,7 +5,7 @@ using namespace band;
 
 int main(int argc, const char** argv) {
   tool::Benchmark benchmark;
-  if (benchmark.Initialize(argc, argv) == kBandOk) {
+  if (benchmark.Initialize(argc, argv).ok()) {
     benchmark.Run();
   } else {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Benchmark failed to initialize");

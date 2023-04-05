@@ -9,6 +9,7 @@
 #include "band/engine.h"
 #include "band/model.h"
 #include "band/tensor.h"
+#include "band/c/c_api_types.h"
 
 struct BandConfigBuilder {
   band::RuntimeConfigBuilder impl;
@@ -38,4 +39,22 @@ struct BandEngine {
   std::unique_ptr<band::Engine> impl;
 };
 
-#endif
+const char* BandBackendGetName(BandBackendType flag);
+const BandBackendType BandBackendGetType(const char* name);
+
+const char* BandStatusGetName(BandStatus status);
+
+const char* BandSchedulerGetName(BandSchedulerType type);
+BandSchedulerType BandSchedulerGetType(const char* name);
+
+const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type);
+BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name);
+
+const char* BandTypeGetName(BandType type);
+
+const char* BandQuantizationTypeGetName(BandQuantizationType type);
+
+const char* BandDeviceGetName(BandDeviceFlags flag);
+BandDeviceFlags BandDeviceGetFlag(const char* name);
+
+#endif  // BAND_C_C_API_INTERNAL_H_

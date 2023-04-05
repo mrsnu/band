@@ -75,14 +75,14 @@ bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 int CpuSet::NumEnabled() const { return GetCPUCount(); }
 #endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
-BandCPUMaskFlags CpuSet::GetCPUMaskFlag() const {
-  for (int i = 0; i < kBandNumCpuMasks; i++) {
-    const BandCPUMaskFlags flag = static_cast<BandCPUMaskFlags>(i);
+CPUMaskFlags CpuSet::GetCPUMaskFlag() const {
+  for (int i = 0; i < GetSize<CPUMaskFlags>(); i++) {
+    const CPUMaskFlags flag = static_cast<CPUMaskFlags>(i);
     if (BandCPUMaskGetSet(flag) == *this) {
       return flag;
     }
   }
-  return kBandNumCpuMasks;
+  return CPUMaskFlags::All;
 }
 
 static CpuSet g_thread_affinity_mask_all;
@@ -126,9 +126,13 @@ int GetCPUCount() {
   return count;
 }
 
-int GetLittleCPUCount() { return BandCPUMaskGetSet(kBandLittle).NumEnabled(); }
+int GetLittleCPUCount() {
+  return BandCPUMaskGetSet(CPUMaskFlags::Little).NumEnabled();
+}
 
-int GetBigCPUCount() { return BandCPUMaskGetSet(kBandBig).NumEnabled(); }
+int GetBigCPUCount() {
+  return BandCPUMaskGetSet(CPUMaskFlags::Big).NumEnabled();
+}
 
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
 static int get_max_freq_khz(int cpuid) {
@@ -207,11 +211,10 @@ int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
   if (syscallret != 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Set sched affinity error :%s",
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Set sched affinity error: %s",
                       strerror(err));
     return -1;
   }
-
   return 0;
 }
 
@@ -239,23 +242,28 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
 }
 #endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
-BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
+absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
-  if (ssaret != 0) return kBandError;
+  if (ssaret != 0) {
+    return absl::InternalError("Failed to set the CPU affinity.");
+  }
+#else
+  BAND_LOG_PROD(BAND_LOG_INFO, "Thread affinity control is off. Ignore mask %s",
+                GetName(thread_affinity_mask.GetCPUMaskFlag()).c_str());
 #endif
-
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
+absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
   int gsaret = GetSchedAffinity(thread_affinity_mask);
-  if (gsaret != 0) return kBandError;
+  if (gsaret != 0) {
+    return absl::InternalError("Failed to get the CPU affinity.");
+  }
 #endif
-
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 int SetupThreadAffinityMasks() {
@@ -307,18 +315,18 @@ int SetupThreadAffinityMasks() {
   return 0;
 }
 
-const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag) {
+const CpuSet& BandCPUMaskGetSet(CPUMaskFlags flag) {
   static std::once_flag once_flag;
   std::call_once(once_flag, []() { SetupThreadAffinityMasks(); });
 
   switch (flag) {
-    case kBandAll:
+    case CPUMaskFlags::All:
       return g_thread_affinity_mask_all;
-    case kBandLittle:
+    case CPUMaskFlags::Little:
       return g_thread_affinity_mask_little;
-    case kBandBig:
+    case CPUMaskFlags::Big:
       return g_thread_affinity_mask_big;
-    case kBandPrimary:
+    case CPUMaskFlags::Primary:
       return g_thread_affinity_mask_primary;
     default:
       // fallback to all cores anyway
@@ -326,30 +334,30 @@ const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag) {
   }
 }
 
-const char* BandCPUMaskGetName(BandCPUMaskFlags flag) {
+const char* BandCPUMaskGetName(CPUMaskFlags flag) {
   switch (flag) {
-    case kBandAll:
+    case CPUMaskFlags::All:
       return "ALL";
-    case kBandLittle:
+    case CPUMaskFlags::Little:
       return "LITTLE";
-    case kBandBig:
+    case CPUMaskFlags::Big:
       return "BIG";
-    case kBandPrimary:
+    case CPUMaskFlags::Primary:
       return "PRIMARY";
     default:
       return "UNKNOWN";
   }
 }
 
-const BandCPUMaskFlags BandCPUMaskGetFlag(const char* name) {
-  for (int i = 0; i < kBandNumCpuMasks; i++) {
-    const auto flag = static_cast<BandCPUMaskFlags>(i);
+const CPUMaskFlags BandCPUMaskGetFlag(const char* name) {
+  for (int i = 0; i < GetSize<CPUMaskFlags>(); i++) {
+    const auto flag = static_cast<CPUMaskFlags>(i);
     if (strcmp(name, BandCPUMaskGetName(flag)) == 0) {
       return flag;
     }
   }
   // Use all as a default flag
-  return kBandAll;
+  return CPUMaskFlags::All;
 }
 
 }  // namespace band

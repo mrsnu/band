@@ -7,7 +7,6 @@
 #include <set>
 #include <vector>
 
-#include "band/c/common.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/context.h"
@@ -36,8 +35,8 @@ typedef std::vector<interface::ITensor*> Tensors;
  * band::ParseRuntimeConfigFromJson("band/test/data/config.json", config);
  * std::unique_ptr<band::Engine> engine = band::Engine::Create(config);
  *
- * band::Model model;
- * model.FromPath(kBandTfLite, "band/test/data/add.tflite");
+ * Band::Model model;
+ * model.FromPath(BackendType::TfLite, "band/test/data/add.tflite");
  * engine->RegisterModel(&model);
  *
  * band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),
@@ -56,39 +55,41 @@ class Engine : public Context {
       const RuntimeConfig& config,
       ErrorReporter* error_reporter = DefaultErrorReporter());
 
-  BandStatus RegisterModel(Model* model);
-  BandStatus UnregisterModel(Model* model);
+  absl::Status RegisterModel(Model* model);
+  absl::Status UnregisterModel(Model* model);
 
   Tensor* CreateTensor(ModelId model_id, int tensor_index);
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
   size_t GetNumWorkers() const override;
-  BandDeviceFlags GetWorkerDevice(WorkerId id) const;
+  DeviceFlags GetWorkerDevice(WorkerId id) const;
 
-  BandStatus RequestSync(
+  absl::Status RequestSync(
       ModelId model_id,
-      BandRequestOption options = BandGetDefaultRequestOption(),
+      RequestOption options = RequestOption::GetDefaultOption(),
       Tensors inputs = {}, Tensors outputs = {});
-  BandStatus RequestSync(std::vector<ModelId> model_ids,
-                         std::vector<BandRequestOption> options = {},
-                         std::vector<Tensors> inputs = {},
-                         std::vector<Tensors> outputs = {});
-  JobId RequestAsync(ModelId model_id,
-                     BandRequestOption options = BandGetDefaultRequestOption(),
-                     Tensors inputs = {});
-  std::vector<JobId> RequestAsync(std::vector<ModelId> model_ids,
-                                  std::vector<BandRequestOption> options = {},
-                                  std::vector<Tensors> inputs = {});
+  absl::Status RequestSync(std::vector<ModelId> model_ids,
+                           std::vector<RequestOption> options = {},
+                           std::vector<Tensors> inputs = {},
+                           std::vector<Tensors> outputs = {});
+  absl::StatusOr<JobId> RequestAsync(
+      ModelId model_id,
+      RequestOption options = RequestOption::GetDefaultOption(),
+      Tensors inputs = {});
+  absl::StatusOr<std::vector<JobId>> RequestAsync(
+      std::vector<ModelId> model_ids,
+      std::vector<RequestOption> options = {},
+      std::vector<Tensors> inputs = {});
 
-  BandStatus Wait(JobId job_id, Tensors outputs = {});
-  BandStatus Wait(std::vector<JobId> job_ids,
-                  std::vector<Tensors> outputs = {});
+  absl::Status Wait(JobId job_id, Tensors outputs = {});
+  absl::Status Wait(std::vector<JobId> job_ids,
+                    std::vector<Tensors> outputs = {});
   void WaitAll();
-  BandStatus GetOutputTensors(JobId job_id, Tensors outputs = {});
+  absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetOnEndRequest(std::function<void(int, BandStatus)> on_end_request);
+  void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
@@ -97,7 +98,7 @@ class Engine : public Context {
 
  private:
   /* context */
-  BandStatus Init(const RuntimeConfig& config) override;
+  absl::Status Init(const RuntimeConfig& config) override;
   void UpdateWorkersWaiting() const override;
   WorkerWaitingTime GetWorkerWaitingTime() const override;
   std::set<WorkerId> GetIdleWorkers() const override;
@@ -107,7 +108,7 @@ class Engine : public Context {
   bool HasSubgraph(const SubgraphKey& key) const override;
   void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) const override;
-  BandStatus Invoke(const SubgraphKey& key) override;
+  absl::Status Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
   WorkerId GetModelWorker(ModelId model_id) const override;
@@ -154,11 +155,11 @@ class Engine : public Context {
   const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
   /* tensor communication */
-  BandStatus TryCopyInputTensors(const Job& job) override;
-  BandStatus TryCopyOutputTensors(const Job& job) override;
+  absl::Status TryCopyInputTensors(const Job& job) override;
+  absl::Status TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
-  WorkerId GetDeviceWorkerId(BandDeviceFlags flag) const;
+  WorkerId GetDeviceWorkerId(DeviceFlags flag) const;
   interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
   const interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;

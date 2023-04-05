@@ -12,12 +12,19 @@
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
-#include "planner.h"
+
+#include "absl/strings/str_format.h"
 
 namespace band {
 
 Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
-  planner_thread_ = std::thread([this] { this->Plan(); });
+  planner_thread_ = std::thread([this] {
+    auto status = this->Plan();
+    if (!status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Planner thread failed: %s",
+                    status.message());
+    }
+  });
 }
 
 Planner::~Planner() {
@@ -28,16 +35,14 @@ Planner::~Planner() {
   planner_thread_.join();
 }
 
-BandStatus Planner::Init(const PlannerConfig& config) {
+absl::Status Planner::Init(const PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
-    BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                      "[Planner] Not supported for %d schedulers",
-                      schedulers_.size());
-    return kBandError;
+    return absl::InternalError(absl::StrFormat(
+        "[Planner] Not supported for %d schedulers", schedulers_.size()));
   }
 
   bool allow_fallback = false;
@@ -45,26 +50,28 @@ BandStatus Planner::Init(const PlannerConfig& config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == kBandFixedWorker) {
+    if (schedulers[i] == SchedulerType::FixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(context_));
-    } else if (schedulers[i] == kBandFixedWorkerGlobalQueue) {
+    } else if (schedulers[i] == SchedulerType::FixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(context_));
-    } else if (schedulers[i] == kBandRoundRobin) {
+    } else if (schedulers[i] == SchedulerType::RoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(context_));
-    } else if (schedulers[i] == kBandShortestExpectedLatency) {
+    } else if (schedulers[i] == SchedulerType::ShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
           context_, schedule_window_size_));
-    } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTime) {
+    } else if (schedulers[i] ==
+               SchedulerType::HeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
           new HEFTScheduler(context_, schedule_window_size_, false));
-    } else if (schedulers[i] == kBandLeastSlackTimeFirst) {
+    } else if (schedulers[i] == SchedulerType::LeastSlackTimeFirst) {
       schedulers_.emplace_back(
           new LeastSlackFirstScheduler(context_, schedule_window_size_));
-    } else if (schedulers[i] == kBandHeterogeneousEarliestFinishTimeReserved) {
+    } else if (schedulers[i] ==
+               SchedulerType::HeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(context_, schedule_window_size_, true));
     } else {
-      return kBandError;
+      return absl::InternalError("[Planner] Unsupported scheduler type.");
     }
 
     // Checks if all the schedulers have the same requirements for the
@@ -74,28 +81,34 @@ BandStatus Planner::Init(const PlannerConfig& config) {
     if (i == 0) {
       allow_fallback = schedulers_[i]->NeedFallbackSubgraphs();
     } else if (allow_fallback != schedulers_[i]->NeedFallbackSubgraphs()) {
-      return kBandError;
+      return absl::InternalError(
+          "[Planner] Different type of scheduler requirements.");
     }
   }
 
   // All schedulers must have the same worker type.
-  if (GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue)) {
-    return kBandError;
+  if (GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
+                          static_cast<int>(WorkerType::GlobalQueue))) {
+    return absl::InternalError(
+        "All schedulers must have the same worker type.");
   }
 
-  if (config.cpu_mask != kBandAll) {
+  if (config.cpu_mask != CPUMaskFlags::All) {
     cpu_set_ = BandCPUMaskGetSet(config.cpu_mask);
     need_cpu_update_ = true;
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
-BandStatus Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
+absl::Status Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
   schedulers_.emplace_back(std::move(scheduler));
   local_queues_.resize(schedulers_.size());
-  return GetWorkerType() == (kBandDeviceQueue | kBandGlobalQueue) ? kBandError
-                                                                  : kBandOk;
+  return GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
+                             static_cast<int>(WorkerType::GlobalQueue))
+             ? absl::InternalError(
+                   "All schedulers must have the same worker type.")
+             : absl::OkStatus();
 }
 
 JobId Planner::EnqueueRequest(Job job, bool push_front) {
@@ -104,29 +117,28 @@ JobId Planner::EnqueueRequest(Job job, bool push_front) {
 
 std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
                                          bool push_front) {
-  std::unique_lock<std::mutex> request_lock(requests_.mtx);
   std::vector<JobId> job_ids(jobs.size());
-  auto enqueue_time = Time::NowMicros();
-  for (int i = 0; i < jobs.size(); i++) {
-    Job& job = jobs[i];
-    if (job.enqueue_time == 0) {
-      // job.enqueue_time may already be set if this model contains a fallback
-      // op, in which case we do not overwrite the set value
-      job.enqueue_time = enqueue_time;
+  {
+    std::unique_lock<std::mutex> request_lock(requests_.mtx);
+    auto enqueue_time = Time::NowMicros();
+    for (int i = 0; i < jobs.size(); i++) {
+      Job& job = jobs[i];
+      if (job.enqueue_time == 0) {
+        // job.enqueue_time may already be set if this model contains a fallback
+        // op, in which case we do not overwrite the set value
+        job.enqueue_time = enqueue_time;
+      }
+      if (job.job_id == -1) {
+        job.job_id = num_submitted_jobs_++;
+      }
+      job_ids[i] = job.job_id;
     }
-    if (job.job_id == -1) {
-      job.job_id = num_submitted_jobs_++;
-    }
-    job_ids[i] = job.job_id;
+
+    auto insert_position =
+        push_front ? requests_.queue.begin() : requests_.queue.end();
+    requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
   }
-
-  auto insert_position =
-      push_front ? requests_.queue.begin() : requests_.queue.end();
-  requests_.queue.insert(insert_position, jobs.begin(), jobs.end());
-  request_lock.unlock();
-
   planner_safe_bool_.notify();
-
   return job_ids;
 }
 
@@ -147,7 +159,6 @@ void Planner::Wait(std::vector<int> job_ids) {
     }
     return true;
   });
-
   request_lock.unlock();
 }
 
@@ -162,20 +173,19 @@ void Planner::WaitAll() {
 
 void Planner::EnqueueFinishedJob(Job& job) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
-
   // record finished / failed job
-  if (context_.IsEnd(job.subgraph_key) || job.status != kBandJobSuccess) {
+  if (context_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
-
     end_invoke_.notify_all();
   }
 
   // report end invoke using callback
   if (on_end_request_ && job.require_callback &&
       context_.IsEnd(job.subgraph_key)) {
-    on_end_request_(job.job_id,
-                    job.status == kBandJobSuccess ? kBandOk : kBandError);
+    on_end_request_(job.job_id, job.status == JobStatus::Success
+                                    ? absl::OkStatus()
+                                    : absl::InternalError("Job failed."));
   }
 }
 
@@ -215,29 +225,32 @@ Job Planner::GetFinishedJob(int job_id) {
 }
 
 void Planner::SetOnEndRequest(
-    std::function<void(int, BandStatus)> on_end_request) {
+    std::function<void(int, absl::Status)> on_end_request) {
   on_end_request_ = on_end_request;
 }
 
 int Planner::GetWorkerType() const {
   int worker_type = 0;
   for (int i = 0; i < schedulers_.size(); ++i) {
-    worker_type |= schedulers_[i]->GetWorkerType();
+    // TODO(widiba03304): Planner's worker type should not have an integer type.
+    // Fix it to have a categorical type.
+    worker_type |= static_cast<int>(schedulers_[i]->GetWorkerType());
   }
   return worker_type;
 }
 
-void Planner::Plan() {
+absl::Status Planner::Plan() {
   while (true) {
     if (planner_safe_bool_.wait()) {
-      return;
+      return absl::OkStatus();
     }
 
     if (need_cpu_update_) {
-      if (SetCPUThreadAffinity(cpu_set_) != kBandOk) {
-        BAND_REPORT_ERROR(context_.GetErrorReporter(),
-                          "[Planner] Failed to set cpu thread affinity");
-        // TODO #21: Handle errors in multi-thread environment
+      {
+        auto status = SetCPUThreadAffinity(cpu_set_);
+        if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+        }
       }
       need_cpu_update_ = false;
     }
@@ -249,6 +262,7 @@ void Planner::Plan() {
       }
     } while (need_reschedule_);
   }
+  return absl::OkStatus();
 }
 
 void Planner::CopyToLocalQueues() {
@@ -314,7 +328,7 @@ void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 }
 
 bool Planner::IsSLOViolated(Job& job) {
-  if (job.status == kBandJobSLOViolation) {
+  if (job.status == JobStatus::SLOViolation) {
     return true;
   }
   // this job has an SLO; check if it's not too late already
@@ -333,7 +347,7 @@ bool Planner::IsSLOViolated(Job& job) {
 
 void Planner::HandleSLOViolatedJob(Job& job) {
   // no point in running this job anymore
-  job.status = kBandJobSLOViolation;
+  job.status = JobStatus::SLOViolation;
 
   // mark this as -1 to differentiate it from the default value, 0
   job.invoke_time = -1;

@@ -12,22 +12,22 @@ namespace band {
 namespace tool {
 class Benchmark {
  public:
-  Benchmark(BandBackendType target_backend = kBandTfLite);
+  Benchmark(BackendType target_backend = BackendType::TfLite);
   ~Benchmark();
-  BandStatus Initialize(int argc, const char** argv);
-  BandStatus Run();
+  absl::Status Initialize(int argc, const char** argv);
+  absl::Status Run();
 
  private:
   struct ModelContext {
     ~ModelContext();
     // simulate input tensor copy from model_inputs to model_request_inputs
-    BandStatus PrepareInput();
+    absl::Status PrepareInput();
 
     Model model;
     Profiler profiler;
     // pre-allocated model tensors for runtime requests
     std::vector<ModelId> model_ids;
-    std::vector<BandRequestOption> request_options;
+    std::vector<RequestOption> request_options;
     std::vector<Tensors> model_request_inputs;
     std::vector<Tensors> model_request_outputs;
     // randomly generated input
@@ -44,9 +44,9 @@ class Benchmark {
   void RunStream();
   void RunWorkload();
 
-  BandStatus LogResults();
+  absl::Status LogResults();
 
-  const BandBackendType target_backend_;
+  const BackendType target_backend_;
   BenchmarkConfig benchmark_config_;
   RuntimeConfig* runtime_config_ = nullptr;
   std::unique_ptr<Engine> engine_ = nullptr;

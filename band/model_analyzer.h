@@ -7,6 +7,8 @@
 #include "band/context.h"
 #include "band/model_spec.h"
 
+#include "absl/status/statusor.h"
+
 namespace band {
 class Model;
 
@@ -27,9 +29,9 @@ class ModelAnalyzer {
  public:
   ModelAnalyzer(const Context& context, bool need_subgraph,
                 SubgraphConfig subgraph_config, Model* model,
-                BandBackendType backend_type);
+                BackendType backend_type);
 
-  std::tuple<BandStatus, ModelSpec, std::vector<SubgraphDef>> CreateSubgraphs();
+  absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>> CreateSubgraphs();
 
  private:
   // A model is partitioned into unit subgraphs.
@@ -37,7 +39,7 @@ class ModelAnalyzer {
   // topologically sorted. Note that there can be better way to assign unit
   // subgraph indices if there exists any unit subgraphs that can be executed in
   // parallel.
-  BandStatus GetUnitSubgraphs(std::vector<SubgraphDef>& unit_subgraphs);
+  absl::Status GetUnitSubgraphs(std::vector<SubgraphDef>& unit_subgraphs);
   // Generate subgraphs for fallback ops in provided model
   // This does not provides unit indices with a SubgraphDef
   std::vector<SubgraphDef> GetSubgraphsForFallbackOps(WorkerId worker_id);
@@ -51,7 +53,7 @@ class ModelAnalyzer {
   const Context& context_;
   const bool need_fallback_subgraph_;
   const SubgraphConfig subgraph_config_;
-  const BandBackendType backend_type_;
+  const BackendType backend_type_;
   std::shared_ptr<ModelSpec> model_spec_;
 };
 }  // namespace band

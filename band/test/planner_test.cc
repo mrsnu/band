@@ -17,9 +17,9 @@ struct MockContext : public MockContextBase {
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
   void Trigger() override {}
 
-  BandStatus Invoke(const SubgraphKey& key) override {
+  absl::Status Invoke(const SubgraphKey& key) override {
     Time::SleepForMicros(50);
-    return kBandOk;
+    return absl::OkStatus();
   }
 
   std::set<int> finished;
@@ -31,8 +31,8 @@ class MockScheduler : public IScheduler {
   MOCK_METHOD1(Schedule, void(JobQueue&));
   MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
-  // MOCK_METHOD0(GetWorkerType, BandWorkerType());
-  BandWorkerType GetWorkerType() { return kBandDeviceQueue; }
+  // MOCK_METHOD0(GetWorkerType, WorkerType());
+  WorkerType GetWorkerType() { return WorkerType::DeviceQueue; }
 };
 
 /*
@@ -46,7 +46,8 @@ planner -> scheduler -> worker -> planner
 TEST(PlannerSuite, SingleQueue) {
   MockContext context;
   Planner planner(context);
-  planner.AddScheduler(std::make_unique<MockScheduler>(context));
+  auto status = planner.AddScheduler(std::make_unique<MockScheduler>(context));
+  EXPECT_EQ(status, absl::OkStatus());
   // TODO: Add tests!
   EXPECT_TRUE(true);
 }

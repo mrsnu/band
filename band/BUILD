@@ -1,4 +1,4 @@
-load("//band:band.bzl", "band_copts")
+load("//band:band.bzl", "band_cc_library")
 
 package(
     default_visibility = [
@@ -119,7 +119,7 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-cc_library(
+band_cc_library(
     name = "common",
     srcs = [
         "common.cc",
@@ -136,7 +136,6 @@ cc_library(
         "logger.h",
         "model_spec.h",
     ],
-    copts = band_copts(),
     linkopts = select({
         "//band:android": [
             "-llog",
@@ -145,11 +144,13 @@ cc_library(
         ],
     }),
     deps = [
-        "//band/c:common",
+        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "interface",
     srcs = [
         "interface/tensor.cc",
@@ -161,13 +162,12 @@ cc_library(
         "interface/tensor.h",
         "interface/tensor_view.h",
     ],
-    copts = band_copts(),
     deps = [
         ":common",
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "backend_factory",
     srcs = [
         "backend_factory.cc",
@@ -175,14 +175,13 @@ cc_library(
     hdrs = [
         "backend_factory.h",
     ],
-    copts = band_copts(),
     deps = [
         ":common",
         ":interface",
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "cpu",
     srcs = [
         "cpu.cc",
@@ -195,7 +194,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "config",
     hdrs = [
         "config.h",
@@ -213,7 +212,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "time",
     srcs = [
         "time.cc",
@@ -223,7 +222,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "model",
     srcs = [
         "model.cc",
@@ -237,7 +236,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "model_analyzer",
     srcs = [
         "model_analyzer.cc",
@@ -254,7 +253,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "worker",
     srcs = [
         "worker.cc",
@@ -273,7 +272,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "scheduler",
     srcs = [
         "scheduler/fixed_worker_global_queue_scheduler.cc",
@@ -297,7 +296,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "planner",
     srcs = [
         "planner.cc",
@@ -316,7 +315,7 @@ cc_library(
 )
 
 
-cc_library(
+band_cc_library(
     name = "job_tracer",
     srcs = [
         "job_tracer.cc",
@@ -332,7 +331,7 @@ cc_library(
 
 
 
-cc_library(
+band_cc_library(
     name = "tensor",
     srcs = [
         "tensor.cc",
@@ -346,7 +345,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "latency_estimator",
     srcs = [
         "latency_estimator.cc",
@@ -365,7 +364,7 @@ cc_library(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "framework",
     srcs = [
         "engine.cc",
@@ -394,7 +393,7 @@ cc_library(
         ],
 )
 
-cc_library(
+band_cc_library(
     name = "json_util",
     srcs = ["json_util.cc"],
     hdrs = ["json_util.h"],
@@ -411,12 +410,7 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "macros",
-    hdrs = ["macros.h"],
-)
-
-cc_library(
+band_cc_library(
     name = "config_builder",
     srcs = ["config_builder.cc"],
     hdrs = ["config_builder.h"],
@@ -424,6 +418,5 @@ cc_library(
         ":common",
         ":config",
         ":cpu",
-        ":macros",
     ],
 )

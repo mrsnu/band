@@ -140,7 +140,7 @@ TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(BandTensorGetData(input_tensor), input.data(),
          input.size() * sizeof(float));
-  BandRequestOption request_option = BandGetDefaultRequestOption();
+  BandRequestOption request_option = BandRequestOptionGetDefault();
   request_option.target_worker = 0;
   EXPECT_EQ(BandEngineRequestSyncOptions(engine, model, request_option,
                                          &input_tensor, &output_tensor),

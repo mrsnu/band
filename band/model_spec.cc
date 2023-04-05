@@ -4,7 +4,6 @@
 #include <iterator>
 
 #include "band/logger.h"
-#include "model_spec.h"
 
 namespace band {
 std::set<int> ModelSpec::GetPureInputTensors(
@@ -38,7 +37,7 @@ std::set<int> ModelSpec::GetOutputTensors(
   return output_tensors;
 }
 
-BandStatus band::ModelSpec::SetUnitSubgraphs(std::vector<std::set<int>> ops) {
+absl::Status band::ModelSpec::SetUnitSubgraphs(std::vector<std::set<int>> ops) {
   unit_subgraph_ops = ops;
 
   // Verify whether unit subgraph covers all ops
@@ -48,10 +47,9 @@ BandStatus band::ModelSpec::SetUnitSubgraphs(std::vector<std::set<int>> ops) {
   }
 
   if ((all_ops.size() != num_ops) || (*all_ops.rbegin() != num_ops - 1)) {
-    BAND_LOG_PROD(BAND_LOG_ERROR,
-                  "Failed to set unit subgraphs. Unit subgraph does not covers "
-                  "all operators");
-    return kBandError;
+    return absl::InternalError(
+        "Failed to set unit subgraphs. Unit subgraph does not covers "
+        "all operators");
   }
 
   unit_subgraph_dependencies.resize(ops.size());
@@ -73,7 +71,7 @@ BandStatus band::ModelSpec::SetUnitSubgraphs(std::vector<std::set<int>> ops) {
     }
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 size_t ModelSpec::GetNumUnitSubgraphs() const {

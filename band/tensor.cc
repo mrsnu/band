@@ -7,23 +7,28 @@
 namespace band {
 Tensor::Tensor(ITensor* tensor_view)
     : type_(tensor_view->GetType()),
-      quantization_({kBandNoQuantization, nullptr}),
+      quantization_({QuantizationType::NoQuantization, nullptr}),
       num_bytes_(tensor_view->GetBytes()),
       dims_(tensor_view->GetDims(),
             tensor_view->GetDims() + tensor_view->GetNumDims()),
       data_(new char[tensor_view->GetBytes()]),
       name_(tensor_view->GetName()) {
-  SetQuantization(tensor_view->GetQuantization());
+  auto status = SetQuantization(tensor_view->GetQuantization());
+  if (!status.ok()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s", status.message());
+  }
 }
 
-Tensor::~Tensor() {
+Tensor::~Tensor() { 
   delete[] data_;
-  BandQuantizationFree(&quantization_);
+  if (quantization_.GetParams() != nullptr) {
+    free(quantization_.GetParams());
+  }
 }
 
-BandType Tensor::GetType() const { return type_; }
+DataType Tensor::GetType() const { return type_; }
 
-void Tensor::SetType(BandType type) { type_ = type; }
+void Tensor::SetType(DataType type) { type_ = type; }
 
 const char* Tensor::GetData() const { return data_; }
 
@@ -41,32 +46,32 @@ size_t Tensor::GetBytes() const { return num_bytes_; }
 
 const char* Tensor::GetName() const { return name_.c_str(); }
 
-BandQuantization Tensor::GetQuantization() const { return quantization_; }
+Quantization Tensor::GetQuantization() const { return quantization_; }
 
-void Tensor::SetQuantization(BandQuantization quantization) {
-  quantization_.type = BandQuantizationType(quantization.type);
-  if (quantization_.type == kBandAffineQuantization) {
-    if (quantization_.params != nullptr) {
-      BandQuantizationFree(&quantization_);
+absl::Status Tensor::SetQuantization(Quantization quantization) {
+  if (quantization_.GetType() == QuantizationType::AffineQuantization) {
+    AffineQuantizationParams* input_q_params =
+        reinterpret_cast<AffineQuantizationParams*>(quantization.GetParams());
+
+    AffineQuantizationParams* q_params =
+        reinterpret_cast<AffineQuantizationParams*>(
+            malloc(sizeof(AffineQuantizationParams)));
+    if (input_q_params == nullptr || q_params == nullptr) {
+      return absl::InternalError("Failed to allocate memory for quantization params");
     }
 
-    const BandAffineQuantization* input_q_params =
-        (BandAffineQuantization*)(quantization.params);
+    q_params->scale = std::vector<float>(input_q_params->scale.size());
+    q_params->zero_point = std::vector<int>(input_q_params->zero_point.size());
 
-    BandAffineQuantization* q_params =
-        reinterpret_cast<BandAffineQuantization*>(
-            malloc(sizeof(BandAffineQuantization)));
-    q_params->scale = BandFloatArrayCreate(input_q_params->scale->size);
-    q_params->zero_point = BandIntArrayCreate(input_q_params->zero_point->size);
+    q_params->scale.insert(q_params->scale.end(), input_q_params->scale.begin(),
+                            input_q_params->scale.end());
+    q_params->zero_point.insert(q_params->zero_point.end(),
+                                input_q_params->zero_point.begin(),
+                                input_q_params->zero_point.end());
     q_params->quantized_dimension = input_q_params->quantized_dimension;
-
-    memcpy(
-        q_params->scale, input_q_params->scale->data,
-        sizeof(input_q_params->scale->data[0]) * input_q_params->scale->size);
-    memcpy(q_params->zero_point, input_q_params->zero_point->data,
-           sizeof(input_q_params->zero_point->data[0]) *
-               input_q_params->zero_point->size);
+    quantization_.SetParams(q_params);
   }
+  return absl::OkStatus();
 }
 
 }  // namespace band

@@ -9,17 +9,23 @@
 namespace band {
 namespace tfl {
 
-BandStatus GetBandStatus(TfLiteStatus status) { return BandStatus(status); }
-BandType GetBandType(TfLiteType type) { return BandType(type); }
-std::set<BandDeviceFlags> TfLiteUtil::GetAvailableDevices() const {
-  static std::set<BandDeviceFlags> valid_devices = {};
+absl::Status GetBandStatus(TfLiteStatus status) { 
+  if (status == kTfLiteOk) {
+    return absl::OkStatus();
+  } else {
+    return absl::InternalError("TfLite Error");
+  }
+}
+
+DataType GetBandType(TfLiteType type) { return DataType(type); }
+std::set<DeviceFlags> TfLiteUtil::GetAvailableDevices() const {
+  static std::set<DeviceFlags> valid_devices = {};
   static std::once_flag once_flag;
 
   std::call_once(once_flag, [&]() {
-    for (int flag = 0; flag < kBandNumDevices; flag++) {
-      const BandDeviceFlags device_flag = static_cast<BandDeviceFlags>(flag);
-      if (TfLiteModelExecutor::GetDeviceDelegate(device_flag).first ==
-          kBandOk) {
+    for (size_t flag = 0; flag < GetSize<DeviceFlags>(); flag++) {
+      const DeviceFlags device_flag = static_cast<DeviceFlags>(flag);
+      if (TfLiteModelExecutor::GetDeviceDelegate(device_flag).ok()) {
         valid_devices.insert(device_flag);
       }
     }

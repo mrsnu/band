@@ -1,9 +1,7 @@
 load(
     "//band:band.bzl", 
     "clean_dep",
-    "band_cc_shared_object",
-    "band_copts",
-    "band_linkopts",
+    "band_cc_library",
 )
 package(
     default_visibility = ["//visibility:public"],
@@ -30,7 +28,7 @@ cc_binary(
 )
 
 
-cc_library(
+band_cc_library(
     name = "benchmark",
     srcs = [
         "benchmark.cc",

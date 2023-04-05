@@ -14,15 +14,15 @@ class Context;
 class LatencyEstimator {
  public:
   explicit LatencyEstimator(Context* context);
-  BandStatus Init(const ProfileConfig& config);
+  absl::Status Init(const ProfileConfig& config);
   void UpdateLatency(const SubgraphKey& key, int64_t latency);
 
-  BandStatus ProfileModel(ModelId model_id);
+  absl::Status ProfileModel(ModelId model_id);
   int64_t GetProfiled(const SubgraphKey& key) const;
   int64_t GetExpected(const SubgraphKey& key) const;
   int64_t GetWorst(ModelId model_id) const;
 
-  BandStatus DumpProfile();
+  absl::Status DumpProfile();
 
   // latency in microseconds
   struct Latency {

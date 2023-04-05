@@ -3,7 +3,9 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
-cc_library(
+load("//band:band.bzl", "band_cc_library")
+
+band_cc_library(
     name = "tfl_backend",
     srcs = [
         "backend.cc",

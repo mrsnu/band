@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "band/c/common.h"
 #include "band/common.h"
 #include "band/cpu.h"
 #include "band/error_reporter.h"
@@ -13,7 +12,7 @@ namespace band {
 
 struct ProfileConfig {
   ProfileConfig() {
-    copy_computation_ratio = std::vector<int>(kBandNumDevices, 0);
+    copy_computation_ratio = std::vector<int>(GetSize<DeviceFlags>(), 0);
   }
   bool online = true;
   int num_warmups = 1;
@@ -25,22 +24,22 @@ struct ProfileConfig {
 
 struct PlannerConfig {
   int schedule_window_size = INT_MAX;
-  std::vector<BandSchedulerType> schedulers;
-  BandCPUMaskFlags cpu_mask = kBandAll;
+  std::vector<SchedulerType> schedulers;
+  CPUMaskFlags cpu_mask = CPUMaskFlags::All;
   std::string log_path = "";
 };
 
 struct WorkerConfig {
   WorkerConfig() {
     // Add one default worker per device
-    for (int i = 0; i < kBandNumDevices; i++) {
-      workers.push_back(static_cast<BandDeviceFlags>(i));
+    for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
+      workers.push_back(static_cast<DeviceFlags>(i));
     }
-    cpu_masks = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
-    num_threads = std::vector<int>(kBandNumDevices, 1);
+    cpu_masks = std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
+    num_threads = std::vector<int>(GetSize<DeviceFlags>(), 1);
   }
-  std::vector<BandDeviceFlags> workers;
-  std::vector<BandCPUMaskFlags> cpu_masks;
+  std::vector<DeviceFlags> workers;
+  std::vector<CPUMaskFlags> cpu_masks;
   std::vector<int> num_threads;
   bool allow_worksteal = false;
   int availability_check_interval_ms = 30000;
@@ -48,12 +47,12 @@ struct WorkerConfig {
 
 struct SubgraphConfig {
   int minimum_subgraph_size = 7;
-  BandSubgraphPreparationType subgraph_preparation_type =
-      kBandMergeUnitSubgraph;
+  SubgraphPreparationType subgraph_preparation_type =
+      SubgraphPreparationType::MergeUnitSubgraph;
 };
 
 struct RuntimeConfig {
-  BandCPUMaskFlags cpu_mask;
+  CPUMaskFlags cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
@@ -61,7 +60,7 @@ struct RuntimeConfig {
 
  private:
   friend class RuntimeConfigBuilder;
-  RuntimeConfig() { cpu_mask = kBandAll; };
+  RuntimeConfig() { cpu_mask = CPUMaskFlags::All; };
 };
 
 }  // namespace band

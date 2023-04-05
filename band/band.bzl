@@ -8,6 +8,11 @@ def band_copts():
             "/wd4018",
         ],
         "//conditions:default": [
+            "-Werror",
+            "-Wno-reorder",
+            "-Wno-comment",
+            "-Wno-unknown-pragmas",
+            "-Wno-unused-variable",
             "-Wno-sign-compare",
         ],
     }) + select({
@@ -166,6 +171,17 @@ def band_cc_android_test(
             linkstatic = linkstatic,
             **kwargs
         )
+
+def band_cc_library(
+        name,
+        copts = band_copts(),
+        **kwargs):
+    """Builds a cc_library for Band"""
+    native.cc_library(
+        name = name,
+        copts = copts,
+        **kwargs
+    )
 
 def band_cc_shared_object(
         name,

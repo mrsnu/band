@@ -17,7 +17,7 @@ class ProfileConfigBuilder {
                                       // variables
  public:
   ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(kBandNumDevices, 30000);
+    copy_computation_ratio_ = std::vector<int>(GetSize<DeviceFlags>(), 30000);
   }
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
@@ -67,11 +67,11 @@ class PlannerConfigBuilder {
     return *this;
   }
   PlannerConfigBuilder& AddSchedulers(
-      std::vector<BandSchedulerType> schedulers) {
+      std::vector<SchedulerType> schedulers) {
     schedulers_ = schedulers;
     return *this;
   }
-  PlannerConfigBuilder& AddCPUMask(BandCPUMaskFlags cpu_mask) {
+  PlannerConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -85,8 +85,8 @@ class PlannerConfigBuilder {
 
  private:
   int schedule_window_size_ = INT_MAX;
-  std::vector<BandSchedulerType> schedulers_;
-  BandCPUMaskFlags cpu_mask_ = kBandAll;
+  std::vector<SchedulerType> schedulers_;
+  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
   std::string log_path_ = "";
 };
 
@@ -96,17 +96,17 @@ class WorkerConfigBuilder {
 
  public:
   WorkerConfigBuilder() {
-    for (int i = 0; i < kBandNumDevices; i++) {
-      workers_.push_back(static_cast<BandDeviceFlags>(i));
+    for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
+      workers_.push_back(static_cast<DeviceFlags>(i));
     }
-    cpu_masks_ = std::vector<BandCPUMaskFlags>(kBandNumDevices, kBandAll);
-    num_threads_ = std::vector<int>(kBandNumDevices, 1);
+    cpu_masks_ = std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
+    num_threads_ = std::vector<int>(GetSize<DeviceFlags>(), 1);
   }
-  WorkerConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
+  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
     workers_ = workers;
     return *this;
   }
-  WorkerConfigBuilder& AddCPUMasks(std::vector<BandCPUMaskFlags> cpu_masks) {
+  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
     cpu_masks_ = cpu_masks;
     return *this;
   }
@@ -127,8 +127,8 @@ class WorkerConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  std::vector<BandDeviceFlags> workers_;
-  std::vector<BandCPUMaskFlags> cpu_masks_;
+  std::vector<DeviceFlags> workers_;
+  std::vector<CPUMaskFlags> cpu_masks_;
   std::vector<int> num_threads_;
   bool allow_worksteal_ = false;
   int availability_check_interval_ms_ = 30000;
@@ -175,22 +175,22 @@ class RuntimeConfigBuilder {
     return *this;
   }
   RuntimeConfigBuilder& AddSchedulers(
-      std::vector<BandSchedulerType> schedulers) {
+      std::vector<SchedulerType> schedulers) {
     planner_config_builder_.AddSchedulers(schedulers);
     return *this;
   }
-  RuntimeConfigBuilder& AddPlannerCPUMask(BandCPUMaskFlags cpu_masks) {
+  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlags cpu_masks) {
     planner_config_builder_.AddCPUMask(cpu_masks);
     return *this;
   }
 
   // Add WorkerConfig
-  RuntimeConfigBuilder& AddWorkers(std::vector<BandDeviceFlags> workers) {
+  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
     worker_config_builder_.AddWorkers(workers);
     return *this;
   }
   RuntimeConfigBuilder& AddWorkerCPUMasks(
-      std::vector<BandCPUMaskFlags> cpu_masks) {
+      std::vector<CPUMaskFlags> cpu_masks) {
     worker_config_builder_.AddCPUMasks(cpu_masks);
     return *this;
   }
@@ -213,11 +213,11 @@ class RuntimeConfigBuilder {
     return *this;
   }
   RuntimeConfigBuilder& AddSubgraphPreparationType(
-      BandSubgraphPreparationType subgraph_preparation_type) {
+      SubgraphPreparationType subgraph_preparation_type) {
     subgraph_preparation_type_ = subgraph_preparation_type;
     return *this;
   }
-  RuntimeConfigBuilder& AddCPUMask(BandCPUMaskFlags cpu_mask) {
+  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -230,9 +230,9 @@ class RuntimeConfigBuilder {
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
   int minimum_subgraph_size_ = 7;
-  BandSubgraphPreparationType subgraph_preparation_type_ =
-      kBandMergeUnitSubgraph;
-  BandCPUMaskFlags cpu_mask_ = kBandAll;
+  SubgraphPreparationType subgraph_preparation_type_ =
+      SubgraphPreparationType::MergeUnitSubgraph;
+  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
 };
 
 }  // namespace band

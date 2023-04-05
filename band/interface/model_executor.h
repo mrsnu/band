@@ -10,6 +10,9 @@
 #include "band/interface/model.h"
 #include "band/model_spec.h"
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+
 namespace band {
 namespace interface {
 /*
@@ -20,12 +23,12 @@ class ITensorView;
 class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(ModelId model_id, WorkerId worker_id,
-                 BandDeviceFlags device_flag)
+                 DeviceFlags device_flag)
       : model_id_(model_id), worker_id_(worker_id), device_flag_(device_flag) {}
   virtual ~IModelExecutor() = default;
 
-  virtual ModelSpec InvestigateModelSpec(IModel* model) = 0;
-  virtual BandStatus PrepareSubgraph(IModel* model, std::set<int> ops = {},
+  virtual absl::StatusOr<ModelSpec> InvestigateModelSpec(IModel* model) = 0;
+  virtual absl::Status PrepareSubgraph(IModel* model, std::set<int> ops = {},
                                      std::set<int> unit_indices = {}) = 0;
 
   virtual const std::vector<int>& GetInputs(const SubgraphKey& key) const = 0;
@@ -42,14 +45,14 @@ class IModelExecutor : public IBackendSpecific {
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual SubgraphKey GetLargestSubgraphKey() const = 0;
 
-  virtual BandStatus ExecuteSubgraph(const SubgraphKey& key) = 0;
+  virtual absl::Status ExecuteSubgraph(const SubgraphKey& key) = 0;
   virtual void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) = 0;
 
  protected:
   const ModelId model_id_;
   const WorkerId worker_id_;
-  const BandDeviceFlags device_flag_;
+  const DeviceFlags device_flag_;
 
  private:
   // Disable copy due to complexity
