@@ -2,14 +2,15 @@
 #define BAND_COMMON_H_
 
 #include <bitset>
+#include <cassert>
 #include <iostream>
 #include <list>
 #include <map>
 #include <set>
 #include <string>
-#include <vector>
 #include <type_traits>
-#include <cassert>
+#include <vector>
+
 
 namespace band {
 typedef int WorkerId;
@@ -40,7 +41,7 @@ std::string GetName(BackendType backend_type);
 
 // NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class CPUMaskFlags : size_t { All = 0, Little = 1, Big = 2, Primary = 3 };
-template<>
+template <>
 size_t GetSize<CPUMaskFlags>();
 std::string GetName(CPUMaskFlags cpu_mask_flags);
 
@@ -102,7 +103,7 @@ std::string GetName(DeviceFlags device_flags);
 template <>
 DeviceFlags FromString(std::string str);
 
-enum class WorkerType : size_t{
+enum class WorkerType : size_t {
   DeviceQueue = 1,
   GlobalQueue = 2,
 };

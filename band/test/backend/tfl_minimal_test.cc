@@ -295,7 +295,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
               << GetName(engine->GetWorkerDevice(worker_id)) << ")"
               << std::endl;
     EXPECT_TRUE(engine
-                    ->RequestSync(model.GetId(), {worker_id, true, -1, -1},
+                    ->RequestSync(model.GetId(),
+                                  {static_cast<int>(worker_id), true, -1, -1},
                                   {input_tensor}, {output_tensor})
                     .ok());
     EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
@@ -354,11 +355,15 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   });
 
   for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
-    EXPECT_TRUE(
-        engine->RequestSync(model.GetId(), {worker_id, true, -1, -1}).ok());
+    EXPECT_TRUE(engine
+                    ->RequestSync(model.GetId(),
+                                  {static_cast<int>(worker_id), true, -1, -1})
+                    .ok());
     EXPECT_EQ(execution_count, worker_id + 1);
-    EXPECT_TRUE(
-        engine->RequestSync(model.GetId(), {worker_id, false, -1, -1}).ok());
+    EXPECT_TRUE(engine
+                    ->RequestSync(model.GetId(),
+                                  {static_cast<int>(worker_id), false, -1, -1})
+                    .ok());
     EXPECT_EQ(execution_count, worker_id + 1);
   }
 }

@@ -47,6 +47,7 @@ class CpuSet {
   int NumEnabled() const;
   CPUMaskFlags GetCPUMaskFlag() const;
   const unsigned long* GetMaskBits() const;
+  std::vector<unsigned long> GetMaskBitsVector() const;
   bool operator==(const CpuSet& rhs) const;
 
 #if defined _BAND_SUPPORT_THREAD_AFFINITY

@@ -4,31 +4,29 @@
 #include "band/backend/tfl/tensor.h"
 #include "band/backend/tfl/util.h"
 #include "band/common.h"
+#include "band/cpu.h"
 #include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/worker.h"
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/subgraph.h"
 
+
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/nnapi/nnapi_util.h"
 #endif  // __ANDROID__
+#include "absl/strings/str_format.h"
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 
-#include "absl/strings/str_format.h"
 
 namespace band {
 namespace tfl {
 
 std::map<DeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
     TfLiteModelExecutor::delegates_ = {};
-
-TfLiteModelExecutor::TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
-                                         DeviceFlags device_flag)
-    : IModelExecutor(model_id, worker_id, device_flag) {}
 
 TfLiteModelExecutor::~TfLiteModelExecutor() {
   // explicitly remove interpreters first
@@ -333,6 +331,11 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
   }
   auto delegate = status_or_delegate.value();
   builder.AddDelegate(delegate);
+
+  builder.SetNumThreads(num_threads_);
+  if (thread_affinity_mask_.GetMaskBitsVector().size() > 0) {
+    builder.SetCpuMasks(thread_affinity_mask_.GetMaskBitsVector());
+  }
 
   if (builder(&interpreter) != kTfLiteOk) {
     return absl::InternalError(

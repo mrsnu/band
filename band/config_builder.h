@@ -66,8 +66,7 @@ class PlannerConfigBuilder {
     schedule_window_size_ = schedule_window_size;
     return *this;
   }
-  PlannerConfigBuilder& AddSchedulers(
-      std::vector<SchedulerType> schedulers) {
+  PlannerConfigBuilder& AddSchedulers(std::vector<SchedulerType> schedulers) {
     schedulers_ = schedulers;
     return *this;
   }
@@ -99,7 +98,8 @@ class WorkerConfigBuilder {
     for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
       workers_.push_back(static_cast<DeviceFlags>(i));
     }
-    cpu_masks_ = std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
+    cpu_masks_ =
+        std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
     num_threads_ = std::vector<int>(GetSize<DeviceFlags>(), 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
@@ -174,8 +174,7 @@ class RuntimeConfigBuilder {
     planner_config_builder_.AddScheduleWindowSize(schedule_window_size);
     return *this;
   }
-  RuntimeConfigBuilder& AddSchedulers(
-      std::vector<SchedulerType> schedulers) {
+  RuntimeConfigBuilder& AddSchedulers(std::vector<SchedulerType> schedulers) {
     planner_config_builder_.AddSchedulers(schedulers);
     return *this;
   }
@@ -189,8 +188,7 @@ class RuntimeConfigBuilder {
     worker_config_builder_.AddWorkers(workers);
     return *this;
   }
-  RuntimeConfigBuilder& AddWorkerCPUMasks(
-      std::vector<CPUMaskFlags> cpu_masks) {
+  RuntimeConfigBuilder& AddWorkerCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
     worker_config_builder_.AddCPUMasks(cpu_masks);
     return *this;
   }

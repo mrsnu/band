@@ -8,8 +8,7 @@ namespace band {
 namespace tfl {
 class TfLiteModelExecutor : public interface::IModelExecutor {
  public:
-  TfLiteModelExecutor(ModelId model_id, WorkerId worker_id,
-                      DeviceFlags device_flag);
+  using interface::IModelExecutor::IModelExecutor;
   ~TfLiteModelExecutor() override;
 
   absl::StatusOr<ModelSpec> InvestigateModelSpec(
