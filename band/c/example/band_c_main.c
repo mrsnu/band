@@ -1,5 +1,4 @@
 #include "band/c/c_api.h"
-#include "band/c/common.h"
 
 #if defined(_WIN32)
 #define __WINDOWS__
@@ -45,7 +44,8 @@ PFN_BandTensorGetData pBandTensorGetData;
 PFN_BandTensorGetDims pBandTensorGetDims;
 PFN_BandTensorGetNumDims pBandTensorGetNumDims;
 PFN_BandTensorGetName pBandTensorGetName;
-PFN_BandTensorGetQuantization pBandTensorGetQuantization;
+PFN_BandTensorGetQuantizationType pBandTensorGetQuantizationType;
+PFN_BandTensorGetQuantizationParams pBandTensorGetQuantizationParams;
 PFN_BandTensorGetType pBandTensorGetType;
 
 #ifdef __WINDOWS__
@@ -91,7 +91,8 @@ void LoadBandLibraryFunctions(void* libbandc) {
   LoadFunction(BandTensorGetDims);
   LoadFunction(BandTensorGetNumDims);
   LoadFunction(BandTensorGetName);
-  LoadFunction(BandTensorGetQuantization);
+  LoadFunction(BandTensorGetQuantizationType);
+  LoadFunction(BandTensorGetQuantizationParams);
   LoadFunction(BandTensorGetType);
 }
 
@@ -191,7 +192,7 @@ int main() {
   int num_workers = pBandEngineGetNumWorkers(engine);
   printf("BandEngineGetNumWorkers\n");
   for (int i = 0; i < num_workers; i++) {
-    printf("BandEngineGetWorkerDevice %s\n", BandDeviceGetName(pBandEngineGetWorkerDevice(engine, i)));
+    printf("BandEngineGetWorkerDevice %d\n", pBandEngineGetWorkerDevice(engine, i));
   }
 
   BandTensor* input_tensor = pBandEngineCreateInputTensor(engine, model, 0);

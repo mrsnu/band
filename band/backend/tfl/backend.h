@@ -12,11 +12,10 @@ namespace band {
 using namespace interface;
 namespace tfl {
 class ModelExecutorCreator : public Creator<IModelExecutor, ModelId, WorkerId,
-                                            BandDeviceFlags, CpuSet, int> {
+                                            DeviceFlags, CpuSet, int> {
  public:
   IModelExecutor* Create(ModelId model_id, WorkerId worker_id,
-                         BandDeviceFlags device_flag,
-                         CpuSet thread_affinity_mask,
+                         DeviceFlags device_flag, CpuSet thread_affinity_mask,
                          int num_threads) const override {
     return new TfLiteModelExecutor(model_id, worker_id, device_flag,
                                    thread_affinity_mask, num_threads);

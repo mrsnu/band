@@ -1,7 +1,5 @@
 #include "band/config_builder.h"
 
-#include "band/macros.h"
-
 namespace band {
 
 #define REPORT_IF_FALSE(context, expr)                            \
@@ -20,8 +18,8 @@ bool ProfileConfigBuilder::IsValid(
   REPORT_IF_FALSE(ProfileConfigBuilder, num_warmups_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder, num_runs_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder,
-                  copy_computation_ratio_.size() == kBandNumDevices);
-  for (int i = 0; i < kBandNumDevices; i++) {
+                  copy_computation_ratio_.size() == GetSize<DeviceFlags>());
+  for (int i = 0; i < GetSize<DeviceFlags>(); i++) {
     REPORT_IF_FALSE(ProfileConfigBuilder, copy_computation_ratio_[i] >= 0);
   }
   REPORT_IF_FALSE(ProfileConfigBuilder,
@@ -38,9 +36,10 @@ bool PlannerConfigBuilder::IsValid(
   REPORT_IF_FALSE(PlannerConfigBuilder, /*log_path_*/ true);  // Always true
   REPORT_IF_FALSE(PlannerConfigBuilder, schedule_window_size_ > 0);
   REPORT_IF_FALSE(PlannerConfigBuilder, schedulers_.size() > 0);
-  REPORT_IF_FALSE(PlannerConfigBuilder,
-                  cpu_mask_ == kBandAll || cpu_mask_ == kBandLittle ||
-                      cpu_mask_ == kBandBig || cpu_mask_ == kBandPrimary);
+  REPORT_IF_FALSE(PlannerConfigBuilder, cpu_mask_ == CPUMaskFlags::All ||
+                                            cpu_mask_ == CPUMaskFlags::Little ||
+                                            cpu_mask_ == CPUMaskFlags::Big ||
+                                            cpu_mask_ == CPUMaskFlags::Primary);
   return result;
 }
 
@@ -48,17 +47,18 @@ bool WorkerConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
   for (int i = 0; i < workers_.size(); i++) {
-    REPORT_IF_FALSE(WorkerConfigBuilder,
-                    workers_[i] == kBandCPU || workers_[i] == kBandGPU ||
-                        workers_[i] == kBandDSP || workers_[i] == kBandNPU);
+    REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlags::CPU ||
+                                             workers_[i] == DeviceFlags::GPU ||
+                                             workers_[i] == DeviceFlags::DSP ||
+                                             workers_[i] == DeviceFlags::NPU);
   }
-  REPORT_IF_FALSE(WorkerConfigBuilder,
-                  cpu_mask_bits_.size() == workers_.size());
+  REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
-    REPORT_IF_FALSE(WorkerConfigBuilder, cpu_mask_bits_[i] == kBandAll ||
-                                             cpu_mask_bits_[i] == kBandLittle ||
-                                             cpu_mask_bits_[i] == kBandBig ||
-                                             cpu_mask_bits_[i] == kBandPrimary);
+    REPORT_IF_FALSE(WorkerConfigBuilder,
+                    cpu_masks_[i] == CPUMaskFlags::All ||
+                        cpu_masks_[i] == CPUMaskFlags::Little ||
+                        cpu_masks_[i] == CPUMaskFlags::Big ||
+                        cpu_masks_[i] == CPUMaskFlags::Primary);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, num_threads_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
@@ -74,14 +74,19 @@ bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
   REPORT_IF_FALSE(RuntimeConfigBuilder, minimum_subgraph_size_ > 0);
-  REPORT_IF_FALSE(RuntimeConfigBuilder,
-                  subgraph_preparation_type_ == kBandNoFallbackSubgraph ||
-                      subgraph_preparation_type_ == kBandFallbackPerWorker ||
-                      subgraph_preparation_type_ == kBandUnitSubgraph ||
-                      subgraph_preparation_type_ == kBandMergeUnitSubgraph);
-  REPORT_IF_FALSE(RuntimeConfigBuilder,
-                  cpu_mask_ == kBandAll || cpu_mask_ == kBandLittle ||
-                      cpu_mask_ == kBandBig || cpu_mask_ == kBandPrimary);
+  REPORT_IF_FALSE(
+      RuntimeConfigBuilder,
+      subgraph_preparation_type_ ==
+              SubgraphPreparationType::NoFallbackSubgraph ||
+          subgraph_preparation_type_ ==
+              SubgraphPreparationType::FallbackPerWorker ||
+          subgraph_preparation_type_ == SubgraphPreparationType::UnitSubgraph ||
+          subgraph_preparation_type_ ==
+              SubgraphPreparationType::MergeUnitSubgraph);
+  REPORT_IF_FALSE(RuntimeConfigBuilder, cpu_mask_ == CPUMaskFlags::All ||
+                                            cpu_mask_ == CPUMaskFlags::Little ||
+                                            cpu_mask_ == CPUMaskFlags::Big ||
+                                            cpu_mask_ == CPUMaskFlags::Primary);
 
   // Independent validation
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
@@ -132,7 +137,7 @@ WorkerConfig WorkerConfigBuilder::Build(
   }
   WorkerConfig worker_config;
   worker_config.workers = workers_;
-  worker_config.cpu_masks = cpu_mask_bits_;
+  worker_config.cpu_masks = cpu_masks_;
   worker_config.num_threads = num_threads_;
   worker_config.allow_worksteal = allow_worksteal_;
   worker_config.availability_check_interval_ms =

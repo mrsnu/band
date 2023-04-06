@@ -15,7 +15,7 @@
             "device": "CPU"
         }
     ],
-    "log_path": "band/test/data/log.csv",
+    "log_path": "band/test/data/log.json",
     "schedulers": [
         "round_robin"
     ],

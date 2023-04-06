@@ -33,7 +33,7 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
   * `batch_size`: The number of model requests in a frame. [default: 1]
   * `worker_id`: **Optional** Specify the worker id to run in int. The argument is only effective with `fixed_device` scheduler.
   * `slo_us` and `slo_scale`: **Optional** fields for specifying an SLO value for a model. Setting `slo_scale` will make the SLO = worst profiled latency of that model * `slo_scale`. `slo_scale` will be ignored if `slo_us` is given (i.e., no reason to specify both options).
-* `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.csv`)
+* `log_path`: The log file path. (e.g., `/data/local/tmp/model_execution_log.json`)
 * `schedulers`: The scheduler types in `list[string]`. If N schedulers are specified, then N queues are generated.
   * `fixed_worker`
   * `round_robin`
@@ -72,7 +72,7 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
 * `profile_online`: Online profile or offline profile [default: true]
 * `profile_warmup_runs`: Number of warmup runs before profile. [default: 1]
 * `profile_num_runs`: Number of runs for profile. [default: 1]
-* `profile_copy_computation_ratio`: Ratio of computation / input-ouput copy in `list[int]`. Used for latency estimation for each device type (e.g., CPU, GPU, DSP, NPU). The length of the list should be equal to the 4 (`kBandNumDevices`). [default: 30000, 30000, 30000, 30000]
+* `profile_copy_computation_ratio`: Ratio of computation / input-ouput copy in `list[int]`. Used for latency estimation for each device type (e.g., CPU, GPU, DSP, NPU). The length of the list should be equal to the 4 (`GetSize<DeviceFlags>()`). [default: 30000, 30000, 30000, 30000]
 * `schedule_window_size`: The number of planning unit.
 * `workload`: The path to file with workload information. [default: None] 
 
@@ -97,7 +97,7 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
             "batch_size": 3
         }
     ],
-    "log_path": "/data/local/tmp/log.csv",
+    "log_path": "/data/local/tmp/log.json",
     "schedulers": [
         "heterogeneous_earliest_finish_time_reserved"
     ],

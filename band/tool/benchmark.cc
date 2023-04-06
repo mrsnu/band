@@ -16,7 +16,7 @@
 
 namespace band {
 namespace tool {
-Benchmark::Benchmark(BandBackendType target_backend)
+Benchmark::Benchmark(BackendType target_backend)
     : target_backend_(target_backend) {}
 
 Benchmark::~Benchmark() {
@@ -28,7 +28,7 @@ Benchmark::~Benchmark() {
   }
 }
 
-BandStatus Benchmark::Run() {
+absl::Status Benchmark::Run() {
   if (benchmark_config_.execution_mode == "periodic") {
     RunPeriodic();
   } else if (benchmark_config_.execution_mode == "stream") {
@@ -58,17 +58,20 @@ Benchmark::ModelContext::~ModelContext() {
   delete_tensors(model_inputs);
 }
 
-BandStatus Benchmark::ModelContext::PrepareInput() {
+absl::Status Benchmark::ModelContext::PrepareInput() {
   for (int batch_index = 0; batch_index < model_request_inputs.size();
        batch_index++) {
     for (int input_index = 0; input_index < model_inputs.size();
          input_index++) {
-      BAND_ENSURE_STATUS(
+      auto status =
           model_request_inputs[batch_index][input_index]->CopyDataFrom(
-              model_inputs[input_index]));
+              model_inputs[input_index]);
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 bool Benchmark::ParseArgs(int argc, const char** argv) {
@@ -181,14 +184,14 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
       builder.AddScheduleWindowSize(root["schedule_window_size"].asInt());
     }
 
-    std::vector<BandSchedulerType> schedulers;
+    std::vector<SchedulerType> schedulers;
     for (auto scheduler : root["schedulers"]) {
       if (!scheduler.isString()) {
         BAND_LOG_PROD(BAND_LOG_ERROR,
                       "Please check if given scheduler is valid");
         return false;
       }
-      schedulers.push_back(BandSchedulerGetType(scheduler.asCString()));
+      schedulers.push_back(FromString<SchedulerType>(scheduler.asCString()));
     }
     builder.AddSchedulers(schedulers);
 
@@ -204,13 +207,14 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   // Worker config
   {
     if (!root["workers"].isNull()) {
-      std::vector<BandDeviceFlags> workers;
-      std::vector<BandCPUMaskFlags> cpu_masks;
+      std::vector<DeviceFlags> workers;
+      std::vector<CPUMaskFlags> cpu_masks;
       std::vector<int> num_threads;
 
       for (auto worker : root["workers"]) {
         if (worker["device"].isString()) {
-          workers.push_back(BandDeviceGetFlag(worker["device"].asCString()));
+          workers.push_back(
+              FromString<DeviceFlags>(worker["device"].asCString()));
         }
         if (worker["num_threads"].isInt()) {
           num_threads.push_back(worker["num_threads"].asInt());
@@ -239,7 +243,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
 
     if (root["subgraph_preparation_type"].isString()) {
-      builder.AddSubgraphPreparationType(BandSubgraphPreparationGetType(
+      builder.AddSubgraphPreparationType(FromString<SubgraphPreparationType>(
           root["subgraph_preparation_type"].asCString()));
     }
 
@@ -269,23 +273,32 @@ void CreateRandomTensorData(void* target_ptr, int num_elements,
   });
 }
 
-BandStatus Benchmark::Initialize(int argc, const char** argv) {
+absl::Status Benchmark::Initialize(int argc, const char** argv) {
   if (!ParseArgs(argc, argv)) {
-    return kBandError;
+    return absl::InternalError("Failed to parse arguments");
   }
 
   engine_ = Engine::Create(*runtime_config_);
   if (!engine_) {
-    std::cout << "Failed to create engine" << std::endl;
-    return kBandError;
+    return absl::InternalError("Failed to create engine");
   }
 
   // load models
   for (auto benchmark_model : benchmark_config_.model_configs) {
     ModelContext* context = new ModelContext;
-    BAND_ENSURE_STATUS(
-        context->model.FromPath(target_backend_, benchmark_model.path.c_str()));
-    BAND_ENSURE_STATUS(engine_->RegisterModel(&context->model));
+    {
+      auto status = context->model.FromPath(target_backend_,
+                                            benchmark_model.path.c_str());
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    {
+      auto status = engine_->RegisterModel(&context->model);
+      if (!status.ok()) {
+        return status;
+      }
+    }
 
     const int model_id = context->model.GetId();
     const auto input_indices = engine_->GetInputTensorIndices(model_id);
@@ -308,7 +321,7 @@ BandStatus Benchmark::Initialize(int argc, const char** argv) {
 
     context->model_ids =
         std::vector<ModelId>(benchmark_model.batch_size, model_id);
-    context->request_options = std::vector<BandRequestOption>(
+    context->request_options = std::vector<RequestOption>(
         benchmark_model.batch_size, benchmark_model.GetRequestOption());
 
     // pre-allocate random input tensor to feed in run-time
@@ -318,37 +331,37 @@ BandStatus Benchmark::Initialize(int argc, const char** argv) {
           engine_->CreateTensor(model_id, input_index);
       // random value ranges borrowed from tensorflow/lite/tools/benchmark
       switch (input_tensor->GetType()) {
-        case kBandUInt8:
+        case DataType::UInt8:
           CreateRandomTensorData<uint8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 254));
           break;
-        case kBandInt8:
+        case DataType::Int8:
           CreateRandomTensorData<int8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(-127, 127));
           break;
-        case kBandInt16:
+        case DataType::Int16:
           CreateRandomTensorData<int16_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int16_t>(0, 99));
           break;
-        case kBandInt32:
+        case DataType::Int32:
           CreateRandomTensorData<int32_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 99));
           break;
-        case kBandInt64:
+        case DataType::Int64:
           CreateRandomTensorData<int64_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int64_t>(0, 99));
           break;
-        case kBandFloat32:
+        case DataType::Float32:
           CreateRandomTensorData<float>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<float>(-0.5, 0.5));
           break;
-        case kBandFloat64:
+        case DataType::Float64:
           CreateRandomTensorData<double>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<double>(-0.5, 0.5));
@@ -363,7 +376,7 @@ BandStatus Benchmark::Initialize(int argc, const char** argv) {
     model_contexts_.push_back(context);
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 void Benchmark::RunPeriodic() {
@@ -372,7 +385,7 @@ void Benchmark::RunPeriodic() {
     std::thread t(
         [this](ModelContext* model_context, const size_t period_us) {
           while (true) {
-            if (model_context->PrepareInput() != kBandOk) {
+            if (!model_context->PrepareInput().ok()) {
               std::cout << "Failed to copy input for model "
                         << model_context->model
                                .GetBackendModel(target_backend_)
@@ -382,10 +395,18 @@ void Benchmark::RunPeriodic() {
             }
 
             size_t id = model_context->profiler.BeginEvent();
-            engine_->RequestSync(model_context->model_ids,
-                                 model_context->request_options,
-                                 model_context->model_request_inputs,
-                                 model_context->model_request_outputs);
+            auto status = engine_->RequestSync(
+                model_context->model_ids, model_context->request_options,
+                model_context->model_request_inputs,
+                model_context->model_request_outputs);
+            if (!status.ok()) {
+              std::cout << "Failed to run model "
+                        << model_context->model
+                               .GetBackendModel(target_backend_)
+                               ->GetPath()
+                        << std::endl;
+              return;
+            }
             model_context->profiler.EndEvent(id);
 
             if (kill_app_) return;
@@ -417,12 +438,12 @@ void Benchmark::RunStream() {
   int64_t start = Time::NowMicros();
   while (true) {
     std::vector<ModelId> model_ids;
-    std::vector<BandRequestOption> request_options;
+    std::vector<RequestOption> request_options;
     std::vector<Tensors> inputs;
     std::vector<Tensors> outputs;
 
     for (auto model_context : model_contexts_) {
-      if (model_context->PrepareInput() != kBandOk) {
+      if (!model_context->PrepareInput().ok()) {
         std::cout
             << "Failed to copy input for model "
             << model_context->model.GetBackendModel(target_backend_)->GetPath()
@@ -442,7 +463,11 @@ void Benchmark::RunStream() {
     }
 
     size_t id = global_profiler_.BeginEvent();
-    engine_->RequestSync(model_ids, request_options, inputs, outputs);
+    auto status =
+        engine_->RequestSync(model_ids, request_options, inputs, outputs);
+    if (!status.ok()) {
+      std::cout << "Failed to run model: " << status.message() << std::endl;
+    }
     global_profiler_.EndEvent(id);
     int64_t current = Time::NowMicros();
     if (current - start >= run_duration_us) break;
@@ -462,7 +487,7 @@ void PrintLine(std::string key, const T& value, size_t indent_level = 0) {
             << "] : " << std::right << value << std::endl;
 }
 
-BandStatus Benchmark::LogResults() {
+absl::Status Benchmark::LogResults() {
   const std::string header = "--\t\t Band Benchmark Tool \t\t--";
   size_t length = header.size();
   std::cout << std::setfill('-') << std::setw(length) << std::fixed;
@@ -511,7 +536,7 @@ BandStatus Benchmark::LogResults() {
     }
   }
 
-  return kBandOk;
+  return absl::OkStatus();
 }
 
 }  // namespace tool

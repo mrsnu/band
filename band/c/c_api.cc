@@ -4,6 +4,8 @@
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 
+namespace {
+
 std::vector<band::interface::ITensor*> BandTensorArrayToVec(
     BandTensor** tensors, int num_tensors) {
   std::vector<band::interface::ITensor*> vec(num_tensors);
@@ -12,6 +14,33 @@ std::vector<band::interface::ITensor*> BandTensorArrayToVec(
   }
   return vec;
 }
+
+BandStatus ToBandStatus(absl::Status& status) {
+  if (status.code() == absl::StatusCode::kInternal) {
+    return kBandError;
+  } else {
+    return kBandOk;
+  }
+}
+
+BandStatus ToBandStatus(absl::Status&& status) {
+  if (status.code() == absl::StatusCode::kInternal) {
+    return kBandError;
+  } else {
+    return kBandOk;
+  }
+}
+
+band::RequestOption ToRequestOption(BandRequestOption& option) {
+  band::RequestOption request_option;
+  request_option.target_worker = option.target_worker;
+  request_option.require_callback = option.require_callback;
+  request_option.slo_scale = option.slo_scale;
+  request_option.slo_us = option.slo_us;
+  return request_option;
+}
+
+}  // anonymous namespace
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,32 +86,32 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       b->impl.AddScheduleWindowSize(arg);
     } break;
     case BAND_PLANNER_SCHEDULERS: {
-      std::vector<BandSchedulerType> schedulers(count);
+      std::vector<band::SchedulerType> schedulers(count);
       for (int i = 0; i < count; i++) {
-        schedulers[i] = static_cast<BandSchedulerType>(va_arg(vl, int));
+        schedulers[i] = static_cast<band::SchedulerType>(va_arg(vl, int));
       }
       b->impl.AddSchedulers(schedulers);
     } break;
     case BAND_PLANNER_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddPlannerCPUMask(static_cast<BandCPUMaskFlags>(arg));
+      b->impl.AddPlannerCPUMask(static_cast<band::CPUMaskFlags>(arg));
     } break;
     case BAND_PLANNER_LOG_PATH: {
       char* arg = va_arg(vl, char*);
       b->impl.AddPlannerLogPath(arg);
     } break;
     case BAND_WORKER_WORKERS: {
-      std::vector<BandDeviceFlags> workers(count);
+      std::vector<band::DeviceFlags> workers(count);
       for (int i = 0; i < count; i++) {
         int temp = va_arg(vl, int);
-        workers[i] = static_cast<BandDeviceFlags>(temp);
+        workers[i] = static_cast<band::DeviceFlags>(temp);
       }
       b->impl.AddWorkers(workers);
     } break;
     case BAND_WORKER_CPU_MASKS: {
-      std::vector<BandCPUMaskFlags> cpu_masks(count);
+      std::vector<band::CPUMaskFlags> cpu_masks(count);
       for (int i = 0; i < count; i++) {
-        cpu_masks[i] = static_cast<BandCPUMaskFlags>(va_arg(vl, int));
+        cpu_masks[i] = static_cast<band::CPUMaskFlags>(va_arg(vl, int));
       }
       b->impl.AddWorkerCPUMasks(cpu_masks);
     } break;
@@ -108,11 +137,11 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     case BAND_SUBGRAPH_PREPARATION_TYPE: {
       int arg = va_arg(vl, int);
       b->impl.AddSubgraphPreparationType(
-          static_cast<BandSubgraphPreparationType>(arg));
+          static_cast<band::SubgraphPreparationType>(arg));
     } break;
     case BAND_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddCPUMask(static_cast<BandCPUMaskFlags>(arg));
+      b->impl.AddCPUMask(static_cast<band::CPUMaskFlags>(arg));
     } break;
   }
   va_end(vl);
@@ -135,19 +164,21 @@ void BandModelDelete(BandModel* model) { delete model; }
 BandStatus BandModelAddFromBuffer(BandModel* model,
                                   BandBackendType backend_type,
                                   const void* model_data, size_t model_size) {
-  return model->impl->FromBuffer(backend_type, (const char*)model_data,
-                                 model_size);
+  return ToBandStatus(
+      model->impl->FromBuffer(static_cast<band::BackendType>(backend_type),
+                              (const char*)model_data, model_size));
 }
 
 BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
                                 const char* model_path) {
-  return model->impl->FromPath(backend_type, model_path);
+  return ToBandStatus(model->impl->FromPath(
+      static_cast<band::BackendType>(backend_type), model_path));
 }
 
 void BandTensorDelete(BandTensor* tensor) { delete tensor; }
 
 BandType BandTensorGetType(BandTensor* tensor) {
-  return tensor->impl->GetType();
+  return static_cast<BandType>(tensor->impl->GetType());
 }
 
 void* BandTensorGetData(BandTensor* tensor) { return tensor->impl->GetData(); }
@@ -168,8 +199,17 @@ const char* BandTensorGetName(BandTensor* tensor) {
   return tensor->impl->GetName();
 }
 
-BandQuantization BandTensorGetQuantization(BandTensor* tensor) {
-  return tensor->impl->GetQuantization();
+BandQuantizationType BandTensorGetQuantizationType(BandTensor* tensor) {
+  return static_cast<BandQuantizationType>(
+      tensor->impl->GetQuantization().GetType());
+}
+
+void* BandTensorGetQuantizationParams(BandTensor* tensor) {
+  return tensor->impl->GetQuantization().GetParams();
+}
+
+BandRequestOption BandRequestOptionGetDefault() {
+  return {-1, true, -1, -1.f};
 }
 
 BandEngine* BandEngineCreate(BandConfig* config) {
@@ -184,10 +224,10 @@ void BandEngineDelete(BandEngine* engine) {
 
 BandStatus BandEngineRegisterModel(BandEngine* engine, BandModel* model) {
   auto status = engine->impl->RegisterModel(model->impl.get());
-  if (status == kBandOk) {
+  if (status == absl::OkStatus()) {
     engine->models.push_back(model->impl);
   }
-  return status;
+  return ToBandStatus(status);
 }
 
 int BandEngineGetNumInputTensors(BandEngine* engine, BandModel* model) {
@@ -203,7 +243,7 @@ int BandEngineGetNumWorkers(BandEngine* engine) {
 }
 
 BandDeviceFlags BandEngineGetWorkerDevice(BandEngine* engine, int worker_id) {
-  return engine->impl->GetWorkerDevice(worker_id);
+  return static_cast<BandDeviceFlags>(engine->impl->GetWorkerDevice(worker_id));
 }
 
 BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,
@@ -225,48 +265,54 @@ BandTensor* BandEngineCreateOutputTensor(BandEngine* engine, BandModel* model,
 BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
                                  BandTensor** input_tensors,
                                  BandTensor** output_tensors) {
-  return engine->impl->RequestSync(
-      model->impl->GetId(), BandGetDefaultRequestOption(),
+  return ToBandStatus(engine->impl->RequestSync(
+      model->impl->GetId(), band::RequestOption::GetDefaultOption(),
       BandTensorArrayToVec(input_tensors,
                            BandEngineGetNumInputTensors(engine, model)),
       BandTensorArrayToVec(output_tensors,
-                           BandEngineGetNumOutputTensors(engine, model)));
+                           BandEngineGetNumOutputTensors(engine, model))));
 }
 
 BandRequestHandle BandEngineRequestAsync(BandEngine* engine, BandModel* model,
                                          BandTensor** input_tensors) {
-  return engine->impl->RequestAsync(
-      model->impl->GetId(), BandGetDefaultRequestOption(),
-      BandTensorArrayToVec(input_tensors,
-                           BandEngineGetNumInputTensors(engine, model)));
+  // TODO(widiba03304): error handling
+  return engine->impl
+      ->RequestAsync(
+          model->impl->GetId(), band::RequestOption::GetDefaultOption(),
+          BandTensorArrayToVec(input_tensors,
+                               BandEngineGetNumInputTensors(engine, model)))
+      .value();
 }
 
 BandStatus BandEngineRequestSyncOptions(BandEngine* engine, BandModel* model,
                                         BandRequestOption options,
                                         BandTensor** input_tensors,
                                         BandTensor** output_tensors) {
-  return engine->impl->RequestSync(
-      model->impl->GetId(), options,
+  return ToBandStatus(engine->impl->RequestSync(
+      model->impl->GetId(), ToRequestOption(options),
       BandTensorArrayToVec(input_tensors,
                            BandEngineGetNumInputTensors(engine, model)),
       BandTensorArrayToVec(output_tensors,
-                           BandEngineGetNumOutputTensors(engine, model)));
+                           BandEngineGetNumOutputTensors(engine, model))));
 }
 
 BandRequestHandle BandEngineRequestAsyncOptions(BandEngine* engine,
                                                 BandModel* model,
                                                 BandRequestOption options,
                                                 BandTensor** input_tensors) {
-  return engine->impl->RequestAsync(
-      model->impl->GetId(), options,
-      BandTensorArrayToVec(input_tensors,
-                           BandEngineGetNumInputTensors(engine, model)));
+  // TODO(widiba): error handling
+  return engine->impl
+      ->RequestAsync(
+          model->impl->GetId(), ToRequestOption(options),
+          BandTensorArrayToVec(input_tensors,
+                               BandEngineGetNumInputTensors(engine, model)))
+      .value();
 }
 
 BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
                           BandTensor** output_tensors, size_t num_outputs) {
-  return engine->impl->Wait(handle,
-                            BandTensorArrayToVec(output_tensors, num_outputs));
+  return ToBandStatus(engine->impl->Wait(
+      handle, BandTensorArrayToVec(output_tensors, num_outputs)));
 }
 
 void BandEngineSetOnEndRequest(BandEngine* engine,
@@ -276,7 +322,11 @@ void BandEngineSetOnEndRequest(BandEngine* engine,
                                void* user_data) {
   auto user_data_invoke = std::bind(
       on_end_invoke, user_data, std::placeholders::_1, std::placeholders::_2);
-  return engine->impl->SetOnEndRequest(user_data_invoke);
+  std::function<void(int, absl::Status)> new_on_end_invoke =
+      [user_data_invoke](int job_id, absl::Status status) {
+        user_data_invoke(job_id, ToBandStatus(status));
+      };
+  return engine->impl->SetOnEndRequest(new_on_end_invoke);
 }
 
 #ifdef __cplusplus

@@ -1,9 +1,7 @@
 #ifndef BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 #define BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 
-#include "band/c/common.h"
 #include "band/interface/model_executor.h"
-#include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/interpreter.h"
 
 namespace band {
@@ -13,11 +11,12 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
   using interface::IModelExecutor::IModelExecutor;
   ~TfLiteModelExecutor() override;
 
-  ModelSpec InvestigateModelSpec(interface::IModel* model) override;
-  BandStatus PrepareSubgraph(interface::IModel* model, std::set<int> ops = {},
-                             std::set<int> unit_indices = {}) override;
+  absl::StatusOr<ModelSpec> InvestigateModelSpec(
+      interface::IModel* model) override;
+  absl::Status PrepareSubgraph(interface::IModel* model, std::set<int> ops = {},
+                               std::set<int> unit_indices = {}) override;
 
-  BandBackendType GetBackendType() const override;
+  BackendType GetBackendType() const override;
   const std::vector<int>& GetInputs(const SubgraphKey& key) const override;
   const std::vector<int>& GetOutputs(const SubgraphKey& key) const override;
   const char* GetInputName(const SubgraphKey& key, int index) const override;
@@ -30,7 +29,7 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
   SubgraphKey GetLargestSubgraphKey() const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
 
-  BandStatus ExecuteSubgraph(const SubgraphKey& key) override;
+  absl::Status ExecuteSubgraph(const SubgraphKey& key) override;
   void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) override;
 
@@ -40,16 +39,15 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
   tflite::Interpreter* GetInterpreter(const SubgraphKey& key);
   const tflite::Interpreter* GetInterpreter(const SubgraphKey& key) const;
 
-  std::unique_ptr<tflite::Interpreter> CreateTfLiteInterpreter(
-      interface::IModel* model, BandDeviceFlags device,
+  absl::StatusOr<std::unique_ptr<tflite::Interpreter>> CreateTfLiteInterpreter(
+      interface::IModel* model, DeviceFlags device,
       std::set<int> op_indices = {});
-  static std::pair<BandStatus, TfLiteDelegate*> GetDeviceDelegate(
-      BandDeviceFlags device);
+  static absl::StatusOr<TfLiteDelegate*> GetDeviceDelegate(DeviceFlags device);
 
   std::unordered_map<SubgraphKey, std::unique_ptr<tflite::Interpreter>,
                      SubgraphHash>
       interpreters_;
-  static std::map<BandDeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
+  static std::map<DeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
       delegates_;
 };
 }  // namespace tfl

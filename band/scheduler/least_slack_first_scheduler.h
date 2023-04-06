@@ -12,7 +12,7 @@ class LeastSlackFirstScheduler : public IScheduler {
   void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
-  BandWorkerType GetWorkerType() override { return kBandGlobalQueue; }
+  WorkerType GetWorkerType() override { return WorkerType::GlobalQueue; }
 
  private:
   int64_t GetSlackTime(int64_t current_time, const Job& job);

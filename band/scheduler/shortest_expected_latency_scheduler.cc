@@ -37,7 +37,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     SubgraphKey target_subgraph_key;
     WorkerWaitingTime worker_waiting = context_.GetWorkerWaitingTime();
 
-    std::unordered_set<std::pair<int, BitMask>, CacheHash> searched_jobs;
+    std::unordered_set<std::pair<int, BitMask>, JobIdBitMaskHash> searched_jobs;
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
 

@@ -4,16 +4,20 @@
 
 #include "band/common.h"
 #include "band/interface/backend.h"
+
 #include "tensorflow/lite/c/common.h"
+
+#include "absl/status/status.h"
 
 namespace band {
 namespace tfl {
-BandStatus GetBandStatus(TfLiteStatus status);
-BandType GetBandType(TfLiteType type);
+
+absl::Status GetBandStatus(TfLiteStatus status);
+DataType GetBandType(TfLiteType type);
 
 class TfLiteUtil : public interface::IBackendUtil {
  public:
-  std::set<BandDeviceFlags> GetAvailableDevices() const override;
+  std::set<DeviceFlags> GetAvailableDevices() const override;
 };
 
 }  // namespace tfl

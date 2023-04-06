@@ -12,7 +12,7 @@ namespace band {
 TEST(CApi, ConfigLoad) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
   BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
-                "band/test/data/log.csv");
+                "band/test/data/log.json");
   BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandRoundRobin);
   BandAddConfig(b, BAND_MINIMUM_SUBGRAPH_SIZE, /*count=*/1, 7);
   BandAddConfig(b, BAND_SUBGRAPH_PREPARATION_TYPE, /*count=*/1,
@@ -51,7 +51,7 @@ TEST(CApi, ModelLoad) {
 TEST(CApi, EngineSimpleInvoke) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
   BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
-                "band/test/data/log.csv");
+                "band/test/data/log.json");
   BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandRoundRobin);
   BandAddConfig(b, BAND_MINIMUM_SUBGRAPH_SIZE, /*count=*/1, 7);
   BandAddConfig(b, BAND_SUBGRAPH_PREPARATION_TYPE, /*count=*/1,
@@ -116,7 +116,7 @@ TEST(CApi, EngineSimpleInvoke) {
 TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
   BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
-                "band/test/data/log.csv");
+                "band/test/data/log.json");
   BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandFixedWorker);
   BandConfig* config = BandConfigCreate(b);
   EXPECT_NE(config, nullptr);
@@ -140,7 +140,7 @@ TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(BandTensorGetData(input_tensor), input.data(),
          input.size() * sizeof(float));
-  BandRequestOption request_option = BandGetDefaultRequestOption();
+  BandRequestOption request_option = BandRequestOptionGetDefault();
   request_option.target_worker = 0;
   EXPECT_EQ(BandEngineRequestSyncOptions(engine, model, request_option,
                                          &input_tensor, &output_tensor),

@@ -7,6 +7,8 @@
 
 #include "band/common.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 // a convenient data structure for holding various model information
 class ModelSpec {
@@ -14,12 +16,12 @@ class ModelSpec {
   // explicitly remove default ctor, to force initialization of required
   // params
   ModelSpec() : ModelSpec(0, 0, {}, {}, {}, {}, {}, {}, {}) {}
-  ModelSpec(int num_ops, int num_tensors, std::vector<BandType> tensor_types,
+  ModelSpec(int num_ops, int num_tensors, std::vector<DataType> tensor_types,
             std::set<int> input_tensors, std::set<int> output_tensors,
             std::vector<std::set<int>> op_input_tensors,
             std::vector<std::set<int>> op_output_tensors,
-            std::map<BandDeviceFlags, std::set<int>> unsupported_ops,
-            std::set<BandDeviceFlags> unavailable_devices)
+            std::map<DeviceFlags, std::set<int>> unsupported_ops,
+            std::set<DeviceFlags> unavailable_devices)
       : num_ops(num_ops),
         num_tensors(num_tensors),
         tensor_types(tensor_types),
@@ -40,7 +42,7 @@ class ModelSpec {
   // connected to multiple ops across multiple subgraphs in Pixel 4 -- output
   // tensor #396).
   std::set<int> GetOutputTensors(const std::set<int>& op_indices) const;
-  BandStatus SetUnitSubgraphs(std::vector<std::set<int>> ops);
+  absl::Status SetUnitSubgraphs(std::vector<std::set<int>> ops);
 
   size_t GetNumUnitSubgraphs() const;
   const std::set<int>& GetUnitSubgraphOps(size_t index) const;
@@ -50,7 +52,7 @@ class ModelSpec {
   /* from Interpreter::InvestigateModelSpec */
   const int num_ops;
   const int num_tensors;
-  const std::vector<BandType> tensor_types;
+  const std::vector<DataType> tensor_types;
   // indices to input / output tensors
   const std::set<int> input_tensors;
   const std::set<int> output_tensors;
@@ -61,8 +63,8 @@ class ModelSpec {
   // e.g., kTfLiteMmapRo in Tensorflow Lite
   const std::vector<std::set<int>> op_input_tensors;
   const std::vector<std::set<int>> op_output_tensors;
-  const std::map<BandDeviceFlags, std::set<int>> unsupported_ops;
-  const std::set<BandDeviceFlags> unavailable_devices;
+  const std::map<DeviceFlags, std::set<int>> unsupported_ops;
+  const std::set<DeviceFlags> unavailable_devices;
 
   std::string path;
 

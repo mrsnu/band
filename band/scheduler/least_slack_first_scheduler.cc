@@ -39,7 +39,7 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     // Change job status and schedule if the execution plan already exceeded SLO
     if (job.slo_us > 0 &&
         current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
-      job.status = kBandJobSLOViolation;
+      job.status = JobStatus::SLOViolation;
       context_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;

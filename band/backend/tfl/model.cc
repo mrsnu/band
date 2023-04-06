@@ -2,26 +2,24 @@
 
 #include <iostream>
 
-#include "band/c/common.h"
-
 namespace band {
 namespace tfl {
 TfLiteModel::TfLiteModel(ModelId id) : interface::IModel(id) {}
 
-BandBackendType TfLiteModel::GetBackendType() const { return kBandTfLite; }
+BackendType TfLiteModel::GetBackendType() const { return BackendType::TfLite; }
 
-BandStatus TfLiteModel::FromPath(const char* filename) {
+absl::Status TfLiteModel::FromPath(const char* filename) {
   // TODO: Add Band TFLBackend error reporter
   flat_buffer_model_ = tflite::FlatBufferModel::BuildFromFile(filename);
   path_ = filename;
-  return flat_buffer_model_ ? kBandOk : kBandError;
+  return flat_buffer_model_ ? absl::OkStatus() : absl::InternalError("Cannot load from file.");
 }
 
-BandStatus TfLiteModel::FromBuffer(const char* buffer, size_t buffer_size) {
+absl::Status TfLiteModel::FromBuffer(const char* buffer, size_t buffer_size) {
   // TODO: Add Band TFLBackend error reporter
   flat_buffer_model_ =
       tflite::FlatBufferModel::BuildFromBuffer(buffer, buffer_size);
-  return flat_buffer_model_ ? kBandOk : kBandError;
+  return flat_buffer_model_ ? absl::OkStatus() : absl::InternalError("Cannot load from buffer.");
 }
 
 bool TfLiteModel::IsInitialized() const {

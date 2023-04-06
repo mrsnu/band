@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
 #include "band/cpu.h"
 #include "band/interface/backend.h"
@@ -20,10 +22,10 @@ namespace interface {
 class ITensorView;
 class IModelExecutor : public IBackendSpecific {
  public:
-  IModelExecutor(ModelId model_id, WorkerId worker_id,
-                 BandDeviceFlags device_flag,
-                 CpuSet thread_affinity_mask = BandCPUMaskGetSet(kBandAll),
-                 int num_threads = -1)
+  IModelExecutor(
+      ModelId model_id, WorkerId worker_id, DeviceFlags device_flag,
+      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlags::All),
+      int num_threads = -1)
       : model_id_(model_id),
         worker_id_(worker_id),
         device_flag_(device_flag),
@@ -31,9 +33,9 @@ class IModelExecutor : public IBackendSpecific {
         num_threads_(num_threads > 0 ? num_threads : -1) {}
   virtual ~IModelExecutor() = default;
 
-  virtual ModelSpec InvestigateModelSpec(IModel* model) = 0;
-  virtual BandStatus PrepareSubgraph(IModel* model, std::set<int> ops = {},
-                                     std::set<int> unit_indices = {}) = 0;
+  virtual absl::StatusOr<ModelSpec> InvestigateModelSpec(IModel* model) = 0;
+  virtual absl::Status PrepareSubgraph(IModel* model, std::set<int> ops = {},
+                                       std::set<int> unit_indices = {}) = 0;
 
   virtual const std::vector<int>& GetInputs(const SubgraphKey& key) const = 0;
   virtual const std::vector<int>& GetOutputs(const SubgraphKey& key) const = 0;
@@ -49,14 +51,14 @@ class IModelExecutor : public IBackendSpecific {
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual SubgraphKey GetLargestSubgraphKey() const = 0;
 
-  virtual BandStatus ExecuteSubgraph(const SubgraphKey& key) = 0;
+  virtual absl::Status ExecuteSubgraph(const SubgraphKey& key) = 0;
   virtual void ForEachSubgraph(
       std::function<void(const SubgraphKey&)> iterator) = 0;
 
  protected:
   const ModelId model_id_;
   const WorkerId worker_id_;
-  const BandDeviceFlags device_flag_;
+  const DeviceFlags device_flag_;
   const CpuSet thread_affinity_mask_;
   const int num_threads_;
 

@@ -1,13 +1,11 @@
 #ifndef BAND_INTERFACE_BACKEND_H_
 #define BAND_INTERFACE_BACKEND_H_
 
-#include "band/c/common.h"
-
 namespace band {
 namespace interface {
 class IBackendSpecific {
  public:
-  virtual BandBackendType GetBackendType() const = 0;
+  virtual BackendType GetBackendType() const = 0;
   bool IsCompatible(const IBackendSpecific& rhs) const {
     return IsCompatible(&rhs);
   }
@@ -18,7 +16,7 @@ class IBackendSpecific {
 
 class IBackendUtil {
  public:
-  virtual std::set<BandDeviceFlags> GetAvailableDevices() const = 0;
+  virtual std::set<DeviceFlags> GetAvailableDevices() const = 0;
 };
 
 }  // namespace interface

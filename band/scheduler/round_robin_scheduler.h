@@ -12,7 +12,7 @@ class RoundRobinScheduler : public IScheduler {
   void Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
-  BandWorkerType GetWorkerType() override { return kBandDeviceQueue; }
+  WorkerType GetWorkerType() override { return WorkerType::DeviceQueue; }
 };
 
 }  // namespace band

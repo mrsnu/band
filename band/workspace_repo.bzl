@@ -7,13 +7,12 @@ def workspace():
     """Workspace initialization for dependencies."""
 
     ######## Remote repositories ########
-    # TODO(widiba03304): Uncomment when abseil comes
-    # http_archive(
-    #     name = "com_google_absl",
-    #     url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.0.tar.gz",
-    #     sha256 = "3ea49a7d97421b88a8c48a0de16c16048e17725c7ec0f1d3ea2683a2a75adc21",
-    #     strip_prefix = "abseil-cpp-20230125.0",
-    # )
+    http_archive(
+        name = "com_google_absl",
+        url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.0.tar.gz",
+        sha256 = "3ea49a7d97421b88a8c48a0de16c16048e17725c7ec0f1d3ea2683a2a75adc21",
+        strip_prefix = "abseil-cpp-20230125.0",
+    )
 
     http_archive(
         name = "build_bazel_rules_android",
@@ -27,6 +26,13 @@ def workspace():
         url = "https://github.com/open-source-parsers/jsoncpp/archive/1.9.5.tar.gz",
         sha256 = "f409856e5920c18d0c2fb85276e24ee607d2a09b5e7d5f0a371368903c275da2",
         strip_prefix = "jsoncpp-1.9.5",
+    )
+
+    http_archive(
+        name = "chrome_tracer",
+        url = "https://github.com/mrsnu/chrome-tracer/archive/refs/tags/v0.0.2.zip",
+        sha256 = "2a5d24832ca6c5dac8136004d6276d69ab1a3aebc81fc79cd909c8732385e8fa",
+        strip_prefix = "chrome-tracer-0.0.2",
     )
 
     ######## Android repositories ########

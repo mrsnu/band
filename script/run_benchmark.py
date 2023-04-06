@@ -8,10 +8,11 @@ from utils import *
 BASE_DIR = 'benchmark'
 TARGET = "band/tool:band_benchmark"
 
-def benchmark_local(debug, platform, backend, build_only, config_path):
+def benchmark_local(debug, trace, platform, backend, build_only, config_path):
     build_cmd = make_cmd(
             build_only=build_only, 
             debug=debug, 
+            trace=trace,
             platform=platform,
             backend=backend,
             target=TARGET
@@ -30,13 +31,14 @@ def benchmark_local(debug, platform, backend, build_only, config_path):
             f'{BASE_DIR}/band_benchmark.exe {config_path}'
         )
 
-def benchmark_android(debug, platform, backend, docker, config_path=""):
+def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
     target_base_dir = BASE_DIR
     # build android targets only (specified in band_cc_android_test tags)
     
     build_command = make_cmd(
         build_only=True,
-        debug=debug,
+        debug=debug, 
+        trace=trace,
         platform="android",
         backend=backend,
         target=TARGET,
@@ -75,8 +77,8 @@ if __name__ == '__main__':
     if args.android:
         # Need to set Android build option in ./configure
         print('Benchmark Android')
-        benchmark_android(args.debug, get_platform(), args.backend,
+        benchmark_android(args.debug, args.trace, get_platform(), args.backend,
                           args.docker, args.config)
     else:
         print(f'Benchmark {get_platform()}')
-        benchmark_local(args.debug, get_platform(), args.backend, args.build, args.config)
+        benchmark_local(args.debug, args.trace, get_platform(), args.backend, args.build, args.config)

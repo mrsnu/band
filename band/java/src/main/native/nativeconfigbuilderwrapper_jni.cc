@@ -104,28 +104,28 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addSchedulers(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     jintArray schedulers) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddSchedulers(ConvertIntArrayTo<BandSchedulerType>(env, schedulers));
+      ->AddSchedulers(ConvertIntArrayTo<band::SchedulerType>(env, schedulers));
 }
 
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addPlannerCPUMask(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint cpuMask) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddPlannerCPUMask(static_cast<BandCPUMaskFlags>(cpuMask));
+      ->AddPlannerCPUMask(static_cast<band::CPUMaskFlags>(cpuMask));
 }
 
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addWorkers(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jintArray workers) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddWorkers(ConvertIntArrayTo<BandDeviceFlags>(env, workers));
+      ->AddWorkers(ConvertIntArrayTo<band::DeviceFlags>(env, workers));
 }
 
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addWorkerCPUMasks(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jintArray cpuMasks) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddWorkerCPUMasks(ConvertIntArrayTo<BandCPUMaskFlags>(env, cpuMasks));
+      ->AddWorkerCPUMasks(ConvertIntArrayTo<band::CPUMaskFlags>(env, cpuMasks));
 }
 
 JNIEXPORT void JNICALL
@@ -167,14 +167,14 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addSubgraphPreparationType(
     jint subgaphPreparationType) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
       ->AddSubgraphPreparationType(
-          static_cast<BandSubgraphPreparationType>(subgaphPreparationType));
+          static_cast<band::SubgraphPreparationType>(subgaphPreparationType));
 }
 
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCPUMask(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint cpuMask) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddCPUMask(static_cast<BandCPUMaskFlags>(cpuMask));
+      ->AddCPUMask(static_cast<band::CPUMaskFlags>(cpuMask));
 }
 
 JNIEXPORT jboolean JNICALL

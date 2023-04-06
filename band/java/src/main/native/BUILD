@@ -1,4 +1,4 @@
-load("//band:band.bzl", "band_copts")
+load("//band:band.bzl", "band_copts", "band_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -25,11 +25,10 @@ filegroup(
     ],
 )
 
-cc_library(
+band_cc_library(
     name = "native",
     srcs = [":native_srcs"],
     hdrs = [":native_hdrs"],
-    copts = band_copts(),
     linkopts = [
         "-lm",
         "-ldl",

@@ -44,7 +44,8 @@ if __name__ == '__main__':
     build_cmd = make_cmd(
         build_only=True,
         debug=args.debug,
-        platform=platform,
+        trace=args.trace,
+        platform="android" if args.android else get_platform(),
         backend=args.backend,
         target=TARGET
     )

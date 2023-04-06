@@ -23,13 +23,15 @@
 
 #include <vector>
 
-#include "band/c/common.h"
+#include "absl/status/status.h"
 
-#if defined __ANDROID__ || defined __linux__
+#include "band/common.h"
+
+#ifdef __ANDROID__
 #define _BAND_SUPPORT_THREAD_AFFINITY
 #endif
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#ifdef _BAND_SUPPORT_THREAD_AFFINITY
 #include <sched.h>  // cpu_set_t
 #endif
 
@@ -43,7 +45,7 @@ class CpuSet {
   void DisableAll();
   bool IsEnabled(int cpu) const;
   int NumEnabled() const;
-  BandCPUMaskFlags GetCPUMaskFlag() const;
+  CPUMaskFlags GetCPUMaskFlag() const;
   const unsigned long* GetMaskBits() const;
   std::vector<unsigned long> GetMaskBitsVector() const;
   bool operator==(const CpuSet& rhs) const;
@@ -62,14 +64,14 @@ int GetCPUCount();
 int GetLittleCPUCount();
 int GetBigCPUCount();
 
-// set explicit thread affinity, return kBandError if mask is empty
-BandStatus SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
-BandStatus GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
+// set explicit thread affinity
+absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
+absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
-const CpuSet& BandCPUMaskGetSet(BandCPUMaskFlags flag);
-const char* BandCPUMaskGetName(BandCPUMaskFlags flag);
-const BandCPUMaskFlags BandCPUMaskGetFlag(const char* name);
+const CpuSet& BandCPUMaskGetSet(CPUMaskFlags flag);
+const char* BandCPUMaskGetName(CPUMaskFlags flag);
+const CPUMaskFlags BandCPUMaskGetFlag(const char* name);
 
 }  // namespace band
 

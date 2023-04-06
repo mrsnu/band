@@ -17,15 +17,15 @@ class Planner;
 class Worker {
  public:
   explicit Worker(Context* context, WorkerId worker_id,
-                  BandDeviceFlags device_flag);
+                  DeviceFlags device_flag);
   virtual ~Worker();
 
-  BandStatus Init(const WorkerConfig& config);
-  BandDeviceFlags GetDeviceFlag() const { return device_flag_; }
+  absl::Status Init(const WorkerConfig& config);
+  DeviceFlags GetDeviceFlag() const { return device_flag_; }
   WorkerId GetId() const { return worker_id_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
-  BandStatus UpdateWorkerThread(const CpuSet thread_affinity_mask,
+  absl::Status UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                 int num_threads);
   void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
   bool IsAvailable() const;
@@ -47,14 +47,10 @@ class Worker {
   virtual bool IsEnqueueReady() const;
   virtual bool HasJob() = 0;
 
-  // DeviceQueueWorker methods
-  virtual JobQueue& GetDeviceRequests();
-  virtual void AllowWorkSteal();
-
  protected:
   const ErrorReporter* GetErrorReporter() const;
   bool IsValid(Job& job);
-  BandStatus TryUpdateWorkerThread();
+  absl::Status TryUpdateWorkerThread();
   void Work();
   // Helper functions that work utilizes
   virtual Job* GetCurrentJob() = 0;
@@ -79,7 +75,7 @@ class Worker {
   bool need_cpu_update_ = false;
   std::mutex cpu_mtx_;
 
-  const BandDeviceFlags device_flag_;
+  const DeviceFlags device_flag_;
 
   static const int64_t LARGE_WAITING_TIME = INT_MAX / 2;
 };
@@ -87,14 +83,14 @@ class Worker {
 class DeviceQueueWorker : public Worker {
  public:
   explicit DeviceQueueWorker(Context* context, WorkerId worker_id,
-                             BandDeviceFlags device_flag)
+                             DeviceFlags device_flag)
       : Worker(context, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;
   bool HasJob() override;
-  JobQueue& GetDeviceRequests() override;
-  void AllowWorkSteal() override;
+  JobQueue& GetDeviceRequests();
+  void AllowWorkSteal();
 
  protected:
   Job* GetCurrentJob() override;
@@ -111,7 +107,7 @@ class DeviceQueueWorker : public Worker {
 class GlobalQueueWorker : public Worker {
  public:
   explicit GlobalQueueWorker(Context* context, WorkerId worker_id,
-                             BandDeviceFlags device_flag)
+                             DeviceFlags device_flag)
       : Worker(context, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;

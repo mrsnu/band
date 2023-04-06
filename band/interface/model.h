@@ -7,6 +7,8 @@
 #include "band/common.h"
 #include "band/interface/backend.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 namespace interface {
 /*
@@ -15,9 +17,10 @@ namespace interface {
 struct IModel : public IBackendSpecific {
  public:
   IModel(ModelId id) : id_(id) {}
+  virtual ~IModel() = default;
 
-  virtual BandStatus FromPath(const char* filename) = 0;
-  virtual BandStatus FromBuffer(const char* buffer, size_t buffer_size) = 0;
+  virtual absl::Status FromPath(const char* filename) = 0;
+  virtual absl::Status FromBuffer(const char* buffer, size_t buffer_size) = 0;
   virtual bool IsInitialized() const = 0;
   ModelId GetId() const { return id_; }
   const std::string& GetPath() const { return path_; }

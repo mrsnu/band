@@ -48,7 +48,6 @@ jintArray ConvertNativeToIntArray(JNIEnv* env, jsize length, const int* array) {
 
 extern "C" {
 
-// private static native long createEngine(long configHandle);
 JNIEXPORT jlong JNICALL Java_org_mrsnu_band_NativeEngineWrapper_createEngine(
     JNIEnv* env, jclass clazz, jobject config) {
   RuntimeConfig* native_config = ConvertJobjectToConfig(env, config);
@@ -60,17 +59,18 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_deleteEngine(
   delete reinterpret_cast<Engine*>(engineHandle);
 }
 
-// private static native long registerModel(long engineHandle, long
 // modelHandle);
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model) {
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
-  engine->RegisterModel(native_model);
+  auto status = engine->RegisterModel(native_model);
+  if (!status.ok()) {
+    // TODO(widiba03304): refactor absl
+    return;
+  }
 }
 
-// private static native long getNumInputTensors(long engineHandle, long
-// modelHandle);
 JNIEXPORT jint JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_getNumInputTensors(JNIEnv* env,
                                                            jclass clazz,
@@ -82,8 +82,6 @@ Java_org_mrsnu_band_NativeEngineWrapper_getNumInputTensors(JNIEnv* env,
       engine->GetInputTensorIndices(native_model->GetId()).size());
 }
 
-// private static native long getNumOutputTensors(long engineHandle, long
-// modelHandle);
 JNIEXPORT jint JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_getNumOutputTensors(JNIEnv* env,
                                                             jclass clazz,
@@ -95,8 +93,6 @@ Java_org_mrsnu_band_NativeEngineWrapper_getNumOutputTensors(JNIEnv* env,
       engine->GetOutputTensorIndices(native_model->GetId()).size());
 }
 
-// private static native long createInputTensor(long engineHandle, long
-// modelHandle, int index);
 JNIEXPORT jlong JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_createInputTensor(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model, jint index) {
@@ -108,8 +104,6 @@ Java_org_mrsnu_band_NativeEngineWrapper_createInputTensor(
   return reinterpret_cast<jlong>(input_tensor);
 }
 
-// private static native long createOutputTensor(long engineHandle, long
-// modelHandle, int index);
 JNIEXPORT jlong JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_createOutputTensor(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model, jint index) {
@@ -138,12 +132,15 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
 
   float* input_raw = reinterpret_cast<float*>(input_tensors[0]->GetData());
   float* output_raw = reinterpret_cast<float*>(output_tensors[0]->GetData());
-  engine->RequestSync(native_model->GetId(), BandGetDefaultRequestOption(),
-                      input_tensors, output_tensors);
+  auto status = engine->RequestSync(native_model->GetId(),
+                      band::RequestOption::GetDefaultOption(), input_tensors,
+                      output_tensors);
+  if (!status.ok()) {
+    // TODO(widiba03304): refactor absl
+    return;
+  }
 }
 
-// private static native long requestAsync(long engineHandle, long modelHandle,
-// List<Long> inputTensors);
 JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model,
     jobject input_tensor_handles) {
@@ -151,10 +148,13 @@ JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
                          "()J");
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
-  auto job_id = engine->RequestAsync(
-      native_model->GetId(), BandGetDefaultRequestOption(),
-      ConvertListToVectorOfPointer<band::interface::ITensor>(
-          env, input_tensor_handles, tnr_mtd));
+  auto job_id =
+      engine
+          ->RequestAsync(native_model->GetId(),
+                         band::RequestOption::GetDefaultOption(),
+                         ConvertListToVectorOfPointer<band::interface::ITensor>(
+                             env, input_tensor_handles, tnr_mtd))
+          .value();
   return static_cast<jint>(job_id);
 }
 
@@ -176,8 +176,8 @@ Java_org_mrsnu_band_NativeEngineWrapper_requestAsyncBatch(
   for (Model* model : model_list) {
     model_ids.push_back(model->GetId());
   }
-  std::vector<BandRequestOption> request_options(model_list.size(),
-                                                 BandGetDefaultRequestOption());
+  std::vector<band::RequestOption> request_options(
+      model_list.size(), band::RequestOption::GetDefaultOption());
 
   std::vector<band::Tensors> input_lists;
   jint size = env->CallIntMethod(inputTensorsList, list_size_mtd);
@@ -189,7 +189,7 @@ Java_org_mrsnu_band_NativeEngineWrapper_requestAsyncBatch(
                                                                tnr_mtd));
   }
   std::vector<int> ret =
-      engine->RequestAsync(model_ids, request_options, input_lists);
+      engine->RequestAsync(model_ids, request_options, input_lists).value();
   return ConvertNativeToIntArray(env, ret.size(), ret.data());
 }
 
@@ -199,8 +199,13 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_wait(
   JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
                          "()J");
   Engine* engine = ConvertLongToEngine(env, engineHandle);
-  engine->Wait(jobId, ConvertListToVectorOfPointer<band::interface::ITensor>(
-                          env, outputTensors, tnr_mtd));
+  auto status = engine->Wait(
+      jobId, ConvertListToVectorOfPointer<band::interface::ITensor>(
+                 env, outputTensors, tnr_mtd));
+  if (!status.ok()) {
+    // TODO(widiba03304): refactor absl
+    return;
+  }
 }
 
 }  // extern "C"

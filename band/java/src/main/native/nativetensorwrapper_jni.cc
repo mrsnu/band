@@ -11,21 +11,22 @@ using band::jni::ConvertLongToTensor;
 namespace {
 
 jobject ConvertNativeToQuantization(JNIEnv* env,
-                                    BandQuantization&& quantization) {
+                                    band::Quantization&& quantization) {
   JNI_DEFINE_CLS_AND_MTD(quant_type,
                          "org/mrsnu/band/Quantization/QuantizationType",
                          "<init>", "(I)V");
   JNI_DEFINE_CLS_AND_MTD(quant, "org/mrsnu/band/Quantization", "<init>",
                          "(Lorg/mrsnu/band/Quantization/QuantizationType;J)V");
 
-  jobject new_quant_type = env->NewObject(quant_type_cls, quant_type_mtd,
-                                          static_cast<jint>(quantization.type));
+  jobject new_quant_type =
+      env->NewObject(quant_type_cls, quant_type_mtd,
+                     static_cast<jint>(quantization.GetType()));
   return env->NewObject(quant_cls, quant_mtd, new_quant_type,
-                        reinterpret_cast<jlong>(quantization.params));
+                        reinterpret_cast<jlong>(quantization.GetParams()));
 }
 
-BandQuantization ConvertQuantizationToNative(JNIEnv* env,
-                                             jobject quantization) {
+band::Quantization ConvertQuantizationToNative(JNIEnv* env,
+                                               jobject quantization) {
   JNI_DEFINE_CLS(quant, "org/mrsnu/band/Quantization");
   JNI_DEFINE_MTD(quant_get_type, quant_cls, "getQuantizationType",
                  "()Lorg/mrsnu/band/Quantization/QuantizationType;");
@@ -33,23 +34,21 @@ BandQuantization ConvertQuantizationToNative(JNIEnv* env,
   JNI_DEFINE_CLS_AND_MTD(quant_type,
                          "org/mrsnu/band/Quantization/QuantizationType",
                          "getValue", "()I");
-  BandQuantization ret;
-  ret.type = static_cast<BandQuantizationType>(env->CallIntMethod(
-      env->CallObjectMethod(quantization, quant_get_param_mtd),
-      quant_type_mtd));
-  ret.params = reinterpret_cast<void*>(
-      env->CallLongMethod(quantization, quant_get_param_mtd));
-  return ret;
+  return {static_cast<band::QuantizationType>(env->CallIntMethod(
+              env->CallObjectMethod(quantization, quant_get_param_mtd),
+              quant_type_mtd)),
+          reinterpret_cast<void*>(
+              env->CallLongMethod(quantization, quant_get_param_mtd))};
 }
 
-jbyteArray ConvertNativeToByteArray(JNIEnv* env, int bytes, const char* data) {
-  jbyteArray arr = env->NewByteArray(bytes);
-  // Note: Maybe JNI uses `signed char` to represent bytes. It can be
-  // problematic if arithmetic operations are performed on the data.
-  env->SetByteArrayRegion(arr, 0, bytes,
-                          reinterpret_cast<const signed char*>(data));
-  return arr;
-}
+// jbyteArray ConvertNativeToByteArray(JNIEnv* env, int bytes, const char* data) {
+//   jbyteArray arr = env->NewByteArray(bytes);
+//   // Note: Maybe JNI uses `signed char` to represent bytes. It can be
+//   // problematic if arithmetic operations are performed on the data.
+//   env->SetByteArrayRegion(arr, 0, bytes,
+//                           reinterpret_cast<const signed char*>(data));
+//   return arr;
+// }
 
 jintArray ConvertNativeToIntArray(JNIEnv* env, int length, const int* array) {
   jintArray arr = env->NewIntArray(length);
@@ -76,7 +75,7 @@ JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getType(
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_setType(
     JNIEnv* env, jclass clazz, jlong tensorHandle, jint dataType) {
   Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  tensor->SetType(static_cast<BandType>(dataType));
+  tensor->SetType(static_cast<band::DataType>(dataType));
 }
 
 JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeTensorWrapper_getData(
@@ -135,7 +134,12 @@ Java_org_mrsnu_band_NativeTensorWrapper_getQuantization(JNIEnv* env,
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeTensorWrapper_setQuantization(
     JNIEnv* env, jclass clazz, jlong tensorHandle, jobject quantization) {
   Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
-  tensor->SetQuantization(ConvertQuantizationToNative(env, quantization));
+  auto status =
+      tensor->SetQuantization(ConvertQuantizationToNative(env, quantization));
+  if (!status.ok()) {
+    // TODO(widiba03304): absl refactor
+    return;
+  }
 }
 
 }  // extern "C"
