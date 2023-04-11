@@ -8,6 +8,8 @@
 #include "band/scheduler/fixed_worker_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
+#include "band/scheduler/shortest_expected_latency_scheduler.h"
+#include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/test/test_util.h"
 
 namespace band {
@@ -36,7 +38,7 @@ struct MockContext : public MockContextBase {
       const Job& job, const WorkerWaitingTime& worker_waiting) const override {
     return std::pair<std::vector<SubgraphKey>, int64_t>(
         {SubgraphKey(job.model_id, *idle_workers_.begin(), {0})},
-        0 /*shortest expected latency*/);
+        job.expected_latency /*consider job's expected_latency is the model's shortest expected latency*/);
   }
 
   WorkerId GetModelWorker(ModelId model_id) const override {
@@ -75,6 +77,11 @@ struct LSTTestsFixture
 struct ModelLevelTestsFixture
     : public testing::TestWithParam<
           std::tuple<std::deque<int>, std::set<int>>> {};
+
+// <shortest latency, available workers> - model id is assigned in order
+struct ModelLevelWithLatencyTestsFixture
+    : public testing::TestWithParam<
+          std::tuple<std::deque<int64_t>, std::set<int>>> {};
 
 // <request config path string, available workers>
 struct ConfigLevelTestsFixture
@@ -218,6 +225,47 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
   }
 }
 
+TEST_P(ModelLevelWithLatencyTestsFixture, ShortestExepectedLatencyRequestTests) {
+  std::deque<int64_t> model_latencies = std::get<0>(GetParam());
+  std::set<int> available_workers = std::get<1>(GetParam());
+  size_t window_size = 5;
+
+  std::deque<Job> requests;
+  for (auto i = 0; i < model_latencies.size(); i++) {
+    auto temp = Job(i);
+    temp.expected_latency = model_latencies[i]; // consider job's expected_latency is the model's shortest expected latency
+    requests.emplace_back(temp);
+  }
+  
+  const int count_requests = requests.size();
+  auto sorted_req = std::deque<Job>(requests);
+  std::sort(sorted_req.begin(), sorted_req.end(), [](Job a, Job b){
+    return a.expected_latency > b.expected_latency;
+  });
+
+  MockContext context(available_workers);
+  ShortestExpectedLatencyScheduler sel_scheduler(context, std::min(window_size, requests.size()));
+  sel_scheduler.Schedule(requests);
+
+  int count_scheduled = 0;
+  for (auto scheduled_models : context.action_) {
+    count_scheduled++;
+  }
+
+  // min(window_size, # of requested models) should be scheduled
+  EXPECT_EQ(count_scheduled,
+            std::min(window_size, context.action_.size()));
+
+  // Scheduled requests should be removed from request list.
+  EXPECT_EQ(count_requests - count_scheduled, requests.size());
+
+  // scheduled results should me the same as requests descending-sorted by latency (LARGEST shortest subgraph-latency)
+  for(int i=0; i<context.action_.size(); i++){
+    EXPECT_EQ(context.action_[i].first.model_id, sorted_req[i].model_id);
+  }
+
+}
+
 INSTANTIATE_TEST_SUITE_P(
     LSTTests, LSTTestsFixture,
     testing::Values(
@@ -242,6 +290,12 @@ INSTANTIATE_TEST_SUITE_P(
     FixedDeviceFixedWorkerEngineRequestTests, ConfigLevelTestsFixture,
     testing::Values(std::make_tuple(std::deque<int>{0, 1, 2},
                                     std::set<int>{0, 1, 2})));
+
+INSTANTIATE_TEST_SUITE_P(
+    ShortestExepectedLatencyRequestTests, ModelLevelWithLatencyTestsFixture,
+    testing::Values(std::make_tuple(std::deque<int64_t>{2, 1, 3}, // shortest latency for each model
+                                    std::set<int>{0, 1, 2})));
+
 
 }  // namespace test
 }  // namespace band
