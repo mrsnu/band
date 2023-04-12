@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package band;
+
+import "band/backend/grpc/proto/common.proto";
+
+message AffineQuantizationParam {
+    repeated float scale = 1;
+    repeated int32 zero_point = 2;
+    int32 quantized_dimension = 3;
+}
+
+message Quantization {
+    QuantizationType type = 1;
+    AffineQuantizationParam affine_param = 2;
+}
+
+message Tensor {
+    Shape shape = 1;
+    DataType dtype = 2;
+    bytes data = 3;
+}

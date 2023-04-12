@@ -26,6 +26,8 @@ void RegisterBackendInternal() {
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register TFL backend");
     }
+#elif defined(BAND_TFLITE_STATIC)
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Register TFL backend");
 #else
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "TFL backend is disabled.");
 #endif

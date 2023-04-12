@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package band;
+
+import "band/backend/grpc/proto/common.proto";
+
+message ModelDescriptor {
+    string id = 1;
+    repeated Shape input_shapes = 2;
+    repeated DataType input_dtypes = 3;
+    repeated Shape output_shapes = 4;
+    repeated DataType output_dtypes = 5;
+}
+
+message ModelSpecification {
+    string id = 1;
+    int32 num_ops = 2;
+    int32 num_tensors = 3;
+}

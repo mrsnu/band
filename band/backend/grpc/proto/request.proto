@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package band;
+
+import "band/backend/grpc/proto/tensor.proto";
+
+enum BackendType {
+  TENSORFLOW = 0;
+  PYTORCH = 1;
+  ONNX = 2;
+  TENSORRT = 3;
+}
+
+message RequestOption {
+  BackendType backend_type = 1;
+}
+
+message Request {
+  RequestOption option = 1;
+  Tensor input_tensor = 2;
+}
+
+message BatchedRequest {
+  RequestOption option = 1;
+  repeated Tensor input_tensors = 2;
+}

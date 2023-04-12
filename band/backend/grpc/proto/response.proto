@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package band;
+
+import "band/backend/grpc/proto/common.proto";
+
+message Response {
+    Status status = 1;
+}
+
+message BatchedResponse {
+    repeated Response responses = 1;
+}
+
+message Event {
+    int32 id = 1;
+}

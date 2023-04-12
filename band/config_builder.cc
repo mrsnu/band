@@ -50,7 +50,8 @@ bool WorkerConfigBuilder::IsValid(
     REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlags::CPU ||
                                              workers_[i] == DeviceFlags::GPU ||
                                              workers_[i] == DeviceFlags::DSP ||
-                                             workers_[i] == DeviceFlags::NPU);
+                                             workers_[i] == DeviceFlags::NPU ||
+                                             workers_[i] == DeviceFlags::NETWORK);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {

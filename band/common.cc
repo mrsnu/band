@@ -26,13 +26,16 @@ size_t GetSize<DataType>() {
 
 template<>
 size_t GetSize<DeviceFlags>() {
-  return 4;
+  return 5;
 }
 
 std::string GetName(BackendType backend_type) {
   switch (backend_type) {
     case BackendType::TfLite: {
       return "Tensorflow Lite";
+    } break;
+    case BackendType::Grpc: {
+      return "gRPC";
     } break;
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown backend type: %d", backend_type);
@@ -189,6 +192,9 @@ std::string GetName(DeviceFlags device_flags) {
     } break;
     case DeviceFlags::NPU: {
       return "NPU";
+    } break;
+    case DeviceFlags::NETWORK: {
+      return "NETWORK";
     } break;
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown device flag: %d", device_flags);

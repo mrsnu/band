@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+enum DataType {
+  NO_TYPE = 0;
+  FLOAT32 = 1;
+  INT32 = 2;
+  UINT8 = 3;
+  INT64 = 4;
+  STRING = 5;
+  BOOL = 6;
+  INT16 = 7;
+  COMPLEX64 = 8;
+  INT8 = 9;
+  FLOAT16 = 10;
+  FLOAT64 = 11;
+}
+
+message Shape {
+  repeated int64 dims = 2;
+}
+
+enum QuantizationType {
+  NO_QUANTIZATION = 0;
+  AFFINE_QUANTIZATION = 1;
+}
+
+message Status {
+  int32 code = 1;
+  string error_message = 2;
+}

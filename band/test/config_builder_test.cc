@@ -64,7 +64,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
       b.AddOnline(true)
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddCopyComputationRatio({1, 2, 3, 4})
+          .AddCopyComputationRatio({1, 2, 3, 4, 5})
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/config.json")
           .AddMinimumSubgraphSize(5)

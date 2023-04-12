@@ -36,7 +36,7 @@ size_t GetSize() {
   return -1;
 }
 
-enum class BackendType : size_t { TfLite = 0 };
+enum class BackendType : size_t { TfLite = 0, Grpc = 1};
 std::string GetName(BackendType backend_type);
 
 // NOTE: Please update the GetSize() function when adding a new scheduler type.
@@ -96,7 +96,13 @@ template <>
 DataType FromString(std::string str);
 
 // NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class DeviceFlags : size_t { CPU = 0, GPU = 1, DSP = 2, NPU = 3 };
+enum class DeviceFlags : size_t { 
+  CPU = 0, 
+  GPU = 1, 
+  DSP = 2, 
+  NPU = 3,
+  NETWORK = 4,
+};
 template <>
 size_t GetSize<DeviceFlags>();
 std::string GetName(DeviceFlags device_flags);

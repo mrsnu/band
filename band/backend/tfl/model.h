@@ -26,4 +26,4 @@ class TfLiteModel : public interface::IModel {
 }  // namespace tfl
 }  // namespace band
 
-#endif
+#endif  // BAND_BACKEND_TFL_MODEL_H_
