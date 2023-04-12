@@ -41,7 +41,7 @@ typedef enum BandCPUMaskFlags {
   kBandLittle = 1,
   kBandBig = 2,
   kBandPrimary = 3,
-  kNumCpuMasks = 4
+  kBandNumCpuMasks = 4
 } BandCPUMaskFlags;
 
 typedef enum BandSubgraphPreparationType {
@@ -49,7 +49,7 @@ typedef enum BandSubgraphPreparationType {
   kBandFallbackPerWorker = 1,
   kBandUnitSubgraph = 2,
   kBandMergeUnitSubgraph = 3,
-  kNumSubgraphPreparationType = 4,
+  kBandNumSubgraphPreparationType = 4,
 } BandSubgraphPreparationType;
 
 // Single-precision complex data type compatible with the C99 definition.
@@ -94,7 +94,7 @@ typedef enum BandDeviceFlags {
   kBandGPU = 1,
   kBandDSP = 2,
   kBandNPU = 3,
-  kNumDevices = 4,
+  kBandNumDevices = 4,
 } BandDeviceFlags;
 
 typedef enum BandConfigField {
