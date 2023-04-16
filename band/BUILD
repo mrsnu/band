@@ -420,3 +420,13 @@ band_cc_library(
         ":cpu",
     ],
 )
+
+band_cc_library(
+    name = "resource_monitor",
+    srcs = ["resource_monitor.cc"],
+    hdrs = ["resource_monitor.h"],
+    deps = [
+        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)

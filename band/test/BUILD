@@ -111,6 +111,17 @@ band_cc_android_test(
 )
 
 band_cc_android_test(
+    name = "resource_monitor_test",
+    size = "small",
+    srcs = ["resource_monitor_test.cc"],
+    data = [],
+    deps = [
+        "//band:resource_monitor",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
     name = "tfl_minimal_test",
     size = "small",
     srcs = ["backend/tfl_minimal_test.cc"],
