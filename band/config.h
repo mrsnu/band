@@ -53,6 +53,7 @@ struct SubgraphConfig {
 
 struct RuntimeConfig {
   CPUMaskFlags cpu_mask;
+  std::string resource_log_path;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
@@ -60,7 +61,7 @@ struct RuntimeConfig {
 
  private:
   friend class RuntimeConfigBuilder;
-  RuntimeConfig() { cpu_mask = CPUMaskFlags::All; };
+  RuntimeConfig() { cpu_mask = CPUMaskFlags::All; resource_log_path = ""; };
 };
 
 }  // namespace band

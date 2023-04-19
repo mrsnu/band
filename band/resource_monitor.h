@@ -1,28 +1,55 @@
 #ifndef BAND_RESOURCE_MONITOR_H_
 #define BAND_RESOURCE_MONITOR_H_
 
+#include <fstream>
 #include <map>
-#include <tuple>
 #include <string>
+#include <tuple>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 
+#define DEFINE_TO_JSON \
+  std::string ToJson() const { \
+    std::string ret = "{"; \
+    for (auto& pair : status) { \
+      auto& key = pair.first; \
+      auto& value = pair.second; \
+      ret += "\"" + key + "\": " + std::to_string(value) + ","; \
+    } \
+    ret.pop_back(); \
+    ret += "}"; \
+    return ret; \
+  }
+
 namespace band {
 
-using ThermalStatus = std::map<std::string, int32_t>;
-using Frequency = std::map<std::string, int32_t>;
-using NetworkStatus = std::map<std::string, int32_t>;
+struct Thermal {
+  std::map<std::string, int32_t> status;
+  DEFINE_TO_JSON;
+};
+
+struct Frequency {
+  std::map<std::string, int32_t> status;
+  DEFINE_TO_JSON;
+};
+
+struct Network {
+  std::map<std::string, int32_t> status;
+  DEFINE_TO_JSON;
+};
 
 class ResourceMonitor {
  public:
-  static absl::StatusOr<ResourceMonitor> Create();
-  absl::Status Init();
+  ~ResourceMonitor();
+  static ResourceMonitor& Create(std::string log_path = "");
+  absl::Status Init(std::string log_path);
 
-  absl::StatusOr<const ThermalStatus> GetCurrentThermalStatus() const;
+  absl::StatusOr<const Thermal> GetCurrentThermal() const;
   absl::StatusOr<const Frequency> GetCurrentFrequency() const;
-  absl::StatusOr<const NetworkStatus> GetCurrentNetworkStatus() const;
-  std::tuple<const ThermalStatus, const Frequency, const NetworkStatus>
+  absl::StatusOr<const Network> GetCurrentNetwork() const;
+  absl::StatusOr<
+      std::tuple<const Thermal, const Frequency, const Network>>
   GetCurrentStatus() const;
 
   absl::Status AddTemperatureResource(std::string resource_path);
@@ -45,6 +72,8 @@ class ResourceMonitor {
   const char* THERMAL_ZONE_BASE_PATH = "/sys/class/thermal/";
   const char* CPUFREQ_BASE_PATH = "/sys/devices/system/cpu/cpufreq/";
   const char* DEVFREQ_BASE_PATH = "/sys/class/devfreq/";
+
+  mutable std::ofstream log_file_;
 
   std::vector<std::string> tzs_;
   std::vector<std::string> cpufreqs_;

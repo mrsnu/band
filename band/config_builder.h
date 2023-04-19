@@ -220,6 +220,11 @@ class RuntimeConfigBuilder {
     return *this;
   }
 
+  RuntimeConfigBuilder& AddResourceLogPath(std::string resource_log_path) {
+    resource_log_path_ = resource_log_path;
+    return *this;
+  }
+
   RuntimeConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
@@ -231,6 +236,7 @@ class RuntimeConfigBuilder {
   SubgraphPreparationType subgraph_preparation_type_ =
       SubgraphPreparationType::MergeUnitSubgraph;
   CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
+  std::string resource_log_path_;
 };
 
 }  // namespace band

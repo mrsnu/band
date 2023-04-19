@@ -87,6 +87,7 @@ bool RuntimeConfigBuilder::IsValid(
                                             cpu_mask_ == CPUMaskFlags::Little ||
                                             cpu_mask_ == CPUMaskFlags::Big ||
                                             cpu_mask_ == CPUMaskFlags::Primary);
+  REPORT_IF_FALSE(RuntimeConfigBuilder, /*resource_log_path_*/true);
 
   // Independent validation
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
@@ -161,6 +162,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
                                     subgraph_preparation_type_};
 
   runtime_config.cpu_mask = cpu_mask_;
+  runtime_config.resource_log_path = resource_log_path_;
   runtime_config.profile_config = profile_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;

@@ -1,7 +1,9 @@
-#include <fstream>
+#include "band/resource_monitor.h"
+
+#include <iostream>
 #include <dirent.h>
 
-#include "band/resource_monitor.h"
+#include "band/logger.h"
 
 namespace band {
 
@@ -83,21 +85,46 @@ bool IsValidDevFreq(std::string path) {
   return false;
 }
 
+std::string MakeJsonList(std::vector<std::string> list) {
+  std::string ret = "[";
+  for (int i = 0; i < list.size(); i++) {
+    ret += list[i];
+    if (i != list.size() - 1) {
+      ret += ", ";
+    }
+  }
+  ret += "]";
+  return ret;
+}
+
 }  // anonymous namespace
 
-absl::StatusOr<ResourceMonitor> ResourceMonitor::Create() {
+ResourceMonitor::~ResourceMonitor() {
+  if (log_file_.is_open()) {
+    log_file_.close();
+  }
+}
+
+ResourceMonitor& ResourceMonitor::Create(std::string log_path) {
   static ResourceMonitor resource_monitor;
-  auto status = resource_monitor.Init();
+  auto status = resource_monitor.Init(log_path);
   if (!status.ok()) {
-    return status;
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Cannot initialize resource monitor.");
   }
   return resource_monitor;
 }
 
-absl::Status ResourceMonitor::Init() { 
+absl::Status ResourceMonitor::Init(std::string log_path) {
   auto tz_paths = GetThermalZonePaths();
   auto cpufreq_paths = GetCpuFreqPaths();
   auto devfreq_paths = GetDevFreqPaths();
+
+  if (log_path.size() > 0) {
+    log_file_.open(log_path, std::ios::out);
+    if (!log_file_.is_open()) {
+      return absl::InternalError("Cannot open log file.");
+    }
+  }
 
   for (auto& tz_path : tz_paths) {
     auto status = AddTemperatureResource(tz_path);
@@ -123,9 +150,8 @@ absl::Status ResourceMonitor::Init() {
   return absl::OkStatus();
 }
 
-absl::StatusOr<const ThermalStatus> ResourceMonitor::GetCurrentThermalStatus()
-    const {
-  ThermalStatus ret;
+absl::StatusOr<const Thermal> ResourceMonitor::GetCurrentThermal() const {
+  Thermal ret;
   for (auto& tz : tzs_) {
     std::string type_path = tz + "/type";
     std::string temp_path = tz + "/temp";
@@ -135,7 +161,7 @@ absl::StatusOr<const ThermalStatus> ResourceMonitor::GetCurrentThermalStatus()
     int32_t temp;
     temp_file >> temp;
     type_file >> type;
-    ret[type] = temp;
+    ret.status[type] = temp;
   }
   return ret;
 }
@@ -150,7 +176,7 @@ absl::StatusOr<const Frequency> ResourceMonitor::GetCurrentFrequency() const {
     }
     int32_t cpuinfo_cur_freq;
     cpuinfo_cur_freq_file >> cpuinfo_cur_freq;
-    ret[cpufreq] = cpuinfo_cur_freq;
+    ret.status[cpufreq] = cpuinfo_cur_freq;
   }
   for (auto& devfreq : devfreqs_) {
     std::string cur_freq_path = devfreq + "/cur_freq";
@@ -160,36 +186,69 @@ absl::StatusOr<const Frequency> ResourceMonitor::GetCurrentFrequency() const {
     }
     int32_t cur_freq;
     cur_freq_file >> cur_freq;
-    ret[devfreq] = cur_freq;
+    ret.status[devfreq] = cur_freq;
   }
   return ret;
 }
 
-absl::StatusOr<const NetworkStatus> ResourceMonitor::GetCurrentNetworkStatus()
-    const {
-  return absl::OkStatus();
+absl::StatusOr<const Network> ResourceMonitor::GetCurrentNetwork() const {
+  return Network();
+}
+
+absl::StatusOr<std::tuple<const Thermal, const Frequency, const Network>>
+ResourceMonitor::GetCurrentStatus() const {
+  auto thermal = GetCurrentThermal();
+  auto frequency = GetCurrentFrequency();
+  auto network = GetCurrentNetwork();
+  Thermal thermal_value;
+  Frequency frequency_value;
+  Network network_value;
+
+  if (!thermal.ok()) {
+    thermal_value = Thermal();
+  } else {
+    thermal_value = thermal.value();
+  }
+  if (!frequency.ok()) {
+    frequency_value = Frequency();
+  } else {
+    frequency_value = frequency.value();
+  }
+  if (!network.ok()) {
+    network_value = Network();
+  } else {
+    network_value = network.value();
+  }
+  if (log_file_.is_open()) {
+    log_file_ << MakeJsonList({thermal_value.ToJson(),
+                               frequency_value.ToJson(),
+                               network_value.ToJson()}) << ",";
+  }
+  return std::make_tuple(thermal_value, frequency_value, network_value);
 }
 
 absl::Status ResourceMonitor::AddTemperatureResource(
     std::string resource_path) {
   if (!IsValidThermalZone(resource_path)) {
-    return absl::InvalidArgumentError("Invalid thermal zone path");
+    return absl::InternalError("Invalid thermal zone path");
   }
   tzs_.push_back(resource_path);
   return absl::OkStatus();
 }
 
-absl::Status ResourceMonitor::AddCPUFrequencyResource(std::string resource_path) {
+absl::Status ResourceMonitor::AddCPUFrequencyResource(
+    std::string resource_path) {
   if (!IsValidCpuFreq(resource_path)) {
-    return absl::InvalidArgumentError("Invalid cpu frequency path");
+    return absl::InternalError("Invalid cpu frequency path");
   }
   cpufreqs_.push_back(resource_path);
   return absl::OkStatus();
 }
 
-absl::Status ResourceMonitor::AddDevFrequencyResource(std::string resource_path) {
+absl::Status ResourceMonitor::AddDevFrequencyResource(
+    std::string resource_path) {
   if (!IsValidDevFreq(resource_path)) {
-    return absl::InvalidArgumentError("Invalid dev frequency path");
+    return absl::InternalError("Invalid dev frequency path");
   }
   devfreqs_.push_back(resource_path);
   return absl::OkStatus();

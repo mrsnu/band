@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/common.h"
 #include "band/context.h"
@@ -16,8 +17,6 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 
@@ -64,9 +63,8 @@ absl::Status Engine::RegisterModel(Model* model) {
       // TODO(BAND-49): unregister for specific backend
       auto status = UnregisterModel(model);
       if (!status.ok()) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                          "Failed to unregister model %d: %s", model_id,
-                          status.message());
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to unregister model %d: %s",
+                      model_id, status.message());
       }
       return status_or_result.status();
     }
@@ -480,12 +478,29 @@ void Engine::SetOnEndRequest(
   planner_->SetOnEndRequest(on_end_request);
 }
 
+void Engine::ProfileResources() {
+  auto original_func = planner_->GetOnEndRequest();
+  SetOnEndRequest([&](int job_id, absl::Status status) {
+    auto cur_status = resource_monitor_->GetCurrentStatus();
+    if (!cur_status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to get current resource status: %s",
+                    cur_status.status().message());
+      return;
+    }
+    if (!original_func) {
+      original_func(job_id, status);
+    }
+  });
+}
+
 absl::Status Engine::Init(const RuntimeConfig& config) {
   planner_ = std::make_unique<Planner>(*this);
   auto status = planner_->Init(config.planner_config);
   if (!status.ok()) {
     return status;
   }
+
+  resource_monitor_ = &ResourceMonitor::Create(config.resource_log_path);
 
   {
     subgraph_config_ = config.subgraph_config;

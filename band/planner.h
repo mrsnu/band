@@ -67,6 +67,9 @@ class Planner {
   const std::map<int, int>& GetModelExecutionCounts() const {
     return model_execution_count_;
   }
+  std::function<void(int, absl::Status)> GetOnEndRequest() const {
+    return on_end_request_;
+  }
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
   // Get the Job instance with the `job_id`.

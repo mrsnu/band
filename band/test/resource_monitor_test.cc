@@ -47,7 +47,7 @@ TEST(ResourceMonitorTest, ThermalZoneTest) {
 }
 
 // May require sudo privilege.
-TEST(ResourceMonitorTest, CpuFreqTest) {
+TEST(ResourceMonitorTest, FreqTest) {
   auto status_or_monitor = ResourceMonitor::Create();
   EXPECT_EQ(status_or_monitor.status(), absl::OkStatus());
   auto monitor = status_or_monitor.value();
@@ -55,6 +55,9 @@ TEST(ResourceMonitorTest, CpuFreqTest) {
   auto status_or_freqs = monitor.GetCurrentFrequency();
   EXPECT_EQ(status_or_freqs.status(), absl::OkStatus());
   auto freqs = status_or_freqs.value();
+  for (auto& freq : freqs) {
+    std::cout << freq.first << ": " << freq.second << std::endl;
+  }
 }
 
 }  // namespace test
