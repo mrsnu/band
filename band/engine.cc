@@ -500,7 +500,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     return status;
   }
 
-  resource_monitor_ = &ResourceMonitor::Create(config.resource_log_path);
+  resource_monitor_ = &ResourceMonitor::Create(config.splash_config.splash_log_path);
 
   {
     subgraph_config_ = config.subgraph_config;

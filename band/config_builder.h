@@ -134,7 +134,33 @@ class WorkerConfigBuilder {
   int availability_check_interval_ms_ = 30000;
 };
 
-// Delegate for ConfigBuilders
+class SplashConfigBuilder {
+ public:
+  SplashConfigBuilder& AddSplashLogPath(std::string splash_log_path) {
+    splash_log_path_ = splash_log_path;
+    return *this;
+  }
+
+  SplashConfigBuilder& AddLatencySmoothingFactor(
+      float latency_smoothing_factor) {
+    latency_smoothing_factor_ = latency_smoothing_factor;
+    return *this;
+  }
+
+  SplashConfigBuilder& AddThermalWindowSize(int32_t thermal_window_size) {
+    thermal_window_size_ = thermal_window_size;
+    return *this;
+  }
+
+  SplashConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+
+ private:
+  std::string splash_log_path_ = "";
+  float latency_smoothing_factor_ = 0.1f;
+  int32_t thermal_window_size_ = 10;
+};
+
 class RuntimeConfigBuilder {
  public:
   // Add ProfileConfig
@@ -206,6 +232,22 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
+  // Add SplashConfig
+  RuntimeConfigBuilder& AddSplashLogPath(std::string splash_log_path) {
+    splash_config_builder_.AddSplashLogPath(splash_log_path);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddLatencySmoothingFactor(
+      float latency_smoothing_factor) {
+    splash_config_builder_.AddLatencySmoothingFactor(
+        latency_smoothing_factor);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddThermalWindowSize(int32_t thermal_window_size) {
+    splash_config_builder_.AddThermalWindowSize(thermal_window_size);
+    return *this;
+  }
+  // Add other configs
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
     minimum_subgraph_size_ = minimum_subgraph_size;
     return *this;
@@ -220,11 +262,6 @@ class RuntimeConfigBuilder {
     return *this;
   }
 
-  RuntimeConfigBuilder& AddResourceLogPath(std::string resource_log_path) {
-    resource_log_path_ = resource_log_path;
-    return *this;
-  }
-
   RuntimeConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
@@ -232,11 +269,11 @@ class RuntimeConfigBuilder {
   ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
+  SplashConfigBuilder splash_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
       SubgraphPreparationType::MergeUnitSubgraph;
   CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
-  std::string resource_log_path_;
 };
 
 }  // namespace band

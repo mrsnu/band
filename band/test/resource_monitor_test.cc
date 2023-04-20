@@ -6,14 +6,13 @@ namespace band {
 namespace test {
 
 TEST(ResourceMonitorTest, CreationTest) {
-  auto status_or_monitor = ResourceMonitor::Create();
-  EXPECT_EQ(status_or_monitor.status(), absl::OkStatus());
-  auto monitor = status_or_monitor.value();
+  auto& monitor = ResourceMonitor::Create();
 
   auto tzs = monitor.GetDetectedThermalZonePaths();
   auto cpufreqs = monitor.GetDetectedCpuFreqPaths();
   auto devfreqs = monitor.GetDetectedDevFreqPaths();
 
+#ifdef __ANDROID__
   std::cout << "Detected thermal zones: " << tzs.size() << std::endl;
   for (auto& tz : tzs) {
     std::cout << tz << std::endl;
@@ -24,7 +23,6 @@ TEST(ResourceMonitorTest, CreationTest) {
     std::cout << cpufreq << std::endl;
   }
   EXPECT_GT(cpufreqs.size(), 0);
-#ifdef __ANDROID__
   std::cout << "Detected devfreqs: " << devfreqs.size() << std::endl;
   for (auto& devfreq : devfreqs) {
     std::cout << devfreq << std::endl;
@@ -34,30 +32,28 @@ TEST(ResourceMonitorTest, CreationTest) {
 }
 
 TEST(ResourceMonitorTest, ThermalZoneTest) {
-  auto status_or_monitor = ResourceMonitor::Create();
-  EXPECT_EQ(status_or_monitor.status(), absl::OkStatus());
-  auto monitor = status_or_monitor.value();
+  auto& monitor = ResourceMonitor::Create();
 
-  auto status_or_thermal_status = monitor.GetCurrentThermalStatus();
-  EXPECT_EQ(status_or_thermal_status.status(), absl::OkStatus());
-  auto thermal_status = status_or_thermal_status.value();
-  for (auto& tz : thermal_status) {
+  auto status_or_thermal = monitor.GetCurrentThermal();
+  EXPECT_EQ(status_or_thermal.status(), absl::OkStatus());
+  auto thermal = status_or_thermal.value();
+  for (auto& tz : thermal.status) {
     std::cout << tz.first << ": " << tz.second << std::endl;
   }
 }
 
 // May require sudo privilege.
 TEST(ResourceMonitorTest, FreqTest) {
-  auto status_or_monitor = ResourceMonitor::Create();
-  EXPECT_EQ(status_or_monitor.status(), absl::OkStatus());
-  auto monitor = status_or_monitor.value();
+  auto& monitor = ResourceMonitor::Create();
 
   auto status_or_freqs = monitor.GetCurrentFrequency();
+#ifdef __ANDROID__
   EXPECT_EQ(status_or_freqs.status(), absl::OkStatus());
   auto freqs = status_or_freqs.value();
-  for (auto& freq : freqs) {
+  for (auto& freq : freqs.status) {
     std::cout << freq.first << ": " << freq.second << std::endl;
   }
+#endif  // __ANDROID__
 }
 
 }  // namespace test

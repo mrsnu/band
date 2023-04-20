@@ -51,14 +51,14 @@ const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
 }
 
 BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name) {
-  for (int i = 0; i < kNumSubgraphPreparationType; i++) {
+  for (int i = 0; i < kBandNumSubgraphPreparationType; i++) {
     BandSubgraphPreparationType type = (BandSubgraphPreparationType)i;
     if (strncmp(BandSubgraphPreparationGetName(type), name,
                 strlen(BandSubgraphPreparationGetName(type))) == 0) {
       return type;
     }
   }
-  return kNumSubgraphPreparationType;
+  return kBandNumSubgraphPreparationType;
 }
 
 const char* BandTypeGetName(BandType type) {
@@ -108,14 +108,14 @@ const char* BandDeviceGetName(BandDeviceFlags flag) {
 }
 
 BandDeviceFlags BandDeviceGetFlag(const char* name) {
-  for (int i = 0; i < kNumDevices; i++) {
+  for (int i = 0; i < kBandNumDevices; i++) {
     BandDeviceFlags flag = (BandDeviceFlags)i;
     if (strncmp(BandDeviceGetName(flag), name,
                 strlen(BandDeviceGetName(flag))) == 0) {
       return flag;
     }
   }
-  return kNumDevices;
+  return kBandNumDevices;
 }
 
 const char* BandBackendGetName(BandBackendType flag) {

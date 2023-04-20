@@ -257,8 +257,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
       builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
     }
 
-    if (root["resource_log_path"].isString()) {
-      builder.AddResourceLogPath(root["resource_log_path"].asCString());
+    if (root["splash_log_path"].isString()) {
+      builder.AddSplashLogPath(root["splash_log_path"].asCString());
     }
   }
 

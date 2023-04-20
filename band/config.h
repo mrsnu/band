@@ -51,17 +51,26 @@ struct SubgraphConfig {
       SubgraphPreparationType::MergeUnitSubgraph;
 };
 
+struct SplashConfig {
+  SplashConfig() {
+    
+  }
+  std::string splash_log_path;
+  float latency_smoothing_factor = 0.1f;
+  int32_t thermal_window_size = 10;
+};
+
 struct RuntimeConfig {
   CPUMaskFlags cpu_mask;
-  std::string resource_log_path;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  SplashConfig splash_config;
 
  private:
   friend class RuntimeConfigBuilder;
-  RuntimeConfig() { cpu_mask = CPUMaskFlags::All; resource_log_path = ""; };
+  RuntimeConfig() { cpu_mask = CPUMaskFlags::All; };
 };
 
 }  // namespace band
