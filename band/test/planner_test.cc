@@ -18,7 +18,7 @@ struct MockContext : public MockContextBase {
   void Trigger() override {}
 
   absl::Status Invoke(const SubgraphKey& key) override {
-    Time::SleepForMicros(50);
+    time::SleepForMicros(50);
     return absl::OkStatus();
   }
 

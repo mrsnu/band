@@ -31,7 +31,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 
     total += expected_latency;
     if (it == requests_.begin()) {
-      int64_t current_time = Time::NowMicros();
+      int64_t current_time = time::NowMicros();
       int64_t invoke_time = (*it).invoke_time;
       if (invoke_time > 0 && current_time > invoke_time) {
         int64_t progress = (current_time - invoke_time) > expected_latency

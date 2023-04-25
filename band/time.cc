@@ -9,7 +9,7 @@
 #endif
 
 namespace band {
-namespace Time {
+namespace time {
 
 #if defined(_MSC_VER)
 
@@ -55,5 +55,5 @@ void SleepForMicros(uint64_t micros) {
 
 #endif  // defined(_MSC_VER)
 
-}  // namespace Time
+}  // namespace time
 }  // namespace band
