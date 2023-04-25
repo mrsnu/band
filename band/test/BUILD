@@ -177,3 +177,23 @@ band_cc_android_test(
         ],
     }),
 )
+
+band_cc_android_test(
+    name = "graph_test",
+    size = "small",
+    srcs = ["graph/graph_test.cc"],
+    data = [
+        "//band/test:data/add.tflite",
+    ],
+    deps = [
+        "//band:framework",
+        "//band/graph:graph",
+        "@com_google_googletest//:gtest",
+    ] + select({
+        "//band:tflite": [
+            "//band/backend/tfl:tfl_backend",
+        ],
+        "//conditions:default": [
+        ],
+    }),
+)

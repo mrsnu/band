@@ -28,9 +28,6 @@ using WorkerWaitingTime = std::map<WorkerId, int64_t>;
 // Decision from a scheduler. Run subgraph key for a specific job.
 using ScheduleAction = std::pair<Job, SubgraphKey>;
 
-// Type definition of job queue.
-using JobQueue = std::deque<Job>;
-
 // Minimal interfaces for Band framework
 class Context {
  public:

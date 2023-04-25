@@ -142,6 +142,10 @@ std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
   return job_ids;
 }
 
+void Planner::EnqueueGraph(Graph graph) {
+  
+}
+
 void Planner::Wait(std::vector<int> job_ids) {
   if (job_ids.size() == 0) {
     return;

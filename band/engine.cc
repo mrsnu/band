@@ -16,6 +16,7 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
+#include "band/graph/node.h"
 
 #include "absl/strings/str_format.h"
 
@@ -419,6 +420,11 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
     jobs.push_back(job);
   }
   return EnqueueBatch(jobs);
+}
+
+absl::Status Engine::RequestGraph(Graph graph, Tensors input) {
+  
+  return absl::OkStatus();
 }
 
 absl::Status Engine::Wait(JobId job_id, Tensors outputs) {

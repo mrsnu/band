@@ -13,15 +13,30 @@
 #include "band/safe_bool.h"
 #include "band/scheduler/scheduler.h"
 #include "band/worker.h"
+#include "band/graph/graph.h"
 
 namespace band {
 
 // The maximum number of available job outputs at one time.
 #define NUM_FINISHED_RECORDS 1000
 
+struct GraphJob {
+  GraphJob() = delete;
+  GraphJob(Graph graph) : graph(graph) {}
+  Graph graph;
+};
+
+// Type definition of graph queue.
+using GraphJobQueue = std::deque<GraphJob>;
+
 // The job queue which can be shared by multiple threads.
 struct ConcurrentJobQueue {
   JobQueue queue;
+  std::mutex mtx;
+};
+
+struct ConcurrentGraphQueue {
+  GraphJobQueue queue;
   std::mutex mtx;
 };
 
@@ -39,6 +54,7 @@ class Planner {
   // Assigns new job id for non-continuous job.
   std::vector<JobId> EnqueueBatch(std::vector<Job> jobs,
                                   bool push_front = false);
+  void EnqueueGraph(Graph graph);
   // Waits until the jobs are done.
   // The interpreter calls the method.
   void Wait(std::vector<int> job_ids);
@@ -108,6 +124,9 @@ class Planner {
 
   // Request Queue
   ConcurrentJobQueue requests_;
+
+  // Graph Queue
+  
 
   // Multi-level Local Queue.
   // The closer the index is to 0, the higher the priority.

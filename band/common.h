@@ -10,7 +10,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-
+#include <deque>
 
 namespace band {
 typedef int WorkerId;
@@ -239,6 +239,10 @@ struct Job {
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
 };
+
+// Type definition of job queue.
+using JobQueue = std::deque<Job>;
+
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618
 struct JobIdBitMaskHash {

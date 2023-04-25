@@ -14,6 +14,7 @@
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
+#include "band/graph/graph.h"
 
 namespace band {
 
@@ -81,6 +82,7 @@ class Engine : public Context {
       std::vector<ModelId> model_ids,
       std::vector<RequestOption> options = {},
       std::vector<Tensors> inputs = {});
+  absl::Status RequestGraph(Graph graph, Tensors inputs);
 
   absl::Status Wait(JobId job_id, Tensors outputs = {});
   absl::Status Wait(std::vector<JobId> job_ids,

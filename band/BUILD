@@ -310,7 +310,8 @@ band_cc_library(
         ":common",
         ":scheduler",
         ":worker",
-        ":job_tracer"
+        ":job_tracer",
+        "//band/graph:graph",
     ],
 )
 
@@ -390,6 +391,7 @@ band_cc_library(
             ":time",
             ":worker",
             ":job_tracer",
+            "//band/graph:graph",
         ],
 )
 
