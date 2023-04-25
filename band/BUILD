@@ -391,6 +391,7 @@ band_cc_library(
             ":time",
             ":worker",
             ":job_tracer",
+            ":resource_monitor",
             "//band/graph:graph",
         ],
 )
@@ -428,6 +429,7 @@ band_cc_library(
     srcs = ["resource_monitor.cc"],
     hdrs = ["resource_monitor.h"],
     deps = [
+        ":common",
         "@com_google_absl//absl/status:status",
         "@com_google_absl//absl/status:statusor",
     ],

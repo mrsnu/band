@@ -12,7 +12,7 @@
 #include "band/profiler.h"
 #include "band/tensor.h"
 #include "band/time.h"
-#include "benchmark.h"
+#include "band/tool/benchmark_util.h"
 
 namespace band {
 namespace tool {
@@ -35,6 +35,10 @@ absl::Status Benchmark::Run() {
     RunStream();
   } else if (benchmark_config_.execution_mode == "workload") {
     RunWorkload();
+  } else if (benchmark_config_.execution_mode == "thermal") {
+    RunThermal();
+  } else {
+    return absl::InvalidArgumentError("Invalid execution mode");
   }
 
   return LogResults();
@@ -90,7 +94,7 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
 
   json::AssignIfValid(benchmark_config_.execution_mode, root, "execution_mode");
 
-  std::set<std::string> supported_execution_modes{"periodic", "stream"};
+  std::set<std::string> supported_execution_modes{"periodic", "stream", "thermal"};
   if (supported_execution_modes.find(benchmark_config_.execution_mode) ==
       supported_execution_modes.end()) {
     std::cout << "Please check if argument execution mode "
@@ -129,7 +133,8 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
 
     // Set `period_ms`.
     // Required for `periodic` mode.
-    if (benchmark_config_.execution_mode == "periodic") {
+    if (benchmark_config_.execution_mode == "periodic" ||
+        benchmark_config_.execution_mode == "thermal") {
       if (!json::AssignIfValid(model.period_ms, model_json_value,
                                "period_ms") ||
           model.period_ms == 0) {
@@ -143,6 +148,7 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
     json::AssignIfValid(model.worker_id, model_json_value, "worker_id");
     json::AssignIfValid(model.slo_us, model_json_value, "slo_us");
     json::AssignIfValid(model.slo_scale, model_json_value, "slo_scale");
+    json::AssignIfValid(model.target_device, model_json_value, "device");
 
     benchmark_config_.model_configs.push_back(model);
   }
@@ -250,6 +256,10 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     if (root["cpu_masks"].isString()) {
       builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
     }
+
+    if (root["splash_log_path"].isString()) {
+      builder.AddSplashLogPath(root["splash_log_path"].asCString());
+    }
   }
 
   if (!builder.IsValid()) {
@@ -260,17 +270,6 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   runtime_config_ = new RuntimeConfig(builder.Build());
 
   return true;
-}
-
-// motivated from /tensorflow/lite/tools/benchmark
-template <typename T, typename Distribution>
-void CreateRandomTensorData(void* target_ptr, int num_elements,
-                            Distribution distribution) {
-  std::mt19937 random_engine;
-  T* target_head = static_cast<T*>(target_ptr);
-  std::generate_n(target_head, num_elements, [&]() {
-    return static_cast<T>(distribution(random_engine));
-  });
 }
 
 absl::Status Benchmark::Initialize(int argc, const char** argv) {
@@ -475,6 +474,64 @@ void Benchmark::RunStream() {
 }
 
 void Benchmark::RunWorkload() { BAND_NOT_IMPLEMENTED; }
+
+void Benchmark::RunThermal() {
+  engine_->ProfileResources();
+
+  for (int model_index = 0; model_index < model_contexts_.size();
+       model_index++) {
+    std::thread t(
+        [this](ModelContext* model_context, const size_t period_us) {
+          while (true) {
+            if (!model_context->PrepareInput().ok()) {
+              std::cout << "Failed to copy input for model "
+                        << model_context->model
+                               .GetBackendModel(target_backend_)
+                               ->GetPath()
+                        << std::endl;
+              return;
+            }
+
+            size_t id = model_context->profiler.BeginEvent();
+            auto status = engine_->RequestSync(
+                model_context->model_ids, model_context->request_options,
+                model_context->model_request_inputs,
+                model_context->model_request_outputs);
+            if (!status.ok()) {
+              std::cout << "Failed to run model "
+                        << model_context->model
+                               .GetBackendModel(target_backend_)
+                               ->GetPath()
+                        << ": "
+                        << status.message()
+                        << std::endl;
+              return;
+            }
+            model_context->profiler.EndEvent(id);
+
+            if (kill_app_) return;
+
+            size_t elapsed_us =
+                model_context->profiler
+                    .GetElapsedTimeAt<std::chrono::microseconds>(id);
+
+            if (elapsed_us < period_us) {
+              std::this_thread::sleep_for(
+                  std::chrono::microseconds(period_us - elapsed_us));
+            }
+          }
+        },
+        model_contexts_[model_index],
+        benchmark_config_.model_configs[model_index].period_ms * 1000);
+
+    t.detach();
+  }
+  // wait for some time until we stop the benchmark
+  std::this_thread::sleep_for(
+      std::chrono::milliseconds(benchmark_config_.running_time_ms));
+  kill_app_ = true;
+  engine_->WaitAll();
+}
 
 void PrintHeader(std::string key, size_t indent_level = 0) {
   std::cout << std::left << std::string(indent_level * 2, ' ') << "<" << key

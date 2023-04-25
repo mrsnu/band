@@ -15,6 +15,7 @@
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
 #include "band/graph/graph.h"
+#include "band/resource_monitor.h"
 
 namespace band {
 
@@ -92,6 +93,7 @@ class Engine : public Context {
 
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
+  void ProfileResources();
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
@@ -201,6 +203,9 @@ class Engine : public Context {
   // continuous unit subgraph indices.
   std::map<int, std::map<int, std::map<int, std::vector<SubgraphKey>>>>
       unit_subgraphs_to_subgraph_keys_;
+
+  // Resource monitor
+  ResourceMonitor* resource_monitor_;
 };  // namespace band
 }  // namespace band
 

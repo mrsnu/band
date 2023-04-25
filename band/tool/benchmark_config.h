@@ -15,7 +15,8 @@ struct ModelConfig {
   int worker_id = -1;
   int slo_us = -1;
   float slo_scale = -1.f;
-
+  std::string target_device = "";
+  
   const RequestOption GetRequestOption() const {
     RequestOption option = RequestOption::GetDefaultOption();
     if (worker_id >= 0) {
@@ -27,6 +28,18 @@ struct ModelConfig {
     if (slo_scale >= 0) {
       option.slo_scale = slo_scale;
     }
+    if (target_device == "CPU") {
+      option.target_worker = 0;
+    }
+    if (target_device == "GPU") {
+      option.target_worker = 1;
+    }
+    if (target_device == "DSP") {
+      option.target_worker = 2;
+    }
+    if (target_device == "NPU") {
+      option.target_worker = 3;
+    }
     return option;
   }
 };
@@ -35,6 +48,7 @@ struct BenchmarkConfig {
   std::vector<ModelConfig> model_configs;
   std::string execution_mode;
   size_t running_time_ms = 60000;
+  std::string resource_log_path;
   // TODO: add workload simulator
 };
 }  // namespace tool

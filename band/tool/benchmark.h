@@ -43,6 +43,7 @@ class Benchmark {
   void RunPeriodic();
   void RunStream();
   void RunWorkload();
+  void RunThermal();
 
   absl::Status LogResults();
 

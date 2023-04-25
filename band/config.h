@@ -51,12 +51,22 @@ struct SubgraphConfig {
       SubgraphPreparationType::MergeUnitSubgraph;
 };
 
+struct SplashConfig {
+  SplashConfig() {
+    
+  }
+  std::string splash_log_path;
+  float latency_smoothing_factor = 0.1f;
+  int32_t thermal_window_size = 10;
+};
+
 struct RuntimeConfig {
   CPUMaskFlags cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  SplashConfig splash_config;
 
  private:
   friend class RuntimeConfigBuilder;

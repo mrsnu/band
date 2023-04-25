@@ -70,6 +70,15 @@ bool WorkerConfigBuilder::IsValid(
   return result;
 }
 
+bool SplashConfigBuilder::IsValid(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  bool result = true;
+  REPORT_IF_FALSE(SplashConfigBuilder, /*splash_log_path_*/ true);  // Always true
+  REPORT_IF_FALSE(SplashConfigBuilder, latency_smoothing_factor_ > 0);
+  REPORT_IF_FALSE(SplashConfigBuilder, thermal_window_size_ > 0);
+  return result;
+}
+
 bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
@@ -87,11 +96,13 @@ bool RuntimeConfigBuilder::IsValid(
                                             cpu_mask_ == CPUMaskFlags::Little ||
                                             cpu_mask_ == CPUMaskFlags::Big ||
                                             cpu_mask_ == CPUMaskFlags::Primary);
+  REPORT_IF_FALSE(RuntimeConfigBuilder, /*resource_log_path_*/true);
 
   // Independent validation
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, planner_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, worker_config_builder_.IsValid());
+  REPORT_IF_FALSE(RuntimeConfigBuilder, splash_config_builder_.IsValid());
 
   return result;
 }
@@ -145,6 +156,17 @@ WorkerConfig WorkerConfigBuilder::Build(
   return worker_config;
 }
 
+SplashConfig SplashConfigBuilder::Build(ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  if (!IsValid(error_reporter)) {
+    abort();
+  }
+  SplashConfig splash_config;
+  splash_config.splash_log_path = splash_log_path_;
+  splash_config.latency_smoothing_factor = latency_smoothing_factor_;
+  splash_config.thermal_window_size = thermal_window_size_;
+  return splash_config;
+}
+
 RuntimeConfig RuntimeConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // TODO(widiba03304): This should not terminate the program. After employing
@@ -157,6 +179,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   ProfileConfig profile_config = profile_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
+  SplashConfig splash_config = splash_config_builder_.Build();
   runtime_config.subgraph_config = {minimum_subgraph_size_,
                                     subgraph_preparation_type_};
 

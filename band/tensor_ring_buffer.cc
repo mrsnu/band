@@ -131,8 +131,9 @@ absl::Status TensorRingBuffer::CopyTensors(
   }
 
   for (size_t i = 0; i < tensors_length; i++) {
-    if (!CopyTensor(src_tensors[i], dst_tensors[i]).ok()) {
-      return absl::InternalError("Failed to copy tensors.");
+    auto status = CopyTensor(src_tensors[i], dst_tensors[i]);
+    if (!status.ok()) {
+      return status;
     }
   }
 
