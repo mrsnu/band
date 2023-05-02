@@ -9,7 +9,7 @@ class ShortestExpectedLatencyScheduler : public IScheduler {
  public:
   explicit ShortestExpectedLatencyScheduler(Context& context, int window_size);
 
-  void Schedule(JobQueue& requests) override;
+  absl::Status Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::DeviceQueue; }

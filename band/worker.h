@@ -27,7 +27,7 @@ class Worker {
   std::condition_variable& GetRequestCv() { return request_cv_; }
   absl::Status UpdateWorkerThread(const CpuSet thread_affinity_mask,
                                 int num_threads);
-  void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
+  void WaitUntilDeviceAvailable(SubgraphKey&& subgraph);
   bool IsAvailable() const;
 
   void Start();
@@ -121,7 +121,7 @@ class GlobalQueueWorker : public Worker {
   void HandleDeviceError(Job& current_job) override;
 
  private:
-  Job current_job_{-1};
+  Job current_job_;
   bool is_busy_ = false;
 };
 

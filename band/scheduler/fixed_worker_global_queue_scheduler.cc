@@ -2,18 +2,20 @@
 #include "band/scheduler/fixed_worker_scheduler.h"
 #include "band/time.h"
 
+#include "absl/status/status.h"
+
 namespace band {
 
-void FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
+absl::Status FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
   // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   std::set<int> idle_workers = context_.GetIdleWorkers();
   if (idle_workers.empty()) {
     // no device is idle; wait for next iteration
-    return;
+    return absl::OkStatus();
   }
 
   BAND_REPORT_ERROR(DefaultErrorReporter(), "NOT IMPLEMENTED");
-  return;
+  return absl::OkStatus();
   // for (auto it = context_.requests_.begin(); it !=
   // context_.requests_.end();)
   // {

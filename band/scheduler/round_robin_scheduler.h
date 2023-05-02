@@ -9,7 +9,7 @@ namespace band {
 class RoundRobinScheduler : public IScheduler {
  public:
   using IScheduler::IScheduler;
-  void Schedule(JobQueue& requests) override;
+  absl::Status Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
   WorkerType GetWorkerType() override { return WorkerType::DeviceQueue; }

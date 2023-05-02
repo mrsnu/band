@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "absl/types/optional.h"
 
 namespace band {
 typedef int WorkerId;
@@ -108,16 +109,6 @@ enum class WorkerType : size_t {
   GlobalQueue = 2,
 };
 
-enum class JobStatus : size_t {
-  Queued,
-  Success,
-  SLOViolation,
-  InputCopyFailure,
-  OutputCopyFailure,
-  InvokeFailure
-};
-std::string GetName(JobStatus job_status);
-
 enum class QuantizationType {
   NoQuantization = 0,
   AffineQuantization = 1,
@@ -153,12 +144,14 @@ class Quantization {
 // that model. `slo_scale` will be ignored if `slo_us` is given
 // (i.e., no reason to specify both options). [default : -1 (not specified)]
 struct RequestOption {
-  int target_worker;
+  absl::optional<int> target_worker;
   bool require_callback;
-  int slo_us;
-  float slo_scale;
+  absl::optional<int64_t> slo_us;
+  absl::optional<float> slo_scale;
 
-  static RequestOption GetDefaultOption() { return {-1, true, -1, -1.f}; }
+  static RequestOption GetDefaultOption() {
+    return {absl::nullopt, true, absl::nullopt, absl::nullopt};
+  }
 };
 
 // data structure for identifying subgraphs within whole models
@@ -193,52 +186,6 @@ struct SubgraphHash {
   std::size_t operator()(const SubgraphKey& p) const;
 };
 
-std::ostream& operator<<(std::ostream& os, const JobStatus& status);
-
-// Job struct is the scheduling and executing unit.
-// The request can specify a model by indication the model id
-struct Job {
-  explicit Job() : model_id(-1) {}
-  explicit Job(ModelId model_id) : model_id(model_id) {}
-  explicit Job(ModelId model_id, int64_t slo)
-      : model_id(model_id), slo_us(slo) {}
-
-  std::string ToJson() const;
-
-  // Constant variables (Valid after invoke)
-  // TODO: better job life-cycle to change these to `const`
-  ModelId model_id;
-  int input_handle = -1;
-  int output_handle = -1;
-  JobId job_id = -1;
-  int sched_id = -1;
-  std::string model_fname;
-  bool require_callback = true;
-
-  // For record (Valid after execution)
-  int64_t enqueue_time = 0;
-  int64_t invoke_time = 0;
-  int64_t end_time = 0;
-  // Profiled invoke execution time
-  int64_t profiled_execution_time = 0;
-  // Expected invoke execution time
-  int64_t expected_execution_time = 0;
-  // Expected total latency
-  int64_t expected_latency = 0;
-  int64_t slo_us;
-
-  // Target worker id (only for fixed worker request)
-  WorkerId target_worker_id = -1;
-
-  // Current status for execution (Valid after planning)
-  JobStatus status = JobStatus::Queued;
-  SubgraphKey subgraph_key;
-  std::vector<Job> following_jobs;
-
-  // Resolved unit subgraphs and executed subgraph keys
-  BitMask resolved_unit_subgraphs;
-  std::list<SubgraphKey> previous_subgraph_keys;
-};
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618
 struct JobIdBitMaskHash {

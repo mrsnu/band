@@ -12,9 +12,8 @@ namespace band {
 namespace test {
 
 struct MockContext : public MockContextBase {
-  void PrepareReenqueue(Job&) override{};
   void UpdateLatency(const SubgraphKey&, int64_t) override{};
-  void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
+  void EnqueueFinishedJob(Job& job) override { finished.insert(job.id()); }
   void Trigger() override {}
 
   absl::Status Invoke(const SubgraphKey& key) override {
@@ -28,7 +27,7 @@ struct MockContext : public MockContextBase {
 class MockScheduler : public IScheduler {
   using IScheduler::IScheduler;
 
-  MOCK_METHOD1(Schedule, void(JobQueue&));
+  MOCK_METHOD1(Schedule, absl::Status(JobQueue&));
   MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
   // MOCK_METHOD0(GetWorkerType, WorkerType());

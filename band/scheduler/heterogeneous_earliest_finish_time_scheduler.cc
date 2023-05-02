@@ -8,7 +8,7 @@ namespace band {
 HEFTScheduler::HEFTScheduler(Context& context, int window_size, bool reserve)
     : IScheduler(context), window_size_(window_size), reserve_(reserve) {}
 
-void HEFTScheduler::Schedule(JobQueue& requests) {
+absl::Status HEFTScheduler::Schedule(JobQueue& requests) {
   int window_size = std::min(window_size_, (int)requests.size());
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
@@ -37,12 +37,12 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
            ++it) {
         Job job = *it;
 
-        if (jobs_to_yield.find(job.job_id) != jobs_to_yield.end()) {
+        if (jobs_to_yield.find(job.id()) != jobs_to_yield.end()) {
           continue;
         }
 
         std::pair<int, BitMask> job_to_search =
-            std::make_pair(job.model_id, job.resolved_unit_subgraphs);
+            std::make_pair(job.model_id(), job.resolved_unit_subgraphs());
         if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
           continue;
         } else {
@@ -52,7 +52,7 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
         // update waiting_time for all future jobs in reserved_
         WorkerWaitingTime reserved_time(waiting_time);
         for (auto job_subgraph_key : reserved_) {
-          if (job_subgraph_key.first == job.job_id) {
+          if (job_subgraph_key.first == job.id()) {
             continue;
           }
 
@@ -77,7 +77,7 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
 
       if (target_job_index < 0) {
         // no one wants to be scheduled..
-        return;
+        return absl::OkStatus();
       }
 
       // skip this job if we can't schedule it immediately,
@@ -87,7 +87,7 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
         waiting_time[worker_id] += context_.GetExpected(target_subgraph_key);
         auto requests_it = requests.begin() + target_job_index;
         Job job = *requests_it;
-        jobs_to_yield.insert(job.job_id);
+        jobs_to_yield.insert(job.id());
         continue;
       } else {
         break;
@@ -105,7 +105,8 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
     // Common status will be updated by `EnqueueAction`.
     if (context_.IsBegin(target_subgraph_key)) {
       // only set these fields if this is the first subgraph of this model
-      job.expected_latency = largest_shortest_latency;
+      REPORT_IF_JOB_METHOD_FAILS(
+          job.UpdateExpectedLatency(largest_shortest_latency));
     }
 
     context_.EnqueueToWorker({job, target_subgraph_key});
@@ -113,11 +114,12 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
     if (reserve_) {
       // add next job to reserved_, if one exists
       if (target_subgraph_key_next != SubgraphKey()) {
-        reserved_[job.job_id] = target_subgraph_key_next;
+        reserved_[job.id()] = target_subgraph_key_next;
       } else {
-        reserved_.erase(job.job_id);
+        reserved_.erase(job.id());
       }
     }
   }
+  return absl::OkStatus();
 }
 }  // namespace band

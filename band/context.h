@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "band/common.h"
+#include "band/job.h"
 #include "band/config.h"
 #include "band/error_reporter.h"
 
@@ -100,7 +101,6 @@ class Context {
   virtual JobId EnqueueRequest(Job job, bool push_front = false) = 0;
   virtual std::vector<JobId> EnqueueBatch(std::vector<Job> jobs,
                                           bool push_front = false) = 0;
-  virtual void PrepareReenqueue(Job& job) = 0;
   virtual void EnqueueFinishedJob(Job& job) = 0;
   virtual void EnqueueToWorker(const ScheduleAction& schedule_action) = 0;
   virtual void EnqueueToWorkerBatch(

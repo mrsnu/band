@@ -10,7 +10,7 @@ namespace band {
 class FixedWorkerScheduler : public IScheduler {
  public:
   using IScheduler::IScheduler;
-  void Schedule(JobQueue& requests) override;
+  absl::Status Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
   WorkerType GetWorkerType() override { return WorkerType::DeviceQueue; }
@@ -19,7 +19,7 @@ class FixedWorkerScheduler : public IScheduler {
 class FixedWorkerGlobalQueueScheduler : public IScheduler {
  public:
   using IScheduler::IScheduler;
-  void Schedule(JobQueue& requests) override;
+  absl::Status Schedule(JobQueue& requests) override;
   // Required for checking SLO violation.
   // We could add an option to this planner for skipping the SLO check,
   // in which case this function can return false.

@@ -147,7 +147,6 @@ class Engine : public Context {
   JobId EnqueueRequest(Job job, bool push_front = false) override;
   std::vector<JobId> EnqueueBatch(std::vector<Job> jobs,
                                   bool push_front = false) override;
-  void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
   void EnqueueToWorker(const ScheduleAction& schedule_action) override;
   void EnqueueToWorkerBatch(

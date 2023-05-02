@@ -16,10 +16,13 @@ class IScheduler {
   // For the given requests, selected requests to schedule and
   // find the appropriate devices. The selected requests should be
   // enqueued to the worker and removed from original queue.
-  virtual void Schedule(JobQueue& requests) = 0;
+  virtual absl::Status Schedule(JobQueue& requests) = 0;
   virtual bool NeedProfile() = 0;
   virtual bool NeedFallbackSubgraphs() = 0;
   virtual WorkerType GetWorkerType() = 0;
+  virtual const ErrorReporter* GetErrorReporter() {
+    return context_.GetErrorReporter();
+  }
 
  protected:
   Context& context_;

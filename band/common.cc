@@ -208,56 +208,6 @@ DeviceFlags FromString(std::string str) {
   return DeviceFlags::CPU;
 }
 
-std::string GetName(JobStatus job_status) {
-  switch (job_status) {
-    case JobStatus::Queued: {
-      return "Queued";
-    } break;
-    case JobStatus::Success: {
-      return "Success";
-    } break;
-    case JobStatus::SLOViolation: {
-      return "SLOViolation";
-    } break;
-    case JobStatus::InputCopyFailure: {
-      return "InputCopyFailure";
-    } break;
-    case JobStatus::OutputCopyFailure: {
-      return "OutputCopyFailure";
-    } break;
-    case JobStatus::InvokeFailure: {
-      return "InvokeFailure";
-    } break;
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", job_status);
-  return "Unknown job status";
-}
-
-std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
-  switch (status) {
-    case JobStatus::Queued: {
-      return os << "Queued";
-    } break;
-    case JobStatus::Success: {
-      return os << "Success";
-    } break;
-    case JobStatus::SLOViolation: {
-      return os << "SLOViolation";
-    } break;
-    case JobStatus::InputCopyFailure: {
-      return os << "InputCopyFailure";
-    } break;
-    case JobStatus::OutputCopyFailure: {
-      return os << "OutputCopyFailure";
-    } break;
-    case JobStatus::InvokeFailure: {
-      return os << "InvokeFailure";
-    } break;
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", status);
-  return os;
-}
-
 SubgraphKey::SubgraphKey() {}
 // special case - entire model subgraph
 SubgraphKey::SubgraphKey(ModelId model_id, WorkerId worker_id,
@@ -337,22 +287,6 @@ std::size_t SubgraphHash::operator()(const SubgraphKey& p) const {
   hash_set(p.GetUnitIndicesSet());
 
   return hash;
-}
-
-std::string Job::ToJson() const {
-  return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
-         ",\"invoke_time\":" + std::to_string(invoke_time) +
-         ",\"end_time\":" + std::to_string(end_time) +
-         ",\"profiled_execution_time\":" +
-         std::to_string(profiled_execution_time) +
-         ",\"expected_execution_time\":" +
-         std::to_string(expected_execution_time) +
-         ",\"expected_latency\":" + std::to_string(expected_latency) +
-         ",\"slo_us\":" + std::to_string(slo_us) +
-         ",\"model_id\":" + std::to_string(model_id) +
-         (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
-         ",\"unit_indices\":" + subgraph_key.GetUnitIndicesString() +
-         ",\"job_id\":" + std::to_string(job_id) + "}";
 }
 
 std::size_t JobIdBitMaskHash::operator()(

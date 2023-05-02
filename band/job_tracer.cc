@@ -16,9 +16,8 @@ std::string JobTracer::GetStreamName(size_t id) const {
 
 std::string JobTracer::GetJobName(const Job& job) const {
   std::string model_name =
-      "(Model " +
-      (job.model_fname == "" ? std::to_string(job.model_id) : job.model_fname);
-  return model_name + ", JobId " + std::to_string(job.job_id) + ")";
+      "(Model " + std::to_string(job.model_id());
+  return model_name + ", JobId " + std::to_string(job.id()) + ")";
 }
 
 JobTracer& JobTracer::Get() {
@@ -28,22 +27,22 @@ JobTracer& JobTracer::Get() {
 
 void JobTracer::BeginSubgraph(const Job& job) {
   std::unique_lock<std::mutex> lock(mtx_);
-  job_to_handle_[{job.job_id, job.subgraph_key.GetUnitIndices()}] = BeginEvent(
-      GetStreamName(job.subgraph_key.GetWorkerId()), GetJobName(job));
+  job_to_handle_[{job.id(), job.subgraph_key().GetUnitIndices()}] = BeginEvent(
+      GetStreamName(job.subgraph_key().GetWorkerId()), GetJobName(job));
 }
 
 void JobTracer::EndSubgraph(const Job& job) {
   std::unique_lock<std::mutex> lock(mtx_);
-  std::pair<size_t, BitMask> key = {job.job_id,
-                                    job.subgraph_key.GetUnitIndices()};
+  std::pair<size_t, BitMask> key = {job.id(),
+                                    job.subgraph_key().GetUnitIndices()};
   if (job_to_handle_.find(key) != job_to_handle_.end()) {
-    EndEvent(GetStreamName(job.subgraph_key.GetWorkerId()),
+    EndEvent(GetStreamName(job.subgraph_key().GetWorkerId()),
              job_to_handle_.at(key), job.ToJson());
   } else {
     band::Logger::Log(BAND_LOG_INFO,
                       "The given job does not exists. (id:%d, unit_indices:%s)",
-                      job.job_id,
-                      job.subgraph_key.GetUnitIndicesString().c_str());
+                      job.id(),
+                      job.subgraph_key().GetUnitIndicesString().c_str());
   }
 }
 

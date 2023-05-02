@@ -12,7 +12,9 @@ namespace tfl {
 absl::Status GetBandStatus(TfLiteStatus status) { 
   if (status == kTfLiteOk) {
     return absl::OkStatus();
-  } else {
+  } else if (status == kTfLiteDelegateError) {
+    return absl::UnavailableError("TfLite Delegate Error");
+  }else {
     return absl::InternalError("TfLite Error");
   }
 }

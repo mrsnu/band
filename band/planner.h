@@ -14,6 +14,8 @@
 #include "band/scheduler/scheduler.h"
 #include "band/worker.h"
 
+#include "absl/status/statusor.h"
+
 namespace band {
 
 // The maximum number of available job outputs at one time.
@@ -46,7 +48,6 @@ class Planner {
   // Enqueues a finised job to the queue.
   // A worker calls the method.
   void EnqueueFinishedJob(Job& job);
-  void PrepareReenqueue(Job& job);
   // Enqueue the request to the worker.
   void EnqueueToWorker(const std::vector<ScheduleAction>& action);
   void Trigger() { planner_safe_bool_.notify(); }
@@ -70,10 +71,14 @@ class Planner {
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
   // Get the Job instance with the `job_id`.
-  Job GetFinishedJob(int job_id);
+  absl::StatusOr<Job> GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
   std::map<ModelId, WorkerId>& GetModelWorkerMap() { return model_worker_map_; }
+
+  const ErrorReporter* GetErrorReporter() const {
+    return context_.GetErrorReporter();
+  }
 
  private:
   // Main loop for planner_thread_

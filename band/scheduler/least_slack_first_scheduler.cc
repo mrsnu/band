@@ -9,16 +9,16 @@ LeastSlackFirstScheduler::LeastSlackFirstScheduler(Context& context,
                                                    int window_size)
     : IScheduler(context), window_size_(window_size) {}
 
-void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
+absl::Status LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
   context_.UpdateWorkersWaiting();
   int window_size = std::min(window_size_, (int)requests.size());
   if (window_size <= 0) {
-    return;
+    return absl::OkStatus();
   }
 
   std::set<int> idle_workers = context_.GetIdleWorkers();
   if (idle_workers.empty()) {
-    return;
+    return absl::OkStatus();
   }
 
   WorkerWaitingTime waiting_time = context_.GetWorkerWaitingTime();
@@ -37,9 +37,9 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     SubgraphKey target_subgraph_key = best_exec_plan.first.front();
 
     // Change job status and schedule if the execution plan already exceeded SLO
-    if (job.slo_us > 0 &&
-        current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
-      job.status = JobStatus::SLOViolation;
+    if (job.slo_us() > 0 && current_time + best_exec_plan.second >
+                                job.enqueue_time() + job.slo_us()) {
+      job.Error(JobStatus::ErrorState::SLOViolation, "SLO Violation");
       context_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
@@ -60,13 +60,14 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
        it != job_indices_to_erase.rend(); ++it) {
     requests.erase(requests.begin() + *it);
   }
+  return absl::OkStatus();
 }
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
                                                const Job& job) {
-  if (job.slo_us > 0) {
-    int64_t deadline = job.enqueue_time + job.slo_us;
-    int64_t remaining_execution_time = job.expected_latency;
+  if (job.slo_us() > 0) {
+    int64_t deadline = job.enqueue_time() + job.slo_us();
+    int64_t remaining_execution_time = job.expected_latency();
     return deadline - current_time - remaining_execution_time;
   } else {
     return INT_MAX;
@@ -87,10 +88,11 @@ void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests,
 void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests,
                                                      int window_size) {
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
-    it->expected_latency = context_
-                               .GetSubgraphWithShortestLatency(
-                                   *it, context_.GetWorkerWaitingTime())
-                               .second;
+    REPORT_IF_JOB_METHOD_FAILS(
+        it->UpdateExpectedLatency(context_
+                                      .GetSubgraphWithShortestLatency(
+                                          *it, context_.GetWorkerWaitingTime())
+                                      .second));
   }
 }
 

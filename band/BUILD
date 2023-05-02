@@ -126,6 +126,7 @@ band_cc_library(
         "error_reporter.cc",
         "logger.cc",
         "model_spec.cc",
+        "job.cc",
     ],
     hdrs = [
         "common.h",
@@ -135,6 +136,7 @@ band_cc_library(
         "error_reporter.h",
         "logger.h",
         "model_spec.h",
+        "job.h",
     ],
     linkopts = select({
         "//band:android": [
@@ -144,6 +146,7 @@ band_cc_library(
         ],
     }),
     deps = [
+        ":time",
         "@com_google_absl//absl/status:status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -267,7 +270,6 @@ band_cc_library(
         ":common",
         ":config",
         ":cpu",
-        ":time",
         ":job_tracer",
     ],
 )
@@ -292,7 +294,6 @@ band_cc_library(
     ],
     deps = [
         ":common",
-        ":time",
     ],
 )
 
@@ -313,7 +314,6 @@ band_cc_library(
         ":job_tracer"
     ],
 )
-
 
 band_cc_library(
     name = "job_tracer",
@@ -387,7 +387,6 @@ band_cc_library(
             ":planner",
             ":scheduler",
             ":tensor",
-            ":time",
             ":worker",
             ":job_tracer",
         ],

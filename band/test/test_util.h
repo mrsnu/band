@@ -57,7 +57,6 @@ struct MockContextBase : public Context {
   MOCK_METHOD0(Trigger, void());
   MOCK_METHOD2(EnqueueRequest, JobId(Job, bool));
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
-  MOCK_METHOD1(PrepareReenqueue, void(Job&));
   MOCK_METHOD1(EnqueueFinishedJob, void(Job&));
   MOCK_METHOD1(EnqueueToWorker, void(const ScheduleAction&));
   MOCK_METHOD1(EnqueueToWorkerBatch, void(const std::vector<ScheduleAction>&));

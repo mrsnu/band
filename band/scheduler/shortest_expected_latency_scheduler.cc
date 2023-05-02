@@ -9,7 +9,7 @@ ShortestExpectedLatencyScheduler::ShortestExpectedLatencyScheduler(
     Context& context, int window_size)
     : IScheduler(context), window_size_(window_size) {}
 
-void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
+absl::Status ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
   JobQueue local_jobs;
   int window_size = std::min(window_size_, (int)requests.size());
   local_jobs.insert(local_jobs.begin(), requests.begin(),
@@ -42,7 +42,7 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       Job& next_job = *it;
 
       std::pair<int, BitMask> job_to_search =
-          std::make_pair(next_job.model_id, next_job.resolved_unit_subgraphs);
+          std::make_pair(next_job.model_id(), next_job.resolved_unit_subgraphs());
       if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
         continue;
       } else {
@@ -66,11 +66,15 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // remove the job from the queue so that we don't meet it in the next loop
     local_jobs.erase(local_jobs.begin() + target_job_idx);
 
-    if (context_.IsBegin(most_urgent_job.subgraph_key)) {
+    if (context_.IsBegin(most_urgent_job.subgraph_key())) {
       // only set these fields if this is the first subgraph of this model
-      most_urgent_job.expected_latency = largest_shortest_latency;
+      auto status = most_urgent_job.UpdateExpectedLatency(largest_shortest_latency);
+      if (!status.ok()) {
+        return status;
+      }
     }
     context_.EnqueueToWorker({most_urgent_job, target_subgraph_key});
   }
+  return absl::OkStatus();
 }
 }  // namespace band

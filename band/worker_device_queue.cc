@@ -16,7 +16,7 @@ int DeviceQueueWorker::GetCurrentJobId() {
   if (requests_.empty()) {
     return -1;
   }
-  return requests_.front().job_id;
+  return requests_.front().id();
 }
 
 int64_t DeviceQueueWorker::GetWaitingTime() {
@@ -27,12 +27,12 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
-    int64_t expected_latency = context_->GetExpected(it->subgraph_key);
+    int64_t expected_latency = context_->GetExpected(it->subgraph_key());
 
     total += expected_latency;
     if (it == requests_.begin()) {
       int64_t current_time = time::NowMicros();
-      int64_t invoke_time = (*it).invoke_time;
+      int64_t invoke_time = (*it).invoke_time();
       if (invoke_time > 0 && current_time > invoke_time) {
         int64_t progress = (current_time - invoke_time) > expected_latency
                                ? expected_latency
@@ -74,13 +74,13 @@ void DeviceQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
-  context_->PrepareReenqueue(current_job);
+  current_job.PrepareReenqueue();
   std::vector<Job> jobs(requests_.begin(), requests_.end());
   requests_.clear();
   lock.unlock();
 
   context_->EnqueueBatch(jobs, true);
-  WaitUntilDeviceAvailable(current_job.subgraph_key);
+  WaitUntilDeviceAvailable(current_job.subgraph_key());
 
   lock.lock();
   is_throttling_ = false;
@@ -127,7 +127,7 @@ void DeviceQueueWorker::TryWorkSteal() {
 
       Subgraph* orig_subgraph = interpreter_ptr->subgraph(job.subgraph_idx);
       SubgraphKey& orig_key = orig_subgraph->GetKey();
-      SubgraphKey new_key(job.model_id, device_flag_, orig_key.input_ops,
+      SubgraphKey new_key(job.model_id(), device_flag_, orig_key.input_ops,
                           orig_key.output_ops);
       int64_t expected_latency = interpreter_ptr->GetExpectedLatency(new_key);
       if (expected_latency == -1 || expected_latency > waiting_time) {

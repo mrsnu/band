@@ -24,7 +24,7 @@ bool GlobalQueueWorker::IsEnqueueReady() const {
 
 bool GlobalQueueWorker::HasJob() { return is_busy_; }
 
-int GlobalQueueWorker::GetCurrentJobId() { return current_job_.job_id; }
+int GlobalQueueWorker::GetCurrentJobId() { return current_job_.id(); }
 
 Job* GlobalQueueWorker::GetCurrentJob() {
   return HasJob() ? &current_job_ : nullptr;
@@ -36,11 +36,11 @@ void GlobalQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
-  context_->PrepareReenqueue(current_job);
+  current_job.PrepareReenqueue();
   lock.unlock();
 
   context_->EnqueueRequest(current_job, true);
-  WaitUntilDeviceAvailable(current_job.subgraph_key);
+  WaitUntilDeviceAvailable(current_job.subgraph_key());
 
   lock.lock();
   is_throttling_ = false;
@@ -72,7 +72,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
     return 0;
   }
 
-  int64_t invoke_time = current_job_.invoke_time;
+  int64_t invoke_time = current_job_.invoke_time();
 
   // if this thread is the same thread that updates is_busy_ (false --> true)
   // and there are no other threads that call this function, then it is
@@ -85,7 +85,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // no need to hold on to the lock anymore
   lock.unlock();
 
-  int64_t profiled_latency = context_->GetExpected(current_job_.subgraph_key);
+  int64_t profiled_latency = context_->GetExpected(current_job_.subgraph_key());
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet

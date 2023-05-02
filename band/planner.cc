@@ -121,17 +121,8 @@ std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
   {
     std::unique_lock<std::mutex> request_lock(requests_.mtx);
     auto enqueue_time = time::NowMicros();
-    for (int i = 0; i < jobs.size(); i++) {
-      Job& job = jobs[i];
-      if (job.enqueue_time == 0) {
-        // job.enqueue_time may already be set if this model contains a fallback
-        // op, in which case we do not overwrite the set value
-        job.enqueue_time = enqueue_time;
-      }
-      if (job.job_id == -1) {
-        job.job_id = num_submitted_jobs_++;
-      }
-      job_ids[i] = job.job_id;
+    for (auto& job : jobs) {
+      REPORT_IF_JOB_METHOD_FAILS(job.Queued(num_submitted_jobs_++));
     }
 
     auto insert_position =
@@ -153,7 +144,7 @@ void Planner::Wait(std::vector<int> job_ids) {
       if (!IsJobIdValid(job_id)) {
         continue;
       }
-      if (jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != job_id) {
+      if (jobs_finished_record_[GetJobRecordIndex(job_id)].id() != job_id) {
         return false;
       }
     }
@@ -174,26 +165,19 @@ void Planner::WaitAll() {
 void Planner::EnqueueFinishedJob(Job& job) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
   // record finished / failed job
-  if (context_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success) {
-    jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
+  if (context_.IsEnd(job.subgraph_key()) || job.IsSuccess()) {
+    jobs_finished_record_[GetJobRecordIndex(job.id())] = job;
     num_finished_jobs_++;
     end_invoke_.notify_all();
   }
 
   // report end invoke using callback
-  if (on_end_request_ && job.require_callback &&
-      context_.IsEnd(job.subgraph_key)) {
-    on_end_request_(job.job_id, job.status == JobStatus::Success
-                                    ? absl::OkStatus()
-                                    : absl::InternalError("Job failed."));
+  if (on_end_request_ && job.require_callback() &&
+      context_.IsEnd(job.subgraph_key())) {
+    on_end_request_(job.id(), job.IsSuccess()
+                                  ? absl::OkStatus()
+                                  : absl::InternalError("Job failed."));
   }
-}
-
-void Planner::PrepareReenqueue(Job& job) {
-  job.invoke_time = 0;
-  job.end_time = 0;
-  job.resolved_unit_subgraphs = 0;
-  job.following_jobs.clear();
 }
 
 bool Planner::NeedProfile() {
@@ -214,14 +198,15 @@ void Planner::SetWindowSize(int schedule_window_size) {
   schedule_window_size_ = schedule_window_size;
 }
 
-Job Planner::GetFinishedJob(int job_id) {
+absl::StatusOr<Job> Planner::GetFinishedJob(int job_id) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
-  if (IsJobIdValid(job_id) &&
-      jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != -1) {
-    return jobs_finished_record_[GetJobRecordIndex(job_id)];
-  } else {
-    return Job();
+  if (!IsJobIdValid(job_id)) {
+    return absl::InternalError("Job not found.");
   }
+  if (jobs_finished_record_[GetJobRecordIndex(job_id)].id() == -1) {
+    return absl::InternalError("Job not finished.");
+  }
+  return jobs_finished_record_[GetJobRecordIndex(job_id)];
 }
 
 void Planner::SetOnEndRequest(
@@ -258,7 +243,7 @@ absl::Status Planner::Plan() {
     do {
       need_reschedule_ = false;
       for (size_t i = 0; i < local_queues_.size(); ++i) {
-        schedulers_[i]->Schedule(local_queues_[i]);
+        REPORT_IF_JOB_METHOD_FAILS(schedulers_[i]->Schedule(local_queues_[i]));
       }
     } while (need_reschedule_);
   }
@@ -278,7 +263,7 @@ void Planner::CopyToLocalQueues() {
     } else if (schedulers_.size() == 2) {
       // TODO: general method for assigning SLO/non-SLO requests
       for (Job& job : requests) {
-        if (job.slo_us > 0) {
+        if (job.slo_us() > 0) {
           local_queues_[0].push_back(std::move(job));
         } else {
           local_queues_[1].push_back(std::move(job));
@@ -307,8 +292,11 @@ void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
       return;
     }
 
+    // TODO(widiba03304): check if SLO violation should be checked here
     if (IsSLOViolated(job)) {
-      HandleSLOViolatedJob(job);
+      job.Error(JobStatus::ErrorState::SLOViolation, "SLO violation.");
+      EnqueueFinishedJob(job);
+      need_reschedule_ = true;
       continue;
     }
 
@@ -328,63 +316,30 @@ void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 }
 
 bool Planner::IsSLOViolated(Job& job) {
-  if (job.status == JobStatus::SLOViolation) {
+  if (job.status().error_state == JobStatus::ErrorState::SLOViolation) {
     return true;
   }
   // this job has an SLO; check if it's not too late already
-  if (job.slo_us > 0) {
+  if (job.slo_us() > 0) {
     WorkerWaitingTime workers_waiting = context_.GetWorkerWaitingTime();
     int64_t current_time = time::NowMicros();
-    int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
-                               job.expected_execution_time;
+    int64_t expected_latency =
+        workers_waiting[job.subgraph_key().GetWorkerId()] +
+        job.expected_execution_time();
 
-    if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
+    if (current_time + expected_latency > job.enqueue_time() + job.slo_us()) {
       return true;
     }
   }
   return false;
 }
 
-void Planner::HandleSLOViolatedJob(Job& job) {
-  // no point in running this job anymore
-  job.status = JobStatus::SLOViolation;
-
-  // mark this as -1 to differentiate it from the default value, 0
-  job.invoke_time = -1;
-
-  // mark the time of this decision (of early-dropping this job)
-  job.end_time = time::NowMicros();
-  EnqueueFinishedJob(job);
-
-  // Set reschedule flag.
-  need_reschedule_ = true;
-}
-
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
-  job.subgraph_key = target_key;
-  job.sched_id = IssueSchedId();
-  job.profiled_execution_time = context_.GetProfiled(target_key);
-  job.expected_execution_time = context_.GetExpected(target_key);
-  job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
-
-  if (!context_.IsEnd(target_key)) {
-    Job remaining_ops(job.model_id);
-    remaining_ops.model_fname = job.model_fname;
-    remaining_ops.slo_us = job.slo_us;
-    remaining_ops.enqueue_time = job.enqueue_time;
-    remaining_ops.following_jobs = job.following_jobs;
-    remaining_ops.expected_latency = job.expected_latency;
-    remaining_ops.sched_id = job.sched_id;
-    remaining_ops.job_id = job.job_id;
-    remaining_ops.input_handle = job.input_handle;
-    remaining_ops.output_handle = job.output_handle;
-    remaining_ops.resolved_unit_subgraphs = job.resolved_unit_subgraphs;
-    remaining_ops.previous_subgraph_keys = job.previous_subgraph_keys;
-    remaining_ops.previous_subgraph_keys.emplace_back(job.subgraph_key);
-
-    job.following_jobs.clear();
-    job.following_jobs.push_back(remaining_ops);
-  }
+  REPORT_IF_JOB_METHOD_FAILS(job.AssignSubgraphKey(target_key));
+  REPORT_IF_JOB_METHOD_FAILS(job.AssignSchedId(IssueSchedId()));
+  REPORT_IF_JOB_METHOD_FAILS(job.UpdateProfileInfo(context_.GetProfiled(target_key),
+                        context_.GetExpected(target_key)));
+  REPORT_IF_JOB_METHOD_FAILS(job.UpdateSubgraphSchedule(context_));
 }
 
 bool Planner::IsJobIdValid(int job_id) {
