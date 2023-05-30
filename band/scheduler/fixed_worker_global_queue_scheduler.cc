@@ -4,16 +4,17 @@
 
 namespace band {
 
-void FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
+bool FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
+  bool success = true;
   // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   std::set<int> idle_workers = context_.GetIdleWorkers();
   if (idle_workers.empty()) {
     // no device is idle; wait for next iteration
-    return;
+    return success;
   }
 
   BAND_REPORT_ERROR(DefaultErrorReporter(), "NOT IMPLEMENTED");
-  return;
+  return success;
   // for (auto it = context_.requests_.begin(); it !=
   // context_.requests_.end();)
   // {

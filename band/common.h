@@ -11,7 +11,6 @@
 #include <type_traits>
 #include <vector>
 
-
 namespace band {
 typedef int WorkerId;
 typedef int ModelId;
@@ -109,6 +108,7 @@ enum class WorkerType : size_t {
 };
 
 enum class JobStatus : size_t {
+  EnqueueFailed,
   Queued,
   Success,
   SLOViolation,

@@ -9,16 +9,17 @@ LeastSlackFirstScheduler::LeastSlackFirstScheduler(Context& context,
                                                    int window_size)
     : IScheduler(context), window_size_(window_size) {}
 
-void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
+bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
+  bool success = true;
   context_.UpdateWorkersWaiting();
   int window_size = std::min(window_size_, (int)requests.size());
   if (window_size <= 0) {
-    return;
+    return success;
   }
 
   std::set<int> idle_workers = context_.GetIdleWorkers();
   if (idle_workers.empty()) {
-    return;
+    return success;
   }
 
   WorkerWaitingTime waiting_time = context_.GetWorkerWaitingTime();
@@ -40,7 +41,7 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     if (job.slo_us > 0 &&
         current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
       job.status = JobStatus::SLOViolation;
-      context_.EnqueueToWorker({job, target_subgraph_key});
+      success &= context_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
     }
@@ -50,7 +51,7 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     if (idle_workers.find(worker_id) != idle_workers.end()) {
       // Update worker's waiting time as if it will execute the job
       waiting_time[worker_id] += context_.GetExpected(target_subgraph_key);
-      context_.EnqueueToWorker({job, target_subgraph_key});
+      success &= context_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
     }
@@ -60,6 +61,8 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
        it != job_indices_to_erase.rend(); ++it) {
     requests.erase(requests.begin() + *it);
   }
+
+  return success;
 }
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,

@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <mutex>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -28,6 +29,8 @@ LogSeverity Logger::verbosity = BAND_LOG_INFO;
 
 void Logger::Log(LogSeverity severity, const char* format, ...) {
   if (verbosity <= severity) {
+    static std::mutex log_mutex;
+    std::lock_guard<std::mutex> lock(log_mutex);
     va_list args;
     va_start(args, format);
     LogFormatted(severity, format, args);
@@ -37,6 +40,8 @@ void Logger::Log(LogSeverity severity, const char* format, ...) {
 
 void Logger::LogFormatted(LogSeverity severity, const char* format,
                           va_list args) {
+  static std::mutex log_mutex;
+  std::lock_guard<std::mutex> lock(log_mutex);
   fprintf(stderr, "%s: ", GetSeverityName(severity));
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
@@ -61,8 +66,9 @@ const char* Logger::GetSeverityName(LogSeverity severity) {
       return "WARNING";
     case BAND_LOG_ERROR:
       return "ERROR";
+    default:
+      return "<Unknown severity>";
   }
-  return "<Unknown severity>";
 }
 
 }  // namespace band

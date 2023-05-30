@@ -26,7 +26,7 @@ class Worker {
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   absl::Status UpdateWorkerThread(const CpuSet thread_affinity_mask,
-                                int num_threads);
+                                  int num_threads);
   void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
   bool IsAvailable() const;
 
@@ -61,7 +61,7 @@ class Worker {
 
   std::once_flag device_cpu_start_flag_;
   std::thread device_cpu_thread_;
-  std::mutex device_mtx_;
+  mutable std::mutex device_mtx_;
   std::condition_variable request_cv_;
   std::condition_variable wait_cv_;
   bool kill_worker_ = false;

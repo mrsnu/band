@@ -2,6 +2,7 @@
 
 #include <unordered_set>
 
+#include "band/logger.h"
 #include "band/time.h"
 
 namespace band {
@@ -9,7 +10,8 @@ ShortestExpectedLatencyScheduler::ShortestExpectedLatencyScheduler(
     Context& context, int window_size)
     : IScheduler(context), window_size_(window_size) {}
 
-void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
+bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
+  bool success = true;
   JobQueue local_jobs;
   int window_size = std::min(window_size_, (int)requests.size());
   local_jobs.insert(local_jobs.begin(), requests.begin(),
@@ -59,6 +61,10 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       }
     }
 
+    if (target_subgraph_key.IsValid() == false) {
+      continue;
+    }
+
     // for some reason, this Job must NOT be a reference (&), otherwise
     // we get a segfault at push_back() below
     Job most_urgent_job = local_jobs[target_job_idx];
@@ -70,7 +76,8 @@ void ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       // only set these fields if this is the first subgraph of this model
       most_urgent_job.expected_latency = largest_shortest_latency;
     }
-    context_.EnqueueToWorker({most_urgent_job, target_subgraph_key});
+    success &= context_.EnqueueToWorker({most_urgent_job, target_subgraph_key});
   }
+  return success;
 }
 }  // namespace band

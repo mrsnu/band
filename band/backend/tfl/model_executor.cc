@@ -11,7 +11,6 @@
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/subgraph.h"
 
-
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
@@ -20,7 +19,6 @@
 #include "absl/strings/str_format.h"
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
-
 
 namespace band {
 namespace tfl {
@@ -330,7 +328,13 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
     return status_or_delegate.status();
   }
   auto delegate = status_or_delegate.value();
-  builder.AddDelegate(delegate);
+  if ((device != DeviceFlags::CPU) && !delegate) {
+    return absl::InternalError(
+        absl::StrFormat("Failed to create Tensorflow Lite delegate for %s",
+                        GetName(device).c_str()));
+  } else {
+    builder.AddDelegate(delegate);
+  }
 
   builder.SetNumThreads(num_threads_);
   if (thread_affinity_mask_.GetMaskBitsVector().size() > 0) {

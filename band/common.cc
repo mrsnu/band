@@ -4,27 +4,27 @@
 
 namespace band {
 
-template<>
+template <>
 size_t GetSize<CPUMaskFlags>() {
   return 4;
 }
 
-template<>
+template <>
 size_t GetSize<SchedulerType>() {
   return 7;
 }
 
-template<>
+template <>
 size_t GetSize<SubgraphPreparationType>() {
   return 4;
 }
 
-template<>
+template <>
 size_t GetSize<DataType>() {
   return 12;
 }
 
-template<>
+template <>
 size_t GetSize<DeviceFlags>() {
   return 4;
 }
@@ -94,7 +94,9 @@ SchedulerType FromString(std::string str) {
       return type;
     }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown scheduler type: %s. Fallback to fixed worker", str.c_str());
+  BAND_LOG_PROD(BAND_LOG_ERROR,
+                "Unknown scheduler type: %s. Fallback to fixed worker",
+                str.c_str());
   return SchedulerType::FixedWorker;
 }
 
@@ -210,6 +212,9 @@ DeviceFlags FromString(std::string str) {
 
 std::string GetName(JobStatus job_status) {
   switch (job_status) {
+    case JobStatus::EnqueueFailed: {
+      return "EnqueueFailed";
+    } break;
     case JobStatus::Queued: {
       return "Queued";
     } break;
@@ -235,6 +240,9 @@ std::string GetName(JobStatus job_status) {
 
 std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
   switch (status) {
+    case JobStatus::EnqueueFailed: {
+      return os << "EnqueueFailed";
+    } break;
     case JobStatus::Queued: {
       return os << "Queued";
     } break;

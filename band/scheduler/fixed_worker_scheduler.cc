@@ -3,7 +3,8 @@
 #include "band/error_reporter.h"
 
 namespace band {
-void FixedWorkerScheduler::Schedule(JobQueue& requests) {
+bool FixedWorkerScheduler::Schedule(JobQueue& requests) {
+  bool success = true;
   // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   while (!requests.empty()) {
     Job to_execute = requests.front();
@@ -17,8 +18,9 @@ void FixedWorkerScheduler::Schedule(JobQueue& requests) {
                              ? context_.GetModelWorker(model_id)
                              : to_execute.target_worker_id;
     SubgraphKey key = context_.GetLargestSubgraphKey(model_id, worker_id);
-    context_.EnqueueToWorker({to_execute, key});
+    success &= context_.EnqueueToWorker({to_execute, key});
   }
+  return success;
 }
 
 }  // namespace band

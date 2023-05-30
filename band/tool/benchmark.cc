@@ -76,9 +76,23 @@ absl::Status Benchmark::ModelContext::PrepareInput() {
 
 bool Benchmark::ParseArgs(int argc, const char** argv) {
   if (argc < 2) {
-    std::cout << "Usage:\n\tbenchmark <config-json-path>" << std::endl;
+    std::cout << "Usage:\n\tbenchmark <config-json-path> [<verbosity> = "
+                 "default value: WARNING]"
+              << std::endl;
+    std::cout << "List of valid verbosity levels:" << std::endl;
+    for (int i = 0; i < BAND_LOG_NUM_SEVERITIES; i++) {
+      std::cout << "\t" << i << " : "
+                << band::Logger::GetSeverityName(static_cast<LogSeverity>(i))
+                << std::endl;
+    }
     return false;
   }
+  if (argc >= 3) {
+    band::Logger::SetVerbosity(atoi(argv[2]));
+  } else {
+    band::Logger::SetVerbosity(BAND_LOG_WARNING);
+  }
+
   Json::Value json_config = json::LoadFromFile(argv[1]);
   return LoadBenchmarkConfigs(json_config) && LoadRuntimeConfigs(json_config);
 }
@@ -284,8 +298,9 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
   }
 
   // load models
-  for (auto benchmark_model : benchmark_config_.model_configs) {
+  for (auto& benchmark_model : benchmark_config_.model_configs) {
     ModelContext* context = new ModelContext;
+
     {
       auto status = context->model.FromPath(target_backend_,
                                             benchmark_model.path.c_str());
@@ -317,6 +332,27 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
 
       context->model_request_inputs.push_back(inputs);
       context->model_request_outputs.push_back(outputs);
+    }
+
+    if (benchmark_model.slo_us <= 0 && benchmark_model.slo_scale > 0.f) {
+      int64_t worst_us = 0;
+
+      // calculate worst case latency
+      for (int worker_id = 0; worker_id < engine_->GetNumWorkers();
+           worker_id++) {
+        worst_us = std::max(engine_->GetProfiled(engine_->GetLargestSubgraphKey(
+                                model_id, worker_id)),
+                            worst_us);
+      }
+
+      if (worst_us == 0) {
+        std::cout << "Failed to get worst case latency for model "
+                  << benchmark_model.path << std::endl;
+        std::cout << "Please check if given planner types require profiling"
+                  << std::endl;
+      } else {
+        benchmark_model.slo_us = worst_us * benchmark_model.slo_scale;
+      }
     }
 
     context->model_ids =
@@ -386,12 +422,8 @@ void Benchmark::RunPeriodic() {
         [this](ModelContext* model_context, const size_t period_us) {
           while (true) {
             if (!model_context->PrepareInput().ok()) {
-              std::cout << "Failed to copy input for model "
-                        << model_context->model
-                               .GetBackendModel(target_backend_)
-                               ->GetPath()
-                        << std::endl;
-              return;
+              BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+              continue;
             }
 
             size_t id = model_context->profiler.BeginEvent();
@@ -399,15 +431,7 @@ void Benchmark::RunPeriodic() {
                 model_context->model_ids, model_context->request_options,
                 model_context->model_request_inputs,
                 model_context->model_request_outputs);
-            if (!status.ok()) {
-              std::cout << "Failed to run model "
-                        << model_context->model
-                               .GetBackendModel(target_backend_)
-                               ->GetPath()
-                        << std::endl;
-              return;
-            }
-            model_context->profiler.EndEvent(id);
+            model_context->profiler.EndEvent(id, status);
 
             if (kill_app_) return;
 
@@ -444,10 +468,8 @@ void Benchmark::RunStream() {
 
     for (auto model_context : model_contexts_) {
       if (!model_context->PrepareInput().ok()) {
-        std::cout
-            << "Failed to copy input for model "
-            << model_context->model.GetBackendModel(target_backend_)->GetPath()
-            << std::endl;
+        BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+        continue;
       }
 
       model_ids.insert(model_ids.end(), model_context->model_ids.begin(),
@@ -465,10 +487,7 @@ void Benchmark::RunStream() {
     size_t id = global_profiler_.BeginEvent();
     auto status =
         engine_->RequestSync(model_ids, request_options, inputs, outputs);
-    if (!status.ok()) {
-      std::cout << "Failed to run model: " << status.message() << std::endl;
-    }
-    global_profiler_.EndEvent(id);
+    global_profiler_.EndEvent(id, status);
     int64_t current = time::NowMicros();
     if (current - start >= run_duration_us) break;
   }
@@ -496,6 +515,9 @@ absl::Status Benchmark::LogResults() {
   PrintHeader("Option");
   PrintLine("Execution mode", benchmark_config_.execution_mode, 1);
   PrintLine("Running time (ms)", benchmark_config_.running_time_ms, 1);
+  for (auto& scheduler : runtime_config_->planner_config.schedulers) {
+    PrintLine("Scheduler", GetName(scheduler), 1);
+  }
 
   PrintHeader("Model");
   for (auto& model_config : benchmark_config_.model_configs) {
@@ -506,7 +528,8 @@ absl::Status Benchmark::LogResults() {
     PrintLine("SLO scale", model_config.slo_scale, 2);
   }
 
-  auto print_profiler = [](const std::string& prefix, const Profiler& profiler,
+  auto print_profiler = [](const std::string& prefix,
+                           const BenchmarkProfiler& profiler,
                            const ModelConfig* model_config = nullptr) {
     const double batch_size = model_config ? model_config->batch_size : 1;
     double average_ms =
@@ -518,6 +541,25 @@ absl::Status Benchmark::LogResults() {
     PrintLine("# Processed requests", profiler.GetNumEvents() * batch_size, 1);
     PrintLine("Avg. Latency (ms)", average_ms, 1);
     PrintLine("Avg. FPS", average_fps, 1);
+    PrintLine("Total # requests", profiler.GetNumEvents() * batch_size, 1);
+    PrintLine("Total # canceled requests",
+              profiler.GetNumCanceledEvents() * batch_size, 1);
+
+    if (model_config->slo_us > 0) {
+      double slo_satisfactory_count = 0;
+      for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
+        if (!profiler.IsEventCanceled(i) &&
+            profiler.GetElapsedTimeAt<std::chrono::microseconds>(i) <
+                model_config->slo_us) {
+          slo_satisfactory_count++;
+        }
+      }
+      double num_events =
+          profiler.GetNumEvents() - profiler.GetNumCanceledEvents();
+
+      PrintLine("SLO Satisfactory Rate (%)",
+                slo_satisfactory_count / num_events * 100, 1);
+    }
   };
 
   if (global_profiler_.GetNumEvents() > 0) {

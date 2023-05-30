@@ -1,14 +1,17 @@
 #include <algorithm>
 
 #include "band/common.h"
+#include "band/logger.h"
 #include "band/time.h"
 #include "band/worker.h"
 #include "worker.h"
+
 
 namespace band {
 
 bool GlobalQueueWorker::EnqueueJob(Job& job) {
   if (!IsEnqueueReady()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Worker is not ready to enqueue");
     return false;
   }
 
