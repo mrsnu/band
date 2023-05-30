@@ -19,7 +19,8 @@ const char* BandSchedulerGetName(BandSchedulerType type) {
       return "least_slack_time_first";
     case kBandHeterogeneousEarliestFinishTimeReserved:
       return "heterogeneous_earliest_finish_time_reserved";
-    default: {}
+    default: {
+    }
   }
   return "Unknown type";
 }
@@ -45,7 +46,8 @@ const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
       return "unit_subgraph";
     case kBandMergeUnitSubgraph:
       return "merge_unit_subgraph";
-    default: {}
+    default: {
+    }
   }
   return "Unknown type";
 }
@@ -87,7 +89,8 @@ const char* BandTypeGetName(BandType type) {
       return "FLOAT16";
     case kBandFloat64:
       return "FLOAT64";
-    default: {}
+    default: {
+    }
   }
   return "Unknown type";
 }
@@ -102,7 +105,8 @@ const char* BandDeviceGetName(BandDeviceFlags flag) {
       return "DSP";
     case kBandNPU:
       return "NPU";
-    default: {}
+    default: {
+    }
   }
   return "Unknown type";
 }
@@ -122,7 +126,8 @@ const char* BandBackendGetName(BandBackendType flag) {
   switch (flag) {
     case kBandTfLite:
       return "Tensorflow Lite";
-    default: {}
+    default: {
+    }
   }
   return "Unknown type";
 }
@@ -145,7 +150,8 @@ const char* BandStatusGetName(BandStatus status) {
       return "DelegateError";
     case kBandError:
       return "Error";
-    default: {}
+    default: {
+    }
   }
   return "Unknown type";
 }
