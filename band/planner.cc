@@ -347,8 +347,8 @@ bool Planner::IsSLOViolated(Job& job) {
     int64_t current_time = Time::NowMicros();
     int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
                                job.expected_execution_time;
-
-    if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
+    int64_t remaining_time = job.slo_us - (current_time - job.enqueue_time);
+    if (expected_latency > remaining_time) {
       return true;
     }
   }
