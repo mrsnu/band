@@ -67,6 +67,7 @@ band_cc_android_test(
     data = [
         "//band/test:data/add.tflite",
         "//band/test:data/benchmark_config.json",
+        "//band/test:data/retinaface_mbv2_quant_160.tflite",
     ],
     deps = [
         ":test_util",
