@@ -1,5 +1,7 @@
 #include "band/backend/grpc/model_executor.h"
 
+#include "band/backend/grpc/proto/model.grpc.pb.h"
+
 namespace band {
 namespace grpc {
 
@@ -17,6 +19,9 @@ absl::StatusOr<ModelSpec> GrpcModelExecutor::InvestigateModelSpec(
   std::vector<std::set<int>> op_output_tensors;
   std::map<DeviceFlags, std::set<int>> unsupported_ops;
   std::set<DeviceFlags> unavailable_devices;
+
+  // 1. Get from model descriptor file.
+  // 2. Compare the model descriptor with the cloud.
   
   ModelSpec model_spec(num_ops, 
                        num_tensors, 

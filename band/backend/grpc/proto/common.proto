@@ -1,5 +1,9 @@
 syntax = "proto3";
 
+package band_proto;
+
+message Void {}
+
 enum DataType {
   NO_TYPE = 0;
   FLOAT32 = 1;
@@ -27,4 +31,8 @@ enum QuantizationType {
 message Status {
   int32 code = 1;
   string error_message = 2;
+}
+
+message OpSet {
+  repeated int32 op = 1;
 }

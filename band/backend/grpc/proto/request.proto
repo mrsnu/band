@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package band;
+package band_proto;
 
 import "band/backend/grpc/proto/tensor.proto";
 

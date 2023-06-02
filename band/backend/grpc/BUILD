@@ -34,5 +34,6 @@ band_cc_library(
     alwayslink = True,
     deps = [
         "//band:framework",
+        "//band/backend/grpc:grpc_client",
     ],
 )
