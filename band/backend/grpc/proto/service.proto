@@ -7,7 +7,6 @@ import "band/backend/grpc/proto/response.proto";
 import "band/backend/grpc/proto/model.proto";
 
 service BandService {
-    rpc RequestOnce(Request) returns (Response) {}
-    rpc RequestBatch(BatchedRequest) returns (BatchedResponse) {}
-    rpc GetModelSpec(ModelDescriptor) returns (ModelSpecification) {} 
+    rpc RequestSync(Request) returns (Response) {}
+    rpc GetModelDesc(ModelDescriptor) returns (ModelSpecification) {} 
 }

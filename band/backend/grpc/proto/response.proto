@@ -8,10 +8,6 @@ message Response {
     Status status = 1;
 }
 
-message BatchedResponse {
-    repeated Response responses = 1;
-}
-
 message Event {
     int32 id = 1;
 }

@@ -30,6 +30,10 @@ class GrpcModelExecutor : public interface::IModelExecutor {
 
   absl::Status ExecuteSubgraph(const SubgraphKey& key) override;
   void ForEachSubgraph(std::function<void(const SubgraphKey&)> iterator) override;
+
+ private:
+  std::vector<int> inputs_;
+  std::vector<int> outputs_;
 };
 
 }

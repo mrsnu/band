@@ -8,10 +8,25 @@ GrpcModelExecutor::~GrpcModelExecutor() {}
 absl::StatusOr<ModelSpec> GrpcModelExecutor::InvestigateModelSpec(
     interface::IModel* model) {
   // Request to the server to get model spec.
-
-  ModelSpec model_spec(num_ops, num_tensors, tensor_types, input_tensor_indices,
-                       output_tensor_indices, op_input_tensors,
-                       op_output_tensors, unsupported_ops, unavailable_devices);
+  int num_ops = 0;
+  int num_tensors = 0;
+  std::vector<DataType> tensor_types;
+  std::set<int> input_tensor_indices;
+  std::set<int> output_tensor_indices;
+  std::vector<std::set<int>> op_input_tensors;
+  std::vector<std::set<int>> op_output_tensors;
+  std::map<DeviceFlags, std::set<int>> unsupported_ops;
+  std::set<DeviceFlags> unavailable_devices;
+  
+  ModelSpec model_spec(num_ops, 
+                       num_tensors, 
+                       tensor_types, 
+                       input_tensor_indices,
+                       output_tensor_indices, 
+                       op_input_tensors,
+                       op_output_tensors, 
+                       unsupported_ops, 
+                       unavailable_devices);
 
   model_spec.path = model->GetPath();
   return model_spec;
@@ -24,36 +39,58 @@ absl::Status GrpcModelExecutor::PrepareSubgraph(interface::IModel* model,
 }
 
 BackendType GrpcModelExecutor::GetBackendType() const {
-    return BackendType::Grpc;
+  return BackendType::Grpc;
 }
 
 const std::vector<int>& GrpcModelExecutor::GetInputs(
-    const SubgraphKey& key) const {}
+    const SubgraphKey& key) const {
+  return inputs_;
+}
 
 const std::vector<int>& GrpcModelExecutor::GetOutputs(
-    const SubgraphKey& key) const {}
+    const SubgraphKey& key) const {
+  return outputs_;
+}
 
 const char* GrpcModelExecutor::GetInputName(const SubgraphKey& key,
-                                            int index) const {}
+                                            int index) const {
+  return nullptr;
+}
 
 const char* GrpcModelExecutor::GetOutputName(const SubgraphKey& key,
-                                             int index) const {}
+                                             int index) const {
+  return nullptr;
+}
 
-size_t GrpcModelExecutor::GetNumTensors(const SubgraphKey& key) const {}
+size_t GrpcModelExecutor::GetNumTensors(const SubgraphKey& key) const {
+  return 0;
+}
 
-size_t GrpcModelExecutor::GetNumNodes(const SubgraphKey& key) const {}
+size_t GrpcModelExecutor::GetNumNodes(const SubgraphKey& key) const {
+  return 0;
+}
 
 std::shared_ptr<interface::ITensorView> GrpcModelExecutor::GetTensorView(
-    const SubgraphKey& key, int index) {}
+    const SubgraphKey& key, int index) {
+  return nullptr;
+}
 
-SubgraphKey GrpcModelExecutor::GetLargestSubgraphKey() const {}
+SubgraphKey GrpcModelExecutor::GetLargestSubgraphKey() const {
+  return SubgraphKey();
+}
 
-bool GrpcModelExecutor::HasSubgraph(const SubgraphKey& key) const {}
+bool GrpcModelExecutor::HasSubgraph(const SubgraphKey& key) const {
+  return false;
+}
 
-absl::Status GrpcModelExecutor::ExecuteSubgraph(const SubgraphKey& key) {}
+absl::Status GrpcModelExecutor::ExecuteSubgraph(const SubgraphKey& key) {
+  return absl::OkStatus();
+}
 
 void GrpcModelExecutor::ForEachSubgraph(
-    std::function<void(const SubgraphKey&)> iterator) {}
+    std::function<void(const SubgraphKey&)> iterator) {
+  return;
+}
 
 }  // namespace grpc
 }  // namespace band

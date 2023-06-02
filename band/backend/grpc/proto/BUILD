@@ -5,14 +5,6 @@ package(
     licenses = ["notice"],
 )
 
-exports_files([
-    "common.proto",
-    "request.proto",
-    "response.proto",
-    "service.proto",
-    "tensor.proto",
-])
-
 proto_library(
     name = "band_proto",
     srcs = [
@@ -21,6 +13,7 @@ proto_library(
         "response.proto",
         "service.proto",
         "tensor.proto",
+        "model.proto",
     ],
 )
 

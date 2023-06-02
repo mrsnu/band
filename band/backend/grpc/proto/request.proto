@@ -7,8 +7,9 @@ import "band/backend/grpc/proto/tensor.proto";
 enum BackendType {
   TENSORFLOW = 0;
   PYTORCH = 1;
-  ONNX = 2;
+  ONNXRUNTIME = 2;
   TENSORRT = 3;
+  CUSTOM = 4;
 }
 
 message RequestOption {
