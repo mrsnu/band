@@ -6,6 +6,7 @@ import java.util.List;
 
 public class NativeModelWrapper implements AutoCloseable {
   private long nativeHandle = 0;
+  private ByteBuffer modelBuffer;
 
   NativeModelWrapper() {
     nativeHandle = createModel();
@@ -20,9 +21,10 @@ public class NativeModelWrapper implements AutoCloseable {
   public void loadFromFile(BackendType backendType, String filePath) {
     loadFromFile(nativeHandle, backendType.getValue(), filePath);
   }
-  
+
   public void loadFromBuffer(BackendType backendType, ByteBuffer modelBuffer) {
-    loadFromBuffer(nativeHandle, backendType.getValue(), modelBuffer);
+    this.modelBuffer = modelBuffer;
+    loadFromBuffer(nativeHandle, backendType.getValue(), this.modelBuffer);
   }
 
   public List<BackendType> getSupportedBackends() throws IllegalStateException {

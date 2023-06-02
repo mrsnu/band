@@ -23,7 +23,7 @@ void LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
   WorkerWaitingTime waiting_time = context_.GetWorkerWaitingTime();
 
-  int64_t current_time = Time::NowMicros();
+  int64_t current_time = time::NowMicros();
   SortBySlackTime(requests, window_size, current_time);
 
   std::set<int> job_indices_to_erase;

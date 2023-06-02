@@ -435,7 +435,7 @@ void Benchmark::RunPeriodic() {
 
 void Benchmark::RunStream() {
   int run_duration_us = benchmark_config_.running_time_ms * 1000;
-  int64_t start = Time::NowMicros();
+  int64_t start = time::NowMicros();
   while (true) {
     std::vector<ModelId> model_ids;
     std::vector<RequestOption> request_options;
@@ -469,7 +469,7 @@ void Benchmark::RunStream() {
       std::cout << "Failed to run model: " << status.message() << std::endl;
     }
     global_profiler_.EndEvent(id);
-    int64_t current = Time::NowMicros();
+    int64_t current = time::NowMicros();
     if (current - start >= run_duration_us) break;
   }
 }

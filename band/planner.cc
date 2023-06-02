@@ -120,7 +120,7 @@ std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
   std::vector<JobId> job_ids(jobs.size());
   {
     std::unique_lock<std::mutex> request_lock(requests_.mtx);
-    auto enqueue_time = Time::NowMicros();
+    auto enqueue_time = time::NowMicros();
     for (int i = 0; i < jobs.size(); i++) {
       Job& job = jobs[i];
       if (job.enqueue_time == 0) {
@@ -334,7 +334,7 @@ bool Planner::IsSLOViolated(Job& job) {
   // this job has an SLO; check if it's not too late already
   if (job.slo_us > 0) {
     WorkerWaitingTime workers_waiting = context_.GetWorkerWaitingTime();
-    int64_t current_time = Time::NowMicros();
+    int64_t current_time = time::NowMicros();
     int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
                                job.expected_execution_time;
 
@@ -353,7 +353,7 @@ void Planner::HandleSLOViolatedJob(Job& job) {
   job.invoke_time = -1;
 
   // mark the time of this decision (of early-dropping this job)
-  job.end_time = Time::NowMicros();
+  job.end_time = time::NowMicros();
   EnqueueFinishedJob(job);
 
   // Set reschedule flag.

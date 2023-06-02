@@ -68,9 +68,9 @@ absl::Status Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
 
 void Worker::WaitUntilDeviceAvailable(SubgraphKey& subgraph) {
   while (true) {
-    Time::SleepForMicros(1000 * availability_check_interval_ms_);
+    time::SleepForMicros(1000 * availability_check_interval_ms_);
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Availability check at %d ms.",
-                      Time::NowMicros());
+                      time::NowMicros());
     if (context_->Invoke(subgraph).ok()) {
       return;
     }
@@ -194,7 +194,7 @@ void Worker::Work() {
 
     if (context_->TryCopyInputTensors(*current_job).ok()) {
       lock.lock();
-      current_job->invoke_time = Time::NowMicros();
+      current_job->invoke_time = time::NowMicros();
       lock.unlock();
 
       BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
@@ -202,7 +202,7 @@ void Worker::Work() {
       if (status.ok()) {
         // end_time is never read/written by any other thread as long as
         // is_busy == true, so it's safe to update it w/o grabbing the lock
-        current_job->end_time = Time::NowMicros();
+        current_job->end_time = time::NowMicros();
         context_->UpdateLatency(
             subgraph_key, (current_job->end_time - current_job->invoke_time));
         if (current_job->following_jobs.size() != 0) {
@@ -222,7 +222,7 @@ void Worker::Work() {
       } else {
         // end_time is never read/written by any other thread as long as
         // !requests_.empty(), so it's safe to update it w/o grabbing the lock
-        current_job->end_time = Time::NowMicros();
+        current_job->end_time = time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
         current_job->status = JobStatus::InvokeFailure;
       }

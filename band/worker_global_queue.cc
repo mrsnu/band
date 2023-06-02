@@ -92,7 +92,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
     return profiled_latency;
   }
 
-  int64_t current_time = Time::NowMicros();
+  int64_t current_time = time::NowMicros();
   int64_t progress = current_time - invoke_time;
   return std::max((long)(profiled_latency - progress), 0L);
 }

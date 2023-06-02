@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 namespace band {
-namespace Time {
+namespace time {
 namespace test {
 
 TEST(TimeTest, NowMicros) {
@@ -32,7 +32,7 @@ TEST(TimeTest, SleepForMicros) {
 }
 
 }  // namespace test
-}  // namespace Time
+}  // namespace time
 }  // namespace band
 
 int main(int argc, char** argv) {
