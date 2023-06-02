@@ -22,8 +22,8 @@ struct MockContext : public MockContextBase {
 
 using WorkerTypeList = testing::Types<DeviceQueueWorker, GlobalQueueWorker>;
 template <class>
-struct WokrerSuite : testing::Test {};
-TYPED_TEST_SUITE(WokrerSuite, WorkerTypeList);
+struct WorkerSuite : testing::Test {};
+TYPED_TEST_SUITE(WorkerSuite, WorkerTypeList);
 
 Job GetEmptyJob() {
   Job job(0);
@@ -32,7 +32,7 @@ Job GetEmptyJob() {
   return job;
 }
 
-TYPED_TEST(WokrerSuite, JobHelper) {
+TYPED_TEST(WorkerSuite, JobHelper) {
   MockContext context;
   TypeParam worker(&context, 0, DeviceFlags::CPU);
   Job job = GetEmptyJob();
@@ -49,7 +49,7 @@ TYPED_TEST(WokrerSuite, JobHelper) {
   worker.End();
 }
 
-TYPED_TEST(WokrerSuite, Wait) {
+TYPED_TEST(WorkerSuite, Wait) {
   MockContext context;
   EXPECT_CALL(context, UpdateLatency).Times(testing::AtLeast(1));
   EXPECT_CALL(context, Trigger).Times(testing::AtLeast(1));
