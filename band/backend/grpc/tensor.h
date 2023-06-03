@@ -3,11 +3,15 @@
 
 #include "band/interface/tensor_view.h"
 
+#include "band/backend/grpc/proto/tensor.pb.h"
+
 namespace band {
 namespace grpc {
 
 class GrpcTensorView : public interface::ITensorView  {
  public:
+  GrpcTensorView(band_proto::Tensor& tensor);
+
   BackendType GetBackendType() const override;
   DataType GetType() const override;
   void SetType(DataType type) override;
@@ -20,6 +24,9 @@ class GrpcTensorView : public interface::ITensorView  {
   const char* GetName() const override;
   Quantization GetQuantization() const override;
   absl::Status SetQuantization(Quantization quantization) override;
+
+private:
+  band_proto::Tensor tensor_;
 };
 
 }  // namespace grpc

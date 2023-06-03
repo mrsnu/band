@@ -20,7 +20,7 @@ enum DataType {
 }
 
 message Shape {
-  repeated int64 dims = 2;
+  repeated int32 dims = 2;
 }
 
 enum QuantizationType {

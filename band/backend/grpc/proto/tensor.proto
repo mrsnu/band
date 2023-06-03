@@ -19,4 +19,5 @@ message Tensor {
     Shape shape = 1;
     DataType dtype = 2;
     bytes data = 3;
+    Quantization quantization = 4;
 }
