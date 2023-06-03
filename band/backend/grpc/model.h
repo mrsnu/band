@@ -13,8 +13,9 @@ class GrpcModel : public interface::IModel {
   absl::Status FromPath(const char* filename) override;
   absl::Status FromBuffer(const char* buffer, size_t buffer_size) override;
   bool IsInitialized() const override;
+  
+  absl::Status ToPath(const char* filename) const;
 
- private:
   std::string id = "";
   int num_ops = -1;
   int num_tensors = -1;

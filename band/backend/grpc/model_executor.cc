@@ -59,12 +59,12 @@ const std::vector<int>& GrpcModelExecutor::GetOutputs(
 
 const char* GrpcModelExecutor::GetInputName(const SubgraphKey& key,
                                             int index) const {
-  return nullptr;
+  return "";
 }
 
 const char* GrpcModelExecutor::GetOutputName(const SubgraphKey& key,
                                              int index) const {
-  return nullptr;
+  return "";
 }
 
 size_t GrpcModelExecutor::GetNumTensors(const SubgraphKey& key) const {

@@ -19,360 +19,55 @@
 
 namespace band {
 using namespace interface;
-TEST(GrpcBackend, BackendInvoke) {
+TEST(GrpcBackend, WriteModel) {
   grpc::GrpcModel bin_model(0);
-  EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
-  grpc::GrpcModelExecutor model_executor(0, 0, DeviceFlags::CPU);
-  EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), absl::OkStatus());
-  EXPECT_TRUE(
-      model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey())
-          .ok());
+  bin_model.id = "TestModel";
+  bin_model.num_ops = 1;
+  bin_model.num_tensors = 1;
+  bin_model.tensor_types = {DataType::Float32};
+  bin_model.input_tensor_indices = {0};
+  bin_model.output_tensor_indices = {0};
+  bin_model.op_input_tensors = {{0}};
+  bin_model.op_output_tensors = {{0}};
+  EXPECT_EQ(bin_model.IsInitialized(), true);
+  
+  EXPECT_EQ(bin_model.ToPath("test.band"), absl::OkStatus());
 }
 
-TEST(GrpcBackend, ModelSpec) {
+TEST(GrpcBackend, ReadModel) {
   grpc::GrpcModel bin_model(0);
-  EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
-
-  grpc::GrpcModelExecutor model_executor(0, 0, DeviceFlags::CPU);
-  ModelSpec model_spec =
-      model_executor.InvestigateModelSpec(&bin_model).value();
-
-#ifdef TFLITE_BUILD_WITH_XNNPACK_DELEGATE
-  EXPECT_EQ(model_spec.num_ops, 1);
-#else
-  EXPECT_EQ(model_spec.num_ops, 2);
-#endif
-  EXPECT_EQ(model_spec.input_tensors.size(), 1);
-  EXPECT_EQ(model_spec.output_tensors.size(), 1);
-}
-
-TEST(GrpcBackend, Registration) {
-  auto backends = BackendFactory::GetAvailableBackends();
-  int expected_num_backends = 0;
-#ifdef BAND_TFLITE
-  expected_num_backends++;
-#endif
-  EXPECT_EQ(backends.size(), expected_num_backends);
-}
-
-TEST(GrpcBackend, InterfaceInvoke) {
-  auto backends = BackendFactory::GetAvailableBackends();
-  IModel* bin_model = BackendFactory::CreateModel(BackendType::Grpc, 0);
-  EXPECT_EQ(bin_model->FromPath("band/test/data/add.tflite"), absl::OkStatus());
-
-  IModelExecutor* model_executor = BackendFactory::CreateModelExecutor(
-      BackendType::Grpc, 0, 0, DeviceFlags::CPU);
-  EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), absl::OkStatus());
-
-  SubgraphKey key = model_executor->GetLargestSubgraphKey();
-
-  EXPECT_EQ(model_executor->GetInputs(key).size(), 1);
-  EXPECT_EQ(model_executor->GetOutputs(key).size(), 1);
-
-  std::array<float, 2> input = {1.f, 3.f};
-  memcpy(model_executor->GetTensorView(key, model_executor->GetInputs(key)[0])
-             ->GetData(),
-         input.data(), input.size() * sizeof(float));
-
-  EXPECT_EQ(model_executor->ExecuteSubgraph(key), absl::OkStatus());
-
-  auto output_tensor =
-      model_executor->GetTensorView(key, model_executor->GetOutputs(key)[0]);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
-
-  delete bin_model;
-  delete model_executor;
-}
-
-TEST(GrpcBackend, SimpleEngineInvokeSync) {
-  RuntimeConfigBuilder b;
-  RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::RoundRobin})
-          .AddMinimumSubgraphSize(7)
-          .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
-          .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
-          .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/profile.json")
-          .AddOnline(true)
-          .AddNumWarmups(1)
-          .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
-          .AddAvailabilityCheckIntervalMs(30000)
-          .AddScheduleWindowSize(10)
-          .Build();
-
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
-
-  Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::Grpc, "band/test/data/add.tflite").ok());
-  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
-
-  Tensor* input_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor* output_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-
-  EXPECT_TRUE(input_tensor && output_tensor);
-
-  int execution_count = 0;
-  engine->SetOnEndRequest(
-      [&execution_count](int, absl::Status) { execution_count++; });
-
-  std::array<float, 2> input = {1.f, 3.f};
-  memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
-
-  EXPECT_TRUE(engine
-                  ->RequestSync(model.GetId(),
-                                RequestOption::GetDefaultOption(),
-                                {input_tensor}, {output_tensor})
-                  .ok());
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
-  EXPECT_EQ(execution_count, 1);
-
-  delete input_tensor;
-  delete output_tensor;
-}
-
-TEST(GrpcBackend, SimpleEngineProfile) {
-  RuntimeConfigBuilder b;
-  RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::FixedWorkerGlobalQueue})
-          .AddMinimumSubgraphSize(7)
-          .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
-          .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
-          .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/profile.json")
-          .AddOnline(true)
-          .AddNumWarmups(1)
-          .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
-          .AddAvailabilityCheckIntervalMs(30000)
-          .AddScheduleWindowSize(10)
-          .Build();
-
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
-
-  Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::Grpc, "band/test/data/add.tflite").ok());
-  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
-
-  EXPECT_GE(
-      engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
-  EXPECT_GE(
-      engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
-}
-
-TEST(GrpcBackend, SimpleEngineInvokeAsync) {
-  RuntimeConfigBuilder b;
-  RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::ShortestExpectedLatency})
-          .AddMinimumSubgraphSize(7)
-          .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
-          .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
-          .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/profile.json")
-          .AddOnline(true)
-          .AddNumWarmups(1)
-          .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
-          .AddAvailabilityCheckIntervalMs(30000)
-          .AddScheduleWindowSize(10)
-          .Build();
-
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
-
-  Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::Grpc, "band/test/data/add.tflite").ok());
-  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
-
-  Tensor* input_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor* output_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-
-  EXPECT_TRUE(input_tensor && output_tensor);
-
-  std::array<float, 2> input = {1.f, 3.f};
-  memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
-
-  int execution_count = 0;
-  engine->SetOnEndRequest(
-      [&execution_count](int, absl::Status) { execution_count++; });
-
-  auto job_id =
-      engine
-          ->RequestAsync(model.GetId(), RequestOption::GetDefaultOption(),
-                         {input_tensor})
-          .value();
-  EXPECT_EQ(engine->Wait(job_id, {output_tensor}), absl::OkStatus());
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
-  EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
-  EXPECT_EQ(execution_count, 1);
-
-  delete input_tensor;
-  delete output_tensor;
-}  // namespace
-
-TEST(GrpcBackend, SimpleEngineInvokeSyncOnWorker) {
-  RuntimeConfigBuilder b;
-  RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::FixedWorker})
-          .AddMinimumSubgraphSize(7)
-          .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-#ifdef __ANDROID__
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP,
-                       DeviceFlags::NPU, DeviceFlags::GPU})
-          .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little,
-                              CPUMaskFlags::All, CPUMaskFlags::All,
-                              CPUMaskFlags::All})
-#else
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
-          .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
-#endif  // __ANDROID__
-          .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/profile.json")
-          .AddOnline(true)
-          .AddNumWarmups(1)
-          .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
-          .AddAvailabilityCheckIntervalMs(30000)
-          .AddScheduleWindowSize(10)
-          .Build();
-
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
-
-  Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::Grpc, "band/test/data/add.tflite").ok());
-  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
-
-  Tensor* input_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  Tensor* output_tensor = engine->CreateTensor(
-      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-
-  EXPECT_TRUE(input_tensor && output_tensor);
-
-  std::array<float, 2> input = {1.f, 3.f};
-  memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
-
-  std::cout << "Num workers " << engine->GetNumWorkers() << std::endl;
-  for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
-    std::cout << "Run on worker (device: "
-              << GetName(engine->GetWorkerDevice(worker_id)) << ")"
-              << std::endl;
-    EXPECT_TRUE(engine
-                    ->RequestSync(model.GetId(),
-                                  {static_cast<int>(worker_id), true, -1, -1},
-                                  {input_tensor}, {output_tensor})
-                    .ok());
-    EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
-    EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
-
-    memset(output_tensor->GetData(), 0, sizeof(float) * 2);
+  EXPECT_EQ(bin_model.FromPath("band/test/data/test.band"), absl::OkStatus());
+  EXPECT_EQ(bin_model.IsInitialized(), true);
+  EXPECT_EQ(bin_model.id, "TestModel");
+  EXPECT_EQ(bin_model.num_ops, 1);
+  EXPECT_EQ(bin_model.num_tensors, 1);
+  for (int i = 0; i < bin_model.tensor_types.size(); i++) {
+    EXPECT_EQ(bin_model.tensor_types[i], DataType::Float32);
   }
-
-  delete input_tensor;
-  delete output_tensor;
-}
-
-TEST(GrpcBackend, SimpleEngineInvokeCallback) {
-  RuntimeConfigBuilder b;
-  RuntimeConfig config =
-      b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::FixedWorker})
-          .AddMinimumSubgraphSize(7)
-          .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-#ifdef __ANDROID__
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP,
-                       DeviceFlags::NPU, DeviceFlags::GPU})
-          .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little,
-                              CPUMaskFlags::All, CPUMaskFlags::All,
-                              CPUMaskFlags::All})
-#else
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
-          .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
-#endif  // __ANDROID__
-          .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/profile.json")
-          .AddOnline(true)
-          .AddNumWarmups(1)
-          .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
-          .AddAvailabilityCheckIntervalMs(30000)
-          .AddScheduleWindowSize(10)
-          .Build();
-
-  auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
-
-  Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::Grpc, "band/test/data/add.tflite").ok());
-  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
-
-  int execution_count = 0;
-  engine->SetOnEndRequest([&execution_count](int job_id, absl::Status status) {
-    execution_count++;
-  });
-
-  for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
-    EXPECT_TRUE(engine
-                    ->RequestSync(model.GetId(),
-                                  {static_cast<int>(worker_id), true, -1, -1})
-                    .ok());
-    EXPECT_EQ(execution_count, worker_id + 1);
-    EXPECT_TRUE(engine
-                    ->RequestSync(model.GetId(),
-                                  {static_cast<int>(worker_id), false, -1, -1})
-                    .ok());
-    EXPECT_EQ(execution_count, worker_id + 1);
+  for (int i = 0; i < bin_model.input_tensor_indices.size(); i++) {
+    EXPECT_EQ(bin_model.input_tensor_indices[i], i);
+  }
+  for (int i = 0; i < bin_model.output_tensor_indices.size(); i++) {
+    EXPECT_EQ(bin_model.output_tensor_indices[i], i);
+  }
+  for (int i = 0; i < bin_model.op_input_tensors.size(); i++) {
+    for (auto j : bin_model.op_input_tensors[i]) {
+      EXPECT_EQ(j, 0);
+    }
+  }
+  for (int i = 0; i < bin_model.op_output_tensors.size(); i++) {
+    for (auto j : bin_model.op_output_tensors[i]) {
+      EXPECT_EQ(j, 0);
+    }
   }
 }
+
 }  // namespace band
 
 int main(int argc, char** argv) {
-#ifdef BAND_TFLITE
+#ifdef BAND_GRPC
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
-#endif  // BAND_TFLITE
+#endif  // BAND_GRPC
   return 0;
 }

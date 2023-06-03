@@ -12,6 +12,7 @@ band_cc_library(
     ],
     deps = [
         "//band/backend/grpc/proto:band_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
     ]
 )
 
@@ -31,6 +32,8 @@ band_cc_library(
         "tensor.h",
         "util.h",
     ],
+    # force to link band::GrpcRegisterCreators (in backend.cc)
+    # to override the weak symbol in //band:backend_factory
     alwayslink = True,
     deps = [
         "//band:framework",

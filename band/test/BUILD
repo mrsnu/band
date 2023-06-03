@@ -1,6 +1,7 @@
 load("//band:band.bzl", "band_cc_library", "band_cc_android_test")
 
 exports_files(glob([
+    "data/*.band",
     "data/*.tflite",
     "data/*.json",
 ]))

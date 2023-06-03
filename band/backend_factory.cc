@@ -12,8 +12,16 @@ using namespace interface;
 extern bool TfLiteRegisterCreators();
 #else
 __attribute__((weak)) extern bool TfLiteRegisterCreators() { return false; }
-#endif
-#endif
+#endif  // _WIN32
+#endif  // BAND_TFLITE
+
+#ifdef BAND_GRPC
+#ifdef _WIN32
+extern bool GrpcRegisterCreators();
+#else
+__attribute__((weak)) extern bool GrpcRegisterCreators() { return false; }
+#endif  // _WIN32
+#endif  // BAND_GRPC
 
 // Expected process
 
@@ -26,11 +34,19 @@ void RegisterBackendInternal() {
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register TFL backend");
     }
-#elif defined(BAND_TFLITE_STATIC)
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Register TFL backend");
 #else
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "TFL backend is disabled.");
-#endif
+#endif  // BAND_TFLITE
+
+#ifdef BAND_GRPC
+    if (GrpcRegisterCreators()) {
+      BAND_LOG_INTERNAL(BAND_LOG_INFO, "Register GRPC backend");
+    } else {
+      BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to register GRPC backend");
+    }
+#else
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "GRPC backend is disabled.");
+#endif  // BAND_GRPC
   });
 }
 

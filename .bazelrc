@@ -29,6 +29,13 @@ build:tflite --action_env BAND_TFLITE=true
 test:tflite --define tflite=true
 test:tflite --copt=-DBAND_TFLITE
 test:tflite --cxxopt=-DBAND_TFLITE
+build:grpc --define grpc=true
+build:grpc --copt=-DBAND_GRPC
+build:grpc --cxxopt=-DBAND_GRPC
+build:grpc --action_env BAND_GRPC=true
+test:grpc --define grpc=true
+test:grpc --copt=-DBAND_GRPC
+test:grpc --cxxopt=-DBAND_GRPC
 
 # Band build config for trace setting.
 build:trace --define trace=true
@@ -44,12 +51,22 @@ build:linux_x86_64 --config=linux
 build:linux_x86_64 --cpu=k8
 build:linux_x86_64_tflite --config=linux_x86_64
 build:linux_x86_64_tflite --config=tflite
+build:linux_x86_64_grpc --config=linux_x86_64
+build:linux_x86_64_grpc --config=grpc
+build:linux_x86_64_all --config=linux_x86_64
+build:linux_x86_64_all --config=tflite
+build:linux_x86_64_all --config=grpc
 
 # Linux test config for Band Engine.
 test:linux_x86_64 --config=linux
 test:linux_x86_64 --cpu=k8
 test:linux_x86_64_tflite --config=linux_x86_64
 test:linux_x86_64_tflite --config=tflite
+test:linux_x86_64_grpc --config=linux_x86_64
+test:linux_x86_64_grpc --config=grpc
+test:linux_x86_64_all --config=linux_x86_64
+test:linux_x86_64_all --config=tflite
+test:linux_x86_64_all --config=grpc
 
 # Android build config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
@@ -59,9 +76,11 @@ build:android_arm64 --cpu=arm64-v8a
 build:android_arm64 --fat_apk_cpu=arm64-v8a
 build:android_arm64_tflite --config=android_arm64
 build:android_arm64_tflite --config=tflite
-# List all backends
+build:android_arm64_grpc --config=android_arm64
+build:android_arm64_grpc --config=grpc
 build:android_arm64_all --config=android_arm64
 build:android_arm64_all --config=tflite
+build:android_arm64_all --config=grpc
 
 # Android test config for Band Engine.
 test:android_arm64 --config=android
@@ -69,9 +88,11 @@ test:android_arm64 --cpu=arm64-v8a
 test:android_arm64 --fat_apk_cpu=arm64-v8a
 test:android_arm64_tflite --config=android_arm64
 test:android_arm64_tflite --config=tflite
-# List all backends
+test:android_arm64_grpc --config=android_arm64
+test:android_arm64_grpc --config=grpc
 test:android_arm64_all --config=android_arm64
 test:android_arm64_all --config=tflite
+test:android_arm64_all --config=grpc
 
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
@@ -109,6 +130,18 @@ build:windows_tflite --config=windows
 build:windows_tflite --config=tflite
 test:windows_tflite --config=windows
 test:windows_tflite --config=tflite
+
+build:windows_grpc --config=windows
+build:windows_grpc --config=grpc
+test:windows_grpc --config=windows
+test:windows_grpc --config=grpc
+
+build:windows_all --config=windows
+build:windows_all --config=tflite
+build:windows_all --config=grpc
+test:windows_all --config=windows
+test:windows_all --config=tflite
+test:windows_all --config=grpc
 
 try-import %workspace%/.band_android_config.bazelrc
 try-import %workspace%/.tflite_config.bazelrc
