@@ -4,10 +4,9 @@
 #include <map>
 #include <memory>
 
+#include "absl/status/statusor.h"
 #include "band/context.h"
 #include "band/model_spec.h"
-
-#include "absl/status/statusor.h"
 
 namespace band {
 class Model;
@@ -27,11 +26,14 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
 
 class ModelAnalyzer {
  public:
-  ModelAnalyzer(const Context& context, bool need_subgraph,
-                SubgraphConfig subgraph_config, Model* model,
-                BackendType backend_type);
+  ModelAnalyzer(
+      const Context& context, bool need_subgraph,
+      SubgraphConfig subgraph_config,
+      std::unique_ptr<BackendConfig>& backend_config,
+      Model* model, BackendType backend_type);
 
-  absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>> CreateSubgraphs();
+  absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>>
+  CreateSubgraphs();
 
  private:
   // A model is partitioned into unit subgraphs.
@@ -53,6 +55,7 @@ class ModelAnalyzer {
   const Context& context_;
   const bool need_fallback_subgraph_;
   const SubgraphConfig subgraph_config_;
+  const std::unique_ptr<BackendConfig>& backend_config_;
   const BackendType backend_type_;
   std::shared_ptr<ModelSpec> model_spec_;
 };

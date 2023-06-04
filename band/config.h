@@ -35,7 +35,8 @@ struct WorkerConfig {
     for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
       workers.push_back(static_cast<DeviceFlags>(i));
     }
-    cpu_masks = std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
+    cpu_masks =
+        std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
     num_threads = std::vector<int>(GetSize<DeviceFlags>(), 1);
   }
   std::vector<DeviceFlags> workers;
@@ -51,12 +52,27 @@ struct SubgraphConfig {
       SubgraphPreparationType::MergeUnitSubgraph;
 };
 
+struct BackendConfig {};
+
+#ifdef BAND_TFLITE
+struct TfLiteBackendConfig : public BackendConfig {};
+#endif  // BAND_TFLITE
+
+#ifdef BAND_GRPC
+struct GrpcBackendConfig : public BackendConfig {
+  GrpcBackendConfig(std::string host, int port) : host(host), port(port) {}
+  std::string host = "localhost";
+  int port = 50051;
+};
+#endif  // BAND_GRPC
+
 struct RuntimeConfig {
   CPUMaskFlags cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  std::map<BackendType, BackendConfig*> backend_configs;
 
  private:
   friend class RuntimeConfigBuilder;

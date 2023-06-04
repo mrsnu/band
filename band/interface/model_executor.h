@@ -8,6 +8,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "band/common.h"
+#include "band/config.h"
 #include "band/cpu.h"
 #include "band/interface/backend.h"
 #include "band/interface/model.h"
@@ -24,11 +25,13 @@ class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(
       ModelId model_id, WorkerId worker_id, DeviceFlags device_flag,
+      const std::unique_ptr<BackendConfig>& backend_config,
       CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlags::All),
       int num_threads = -1)
       : model_id_(model_id),
         worker_id_(worker_id),
         device_flag_(device_flag),
+        backend_config_(backend_config),
         thread_affinity_mask_(thread_affinity_mask),
         num_threads_(num_threads > 0 ? num_threads : -1) {}
   virtual ~IModelExecutor() = default;
@@ -59,6 +62,7 @@ class IModelExecutor : public IBackendSpecific {
   const ModelId model_id_;
   const WorkerId worker_id_;
   const DeviceFlags device_flag_;
+  const std::unique_ptr<BackendConfig>& backend_config_;
   const CpuSet thread_affinity_mask_;
   const int num_threads_;
 

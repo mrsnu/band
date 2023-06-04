@@ -4,6 +4,7 @@
 #include <iterator>
 #include <memory>
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/context.h"
 #include "band/interface/model.h"
@@ -11,8 +12,6 @@
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/worker.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 std::string SetToString(const std::set<int>& set) {
@@ -156,20 +155,24 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
   return summary;
 }
 
-ModelAnalyzer::ModelAnalyzer(const Context& context,
-                             bool need_fallback_subgraph,
-                             SubgraphConfig subgraph_config, Model* model,
-                             BackendType backend_type)
+ModelAnalyzer::ModelAnalyzer(
+    const Context& context, bool need_fallback_subgraph,
+    SubgraphConfig subgraph_config,
+    std::unique_ptr<BackendConfig>& backend_config,
+    Model* model, BackendType backend_type)
     : context_(context),
       need_fallback_subgraph_(need_fallback_subgraph),
       subgraph_config_(subgraph_config),
+      backend_config_(backend_config),
       backend_type_(backend_type) {
   std::unique_ptr<interface::IModelExecutor> interpreter(
       BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
-                                          DeviceFlags::CPU));
+                                          DeviceFlags::CPU,
+                                          backend_config_));
   // TODO(widiba03304): Report error when it fails.
   model_spec_ = std::make_shared<ModelSpec>(
-      interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)).value());
+      interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type))
+          .value());
 
   for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
     BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
@@ -178,7 +181,8 @@ ModelAnalyzer::ModelAnalyzer(const Context& context,
   }
 
   for (auto device : model_spec_->unavailable_devices) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", GetName(device).c_str());
+    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s",
+                  GetName(device).c_str());
   }
 }
 

@@ -172,6 +172,7 @@ class Engine : public Context {
   Engine& operator=(const Engine&&) = delete;
 
   SubgraphConfig subgraph_config_;
+  std::map<BackendType, std::unique_ptr<BackendConfig>> backend_configs_;
 
   std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<interface::IModelExecutor>>

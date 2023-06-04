@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/common.h"
 #include "band/context.h"
@@ -16,8 +17,6 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 
@@ -57,16 +56,16 @@ absl::Status Engine::RegisterModel(Model* model) {
   for (BackendType backend_type : model->GetSupportedBackends()) {
     // Analyze model & generate subgraphs per backend type
     ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
-                           subgraph_config_, model, backend_type);
+                           subgraph_config_, backend_configs_.at(backend_type),
+                           model, backend_type);
 
     const auto status_or_result = analyzer.CreateSubgraphs();
     if (!status_or_result.ok()) {
       // TODO(BAND-49): unregister for specific backend
       auto status = UnregisterModel(model);
       if (!status.ok()) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                          "Failed to unregister model %d: %s", model_id,
-                          status.message());
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to unregister model %d: %s",
+                      model_id, status.message());
       }
       return status_or_result.status();
     }
@@ -85,6 +84,7 @@ absl::Status Engine::RegisterModel(Model* model) {
           std::unique_ptr<interface::IModelExecutor> model_executor(
               BackendFactory::CreateModelExecutor(
                   backend_type, model_id, worker_id, GetWorkerDevice(worker_id),
+                  backend_configs_.at(backend_type),
                   worker->GetWorkerThreadAffinity(), worker->GetNumThreads()));
           model_executors_[{model_id, worker_id}] = std::move(model_executor);
           added_once = true;
@@ -511,6 +511,13 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   }
 
   // Search for all available backends, devices
+  for (auto& backend_config : config.backend_configs) {
+    auto backend_type = backend_config.first;
+    auto backend_config_value = backend_config.second;
+    backend_configs_[backend_type] =
+        std::unique_ptr<BackendConfig>(backend_config_value);
+  }
+
   std::set<DeviceFlags> valid_devices;
   auto valid_backends = BackendFactory::GetAvailableBackends();
   for (auto backend : valid_backends) {

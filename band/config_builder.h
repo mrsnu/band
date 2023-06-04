@@ -134,6 +134,50 @@ class WorkerConfigBuilder {
   int availability_check_interval_ms_ = 30000;
 };
 
+class BackendConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public:
+  virtual BackendConfig* Build(
+      ErrorReporter* error_reporter = DefaultErrorReporter()) = 0;
+  virtual bool IsValid(
+      ErrorReporter* error_reporter = DefaultErrorReporter()) = 0;
+};
+
+#ifdef BAND_TFLITE
+class TfLiteBackendConfigBuilder : public BackendConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public:
+  BackendConfig* Build(
+      ErrorReporter* error_reporter = DefaultErrorReporter()) override;
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter()) override;
+};
+#endif  // BAND_TFLITE
+
+#ifdef BAND_GRPC
+class GrpcBackendConfigBuilder : public BackendConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public:
+  GrpcBackendConfigBuilder& AddHost(std::string host) {
+    host_ = host;
+    return *this;
+  }
+  GrpcBackendConfigBuilder& AddPort(int port) {
+    port_ = port;
+    return *this;
+  }
+  BackendConfig* Build(
+      ErrorReporter* error_reporter = DefaultErrorReporter()) override;
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter()) override;
+
+ private:
+  std::string host_ = "localhost";
+  int port_ = 50051;
+};
+#endif  // BAND_GRPC
+
 // Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
@@ -206,6 +250,23 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
+
+  // Add BackendConfig
+#ifdef BAND_TFLITE
+#endif  // BAND_TFLITE
+
+#ifdef BAND_GRPC
+  RuntimeConfigBuilder& AddGrpcHost(std::string host) {
+    grpc_backend_config_builder_.AddHost(host);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddGrpcPort(int port) {
+    grpc_backend_config_builder_.AddPort(port);
+    return *this;
+  }
+#endif  // BAND_GRPC
+
+  // Add RuntimeConfig
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
     minimum_subgraph_size_ = minimum_subgraph_size;
     return *this;
@@ -227,6 +288,12 @@ class RuntimeConfigBuilder {
   ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
+#ifdef BAND_TFLITE
+  TfLiteBackendConfigBuilder tflite_backend_config_builder_;
+#endif  // BAND_TFLITE
+#ifdef BAND_GRPC
+  GrpcBackendConfigBuilder grpc_backend_config_builder_;
+#endif  // BAND_GRPC
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
       SubgraphPreparationType::MergeUnitSubgraph;

@@ -47,11 +47,12 @@ bool WorkerConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
   for (int i = 0; i < workers_.size(); i++) {
-    REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlags::CPU ||
-                                             workers_[i] == DeviceFlags::GPU ||
-                                             workers_[i] == DeviceFlags::DSP ||
-                                             workers_[i] == DeviceFlags::NPU ||
-                                             workers_[i] == DeviceFlags::NETWORK);
+    REPORT_IF_FALSE(WorkerConfigBuilder,
+                    workers_[i] == DeviceFlags::CPU ||
+                        workers_[i] == DeviceFlags::GPU ||
+                        workers_[i] == DeviceFlags::DSP ||
+                        workers_[i] == DeviceFlags::NPU ||
+                        workers_[i] == DeviceFlags::NETWORK);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
@@ -70,6 +71,23 @@ bool WorkerConfigBuilder::IsValid(
   REPORT_IF_FALSE(WorkerConfigBuilder, availability_check_interval_ms_ > 0);
   return result;
 }
+
+#ifdef BAND_TFLITE
+bool TfLiteBackendConfigBuilder::IsValid(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  bool result = true;
+  return result;
+}
+#endif  // BAND_TFLITE
+
+#ifdef BAND_GRPC
+bool GrpcBackendConfigBuilder::IsValid(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  bool result = true;
+  REPORT_IF_FALSE(GrpcBackendConfigBuilder, port_ > 0 && port_ < 65536);
+  return result;
+}
+#endif  // BAND_GRPC
 
 bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
@@ -146,6 +164,30 @@ WorkerConfig WorkerConfigBuilder::Build(
   return worker_config;
 }
 
+#ifdef BAND_TFLITE
+BackendConfig* TfLiteBackendConfigBuilder::Build(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  // This should not terminate the program. After employing abseil, Build()
+  // should return error.
+  if (!IsValid(error_reporter)) {
+    abort();
+  }
+  return new TfLiteBackendConfig();
+}
+#endif  // BAND_TFLITE
+
+#ifdef BAND_GRPC
+BackendConfig* GrpcBackendConfigBuilder::Build(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  // This should not terminate the program. After employing abseil, Build()
+  // should return error.
+  if (!IsValid(error_reporter)) {
+    abort();
+  }
+  return new GrpcBackendConfig(host_, port_);
+}
+#endif  // BAND_GRPC
+
 RuntimeConfig RuntimeConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // TODO(widiba03304): This should not terminate the program. After employing
@@ -158,6 +200,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   ProfileConfig profile_config = profile_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
+
   runtime_config.subgraph_config = {minimum_subgraph_size_,
                                     subgraph_preparation_type_};
 
@@ -165,6 +208,12 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   runtime_config.profile_config = profile_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;
+#ifdef BAND_TFLITE
+  runtime_config.backend_configs[BackendType::TfLite] = tflite_backend_config_builder_.Build();
+#endif  // BAND_TFLITE
+#ifdef BAND_GRPC
+  runtime_config.backend_configs[BackendType::Grpc] = (grpc_backend_config_builder_.Build());
+#endif  // BAND_GRPC
   return runtime_config;
 }
 
