@@ -18,10 +18,5 @@ message RequestOption {
 
 message Request {
   RequestOption option = 1;
-  Tensor input_tensor = 2;
-}
-
-message BatchedRequest {
-  RequestOption option = 1;
-  repeated Tensor input_tensors = 2;
+  repeated Tensor tensors = 2;
 }

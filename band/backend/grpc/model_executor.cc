@@ -1,6 +1,8 @@
 #include "band/backend/grpc/model_executor.h"
 
-#include "band/backend/grpc/proto/model.grpc.pb.h"
+#include "band/backend/grpc/model.h"
+#include "band/backend/grpc/tensor.h"
+#include "band/backend/grpc/grpc_client.h"
 
 namespace band {
 namespace grpc {
@@ -9,7 +11,7 @@ GrpcModelExecutor::~GrpcModelExecutor() {}
 
 absl::StatusOr<ModelSpec> GrpcModelExecutor::InvestigateModelSpec(
     interface::IModel* model) {
-  // Request to the server to get model spec.
+  // 0. Request to the server to get model spec.
   int num_ops = 0;
   int num_tensors = 0;
   std::vector<DataType> tensor_types;

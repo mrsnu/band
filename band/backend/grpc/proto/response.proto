@@ -3,9 +3,11 @@ syntax = "proto3";
 package band_proto;
 
 import "band/backend/grpc/proto/common.proto";
+import "band/backend/grpc/proto/tensor.proto";
 
 message Response {
     Status status = 1;
+    repeated Tensor tensors = 2;
 }
 
 message Event {

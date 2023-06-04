@@ -1,6 +1,8 @@
 #ifndef BAND_INTERFACE_BACKEND_H_
 #define BAND_INTERFACE_BACKEND_H_
 
+#include "band/common.h"
+
 namespace band {
 namespace interface {
 class IBackendSpecific {

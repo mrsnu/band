@@ -10,9 +10,15 @@ band_cc_library(
     hdrs = [
         "grpc_client.h"
     ],
+    srcs = [
+        "grpc_client.cc",
+    ],
     deps = [
+        "//band:common",
         "//band/backend/grpc/proto:band_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status:statusor",
     ]
 )
 

@@ -28,8 +28,14 @@ enum QuantizationType {
   AFFINE_QUANTIZATION = 1;
 }
 
+enum StatusCode {
+  OK = 0;
+  UNKNOWN_ERROR = 1;
+  INVALID_ARGUMENT = 2;
+}
+
 message Status {
-  int32 code = 1;
+  StatusCode code = 1;
   string error_message = 2;
 }
 

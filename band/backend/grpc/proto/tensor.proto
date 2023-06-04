@@ -16,8 +16,9 @@ message Quantization {
 }
 
 message Tensor {
-    Shape shape = 1;
-    DataType dtype = 2;
-    bytes data = 3;
-    Quantization quantization = 4;
+    string name = 1;
+    Shape shape = 2;
+    DataType dtype = 3;
+    bytes data = 4;
+    Quantization quantization = 5;
 }

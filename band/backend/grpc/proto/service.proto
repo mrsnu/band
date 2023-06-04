@@ -8,7 +8,7 @@ import "band/backend/grpc/proto/response.proto";
 import "band/backend/grpc/proto/model.proto";
 
 service BandService {
+    rpc GetModelDesc(Void) returns (stream ModelDescriptor) {}
+    rpc CheckModelDesc(ModelDescriptor) returns (Status) {}
     rpc RequestSync(Request) returns (Response) {}
-    rpc GetModelDesc(Void) returns (ModelDescriptor) {}
-    rpc CheckModelDesc(ModelDescriptor) returns (Response) {}
 }

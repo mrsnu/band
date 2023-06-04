@@ -21,35 +21,7 @@ absl::Status GrpcModel::FromPath(const char* filename) {
   if (!model_desc_proto.ParseFromIstream(&fin)) {
     return absl::InternalError("Cannot parse the model descriptor file.");
   }
-  id = model_desc_proto.id();
-  num_ops = model_desc_proto.num_ops();
-  num_tensors = model_desc_proto.num_tensors();
-  for (int i = 0; i < model_desc_proto.tensor_types_size(); i++) {
-    tensor_types.push_back(
-        static_cast<DataType>(model_desc_proto.tensor_types(i)));
-  }
-  for (int i = 0; i < model_desc_proto.input_tensor_indices_size(); i++) {
-    input_tensor_indices.push_back(model_desc_proto.input_tensor_indices(i));
-  }
-  for (int i = 0; i < model_desc_proto.output_tensor_indices_size(); i++) {
-    output_tensor_indices.push_back(model_desc_proto.output_tensor_indices(i));
-  }
-  for (int i = 0; i < model_desc_proto.op_input_tensors_size(); i++) {
-    std::set<int> op_input_tensor;
-    for (int j = 0; j < model_desc_proto.op_input_tensors(i).op_size(); j++) {
-      op_input_tensor.insert(model_desc_proto.op_input_tensors(i).op(j));
-    }
-    op_input_tensors.push_back(op_input_tensor);
-  }
-  for (int i = 0; i < model_desc_proto.op_output_tensors_size(); i++) {
-    std::set<int> op_output_tensor;
-    for (int j = 0; j < model_desc_proto.op_output_tensors(i).op_size(); j++) {
-      op_output_tensor.insert(model_desc_proto.op_output_tensors(i).op(j));
-    }
-    op_output_tensors.push_back(op_output_tensor);
-  }
-
-  return absl::OkStatus();
+  return FromProto(model_desc_proto);
 }
 
 absl::Status GrpcModel::FromBuffer(const char* buffer, size_t buffer_size) {
@@ -57,30 +29,33 @@ absl::Status GrpcModel::FromBuffer(const char* buffer, size_t buffer_size) {
   if (!model_desc_proto.ParseFromArray(buffer, buffer_size)) {
     return absl::InternalError("Cannot parse the model descriptor buffer.");
   }
-  id = model_desc_proto.id();
-  num_ops = model_desc_proto.num_ops();
-  num_tensors = model_desc_proto.num_tensors();
-  for (int i = 0; i < model_desc_proto.tensor_types_size(); i++) {
-    tensor_types.push_back(
-        static_cast<DataType>(model_desc_proto.tensor_types(i)));
+  return FromProto(model_desc_proto);
+}
+
+absl::Status GrpcModel::FromProto(band_proto::ModelDescriptor proto) {
+  id = proto.id();
+  num_ops = proto.num_ops();
+  num_tensors = proto.num_tensors();
+  for (int i = 0; i < proto.tensor_types_size(); i++) {
+    tensor_types.push_back(static_cast<DataType>(proto.tensor_types(i)));
   }
-  for (int i = 0; i < model_desc_proto.input_tensor_indices_size(); i++) {
-    input_tensor_indices.push_back(model_desc_proto.input_tensor_indices(i));
+  for (int i = 0; i < proto.input_tensor_indices_size(); i++) {
+    input_tensor_indices.push_back(proto.input_tensor_indices(i));
   }
-  for (int i = 0; i < model_desc_proto.output_tensor_indices_size(); i++) {
-    output_tensor_indices.push_back(model_desc_proto.output_tensor_indices(i));
+  for (int i = 0; i < proto.output_tensor_indices_size(); i++) {
+    output_tensor_indices.push_back(proto.output_tensor_indices(i));
   }
-  for (int i = 0; i < model_desc_proto.op_input_tensors_size(); i++) {
+  for (int i = 0; i < proto.op_input_tensors_size(); i++) {
     std::set<int> op_input_tensor;
-    for (int j = 0; j < model_desc_proto.op_input_tensors(i).op_size(); j++) {
-      op_input_tensor.insert(model_desc_proto.op_input_tensors(i).op(j));
+    for (int j = 0; j < proto.op_input_tensors(i).op_size(); j++) {
+      op_input_tensor.insert(proto.op_input_tensors(i).op(j));
     }
     op_input_tensors.push_back(op_input_tensor);
   }
-  for (int i = 0; i < model_desc_proto.op_output_tensors_size(); i++) {
+  for (int i = 0; i < proto.op_output_tensors_size(); i++) {
     std::set<int> op_output_tensor;
-    for (int j = 0; j < model_desc_proto.op_output_tensors(i).op_size(); j++) {
-      op_output_tensor.insert(model_desc_proto.op_output_tensors(i).op(j));
+    for (int j = 0; j < proto.op_output_tensors(i).op_size(); j++) {
+      op_output_tensor.insert(proto.op_output_tensors(i).op(j));
     }
     op_output_tensors.push_back(op_output_tensor);
   }
@@ -96,10 +71,30 @@ bool GrpcModel::IsInitialized() const {
 }
 
 absl::Status GrpcModel::ToPath(const char* filename) const {
+  auto status_or_model_desc_proto = ToProto();
+  if (!status_or_model_desc_proto.ok()) {
+    return status_or_model_desc_proto.status();
+  }
+  
+  band_proto::ModelDescriptor model_desc_proto =
+      status_or_model_desc_proto.value();
+
+  std::ofstream fout;
+  fout.open(filename, std::ios::out | std::ios::binary);
+  if (!fout.is_open()) {
+    return absl::InternalError("Cannot open the model file.");
+  }
+  if (!model_desc_proto.SerializeToOstream(&fout)) {
+    return absl::InternalError("Cannot serialize the model descriptor file.");
+  }
+
+  return absl::OkStatus();
+}
+
+absl::StatusOr<band_proto::ModelDescriptor> GrpcModel::ToProto() const {
   if (!IsInitialized()) {
     return absl::InternalError("Model is not initialized.");
   }
-
   band_proto::ModelDescriptor model_desc_proto;
   model_desc_proto.set_id(id);
   model_desc_proto.set_num_ops(num_ops);
@@ -130,17 +125,7 @@ absl::Status GrpcModel::ToPath(const char* filename) const {
       op_output_tensor_proto->add_op(*it);
     }
   }
-
-  std::ofstream fout;
-  fout.open(filename, std::ios::out | std::ios::binary);
-  if (!fout.is_open()) {
-    return absl::InternalError("Cannot open the model file.");
-  }
-  if (!model_desc_proto.SerializeToOstream(&fout)) {
-    return absl::InternalError("Cannot serialize the model descriptor file.");
-  }
-  
-  return absl::OkStatus();
+  return model_desc_proto;
 }
 
 }  // namespace grpc
