@@ -421,7 +421,25 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
 }
 
 absl::Status Engine::RequestGraph(Graph graph, Tensors input) {
-  
+  for (auto node_id : graph.GetTopologicalOrder()) {
+    auto node = graph.GetNodeById(node_id);
+    switch (node->GetType()) {
+      case NodeType::kEntry: {
+        
+      } break;
+      case NodeType::kExit: {
+
+      } break;
+      case NodeType::kBasic: {
+
+      } break;
+      case NodeType::kModel: {
+        
+      } break;
+      default: {}
+    }
+  }
+
   return absl::OkStatus();
 }
 
@@ -1077,6 +1095,11 @@ const interface::IModelExecutor* Engine::GetModelExecutor(
     const SubgraphKey& key) const {
   auto it = model_executors_.find({key.GetModelId(), key.GetWorkerId()});
   return it != model_executors_.end() ? it->second.get() : nullptr;
+}
+
+absl::StatusOr<Tensors> Engine::AllocateTensorsForGraph(const Graph& graph) {
+  Tensors tensors;
+  return tensors;
 }
 
 }  // namespace band

@@ -50,7 +50,27 @@ std::string GetNodeAttribute(Node* node) {
 
 }  // anonymous namespace
 
-std::string Graph::GetGraphVizText() {
+std::vector<size_t> IGraph::GetParents(size_t node_id) const {
+  std::vector<size_t> ret;
+  for (auto& edge : edges()) {
+    if (edge.second == node_id) {
+      ret.push_back(edge.first);
+    }
+  }
+  return ret;
+}
+
+std::vector<size_t> IGraph::GetChildren(size_t node_id) const {
+  std::vector<size_t> ret;
+  for (auto& edge : edges()) {
+    if (edge.first == node_id) {
+      ret.push_back(edge.second);
+    }
+  }
+  return ret;
+}
+
+std::string Graph::GetGraphVizText() const {
   std::string ret;
   ret += "digraph " + name_ + " {\n";
   ret += "  {\n";
@@ -67,9 +87,29 @@ std::string Graph::GetGraphVizText() {
   return ret;
 }
 
-void Graph::SaveGraphViz(std::string path) {
+void Graph::SaveGraphViz(std::string path) const {
   std::ofstream file(path);
   file << GetGraphVizText();
+}
+
+std::vector<size_t> Graph::GetTopologicalOrder() const {
+  std::vector<size_t> ret;
+  std::vector<bool> visited(nodes_.size(), false);
+  std::function<void(size_t)> dfs = [&](size_t node_id) {
+    if (visited[node_id]) {
+      return;
+    }
+    visited[node_id] = true;
+    for (auto& child : GetChildren(node_id)) {
+      dfs(child);
+    }
+    ret.push_back(node_id);
+  };
+  for (size_t i = 0; i < nodes_.size(); ++i) {
+    dfs(i);
+  }
+  std::reverse(ret.begin(), ret.end());
+  return ret;
 }
 
 }  // namespace band

@@ -10,6 +10,7 @@
 namespace band {
 
 using Tensors = std::vector<interface::ITensor*>;
+using TensorFunction = std::function<Tensors(Tensors)>;
 
 class GraphBuilder;
 
@@ -30,6 +31,10 @@ class Node {
 
   size_t id() const { return id_; }
   GraphBuilder* builder() const { return builder_; }
+  virtual DataType GetInputTensorType(size_t index) const = 0;
+  virtual DataType GetOutputTensorType(size_t index) const = 0;
+  virtual std::vector<int> GetInputTensorDims(size_t index) const = 0;
+  virtual std::vector<int> GetOutputTensorDims(size_t index) const = 0;
 
  private:
   size_t id_;
@@ -56,16 +61,16 @@ class ExitNode : public Node {
 class BasicNode : public Node {
  public:
   BasicNode() = delete;
-  BasicNode(GraphBuilder* builder, size_t id,
-            std::function<Tensors(Tensors)> func, std::string name = "")
+  BasicNode(GraphBuilder* builder, size_t id, TensorFunction func,
+            std::string name = "")
       : Node(builder, id, name), func_(func) {}
 
   NodeType GetType() override { return NodeType::kBasic; }
 
-  std::function<Tensors(Tensors)> GetFunc() const { return func_; }
+  TensorFunction GetFunc() const { return func_; }
 
  private:
-  std::function<Tensors(Tensors)> func_;
+  TensorFunction func_;
 };
 
 class ModelNode : public Node {
@@ -92,11 +97,14 @@ class ModelNode : public Node {
   Model model_;
 };
 
-Node* BasicOp(std::function<Tensors(Tensors)> func, Node* operand,
-              std::string name = "");
-Node* ModelOp(Model model, Node* operand, std::string name = "");
-Node* ModelOp(BackendType backend, std::string model_path, Node* operand,
-              std::string name = "");
+std::shared_ptr<Node> BasicOp(TensorFunction func,
+                              std::shared_ptr<Node> operand,
+                              std::string name = "");
+std::shared_ptr<Node> ModelOp(Model model, std::shared_ptr<Node> operand,
+                              std::string name = "");
+std::shared_ptr<Node> ModelOp(BackendType backend, std::string model_path,
+                              std::shared_ptr<Node> operand,
+                              std::string name = "");
 
 }  // namespace band
 

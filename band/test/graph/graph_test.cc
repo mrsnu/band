@@ -32,7 +32,7 @@ TEST(GraphTest, ModelNodeTest) {
   auto node_2 = ModelOp(model_2, node_1, "model_2");
   auto node_3 = ModelOp(model_3, node_1, "model_3");
   auto node_4 = ModelOp(model_4, node_1, "model_4");
-  std::cout << b.Build().value().GetGraphVizText();
+  EXPECT_EQ(b.Build().status(), absl::OkStatus());
 }
 
 TEST(GraphTest, ModelNodeFromPathTest) {
@@ -43,7 +43,11 @@ TEST(GraphTest, ModelNodeFromPathTest) {
   auto node_3 = ModelOp(BackendType::TfLite, "band/test/data/add.tflite", node_1, "model_3");
   auto node_4 = ModelOp(BackendType::TfLite, "band/test/data/add.tflite", node_1, "model_4");
   auto node_5 = BasicOp([](Tensors inputs) { return inputs; }, node_3, "basic_1");
-  std::cout << b.Build().value().GetGraphVizText();
+  EXPECT_EQ(b.Build().status(), absl::OkStatus());
+}
+
+TEST(GraphTest, TopologicalOrderTest) {
+  
 }
 
 }  // namespace test

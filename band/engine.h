@@ -167,6 +167,7 @@ class Engine : public Context {
   interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
   const interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;
+  absl::StatusOr<Tensors> AllocateTensorsForGraph(const Graph& graph);
 
   Engine() = delete;
   Engine(ErrorReporter* error_reporeter);

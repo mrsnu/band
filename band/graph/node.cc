@@ -4,15 +4,15 @@
 
 namespace band {
 
-Node* BasicOp(std::function<Tensors(Tensors)> func, Node* operand, std::string name) {
+std::shared_ptr<Node> BasicOp(TensorFunction func, std::shared_ptr<Node> operand, std::string name) {
   return operand->builder()->AddBasicNode(func, operand, name);
 }
 
-Node* ModelOp(Model model, Node* operand, std::string name) {
+std::shared_ptr<Node> ModelOp(Model model, std::shared_ptr<Node> operand, std::string name) {
   return operand->builder()->AddModelNode(model, operand, name);
 }
 
-Node* ModelOp(BackendType backend, std::string model_path, Node* operand,
+std::shared_ptr<Node> ModelOp(BackendType backend, std::string model_path, std::shared_ptr<Node> operand,
               std::string name) {
   return operand->builder()->AddModelNodeFromPath(backend, model_path, operand,
                                                   name);

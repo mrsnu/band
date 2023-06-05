@@ -11,11 +11,13 @@ band_cc_library(
         "graph.h",
         "node.h",
         "graph_builder.h",
+        "invariant.h",
     ],
     srcs = [
         "graph.cc",
         "node.cc",
         "graph_builder.cc",
+        "invariant.cc",
     ],
     deps = [
         "//band:model",
