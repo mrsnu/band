@@ -7,6 +7,7 @@ from utils import *
 
 BASE_DIR = 'benchmark'
 TARGET = "band/tool:band_benchmark"
+DEFAULT_CONFIG = 'script/config_samples/benchmark_config.json'
 
 
 def benchmark_local(debug, trace, platform, backend, build_only, config_path):
@@ -77,9 +78,13 @@ if __name__ == '__main__':
     parser = get_argument_parser("Run Band benchmarks for specific target platform. "
                                  "The user should prepare/specify dependent files either absolute path or relative path depending on an execution mode. "
                                  "This script executes the benchmark from (Android: /data/local/tmp, Other: current working directory)")
-    parser.add_argument('-c', '--config', default='script/config_samples',
-                        help='Target config file or directory (default = script/config_samples)')
+    parser.add_argument('-c', '--config', default=f'{DEFAULT_CONFIG}',
+                        help=f'Target config file or directory (default = {DEFAULT_CONFIG})')
     args = parser.parse_args()
+
+    # copy from band/test/data/benchmark_config.json 
+    if args.config == DEFAULT_CONFIG:
+        shutil.copy('band/test/data/benchmark_config.json', f'{DEFAULT_CONFIG}')
 
     if args.rebuild:
         clean_bazel(args.docker)

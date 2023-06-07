@@ -465,7 +465,7 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   }
 
   if (job.status == JobStatus::SLOViolation) {
-    return absl::Status(absl::StatusCode::kDeadlineExceeded, "SLO violation");
+    return absl::DeadlineExceededError("SLO violation");
   } else if (job.status != JobStatus::Success) {
     return absl::InternalError(
         absl::StrFormat("Job failed with status : %s", GetName(job.status)));
