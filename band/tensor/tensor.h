@@ -13,9 +13,7 @@ namespace band {
 class ExternalBuffer;
 class Tensor : public interface::ITensor {
  public:
-  // deep copy from tensor view
-  explicit Tensor(interface::ITensor* tensor_view);
-  explicit Tensor(ExternalBuffer* external_buffer);
+  explicit Tensor(interface::ITensor* tensor_view, bool copy_data = false);
   ~Tensor();
 
   DataType GetType() const override;

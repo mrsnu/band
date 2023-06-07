@@ -6,7 +6,7 @@
 #include "band/tensor/external_buffer.h"
 
 namespace band {
-Tensor::Tensor(ITensor* tensor_view)
+Tensor::Tensor(ITensor* tensor_view, bool copy_data)
     : type_(tensor_view->GetType()),
       quantization_({QuantizationType::NoQuantization, nullptr}),
       num_bytes_(tensor_view->GetBytes()),
@@ -14,15 +14,15 @@ Tensor::Tensor(ITensor* tensor_view)
             tensor_view->GetDims() + tensor_view->GetNumDims()),
       data_(new char[tensor_view->GetBytes()]),
       name_(tensor_view->GetName()) {
-  memcpy(data_, tensor_view->GetData(), tensor_view->GetBytes());
+  if (copy_data) {
+    memcpy(data_, tensor_view->GetData(), tensor_view->GetBytes());
+  }
   auto status = SetQuantization(tensor_view->GetQuantization());
   if (!status.ok()) {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s",
                   status.message());
   }
 }
-
-Tensor::Tensor(ExternalBuffer* external_buffer) {}
 
 Tensor::~Tensor() {
   delete[] data_;
