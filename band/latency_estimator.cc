@@ -152,7 +152,7 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
     BAND_LOG_PROD(BAND_LOG_INFO,
                   "[LatencyEstimator::GetExpected] The given %s not found",
                   key.ToString().c_str());
-    return -1;
+    return std::numeric_limits<int32_t>::max();
   }
 }
 

@@ -19,6 +19,9 @@ int LogSeverityToAndroid(band::LogSeverity severity) {
     case band::BAND_LOG_ERROR:
       return ANDROID_LOG_ERROR;
       break;
+    case band::BAND_LOG_NUM_SEVERITIES:
+    default:
+      break;
   }
   return -1;
 }
@@ -66,6 +69,7 @@ const char* Logger::GetSeverityName(LogSeverity severity) {
       return "WARNING";
     case BAND_LOG_ERROR:
       return "ERROR";
+    case BAND_LOG_NUM_SEVERITIES:
     default:
       return "<Unknown severity>";
   }

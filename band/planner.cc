@@ -297,7 +297,7 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
   for (auto& action : actions) {
     Job job;
     SubgraphKey target_key;
-
+    
     std::tie(job, target_key) = action;
 
     Worker* worker = context_.GetWorker(target_key.GetWorkerId());
