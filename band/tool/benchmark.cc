@@ -545,7 +545,7 @@ absl::Status Benchmark::LogResults() {
     PrintLine("Total # canceled requests",
               profiler.GetNumCanceledEvents() * batch_size, 1);
 
-    if (model_config->slo_us > 0) {
+    if (model_config && model_config->slo_us > 0) {
       double slo_satisfactory_count = 0;
       for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
         if (!profiler.IsEventCanceled(i) &&
@@ -554,6 +554,7 @@ absl::Status Benchmark::LogResults() {
           slo_satisfactory_count++;
         }
       }
+
       double num_events =
           profiler.GetNumEvents() - profiler.GetNumCanceledEvents();
 
