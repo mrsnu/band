@@ -8,15 +8,16 @@ from utils import *
 BASE_DIR = 'benchmark'
 TARGET = "band/tool:band_benchmark"
 
+
 def benchmark_local(debug, trace, platform, backend, build_only, config_path):
     build_cmd = make_cmd(
-            build_only=build_only, 
-            debug=debug, 
-            trace=trace,
-            platform=platform,
-            backend=backend,
-            target=TARGET
-        )
+        build_only=build_only,
+        debug=debug,
+        trace=trace,
+        platform=platform,
+        backend=backend,
+        target=TARGET
+    )
     run_cmd(build_cmd)
     copy('bazel-bin/band/tool/band_benchmark', BASE_DIR)
     run_cmd(
@@ -31,13 +32,14 @@ def benchmark_local(debug, trace, platform, backend, build_only, config_path):
             f'{BASE_DIR}/band_benchmark.exe {config_path}'
         )
 
+
 def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
     target_base_dir = BASE_DIR
     # build android targets only (specified in band_cc_android_test tags)
-    
+
     build_command = make_cmd(
         build_only=True,
-        debug=debug, 
+        debug=debug,
         trace=trace,
         platform="android",
         backend=backend,
@@ -54,23 +56,34 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         run_cmd(build_command)
         copy('bazel-bin/band/tool/band_benchmark', target_base_dir)
 
-    shutil.copy(config_path, f'{target_base_dir}/config.json')
+    config_paths = []
+    if os.path.isfile(config_path):
+        config_paths.append(config_path)
+    elif os.path.isdir(config_path):
+        for file in os.listdir(config_path):
+            if file.endswith('.json'):
+                config_paths.append(f'{config_path}/{file}')
+    for config_path in config_paths:
+        name = os.path.basename(config_path)
+        shutil.copy(config_path, f'{target_base_dir}/{name}')
     push_to_android(f'{target_base_dir}', '')
-    run_binary_android('', f'benchmark/band_benchmark',
-                       'benchmark/config.json')
+    for config_path in config_paths:
+        name = os.path.basename(config_path)
+        run_binary_android('', f'{target_base_dir}/band_benchmark',
+                           f'{target_base_dir}/{name}')
 
 
 if __name__ == '__main__':
     parser = get_argument_parser("Run Band benchmarks for specific target platform. "
                                  "The user should prepare/specify dependent files either absolute path or relative path depending on an execution mode. "
                                  "This script executes the benchmark from (Android: /data/local/tmp, Other: current working directory)")
-    parser.add_argument('-c', '--config', default='band/test/data/benchmark_config.json',
-                        help='Target config (default = band/test/data/benchmark_config.json)')
+    parser.add_argument('-c', '--config', default='script/config_samples',
+                        help='Target config file or directory (default = script/config_samples)')
     args = parser.parse_args()
 
     if args.rebuild:
         clean_bazel(args.docker)
-    
+
     if os.path.isdir(BASE_DIR):
         shutil.rmtree(BASE_DIR)
 
@@ -81,4 +94,5 @@ if __name__ == '__main__':
                           args.docker, args.config)
     else:
         print(f'Benchmark {get_platform()}')
-        benchmark_local(args.debug, args.trace, get_platform(), args.backend, args.build, args.config)
+        benchmark_local(args.debug, args.trace, get_platform(),
+                        args.backend, args.build, args.config)
