@@ -4,29 +4,36 @@
 
 namespace band {
 
-template<>
+template <>
 size_t GetSize<CPUMaskFlags>() {
-  return 4;
+  return static_cast<size_t>(CPUMaskFlags::Primary) + 1;
 }
 
-template<>
+template <>
 size_t GetSize<SchedulerType>() {
-  return 7;
+  return static_cast<size_t>(
+             SchedulerType::HeterogeneousEarliestFinishTimeReserved) +
+         1;
 }
 
-template<>
+template <>
 size_t GetSize<SubgraphPreparationType>() {
-  return 4;
+  return static_cast<size_t>(SubgraphPreparationType::MergeUnitSubgraph) + 1;
 }
 
-template<>
+template <>
 size_t GetSize<DataType>() {
-  return 12;
+  return static_cast<size_t>(DataType::Float64) + 1;
 }
 
-template<>
+template <>
+size_t GetSize<FormatType>() {
+  return static_cast<size_t>(FormatType::NV12) + 1;
+}
+
+template <>
 size_t GetSize<DeviceFlags>() {
-  return 4;
+  return static_cast<size_t>(DeviceFlags::NPU) + 1;
 }
 
 std::string GetName(BackendType backend_type) {
@@ -94,7 +101,9 @@ SchedulerType FromString(std::string str) {
       return type;
     }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown scheduler type: %s. Fallback to fixed worker", str.c_str());
+  BAND_LOG_PROD(BAND_LOG_ERROR,
+                "Unknown scheduler type: %s. Fallback to fixed worker",
+                str.c_str());
   return SchedulerType::FixedWorker;
 }
 
@@ -174,6 +183,66 @@ std::string GetName(DataType data_type) {
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown data type: %d", data_type);
   return "Unknown data type";
+}
+
+template <>
+DataType FromString(std::string str) {
+  for (int i = 0; i < GetSize<DataType>(); i++) {
+    DataType type = static_cast<DataType>(i);
+    if (GetName(type) == str) {
+      return type;
+    }
+  }
+  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown data type: %s. Fallback to Float64",
+                str.c_str());
+  return DataType::Float64;
+}
+
+std::string GetName(FormatType format_type) {
+  switch (format_type) {
+    case FormatType::GrayScale: {
+      return "GRAYSCALE";
+    } break;
+    case FormatType::RGB: {
+      return "RGB";
+    } break;
+    case FormatType::BGR: {
+      return "BGR";
+    } break;
+    case FormatType::RGBA: {
+      return "RGBA";
+    } break;
+    case FormatType::BGRA: {
+      return "BGRA";
+    } break;
+    case FormatType::YV12: {
+      return "YV12";
+    } break;
+    case FormatType::YV21: {
+      return "YV21";
+    } break;
+    case FormatType::NV21: {
+      return "NV21";
+    } break;
+    case FormatType::NV12: {
+      return "NV12";
+    } break;
+  }
+  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %d", format_type);
+  return "Unknown format type";
+}
+
+template <>
+FormatType FromString(std::string str) {
+  for (int i = 0; i < GetSize<FormatType>(); i++) {
+    FormatType type = static_cast<FormatType>(i);
+    if (GetName(type) == str) {
+      return type;
+    }
+  }
+  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %s. Fallback to NV12",
+                str.c_str());
+  return FormatType::NV12;
 }
 
 std::string GetName(DeviceFlags device_flags) {

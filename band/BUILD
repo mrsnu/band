@@ -335,9 +335,11 @@ band_cc_library(
     name = "tensor",
     srcs = [
         "tensor/tensor.cc",
+        "tensor/external_buffer.cc"
     ],
     hdrs = [
         "tensor/tensor.h",
+        "tensor/external_buffer.h"
     ],
     deps = [
         ":common",

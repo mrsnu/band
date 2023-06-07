@@ -22,6 +22,7 @@ enum class SchedulerType : size_t;
 enum class SubgraphPreparationType : size_t;
 enum class DataType : size_t;
 enum class DeviceFlags : size_t;
+enum class FormatType : size_t;
 
 // Empty template.
 template <typename T>
@@ -89,20 +90,30 @@ enum class DataType : size_t {
   Float64 = 11
 };
 
-enum class FormatType : size_t {
-  GrayScale = 0,
-  RGB = 1,
-  BGR = 2,
-  YUV_420_888 = 3,
-  NV21 = 4,
-  NV12 = 5,
-};
-
 template <>
 size_t GetSize<DataType>();
 std::string GetName(DataType data_type);
 template <>
 DataType FromString(std::string str);
+
+// NOTE: Please update the GetSize() function when adding a new enum type.
+enum class FormatType : size_t {
+  GrayScale = 0,
+  RGB = 1,
+  BGR = 2,
+  RGBA = 3,
+  BGRA = 4,
+  YV12 = 5,
+  YV21 = 6,
+  NV21 = 7,
+  NV12 = 8
+};
+
+template <>
+size_t GetSize<FormatType>();
+std::string GetName(FormatType data_type);
+template <>
+FormatType FromString(std::string str);
 
 // NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class DeviceFlags : size_t { CPU = 0, GPU = 1, DSP = 2, NPU = 3 };

@@ -1,5 +1,5 @@
-#ifndef BAND_TENSOR_RING_BUFFER_H_
-#define BAND_TENSOR_RING_BUFFER_H_
+#ifndef BAND_TENSOR_TENSOR_RING_BUFFER_H_
+#define BAND_TENSOR_TENSOR_RING_BUFFER_H_
 
 #include <array>
 #include <map>
@@ -7,10 +7,9 @@
 #include <mutex>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
-
-#include "absl/status/status.h"
 
 namespace band {
 
@@ -29,20 +28,20 @@ class TensorRingBuffer {
   bool IsTensorIndexValid(int tensor_index) const;
   bool IsHandleValid(int handle) const;
   absl::Status GetTensorFromHandle(interface::ITensor* dst, int tensor_index,
-                                 int handle) const;
-  absl::Status PutTensorToHandle(const interface::ITensor* src, int tensor_index,
-                               int handle);
-  absl::Status GetTensorsFromHandle(std::vector<interface::ITensor*>& dst_tensors,
-                                  int handle) const;
+                                   int handle) const;
+  absl::Status PutTensorToHandle(const interface::ITensor* src,
+                                 int tensor_index, int handle);
+  absl::Status GetTensorsFromHandle(
+      std::vector<interface::ITensor*>& dst_tensors, int handle) const;
   absl::Status PutTensorsToHandle(
       const std::vector<interface::ITensor*>& src_tensors, int handle);
 
  private:
   int GetIndex(int handle) const;
   absl::Status CopyTensors(const std::vector<interface::ITensor*>& src_tensors,
-                         std::vector<interface::ITensor*>& dst_tensors) const;
+                           std::vector<interface::ITensor*>& dst_tensors) const;
   absl::Status CopyTensor(const interface::ITensor* src,
-                        interface::ITensor* dst) const;
+                          interface::ITensor* dst) const;
 
   mutable std::mutex head_mtx_;
   int head_ = 0;
@@ -54,4 +53,4 @@ class TensorRingBuffer {
 };
 }  // namespace band
 
-#endif  // BAND_TENSOR_RING_BUFFER_H_
+#endif  // BAND_TENSOR_TENSOR_RING_BUFFER_H_
