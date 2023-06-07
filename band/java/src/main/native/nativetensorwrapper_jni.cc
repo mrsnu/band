@@ -3,7 +3,7 @@
 
 #include "band/java/src/main/native/jni_utils.h"
 #include "band/logger.h"
-#include "band/tensor.h"
+#include "band/tensor/tensor.h"
 
 using band::Tensor;
 using band::jni::ConvertLongToTensor;
@@ -41,7 +41,8 @@ band::Quantization ConvertQuantizationToNative(JNIEnv* env,
               env->CallLongMethod(quantization, quant_get_param_mtd))};
 }
 
-// jbyteArray ConvertNativeToByteArray(JNIEnv* env, int bytes, const char* data) {
+// jbyteArray ConvertNativeToByteArray(JNIEnv* env, int bytes, const char* data)
+// {
 //   jbyteArray arr = env->NewByteArray(bytes);
 //   // Note: Maybe JNI uses `signed char` to represent bytes. It can be
 //   // problematic if arithmetic operations are performed on the data.

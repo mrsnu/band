@@ -13,7 +13,7 @@
 #include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
-#include "band/tensor_ring_buffer.h"
+#include "band/tensor/tensor_ring_buffer.h"
 
 namespace band {
 
@@ -78,8 +78,7 @@ class Engine : public Context {
       RequestOption options = RequestOption::GetDefaultOption(),
       Tensors inputs = {});
   absl::StatusOr<std::vector<JobId>> RequestAsync(
-      std::vector<ModelId> model_ids,
-      std::vector<RequestOption> options = {},
+      std::vector<ModelId> model_ids, std::vector<RequestOption> options = {},
       std::vector<Tensors> inputs = {});
 
   absl::Status Wait(JobId job_id, Tensors outputs = {});

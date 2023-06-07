@@ -15,7 +15,7 @@
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/model.h"
-#include "band/tensor.h"
+#include "band/tensor/tensor.h"
 
 namespace band {
 using namespace interface;
@@ -62,7 +62,8 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()), absl::OkStatus());
+  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 }
 

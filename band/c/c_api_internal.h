@@ -4,12 +4,13 @@
 #include <list>
 #include <memory>
 
+#include "band/c/c_api_types.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/model.h"
-#include "band/tensor.h"
-#include "band/c/c_api_types.h"
+#include "band/tensor/tensor.h"
+
 
 struct BandConfigBuilder {
   band::RuntimeConfigBuilder impl;

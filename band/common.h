@@ -11,7 +11,6 @@
 #include <type_traits>
 #include <vector>
 
-
 namespace band {
 typedef int WorkerId;
 typedef int ModelId;
@@ -39,13 +38,13 @@ size_t GetSize() {
 enum class BackendType : size_t { TfLite = 0 };
 std::string GetName(BackendType backend_type);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
+// NOTE: Please update the GetSize() function when adding a new enum type.
 enum class CPUMaskFlags : size_t { All = 0, Little = 1, Big = 2, Primary = 3 };
 template <>
 size_t GetSize<CPUMaskFlags>();
 std::string GetName(CPUMaskFlags cpu_mask_flags);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
+// NOTE: Please update the GetSize() function when adding a new enum type.
 enum class SchedulerType : size_t {
   FixedWorker = 0,
   RoundRobin = 1,
@@ -61,7 +60,7 @@ std::string GetName(SchedulerType scheduler_type);
 template <>
 SchedulerType FromString(std::string str);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
+// NOTE: Please update the GetSize() function when adding a new enum type.
 enum class SubgraphPreparationType : size_t {
   NoFallbackSubgraph = 0,
   FallbackPerWorker = 1,
@@ -74,7 +73,7 @@ std::string GetName(SubgraphPreparationType subgraph_preparation_type);
 template <>
 SubgraphPreparationType FromString(std::string str);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
+// NOTE: Please update the GetSize() function when adding a new enum type.
 enum class DataType : size_t {
   NoType = 0,
   Float32 = 1,
@@ -89,6 +88,16 @@ enum class DataType : size_t {
   Float16 = 10,
   Float64 = 11
 };
+
+enum class FormatType : size_t {
+  GrayScale = 0,
+  RGB = 1,
+  BGR = 2,
+  YUV_420_888 = 3,
+  NV21 = 4,
+  NV12 = 5,
+};
+
 template <>
 size_t GetSize<DataType>();
 std::string GetName(DataType data_type);

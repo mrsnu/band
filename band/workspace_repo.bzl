@@ -35,6 +35,17 @@ def workspace():
         strip_prefix = "chrome-tracer-0.0.2",
     )
 
+    http_archive(
+        name = "libyuv",
+        urls = ["https://chromium.googlesource.com/libyuv/libyuv/+archive/39240f7149cffde62e3620344d222c8ab2c21178.tar.gz"],
+        # Adding the constrain of sha256 and strip_prefix will cause failure as of
+        # Jan 2021. It seems that the downloaded libyuv was different every time,
+        # so that the specified sha256 and strip_prefix cannot match.
+        # sha256 = "01c2e30eb8e83880f9ba382f6bece9c38cd5b07f9cadae46ef1d5a69e07fafaf",
+        # strip_prefix = "libyuv-39240f7149cffde62e3620344d222c8ab2c21178",
+        build_file = Label("//third_party:libyuv.BUILD"),
+    )
+
     ######## Android repositories ########
     android(name = "android_repo")
 

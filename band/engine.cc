@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/common.h"
 #include "band/context.h"
@@ -14,10 +15,9 @@
 #include "band/model_analyzer.h"
 #include "band/model_spec.h"
 #include "band/planner.h"
-#include "band/tensor.h"
+#include "band/tensor/tensor.h"
 #include "band/worker.h"
 
-#include "absl/strings/str_format.h"
 
 namespace band {
 
@@ -64,9 +64,8 @@ absl::Status Engine::RegisterModel(Model* model) {
       // TODO(BAND-49): unregister for specific backend
       auto status = UnregisterModel(model);
       if (!status.ok()) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                          "Failed to unregister model %d: %s", model_id,
-                          status.message());
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to unregister model %d: %s",
+                      model_id, status.message());
       }
       return status_or_result.status();
     }

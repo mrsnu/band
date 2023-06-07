@@ -8,7 +8,7 @@
 #include "band/java/src/main/native/jni_utils.h"
 #include "band/logger.h"
 #include "band/model.h"
-#include "band/tensor.h"
+#include "band/tensor/tensor.h"
 
 using band::Engine;
 using band::Model;
@@ -133,8 +133,8 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
   float* input_raw = reinterpret_cast<float*>(input_tensors[0]->GetData());
   float* output_raw = reinterpret_cast<float*>(output_tensors[0]->GetData());
   auto status = engine->RequestSync(native_model->GetId(),
-                      band::RequestOption::GetDefaultOption(), input_tensors,
-                      output_tensors);
+                                    band::RequestOption::GetDefaultOption(),
+                                    input_tensors, output_tensors);
   if (!status.ok()) {
     // TODO(widiba03304): refactor absl
     return;

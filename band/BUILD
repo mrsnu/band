@@ -334,14 +334,29 @@ band_cc_library(
 band_cc_library(
     name = "tensor",
     srcs = [
-        "tensor.cc",
+        "tensor/tensor.cc",
     ],
     hdrs = [
-        "tensor.h",
+        "tensor/tensor.h",
     ],
     deps = [
         ":common",
         ":interface",
+    ],
+)
+
+band_cc_library(
+    name = "tensor_ring_buffer",
+    srcs = [
+        "tensor/tensor_ring_buffer.cc",
+    ],
+    hdrs = [
+        "tensor/tensor_ring_buffer.h",
+    ],
+    deps = [
+        ":common",
+        ":interface",
+        ":tensor"
     ],
 )
 
@@ -368,11 +383,9 @@ band_cc_library(
     name = "framework",
     srcs = [
         "engine.cc",
-        "tensor_ring_buffer.cc",
     ],
     hdrs = [
         "engine.h",
-        "tensor_ring_buffer.h",
     ],
     deps =
         [
@@ -387,6 +400,7 @@ band_cc_library(
             ":planner",
             ":scheduler",
             ":tensor",
+            ":tensor_ring_buffer",
             ":time",
             ":worker",
             ":job_tracer",
