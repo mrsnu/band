@@ -183,6 +183,17 @@ def band_cc_library(
         **kwargs
     )
 
+def band_cc_binary(
+    name,
+    copts = band_copts(),
+    **kwargs):
+    """Builds a cc_binary for Band"""
+    native.cc_binary(
+        name = name,
+        copts = copts,
+        **kwargs
+    )
+
 def band_cc_shared_object(
         name,
         srcs = [],
