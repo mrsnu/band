@@ -11,12 +11,6 @@ namespace tensor {
 // buffer with multiple data planes. Each data plane has its own demension.
 class Buffer {
  public:
-  struct Rect {
-    size_t x;
-    size_t y;
-    size_t width;
-    size_t height;
-  };
   ~Buffer() = default;
 
   static std::shared_ptr<Buffer> CreateFromRaw(const char* data, size_t width,
@@ -29,7 +23,6 @@ class Buffer {
   static std::shared_ptr<Buffer> CreateFromTensor(
       const interface::ITensor* tensor);
 
- private:
   struct DataPlane {
     // owned by the caller
     const char* data;
@@ -37,6 +30,16 @@ class Buffer {
     size_t pixel_stride_bytes = 1;
   };
 
+  const std::vector<size_t>& GetDimension() const;
+  const DataPlane* operator[](size_t index) const;
+  DataPlane* operator[](size_t index);
+  size_t GetNumPlanes() const;
+  size_t GetNumElements() const;
+  size_t GetPixelBytes() const;
+  size_t GetBytes() const;
+  FormatType GetFormatType() const;
+
+ private:
   Buffer(std::vector<size_t> dimension, std::vector<DataPlane> data_planes,
          FormatType format_type);
 

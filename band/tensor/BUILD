@@ -11,25 +11,41 @@ load(
 )
 
 band_cc_library(
-    name = "tensor",
+    name = "buffer",
     srcs = [
-        "tensor.cc",
         "buffer.cc",
         "buffer_processor.cc",
-        "operation.cc"
-    ],
+        "libyuv_operation.cc",
+        "operation.cc"],
     hdrs = [
-        "tensor.h",
         "buffer.h",
         "buffer_processor.h",
+        "libyuv_operation.h",
         "operation.h",
     ],
     deps = [
         "//band:common",
         "//band:interface",
-        "@libyuv",
+        "@libyuv"
+    ]
+)
+
+band_cc_library(
+    name = "tensor",
+    srcs = [
+        "tensor.cc"
+    ],
+    hdrs = [
+        "tensor.h"
+    ],
+    deps = [
+        "//band:common",
+        "//band:interface",
+        ":buffer"
     ],
 )
+
+
 
 band_cc_library(
     name = "tensor_ring_buffer",

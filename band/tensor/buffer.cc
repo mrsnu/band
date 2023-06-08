@@ -175,5 +175,40 @@ size_t Buffer::GetSize(const std::vector<size_t>& dims) {
   return size;
 }
 
+const std::vector<size_t>& Buffer::GetDimension() const {
+  // TODO: insert return statement here
+}
+
+const Buffer::DataPlane* Buffer::operator[](size_t index) const {
+  return &data_planes_[index];
+}
+
+Buffer::DataPlane* Buffer::operator[](size_t index) {
+  return &data_planes_[index];
+}
+
+size_t Buffer::GetNumPlanes() const { return data_planes_.size(); }
+
+size_t Buffer::GetNumElements() const {
+  size_t num_elements = 1;
+  for (auto dim : GetDimension()) {
+    num_elements *= dim;
+  }
+  return num_elements;
+}
+
+size_t Buffer::GetPixelBytes() const {
+  if (format_type_ == FormatType::Custom) {
+    // custom format type has only one data plane
+    return data_planes_[0].pixel_stride_bytes;
+  } else {
+    return GetPixelStrideBytes(format_type_);
+  }
+}
+
+size_t Buffer::GetBytes() const { return GetPixelBytes() * GetNumElements(); }
+
+FormatType Buffer::GetFormatType() const { return format_type_; }
+
 }  // namespace tensor
 }  // namespace band

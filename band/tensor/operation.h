@@ -21,13 +21,13 @@ class IOperation {
 
 class CropOperation : public IOperation {
  public:
-  CropOperation(size_t x, size_t y, size_t width, size_t height)
-      : x_(x), y_(y), width_(width), height_(height) {}
+  CropOperation(int x0, int y0, int x1, int y1)
+      : x0_(x0), y0_(y0), x1_(x1), y1_(y1) {}
   absl::Status Process(const Buffer* input) override;
   bool IsCompatible(const Buffer* input) const override;
 
  private:
-  size_t x_, y_, width_, height_;
+  int x0_, y0_, x1_, y1_;
 };
 
 class ResizeOperation : public IOperation {
