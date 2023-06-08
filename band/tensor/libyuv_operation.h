@@ -31,9 +31,6 @@ namespace tensor {
 
 class LibyuvBufferUtils {
  public:
-  LibyuvBufferUtils() = default;
-  ~LibyuvBufferUtils() override = default;
-
   // Crops input `buffer` to the specified subregions and resizes the cropped
   // region to the target image resolution defined by the `output_buffer`.
   //
@@ -42,30 +39,30 @@ class LibyuvBufferUtils {
   //
   // Crop region dimensions must be equal or smaller than input `buffer`
   // dimensions.
-  absl::Status Crop(const Buffer& buffer, int x0, int y0, int x1, int y1,
-                    Buffer* output_buffer) override;
+  static absl::Status Crop(const Buffer& buffer, int x0, int y0, int x1, int y1,
+                           Buffer& output_buffer);
 
   // Resizes `buffer` to the size of the given `output_buffer`.
-  absl::Status Resize(const Buffer& buffer, Buffer* output_buffer) override;
+  static absl::Status Resize(const Buffer& buffer, Buffer& output_buffer);
 
   // Rotates `buffer` counter-clockwise by the given `angle_deg` (in degrees).
   //
   // The given angle must be a multiple of 90 degrees.
-  absl::Status Rotate(const Buffer& buffer, int angle_deg,
-                      Buffer* output_buffer) override;
+  static absl::Status Rotate(const Buffer& buffer, int angle_deg,
+                             Buffer& output_buffer);
 
   // Flips `buffer` horizontally.
-  absl::Status FlipHorizontally(const Buffer& buffer,
-                                Buffer* output_buffer) override;
+  static absl::Status FlipHorizontally(const Buffer& buffer,
+                                       Buffer& output_buffer);
 
   // Flips `buffer` vertically.
-  absl::Status FlipVertically(const Buffer& buffer,
-                              Buffer* output_buffer) override;
+  static absl::Status FlipVertically(const Buffer& buffer,
+                                     Buffer& output_buffer);
 
   // Converts `buffer`'s format to the format of the given `output_buffer`.
   //
   // Grayscale format cannot be converted to other formats.
-  absl::Status Convert(const Buffer& buffer, Buffer* output_buffer) override;
+  static absl::Status Convert(const Buffer& buffer, Buffer& output_buffer);
 };
 
 }  // namespace tensor

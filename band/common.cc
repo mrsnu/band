@@ -206,14 +206,8 @@ std::string GetName(FormatType format_type) {
     case FormatType::RGB: {
       return "RGB";
     } break;
-    case FormatType::BGR: {
-      return "BGR";
-    } break;
     case FormatType::RGBA: {
       return "RGBA";
-    } break;
-    case FormatType::BGRA: {
-      return "BGRA";
     } break;
     case FormatType::YV12: {
       return "YV12";
