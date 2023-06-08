@@ -27,8 +27,13 @@ size_t GetSize<DataType>() {
 }
 
 template <>
-size_t GetSize<FormatType>() {
-  return static_cast<size_t>(FormatType::Custom) + 1;
+size_t GetSize<BufferFormat>() {
+  return static_cast<size_t>(BufferFormat::Custom) + 1;
+}
+
+template <>
+size_t GetSize<BufferOrientation>() {
+  return static_cast<size_t>(BufferOrientation::LeftBottom) + 1;
 }
 
 template <>
@@ -198,30 +203,30 @@ DataType FromString(std::string str) {
   return DataType::Float64;
 }
 
-std::string GetName(FormatType format_type) {
+std::string GetName(BufferFormat format_type) {
   switch (format_type) {
-    case FormatType::GrayScale: {
+    case BufferFormat::GrayScale: {
       return "GRAYSCALE";
     } break;
-    case FormatType::RGB: {
+    case BufferFormat::RGB: {
       return "RGB";
     } break;
-    case FormatType::RGBA: {
+    case BufferFormat::RGBA: {
       return "RGBA";
     } break;
-    case FormatType::YV12: {
+    case BufferFormat::YV12: {
       return "YV12";
     } break;
-    case FormatType::YV21: {
+    case BufferFormat::YV21: {
       return "YV21";
     } break;
-    case FormatType::NV21: {
+    case BufferFormat::NV21: {
       return "NV21";
     } break;
-    case FormatType::NV12: {
+    case BufferFormat::NV12: {
       return "NV12";
     } break;
-    case FormatType::Custom: {
+    case BufferFormat::Custom: {
       return "CUSTOM";
     } break;
   }
@@ -230,16 +235,60 @@ std::string GetName(FormatType format_type) {
 }
 
 template <>
-FormatType FromString(std::string str) {
-  for (int i = 0; i < GetSize<FormatType>(); i++) {
-    FormatType type = static_cast<FormatType>(i);
+BufferFormat FromString(std::string str) {
+  for (int i = 0; i < GetSize<BufferFormat>(); i++) {
+    BufferFormat type = static_cast<BufferFormat>(i);
     if (GetName(type) == str) {
       return type;
     }
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %s. Fallback to Custom",
                 str.c_str());
-  return FormatType::Custom;
+  return BufferFormat::Custom;
+}
+
+std::string GetName(BufferOrientation format_type) {
+  switch (format_type) {
+    case BufferOrientation::TopLeft: {
+      return "TOP_LEFT";
+    } break;
+    case BufferOrientation::TopRight: {
+      return "TOP_RIGHT";
+    } break;
+    case BufferOrientation::BottomRight: {
+      return "BOTTOM_RIGHT";
+    } break;
+    case BufferOrientation::BottomLeft: {
+      return "BOTTOM_LEFT";
+    } break;
+    case BufferOrientation::LeftTop: {
+      return "LEFT_TOP";
+    } break;
+    case BufferOrientation::RightTop: {
+      return "RIGHT_TOP";
+    } break;
+    case BufferOrientation::RightBottom: {
+      return "RIGHT_BOTTOM";
+    } break;
+    case BufferOrientation::LeftBottom: {
+      return "LEFT_BOTTOM";
+    } break;
+  }
+  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %d", format_type);
+  return "Unknown format type";
+}
+
+template <>
+BufferOrientation FromString(std::string str) {
+  for (int i = 0; i < GetSize<BufferOrientation>(); i++) {
+    BufferOrientation type = static_cast<BufferOrientation>(i);
+    if (GetName(type) == str) {
+      return type;
+    }
+  }
+  BAND_LOG_PROD(BAND_LOG_ERROR,
+                "Unknown format type: %s. Fallback to LeftBottom", str.c_str());
+  return BufferOrientation::LeftBottom;
 }
 
 std::string GetName(DeviceFlags device_flags) {

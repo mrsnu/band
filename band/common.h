@@ -22,7 +22,8 @@ enum class SchedulerType : size_t;
 enum class SubgraphPreparationType : size_t;
 enum class DataType : size_t;
 enum class DeviceFlags : size_t;
-enum class FormatType : size_t;
+enum class BufferFormat : size_t;
+enum class BufferOrientation : size_t;
 
 // Empty template.
 template <typename T>
@@ -97,7 +98,7 @@ template <>
 DataType FromString(std::string str);
 
 // NOTE: Please update the GetSize() function when adding a new enum type.
-enum class FormatType : size_t {
+enum class BufferFormat : size_t {
   GrayScale = 0,
   RGB = 1,
   RGBA = 2,
@@ -109,10 +110,31 @@ enum class FormatType : size_t {
 };
 
 template <>
-size_t GetSize<FormatType>();
-std::string GetName(FormatType data_type);
+size_t GetSize<BufferFormat>();
+std::string GetName(BufferFormat format);
 template <>
-FormatType FromString(std::string str);
+BufferFormat FromString(std::string str);
+
+// Buffer content orientation follows EXIF specification. The name of
+// each enum value defines the position of the 0th row and the 0th column of
+// the image content. See http://jpegclub.org/exif_orientation.html for
+// details.
+enum class BufferOrientation : size_t {
+  TopLeft = 1,
+  TopRight = 2,
+  BottomRight = 3,
+  BottomLeft = 4,
+  LeftTop = 5,
+  RightTop = 6,
+  RightBottom = 7,
+  LeftBottom = 8
+};
+
+template <>
+size_t GetSize<BufferOrientation>();
+std::string GetName(BufferOrientation data_type);
+template <>
+BufferOrientation FromString(std::string str);
 
 // NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class DeviceFlags : size_t { CPU = 0, GPU = 1, DSP = 2, NPU = 3 };

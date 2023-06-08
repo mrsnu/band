@@ -1,0 +1,85 @@
+#ifndef BAND_TENSOR_IMAGE_OPERATION_H
+#define BAND_TENSOR_IMAGE_OPERATION_H
+#include "absl/status/status.h"
+#include "band/tensor/buffer.h"
+#include "band/tensor/operation.h"
+
+namespace band {
+namespace tensor {
+
+class CropOperation : public IOperation {
+ public:
+  CropOperation(int x0, int y0, int x1, int y1)
+      : x0_(x0), y0_(y0), x1_(x1), y1_(y1) {}
+
+  virtual IOperation* Clone() const override {
+    return new CropOperation(*this);
+  }
+  virtual absl::Status Process(const Buffer& input) override;
+  virtual absl::Status IsValid(const Buffer& input) const override;
+
+ private:
+  int x0_, y0_, x1_, y1_;
+};
+
+class ResizeOperation : public IOperation {
+ public:
+  ResizeOperation(const std::vector<size_t>& dims) : dims_(dims) {}
+
+  virtual IOperation* Clone() const override {
+    return new ResizeOperation(*this);
+  }
+  virtual absl::Status Process(const Buffer& input) override;
+  virtual absl::Status IsValid(const Buffer& input) const override;
+
+ private:
+  std::vector<size_t> dims_;
+};
+
+class RotateOperation : public IOperation {
+ public:
+  RotateOperation(int angle_deg) : angle_deg_(angle_deg) {}
+
+  virtual IOperation* Clone() const override {
+    return new RotateOperation(*this);
+  }
+  virtual absl::Status Process(const Buffer& input) override;
+  virtual absl::Status IsValid(const Buffer& input) const override;
+
+ private:
+  int angle_deg_;
+};
+
+class FlipOperation : public IOperation {
+ public:
+  // horizontal: true for horizontal flip, false for vertical flip
+  FlipOperation(bool horizontal) : horizontal_(horizontal) {}
+
+  virtual IOperation* Clone() const override {
+    return new FlipOperation(*this);
+  }
+  virtual absl::Status Process(const Buffer& input) override;
+  virtual absl::Status IsValid(const Buffer& input) const override;
+
+ private:
+  bool horizontal_;
+};
+
+class ConvertOperation : public IOperation {
+ public:
+  ConvertOperation(BufferFormat format_type) : format_type_(format_type) {}
+
+  virtual IOperation* Clone() const override {
+    return new ConvertOperation(*this);
+  }
+  virtual absl::Status Process(const Buffer& input) override;
+  virtual absl::Status IsValid(const Buffer& input) const override;
+
+ private:
+  BufferFormat format_type_;
+};
+
+}  // namespace tensor
+}  // namespace band
+
+#endif  // BAND_TENSOR_IMAGE_OPERATION_H

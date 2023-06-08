@@ -1,0 +1,35 @@
+#include "band/tensor/processor.h"
+
+#include "processor.h"
+
+namespace band {
+namespace tensor {
+
+IProcessor::~IProcessor() {
+  for (auto& operation : operations_) {
+    delete operation;
+  }
+}
+
+absl::Status IProcessor::Process(const Buffer& input, Buffer& output) {
+  if (operations_.empty()) {
+    return absl::InternalError("IProcessor: no operations are specified.");
+  }
+
+  operations_.back()->SetOutput(&output);
+
+  for (size_t i = 0; i < operations_.size(); ++i) {
+    absl::Status status = operations_[i]->Process(input);
+    if (!status.ok()) {
+      return status;
+    }
+    if (i + 1 < operations_.size()) {
+      operations_[i + 1]->SetOutput(operations_[i]->GetOutput());
+    }
+  }
+
+  return absl::OkStatus();
+}
+
+}  // namespace tensor
+}  // namespace band

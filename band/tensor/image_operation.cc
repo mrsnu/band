@@ -1,15 +1,16 @@
-#include "band/tensor/operation.h"
+#include "band/tensor/image_operation.h"
 
 #include "absl/strings/str_format.h"
 #include "band/tensor/libyuv_operation.h"
+#include "band/tensor/operation.h"
 
 namespace band {
 namespace tensor {
 
-absl::Status CropOperation::Process(const Buffer* input) {
+absl::Status CropOperation::Process(const Buffer& input) {
   if (!output_.get()) {
-    output_ = Buffer::CreateEmpty(x1_ - x0_, y1_ - y0_, input->GetFormatType(),
-                                  input->GetOrientation());
+    output_ = Buffer::CreateEmpty(x1_ - x0_, y1_ - y0_, input.GetBufferFormat(),
+                                  input.GetOrientation());
   }
 
   absl::Status status = IsValid(input);
@@ -17,11 +18,11 @@ absl::Status CropOperation::Process(const Buffer* input) {
     return status;
   }
 
-  return LibyuvBufferUtils::Crop(*input, x0_, y0_, x1_, y1_, *GetOutput());
+  return LibyuvBufferUtils::Crop(input, x0_, y0_, x1_, y1_, *GetOutput());
 }
 
-absl::Status CropOperation::IsValid(const Buffer* input) const {
-  if (input->GetFormatType() == FormatType::Custom) {
+absl::Status CropOperation::IsValid(const Buffer& input) const {
+  if (input.GetBufferFormat() == BufferFormat::Custom) {
     return absl::InvalidArgumentError(
         "CropOperation: Custom buffer format type is not supported.");
   }
@@ -36,13 +37,13 @@ absl::Status CropOperation::IsValid(const Buffer* input) const {
         "CropOperation: invalid crop region is not allowed.");
   }
 
-  if (x1_ > input->GetDimension()[0] || y1_ > input->GetDimension()[1]) {
+  if (x1_ > input.GetDimension()[0] || y1_ > input.GetDimension()[1]) {
     return absl::InvalidArgumentError(
         "CropOperation: crop region is out of bounds.");
   }
 
   if (output_.get()) {
-    if (input->IsFormatTypeCompatible(*output_)) {
+    if (input.IsBufferFormatCompatible(*output_)) {
       return absl::InvalidArgumentError(
           "CropOperation: output buffer format type is not compatible.");
     }
@@ -51,10 +52,10 @@ absl::Status CropOperation::IsValid(const Buffer* input) const {
   return absl::OkStatus();
 }
 
-absl::Status ResizeOperation::Process(const Buffer* input) {
+absl::Status ResizeOperation::Process(const Buffer& input) {
   if (!output_.get()) {
-    output_ = Buffer::CreateEmpty(dims_[0], dims_[1], input->GetFormatType(),
-                                  input->GetOrientation());
+    output_ = Buffer::CreateEmpty(dims_[0], dims_[1], input.GetBufferFormat(),
+                                  input.GetOrientation());
   }
 
   absl::Status status = IsValid(input);
@@ -62,11 +63,11 @@ absl::Status ResizeOperation::Process(const Buffer* input) {
     return status;
   }
 
-  return LibyuvBufferUtils::Resize(*input, *GetOutput());
+  return LibyuvBufferUtils::Resize(input, *GetOutput());
 }
 
-absl::Status ResizeOperation::IsValid(const Buffer* input) const {
-  if (input->GetFormatType() == FormatType::Custom) {
+absl::Status ResizeOperation::IsValid(const Buffer& input) const {
+  if (input.GetBufferFormat() == BufferFormat::Custom) {
     return absl::InvalidArgumentError(
         "ResizeOperation: Custom buffer format type is not supported.");
   }
@@ -82,44 +83,45 @@ absl::Status ResizeOperation::IsValid(const Buffer* input) const {
   }
 
   if (output_.get()) {
-    switch (input->GetFormatType()) {
-      case FormatType::GrayScale:
-      case FormatType::RGB:
-      case FormatType::NV12:
-      case FormatType::NV21:
-      case FormatType::YV12:
-      case FormatType::YV21:
-        if (input->GetFormatType() != output_->GetFormatType()) {
+    switch (input.GetBufferFormat()) {
+      case BufferFormat::GrayScale:
+      case BufferFormat::RGB:
+      case BufferFormat::NV12:
+      case BufferFormat::NV21:
+      case BufferFormat::YV12:
+      case BufferFormat::YV21:
+        if (input.GetBufferFormat() != output_->GetBufferFormat()) {
           return absl::InvalidArgumentError(
               "ResizeOperation: output buffer format type is not compatible.");
         }
         break;
-      case FormatType::RGBA:
-        if (output_->GetFormatType() != FormatType::RGB &&
-            output_->GetFormatType() != FormatType::RGBA) {
+      case BufferFormat::RGBA:
+        if (output_->GetBufferFormat() != BufferFormat::RGB &&
+            output_->GetBufferFormat() != BufferFormat::RGBA) {
           return absl::InvalidArgumentError(
               "ResizeOperation: output buffer format type is not compatible.");
         }
         break;
       default:
-        return absl::InternalError(absl::StrFormat(
-            "Unsupported buffer format: %s.", GetName(input->GetFormatType())));
+        return absl::InternalError(
+            absl::StrFormat("Unsupported buffer format: %s.",
+                            GetName(input.GetBufferFormat())));
     }
   }
 
   return absl::OkStatus();
 }
 
-absl::Status RotateOperation::Process(const Buffer* input) {
+absl::Status RotateOperation::Process(const Buffer& input) {
   if (!output_.get()) {
     const bool is_dimension_change = (angle_deg_ / 90) % 2 == 1;
-    const size_t width = is_dimension_change ? input->GetDimension()[1]
-                                             : input->GetDimension()[0];
-    const size_t height = is_dimension_change ? input->GetDimension()[0]
-                                              : input->GetDimension()[1];
+    const size_t width =
+        is_dimension_change ? input.GetDimension()[1] : input.GetDimension()[0];
+    const size_t height =
+        is_dimension_change ? input.GetDimension()[0] : input.GetDimension()[1];
 
-    output_ = Buffer::CreateEmpty(width, height, input->GetFormatType(),
-                                  input->GetOrientation());
+    output_ = Buffer::CreateEmpty(width, height, input.GetBufferFormat(),
+                                  input.GetOrientation());
   }
 
   absl::Status status = IsValid(input);
@@ -127,27 +129,27 @@ absl::Status RotateOperation::Process(const Buffer* input) {
     return status;
   }
 
-  return LibyuvBufferUtils::Rotate(*input, angle_deg_, *GetOutput());
+  return LibyuvBufferUtils::Rotate(input, angle_deg_, *GetOutput());
 }
 
-absl::Status RotateOperation::IsValid(const Buffer* input) const {
+absl::Status RotateOperation::IsValid(const Buffer& input) const {
   if (output_.get()) {
-    if (input->GetFormatType() == FormatType::Custom) {
+    if (input.GetBufferFormat() == BufferFormat::Custom) {
       return absl::InvalidArgumentError(
           "RotateOperation: Custom buffer format type is not supported.");
     }
 
-    if (input->IsFormatTypeCompatible(*output_)) {
+    if (input.IsBufferFormatCompatible(*output_)) {
       return absl::InvalidArgumentError(
           "RotateOperation: output buffer format type is not compatible.");
     }
 
     const bool is_dimension_change = (angle_deg_ / 90) % 2 == 1;
     const bool are_dimensions_rotated =
-        (input->GetDimension()[0] == output_->GetDimension()[1]) &&
-        (input->GetDimension()[1] == output_->GetDimension()[0]);
+        (input.GetDimension()[0] == output_->GetDimension()[1]) &&
+        (input.GetDimension()[1] == output_->GetDimension()[0]);
     const bool are_dimensions_equal =
-        input->GetDimension() == output_->GetDimension();
+        input.GetDimension() == output_->GetDimension();
 
     if (angle_deg_ >= 360 || angle_deg_ <= 0 || angle_deg_ % 90 != 0) {
       return absl::InvalidArgumentError(
@@ -162,11 +164,11 @@ absl::Status RotateOperation::IsValid(const Buffer* input) const {
   return absl::OkStatus();
 }
 
-absl::Status FlipOperation::Process(const Buffer* input) {
+absl::Status FlipOperation::Process(const Buffer& input) {
   if (!output_.get()) {
     output_ =
-        Buffer::CreateEmpty(input->GetDimension()[0], input->GetDimension()[1],
-                            input->GetFormatType(), input->GetOrientation());
+        Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
+                            input.GetBufferFormat(), input.GetOrientation());
   }
 
   absl::Status status = IsValid(input);
@@ -174,18 +176,18 @@ absl::Status FlipOperation::Process(const Buffer* input) {
     return status;
   }
 
-  return horizontal_ ? LibyuvBufferUtils::FlipHorizontally(*input, *GetOutput())
-                     : LibyuvBufferUtils::FlipVertically(*input, *GetOutput());
+  return horizontal_ ? LibyuvBufferUtils::FlipHorizontally(input, *GetOutput())
+                     : LibyuvBufferUtils::FlipVertically(input, *GetOutput());
 }
 
-absl::Status FlipOperation::IsValid(const Buffer* input) const {
+absl::Status FlipOperation::IsValid(const Buffer& input) const {
   if (output_.get()) {
-    if (input->IsFormatTypeCompatible(*output_)) {
+    if (input.IsBufferFormatCompatible(*output_)) {
       return absl::InvalidArgumentError(
           "FlipOperation: output buffer format type is not compatible.");
     }
 
-    const auto& input_dims = input->GetDimension();
+    const auto& input_dims = input.GetDimension();
     const auto& output_dims = output_->GetDimension();
     for (size_t i = 0; i < input_dims.size(); ++i) {
       if (input_dims[i] != output_dims[i]) {
@@ -198,40 +200,41 @@ absl::Status FlipOperation::IsValid(const Buffer* input) const {
   return absl::OkStatus();
 }
 
-absl::Status ConvertOperation::Process(const Buffer* input) {
+absl::Status ConvertOperation::Process(const Buffer& input) {
   absl::Status status = IsValid(input);
   if (!status.ok()) {
     return status;
   }
 
-  return LibyuvBufferUtils::Convert(*input, *GetOutput());
+  return LibyuvBufferUtils::Convert(input, *GetOutput());
 }
 
-absl::Status ConvertOperation::IsValid(const Buffer* input) const {
+absl::Status ConvertOperation::IsValid(const Buffer& input) const {
   if (output_.get()) {
-    if (input->GetFormatType() == output_->GetFormatType()) {
+    if (input.GetBufferFormat() == output_->GetBufferFormat()) {
       return absl::InvalidArgumentError("Formats must be different.");
     }
 
-    switch (input->GetFormatType()) {
-      case FormatType::GrayScale:
+    switch (input.GetBufferFormat()) {
+      case BufferFormat::GrayScale:
         return absl::InvalidArgumentError(
             "Grayscale format does not convert to other formats.");
-      case FormatType::RGB:
-        if (output_->GetFormatType() == FormatType::RGBA) {
+      case BufferFormat::RGB:
+        if (output_->GetBufferFormat() == BufferFormat::RGBA) {
           return absl::InvalidArgumentError(
               "RGB format does not convert to RGBA");
         }
         return absl::OkStatus();
-      case FormatType::RGBA:
-      case FormatType::NV12:
-      case FormatType::NV21:
-      case FormatType::YV12:
-      case FormatType::YV21:
+      case BufferFormat::RGBA:
+      case BufferFormat::NV12:
+      case BufferFormat::NV21:
+      case BufferFormat::YV12:
+      case BufferFormat::YV21:
         return absl::OkStatus();
       default:
-        return absl::InternalError(absl::StrFormat(
-            "Unsupported buffer format: %s.", GetName(input->GetFormatType())));
+        return absl::InternalError(
+            absl::StrFormat("Unsupported buffer format: %s.",
+                            GetName(input.GetBufferFormat())));
     }
 
   } else {
