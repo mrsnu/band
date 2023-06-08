@@ -329,41 +329,6 @@ band_cc_library(
     ],
 )
 
-band_cc_library(
-    name = "tensor",
-    srcs = [
-        "tensor/tensor.cc",
-        "tensor/buffer.cc",
-        "tensor/buffer_processor.cc",
-        "tensor/operation.cc"
-    ],
-    hdrs = [
-        "tensor/tensor.h",
-        "tensor/buffer.h",
-        "tensor/buffer_processor.h",
-        "tensor/operation.h",
-    ],
-    deps = [
-        ":common",
-        ":interface",
-        "@libyuv",
-    ],
-)
-
-band_cc_library(
-    name = "tensor_ring_buffer",
-    srcs = [
-        "tensor/tensor_ring_buffer.cc",
-    ],
-    hdrs = [
-        "tensor/tensor_ring_buffer.h",
-    ],
-    deps = [
-        ":common",
-        ":interface",
-        ":tensor"
-    ],
-)
 
 band_cc_library(
     name = "latency_estimator",
@@ -404,8 +369,8 @@ band_cc_library(
             ":model_analyzer",
             ":planner",
             ":scheduler",
-            ":tensor",
-            ":tensor_ring_buffer",
+            "//band/tensor:tensor",
+            "//band/tensor:tensor_ring_buffer",
             ":time",
             ":worker",
             ":job_tracer",
