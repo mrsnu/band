@@ -106,7 +106,8 @@ enum class FormatType : size_t {
   YV12 = 5,
   YV21 = 6,
   NV21 = 7,
-  NV12 = 8
+  NV12 = 8,
+  Custom = 9
 };
 
 template <>

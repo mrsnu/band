@@ -3,13 +3,12 @@
 #include <string.h>
 
 #include "band/logger.h"
-#include "band/tensor/external_buffer.h"
+#include "band/tensor/buffer.h"
 
 namespace band {
 Tensor::Tensor(ITensor* tensor_view, bool copy_data)
     : type_(tensor_view->GetType()),
       quantization_({QuantizationType::NoQuantization, nullptr}),
-      num_bytes_(tensor_view->GetBytes()),
       dims_(tensor_view->GetDims(),
             tensor_view->GetDims() + tensor_view->GetNumDims()),
       data_(new char[tensor_view->GetBytes()]),
@@ -46,8 +45,6 @@ size_t Tensor::GetNumDims() const { return dims_.size(); }
 void Tensor::SetDims(const std::vector<int>& dims) {
   dims_ = std::vector<int>(dims.begin(), dims.end());
 }
-
-size_t Tensor::GetBytes() const { return num_bytes_; }
 
 const char* Tensor::GetName() const { return name_.c_str(); }
 

@@ -43,7 +43,7 @@ def workspace():
         # so that the specified sha256 and strip_prefix cannot match.
         # sha256 = "01c2e30eb8e83880f9ba382f6bece9c38cd5b07f9cadae46ef1d5a69e07fafaf",
         # strip_prefix = "libyuv-39240f7149cffde62e3620344d222c8ab2c21178",
-        build_file = Label("//third_party:libyuv.BUILD"),
+        build_file = Label("//third_party/libyuv:BUILD"),
     )
 
     ######## Android repositories ########

@@ -1,17 +1,19 @@
-#include "band/tensor/external_buffer.h"
+#include "band/tensor/buffer.h"
 
 #include "band/logger.h"
-#include "external_buffer.h"
+#include "buffer.h"
 
 namespace band {
-std::shared_ptr<ExternalBuffer> ExternalBuffer::CreateFromBuffer(
-    const char* data, size_t width, size_t height, FormatType format_type) {
+namespace tensor {
+std::shared_ptr<Buffer> Buffer::CreateFromRaw(const char* data, size_t width,
+                                              size_t height,
+                                              FormatType format_type) {
   if (format_type <= FormatType::BGRA) {
-    return std::make_shared<ExternalBuffer>(
-        std::vector<int>{static_cast<int>(width), static_cast<int>(height)},
+    return std::shared_ptr<Buffer>(new Buffer(
+        std::vector<size_t>{width, height},
         std::vector<DataPlane>{{data, width * GetPixelStrideBytes(format_type),
                                 GetPixelStrideBytes(format_type)}},
-        format_type);
+        format_type));
   }
 
   switch (format_type) {
@@ -32,9 +34,8 @@ std::shared_ptr<ExternalBuffer> ExternalBuffer::CreateFromBuffer(
                                  format_type);
     }
     case FormatType::YV21: {
-      std::vector<int> uv_dims = GetUvDims(
-          std::vector<int>{static_cast<int>(width), static_cast<int>(height)},
-          format_type);
+      std::vector<size_t> uv_dims =
+          GetUvDims(std::vector<size_t>{width, height}, format_type);
       return CreateFromYUVPlanes(
           data,                                             // y
           data + width * height,                            // u
@@ -42,9 +43,8 @@ std::shared_ptr<ExternalBuffer> ExternalBuffer::CreateFromBuffer(
           width, height, width, uv_dims[0], 1, format_type);
     }
     case FormatType::YV12: {
-      std::vector<int> uv_dims = GetUvDims(
-          std::vector<int>{static_cast<int>(width), static_cast<int>(height)},
-          format_type);
+      std::vector<size_t> uv_dims =
+          GetUvDims(std::vector<size_t>{width, height}, format_type);
       return CreateFromYUVPlanes(
           data,                                             // y
           data + width * height + uv_dims[0] * uv_dims[1],  // u
@@ -58,7 +58,7 @@ std::shared_ptr<ExternalBuffer> ExternalBuffer::CreateFromBuffer(
   }
 }
 
-std::shared_ptr<ExternalBuffer> ExternalBuffer::CreateFromYUVPlanes(
+std::shared_ptr<Buffer> Buffer::CreateFromYUVPlanes(
     const char* y_data, const char* u_data, const char* v_data, size_t width,
     size_t height, size_t row_stride_y, size_t row_stride_uv,
     size_t pixel_stride_uv, FormatType format_type) {
@@ -78,17 +78,48 @@ std::shared_ptr<ExternalBuffer> ExternalBuffer::CreateFromYUVPlanes(
     return nullptr;
   }
 
-  return std::make_shared<ExternalBuffer>(
-      std::vector<int>{static_cast<int>(width), static_cast<int>(height)},
-      data_planes, format_type);
+  return std::shared_ptr<Buffer>(
+      new Buffer(std::vector<size_t>{width, height}, data_planes, format_type));
 }
 
-ExternalBuffer::ExternalBuffer(const std::vector<int>& dims,
-                               const std::vector<DataPlane>& data_planes,
-                               FormatType format_type)
-    : dims_(dims), data_planes_(data_planes), format_type_(format_type) {}
+std::shared_ptr<Buffer> Buffer::CreateFromTensor(
+    const interface::ITensor* tensor) {
+  if (tensor == nullptr) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor is null");
+    return nullptr;
+  }
 
-size_t ExternalBuffer::GetPixelStrideBytes(FormatType format_type) {
+  if (tensor->GetNumDims() == 0) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor has no dimension");
+    return nullptr;
+  }
+
+  std::vector<size_t> dims;
+  for (size_t i = 0; i < tensor->GetNumDims(); ++i) {
+    dims.push_back(tensor->GetDims()[i]);
+    if (dims.back() <= 0) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor has invalid dimension : %d",
+                    dims.back());
+      return nullptr;
+    }
+  }
+
+  std::vector<DataPlane> data_planes;
+  data_planes.push_back({tensor->GetData(),
+                         tensor->GetDims()[0] * tensor->GetPixelBytes(),
+                         tensor->GetPixelBytes()});
+
+  return std::shared_ptr<Buffer>(
+      new Buffer(dims, data_planes, FormatType::Custom));
+}
+
+Buffer::Buffer(std::vector<size_t> dimension,
+               std::vector<DataPlane> data_planes, FormatType format_type)
+    : dimension_(dimension),
+      data_planes_(data_planes),
+      format_type_(format_type) {}
+
+size_t Buffer::GetPixelStrideBytes(FormatType format_type) {
   switch (format_type) {
     case FormatType::GrayScale:
       return 1;
@@ -106,8 +137,9 @@ size_t ExternalBuffer::GetPixelStrideBytes(FormatType format_type) {
       return 0;
   }
 }
-std::vector<int> ExternalBuffer::GetUvDims(const std::vector<int>& dims,
-                                           FormatType format_type) {
+
+std::vector<size_t> Buffer::GetUvDims(const std::vector<size_t>& dims,
+                                      FormatType format_type) {
   if (dims.size() != 2 || dims[0] <= 0 || dims[1] <= 0) {
     std::string dims_str;
     for (const auto& dim : dims) {
@@ -115,7 +147,7 @@ std::vector<int> ExternalBuffer::GetUvDims(const std::vector<int>& dims,
     }
     BAND_LOG_PROD(BAND_LOG_ERROR, "Given dims is not valid for UV plane : %s",
                   dims_str.c_str());
-    return std::vector<int>();
+    return std::vector<size_t>();
   }
 
   switch (format_type) {
@@ -127,11 +159,11 @@ std::vector<int> ExternalBuffer::GetUvDims(const std::vector<int>& dims,
     default:
       BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
                     GetName(format_type));
-      return std::vector<int>();
+      return std::vector<size_t>();
   }
 }
 
-size_t ExternalBuffer::GetSize(const std::vector<int>& dims) {
+size_t Buffer::GetSize(const std::vector<size_t>& dims) {
   size_t size = 1;
   for (const auto& dim : dims) {
     if (dim <= 0) {
@@ -142,4 +174,6 @@ size_t ExternalBuffer::GetSize(const std::vector<int>& dims) {
   }
   return size;
 }
+
+}  // namespace tensor
 }  // namespace band

@@ -28,7 +28,7 @@ size_t GetSize<DataType>() {
 
 template <>
 size_t GetSize<FormatType>() {
-  return static_cast<size_t>(FormatType::NV12) + 1;
+  return static_cast<size_t>(FormatType::Custom) + 1;
 }
 
 template <>
@@ -227,6 +227,9 @@ std::string GetName(FormatType format_type) {
     case FormatType::NV12: {
       return "NV12";
     } break;
+    case FormatType::Custom: {
+      return "CUSTOM";
+    } break;
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %d", format_type);
   return "Unknown format type";
@@ -240,9 +243,9 @@ FormatType FromString(std::string str) {
       return type;
     }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %s. Fallback to NV12",
+  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %s. Fallback to Custom",
                 str.c_str());
-  return FormatType::NV12;
+  return FormatType::Custom;
 }
 
 std::string GetName(DeviceFlags device_flags) {
