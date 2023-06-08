@@ -7,6 +7,13 @@
 namespace band {
 namespace tensor {
 
+// Interface for buffer operations such as crop, resize, rotate, flip, convert
+// format, etc. Each operation should be able to validate an input buffer and
+// process the input buffer to generate the output buffer.
+// The output buffer can be explicitly assigned by calling SetOutput() or
+// automatically created by the operation. Each operation should create
+// output buffer if it is not explicitly assigned and cache the output buffer
+// for future use (e.g. for the next operation with the same input format).
 class IOperation {
  public:
   virtual ~IOperation() = default;

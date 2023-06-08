@@ -7,10 +7,11 @@ namespace tensor {
 class IOperation;
 class BufferProcessor {
  public:
-  
-  
-  
  private:
+  BufferProcessor() = default;
+  ~BufferProcessor() = default;
+  BufferProcessor(const BufferProcessor&) = delete;
+  BufferProcessor& operator=(const BufferProcessor&) = delete;
 };
 
 }  // namespace tensor
