@@ -54,7 +54,7 @@ class LatencyEstimator {
   Json::Value profile_database_json_;
 
   std::unordered_map<SubgraphKey, Latency, SubgraphHash> profile_database_;
-  float profile_smoothing_factor_;
+  float profile_smoothing_factor_ = 0.05f;
 
   bool profile_online_;
   int profile_num_warmups_;

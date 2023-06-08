@@ -1,13 +1,12 @@
 #include "band/latency_estimator.h"
 
+#include "absl/strings/str_format.h"
 #include "band/context.h"
 #include "band/json_util.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/profiler.h"
 #include "band/worker.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 LatencyEstimator::LatencyEstimator(Context* context) : context_(context) {}
@@ -26,6 +25,7 @@ absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   profile_num_warmups_ = config.num_warmups;
   profile_num_runs_ = config.num_runs;
   profile_copy_computation_ratio_ = config.copy_computation_ratio;
+  profile_smoothing_factor_ = config.smoothing_factor;
 
   return absl::OkStatus();
 }
@@ -152,7 +152,7 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
     BAND_LOG_PROD(BAND_LOG_INFO,
                   "[LatencyEstimator::GetExpected] The given %s not found",
                   key.ToString().c_str());
-    return -1;
+    return std::numeric_limits<int32_t>::max();
   }
 }
 

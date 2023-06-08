@@ -62,11 +62,12 @@ band_cc_android_test(
 
 band_cc_android_test(
     name = "benchmark_test",
-    size = "small",
+    size = "medium",
     srcs = ["tool/benchmark_test.cc"],
     data = [
         "//band/test:data/add.tflite",
         "//band/test:data/benchmark_config.json",
+        "//band/test:data/retinaface_mbv2_quant_160.tflite",
     ],
     deps = [
         ":test_util",

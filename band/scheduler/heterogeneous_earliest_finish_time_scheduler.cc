@@ -8,7 +8,8 @@ namespace band {
 HEFTScheduler::HEFTScheduler(Context& context, int window_size, bool reserve)
     : IScheduler(context), window_size_(window_size), reserve_(reserve) {}
 
-void HEFTScheduler::Schedule(JobQueue& requests) {
+bool HEFTScheduler::Schedule(JobQueue& requests) {
+  bool success = true;
   int window_size = std::min(window_size_, (int)requests.size());
   // stop if there are no idle devices OR there's nothing in `requests`
   while (window_size > 0) {
@@ -77,7 +78,7 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
 
       if (target_job_index < 0) {
         // no one wants to be scheduled..
-        return;
+        return success;
       }
 
       // skip this job if we can't schedule it immediately,
@@ -108,7 +109,7 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
       job.expected_latency = largest_shortest_latency;
     }
 
-    context_.EnqueueToWorker({job, target_subgraph_key});
+    success &= context_.EnqueueToWorker({job, target_subgraph_key});
 
     if (reserve_) {
       // add next job to reserved_, if one exists
@@ -119,5 +120,6 @@ void HEFTScheduler::Schedule(JobQueue& requests) {
       }
     }
   }
+  return success;
 }
 }  // namespace band

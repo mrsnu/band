@@ -4,8 +4,9 @@
 
 namespace band {
 
-void RoundRobinScheduler::Schedule(JobQueue& requests) {
+bool RoundRobinScheduler::Schedule(JobQueue& requests) {
   std::set<WorkerId> idle_workers = context_.GetIdleWorkers();
+  bool success = true;
 
   for (auto worker_id : idle_workers) {
     if (!requests.empty()) {
@@ -18,11 +19,13 @@ void RoundRobinScheduler::Schedule(JobQueue& requests) {
         Job to_execute = *available_job;
         SubgraphKey key =
             context_.GetLargestSubgraphKey(to_execute.model_id, worker_id);
-        context_.EnqueueToWorker({to_execute, key});
+        success &= context_.EnqueueToWorker({to_execute, key});
         requests.erase(available_job);
       }
     }
   }
+
+  return success;
 }
 
 }  // namespace band

@@ -9,7 +9,7 @@ class HEFTScheduler : public IScheduler {
  public:
   explicit HEFTScheduler(Context& context, int window_size, bool reserve);
 
-  void Schedule(JobQueue& requests) override;
+  bool Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::GlobalQueue; }

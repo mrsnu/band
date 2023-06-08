@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/common.h"
 #include "band/context.h"
@@ -16,8 +17,6 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 
@@ -64,9 +63,8 @@ absl::Status Engine::RegisterModel(Model* model) {
       // TODO(BAND-49): unregister for specific backend
       auto status = UnregisterModel(model);
       if (!status.ok()) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                          "Failed to unregister model %d: %s", model_id,
-                          status.message());
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to unregister model %d: %s",
+                      model_id, status.message());
       }
       return status_or_result.status();
     }
@@ -431,6 +429,10 @@ absl::Status Engine::Wait(JobId job_id, Tensors outputs) {
 
 absl::Status Engine::Wait(std::vector<JobId> job_ids,
                           std::vector<Tensors> outputs) {
+  for (auto job_id : job_ids) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Wait for job %d", job_id);
+  }
+
   planner_->Wait(job_ids);
   for (size_t i = 0; i < outputs.size(); i++) {
     auto status = GetOutputTensors(job_ids[i], outputs[i]);
@@ -460,6 +462,13 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   if (job.output_handle == -1) {
     return absl::InternalError(
         absl::StrFormat("Invalid output handle : %d", job.output_handle));
+  }
+
+  if (job.status == JobStatus::SLOViolation) {
+    return absl::DeadlineExceededError("SLO violation");
+  } else if (job.status != JobStatus::Success) {
+    return absl::InternalError(
+        absl::StrFormat("Job failed with status : %s", GetName(job.status)));
   }
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
@@ -866,7 +875,7 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
     int64_t expected_latency = GetExpected(key);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 
-    if (min_latency > total) {
+    if (min_latency >= total) {
       min_latency = total;
       min_key = key;
     }
@@ -906,13 +915,13 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
-void Engine::EnqueueToWorker(const ScheduleAction& action) {
-  EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
+bool Engine::EnqueueToWorker(const ScheduleAction& action) {
+  return EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
 }
 
-void Engine::EnqueueToWorkerBatch(
+bool Engine::EnqueueToWorkerBatch(
     const std::vector<ScheduleAction>& schedule_action) {
-  planner_->EnqueueToWorker(schedule_action);
+  return planner_->EnqueueToWorker(schedule_action);
 }
 
 const Worker* Engine::GetWorker(WorkerId id) const {

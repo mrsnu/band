@@ -55,14 +55,16 @@ struct MockContext : public MockContextBase {
   }
 
   int64_t GetExpected(const SubgraphKey& key) const override { return 10; }
-  void EnqueueToWorker(const ScheduleAction& action) override {
+  bool EnqueueToWorker(const ScheduleAction& action) override {
     action_.push_back(action);
+    return true;
   }
 
-  void EnqueueToWorkerBatch(
+  bool EnqueueToWorkerBatch(
       const std::vector<ScheduleAction>& schedule_action) override {
     action_.insert(action_.end(), schedule_action.begin(),
                    schedule_action.end());
+    return true;
   }
 };
 

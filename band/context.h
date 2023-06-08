@@ -102,8 +102,8 @@ class Context {
                                           bool push_front = false) = 0;
   virtual void PrepareReenqueue(Job& job) = 0;
   virtual void EnqueueFinishedJob(Job& job) = 0;
-  virtual void EnqueueToWorker(const ScheduleAction& schedule_action) = 0;
-  virtual void EnqueueToWorkerBatch(
+  virtual bool EnqueueToWorker(const ScheduleAction& schedule_action) = 0;
+  virtual bool EnqueueToWorkerBatch(
       const std::vector<ScheduleAction>& schedule_action) = 0;
 
   /* getters */

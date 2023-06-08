@@ -9,7 +9,7 @@ class LeastSlackFirstScheduler : public IScheduler {
  public:
   explicit LeastSlackFirstScheduler(Context& context, int window_size);
 
-  void Schedule(JobQueue& requests) override;
+  bool Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::GlobalQueue; }

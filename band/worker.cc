@@ -1,11 +1,10 @@
 #include "band/worker.h"
 
+#include "absl/strings/str_format.h"
 #include "band/common.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/time.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 Worker::Worker(Context* context, WorkerId worker_id, DeviceFlags device_flag)
@@ -155,12 +154,11 @@ absl::Status Worker::TryUpdateWorkerThread() {
 
 void Worker::Work() {
   while (true) {
-    std::unique_lock<std::mutex> lock(device_mtx_);
-
     if (!HasJob()) {
       wait_cv_.notify_all();
     }
 
+    std::unique_lock<std::mutex> lock(device_mtx_);
     request_cv_.wait(
         lock, [this]() { return (kill_worker_ || HasJob()) && !is_paused_; });
 
@@ -189,7 +187,8 @@ void Worker::Work() {
 
     if (!TryUpdateWorkerThread().ok()) {
       // TODO #21: Handle errors in multi-thread environment
-      break;
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to update thread",
+                    worker_id_);
     }
 
     if (context_->TryCopyInputTensors(*current_job).ok()) {
@@ -218,6 +217,8 @@ void Worker::Work() {
       } else if (!status.ok()) {
         HandleDeviceError(*current_job);
         context_->Trigger();
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to invoke job %d",
+                      worker_id_, current_job->job_id);
         continue;
       } else {
         // end_time is never read/written by any other thread as long as
@@ -227,8 +228,8 @@ void Worker::Work() {
         current_job->status = JobStatus::InvokeFailure;
       }
     } else {
-      BAND_REPORT_ERROR(GetErrorReporter(), "%s worker failed to copy input",
-                        GetName(device_flag_).c_str());
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to copy input",
+                    worker_id_);
       // TODO #21: Handle errors in multi-thread environment
       current_job->status = JobStatus::InputCopyFailure;
     }
@@ -240,6 +241,8 @@ void Worker::Work() {
     lock.unlock();
 
     context_->Trigger();
+    BAND_LOG_PROD(BAND_LOG_INFO, "Worker %d finished job %d", worker_id_,
+                  current_job->job_id);
   }
 }
 
