@@ -10,8 +10,8 @@
 
 namespace {
 
-std::shared_ptr<grpc::Channel> GetChannel(std::string host, std::string port) {
-  return grpc::CreateChannel(host + ":" + port,
+std::shared_ptr<grpc::Channel> GetChannel(std::string host, int port) {
+  return grpc::CreateChannel(host + ":" + std::to_string(port),
                              grpc::InsecureChannelCredentials());
 }
 
@@ -37,14 +37,17 @@ namespace grpc {
 
 class GrpcClient {
  public:
-  GrpcClient(std::string host, std::string port)
-      : client_(GetChannel(host, port)) {};
+  GrpcClient() = default;
+  void Connect(std::string host, int port) {
+    client_ = std::make_unique<GrpcClientService>(GetChannel(host, port));
+  }
+
   absl::StatusOr<std::vector<band_proto::ModelDescriptor>> GetModelDesc() const;
   absl::Status CheckModelDesc(band_proto::ModelDescriptor model_desc) const;
   absl::StatusOr<band_proto::Response> RequestSync(band_proto::Request) const;
 
  private:
-  GrpcClientService client_;
+  std::unique_ptr<GrpcClientService> client_;
 };
 
 }  // namespace grpc

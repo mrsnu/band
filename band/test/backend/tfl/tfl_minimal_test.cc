@@ -22,7 +22,7 @@ using namespace interface;
 TEST(TFLiteBackend, BackendInvoke) {
   tfl::TfLiteModel bin_model(0);
   EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
-  std::unique_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
+  std::shared_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
   tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU, config);
   EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), absl::OkStatus());
   EXPECT_TRUE(
@@ -33,7 +33,7 @@ TEST(TFLiteBackend, BackendInvoke) {
 TEST(TFLiteBackend, ModelSpec) {
   tfl::TfLiteModel bin_model(0);
   EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
-  std::unique_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
+  std::shared_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
   tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU, config);
   ModelSpec model_spec =
       model_executor.InvestigateModelSpec(&bin_model).value();
@@ -61,7 +61,7 @@ TEST(TFLiteBackend, InterfaceInvoke) {
   IModel* bin_model = BackendFactory::CreateModel(BackendType::TfLite, 0);
   EXPECT_EQ(bin_model->FromPath("band/test/data/add.tflite"), absl::OkStatus());
 
-  std::unique_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
+  std::shared_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
   IModelExecutor* model_executor = BackendFactory::CreateModelExecutor(
       BackendType::TfLite, 0, 0, DeviceFlags::CPU, config);
   EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), absl::OkStatus());

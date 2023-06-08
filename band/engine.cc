@@ -514,8 +514,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   for (auto& backend_config : config.backend_configs) {
     auto backend_type = backend_config.first;
     auto backend_config_value = backend_config.second;
-    backend_configs_[backend_type] =
-        std::unique_ptr<BackendConfig>(backend_config_value);
+    backend_configs_[backend_type] = backend_config_value;
   }
 
   std::set<DeviceFlags> valid_devices;
@@ -637,9 +636,9 @@ bool Engine::HasSubgraph(const SubgraphKey& key) const {
 }
 
 void Engine::ForEachSubgraph(
-    std::function<void(const SubgraphKey&)> iterator) const {
+    std::function<void(const SubgraphKey&)> visitor) const {
   for (auto& model_executor : model_executors_) {
-    model_executor.second->ForEachSubgraph(iterator);
+    model_executor.second->ForEachSubgraph(visitor);
   }
 }
 

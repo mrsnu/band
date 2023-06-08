@@ -107,7 +107,7 @@ class Engine : public Context {
   bool IsEnd(const SubgraphKey& key) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
   void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) const override;
+      std::function<void(const SubgraphKey&)> visitor) const override;
   absl::Status Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
@@ -172,7 +172,7 @@ class Engine : public Context {
   Engine& operator=(const Engine&&) = delete;
 
   SubgraphConfig subgraph_config_;
-  std::map<BackendType, std::unique_ptr<BackendConfig>> backend_configs_;
+  std::map<BackendType, std::shared_ptr<BackendConfig>> backend_configs_;
 
   std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<interface::IModelExecutor>>

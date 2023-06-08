@@ -238,9 +238,9 @@ absl::Status TfLiteModelExecutor::ExecuteSubgraph(const SubgraphKey& key) {
 }
 
 void TfLiteModelExecutor::ForEachSubgraph(
-    std::function<void(const SubgraphKey&)> iterator) {
+    std::function<void(const SubgraphKey&)> visitor) {
   for (const auto& interpreter : interpreters_) {
-    iterator(interpreter.first);
+    visitor(interpreter.first);
   }
 }
 

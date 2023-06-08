@@ -15,11 +15,11 @@ namespace grpc {
 
 class ModelExecutorCreator
     : public Creator<IModelExecutor, ModelId, WorkerId, DeviceFlags,
-                     const std::unique_ptr<BackendConfig>&, CpuSet, int> {
+                     std::shared_ptr<BackendConfig>, CpuSet, int> {
  public:
   IModelExecutor* Create(ModelId model_id, WorkerId worker_id,
                          DeviceFlags device_flag,
-                         const std::unique_ptr<BackendConfig>& config,
+                         std::shared_ptr<BackendConfig> config,
                          CpuSet thread_affinity_mask,
                          int num_threads) const override {
     return new GrpcModelExecutor(model_id, worker_id, device_flag, config,

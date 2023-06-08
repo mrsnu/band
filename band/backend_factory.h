@@ -27,7 +27,7 @@ class BackendFactory {
   static interface::IModelExecutor* CreateModelExecutor(
       BackendType backend, ModelId model_id, WorkerId worker_id,
       DeviceFlags device_flag,
-      const std::unique_ptr<BackendConfig>& backend_config,
+      std::shared_ptr<BackendConfig> backend_config,
       CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlags::All),
       int num_threads = -1);
   static interface::IModel* CreateModel(BackendType backend, ModelId id);
@@ -37,7 +37,7 @@ class BackendFactory {
   static void RegisterBackendCreators(
       BackendType backend,
       Creator<interface::IModelExecutor, ModelId, WorkerId, DeviceFlags,
-              const std::unique_ptr<BackendConfig>&, CpuSet, int>*
+              std::shared_ptr<BackendConfig>, CpuSet, int>*
           model_executor_creator,
       Creator<interface::IModel, ModelId>* model_creator,
       Creator<interface::IBackendUtil>* util_creator);
@@ -48,7 +48,7 @@ class BackendFactory {
   static std::map<BackendType,
                   std::shared_ptr<Creator<
                       interface::IModelExecutor, ModelId, WorkerId, DeviceFlags,
-                      const std::unique_ptr<BackendConfig>&, CpuSet, int>>>
+                      std::shared_ptr<BackendConfig>, CpuSet, int>>>
       model_executor_creators_;
   static std::map<BackendType,
                   std::shared_ptr<Creator<interface::IModel, ModelId>>>

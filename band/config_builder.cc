@@ -165,26 +165,26 @@ WorkerConfig WorkerConfigBuilder::Build(
 }
 
 #ifdef BAND_TFLITE
-BackendConfig* TfLiteBackendConfigBuilder::Build(
+std::shared_ptr<BackendConfig> TfLiteBackendConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // This should not terminate the program. After employing abseil, Build()
   // should return error.
   if (!IsValid(error_reporter)) {
     abort();
   }
-  return new TfLiteBackendConfig();
+  return std::make_shared<TfLiteBackendConfig>();
 }
 #endif  // BAND_TFLITE
 
 #ifdef BAND_GRPC
-BackendConfig* GrpcBackendConfigBuilder::Build(
+std::shared_ptr<BackendConfig> GrpcBackendConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // This should not terminate the program. After employing abseil, Build()
   // should return error.
   if (!IsValid(error_reporter)) {
     abort();
   }
-  return new GrpcBackendConfig(host_, port_);
+  return std::make_shared<GrpcBackendConfig>(host_, port_);
 }
 #endif  // BAND_GRPC
 

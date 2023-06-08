@@ -72,7 +72,7 @@ struct RuntimeConfig {
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
-  std::map<BackendType, BackendConfig*> backend_configs;
+  std::map<BackendType, std::shared_ptr<BackendConfig>> backend_configs;
 
  private:
   friend class RuntimeConfigBuilder;

@@ -12,9 +12,13 @@ band_cc_android_test(
     ],
     deps = [
         "//band:config_builder",
-        "//band/backend/tfl:tfl_backend",
         "@com_google_googletest//:gtest",
-    ],
+    ] + select({
+        "//band:tflite": [
+            "//band/backend/tfl:tfl_backend",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 band_cc_android_test(
@@ -32,7 +36,11 @@ band_cc_android_test(
     ],
     deps = [
         "//band:config_builder",
-        "//band/backend/tfl:tfl_backend",
         "@com_google_googletest//:gtest",
-    ],
+    ] + select({
+        "//band:tflite": [
+            "//band/backend/tfl:tfl_backend",
+        ],
+        "//conditions:default": [],
+    }),
 )

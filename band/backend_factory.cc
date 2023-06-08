@@ -52,7 +52,7 @@ void RegisterBackendInternal() {
 
 std::map<BackendType, std::shared_ptr<Creator<
                           IModelExecutor, ModelId, WorkerId, DeviceFlags,
-                          const std::unique_ptr<BackendConfig>&, CpuSet, int>>>
+                          std::shared_ptr<BackendConfig>, CpuSet, int>>>
     BackendFactory::model_executor_creators_ = {};
 std::map<BackendType, std::shared_ptr<Creator<IModel, ModelId>>>
     BackendFactory::model_creators_ = {};
@@ -62,7 +62,7 @@ std::map<BackendType, std::shared_ptr<Creator<IBackendUtil>>>
 IModelExecutor* BackendFactory::CreateModelExecutor(
     BackendType backend, ModelId model_id, WorkerId worker_id,
     DeviceFlags device_flag,
-    const std::unique_ptr<BackendConfig>& backend_config,
+    std::shared_ptr<BackendConfig> backend_config,
     CpuSet thread_affinity_mask, int num_threads) {
   RegisterBackendInternal();
   auto it = model_executor_creators_.find(backend);
@@ -100,13 +100,13 @@ std::vector<BackendType> BackendFactory::GetAvailableBackends() {
 void BackendFactory::RegisterBackendCreators(
     BackendType backend,
     Creator<IModelExecutor, ModelId, WorkerId, DeviceFlags,
-            const std::unique_ptr<BackendConfig>&, CpuSet, int>*
+            std::shared_ptr<BackendConfig>, CpuSet, int>*
         model_executor_creator,
     Creator<IModel, ModelId>* model_creator,
     Creator<IBackendUtil>* util_creator) {
   model_executor_creators_[backend] = std::shared_ptr<
       Creator<IModelExecutor, ModelId, WorkerId, DeviceFlags,
-              const std::unique_ptr<BackendConfig>&, CpuSet, int>>(
+              std::shared_ptr<BackendConfig>, CpuSet, int>>(
       model_executor_creator);
   model_creators_[backend] =
       std::shared_ptr<Creator<IModel, ModelId>>(model_creator);

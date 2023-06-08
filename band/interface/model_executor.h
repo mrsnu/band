@@ -25,7 +25,7 @@ class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(
       ModelId model_id, WorkerId worker_id, DeviceFlags device_flag,
-      const std::unique_ptr<BackendConfig>& backend_config,
+      std::shared_ptr<BackendConfig> backend_config,
       CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlags::All),
       int num_threads = -1)
       : model_id_(model_id),
@@ -56,13 +56,13 @@ class IModelExecutor : public IBackendSpecific {
 
   virtual absl::Status ExecuteSubgraph(const SubgraphKey& key) = 0;
   virtual void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) = 0;
+      std::function<void(const SubgraphKey&)> visitor) = 0;
 
  protected:
   const ModelId model_id_;
   const WorkerId worker_id_;
   const DeviceFlags device_flag_;
-  const std::unique_ptr<BackendConfig>& backend_config_;
+  std::shared_ptr<BackendConfig> backend_config_;
   const CpuSet thread_affinity_mask_;
   const int num_threads_;
 

@@ -29,7 +29,7 @@ class ModelAnalyzer {
   ModelAnalyzer(
       const Context& context, bool need_subgraph,
       SubgraphConfig subgraph_config,
-      std::unique_ptr<BackendConfig>& backend_config,
+      std::shared_ptr<BackendConfig>& backend_config,
       Model* model, BackendType backend_type);
 
   absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>>
@@ -55,7 +55,7 @@ class ModelAnalyzer {
   const Context& context_;
   const bool need_fallback_subgraph_;
   const SubgraphConfig subgraph_config_;
-  const std::unique_ptr<BackendConfig>& backend_config_;
+  std::shared_ptr<BackendConfig> backend_config_;
   const BackendType backend_type_;
   std::shared_ptr<ModelSpec> model_spec_;
 };

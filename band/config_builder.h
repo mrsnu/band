@@ -138,7 +138,7 @@ class BackendConfigBuilder {
   friend class RuntimeConfigBuilder;
 
  public:
-  virtual BackendConfig* Build(
+  virtual std::shared_ptr<BackendConfig> Build(
       ErrorReporter* error_reporter = DefaultErrorReporter()) = 0;
   virtual bool IsValid(
       ErrorReporter* error_reporter = DefaultErrorReporter()) = 0;
@@ -149,7 +149,7 @@ class TfLiteBackendConfigBuilder : public BackendConfigBuilder {
   friend class RuntimeConfigBuilder;
 
  public:
-  BackendConfig* Build(
+  std::shared_ptr<BackendConfig> Build(
       ErrorReporter* error_reporter = DefaultErrorReporter()) override;
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter()) override;
 };
@@ -168,7 +168,7 @@ class GrpcBackendConfigBuilder : public BackendConfigBuilder {
     port_ = port;
     return *this;
   }
-  BackendConfig* Build(
+  std::shared_ptr<BackendConfig> Build(
       ErrorReporter* error_reporter = DefaultErrorReporter()) override;
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter()) override;
 

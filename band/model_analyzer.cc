@@ -158,7 +158,7 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
 ModelAnalyzer::ModelAnalyzer(
     const Context& context, bool need_fallback_subgraph,
     SubgraphConfig subgraph_config,
-    std::unique_ptr<BackendConfig>& backend_config,
+    std::shared_ptr<BackendConfig>& backend_config,
     Model* model, BackendType backend_type)
     : context_(context),
       need_fallback_subgraph_(need_fallback_subgraph),

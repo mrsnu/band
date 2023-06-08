@@ -32,6 +32,15 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+# GRPC backend setting.
+config_setting(
+    name = "grpc",
+    define_values = {
+        "grpc": "true",
+    },
+    visibility = ["//visibility:public"],
+)
+
 # Linux config settings
 config_setting(
     name = "linux",

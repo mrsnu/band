@@ -21,8 +21,8 @@ struct CustomWorkerMockContext : public MockContextBase {
     return &model_spec;
   }
   void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) const override {
-    iterator(SubgraphKey(0, 0));
+      std::function<void(const SubgraphKey&)> visitor) const override {
+    visitor(SubgraphKey(0, 0));
   }
   bool HasSubgraph(const SubgraphKey& key) const override { return true; }
 

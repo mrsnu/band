@@ -9,7 +9,11 @@ band_cc_android_test(
     ],
     deps = [
         "//band:config_builder",
-        "//band/backend/grpc:grpc_backend",
         "@com_google_googletest//:gtest",
-    ],
+    ] + select({
+        "//band:grpc": [
+            "//band/backend/grpc:grpc_backend",
+        ],
+        "//conditions:default": [],
+    }),
 )

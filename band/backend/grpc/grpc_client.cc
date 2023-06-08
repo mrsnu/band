@@ -43,7 +43,7 @@ namespace grpc {
 
 absl::StatusOr<std::vector<band_proto::ModelDescriptor>>
 GrpcClient::GetModelDesc() const {
-  auto status_or_descs = client_.GetModelDesc();
+  auto status_or_descs = client_->GetModelDesc();
   if (!status_or_descs.ok()) {
     return status_or_descs.status();
   }
@@ -52,7 +52,7 @@ GrpcClient::GetModelDesc() const {
 
 absl::Status GrpcClient::CheckModelDesc(
     band_proto::ModelDescriptor model_desc) const {
-  auto status_or_res = client_.CheckModelDesc(model_desc);
+  auto status_or_res = client_->CheckModelDesc(model_desc);
   if (!status_or_res.ok()) {
     return status_or_res.status();
   }
