@@ -74,7 +74,7 @@ absl::Status ResizeOperation::IsValid(const Buffer& input) const {
         "ResizeOperation: Raw buffer format type is not supported.");
   }
 
-  if (dims_.size() != 2) {
+  if (dims_.size() < 2) {
     return absl::InvalidArgumentError(
         "ResizeOperation: invalid dimension size.");
   }

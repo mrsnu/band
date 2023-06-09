@@ -416,44 +416,40 @@ TEST(TFLiteBackend, ClassificationTest) {
 
   Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-
-  EXPECT_TRUE(input_tensor);
+  std::shared_ptr<Buffer> tensor_buffer =
+      Buffer::CreateFromTensor(input_tensor);
 
   ImageProcessorBuilder preprocessor_builder;
   // by default, the image is resized to input size
   absl::StatusOr<std::unique_ptr<Processor>> preprocessor =
-      preprocessor_builder.Build();
-
+      preprocessor_builder.Build(image_buffer.get(), tensor_buffer.get());
   EXPECT_TRUE(preprocessor.ok());
-
-  std::shared_ptr<Buffer> tensor_buffer =
-      Buffer::CreateFromTensor(input_tensor);
-
   EXPECT_TRUE(
       preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
-
+  // confirm that the image is resized to 224x224 and converted to RGB
   Tensor* output_tensor = engine->CreateTensor(
       model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-
-  engine->RequestSync(model.GetId(), {0, false, -1, -1}, {input_tensor},
-                      {output_tensor});
+  EXPECT_TRUE(engine
+                  ->RequestSync(model.GetId(), {0, false, -1, -1},
+                                {input_tensor}, {output_tensor})
+                  .ok());
 
   // TODO: postprocessing library
-  std::vector<float> output_data;
+  std::vector<unsigned char> output_data;
   output_data.resize(output_tensor->GetNumElements());
   memcpy(output_data.data(), output_tensor->GetData(),
-         output_tensor->GetNumElements() * sizeof(float));
+         output_tensor->GetNumElements() * sizeof(unsigned char));
 
   size_t max_index = 0;
-  float max_value = 0;
+  unsigned char max_value = 0;
   for (size_t i = 0; i < output_data.size(); ++i) {
     if (output_data[i] > max_value) {
       max_value = output_data[i];
       max_index = i;
     }
   }
-
-  EXPECT_TRUE(max_index == 285);
+  // tiger cat
+  EXPECT_EQ(max_index, 282);
 }
 }  // namespace test
 }  // namespace band

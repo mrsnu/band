@@ -132,20 +132,24 @@ std::shared_ptr<Buffer> Buffer::CreateFromTensor(
   }
 
   std::vector<DataPlane> data_planes;
-  data_planes.push_back(DataPlane{
-      reinterpret_cast<const unsigned char*>(tensor->GetData()),
-      tensor->GetDims()[0] * tensor->GetPixelBytes(), tensor->GetPixelBytes()});
+  bool is_rgb = dims.size() == 3 && dims[2] == 3;
 
-  // assume the tensor is in NHWC format
-  const BufferFormat buffer_format = tensor->GetNumDims() == 3 && dims[2] == 3
-                                         ? BufferFormat::RGB
-                                         : BufferFormat::Raw;
-  if (buffer_format == BufferFormat::Raw) {
+  if (is_rgb) {
+    // assume the tensor is in NHWC format
+    dims = {dims[1], dims[0]};
+    data_planes.push_back(
+        DataPlane{reinterpret_cast<const unsigned char*>(tensor->GetData()),
+                  dims[0] * 3, 3});  // RGB
+    return std::shared_ptr<Buffer>(new Buffer(
+        dims, data_planes, BufferFormat::RGB, BufferOrientation::TopLeft));
+  } else {
+    // flatten the tensor into single-row data plane
+    data_planes.push_back(
+        DataPlane{reinterpret_cast<const unsigned char*>(tensor->GetData()),
+                  tensor->GetBytes(), tensor->GetPixelBytes()});
+
     return std::shared_ptr<Buffer>(new Buffer(
         dims, data_planes, tensor->GetType(), BufferOrientation::TopLeft));
-  } else {
-    return std::shared_ptr<Buffer>(new Buffer(dims, data_planes, buffer_format,
-                                              BufferOrientation::TopLeft));
   }
 }
 
