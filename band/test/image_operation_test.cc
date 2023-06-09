@@ -54,7 +54,7 @@ TEST(ImageOperationTest, CropOperationImageTest) {
   std::shared_ptr<tensor::Buffer> input_buffer =
       LoadImage("band/test/data/hippo.jpg");
   std::shared_ptr<tensor::Buffer> cropped_buffer =
-      LoadImage("band/test/data/hippo_256.jpg");
+      LoadImage("band/test/data/hippo_crop_256.jpg");
   EXPECT_EQ(crop_op.Process(*input_buffer), absl::OkStatus());
   auto output_buffer = crop_op.GetOutput();
   EXPECT_EQ(output_buffer->GetDimension()[0], 256);
@@ -112,6 +112,25 @@ TEST(ImageOperationTest, RotateImageTest) {
 
   for (size_t i = 0; i < output_buffer2->GetNumElements(); ++i) {
     EXPECT_EQ((*output_buffer2)[0].data[i], (*input_buffer)[0].data[i]);
+  }
+}
+
+TEST(ImageOperationTest, ResizeImageTest) {
+  tensor::ResizeOperation resize_op(256, 256);
+  std::shared_ptr<tensor::Buffer> input_buffer =
+      LoadImage("band/test/data/hippo.jpg");
+  EXPECT_EQ(resize_op.Process(*input_buffer), absl::OkStatus());
+  auto output_buffer = resize_op.GetOutput();
+
+  EXPECT_EQ(output_buffer->GetDimension()[0], 256);
+  EXPECT_EQ(output_buffer->GetDimension()[1], 256);
+
+  std::shared_ptr<tensor::Buffer> resized_buffer =
+      LoadImage("band/test/data/hippo_resize_256.jpg");
+
+  // give some tolerance
+  for (size_t i = 0; i < output_buffer->GetNumElements(); ++i) {
+    EXPECT_NEAR((*output_buffer)[0].data[i], (*resized_buffer)[0].data[i], 3);
   }
 }
 

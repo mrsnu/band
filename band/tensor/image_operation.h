@@ -24,6 +24,7 @@ class CropOperation : public IOperation {
 
 class ResizeOperation : public IOperation {
  public:
+  ResizeOperation(size_t width, size_t height) : dims_({width, height}) {}
   ResizeOperation(const std::vector<size_t>& dims) : dims_(dims) {}
 
   virtual IOperation* Clone() const override {

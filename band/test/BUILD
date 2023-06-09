@@ -138,7 +138,8 @@ band_cc_android_test(
     ],
     data = [
         "//band/test:data/hippo.jpg",
-        "//band/test:data/hippo_256.jpg",
+        "//band/test:data/hippo_crop_256.jpg",
+        "//band/test:data/hippo_resize_256.jpg",
     ],
     deps = [
         "//band/tensor:buffer",
