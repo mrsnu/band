@@ -20,14 +20,13 @@ tflite-support/tensorflow_lite_support/cc/task/vision/utils
 by Jingyu Lee <dostos10@gmail.com>
 */
 
-#ifndef BAND_TENSOR_LIBYUV_OPERATION_H_
-#define BAND_TENSOR_LIBYUV_OPERATION_H_
+#ifndef BAND_BUFFER_LIBYUV_OPERATION_H_
+#define BAND_BUFFER_LIBYUV_OPERATION_H_
 
 #include "absl/status/status.h"
-#include "band/tensor/buffer.h"
+#include "band/buffer/buffer.h"
 
 namespace band {
-namespace tensor {
 
 class LibyuvBufferUtils {
  public:
@@ -64,8 +63,6 @@ class LibyuvBufferUtils {
   // Grayscale format cannot be converted to other formats.
   static absl::Status Convert(const Buffer& buffer, Buffer& output_buffer);
 };
-
-}  // namespace tensor
 }  // namespace band
 
-#endif  // BAND_TENSOR_LIBYUV_OPERATION_H_
+#endif  // BAND_BUFFER_LIBYUV_OPERATION_H_

@@ -1,4 +1,4 @@
-#include "band/tensor/tensor_ring_buffer.h"
+#include "band/tensor_ring_buffer.h"
 
 #include <cassert>
 #include <cstring>  // memcpy
@@ -8,7 +8,7 @@
 #include "band/error_reporter.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
-#include "band/tensor/tensor.h"
+#include "band/tensor.h"
 
 namespace band {
 TensorRingBuffer::TensorRingBuffer(

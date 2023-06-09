@@ -1,11 +1,10 @@
-#ifndef BAND_TENSOR_IMAGE_OPERATION_H
-#define BAND_TENSOR_IMAGE_OPERATION_H
+#ifndef BAND_BUFFER_IMAGE_OPERATION_H
+#define BAND_BUFFER_IMAGE_OPERATION_H
 #include "absl/status/status.h"
-#include "band/tensor/buffer.h"
-#include "band/tensor/operation.h"
+#include "band/buffer/buffer.h"
+#include "band/buffer/operation.h"
 
 namespace band {
-namespace tensor {
 
 class CropOperation : public IOperation {
  public:
@@ -78,8 +77,6 @@ class ConvertOperation : public IOperation {
   virtual absl::Status Process(const Buffer& input) override;
   virtual absl::Status IsValid(const Buffer& input) const override;
 };
-
-}  // namespace tensor
 }  // namespace band
 
-#endif  // BAND_TENSOR_IMAGE_OPERATION_H
+#endif  // BAND_BUFFER_IMAGE_OPERATION_H

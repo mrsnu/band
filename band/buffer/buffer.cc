@@ -1,10 +1,9 @@
-#include "band/tensor/buffer.h"
+#include "band/buffer/buffer.h"
 
 #include "band/logger.h"
 #include "buffer.h"
 
 namespace band {
-namespace tensor {
 
 Buffer::~Buffer() {
   if (owns_data_) {
@@ -140,10 +139,14 @@ std::shared_ptr<Buffer> Buffer::CreateFromTensor(
   // assume the tensor is in NHWC format
   const BufferFormat buffer_format = tensor->GetNumDims() == 3 && dims[2] == 3
                                          ? BufferFormat::RGB
-                                         : BufferFormat::Custom;
-
-  return std::shared_ptr<Buffer>(
-      new Buffer(dims, data_planes, buffer_format, BufferOrientation::TopLeft));
+                                         : BufferFormat::Raw;
+  if (buffer_format == BufferFormat::Raw) {
+    return std::shared_ptr<Buffer>(new Buffer(
+        dims, data_planes, tensor->GetType(), BufferOrientation::TopLeft));
+  } else {
+    return std::shared_ptr<Buffer>(new Buffer(dims, data_planes, buffer_format,
+                                              BufferOrientation::TopLeft));
+  }
 }
 
 std::shared_ptr<Buffer> Buffer::CreateEmpty(size_t width, size_t height,
@@ -169,9 +172,9 @@ std::shared_ptr<Buffer> Buffer::CreateEmpty(size_t width, size_t height,
       break;
     }
 
-    case BufferFormat::Custom: {
+    case BufferFormat::Raw: {
       BAND_LOG_PROD(BAND_LOG_ERROR,
-                    "Custom format type requires external input to create "
+                    "Raw format type requires external input to create "
                     "empty buffer");
       return nullptr;
     }
@@ -189,6 +192,14 @@ Buffer::Buffer(std::vector<size_t> dimension,
       buffer_format_(buffer_format),
       orientation_(orientation),
       owns_data_(owns_data) {}
+
+Buffer::Buffer(std::vector<size_t> dimension,
+               std::vector<DataPlane> data_planes, DataType data_type,
+               BufferOrientation orientation, bool owns_data)
+    : Buffer(dimension, data_planes, BufferFormat::Raw, orientation,
+             owns_data) {
+  data_type_ = data_type;
+}
 
 size_t Buffer::GetPixelStrideBytes(BufferFormat buffer_format) {
   switch (buffer_format) {
@@ -289,7 +300,7 @@ size_t Buffer::GetNumElements() const {
 }
 
 size_t Buffer::GetPixelBytes() const {
-  if (buffer_format_ == BufferFormat::Custom) {
+  if (buffer_format_ == BufferFormat::Raw) {
     // custom format type has only one data plane
     return data_planes_[0].pixel_stride_bytes;
   } else {
@@ -298,6 +309,8 @@ size_t Buffer::GetPixelBytes() const {
 }
 
 size_t Buffer::GetBytes() const { return GetPixelBytes() * GetNumElements(); }
+
+DataType Buffer::GetDataType() const { return data_type_; }
 
 BufferFormat Buffer::GetBufferFormat() const { return buffer_format_; }
 
@@ -321,6 +334,4 @@ bool Buffer::IsBufferFormatCompatible(const Buffer& rhs) const {
       return buffer_format_ == rhs.buffer_format_;
   }
 }
-
-}  // namespace tensor
 }  // namespace band

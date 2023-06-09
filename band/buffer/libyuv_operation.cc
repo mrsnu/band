@@ -5,7 +5,7 @@ tflite-support/tensorflow_lite_support/cc/task/vision/utils
 by Jingyu Lee <dostos10@gmail.com>
 */
 
-#include "band/tensor/libyuv_operation.h"
+#include "band/buffer/libyuv_operation.h"
 
 #include <stdint.h>
 
@@ -16,12 +16,11 @@ by Jingyu Lee <dostos10@gmail.com>
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "band/buffer/buffer.h"
 #include "band/common.h"
-#include "band/tensor/buffer.h"
 #include "libyuv.h"
 
 namespace band {
-namespace tensor {
 
 using ::absl::StatusCode;
 
@@ -1711,5 +1710,5 @@ absl::Status LibyuvBufferUtils::Convert(const Buffer& buffer,
           "Format %s is not supported.", GetName(buffer.GetBufferFormat())));
   }
 }
-}  // namespace tensor
+
 }  // namespace band

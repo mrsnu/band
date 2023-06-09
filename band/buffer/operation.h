@@ -1,12 +1,10 @@
-#ifndef BAND_TENSOR_OPERATION_H
-#define BAND_TENSOR_OPERATION_H
+#ifndef BAND_BUFFER_OPERATION_H
+#define BAND_BUFFER_OPERATION_H
 
 #include "absl/status/status.h"
-#include "band/tensor/buffer.h"
+#include "band/buffer/buffer.h"
 
 namespace band {
-namespace tensor {
-
 // Interface for buffer operations such as crop, resize, rotate, flip, convert
 // format, etc. Each operation should be able to validate an input buffer and
 // process the input buffer to generate the output buffer.
@@ -29,7 +27,6 @@ class IOperation {
  protected:
   std::shared_ptr<Buffer> output_;
 };
-}  // namespace tensor
 }  // namespace band
 
 #endif

@@ -54,7 +54,8 @@ BAND_CAPI_EXPORT extern BandStatus BandModelAddFromFile(
     BandModel* model, BandBackendType backend_type, const char* model_path);
 
 /* tensor */
-// Band intetionally `only` expose getters to ensure
+// Band intetionally `only` expose getters to ensure the tensor shape is
+// immutable from C API.
 BAND_CAPI_EXPORT extern void BandTensorDelete(BandTensor* tensor);
 BAND_CAPI_EXPORT extern BandType BandTensorGetType(BandTensor* tensor);
 BAND_CAPI_EXPORT extern void* BandTensorGetData(BandTensor* tensor);
@@ -62,14 +63,15 @@ BAND_CAPI_EXPORT extern size_t BandTensorGetNumDims(BandTensor* tensor);
 BAND_CAPI_EXPORT extern const int* BandTensorGetDims(BandTensor* tensor);
 BAND_CAPI_EXPORT extern size_t BandTensorGetBytes(BandTensor* tensor);
 BAND_CAPI_EXPORT extern const char* BandTensorGetName(BandTensor* tensor);
-BAND_CAPI_EXPORT extern BandQuantizationType BandTensorGetQuantizationType(BandTensor* tensor);
-BAND_CAPI_EXPORT extern void* BandTensorGetQuantizationParams(BandTensor* tensor);
+BAND_CAPI_EXPORT extern BandQuantizationType BandTensorGetQuantizationType(
+    BandTensor* tensor);
+BAND_CAPI_EXPORT extern void* BandTensorGetQuantizationParams(
+    BandTensor* tensor);
 
 /* request option */
 BAND_CAPI_EXPORT extern BandRequestOption BandRequestOptionGetDefault();
 
 /* engine */
-// TODO: Error reporter
 BAND_CAPI_EXPORT extern BandEngine* BandEngineCreate(BandConfig* config);
 BAND_CAPI_EXPORT extern void BandEngineDelete(BandEngine* engine);
 BAND_CAPI_EXPORT extern BandStatus BandEngineRegisterModel(BandEngine* engine,
@@ -82,14 +84,6 @@ BAND_CAPI_EXPORT extern int BandEngineGetNumOutputTensors(BandEngine* engine,
 BAND_CAPI_EXPORT extern int BandEngineGetNumWorkers(BandEngine* engine);
 BAND_CAPI_EXPORT extern BandDeviceFlags BandEngineGetWorkerDevice(
     BandEngine* engine, int worker_id);
-
-/*
-
-BandTensor* BandCreateTensorFromImage(args..)
-bool Band
-
-
-*/
 
 // Create a input tensor for given model's n'th index
 BAND_CAPI_EXPORT
@@ -154,11 +148,11 @@ typedef BandStatus (*PFN_BandEngineRequestSync)(BandEngine*, BandModel*,
 typedef BandRequestHandle (*PFN_BandEngineRequestAsync)(BandEngine*, BandModel*,
                                                         BandTensor**);
 typedef BandStatus (*PFN_BandEngineRequestSyncOptions)(BandEngine*, BandModel*,
-                                                BandRequestOption,
-                                                BandTensor**, BandTensor**);
-typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(BandEngine*, BandModel*,
-                                                        BandRequestOption,
-                                                        BandTensor**);
+                                                       BandRequestOption,
+                                                       BandTensor**,
+                                                       BandTensor**);
+typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(
+    BandEngine*, BandModel*, BandRequestOption, BandTensor**);
 typedef BandStatus (*PFN_BandEngineWait)(BandEngine*, BandRequestHandle,
                                          BandTensor**, size_t);
 typedef void (*PFN_BandEngineSetOnEndRequest)(BandEngine*,

@@ -28,7 +28,7 @@ size_t GetSize<DataType>() {
 
 template <>
 size_t GetSize<BufferFormat>() {
-  return static_cast<size_t>(BufferFormat::Custom) + 1;
+  return static_cast<size_t>(BufferFormat::Raw) + 1;
 }
 
 template <>
@@ -226,7 +226,7 @@ std::string GetName(BufferFormat format_type) {
     case BufferFormat::NV12: {
       return "NV12";
     } break;
-    case BufferFormat::Custom: {
+    case BufferFormat::Raw: {
       return "CUSTOM";
     } break;
   }
@@ -244,7 +244,7 @@ BufferFormat FromString(std::string str) {
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %s. Fallback to Custom",
                 str.c_str());
-  return BufferFormat::Custom;
+  return BufferFormat::Raw;
 }
 
 std::string GetName(BufferOrientation format_type) {

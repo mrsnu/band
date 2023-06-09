@@ -1,5 +1,5 @@
-#ifndef BAND_TENSOR_BUFFER_H_
-#define BAND_TENSOR_BUFFER_H_
+#ifndef BAND_BUFFER_BUFFER_H_
+#define BAND_BUFFER_BUFFER_H_
 
 #include <memory>
 
@@ -7,9 +7,11 @@
 #include "band/interface/tensor.h"
 
 namespace band {
-namespace tensor {
 
-// buffer with multiple data planes. Each data plane has its own demension.
+// External buffer with multiple data planes. Each data plane has its own
+// demension. The main purpose of this class is to provide a unified interface
+// for external user to pass in buffer data to the engine. The engine will then
+// convert the buffer to the internal tensor format.
 class Buffer {
  public:
   struct DataPlane {
@@ -23,11 +25,13 @@ class Buffer {
       const std::vector<DataPlane>& data_planes,
       const std::vector<size_t>& dims, BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft);
+
   static std::shared_ptr<Buffer> CreateFromRaw(
       const unsigned char* data, size_t width, size_t height,
       BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft,
       bool owns_data = false);
+
   static std::shared_ptr<Buffer> CreateFromYUVPlanes(
       const unsigned char* y_data, const unsigned char* u_data,
       const unsigned char* v_data, size_t width, size_t height,
@@ -35,8 +39,10 @@ class Buffer {
       BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft,
       bool owns_data = false);
+
   static std::shared_ptr<Buffer> CreateFromTensor(
       const interface::ITensor* tensor);
+
   static std::shared_ptr<Buffer> CreateEmpty(
       size_t width, size_t height, BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft);
@@ -48,6 +54,7 @@ class Buffer {
   size_t GetNumElements() const;
   size_t GetPixelBytes() const;
   size_t GetBytes() const;
+  DataType GetDataType() const;
   BufferFormat GetBufferFormat() const;
   BufferOrientation GetOrientation() const;
 
@@ -65,6 +72,9 @@ class Buffer {
   Buffer(std::vector<size_t> dimension, std::vector<DataPlane> data_planes,
          BufferFormat buffer_format, BufferOrientation orientation,
          bool owns_data = false);
+  Buffer(std::vector<size_t> dimension, std::vector<DataPlane> data_planes,
+         DataType data_type, BufferOrientation orientation,
+         bool owns_data = false);
 
   static size_t GetPixelStrideBytes(BufferFormat buffer_format);
   static size_t GetSize(const std::vector<size_t>& dims);
@@ -73,9 +83,10 @@ class Buffer {
   const std::vector<size_t> dimension_;
   std::vector<DataPlane> data_planes_;
   BufferFormat buffer_format_;
+  DataType data_type_ = DataType::UInt8;
   BufferOrientation orientation_;
 };
-}  // namespace tensor
+
 }  // namespace band
 
 #endif

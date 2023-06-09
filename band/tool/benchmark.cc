@@ -10,7 +10,7 @@
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/profiler.h"
-#include "band/tensor/tensor.h"
+#include "band/tensor.h"
 #include "band/time.h"
 #include "benchmark.h"
 

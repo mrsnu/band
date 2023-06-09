@@ -1,9 +1,8 @@
-#include "band/tensor/tensor.h"
+#include "band/tensor.h"
 
 #include <string.h>
 
 #include "band/logger.h"
-#include "band/tensor/buffer.h"
 
 namespace band {
 Tensor::Tensor(ITensor* tensor_view, bool copy_data)

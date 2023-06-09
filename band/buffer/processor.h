@@ -1,15 +1,14 @@
-#ifndef BAND_TENSOR_PROCESSOR_H
-#define BAND_TENSOR_PROCESSOR_H
+#ifndef BAND_BUFFER_PROCESSOR_H
+#define BAND_BUFFER_PROCESSOR_H
 
 #include "absl/status/statusor.h"
-#include "band/tensor/operation.h"
+#include "band/buffer/operation.h"
 
 namespace band {
-namespace tensor {
 
-class IProcessor;
-class IOperation;
 class Buffer;
+class IOperation;
+class Processor;
 
 class IProcessorBuilder {
  public:
@@ -19,7 +18,7 @@ class IProcessorBuilder {
   // The input and output buffers are used to validate the operations.
   // If the input and output buffers are nullptr, this builder only
   // validates the connections between operations.
-  virtual absl::StatusOr<std::unique_ptr<IProcessor>> Build(
+  virtual absl::StatusOr<std::unique_ptr<Processor>> Build(
       const Buffer* input = nullptr, Buffer* output = nullptr) = 0;
 
   // Add an operation to the processor.
@@ -30,7 +29,7 @@ class IProcessorBuilder {
   }
 
  protected:
-  std::unique_ptr<IProcessor> CreateProcessor(
+  std::unique_ptr<Processor> CreateProcessor(
       std::vector<IOperation*> operations);
 
   IProcessorBuilder(const IProcessorBuilder&) = delete;
@@ -39,7 +38,7 @@ class IProcessorBuilder {
   std::vector<std::unique_ptr<IOperation>> operations_;
 };
 
-// A processor is a collection of operations.
+// A processor has a collection of sequential operations.
 // The processor is responsible for validating the operations and
 // executing them in the correct order.
 // TODO(dostos)
@@ -48,21 +47,19 @@ class IProcessorBuilder {
 // 3. Engine should include pre/post processing task per each job, and
 //    let a planner to include the pre/post processing time if needed.
 
-class IProcessor {
+class Processor {
  public:
-  virtual ~IProcessor();
+  virtual ~Processor();
   absl::Status Process(const Buffer& input, Buffer& output);
 
  protected:
   friend class IProcessorBuilder;
-  IProcessor(std::vector<IOperation*> operations);
-  IProcessor(const IProcessor&) = delete;
-  IProcessor& operator=(const IProcessor&) = delete;
+  Processor(std::vector<IOperation*> operations);
+  Processor(const Processor&) = delete;
+  Processor& operator=(const Processor&) = delete;
 
   std::vector<IOperation*> operations_;
 };
-
-}  // namespace tensor
 }  // namespace band
 
 #endif

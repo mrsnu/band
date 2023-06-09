@@ -1,13 +1,12 @@
 
-#include "band/tensor/image_processor.h"
+#include "band/buffer/image_processor.h"
 
-#include "band/tensor/buffer.h"
-#include "band/tensor/image_operation.h"
+#include "band/buffer/buffer.h"
+#include "band/buffer/image_operation.h"
 
 namespace band {
-namespace tensor {
 
-absl::StatusOr<std::unique_ptr<IProcessor>> ImageProcessorBuilder::Build(
+absl::StatusOr<std::unique_ptr<Processor>> ImageProcessorBuilder::Build(
     const Buffer* input, Buffer* output) {
   bool requires_validation = input != nullptr && output != nullptr;
 
@@ -19,7 +18,7 @@ absl::StatusOr<std::unique_ptr<IProcessor>> ImageProcessorBuilder::Build(
   if (operations_.empty() && requires_validation) {
     operations.push_back(new ResizeOperation(output->GetDimension()));
   }
-  std::unique_ptr<IProcessor> processor = CreateProcessor(operations);
+  std::unique_ptr<Processor> processor = CreateProcessor(operations);
   if (requires_validation) {
     absl::Status status = processor->Process(*input, *output);
     if (!status.ok()) {
@@ -29,5 +28,4 @@ absl::StatusOr<std::unique_ptr<IProcessor>> ImageProcessorBuilder::Build(
   return std::move(processor);
 }
 
-}  // namespace tensor
 }  // namespace band

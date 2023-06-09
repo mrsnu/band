@@ -99,6 +99,7 @@ DataType FromString(std::string str);
 
 // NOTE: Please update the GetSize() function when adding a new enum type.
 enum class BufferFormat : size_t {
+  // image format
   GrayScale = 0,
   RGB = 1,
   RGBA = 2,
@@ -106,7 +107,9 @@ enum class BufferFormat : size_t {
   YV21 = 4,
   NV21 = 5,
   NV12 = 6,
-  Custom = 7
+  // raw format, from tensor
+  // internal format follows DataType
+  Raw = 7
 };
 
 template <>

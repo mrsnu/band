@@ -13,7 +13,7 @@
 #include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
-#include "band/tensor/tensor_ring_buffer.h"
+#include "band/tensor_ring_buffer.h"
 
 namespace band {
 

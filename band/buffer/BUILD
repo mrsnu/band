@@ -32,33 +32,3 @@ band_cc_library(
         "@libyuv",
     ],
 )
-
-band_cc_library(
-    name = "tensor",
-    srcs = [
-        "tensor.cc",
-    ],
-    hdrs = [
-        "tensor.h",
-    ],
-    deps = [
-        ":buffer",
-        "//band:common",
-        "//band:interface",
-    ],
-)
-
-band_cc_library(
-    name = "tensor_ring_buffer",
-    srcs = [
-        "tensor_ring_buffer.cc",
-    ],
-    hdrs = [
-        "tensor_ring_buffer.h",
-    ],
-    deps = [
-        ":tensor",
-        "//band:common",
-        "//band:interface",
-    ],
-)

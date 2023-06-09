@@ -15,9 +15,10 @@
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/model.h"
-#include "band/tensor/tensor.h"
+#include "band/tensor.h"
 
 namespace band {
+namespace test {
 using namespace interface;
 
 struct ModelPartitionTestsFixture
@@ -81,6 +82,7 @@ INSTANTIATE_TEST_SUITE_P(
             SubgraphPreparationType::MergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
                         SubgraphPreparationType::MergeUnitSubgraph)));
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

@@ -3,7 +3,7 @@
 
 #include "band/java/src/main/native/jni_utils.h"
 #include "band/logger.h"
-#include "band/tensor/tensor.h"
+#include "band/tensor.h"
 
 using band::Tensor;
 using band::jni::ConvertLongToTensor;

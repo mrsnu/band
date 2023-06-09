@@ -1,11 +1,10 @@
-#include "band/tensor/image_operation.h"
+#include "band/buffer/image_operation.h"
 
 #include "absl/strings/str_format.h"
-#include "band/tensor/libyuv_operation.h"
-#include "band/tensor/operation.h"
+#include "band/buffer/libyuv_operation.h"
+#include "band/buffer/operation.h"
 
 namespace band {
-namespace tensor {
 
 absl::Status CropOperation::Process(const Buffer& input) {
   if (!output_) {
@@ -25,9 +24,9 @@ absl::Status CropOperation::Process(const Buffer& input) {
 }
 
 absl::Status CropOperation::IsValid(const Buffer& input) const {
-  if (input.GetBufferFormat() == BufferFormat::Custom) {
+  if (input.GetBufferFormat() == BufferFormat::Raw) {
     return absl::InvalidArgumentError(
-        "CropOperation: Custom buffer format type is not supported.");
+        "CropOperation: Raw buffer format type is not supported.");
   }
 
   if (x0_ < 0 || y0_ < 0 || x1_ < 0 || y1_ < 0) {
@@ -53,7 +52,7 @@ absl::Status CropOperation::IsValid(const Buffer& input) const {
   }
 
   return absl::OkStatus();
-}  // namespace tensor
+}  // namespace buffer
 
 absl::Status ResizeOperation::Process(const Buffer& input) {
   if (!output_) {
@@ -70,9 +69,9 @@ absl::Status ResizeOperation::Process(const Buffer& input) {
 }
 
 absl::Status ResizeOperation::IsValid(const Buffer& input) const {
-  if (input.GetBufferFormat() == BufferFormat::Custom) {
+  if (input.GetBufferFormat() == BufferFormat::Raw) {
     return absl::InvalidArgumentError(
-        "ResizeOperation: Custom buffer format type is not supported.");
+        "ResizeOperation: Raw buffer format type is not supported.");
   }
 
   if (dims_.size() != 2) {
@@ -137,9 +136,9 @@ absl::Status RotateOperation::Process(const Buffer& input) {
 
 absl::Status RotateOperation::IsValid(const Buffer& input) const {
   if (output_) {
-    if (input.GetBufferFormat() == BufferFormat::Custom) {
+    if (input.GetBufferFormat() == BufferFormat::Raw) {
       return absl::InvalidArgumentError(
-          "RotateOperation: Custom buffer format type is not supported.");
+          "RotateOperation: Raw buffer format type is not supported.");
     }
 
     if (!input.IsBufferFormatCompatible(*output_)) {
@@ -244,5 +243,4 @@ absl::Status ConvertOperation::IsValid(const Buffer& input) const {
   }
 }
 
-}  // namespace tensor
 }  // namespace band

@@ -15,7 +15,7 @@
 #include "band/model_analyzer.h"
 #include "band/model_spec.h"
 #include "band/planner.h"
-#include "band/tensor/tensor.h"
+#include "band/tensor.h"
 #include "band/worker.h"
 
 

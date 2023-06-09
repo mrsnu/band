@@ -9,7 +9,7 @@
 #include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/model.h"
-#include "band/tensor/tensor.h"
+#include "band/tensor.h"
 
 namespace band {
 namespace jni {
