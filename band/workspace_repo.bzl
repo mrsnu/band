@@ -36,6 +36,14 @@ def workspace():
     )
 
     http_archive(
+        name = "stblib",
+        strip_prefix = "stb-b42009b3b9d4ca35bc703f5310eedc74f584be58",
+        sha256 = "13a99ad430e930907f5611325ec384168a958bf7610e63e60e2fd8e7b7379610",
+        urls = ["https://github.com/nothings/stb/archive/b42009b3b9d4ca35bc703f5310eedc74f584be58.tar.gz"],
+        build_file = Label("//third_party/stblib:BUILD"),
+    )
+
+    http_archive(
         name = "libyuv",
         urls = ["https://chromium.googlesource.com/libyuv/libyuv/+archive/39240f7149cffde62e3620344d222c8ab2c21178.tar.gz"],
         # Adding the constrain of sha256 and strip_prefix will cause failure as of

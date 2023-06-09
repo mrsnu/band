@@ -13,20 +13,20 @@ Buffer::~Buffer() {
   }
 }
 
-std::unique_ptr<Buffer> Buffer::CreateFromPlanes(
+std::shared_ptr<Buffer> Buffer::CreateFromPlanes(
     const std::vector<DataPlane>& data_planes, const std::vector<size_t>& dims,
     BufferFormat buffer_format, BufferOrientation orientation) {
-  return std::unique_ptr<Buffer>(
+  return std::shared_ptr<Buffer>(
       new Buffer(dims, data_planes, buffer_format, orientation));
 }
 
-std::unique_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
+std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
                                               size_t width, size_t height,
                                               BufferFormat buffer_format,
                                               BufferOrientation orientation,
                                               bool owns_data) {
   if (buffer_format <= BufferFormat::RGBA) {
-    return std::unique_ptr<Buffer>(new Buffer(
+    return std::shared_ptr<Buffer>(new Buffer(
         std::vector<size_t>{width, height},
         std::vector<DataPlane>{{data,
                                 width * GetPixelStrideBytes(buffer_format),
@@ -78,7 +78,7 @@ std::unique_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
   }
 }
 
-std::unique_ptr<Buffer> Buffer::CreateFromYUVPlanes(
+std::shared_ptr<Buffer> Buffer::CreateFromYUVPlanes(
     const unsigned char* y_data, const unsigned char* u_data,
     const unsigned char* v_data, size_t width, size_t height,
     size_t row_stride_y, size_t row_stride_uv, size_t pixel_stride_uv,
@@ -100,12 +100,12 @@ std::unique_ptr<Buffer> Buffer::CreateFromYUVPlanes(
     return nullptr;
   }
 
-  return std::unique_ptr<Buffer>(new Buffer(std::vector<size_t>{width, height},
+  return std::shared_ptr<Buffer>(new Buffer(std::vector<size_t>{width, height},
                                             data_planes, buffer_format,
                                             orientation, owns_data));
 }
 
-std::unique_ptr<Buffer> Buffer::CreateFromTensor(
+std::shared_ptr<Buffer> Buffer::CreateFromTensor(
     const interface::ITensor* tensor) {
   if (tensor == nullptr) {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor is null");
@@ -142,11 +142,11 @@ std::unique_ptr<Buffer> Buffer::CreateFromTensor(
                                          ? BufferFormat::RGB
                                          : BufferFormat::Custom;
 
-  return std::unique_ptr<Buffer>(
+  return std::shared_ptr<Buffer>(
       new Buffer(dims, data_planes, buffer_format, BufferOrientation::TopLeft));
 }
 
-std::unique_ptr<Buffer> Buffer::CreateEmpty(size_t width, size_t height,
+std::shared_ptr<Buffer> Buffer::CreateEmpty(size_t width, size_t height,
                                             BufferFormat buffer_format,
                                             BufferOrientation orientation) {
   size_t total_bytes = GetSize({width, height});
@@ -249,6 +249,11 @@ size_t Buffer::GetBufferByteSize(const std::vector<size_t>& dims,
     default:
       return GetSize(dims) * GetPixelStrideBytes(buffer_format);
   }
+}
+
+std::vector<size_t> Buffer::GetCropDimension(size_t x0, size_t x1, size_t y0,
+                                             size_t y1) {
+  return {x1 - x0 + 1, y1 - y0 + 1};
 }
 
 size_t Buffer::GetSize(const std::vector<size_t>& dims) {

@@ -8,9 +8,12 @@ namespace band {
 namespace tensor {
 
 absl::Status CropOperation::Process(const Buffer& input) {
-  if (!output_.get()) {
-    output_ = Buffer::CreateEmpty(x1_ - x0_, y1_ - y0_, input.GetBufferFormat(),
-                                  input.GetOrientation());
+  if (!output_) {
+    const std::vector<size_t> crop_dimension =
+        Buffer::GetCropDimension(x0_, x1_, y0_, y1_);
+    output_ =
+        Buffer::CreateEmpty(crop_dimension[0], crop_dimension[1],
+                            input.GetBufferFormat(), input.GetOrientation());
   }
 
   absl::Status status = IsValid(input);
@@ -42,18 +45,18 @@ absl::Status CropOperation::IsValid(const Buffer& input) const {
         "CropOperation: crop region is out of bounds.");
   }
 
-  if (output_.get()) {
-    if (input.IsBufferFormatCompatible(*output_)) {
-      return absl::InvalidArgumentError(
-          "CropOperation: output buffer format type is not compatible.");
-    }
+  if (output_ && !input.IsBufferFormatCompatible(*output_)) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "CropOperation: output buffer format type is not "
+        "compatible. %s vs %s",
+        GetName(input.GetBufferFormat()), GetName(output_->GetBufferFormat())));
   }
 
   return absl::OkStatus();
-}
+}  // namespace tensor
 
 absl::Status ResizeOperation::Process(const Buffer& input) {
-  if (!output_.get()) {
+  if (!output_) {
     output_ = Buffer::CreateEmpty(dims_[0], dims_[1], input.GetBufferFormat(),
                                   input.GetOrientation());
   }
@@ -82,7 +85,7 @@ absl::Status ResizeOperation::IsValid(const Buffer& input) const {
         "ResizeOperation: invalid dimension value.");
   }
 
-  if (output_.get()) {
+  if (output_) {
     switch (input.GetBufferFormat()) {
       case BufferFormat::GrayScale:
       case BufferFormat::RGB:
@@ -113,7 +116,7 @@ absl::Status ResizeOperation::IsValid(const Buffer& input) const {
 }
 
 absl::Status RotateOperation::Process(const Buffer& input) {
-  if (!output_.get()) {
+  if (!output_) {
     const bool is_dimension_change = (angle_deg_ / 90) % 2 == 1;
     const size_t width =
         is_dimension_change ? input.GetDimension()[1] : input.GetDimension()[0];
@@ -133,13 +136,13 @@ absl::Status RotateOperation::Process(const Buffer& input) {
 }
 
 absl::Status RotateOperation::IsValid(const Buffer& input) const {
-  if (output_.get()) {
+  if (output_) {
     if (input.GetBufferFormat() == BufferFormat::Custom) {
       return absl::InvalidArgumentError(
           "RotateOperation: Custom buffer format type is not supported.");
     }
 
-    if (input.IsBufferFormatCompatible(*output_)) {
+    if (!input.IsBufferFormatCompatible(*output_)) {
       return absl::InvalidArgumentError(
           "RotateOperation: output buffer format type is not compatible.");
     }
@@ -165,7 +168,7 @@ absl::Status RotateOperation::IsValid(const Buffer& input) const {
 }
 
 absl::Status FlipOperation::Process(const Buffer& input) {
-  if (!output_.get()) {
+  if (!output_) {
     output_ =
         Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
                             input.GetBufferFormat(), input.GetOrientation());
@@ -181,19 +184,17 @@ absl::Status FlipOperation::Process(const Buffer& input) {
 }
 
 absl::Status FlipOperation::IsValid(const Buffer& input) const {
-  if (output_.get()) {
-    if (input.IsBufferFormatCompatible(*output_)) {
-      return absl::InvalidArgumentError(
-          "FlipOperation: output buffer format type is not compatible.");
-    }
+  if (output_ && !input.IsBufferFormatCompatible(*output_)) {
+    return absl::InvalidArgumentError(
+        "FlipOperation: output buffer format type is not compatible.");
+  }
 
-    const auto& input_dims = input.GetDimension();
-    const auto& output_dims = output_->GetDimension();
-    for (size_t i = 0; i < input_dims.size(); ++i) {
-      if (input_dims[i] != output_dims[i]) {
-        return absl::InvalidArgumentError(
-            "FlipOperation: input and output buffer dimensions must be same.");
-      }
+  const auto& input_dims = input.GetDimension();
+  const auto& output_dims = output_->GetDimension();
+  for (size_t i = 0; i < input_dims.size(); ++i) {
+    if (input_dims[i] != output_dims[i]) {
+      return absl::InvalidArgumentError(
+          "FlipOperation: input and output buffer dimensions must be same.");
     }
   }
 
@@ -210,7 +211,7 @@ absl::Status ConvertOperation::Process(const Buffer& input) {
 }
 
 absl::Status ConvertOperation::IsValid(const Buffer& input) const {
-  if (output_.get()) {
+  if (output_) {
     if (input.GetBufferFormat() == output_->GetBufferFormat()) {
       return absl::InvalidArgumentError("Formats must be different.");
     }

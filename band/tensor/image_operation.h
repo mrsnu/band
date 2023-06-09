@@ -36,6 +36,8 @@ class ResizeOperation : public IOperation {
   std::vector<size_t> dims_;
 };
 
+// RotateOperation rotates the input buffer by the specified angle in degrees
+// (counter-clockwise). The output buffer will be created automatically.
 class RotateOperation : public IOperation {
  public:
   RotateOperation(int angle_deg) : angle_deg_(angle_deg) {}
@@ -67,16 +69,13 @@ class FlipOperation : public IOperation {
 
 class ConvertOperation : public IOperation {
  public:
-  ConvertOperation(BufferFormat format_type) : format_type_(format_type) {}
+  ConvertOperation() = default;
 
   virtual IOperation* Clone() const override {
     return new ConvertOperation(*this);
   }
   virtual absl::Status Process(const Buffer& input) override;
   virtual absl::Status IsValid(const Buffer& input) const override;
-
- private:
-  BufferFormat format_type_;
 };
 
 }  // namespace tensor

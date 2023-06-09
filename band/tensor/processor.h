@@ -11,19 +11,15 @@ class IProcessor;
 class IOperation;
 class Buffer;
 
-template <typename ProcessorType>
 class IProcessorBuilder {
  public:
-  IProcessorBuilder() {
-    static_assert(std::is_base_of<IProcessor, ProcessorType>::value,
-                  "ProcessorType must be derived from IProcessor.");
-  }
+  IProcessorBuilder() = default;
   virtual ~IProcessorBuilder() = default;
   // Build a processor from the operations added to this builder.
   // The input and output buffers are used to validate the operations.
   // If the input and output buffers are nullptr, this builder only
   // validates the connections between operations.
-  virtual absl::StatusOr<std::unique_ptr<ProcessorType>> Build(
+  virtual absl::StatusOr<std::unique_ptr<IProcessor>> Build(
       const Buffer* input = nullptr, Buffer* output = nullptr) = 0;
 
   // Add an operation to the processor.
@@ -34,6 +30,9 @@ class IProcessorBuilder {
   }
 
  protected:
+  std::unique_ptr<IProcessor> CreateProcessor(
+      std::vector<IOperation*> operations);
+
   IProcessorBuilder(const IProcessorBuilder&) = delete;
   IProcessorBuilder& operator=(const IProcessorBuilder&) = delete;
 
@@ -55,7 +54,8 @@ class IProcessor {
   absl::Status Process(const Buffer& input, Buffer& output);
 
  protected:
-  IProcessor() = default;
+  friend class IProcessorBuilder;
+  IProcessor(std::vector<IOperation*> operations);
   IProcessor(const IProcessor&) = delete;
   IProcessor& operator=(const IProcessor&) = delete;
 

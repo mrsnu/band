@@ -18,7 +18,6 @@ class IOperation {
  public:
   IOperation() = default;
   virtual ~IOperation() = default;
-  IOperation(const IOperation&);
   // For processor builder to clone the operation
   virtual IOperation* Clone() const = 0;
   virtual absl::Status Process(const Buffer& input) = 0;
@@ -28,7 +27,7 @@ class IOperation {
   Buffer* GetOutput() const { return output_.get(); }
 
  protected:
-  std::unique_ptr<Buffer> output_;
+  std::shared_ptr<Buffer> output_;
 };
 }  // namespace tensor
 }  // namespace band

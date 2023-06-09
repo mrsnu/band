@@ -892,11 +892,6 @@ absl::Status FlipPlaneVertically(const Buffer& buffer, Buffer& output_buffer) {
   return absl::OkStatus();
 }
 
-std::vector<size_t> GetCropDimension(size_t x0, size_t x1, size_t y0,
-                                     size_t y1) {
-  return {x1 - x0 + 1, y1 - y0 + 1};
-}
-
 // This method only supports kGRAY, kRGBA, and kRGB formats.
 absl::Status CropPlane(const Buffer& buffer, int x0, int y0, int x1, int y1,
                        Buffer& output_buffer) {
@@ -907,7 +902,7 @@ absl::Status CropPlane(const Buffer& buffer, int x0, int y0, int x1, int y1,
   }
 
   size_t pixel_stride = buffer.GetPixelBytes();
-  std::vector<size_t> crop_dimension = GetCropDimension(x0, x1, y0, y1);
+  std::vector<size_t> crop_dimension = Buffer::GetCropDimension(x0, x1, y0, y1);
 
   // Cropping is achieved by adjusting origin to (x0, y0).
   int adjusted_offset = buffer[0].row_stride_bytes * y0 + x0 * pixel_stride;
@@ -999,7 +994,7 @@ absl::Status CropYv(const Buffer& buffer, int x0, int y0, int x1, int y1,
   }
   // Crop Y plane by copying the buffer with the origin offset to (x0, y0).
   int crop_offset_y = input_data->y_row_stride * y0 + x0;
-  std::vector<size_t> crop_dimension = GetCropDimension(x0, x1, y0, y1);
+  std::vector<size_t> crop_dimension = Buffer::GetCropDimension(x0, x1, y0, y1);
   libyuv::CopyPlane(
       input_data->y_buffer + crop_offset_y, input_data->y_row_stride,
       const_cast<unsigned char*>(output_data->y_buffer),
@@ -1029,7 +1024,7 @@ absl::Status CropYv(const Buffer& buffer, int x0, int y0, int x1, int y1,
 
 absl::Status CropResizeYuv(const Buffer& buffer, int x0, int y0, int x1, int y1,
                            Buffer& output_buffer) {
-  std::vector<size_t> crop_dimension = GetCropDimension(x0, x1, y0, y1);
+  std::vector<size_t> crop_dimension = Buffer::GetCropDimension(x0, x1, y0, y1);
   if (crop_dimension == output_buffer.GetDimension()) {
     switch (buffer.GetBufferFormat()) {
       case BufferFormat::NV12:
@@ -1373,7 +1368,7 @@ absl::Status ResizeGray(const Buffer& buffer, Buffer& output_buffer) {
 // This method only supports kGRAY, kRGBA, and kRGB formats.
 absl::Status CropResize(const Buffer& buffer, int x0, int y0, int x1, int y1,
                         Buffer& output_buffer) {
-  std::vector<size_t> crop_dimension = GetCropDimension(x0, x1, y0, y1);
+  std::vector<size_t> crop_dimension = Buffer::GetCropDimension(x0, x1, y0, y1);
   if (crop_dimension == output_buffer.GetDimension()) {
     return CropPlane(buffer, x0, y0, x1, y1, output_buffer);
   }
@@ -1432,8 +1427,8 @@ absl::Status UniformCropResizePlane(const Buffer& buffer,
   if (!crop_coordinates.empty()) {
     x0 = crop_coordinates[0];
     y0 = crop_coordinates[1];
-    input_dimension =
-        GetCropDimension(x0, crop_coordinates[2], y0, crop_coordinates[3]);
+    input_dimension = Buffer::GetCropDimension(x0, crop_coordinates[2], y0,
+                                               crop_coordinates[3]);
   }
   if (input_dimension == output_buffer.GetDimension()) {
     // Cropping only case.
@@ -1485,8 +1480,8 @@ absl::Status UniformCropResizeYuv(const Buffer& buffer,
   if (!crop_coordinates.empty()) {
     x0 = crop_coordinates[0];
     y0 = crop_coordinates[1];
-    input_dimension =
-        GetCropDimension(x0, crop_coordinates[2], y0, crop_coordinates[3]);
+    input_dimension = Buffer::GetCropDimension(x0, crop_coordinates[2], y0,
+                                               crop_coordinates[3]);
   }
   if (input_dimension == output_buffer.GetDimension()) {
     // Cropping only case.

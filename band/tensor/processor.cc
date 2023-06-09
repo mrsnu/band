@@ -5,12 +5,6 @@
 namespace band {
 namespace tensor {
 
-IProcessor::~IProcessor() {
-  for (auto& operation : operations_) {
-    delete operation;
-  }
-}
-
 absl::Status IProcessor::Process(const Buffer& input, Buffer& output) {
   if (operations_.empty()) {
     return absl::InternalError("IProcessor: no operations are specified.");
@@ -29,6 +23,22 @@ absl::Status IProcessor::Process(const Buffer& input, Buffer& output) {
   }
 
   return absl::OkStatus();
+}
+
+IProcessor::IProcessor(std::vector<IOperation*> operations)
+    : operations_(std::move(operations))
+
+{}
+
+IProcessor::~IProcessor() {
+  for (auto& operation : operations_) {
+    delete operation;
+  }
+}
+
+std::unique_ptr<IProcessor> IProcessorBuilder::CreateProcessor(
+    std::vector<IOperation*> operations) {
+  return std::unique_ptr<IProcessor>(new IProcessor(operations));
 }
 
 }  // namespace tensor

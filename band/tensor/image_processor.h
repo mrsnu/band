@@ -10,24 +10,15 @@ namespace band {
 namespace tensor {
 
 class IOperation;
-class ImageProcessor;
+class IProcessor;
 
-class ImageProcessorBuilder : public IProcessorBuilder<ImageProcessor> {
+class ImageProcessorBuilder : public IProcessorBuilder {
  public:
-  virtual absl::StatusOr<std::unique_ptr<ImageProcessor>> Build(
+  virtual absl::StatusOr<std::unique_ptr<IProcessor>> Build(
       const Buffer* input = nullptr, Buffer* output = nullptr) override;
 
   // TODO(dostos): type check for image operations
-  using IProcessorBuilder<ImageProcessor>::AddOperation;
-};
-
-class ImageProcessor : public IProcessor {
- public:
-  absl::Status Process(const Buffer& input);
-  absl::Status IsValid(const Buffer& input) const;
-
- protected:
-  friend class ImageProcessorBuilder;
+  using IProcessorBuilder::AddOperation;
 };
 
 }  // namespace tensor

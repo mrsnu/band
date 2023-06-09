@@ -19,25 +19,25 @@ class Buffer {
   };
   ~Buffer();
 
-  static std::unique_ptr<Buffer> CreateFromPlanes(
+  static std::shared_ptr<Buffer> CreateFromPlanes(
       const std::vector<DataPlane>& data_planes,
       const std::vector<size_t>& dims, BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft);
-  static std::unique_ptr<Buffer> CreateFromRaw(
+  static std::shared_ptr<Buffer> CreateFromRaw(
       const unsigned char* data, size_t width, size_t height,
       BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft,
       bool owns_data = false);
-  static std::unique_ptr<Buffer> CreateFromYUVPlanes(
+  static std::shared_ptr<Buffer> CreateFromYUVPlanes(
       const unsigned char* y_data, const unsigned char* u_data,
       const unsigned char* v_data, size_t width, size_t height,
       size_t row_stride_y, size_t row_stride_uv, size_t pixel_stride_uv,
       BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft,
       bool owns_data = false);
-  static std::unique_ptr<Buffer> CreateFromTensor(
+  static std::shared_ptr<Buffer> CreateFromTensor(
       const interface::ITensor* tensor);
-  static std::unique_ptr<Buffer> CreateEmpty(
+  static std::shared_ptr<Buffer> CreateEmpty(
       size_t width, size_t height, BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::TopLeft);
 
@@ -57,6 +57,9 @@ class Buffer {
                                        BufferFormat buffer_format);
   static size_t GetBufferByteSize(const std::vector<size_t>& dims,
                                   BufferFormat buffer_format);
+
+  static std::vector<size_t> GetCropDimension(size_t x0, size_t x1, size_t y0,
+                                              size_t y1);
 
  private:
   Buffer(std::vector<size_t> dimension, std::vector<DataPlane> data_planes,

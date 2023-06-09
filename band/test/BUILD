@@ -1,8 +1,9 @@
-load("//band:band.bzl", "band_cc_library", "band_cc_android_test")
+load("//band:band.bzl", "band_cc_android_test", "band_cc_library")
 
 exports_files(glob([
     "data/*.tflite",
     "data/*.json",
+    "data/*.jpg",
 ]))
 
 band_cc_library(
@@ -131,10 +132,20 @@ band_cc_android_test(
     name = "image_operation_test",
     size = "small",
     srcs = ["image_operation_test.cc"],
+    copts = [
+        "-DSTB_IMAGE_IMPLEMENTATION",
+        "-DSTB_IMAGE_WRITE_IMPLEMENTATION",
+    ],
+    data = [
+        "//band/test:data/hippo.jpg",
+        "//band/test:data/hippo_256.jpg",
+    ],
     deps = [
         "//band/tensor:buffer",
         "@com_google_googletest//:gtest",
-    ]
+        "@stblib//:stb_image",
+        "@stblib//:stb_image_write",
+    ],
 )
 
 band_cc_android_test(

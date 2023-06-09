@@ -1,55 +1,52 @@
+load(
+    "//band:band.bzl",
+    "band_cc_library",
+)
+
 package(
     default_visibility = ["//band:__subpackages__"],
     licenses = ["notice"],  # Apache 2.0
-)
-
-load(
-    "//band:band.bzl", 
-    "clean_dep",
-    "band_cc_library",
-    "band_cc_shared_object",
 )
 
 band_cc_library(
     name = "buffer",
     srcs = [
         "buffer.cc",
+        "image_operation.cc",
         "image_processor.cc",
-        "processor.cc",
         "libyuv_operation.cc",
-        "image_operation.cc"
-        ],
+        "operation.cc",
+        "processor.cc",
+    ],
     hdrs = [
         "buffer.h",
+        "image_operation.h",
         "image_processor.h",
-        "processor.h",
         "libyuv_operation.h",
         "operation.h",
-        "image_operation.h",
+        "processor.h",
     ],
     deps = [
         "//band:common",
         "//band:interface",
-        "@libyuv"
-    ]
+        "@libyuv",
+    ],
 )
 
 band_cc_library(
     name = "tensor",
     srcs = [
-        "tensor.cc"
+        "tensor.cc",
     ],
     hdrs = [
-        "tensor.h"
+        "tensor.h",
     ],
     deps = [
+        ":buffer",
         "//band:common",
         "//band:interface",
-        ":buffer"
     ],
 )
-
-
 
 band_cc_library(
     name = "tensor_ring_buffer",
@@ -60,8 +57,8 @@ band_cc_library(
         "tensor_ring_buffer.h",
     ],
     deps = [
+        ":tensor",
         "//band:common",
         "//band:interface",
-        ":tensor"
     ],
 )
