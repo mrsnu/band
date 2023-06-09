@@ -128,6 +128,16 @@ band_cc_android_test(
 )
 
 band_cc_android_test(
+    name = "image_operation_test",
+    size = "small",
+    srcs = ["image_operation_test.cc"],
+    deps = [
+        "//band/tensor:buffer",
+        "@com_google_googletest//:gtest",
+    ]
+)
+
+band_cc_android_test(
     name = "tfl_subgraph_test",
     size = "enormous",
     srcs = ["backend/tfl_subgraph_test.cc"],

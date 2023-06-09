@@ -83,6 +83,14 @@ BAND_CAPI_EXPORT extern int BandEngineGetNumWorkers(BandEngine* engine);
 BAND_CAPI_EXPORT extern BandDeviceFlags BandEngineGetWorkerDevice(
     BandEngine* engine, int worker_id);
 
+/*
+
+BandTensor* BandCreateTensorFromImage(args..)
+bool Band
+
+
+*/
+
 // Create a input tensor for given model's n'th index
 BAND_CAPI_EXPORT
 extern BandTensor* BandEngineCreateInputTensor(BandEngine* engine,
