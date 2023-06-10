@@ -15,10 +15,10 @@ bool FixedWorkerScheduler::Schedule(JobQueue& requests) {
     // (1) : direct request from the engine
     // (2) : predefined mapping from the config
     WorkerId worker_id = to_execute.target_worker_id == -1
-                             ? context_.GetModelWorker(model_id)
+                             ? engine_.GetModelWorker(model_id)
                              : to_execute.target_worker_id;
-    SubgraphKey key = context_.GetLargestSubgraphKey(model_id, worker_id);
-    success &= context_.EnqueueToWorker({to_execute, key});
+    SubgraphKey key = engine_.GetLargestSubgraphKey(model_id, worker_id);
+    success &= engine_.EnqueueToWorker({to_execute, key});
   }
   return success;
 }

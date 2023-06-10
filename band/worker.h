@@ -7,7 +7,7 @@
 #include <thread>
 
 #include "band/config.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/cpu.h"
 
 namespace band {
@@ -16,7 +16,7 @@ class Planner;
 
 class Worker {
  public:
-  explicit Worker(Context* context, WorkerId worker_id,
+  explicit Worker(IEngine* engine, WorkerId worker_id,
                   DeviceFlags device_flag);
   virtual ~Worker();
 
@@ -57,7 +57,7 @@ class Worker {
   virtual void EndEnqueue() = 0;
   virtual void HandleDeviceError(Job& current_job) = 0;
 
-  Context* const context_;
+  IEngine* const engine_;
 
   std::once_flag device_cpu_start_flag_;
   std::thread device_cpu_thread_;
@@ -82,9 +82,9 @@ class Worker {
 
 class DeviceQueueWorker : public Worker {
  public:
-  explicit DeviceQueueWorker(Context* context, WorkerId worker_id,
+  explicit DeviceQueueWorker(IEngine* engine, WorkerId worker_id,
                              DeviceFlags device_flag)
-      : Worker(context, worker_id, device_flag) {}
+      : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;
@@ -106,9 +106,9 @@ class DeviceQueueWorker : public Worker {
 
 class GlobalQueueWorker : public Worker {
  public:
-  explicit GlobalQueueWorker(Context* context, WorkerId worker_id,
+  explicit GlobalQueueWorker(IEngine* engine, WorkerId worker_id,
                              DeviceFlags device_flag)
-      : Worker(context, worker_id, device_flag) {}
+      : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;

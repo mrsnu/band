@@ -44,9 +44,9 @@ planner -> scheduler -> worker -> planner
 */
 
 TEST(PlannerSuite, SingleQueue) {
-  MockContext context;
-  Planner planner(context);
-  auto status = planner.AddScheduler(std::make_unique<MockScheduler>(context));
+  MockContext engine;
+  Planner planner(engine);
+  auto status = planner.AddScheduler(std::make_unique<MockScheduler>(engine));
   EXPECT_EQ(status, absl::OkStatus());
   // TODO: Add tests!
   EXPECT_TRUE(true);

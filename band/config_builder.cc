@@ -2,11 +2,11 @@
 
 namespace band {
 
-#define REPORT_IF_FALSE(context, expr)                            \
+#define REPORT_IF_FALSE(engine, expr)                            \
   do {                                                            \
     result &= (expr);                                             \
     if (!(expr)) {                                                \
-      BAND_REPORT_ERROR(error_reporter, "[" #context "] " #expr); \
+      BAND_REPORT_ERROR(error_reporter, "[" #engine "] " #expr); \
     }                                                             \
   } while (0);
 

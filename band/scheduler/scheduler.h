@@ -3,14 +3,14 @@
 
 #include <map>
 
-#include "band/context.h"
+#include "band/engine_interface.h"
 
 namespace band {
 class Planner;
 
 class IScheduler {
  public:
-  explicit IScheduler(Context& context) : context_(context) {}
+  explicit IScheduler(IEngine& engine) : engine_(engine) {}
   virtual ~IScheduler() = default;
   // A Schedule() function is expected to do the followings:
   // For the given requests, selected requests to schedule and
@@ -23,7 +23,7 @@ class IScheduler {
   virtual WorkerType GetWorkerType() = 0;
 
  protected:
-  Context& context_;
+  IEngine& engine_;
 };
 }  // namespace band
 

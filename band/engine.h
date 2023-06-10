@@ -9,7 +9,7 @@
 
 #include "band/common.h"
 #include "band/config.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
@@ -48,7 +48,7 @@ typedef std::vector<interface::ITensor*> Tensors;
  * engine->RequestSync(model.GetId(), {input_tensor}, {output_tensor})
  * // Copy result from output_tensor->GetData()
  */
-class Engine : public Context {
+class Engine : public IEngine {
  public:
   ~Engine() override;
   static std::unique_ptr<Engine> Create(
@@ -96,7 +96,7 @@ class Engine : public Context {
                                     WorkerId worker_id) const override;
 
  private:
-  /* context */
+  /* engine */
   absl::Status Init(const RuntimeConfig& config) override;
   void UpdateWorkersWaiting() const override;
   WorkerWaitingTime GetWorkerWaitingTime() const override;

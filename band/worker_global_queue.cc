@@ -39,10 +39,10 @@ void GlobalQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
-  context_->PrepareReenqueue(current_job);
+  engine_->PrepareReenqueue(current_job);
   lock.unlock();
 
-  context_->EnqueueRequest(current_job, true);
+  engine_->EnqueueRequest(current_job, true);
   WaitUntilDeviceAvailable(current_job.subgraph_key);
 
   lock.lock();
@@ -88,7 +88,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // no need to hold on to the lock anymore
   lock.unlock();
 
-  int64_t profiled_latency = context_->GetExpected(current_job_.subgraph_key);
+  int64_t profiled_latency = engine_->GetExpected(current_job_.subgraph_key);
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet

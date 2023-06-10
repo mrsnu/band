@@ -27,7 +27,7 @@ struct ConcurrentJobQueue {
 
 class Planner {
  public:
-  explicit Planner(Context& context);
+  explicit Planner(IEngine& engine);
   ~Planner();
 
   absl::Status Init(const PlannerConfig& config);
@@ -127,7 +127,7 @@ class Planner {
   std::thread planner_thread_;
   // Map structure to find assigned worker of model idx (model_id, worker_id)
   std::map<ModelId, WorkerId> model_worker_map_;
-  Context& context_;
+  IEngine& engine_;
 };
 
 }  // namespace band

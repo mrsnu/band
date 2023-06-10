@@ -10,10 +10,10 @@
 #include "band/config.h"
 
 namespace band {
-class Context;
+class IEngine;
 class LatencyEstimator {
  public:
-  explicit LatencyEstimator(Context* context);
+  explicit LatencyEstimator(IEngine* engine);
   absl::Status Init(const ProfileConfig& config);
   void UpdateLatency(const SubgraphKey& key, int64_t latency);
 
@@ -61,7 +61,7 @@ class LatencyEstimator {
   int profile_num_runs_;
   std::vector<int> profile_copy_computation_ratio_;
 
-  Context* const context_;
+  IEngine* const engine_;
 };
 }  // namespace band
 

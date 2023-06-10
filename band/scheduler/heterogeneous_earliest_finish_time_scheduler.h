@@ -7,7 +7,7 @@ namespace band {
 
 class HEFTScheduler : public IScheduler {
  public:
-  explicit HEFTScheduler(Context& context, int window_size, bool reserve);
+  explicit HEFTScheduler(IEngine& engine, int window_size, bool reserve);
 
   bool Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }

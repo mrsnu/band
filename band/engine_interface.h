@@ -1,5 +1,5 @@
-#ifndef BAND_CONTEXT_H_
-#define BAND_CONTEXT_H_
+#ifndef BAND_ENGINE_INTERFACE_H_
+#define BAND_ENGINE_INTERFACE_H_
 
 #include <functional>
 #include <map>
@@ -32,12 +32,12 @@ using ScheduleAction = std::pair<Job, SubgraphKey>;
 using JobQueue = std::deque<Job>;
 
 // Minimal interfaces for Band framework
-class Context {
+class IEngine {
  public:
-  Context(ErrorReporter* error_reporeter = DefaultErrorReporter())
+  IEngine(ErrorReporter* error_reporeter = DefaultErrorReporter())
       : error_reporter_(error_reporeter) {}
 
-  virtual ~Context() = default;
+  virtual ~IEngine() = default;
 
   virtual absl::Status Init(const RuntimeConfig& config) {
     BAND_NOT_IMPLEMENTED;
@@ -123,4 +123,4 @@ class Context {
 };
 }  // namespace band
 
-#endif  // BAND_CONTEXT_H_
+#endif  // BAND_ENGINE_INTERFACE_H_

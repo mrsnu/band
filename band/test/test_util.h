@@ -4,12 +4,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "band/context.h"
+#include "band/engine_interface.h"
 
 namespace band {
 namespace test {
 
-struct MockContextBase : public Context {
+struct MockContextBase : public IEngine {
   MockContextBase() = default;
 
   MOCK_CONST_METHOD0(UpdateWorkersWaiting, void(void));

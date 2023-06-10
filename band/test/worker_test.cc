@@ -33,8 +33,8 @@ Job GetEmptyJob() {
 }
 
 TYPED_TEST(WorkerSuite, JobHelper) {
-  MockContext context;
-  TypeParam worker(&context, 0, DeviceFlags::CPU);
+  MockContext engine;
+  TypeParam worker(&engine, 0, DeviceFlags::CPU);
   Job job = GetEmptyJob();
 
   worker.Start();
@@ -50,13 +50,13 @@ TYPED_TEST(WorkerSuite, JobHelper) {
 }
 
 TYPED_TEST(WorkerSuite, Wait) {
-  MockContext context;
-  EXPECT_CALL(context, UpdateLatency).Times(testing::AtLeast(1));
-  EXPECT_CALL(context, Trigger).Times(testing::AtLeast(1));
-  EXPECT_CALL(context, TryCopyInputTensors).Times(testing::AtLeast(1));
-  EXPECT_CALL(context, TryCopyOutputTensors).Times(testing::AtLeast(1));
+  MockContext engine;
+  EXPECT_CALL(engine, UpdateLatency).Times(testing::AtLeast(1));
+  EXPECT_CALL(engine, Trigger).Times(testing::AtLeast(1));
+  EXPECT_CALL(engine, TryCopyInputTensors).Times(testing::AtLeast(1));
+  EXPECT_CALL(engine, TryCopyOutputTensors).Times(testing::AtLeast(1));
 
-  TypeParam worker(&context, 0, DeviceFlags::CPU);
+  TypeParam worker(&engine, 0, DeviceFlags::CPU);
   Job job = GetEmptyJob();
 
   worker.Start();
@@ -70,7 +70,7 @@ TYPED_TEST(WorkerSuite, Wait) {
   auto now1 = time::NowMicros();
   EXPECT_GE(now1, now0 + 50);
 
-  EXPECT_NE(context.finished.find(job.job_id), context.finished.end());
+  EXPECT_NE(engine.finished.find(job.job_id), engine.finished.end());
   worker.End();
 }
 

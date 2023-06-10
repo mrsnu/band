@@ -4,7 +4,7 @@
 #include <map>
 #include <memory>
 
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/model_spec.h"
 
 #include "absl/status/statusor.h"
@@ -27,7 +27,7 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
 
 class ModelAnalyzer {
  public:
-  ModelAnalyzer(const Context& context, bool need_subgraph,
+  ModelAnalyzer(const IEngine& engine, bool need_subgraph,
                 SubgraphConfig subgraph_config, Model* model,
                 BackendType backend_type);
 
@@ -50,7 +50,7 @@ class ModelAnalyzer {
   bool IsWorkerValid(WorkerId worker_id) const;
   bool IsResolved(const std::set<int> resolved_tensors, int op_index) const;
 
-  const Context& context_;
+  const IEngine& engine_;
   const bool need_fallback_subgraph_;
   const SubgraphConfig subgraph_config_;
   const BackendType backend_type_;

@@ -7,7 +7,7 @@ namespace band {
 
 class LeastSlackFirstScheduler : public IScheduler {
  public:
-  explicit LeastSlackFirstScheduler(Context& context, int window_size);
+  explicit LeastSlackFirstScheduler(IEngine& engine, int window_size);
 
   bool Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }

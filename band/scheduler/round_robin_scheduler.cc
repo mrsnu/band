@@ -5,21 +5,21 @@
 namespace band {
 
 bool RoundRobinScheduler::Schedule(JobQueue& requests) {
-  std::set<WorkerId> idle_workers = context_.GetIdleWorkers();
+  std::set<WorkerId> idle_workers = engine_.GetIdleWorkers();
   bool success = true;
 
   for (auto worker_id : idle_workers) {
     if (!requests.empty()) {
       auto available_job = std::find_if(
           requests.begin(), requests.end(), [this, worker_id](const Job& job) {
-            return context_.GetLargestSubgraphKey(job.model_id, worker_id)
+            return engine_.GetLargestSubgraphKey(job.model_id, worker_id)
                 .IsValid();
           });
       if (available_job != requests.end()) {
         Job to_execute = *available_job;
         SubgraphKey key =
-            context_.GetLargestSubgraphKey(to_execute.model_id, worker_id);
-        success &= context_.EnqueueToWorker({to_execute, key});
+            engine_.GetLargestSubgraphKey(to_execute.model_id, worker_id);
+        success &= engine_.EnqueueToWorker({to_execute, key});
         requests.erase(available_job);
       }
     }

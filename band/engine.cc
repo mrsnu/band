@@ -6,7 +6,7 @@
 #include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/common.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
 #include "band/latency_estimator.h"
@@ -562,7 +562,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   return absl::OkStatus();
 }
 
-Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
+Engine::Engine(ErrorReporter* error_reporeter) : IEngine(error_reporeter) {}
 
 void Engine::UpdateWorkersWaiting() const {
   for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {

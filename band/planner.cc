@@ -3,7 +3,7 @@
 #include <fstream>
 
 #include "absl/strings/str_format.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
@@ -16,7 +16,7 @@
 
 namespace band {
 
-Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
+Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
   planner_thread_ = std::thread([this] {
     auto status = this->Plan();
     if (!status.ok()) {
@@ -50,25 +50,25 @@ absl::Status Planner::Init(const PlannerConfig& config) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
     if (schedulers[i] == SchedulerType::FixedWorker) {
-      schedulers_.emplace_back(new FixedWorkerScheduler(context_));
+      schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::FixedWorkerGlobalQueue) {
-      schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(context_));
+      schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::RoundRobin) {
-      schedulers_.emplace_back(new RoundRobinScheduler(context_));
+      schedulers_.emplace_back(new RoundRobinScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::ShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
-          context_, schedule_window_size_));
+          engine_, schedule_window_size_));
     } else if (schedulers[i] ==
                SchedulerType::HeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
-          new HEFTScheduler(context_, schedule_window_size_, false));
+          new HEFTScheduler(engine_, schedule_window_size_, false));
     } else if (schedulers[i] == SchedulerType::LeastSlackTimeFirst) {
       schedulers_.emplace_back(
-          new LeastSlackFirstScheduler(context_, schedule_window_size_));
+          new LeastSlackFirstScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] ==
                SchedulerType::HeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
-          new HEFTScheduler(context_, schedule_window_size_, true));
+          new HEFTScheduler(engine_, schedule_window_size_, true));
     } else {
       return absl::InternalError("[Planner] Unsupported scheduler type.");
     }
@@ -173,7 +173,7 @@ void Planner::WaitAll() {
 void Planner::EnqueueFinishedJob(Job& job) {
   std::lock_guard<std::mutex> finished_lock(job_finished_mtx_);
   const bool is_finished =
-      context_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success;
+      engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success;
   // record finished / failed job
   if (is_finished) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
@@ -300,7 +300,7 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
     
     std::tie(job, target_key) = action;
 
-    Worker* worker = context_.GetWorker(target_key.GetWorkerId());
+    Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
       BAND_LOG_PROD(BAND_LOG_ERROR,
                     "EnqueueToWorker failed. Requests scheduled to null worker "
@@ -343,7 +343,7 @@ bool Planner::IsSLOViolated(Job& job) {
   }
   // this job has an SLO; check if it's not too late already
   if (job.slo_us > 0) {
-    WorkerWaitingTime workers_waiting = context_.GetWorkerWaitingTime();
+    WorkerWaitingTime workers_waiting = engine_.GetWorkerWaitingTime();
     int64_t current_time = time::NowMicros();
     int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
                                job.expected_execution_time;
@@ -358,11 +358,11 @@ bool Planner::IsSLOViolated(Job& job) {
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = context_.GetProfiled(target_key);
-  job.expected_execution_time = context_.GetExpected(target_key);
+  job.profiled_execution_time = engine_.GetProfiled(target_key);
+  job.expected_execution_time = engine_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
-  if (!context_.IsEnd(target_key)) {
+  if (!engine_.IsEnd(target_key)) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
     remaining_ops.slo_us = job.slo_us;

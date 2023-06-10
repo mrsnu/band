@@ -299,23 +299,23 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
 
   // load models
   for (auto& benchmark_model : benchmark_config_.model_configs) {
-    ModelContext* context = new ModelContext;
+    ModelContext* engine = new ModelContext;
 
     {
-      auto status = context->model.FromPath(target_backend_,
+      auto status = engine->model.FromPath(target_backend_,
                                             benchmark_model.path.c_str());
       if (!status.ok()) {
         return status;
       }
     }
     {
-      auto status = engine_->RegisterModel(&context->model);
+      auto status = engine_->RegisterModel(&engine->model);
       if (!status.ok()) {
         return status;
       }
     }
 
-    const int model_id = context->model.GetId();
+    const int model_id = engine->model.GetId();
     const auto input_indices = engine_->GetInputTensorIndices(model_id);
     const auto output_indices = engine_->GetOutputTensorIndices(model_id);
 
@@ -330,8 +330,8 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
         outputs.push_back(engine_->CreateTensor(model_id, output_index));
       }
 
-      context->model_request_inputs.push_back(inputs);
-      context->model_request_outputs.push_back(outputs);
+      engine->model_request_inputs.push_back(inputs);
+      engine->model_request_outputs.push_back(outputs);
     }
 
     if (benchmark_model.slo_us <= 0 && benchmark_model.slo_scale > 0.f) {
@@ -355,9 +355,9 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       }
     }
 
-    context->model_ids =
+    engine->model_ids =
         std::vector<ModelId>(benchmark_model.batch_size, model_id);
-    context->request_options = std::vector<RequestOption>(
+    engine->request_options = std::vector<RequestOption>(
         benchmark_model.batch_size, benchmark_model.GetRequestOption());
 
     // pre-allocate random input tensor to feed in run-time
@@ -408,8 +408,8 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       }
       inputs.push_back(input_tensor);
     }
-    context->model_inputs = inputs;
-    model_contexts_.push_back(context);
+    engine->model_inputs = inputs;
+    model_contexts_.push_back(engine);
   }
 
   return absl::OkStatus();

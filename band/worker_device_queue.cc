@@ -27,7 +27,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
-    int64_t expected_latency = context_->GetExpected(it->subgraph_key);
+    int64_t expected_latency = engine_->GetExpected(it->subgraph_key);
 
     total += expected_latency;
     if (it == requests_.begin()) {
@@ -77,12 +77,12 @@ void DeviceQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
-  context_->PrepareReenqueue(current_job);
+  engine_->PrepareReenqueue(current_job);
   std::vector<Job> jobs(requests_.begin(), requests_.end());
   requests_.clear();
   lock.unlock();
 
-  context_->EnqueueBatch(jobs, true);
+  engine_->EnqueueBatch(jobs, true);
   WaitUntilDeviceAvailable(current_job.subgraph_key);
 
   lock.lock();
