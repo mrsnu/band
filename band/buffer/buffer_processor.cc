@@ -1,10 +1,10 @@
-#include "band/buffer/processor.h"
+#include "band/buffer/buffer_processor.h"
 
-#include "processor.h"
+#include "buffer_processor.h"
 
 namespace band {
 
-absl::Status Processor::Process(const Buffer& input, Buffer& output) {
+absl::Status BufferProcessor::Process(const Buffer& input, Buffer& output) {
   if (operations_.empty()) {
     return absl::InternalError("IProcessor: no operations are specified.");
   }
@@ -24,20 +24,20 @@ absl::Status Processor::Process(const Buffer& input, Buffer& output) {
   return absl::OkStatus();
 }
 
-Processor::Processor(std::vector<IOperation*> operations)
+BufferProcessor::BufferProcessor(std::vector<IOperation*> operations)
     : operations_(std::move(operations))
 
 {}
 
-Processor::~Processor() {
+BufferProcessor::~BufferProcessor() {
   for (auto& operation : operations_) {
     delete operation;
   }
 }
 
-std::unique_ptr<Processor> IProcessorBuilder::CreateProcessor(
+std::unique_ptr<BufferProcessor> IBufferProcessorBuilder::CreateProcessor(
     std::vector<IOperation*> operations) {
-  return std::unique_ptr<Processor>(new Processor(operations));
+  return std::unique_ptr<BufferProcessor>(new BufferProcessor(operations));
 }
 
 }  // namespace band

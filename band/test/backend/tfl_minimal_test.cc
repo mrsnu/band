@@ -421,7 +421,7 @@ TEST(TFLiteBackend, ClassificationTest) {
 
   ImageProcessorBuilder preprocessor_builder;
   // by default, the image is resized to input size
-  absl::StatusOr<std::unique_ptr<Processor>> preprocessor =
+  absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
       preprocessor_builder.Build(image_buffer.get(), tensor_buffer.get());
   EXPECT_TRUE(preprocessor.ok());
   EXPECT_TRUE(

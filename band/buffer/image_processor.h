@@ -3,21 +3,21 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "band/buffer/processor.h"
+#include "band/buffer/buffer_processor.h"
 #include "band/common.h"
 
 namespace band {
 
 class IOperation;
-class Processor;
+class BufferProcessor;
 
-class ImageProcessorBuilder : public IProcessorBuilder {
+class ImageProcessorBuilder : public IBufferProcessorBuilder {
  public:
-  virtual absl::StatusOr<std::unique_ptr<Processor>> Build(
+  virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build(
       const Buffer* input = nullptr, Buffer* output = nullptr) override;
 
   // TODO(dostos): type check for image operations
-  using IProcessorBuilder::AddOperation;
+  using IBufferProcessorBuilder::AddOperation;
 };
 }  // namespace band
 

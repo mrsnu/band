@@ -6,7 +6,7 @@
 
 namespace band {
 
-absl::StatusOr<std::unique_ptr<Processor>> ImageProcessorBuilder::Build(
+absl::StatusOr<std::unique_ptr<BufferProcessor>> ImageProcessorBuilder::Build(
     const Buffer* input, Buffer* output) {
   bool requires_validation = input != nullptr && output != nullptr;
 
@@ -18,7 +18,7 @@ absl::StatusOr<std::unique_ptr<Processor>> ImageProcessorBuilder::Build(
   if (operations_.empty() && requires_validation) {
     operations.push_back(new ResizeOperation(output->GetDimension()));
   }
-  std::unique_ptr<Processor> processor = CreateProcessor(operations);
+  std::unique_ptr<BufferProcessor> processor = CreateProcessor(operations);
   if (requires_validation) {
     absl::Status status = processor->Process(*input, *output);
     if (!status.ok()) {
