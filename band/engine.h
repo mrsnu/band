@@ -36,7 +36,7 @@ typedef std::vector<interface::ITensor*> Tensors;
  * std::unique_ptr<band::Engine> engine = band::Engine::Create(config);
  *
  * Band::Model model;
- * model.FromPath(BackendType::TfLite, "band/test/data/add.tflite");
+ * model.FromPath(BackendType::kBandTfLite, "band/test/data/add.tflite");
  * engine->RegisterModel(&model);
  *
  * band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),
@@ -63,7 +63,7 @@ class Engine : public IEngine {
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
   size_t GetNumWorkers() const override;
-  DeviceFlags GetWorkerDevice(WorkerId id) const;
+  DeviceFlag GetWorkerDevice(WorkerId id) const;
 
   absl::Status RequestSync(
       ModelId model_id,
@@ -158,7 +158,7 @@ class Engine : public IEngine {
   absl::Status TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
-  WorkerId GetDeviceWorkerId(DeviceFlags flag) const;
+  WorkerId GetDeviceWorkerId(DeviceFlag flag) const;
   interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
   const interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;

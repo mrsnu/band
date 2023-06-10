@@ -11,6 +11,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "band/c/c_type.h"
+
 namespace band {
 typedef int WorkerId;
 typedef int ModelId;
@@ -18,111 +20,53 @@ typedef int JobId;
 
 using BitMask = std::bitset<64>;
 
-enum class SchedulerType : size_t;
-enum class SubgraphPreparationType : size_t;
-enum class DataType : size_t;
-enum class DeviceFlags : size_t;
-
 // Empty template.
 template <typename T>
 T FromString(std::string str) {
   assert(false && "FromString not implemented for this type.");
 }
 
-template <typename T>
-size_t GetSize() {
-  assert(false && "GetSize not implemented for this type.");
-  return -1;
-}
+typedef BandBackendType BackendType;
+typedef BandSchedulerType SchedulerType;
+typedef BandCPUMaskFlag CPUMaskFlag;
+typedef BandSubgraphPreparationType SubgraphPreparationType;
+typedef BandDataType DataType;
+typedef BandDeviceFlag DeviceFlag;
+typedef BandQuantizationType QuantizationType;
 
-enum class BackendType : size_t { TfLite = 0 };
-std::string GetName(BackendType backend_type);
+std::string ToString(BackendType backend_type);
+std::string ToString(SchedulerType scheduler_type);
+std::string ToString(CPUMaskFlag cpu_mask_flags);
+std::string ToString(SubgraphPreparationType subgraph_preparation_type);
+std::string ToString(DataType data_type);
+std::string ToString(DeviceFlag device_flags);
+std::string ToString(QuantizationType);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class CPUMaskFlags : size_t { All = 0, Little = 1, Big = 2, Primary = 3 };
-template <>
-size_t GetSize<CPUMaskFlags>();
-std::string GetName(CPUMaskFlags cpu_mask_flags);
-
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class SchedulerType : size_t {
-  FixedWorker = 0,
-  RoundRobin = 1,
-  ShortestExpectedLatency = 2,
-  FixedWorkerGlobalQueue = 3,
-  HeterogeneousEarliestFinishTime = 4,
-  LeastSlackTimeFirst = 5,
-  HeterogeneousEarliestFinishTimeReserved = 6
-};
-template <>
-size_t GetSize<SchedulerType>();
-std::string GetName(SchedulerType scheduler_type);
 template <>
 SchedulerType FromString(std::string str);
-
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class SubgraphPreparationType : size_t {
-  NoFallbackSubgraph = 0,
-  FallbackPerWorker = 1,
-  UnitSubgraph = 2,
-  MergeUnitSubgraph = 3
-};
-template <>
-size_t GetSize<SubgraphPreparationType>();
-std::string GetName(SubgraphPreparationType subgraph_preparation_type);
 template <>
 SubgraphPreparationType FromString(std::string str);
-
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class DataType : size_t {
-  NoType = 0,
-  Float32 = 1,
-  Int32 = 2,
-  UInt8 = 3,
-  Int64 = 4,
-  String = 5,
-  Bool = 6,
-  Int16 = 7,
-  Complex64 = 8,
-  Int8 = 9,
-  Float16 = 10,
-  Float64 = 11
-};
-template <>
-size_t GetSize<DataType>();
-std::string GetName(DataType data_type);
 template <>
 DataType FromString(std::string str);
-
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class DeviceFlags : size_t { CPU = 0, GPU = 1, DSP = 2, NPU = 3 };
 template <>
-size_t GetSize<DeviceFlags>();
-std::string GetName(DeviceFlags device_flags);
-template <>
-DeviceFlags FromString(std::string str);
+DeviceFlag FromString(std::string str);
 
 enum class WorkerType : size_t {
-  DeviceQueue = 1,
-  GlobalQueue = 2,
+  kDeviceQueue = 1,
+  kGlobalQueue = 2,
 };
 
 enum class JobStatus : size_t {
-  EnqueueFailed,
-  Queued,
-  Success,
-  SLOViolation,
-  InputCopyFailure,
-  OutputCopyFailure,
-  InvokeFailure
+  kEnqueueFailed,
+  kQueued,
+  kSuccess,
+  kSLOViolation,
+  kInputCopyFailure,
+  kOutputCopyFailure,
+  kInvokeFailure
 };
-std::string GetName(JobStatus job_status);
 
-enum class QuantizationType {
-  NoQuantization = 0,
-  AffineQuantization = 1,
-};
-std::string GetName(QuantizationType);
+std::string ToString(JobStatus job_status);
 
 struct AffineQuantizationParams {
   std::vector<float> scale;
@@ -231,7 +175,7 @@ struct Job {
   WorkerId target_worker_id = -1;
 
   // Current status for execution (Valid after planning)
-  JobStatus status = JobStatus::Queued;
+  JobStatus status = JobStatus::kQueued;
   SubgraphKey subgraph_key;
   std::vector<Job> following_jobs;
 

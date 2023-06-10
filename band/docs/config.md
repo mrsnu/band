@@ -7,30 +7,30 @@ Each configuration field is optional or required. If a field is optional, then i
 ### Enumeration Types
 - `SchedulerType`:
   - `kBandFixedDeviceFixedWorker`: 
-  - `SchedulerType::RoundRobin`: 
-  - `SchedulerType::ShortestExpectedLatency`: 
+  - `SchedulerType::kBandRoundRobin`: 
+  - `SchedulerType::kBandShortestExpectedLatency`: 
   - `kBandFixedDeviceFixedWorkerGlobalQueue`: 
-  - `SchedulerType::HeterogeneousEarliestFinishTime`: 
-  - `SchedulerType::LeastSlackTimeFirst`: 
-  - `SchedulerType::HeterogeneousEarliestFinishTimeReserved`
+  - `SchedulerType::kBandHeterogeneousEarliestFinishTime`: 
+  - `SchedulerType::kBandLeastSlackTimeFirst`: 
+  - `SchedulerType::kBandHeterogeneousEarliestFinishTimeReserved`
 
-- `CPUMaskFlags`: 
-   - `CPUMaskFlags::All`
-   - `CPUMaskFlags::Little`
-   - `CPUMaskFlags::Big`
-   - `CPUMaskFlags::Primary`
+- `CPUMaskFlag`: 
+   - `CPUMaskFlag::kBandAll`
+   - `CPUMaskFlag::kBandLittle`
+   - `CPUMaskFlag::kBandBig`
+   - `CPUMaskFlag::kBandPrimary`
   
-- `DeviceFlags`: 
-  - `DeviceFlags::CPU`
-  - `DeviceFlags::GPU`
-  - `DeviceFlags::DSP`
-  - `DeviceFlags::NPU`
+- `DeviceFlag`: 
+  - `DeviceFlag::kBandCPU`
+  - `DeviceFlag::kBandGPU`
+  - `DeviceFlag::kBandDSP`
+  - `DeviceFlag::kBandNPU`
 
 - `SubgraphPreparationType`: 
-  - `SubgraphPreparationType::NoFallbackSubgraph`
-  - `SubgraphPreparationType::FallbackPerWorker`
-  - `SubgraphPreparationType::UnitSubgraph`
-  - `SubgraphPreparationType::MergeUnitSubgraph`
+  - `SubgraphPreparationType::kBandNoFallbackSubgraph`
+  - `SubgraphPreparationType::kBandFallbackPerWorker`
+  - `SubgraphPreparationType::kBandUnitSubgraph`
+  - `SubgraphPreparationType::kBandMergeUnitSubgraph`
 
 ## `ProfileConfig`
 - `online` [type: `bool`, default: `true`]: Profile online if true, offline if false.
@@ -43,12 +43,12 @@ Each configuration field is optional or required. If a field is optional, then i
 ## `PlannerConfig`
 - `schedule_window_size` [type: `int`, default: `INT_MAX`]: The size of window that scheduler will use.
 - `schedulers` [type: `std::vector<SchedulerType>`, __required__]: The types of schedulers. If `N` schedulers are specified, `N` queues will be generated.
-- `cpu_mask` [type: `CPUMaskFlags`, default: `CPUMaskFlags::All`]: CPU masks to set CPU affinity.
+- `cpu_mask` [type: `CPUMaskFlag`, default: `CPUMaskFlag::kBandAll`]: CPU masks to set CPU affinity.
 - `log_path` [type: `std::string`, default: `""`]: The output path to the file for planner's log. If not specified, this will be ignored and will not generate the result file. 
 
 ## `WorkerConfig`
-- `workers` [type: `std::vector<DeviceFlags>`, default: `[DeviceFlags::CPU, DeviceFlags::GPU, ...]`]: The list of target devices. By default, one worker per device is generated.
-- `cpu_masks` [type: `std::vector<CPUMaskFlags>`, default: `[CPUMaskFlags::All, CPUMaskFlags::All, ...]`]: CPU masks to set CPU affinity. The size of the list must be the same as the size of `workers`.
+- `workers` [type: `std::vector<DeviceFlag>`, default: `[DeviceFlag::kBandCPU, DeviceFlag::kBandGPU, ...]`]: The list of target devices. By default, one worker per device is generated.
+- `cpu_masks` [type: `std::vector<CPUMaskFlag>`, default: `[CPUMaskFlag::kBandAll, CPUMaskFlag::kBandAll, ...]`]: CPU masks to set CPU affinity. The size of the list must be the same as the size of `workers`.
 - `num_threads` [type: `std::vector<int>`, default: `[1, 1, ...]`]: The number of threads. The size of the list must be the same as the size of `workers`.
 - `allow_worksteal` [type: `bool`, default: `false`]: Work-stealing is enabled if true, disabled if false.
 - `availability_check_interval_ms` [type: `int`, default: `30_000`]: The interval for checking availability of devices. Used for detecting thermal throttling.
@@ -56,8 +56,8 @@ Each configuration field is optional or required. If a field is optional, then i
 ## `RuntimeConfig`
 - `RuntimeConfig` contains `ProfileConfig`, `PlannerConfig` and `WorkerConfig`.
 - `minimum_subgraph_size` [type: `int`, default: `7`]: The minimum subgraph size. If candidate subgraph size is smaller than this, the subgraph will not be created.
-- `subgraph_preparation_type` [type: `SubgraphPreparationType`, default: `SubgraphPreparationType::MergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
-- `cpu_mask` [type: `CPUMaskFlags`, default: `CPUMaskFlags::All`]: The CPU mask for Band Engine.
+- `subgraph_preparation_type` [type: `SubgraphPreparationType`, default: `SubgraphPreparationType::kBandMergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
+- `cpu_mask` [type: `CPUMaskFlag`, default: `CPUMaskFlag::kBandAll`]: The CPU mask for Band Engine.
 
 ## `RuntimeConfigBuilder` API
 `RuntimeConfigBuilder` delegates all builder that inherits `ConfigBuilder`.
@@ -68,7 +68,7 @@ It is a `friend` class of all the other `ConfigBuilder` classes, so make sure to
 RuntimeConfigBuilder b;
 auto config = b.AddOnline(false)  // Default was `true`
                   .AddSmoothingFactor(0.3)  // Default was `0.1`
-                  .AddSchedulers({SchedulerType::RoundRobin, SchedulerType::LeastSlackTimeFirst})  // Required field.
+                  .AddSchedulers({SchedulerType::kBandRoundRobin, SchedulerType::kBandLeastSlackTimeFirst})  // Required field.
                   .Build();
 ```
 ### Methods
@@ -82,12 +82,12 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddPlannerLogPath(std::string planner_log_path)`
 - `AddScheduleWindowSize(int schedule_window_size)`
 - `AddSchedulers(std::vector<SchedulerType> schedulers)`
-- `AddPlannerCPUMask(CPUMaskFlags cpu_masks)`
-- `AddWorkers(std::vector<DeviceFlags> workers)`
-- `AddWorkerCPUMasks(std::vector<CPUMaskFlags> cpu_masks)`
+- `AddPlannerCPUMask(CPUMaskFlag cpu_masks)`
+- `AddWorkers(std::vector<DeviceFlag> workers)`
+- `AddWorkerCPUMasks(std::vector<CPUMaskFlag> cpu_masks)`
 - `AddWorkerNumThreads(std::vector<int> num_threads)`
 - `AddAllowWorkSteal(bool allow_worksteal)`
 - `AddAvailabilityCheckIntervalMs(int32_t availability_check_interval_ms)`
 - `AddMinimumSubgraphSize(int minimum_subgraph_size)`
 - `AddSubgraphPreparationType(SubgraphPreparationType subgraph_preparation_type)`
-- `AddCPUMask(CPUMaskFlags cpu_mask)`
+- `AddCPUMask(CPUMaskFlag cpu_mask)`

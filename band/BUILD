@@ -134,7 +134,7 @@ band_cc_library(
         "cpu.h",
         "error_reporter.h",
         "logger.h",
-        "model_spec.h",
+        "model_spec.h"
     ],
     linkopts = select({
         "//band:android": [
@@ -147,6 +147,7 @@ band_cc_library(
         "@com_google_absl//absl/status:status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "//band/c:c_type"
     ],
 )
 

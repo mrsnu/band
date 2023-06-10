@@ -49,24 +49,24 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == SchedulerType::FixedWorker) {
+    if (schedulers[i] == SchedulerType::kBandFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::FixedWorkerGlobalQueue) {
+    } else if (schedulers[i] == SchedulerType::kBandFixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::RoundRobin) {
+    } else if (schedulers[i] == SchedulerType::kBandRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::ShortestExpectedLatency) {
+    } else if (schedulers[i] == SchedulerType::kBandShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
           engine_, schedule_window_size_));
     } else if (schedulers[i] ==
-               SchedulerType::HeterogeneousEarliestFinishTime) {
+               SchedulerType::kBandHeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
           new HEFTScheduler(engine_, schedule_window_size_, false));
-    } else if (schedulers[i] == SchedulerType::LeastSlackTimeFirst) {
+    } else if (schedulers[i] == SchedulerType::kBandLeastSlackTimeFirst) {
       schedulers_.emplace_back(
           new LeastSlackFirstScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] ==
-               SchedulerType::HeterogeneousEarliestFinishTimeReserved) {
+               SchedulerType::kBandHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(engine_, schedule_window_size_, true));
     } else {
@@ -86,13 +86,13 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   }
 
   // All schedulers must have the same worker type.
-  if (GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
-                          static_cast<int>(WorkerType::GlobalQueue))) {
+  if (GetWorkerType() == (static_cast<int>(WorkerType::kDeviceQueue) |
+                          static_cast<int>(WorkerType::kGlobalQueue))) {
     return absl::InternalError(
         "All schedulers must have the same worker type.");
   }
 
-  if (config.cpu_mask != CPUMaskFlags::All) {
+  if (config.cpu_mask != CPUMaskFlag::kBandAll) {
     cpu_set_ = BandCPUMaskGetSet(config.cpu_mask);
     need_cpu_update_ = true;
   }
@@ -103,8 +103,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
 absl::Status Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
   schedulers_.emplace_back(std::move(scheduler));
   local_queues_.resize(schedulers_.size());
-  return GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
-                             static_cast<int>(WorkerType::GlobalQueue))
+  return GetWorkerType() == (static_cast<int>(WorkerType::kDeviceQueue) |
+                             static_cast<int>(WorkerType::kGlobalQueue))
              ? absl::InternalError(
                    "All schedulers must have the same worker type.")
              : absl::OkStatus();
@@ -173,7 +173,7 @@ void Planner::WaitAll() {
 void Planner::EnqueueFinishedJob(Job& job) {
   std::lock_guard<std::mutex> finished_lock(job_finished_mtx_);
   const bool is_finished =
-      engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success;
+      engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
   // record finished / failed job
   if (is_finished) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
@@ -183,7 +183,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
 
   // report end invoke using callback
   if (on_end_request_ && job.require_callback && is_finished) {
-    on_end_request_(job.job_id, job.status == JobStatus::Success
+    on_end_request_(job.job_id, job.status == JobStatus::kSuccess
                                     ? absl::OkStatus()
                                     : absl::InternalError("Job failed."));
   }
@@ -306,11 +306,11 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
                     "EnqueueToWorker failed. Requests scheduled to null worker "
                     "id %d",
                     target_key.GetWorkerId());
-      job.status = JobStatus::EnqueueFailed;
+      job.status = JobStatus::kEnqueueFailed;
       EnqueueFinishedJob(job);
     } else if (IsSLOViolated(job)) {
       // no point in running this job anymore
-      job.status = JobStatus::SLOViolation;
+      job.status = JobStatus::kSLOViolation;
       // mark this as -1 to differentiate it from the default value, 0
       job.invoke_time = -1;
       // mark the time of this decision (of early-dropping this job)
@@ -338,7 +338,7 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 }
 
 bool Planner::IsSLOViolated(Job& job) {
-  if (job.status == JobStatus::SLOViolation) {
+  if (job.status == JobStatus::kSLOViolation) {
     return true;
   }
   // this job has an SLO; check if it's not too late already

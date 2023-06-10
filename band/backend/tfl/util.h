@@ -13,11 +13,11 @@ namespace band {
 namespace tfl {
 
 absl::Status GetBandStatus(TfLiteStatus status);
-DataType GetBandType(TfLiteType type);
+DataType GetBandDataType(TfLiteType type);
 
 class TfLiteUtil : public interface::IBackendUtil {
  public:
-  std::set<DeviceFlags> GetAvailableDevices() const override;
+  std::set<DeviceFlag> GetAvailableDevices() const override;
 };
 
 }  // namespace tfl

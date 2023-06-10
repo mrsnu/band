@@ -166,7 +166,7 @@ ModelAnalyzer::ModelAnalyzer(const IEngine& engine,
       backend_type_(backend_type) {
   std::unique_ptr<interface::IModelExecutor> interpreter(
       BackendFactory::CreateModelExecutor(backend_type, model->GetId(), 0,
-                                          DeviceFlags::CPU));
+                                          DeviceFlag::kBandCPU));
   // TODO(widiba03304): Report error when it fails.
   model_spec_ = std::make_shared<ModelSpec>(
       interpreter->InvestigateModelSpec(model->GetBackendModel(backend_type)).value());
@@ -174,11 +174,11 @@ ModelAnalyzer::ModelAnalyzer(const IEngine& engine,
   for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
     BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
                   SetToString(device_unsupported_ops.second).c_str(),
-                  GetName(device_unsupported_ops.first).c_str());
+                  ToString(device_unsupported_ops.first).c_str());
   }
 
   for (auto device : model_spec_->unavailable_devices) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", GetName(device).c_str());
+    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", ToString(device).c_str());
   }
 }
 
@@ -194,7 +194,7 @@ ModelAnalyzer::CreateSubgraphs() {
   }
 
   switch (subgraph_config_.subgraph_preparation_type) {
-    case SubgraphPreparationType::FallbackPerWorker: {
+    case SubgraphPreparationType::kBandFallbackPerWorker: {
       for (WorkerId worker_id = 0; worker_id < engine_.GetNumWorkers();
            worker_id++) {
         std::vector<SubgraphDef> worker_subgraphs =
@@ -224,11 +224,11 @@ ModelAnalyzer::CreateSubgraphs() {
                              worker_subgraphs.end());
       }
     } break;
-    case SubgraphPreparationType::NoFallbackSubgraph:
-    case SubgraphPreparationType::UnitSubgraph: {
+    case SubgraphPreparationType::kBandNoFallbackSubgraph:
+    case SubgraphPreparationType::kBandUnitSubgraph: {
       subgraph_defs = unit_subgraph_defs;
     } break;
-    case SubgraphPreparationType::MergeUnitSubgraph: {
+    case SubgraphPreparationType::kBandMergeUnitSubgraph: {
       // Add merged atomic subgraphs
       // Note that each merged subgraph consists of unit subgraphs with
       // continuous unit subgraph indices.
@@ -236,6 +236,13 @@ ModelAnalyzer::CreateSubgraphs() {
       // we should re-implement the merging logic.
       subgraph_defs = MergeUnitSubgraphs(unit_subgraph_defs);
     } break;
+    default: {
+      return absl::InternalError(absl::StrFormat(
+          "Failed to create subgraph. Unsupported subgraph preparation type "
+          "%s for model %s and mode %s",
+          ToString(subgraph_config_.subgraph_preparation_type),
+          model_spec_->path.c_str(), ToString(subgraph_config_.subgraph_preparation_type)));
+    }
   }
 
   // Verify subgraphs
@@ -249,14 +256,14 @@ ModelAnalyzer::CreateSubgraphs() {
             "Failed to create subgraph. Unit subgraph indices in "
             "subgraph %s are not continous for model %s and mode %s",
             subgraph_def.ToString().c_str(), model_spec_->path.c_str(),
-            GetName(subgraph_config_.subgraph_preparation_type)));
+            ToString(subgraph_config_.subgraph_preparation_type)));
       }
     }
   }
 
   const std::string subgraph_summary =
       subgraph_config_.subgraph_preparation_type !=
-              SubgraphPreparationType::FallbackPerWorker
+              SubgraphPreparationType::kBandFallbackPerWorker
           ? SummarizeSubgraphs(subgraph_defs)
           : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
                                                 subgraph_defs);
@@ -264,7 +271,7 @@ ModelAnalyzer::CreateSubgraphs() {
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d subgraphs for model %s with mode %s %s",
                 subgraph_defs.size(), model_spec_->path.c_str(),
-                GetName(subgraph_config_.subgraph_preparation_type).c_str(),
+                ToString(subgraph_config_.subgraph_preparation_type).c_str(),
                 subgraph_summary.c_str());
 
   return std::make_pair(*model_spec_, subgraph_defs);
@@ -300,7 +307,7 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
           GetSubgraphsForFallbackOps(worker_id);
       for (auto worker_and_ops : worker_op_sets) {
         if (engine_.GetWorker(worker_id)->GetDeviceFlag() ==
-            DeviceFlags::CPU) {
+            DeviceFlag::kBandCPU) {
           continue;
         }
         if (worker_and_ops.op_indices.size() <
@@ -326,9 +333,9 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
 
     for (int op_index = 0; op_index < num_ops; op_index++) {
       for (WorkerId worker_id = 0; worker_id < num_workers; ++worker_id) {
-        DeviceFlags device_flag =
+        DeviceFlag device_flag =
             engine_.GetWorker(worker_id)->GetDeviceFlag();
-        if (device_flag == DeviceFlags::CPU) {
+        if (device_flag == DeviceFlag::kBandCPU) {
           op_support_table[op_index] |= 1 << worker_id;
           continue;
         }
@@ -502,7 +509,7 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
 
   std::vector<SubgraphDef> subgraph_defs;
   const int num_ops = model_spec_->num_ops;
-  const DeviceFlags device_flag =
+  const DeviceFlag device_flag =
       engine_.GetWorker(worker_id)->GetDeviceFlag();
   const std::set<int>& unsupported_ops =
       model_spec_->unsupported_ops.at(device_flag);
@@ -510,7 +517,7 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
   std::set<int> cpu_worker_ids;
   for (WorkerId worker_id = 0; worker_id < engine_.GetNumWorkers();
        worker_id++) {
-    if (engine_.GetWorker(worker_id)->GetDeviceFlag() == DeviceFlags::CPU) {
+    if (engine_.GetWorker(worker_id)->GetDeviceFlag() == DeviceFlag::kBandCPU) {
       cpu_worker_ids.insert(worker_id);
     }
   }
@@ -559,7 +566,7 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     std::set<int> operator_set;
     bool found = true;
     // Switch between device and fallback
-    DeviceFlags current_device = is_fallback ? DeviceFlags::CPU : device_flag;
+    DeviceFlag current_device = is_fallback ? DeviceFlag::kBandCPU : device_flag;
 
     // Get all op that has resolvable dependency to specific device
     while (found) {
@@ -600,8 +607,8 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     }
 
     if (operator_set.size()) {
-      if (current_device == DeviceFlags::CPU &&
-          device_flag != DeviceFlags::CPU) {
+      if (current_device == DeviceFlag::kBandCPU &&
+          device_flag != DeviceFlag::kBandCPU) {
         for (auto cpu_worker_id : cpu_worker_ids) {
           subgraph_defs.push_back({cpu_worker_id, operator_set, {}});
         }
@@ -695,7 +702,7 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
 bool ModelAnalyzer::NeedFallbackSubgraph() const {
   return need_fallback_subgraph_ &&
          (subgraph_config_.subgraph_preparation_type !=
-          SubgraphPreparationType::NoFallbackSubgraph);
+          SubgraphPreparationType::kBandNoFallbackSubgraph);
 }
 
 bool ModelAnalyzer::IsWorkerValid(WorkerId worker_id) const {

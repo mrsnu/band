@@ -17,11 +17,11 @@ class Planner;
 class Worker {
  public:
   explicit Worker(IEngine* engine, WorkerId worker_id,
-                  DeviceFlags device_flag);
+                  DeviceFlag device_flag);
   virtual ~Worker();
 
   absl::Status Init(const WorkerConfig& config);
-  DeviceFlags GetDeviceFlag() const { return device_flag_; }
+  DeviceFlag GetDeviceFlag() const { return device_flag_; }
   WorkerId GetId() const { return worker_id_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
@@ -75,7 +75,7 @@ class Worker {
   bool need_cpu_update_ = false;
   std::mutex cpu_mtx_;
 
-  const DeviceFlags device_flag_;
+  const DeviceFlag device_flag_;
 
   static const int64_t LARGE_WAITING_TIME = INT_MAX / 2;
 };
@@ -83,7 +83,7 @@ class Worker {
 class DeviceQueueWorker : public Worker {
  public:
   explicit DeviceQueueWorker(IEngine* engine, WorkerId worker_id,
-                             DeviceFlags device_flag)
+                             DeviceFlag device_flag)
       : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
@@ -107,7 +107,7 @@ class DeviceQueueWorker : public Worker {
 class GlobalQueueWorker : public Worker {
  public:
   explicit GlobalQueueWorker(IEngine* engine, WorkerId worker_id,
-                             DeviceFlags device_flag)
+                             DeviceFlag device_flag)
       : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;

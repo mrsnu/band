@@ -7,7 +7,7 @@
 namespace band {
 Tensor::Tensor(ITensor* tensor_view)
     : type_(tensor_view->GetType()),
-      quantization_({QuantizationType::NoQuantization, nullptr}),
+      quantization_({QuantizationType::kBandNoQuantization, nullptr}),
       num_bytes_(tensor_view->GetBytes()),
       dims_(tensor_view->GetDims(),
             tensor_view->GetDims() + tensor_view->GetNumDims()),
@@ -49,7 +49,7 @@ const char* Tensor::GetName() const { return name_.c_str(); }
 Quantization Tensor::GetQuantization() const { return quantization_; }
 
 absl::Status Tensor::SetQuantization(Quantization quantization) {
-  if (quantization_.GetType() == QuantizationType::AffineQuantization) {
+  if (quantization_.GetType() == QuantizationType::kBandAffineQuantization) {
     AffineQuantizationParams* input_q_params =
         reinterpret_cast<AffineQuantizationParams*>(quantization.GetParams());
 

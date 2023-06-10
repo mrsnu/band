@@ -17,7 +17,7 @@ class ProfileConfigBuilder {
                                       // variables
  public:
   ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(GetSize<DeviceFlags>(), 30000);
+    copy_computation_ratio_ = std::vector<int>(DeviceFlag::kBandNumDeviceFlag, 30000);
   }
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
@@ -70,7 +70,7 @@ class PlannerConfigBuilder {
     schedulers_ = schedulers;
     return *this;
   }
-  PlannerConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
+  PlannerConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -85,7 +85,7 @@ class PlannerConfigBuilder {
  private:
   int schedule_window_size_ = INT_MAX;
   std::vector<SchedulerType> schedulers_;
-  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kBandAll;
   std::string log_path_ = "";
 };
 
@@ -95,18 +95,18 @@ class WorkerConfigBuilder {
 
  public:
   WorkerConfigBuilder() {
-    for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
-      workers_.push_back(static_cast<DeviceFlags>(i));
+    for (size_t i = 0; i < DeviceFlag::kBandNumDeviceFlag; i++) {
+      workers_.push_back(static_cast<DeviceFlag>(i));
     }
     cpu_masks_ =
-        std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
-    num_threads_ = std::vector<int>(GetSize<DeviceFlags>(), 1);
+        std::vector<CPUMaskFlag>(DeviceFlag::kBandNumDeviceFlag, CPUMaskFlag::kBandAll);
+    num_threads_ = std::vector<int>(DeviceFlag::kBandNumDeviceFlag, 1);
   }
-  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
+  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
     workers_ = workers;
     return *this;
   }
-  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
+  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
     cpu_masks_ = cpu_masks;
     return *this;
   }
@@ -127,8 +127,8 @@ class WorkerConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  std::vector<DeviceFlags> workers_;
-  std::vector<CPUMaskFlags> cpu_masks_;
+  std::vector<DeviceFlag> workers_;
+  std::vector<CPUMaskFlag> cpu_masks_;
   std::vector<int> num_threads_;
   bool allow_worksteal_ = false;
   int availability_check_interval_ms_ = 30000;
@@ -178,17 +178,17 @@ class RuntimeConfigBuilder {
     planner_config_builder_.AddSchedulers(schedulers);
     return *this;
   }
-  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlags cpu_masks) {
+  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlag cpu_masks) {
     planner_config_builder_.AddCPUMask(cpu_masks);
     return *this;
   }
 
   // Add WorkerConfig
-  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
+  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
     worker_config_builder_.AddWorkers(workers);
     return *this;
   }
-  RuntimeConfigBuilder& AddWorkerCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
+  RuntimeConfigBuilder& AddWorkerCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
     worker_config_builder_.AddCPUMasks(cpu_masks);
     return *this;
   }
@@ -215,7 +215,7 @@ class RuntimeConfigBuilder {
     subgraph_preparation_type_ = subgraph_preparation_type;
     return *this;
   }
-  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
+  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -229,8 +229,8 @@ class RuntimeConfigBuilder {
   WorkerConfigBuilder worker_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
-      SubgraphPreparationType::MergeUnitSubgraph;
-  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
+      SubgraphPreparationType::kBandMergeUnitSubgraph;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kBandAll;
 };
 
 }  // namespace band

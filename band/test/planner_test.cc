@@ -32,7 +32,7 @@ class MockScheduler : public IScheduler {
   MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
   // MOCK_METHOD0(GetWorkerType, WorkerType());
-  WorkerType GetWorkerType() { return WorkerType::DeviceQueue; }
+  WorkerType GetWorkerType() { return WorkerType::kDeviceQueue; }
 };
 
 /*

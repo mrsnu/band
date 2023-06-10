@@ -7,7 +7,7 @@
 #include "band/time.h"
 
 namespace band {
-Worker::Worker(IEngine* engine, WorkerId worker_id, DeviceFlags device_flag)
+Worker::Worker(IEngine* engine, WorkerId worker_id, DeviceFlag device_flag)
     : engine_(engine), worker_id_(worker_id), device_flag_(device_flag) {}
 
 Worker::~Worker() {
@@ -24,8 +24,8 @@ absl::Status Worker::Init(const WorkerConfig& config) {
   BAND_LOG_INTERNAL(
       BAND_LOG_INFO,
       "Set affinity of worker (%d,%s) to %s cores for %d threads.", worker_id_,
-      GetName(device_flag_).c_str(),
-      BandCPUMaskGetName(config.cpu_masks[worker_id_]),
+      ToString(device_flag_).c_str(),
+      BandCPUMaskToString(config.cpu_masks[worker_id_]),
       config.num_threads[worker_id_]);
 
   const CpuSet worker_mask_set =
@@ -146,7 +146,7 @@ absl::Status Worker::TryUpdateWorkerThread() {
     if (!SetCPUThreadAffinity(cpu_set_).ok()) {
       return absl::InternalError(
           absl::StrFormat("Worker (%d, %s) failed to set cpu thread affinity",
-                          worker_id_, GetName(device_flag_)));
+                          worker_id_, ToString(device_flag_)));
     }
   }
   return absl::OkStatus();
@@ -174,7 +174,7 @@ void Worker::Work() {
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
                         "enqueue time %d, invoke time %d, end time %d)",
-                        GetName(device_flag_).c_str(), current_job->model_id,
+                        ToString(device_flag_).c_str(), current_job->model_id,
                         current_job->subgraph_key.IsValid(),
                         current_job->subgraph_key.GetModelId(),
                         current_job->subgraph_key.GetWorkerId(),
@@ -213,7 +213,7 @@ void Worker::Work() {
             BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
           }
         }
-        current_job->status = JobStatus::Success;
+        current_job->status = JobStatus::kSuccess;
       } else if (!status.ok()) {
         HandleDeviceError(*current_job);
         engine_->Trigger();
@@ -225,13 +225,13 @@ void Worker::Work() {
         // !requests_.empty(), so it's safe to update it w/o grabbing the lock
         current_job->end_time = time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
-        current_job->status = JobStatus::InvokeFailure;
+        current_job->status = JobStatus::kInvokeFailure;
       }
     } else {
       BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to copy input",
                     worker_id_);
       // TODO #21: Handle errors in multi-thread environment
-      current_job->status = JobStatus::InputCopyFailure;
+      current_job->status = JobStatus::kInputCopyFailure;
     }
     BAND_TRACER_END_SUBGRAPH(*current_job);
     engine_->EnqueueFinishedJob(*current_job);

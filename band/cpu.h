@@ -45,7 +45,7 @@ class CpuSet {
   void DisableAll();
   bool IsEnabled(int cpu) const;
   int NumEnabled() const;
-  CPUMaskFlags GetCPUMaskFlag() const;
+  CPUMaskFlag GetCPUMaskFlag() const;
   const unsigned long* GetMaskBits() const;
   std::vector<unsigned long> GetMaskBitsVector() const;
   bool operator==(const CpuSet& rhs) const;
@@ -69,9 +69,9 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
-const CpuSet& BandCPUMaskGetSet(CPUMaskFlags flag);
-const char* BandCPUMaskGetName(CPUMaskFlags flag);
-const CPUMaskFlags BandCPUMaskGetFlag(const char* name);
+const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
+const char* BandCPUMaskToString(CPUMaskFlag flag);
+const CPUMaskFlag BandCPUMaskGetFlag(const char* name);
 
 }  // namespace band
 
