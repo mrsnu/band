@@ -15,11 +15,11 @@ band_cc_library(
     ],
     deps = [
         "//band:common",
-        "//band/backend/grpc/proto:band_cc_grpc",
-        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status:status",
         "@com_google_absl//absl/status:statusor",
-    ]
+        "//band/backend/grpc/proto:band_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+    ],
 )
 
 band_cc_library(
