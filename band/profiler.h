@@ -17,9 +17,11 @@ class Profiler {
     static_assert(is_chrono_duration<T>::value,
                   "T must be a std::chrono::duration");
     if (timeline_vector_.size() > index) {
-      return std::chrono::duration_cast<T>(timeline_vector_[index].second -
-                                           timeline_vector_[index].first)
-          .count();
+      return std::max<double>(
+          std::chrono::duration_cast<T>(timeline_vector_[index].second -
+                                        timeline_vector_[index].first)
+              .count(),
+          0);
     } else
       return 0;
   }
@@ -32,6 +34,10 @@ class Profiler {
     double accumulated_time = 0;
     for (size_t i = 0; i < timeline_vector_.size(); i++) {
       accumulated_time += GetElapsedTimeAt<T>(i);
+    }
+
+    if (timeline_vector_.size() == 0) {
+      return 0;
     }
 
     return accumulated_time / timeline_vector_.size();

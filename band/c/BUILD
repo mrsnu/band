@@ -64,7 +64,7 @@ band_cc_library(
         "c_api.h",
     ],
     deps = [
-        ":c_api_types",
+        ":c_type",
         ":c_api_internal",
         "//band:config_builder",
         "//band:framework",
@@ -78,13 +78,13 @@ band_cc_library(
     srcs = ["c_api_internal.cc"],
     visibility = ["//visibility:private"],
     deps = [
-        ":c_api_types",
+        ":c_type",
         "//band:framework",
         "//band:config_builder",
     ],
 )
 
 band_cc_library(
-    name = "c_api_types",
-    hdrs = ["c_api_types.h"],
+    name = "c_type",
+    hdrs = ["c_type.h"],
 )

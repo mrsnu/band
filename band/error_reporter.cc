@@ -15,8 +15,8 @@ int ErrorReporter::Report(const char* format, ...) const {
   return code;
 }
 
-// TODO(aselle): Make the name of ReportError on context the same, so
-// we can use the ensure functions w/o a context and w/ a reporter.
+// TODO(aselle): Make the name of ReportError on engine the same, so
+// we can use the ensure functions w/o a engine and w/ a reporter.
 int ErrorReporter::ReportError(void*, const char* format, ...) const {
   va_list args;
   va_start(args, format);

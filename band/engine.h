@@ -9,7 +9,7 @@
 
 #include "band/common.h"
 #include "band/config.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
@@ -36,7 +36,7 @@ typedef std::vector<interface::ITensor*> Tensors;
  * std::unique_ptr<band::Engine> engine = band::Engine::Create(config);
  *
  * Band::Model model;
- * model.FromPath(BackendType::TfLite, "band/test/data/add.tflite");
+ * model.FromPath(BackendType::kBandTfLite, "band/test/data/add.tflite");
  * engine->RegisterModel(&model);
  *
  * band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),
@@ -48,7 +48,7 @@ typedef std::vector<interface::ITensor*> Tensors;
  * engine->RequestSync(model.GetId(), {input_tensor}, {output_tensor})
  * // Copy result from output_tensor->GetData()
  */
-class Engine : public Context {
+class Engine : public IEngine {
  public:
   ~Engine() override;
   static std::unique_ptr<Engine> Create(
@@ -63,7 +63,7 @@ class Engine : public Context {
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
   size_t GetNumWorkers() const override;
-  DeviceFlags GetWorkerDevice(WorkerId id) const;
+  DeviceFlag GetWorkerDevice(WorkerId id) const;
 
   absl::Status RequestSync(
       ModelId model_id,
@@ -96,7 +96,7 @@ class Engine : public Context {
                                     WorkerId worker_id) const override;
 
  private:
-  /* context */
+  /* engine */
   absl::Status Init(const RuntimeConfig& config) override;
   void UpdateWorkersWaiting() const override;
   WorkerWaitingTime GetWorkerWaitingTime() const override;
@@ -148,8 +148,8 @@ class Engine : public Context {
                                   bool push_front = false) override;
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
-  void EnqueueToWorker(const ScheduleAction& schedule_action) override;
-  void EnqueueToWorkerBatch(
+  bool EnqueueToWorker(const ScheduleAction& schedule_action) override;
+  bool EnqueueToWorkerBatch(
       const std::vector<ScheduleAction>& schedule_action) override;
   const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
@@ -158,7 +158,7 @@ class Engine : public Context {
   absl::Status TryCopyOutputTensors(const Job& job) override;
 
   /* helper functions */
-  WorkerId GetDeviceWorkerId(DeviceFlags flag) const;
+  WorkerId GetDeviceWorkerId(DeviceFlag flag) const;
   interface::IModelExecutor* GetModelExecutor(const SubgraphKey& key);
   const interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;

@@ -2,7 +2,8 @@
 
 #include <fstream>
 
-#include "band/context.h"
+#include "absl/strings/str_format.h"
+#include "band/engine_interface.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
@@ -13,11 +14,9 @@
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
 
-#include "absl/strings/str_format.h"
-
 namespace band {
 
-Planner::Planner(Context& context) : num_submitted_jobs_(0), context_(context) {
+Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
   planner_thread_ = std::thread([this] {
     auto status = this->Plan();
     if (!status.ok()) {
@@ -50,26 +49,26 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == SchedulerType::FixedWorker) {
-      schedulers_.emplace_back(new FixedWorkerScheduler(context_));
-    } else if (schedulers[i] == SchedulerType::FixedWorkerGlobalQueue) {
-      schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(context_));
-    } else if (schedulers[i] == SchedulerType::RoundRobin) {
-      schedulers_.emplace_back(new RoundRobinScheduler(context_));
-    } else if (schedulers[i] == SchedulerType::ShortestExpectedLatency) {
+    if (schedulers[i] == SchedulerType::kBandFixedWorker) {
+      schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kBandFixedWorkerGlobalQueue) {
+      schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kBandRoundRobin) {
+      schedulers_.emplace_back(new RoundRobinScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kBandShortestExpectedLatency) {
       schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
-          context_, schedule_window_size_));
+          engine_, schedule_window_size_));
     } else if (schedulers[i] ==
-               SchedulerType::HeterogeneousEarliestFinishTime) {
+               SchedulerType::kBandHeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
-          new HEFTScheduler(context_, schedule_window_size_, false));
-    } else if (schedulers[i] == SchedulerType::LeastSlackTimeFirst) {
+          new HEFTScheduler(engine_, schedule_window_size_, false));
+    } else if (schedulers[i] == SchedulerType::kBandLeastSlackTimeFirst) {
       schedulers_.emplace_back(
-          new LeastSlackFirstScheduler(context_, schedule_window_size_));
+          new LeastSlackFirstScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] ==
-               SchedulerType::HeterogeneousEarliestFinishTimeReserved) {
+               SchedulerType::kBandHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
-          new HEFTScheduler(context_, schedule_window_size_, true));
+          new HEFTScheduler(engine_, schedule_window_size_, true));
     } else {
       return absl::InternalError("[Planner] Unsupported scheduler type.");
     }
@@ -87,13 +86,13 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   }
 
   // All schedulers must have the same worker type.
-  if (GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
-                          static_cast<int>(WorkerType::GlobalQueue))) {
+  if (GetWorkerType() == (static_cast<int>(WorkerType::kDeviceQueue) |
+                          static_cast<int>(WorkerType::kGlobalQueue))) {
     return absl::InternalError(
         "All schedulers must have the same worker type.");
   }
 
-  if (config.cpu_mask != CPUMaskFlags::All) {
+  if (config.cpu_mask != CPUMaskFlag::kBandAll) {
     cpu_set_ = BandCPUMaskGetSet(config.cpu_mask);
     need_cpu_update_ = true;
   }
@@ -104,8 +103,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
 absl::Status Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
   schedulers_.emplace_back(std::move(scheduler));
   local_queues_.resize(schedulers_.size());
-  return GetWorkerType() == (static_cast<int>(WorkerType::DeviceQueue) |
-                             static_cast<int>(WorkerType::GlobalQueue))
+  return GetWorkerType() == (static_cast<int>(WorkerType::kDeviceQueue) |
+                             static_cast<int>(WorkerType::kGlobalQueue))
              ? absl::InternalError(
                    "All schedulers must have the same worker type.")
              : absl::OkStatus();
@@ -147,8 +146,8 @@ void Planner::Wait(std::vector<int> job_ids) {
     return;
   }
 
-  std::unique_lock<std::mutex> request_lock(requests_.mtx);
-  end_invoke_.wait(request_lock, [this, job_ids] {
+  std::unique_lock<std::mutex> finished_lock(job_finished_mtx_);
+  end_invoke_.wait(finished_lock, [this, job_ids] {
     for (int job_id : job_ids) {
       if (!IsJobIdValid(job_id)) {
         continue;
@@ -159,31 +158,32 @@ void Planner::Wait(std::vector<int> job_ids) {
     }
     return true;
   });
-  request_lock.unlock();
+  finished_lock.unlock();
 }
 
 void Planner::WaitAll() {
-  std::unique_lock<std::mutex> request_lock(requests_.mtx);
-  end_invoke_.wait(request_lock, [this]() {
+  std::unique_lock<std::mutex> finished_lock(job_finished_mtx_);
+  end_invoke_.wait(finished_lock, [this]() {
     return num_finished_jobs_ >= num_submitted_jobs_;
   });
 
-  request_lock.unlock();
+  finished_lock.unlock();
 }
 
 void Planner::EnqueueFinishedJob(Job& job) {
-  std::lock_guard<std::mutex> request_lock(requests_.mtx);
+  std::lock_guard<std::mutex> finished_lock(job_finished_mtx_);
+  const bool is_finished =
+      engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
   // record finished / failed job
-  if (context_.IsEnd(job.subgraph_key) || job.status != JobStatus::Success) {
+  if (is_finished) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
     num_finished_jobs_++;
     end_invoke_.notify_all();
   }
 
   // report end invoke using callback
-  if (on_end_request_ && job.require_callback &&
-      context_.IsEnd(job.subgraph_key)) {
-    on_end_request_(job.job_id, job.status == JobStatus::Success
+  if (on_end_request_ && job.require_callback && is_finished) {
+    on_end_request_(job.job_id, job.status == JobStatus::kSuccess
                                     ? absl::OkStatus()
                                     : absl::InternalError("Job failed."));
   }
@@ -242,9 +242,8 @@ int Planner::GetWorkerType() const {
 absl::Status Planner::Plan() {
   while (true) {
     if (planner_safe_bool_.wait()) {
-      return absl::OkStatus();
+      break;
     }
-
     if (need_cpu_update_) {
       {
         auto status = SetCPUThreadAffinity(cpu_set_);
@@ -255,12 +254,14 @@ absl::Status Planner::Plan() {
       need_cpu_update_ = false;
     }
     CopyToLocalQueues();
-    do {
-      need_reschedule_ = false;
-      for (size_t i = 0; i < local_queues_.size(); ++i) {
-        schedulers_[i]->Schedule(local_queues_[i]);
-      }
-    } while (need_reschedule_);
+    bool need_reschedule = false;
+    for (size_t i = 0; i < local_queues_.size(); ++i) {
+      need_reschedule |= !schedulers_[i]->Schedule(local_queues_[i]);
+    }
+
+    if (need_reschedule) {
+      planner_safe_bool_.notify();
+    }
   }
   return absl::OkStatus();
 }
@@ -291,83 +292,77 @@ void Planner::CopyToLocalQueues() {
   request_lock.unlock();
 }
 
-void Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
+bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
+  bool success = true;
   for (auto& action : actions) {
     Job job;
     SubgraphKey target_key;
-
+    
     std::tie(job, target_key) = action;
 
-    Worker* worker = context_.GetWorker(target_key.GetWorkerId());
+    Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
-      BAND_REPORT_ERROR(
-          context_.GetErrorReporter(),
-          "EnqueueToWorker failed. Requests scheduled to null worker id %d",
-          target_key.GetWorkerId());
-      return;
-    }
-
-    if (IsSLOViolated(job)) {
-      HandleSLOViolatedJob(job);
-      continue;
-    }
-
-    {
+      BAND_LOG_PROD(BAND_LOG_ERROR,
+                    "EnqueueToWorker failed. Requests scheduled to null worker "
+                    "id %d",
+                    target_key.GetWorkerId());
+      job.status = JobStatus::kEnqueueFailed;
+      EnqueueFinishedJob(job);
+    } else if (IsSLOViolated(job)) {
+      // no point in running this job anymore
+      job.status = JobStatus::kSLOViolation;
+      // mark this as -1 to differentiate it from the default value, 0
+      job.invoke_time = -1;
+      // mark the time of this decision (of early-dropping this job)
+      job.end_time = time::NowMicros();
+      // Set reschedule flag.
+      success = false;
+      EnqueueFinishedJob(job);
+    } else {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
 
       if (worker->IsEnqueueReady()) {
         UpdateJobScheduleStatus(job, target_key);
-        worker->EnqueueJob(job);
+        if (!worker->EnqueueJob(job)) {
+          BAND_LOG_PROD(BAND_LOG_ERROR,
+                        "EnqueueToWorker failed. Requests scheduled to "
+                        "unavailable worker id %d",
+                        target_key.GetWorkerId());
+        }
       } else {
         EnqueueRequest(job, true);
       }
     }
-
-    worker->GetRequestCv().notify_one();
   }
+  return success;
 }
 
 bool Planner::IsSLOViolated(Job& job) {
-  if (job.status == JobStatus::SLOViolation) {
+  if (job.status == JobStatus::kSLOViolation) {
     return true;
   }
   // this job has an SLO; check if it's not too late already
   if (job.slo_us > 0) {
-    WorkerWaitingTime workers_waiting = context_.GetWorkerWaitingTime();
+    WorkerWaitingTime workers_waiting = engine_.GetWorkerWaitingTime();
     int64_t current_time = time::NowMicros();
     int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
                                job.expected_execution_time;
-
-    if (current_time + expected_latency > job.enqueue_time + job.slo_us) {
+    int64_t remaining_time = job.slo_us - (current_time - job.enqueue_time);
+    if (expected_latency > remaining_time) {
       return true;
     }
   }
   return false;
 }
 
-void Planner::HandleSLOViolatedJob(Job& job) {
-  // no point in running this job anymore
-  job.status = JobStatus::SLOViolation;
-
-  // mark this as -1 to differentiate it from the default value, 0
-  job.invoke_time = -1;
-
-  // mark the time of this decision (of early-dropping this job)
-  job.end_time = time::NowMicros();
-  EnqueueFinishedJob(job);
-
-  // Set reschedule flag.
-  need_reschedule_ = true;
-}
-
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = context_.GetProfiled(target_key);
-  job.expected_execution_time = context_.GetExpected(target_key);
+  job.profiled_execution_time = engine_.GetProfiled(target_key);
+  job.expected_execution_time = engine_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
-  if (!context_.IsEnd(target_key)) {
+  if (!engine_.IsEnd(target_key)) {
     Job remaining_ops(job.model_id);
     remaining_ops.model_fname = job.model_fname;
     remaining_ops.slo_us = job.slo_us;

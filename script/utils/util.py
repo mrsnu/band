@@ -112,7 +112,7 @@ def get_argument_parser(desc: str):
     parser.add_argument('-android', action="store_true", default=False,
                         help='Test on Android (with adb)')
     parser.add_argument('-docker', action="store_true", default=False,
-                        help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker context has devcontainer built with a /.devcontainer')
+                        help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker engine has devcontainer built with a /.devcontainer')
     parser.add_argument('-s', '--ssh', required=False, default=None, help="SSH host name (e.g. dev@ssh.band.org)")
     parser.add_argument('-t', '--trace', action="store_true", default=True, help='Build with trace (default = True)')
     parser.add_argument('-d', '--debug', action="store_true", default=False,

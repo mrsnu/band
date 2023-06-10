@@ -23,7 +23,7 @@ aar_with_jni(
     android_library = ":band_runtime",
     headers = [
         "//band/c:c_api.h",
-        "//band/c:c_api_types.h",
+        "//band/c:c_type.h",
     ],
 )
 

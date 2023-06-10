@@ -6,7 +6,7 @@
 #include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/common.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
 #include "band/latency_estimator.h"
@@ -17,7 +17,6 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
-
 
 namespace band {
 
@@ -89,7 +88,7 @@ absl::Status Engine::RegisterModel(Model* model) {
           added_once = true;
           BAND_LOG_INTERNAL(
               BAND_LOG_INFO, "Create model executor for model %d worker %s",
-              model_id, GetName(GetWorkerDevice(worker_id)).c_str());
+              model_id, ToString(GetWorkerDevice(worker_id)).c_str());
         }
       }
 
@@ -195,9 +194,9 @@ absl::Status Engine::RegisterModel(Model* model) {
                                                        common_tensor_index))) {
                 return absl::InternalError(absl::StrFormat(
                     "%s %s %d != %s %s %d",
-                    GetName(GetWorkerDevice(lhs.worker_id)).c_str(),
+                    ToString(GetWorkerDevice(lhs.worker_id)).c_str(),
                     lhs.ToString().c_str(), common_tensor_index,
-                    GetName(GetWorkerDevice(rhs.worker_id)).c_str(),
+                    ToString(GetWorkerDevice(rhs.worker_id)).c_str(),
                     rhs.ToString().c_str(), common_tensor_index));
               }
             }
@@ -215,7 +214,7 @@ absl::Status Engine::RegisterModel(Model* model) {
         std::vector<std::shared_ptr<interface::ITensor>> output_tensors;
 
         auto model_subgraph_key = GetLargestSubgraphKey(
-            model_id, GetDeviceWorkerId(DeviceFlags::CPU));
+            model_id, GetDeviceWorkerId(DeviceFlag::kBandCPU));
         interface::IModelExecutor* primary_model_executor =
             GetModelExecutor(model_subgraph_key);
 
@@ -284,7 +283,7 @@ absl::Status Engine::UnregisterModel(Model* model) {
 Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
   // TODO: What if there are multiple backends?
   SubgraphKey model_subgraph_key =
-      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlag::kBandCPU));
 
   if (interface::IModelExecutor* model_executor =
           GetModelExecutor(model_subgraph_key)) {
@@ -297,7 +296,7 @@ Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
 
 std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
-      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlag::kBandCPU));
   const interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetOutputs(model_subgraph_key)
@@ -306,7 +305,7 @@ std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
 
 std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
-      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlags::CPU));
+      GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlag::kBandCPU));
   const interface::IModelExecutor* model_executor =
       GetModelExecutor(model_subgraph_key);
   return model_executor ? model_executor->GetInputs(model_subgraph_key)
@@ -315,14 +314,14 @@ std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
 
 size_t Engine::GetNumWorkers() const { return workers_.size(); }
 
-DeviceFlags Engine::GetWorkerDevice(WorkerId id) const {
+DeviceFlag Engine::GetWorkerDevice(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id)->GetDeviceFlag();
   }
   BAND_LOG_PROD(
       BAND_LOG_ERROR,
       "Cannot find the device for the given worker: %d. Fallback to CPU", id);
-  return DeviceFlags::CPU;
+  return DeviceFlag::kBandCPU;
 }
 
 absl::Status Engine::RequestSync(ModelId model_id, RequestOption options,
@@ -430,6 +429,10 @@ absl::Status Engine::Wait(JobId job_id, Tensors outputs) {
 
 absl::Status Engine::Wait(std::vector<JobId> job_ids,
                           std::vector<Tensors> outputs) {
+  for (auto job_id : job_ids) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Wait for job %d", job_id);
+  }
+
   planner_->Wait(job_ids);
   for (size_t i = 0; i < outputs.size(); i++) {
     auto status = GetOutputTensors(job_ids[i], outputs[i]);
@@ -459,6 +462,13 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   if (job.output_handle == -1) {
     return absl::InternalError(
         absl::StrFormat("Invalid output handle : %d", job.output_handle));
+  }
+
+  if (job.status == JobStatus::kSLOViolation) {
+    return absl::DeadlineExceededError("SLO violation");
+  } else if (job.status != JobStatus::kSuccess) {
+    return absl::InternalError(
+        absl::StrFormat("Job failed with status : %s", ToString(job.status)));
   }
 
   if (model_output_buffer_.find(job.model_id) == model_output_buffer_.end()) {
@@ -497,11 +507,11 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       }
     }
 
-    const CPUMaskFlags cpu_mask = static_cast<CPUMaskFlags>(config.cpu_mask);
+    const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
     auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
 
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
-                      BandCPUMaskGetName(cpu_mask));
+                      BandCPUMaskToString(cpu_mask));
 
     auto status = SetCPUThreadAffinity(cpu_mask_set);
     if (!status.ok()) {
@@ -510,7 +520,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   }
 
   // Search for all available backends, devices
-  std::set<DeviceFlags> valid_devices;
+  std::set<DeviceFlag> valid_devices;
   auto valid_backends = BackendFactory::GetAvailableBackends();
   for (auto backend : valid_backends) {
     auto backend_devices =
@@ -520,11 +530,11 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
 
   auto& potential_workers = config.worker_config.workers;
   for (int i = 0; i < potential_workers.size(); i++) {
-    DeviceFlags device_flag = potential_workers[i];
+    DeviceFlag device_flag = potential_workers[i];
     if (valid_devices.find(device_flag) != valid_devices.end()) {
       std::unique_ptr<Worker> worker;
       if (planner_->GetWorkerType() ==
-          static_cast<int>(WorkerType::GlobalQueue)) {
+          static_cast<int>(WorkerType::kGlobalQueue)) {
         worker = std::make_unique<GlobalQueueWorker>(this, workers_.size(),
                                                      device_flag);
       } else {
@@ -534,25 +544,25 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
 
       if (!worker->Init(config.worker_config).ok()) {
         return absl::InternalError(absl::StrFormat(
-            "Worker::Init() failed for worker : %s.", GetName(device_flag)));
+            "Worker::Init() failed for worker : %s.", ToString(device_flag)));
       }
 
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
-                        GetName(device_flag).c_str());
+                        ToString(device_flag).c_str());
       worker->Start();
       workers_.push_back(std::move(worker));
       workers_waiting_[i] = 0;
       BAND_TRACER_ADD_WORKER(device_flag, workers_.back()->GetId());
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
-                        GetName(device_flag).c_str());
+                        ToString(device_flag).c_str());
     }
   }
 
   return absl::OkStatus();
 }
 
-Engine::Engine(ErrorReporter* error_reporeter) : Context(error_reporeter) {}
+Engine::Engine(ErrorReporter* error_reporeter) : IEngine(error_reporeter) {}
 
 void Engine::UpdateWorkersWaiting() const {
   for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
@@ -788,7 +798,7 @@ Engine::GetSubgraphWithShortestLatency(
     const Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
   if (subgraph_config_.subgraph_preparation_type ==
-      SubgraphPreparationType::FallbackPerWorker) {
+      SubgraphPreparationType::kBandFallbackPerWorker) {
     auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
                                    worker_waiting);
     std::pair<std::vector<SubgraphKey>, int64_t> ret =
@@ -865,7 +875,7 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
     int64_t expected_latency = GetExpected(key);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 
-    if (min_latency > total) {
+    if (min_latency >= total) {
       min_latency = total;
       min_key = key;
     }
@@ -905,13 +915,13 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
-void Engine::EnqueueToWorker(const ScheduleAction& action) {
-  EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
+bool Engine::EnqueueToWorker(const ScheduleAction& action) {
+  return EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
 }
 
-void Engine::EnqueueToWorkerBatch(
+bool Engine::EnqueueToWorkerBatch(
     const std::vector<ScheduleAction>& schedule_action) {
-  planner_->EnqueueToWorker(schedule_action);
+  return planner_->EnqueueToWorker(schedule_action);
 }
 
 const Worker* Engine::GetWorker(WorkerId id) const {
@@ -1035,14 +1045,14 @@ absl::Status Engine::TryCopyOutputTensors(const Job& job) {
   return absl::OkStatus();
 }
 
-WorkerId Engine::GetDeviceWorkerId(DeviceFlags flag) const {
+WorkerId Engine::GetDeviceWorkerId(DeviceFlag flag) const {
   for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
     if (workers_[worker_id]->GetDeviceFlag() == flag) {
       return worker_id;
     }
   }
   BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a worker for %s",
-                    GetName(flag).c_str());
+                    ToString(flag).c_str());
   return -1;
 }
 

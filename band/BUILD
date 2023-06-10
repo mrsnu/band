@@ -130,11 +130,11 @@ band_cc_library(
     hdrs=[
         "common.h",
         "config.h",
-        "context.h",
+        "engine_interface.h",
         "cpu.h",
         "error_reporter.h",
         "logger.h",
-        "model_spec.h",
+        "model_spec.h"
     ],
     linkopts=select(
         {
@@ -148,6 +148,7 @@ band_cc_library(
         "@com_google_absl//absl/status:status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "//band/c:c_type"
     ],
 )
 

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char* BandSchedulerGetName(BandSchedulerType type) {
+const char* BandSchedulerToString(BandSchedulerType type) {
   switch (type) {
     case kBandFixedWorker:
       return "fixed_worker";
@@ -28,15 +28,15 @@ const char* BandSchedulerGetName(BandSchedulerType type) {
 BandSchedulerType BandSchedulerGetType(const char* name) {
   for (int i = 0; i < kBandNumSchedulerType; i++) {
     BandSchedulerType type = (BandSchedulerType)i;
-    if (strncmp(BandSchedulerGetName(type), name,
-                strlen(BandSchedulerGetName(type))) == 0) {
+    if (strncmp(BandSchedulerToString(type), name,
+                strlen(BandSchedulerToString(type))) == 0) {
       return type;
     }
   }
   return kBandNumSchedulerType;
 }
 
-const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
+const char* BandSubgraphPreparationToString(BandSubgraphPreparationType type) {
   switch (type) {
     case kBandNoFallbackSubgraph:
       return "no_fallback_subgraph";
@@ -55,15 +55,15 @@ const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type) {
 BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name) {
   for (int i = 0; i < kBandNumSubgraphPreparationType; i++) {
     BandSubgraphPreparationType type = (BandSubgraphPreparationType)i;
-    if (strncmp(BandSubgraphPreparationGetName(type), name,
-                strlen(BandSubgraphPreparationGetName(type))) == 0) {
+    if (strncmp(BandSubgraphPreparationToString(type), name,
+                strlen(BandSubgraphPreparationToString(type))) == 0) {
       return type;
     }
   }
   return kBandNumSubgraphPreparationType;
 }
 
-const char* BandTypeGetName(BandType type) {
+const char* BandDataTypeToString(BandDataType type) {
   switch (type) {
     case kBandNoType:
       return "NOTYPE";
@@ -95,7 +95,7 @@ const char* BandTypeGetName(BandType type) {
   return "Unknown type";
 }
 
-const char* BandDeviceGetName(BandDeviceFlags flag) {
+const char* BandDeviceToString(BandDeviceFlag flag) {
   switch (flag) {
     case kBandCPU:
       return "CPU";
@@ -111,18 +111,18 @@ const char* BandDeviceGetName(BandDeviceFlags flag) {
   return "Unknown type";
 }
 
-BandDeviceFlags BandDeviceGetFlag(const char* name) {
-  for (int i = 0; i < kBandNumDevices; i++) {
-    BandDeviceFlags flag = (BandDeviceFlags)i;
-    if (strncmp(BandDeviceGetName(flag), name,
-                strlen(BandDeviceGetName(flag))) == 0) {
+BandDeviceFlag BandDeviceGetFlag(const char* name) {
+  for (int i = 0; i < kBandNumDeviceFlag; i++) {
+    BandDeviceFlag flag = (BandDeviceFlag)i;
+    if (strncmp(BandDeviceToString(flag), name,
+                strlen(BandDeviceToString(flag))) == 0) {
       return flag;
     }
   }
-  return kBandNumDevices;
+  return kBandNumDeviceFlag;
 }
 
-const char* BandBackendGetName(BandBackendType flag) {
+const char* BandBackendToString(BandBackendType flag) {
   switch (flag) {
     case kBandTfLite:
       return "Tensorflow Lite";
@@ -133,16 +133,16 @@ const char* BandBackendGetName(BandBackendType flag) {
 }
 
 const BandBackendType BandBackendGetType(const char* name) {
-  for (int i = 0; i < kBandNumBackendTypes; i++) {
+  for (int i = 0; i < kBandNumBackendType; i++) {
     BandBackendType flag = (BandBackendType)i;
-    if (strcmp(BandBackendGetName(flag), name) == 0) {
+    if (strcmp(BandBackendToString(flag), name) == 0) {
       return flag;
     }
   }
-  return kBandNumBackendTypes;
+  return kBandNumBackendType;
 }
 
-const char* BandStatusGetName(BandStatus status) {
+const char* BandStatusToString(BandStatus status) {
   switch (status) {
     case kBandOk:
       return "Ok";

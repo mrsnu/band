@@ -28,11 +28,11 @@ struct MockContext : public MockContextBase {
 class MockScheduler : public IScheduler {
   using IScheduler::IScheduler;
 
-  MOCK_METHOD1(Schedule, void(JobQueue&));
+  MOCK_METHOD1(Schedule, bool(JobQueue&));
   MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
   // MOCK_METHOD0(GetWorkerType, WorkerType());
-  WorkerType GetWorkerType() { return WorkerType::DeviceQueue; }
+  WorkerType GetWorkerType() { return WorkerType::kDeviceQueue; }
 };
 
 /*
@@ -44,9 +44,9 @@ planner -> scheduler -> worker -> planner
 */
 
 TEST(PlannerSuite, SingleQueue) {
-  MockContext context;
-  Planner planner(context);
-  auto status = planner.AddScheduler(std::make_unique<MockScheduler>(context));
+  MockContext engine;
+  Planner planner(engine);
+  auto status = planner.AddScheduler(std::make_unique<MockScheduler>(engine));
   EXPECT_EQ(status, absl::OkStatus());
   // TODO: Add tests!
   EXPECT_TRUE(true);

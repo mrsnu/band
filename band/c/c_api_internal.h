@@ -5,12 +5,12 @@
 #include <memory>
 
 #include "band/buffer/buffer.h"
-#include "band/c/c_api_types.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/model.h"
 #include "band/tensor.h"
+#include "band/c/c_type.h"
 
 struct BandConfigBuilder {
   band::RuntimeConfigBuilder impl;
@@ -46,22 +46,22 @@ struct BandEngine {
   std::unique_ptr<band::Engine> impl;
 };
 
-const char* BandBackendGetName(BandBackendType flag);
+const char* BandBackendToString(BandBackendType flag);
 const BandBackendType BandBackendGetType(const char* name);
 
-const char* BandStatusGetName(BandStatus status);
+const char* BandStatusToString(BandStatus status);
 
-const char* BandSchedulerGetName(BandSchedulerType type);
+const char* BandSchedulerToString(BandSchedulerType type);
 BandSchedulerType BandSchedulerGetType(const char* name);
 
-const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type);
+const char* BandSubgraphPreparationToString(BandSubgraphPreparationType type);
 BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name);
 
-const char* BandTypeGetName(BandType type);
+const char* BandDataTypeToString(BandDataType type);
 
-const char* BandQuantizationTypeGetName(BandQuantizationType type);
+const char* BandQuantizationTypeToString(BandQuantizationType type);
 
-const char* BandDeviceGetName(BandDeviceFlags flag);
-BandDeviceFlags BandDeviceGetFlag(const char* name);
+const char* BandDeviceToString(BandDeviceFlag flag);
+BandDeviceFlag BandDeviceGetFlag(const char* name);
 
 #endif  // BAND_C_C_API_INTERNAL_H_

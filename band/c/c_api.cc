@@ -94,24 +94,24 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_PLANNER_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddPlannerCPUMask(static_cast<band::CPUMaskFlags>(arg));
+      b->impl.AddPlannerCPUMask(static_cast<band::CPUMaskFlag>(arg));
     } break;
     case BAND_PLANNER_LOG_PATH: {
       char* arg = va_arg(vl, char*);
       b->impl.AddPlannerLogPath(arg);
     } break;
     case BAND_WORKER_WORKERS: {
-      std::vector<band::DeviceFlags> workers(count);
+      std::vector<band::DeviceFlag> workers(count);
       for (int i = 0; i < count; i++) {
         int temp = va_arg(vl, int);
-        workers[i] = static_cast<band::DeviceFlags>(temp);
+        workers[i] = static_cast<band::DeviceFlag>(temp);
       }
       b->impl.AddWorkers(workers);
     } break;
     case BAND_WORKER_CPU_MASKS: {
-      std::vector<band::CPUMaskFlags> cpu_masks(count);
+      std::vector<band::CPUMaskFlag> cpu_masks(count);
       for (int i = 0; i < count; i++) {
-        cpu_masks[i] = static_cast<band::CPUMaskFlags>(va_arg(vl, int));
+        cpu_masks[i] = static_cast<band::CPUMaskFlag>(va_arg(vl, int));
       }
       b->impl.AddWorkerCPUMasks(cpu_masks);
     } break;
@@ -141,7 +141,7 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_CPU_MASK: {
       int arg = va_arg(vl, int);
-      b->impl.AddCPUMask(static_cast<band::CPUMaskFlags>(arg));
+      b->impl.AddCPUMask(static_cast<band::CPUMaskFlag>(arg));
     } break;
   }
   va_end(vl);
@@ -177,8 +177,8 @@ BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
 
 void BandTensorDelete(BandTensor* tensor) { delete tensor; }
 
-BandType BandTensorGetType(BandTensor* tensor) {
-  return static_cast<BandType>(tensor->impl->GetType());
+BandDataType BandTensorGetType(BandTensor* tensor) {
+  return static_cast<BandDataType>(tensor->impl->GetType());
 }
 
 void* BandTensorGetData(BandTensor* tensor) { return tensor->impl->GetData(); }
@@ -242,8 +242,8 @@ int BandEngineGetNumWorkers(BandEngine* engine) {
   return engine->impl->GetNumWorkers();
 }
 
-BandDeviceFlags BandEngineGetWorkerDevice(BandEngine* engine, int worker_id) {
-  return static_cast<BandDeviceFlags>(engine->impl->GetWorkerDevice(worker_id));
+BandDeviceFlag BandEngineGetWorkerDevice(BandEngine* engine, int worker_id) {
+  return static_cast<BandDeviceFlag>(engine->impl->GetWorkerDevice(worker_id));
 }
 
 BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,

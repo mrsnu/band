@@ -27,7 +27,7 @@ struct ConcurrentJobQueue {
 
 class Planner {
  public:
-  explicit Planner(Context& context);
+  explicit Planner(IEngine& engine);
   ~Planner();
 
   absl::Status Init(const PlannerConfig& config);
@@ -48,7 +48,8 @@ class Planner {
   void EnqueueFinishedJob(Job& job);
   void PrepareReenqueue(Job& job);
   // Enqueue the request to the worker.
-  void EnqueueToWorker(const std::vector<ScheduleAction>& action);
+  // Returns true if the request is successfully enqueued.
+  bool EnqueueToWorker(const std::vector<ScheduleAction>& action);
   void Trigger() { planner_safe_bool_.notify(); }
   int IssueSchedId() { return sched_id_++; }
 
@@ -87,8 +88,6 @@ class Planner {
   // This func assumes that workers_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.
   bool IsSLOViolated(Job& job);
-  // Set the job status and enqueue to the finished queue.
-  void HandleSLOViolatedJob(Job& job);
   // Update the job information based on next target key
   void UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key);
   // Update `model_worker_map_`.
@@ -114,6 +113,7 @@ class Planner {
   std::vector<JobQueue> local_queues_;
   std::vector<std::unique_ptr<IScheduler>> schedulers_;
 
+  std::mutex job_finished_mtx_;
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
   std::atomic<int> num_submitted_jobs_;
   int num_finished_jobs_ = 0;
@@ -127,8 +127,7 @@ class Planner {
   std::thread planner_thread_;
   // Map structure to find assigned worker of model idx (model_id, worker_id)
   std::map<ModelId, WorkerId> model_worker_map_;
-  Context& context_;
-  bool need_reschedule_ = false;
+  IEngine& engine_;
 };
 
 }  // namespace band

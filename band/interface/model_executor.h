@@ -23,8 +23,8 @@ class ITensorView;
 class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(
-      ModelId model_id, WorkerId worker_id, DeviceFlags device_flag,
-      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlags::All),
+      ModelId model_id, WorkerId worker_id, DeviceFlag device_flag,
+      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlag::kBandAll),
       int num_threads = -1)
       : model_id_(model_id),
         worker_id_(worker_id),
@@ -58,7 +58,7 @@ class IModelExecutor : public IBackendSpecific {
  protected:
   const ModelId model_id_;
   const WorkerId worker_id_;
-  const DeviceFlags device_flag_;
+  const DeviceFlag device_flag_;
   const CpuSet thread_affinity_mask_;
   const int num_threads_;
 

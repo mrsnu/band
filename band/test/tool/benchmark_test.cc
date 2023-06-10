@@ -12,6 +12,8 @@ TEST(BenchmarkTest, BenchmarkConfigLoadSuccess) {
 }
 
 TEST(BenchmarkTest, BenchmarkConfigLoadFail) {
+  // intentionally silent the log, to avoid the test failure due to the error log
+  Logger::SetVerbosity(BAND_LOG_NUM_SEVERITIES);
   tool::Benchmark benchmark;
   const char* argv[] = {"", ""};
   EXPECT_TRUE(!benchmark.Initialize(2, argv).ok());
