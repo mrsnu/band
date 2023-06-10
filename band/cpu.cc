@@ -86,13 +86,13 @@ int CpuSet::NumEnabled() const { return GetCPUCount(); }
 #endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
 
 CPUMaskFlag CpuSet::GetCPUMaskFlag() const {
-  for (int i = 0; i < CPUMaskFlag::kBandNumCpuMask; i++) {
+  for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
     const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);
     if (BandCPUMaskGetSet(flag) == *this) {
       return flag;
     }
   }
-  return CPUMaskFlag::kBandAll;
+  return CPUMaskFlag::kAll;
 }
 
 static CpuSet g_thread_affinity_mask_all;
@@ -137,11 +137,11 @@ int GetCPUCount() {
 }
 
 int GetLittleCPUCount() {
-  return BandCPUMaskGetSet(CPUMaskFlag::kBandLittle).NumEnabled();
+  return BandCPUMaskGetSet(CPUMaskFlag::kLittle).NumEnabled();
 }
 
 int GetBigCPUCount() {
-  return BandCPUMaskGetSet(CPUMaskFlag::kBandBig).NumEnabled();
+  return BandCPUMaskGetSet(CPUMaskFlag::kBig).NumEnabled();
 }
 
 #if defined _BAND_SUPPORT_THREAD_AFFINITY
@@ -261,7 +261,7 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
   }
 #else
   BAND_LOG_PROD(BAND_LOG_INFO, "Thread affinity control is off. Ignore mask %s",
-                ToString(thread_affinity_mask.GetCPUMaskFlag()).c_str());
+                ToString(thread_affinity_mask.GetCPUMaskFlag()));
 #endif
   return absl::OkStatus();
 }
@@ -330,44 +330,18 @@ const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag) {
   std::call_once(once_flag, []() { SetupThreadAffinityMasks(); });
 
   switch (flag) {
-    case CPUMaskFlag::kBandAll:
+    case CPUMaskFlag::kAll:
       return g_thread_affinity_mask_all;
-    case CPUMaskFlag::kBandLittle:
+    case CPUMaskFlag::kLittle:
       return g_thread_affinity_mask_little;
-    case CPUMaskFlag::kBandBig:
+    case CPUMaskFlag::kBig:
       return g_thread_affinity_mask_big;
-    case CPUMaskFlag::kBandPrimary:
+    case CPUMaskFlag::kPrimary:
       return g_thread_affinity_mask_primary;
     default:
       // fallback to all cores anyway
       return g_thread_affinity_mask_all;
   }
-}
-
-const char* BandCPUMaskToString(CPUMaskFlag flag) {
-  switch (flag) {
-    case CPUMaskFlag::kBandAll:
-      return "ALL";
-    case CPUMaskFlag::kBandLittle:
-      return "LITTLE";
-    case CPUMaskFlag::kBandBig:
-      return "BIG";
-    case CPUMaskFlag::kBandPrimary:
-      return "PRIMARY";
-    default:
-      return "UNKNOWN";
-  }
-}
-
-const CPUMaskFlag BandCPUMaskGetFlag(const char* name) {
-  for (int i = 0; i < CPUMaskFlag::kBandNumCpuMask; i++) {
-    const auto flag = static_cast<CPUMaskFlag>(i);
-    if (strcmp(name, BandCPUMaskToString(flag)) == 0) {
-      return flag;
-    }
-  }
-  // Use all as a default flag
-  return CPUMaskFlag::kBandAll;
 }
 
 }  // namespace band

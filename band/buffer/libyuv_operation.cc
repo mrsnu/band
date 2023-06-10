@@ -49,10 +49,10 @@ struct YuvData {
 };
 
 absl::StatusOr<YuvData> GetYuvDataFromBuffer(const Buffer& buffer) {
-  if (buffer.GetBufferFormat() != BufferFormat::kBandYV12 &&
-      buffer.GetBufferFormat() != BufferFormat::kBandYV21 &&
-      buffer.GetBufferFormat() != BufferFormat::kBandNV12 &&
-      buffer.GetBufferFormat() != BufferFormat::kBandNV21) {
+  if (buffer.GetBufferFormat() != BufferFormat::kYV12 &&
+      buffer.GetBufferFormat() != BufferFormat::kYV21 &&
+      buffer.GetBufferFormat() != BufferFormat::kNV12 &&
+      buffer.GetBufferFormat() != BufferFormat::kNV21) {
     return absl::InvalidArgumentError(absl::StrFormat(
         "Buffer format %i is not supported.", buffer.GetBufferFormat()));
   }
@@ -63,8 +63,8 @@ absl::StatusOr<YuvData> GetYuvDataFromBuffer(const Buffer& buffer) {
   }
 
   YuvData yuv_data;
-  if (buffer.GetBufferFormat() == BufferFormat::kBandNV21 ||
-      buffer.GetBufferFormat() == BufferFormat::kBandYV12) {
+  if (buffer.GetBufferFormat() == BufferFormat::kNV21 ||
+      buffer.GetBufferFormat() == BufferFormat::kYV12) {
     // Y follow by VU order. The VU chroma planes can be interleaved or
     // planar.
     yuv_data.y_buffer = buffer[0].data;
@@ -95,7 +95,7 @@ absl::Status ConvertFromNv12(const Buffer& buffer, Buffer& output_buffer) {
     return yuv_data.status();
   }
   switch (output_buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGB: {
+    case BufferFormat::kRGB: {
       // The RAW format of Libyuv represents the 8-bit interleaved RGB format in
       // the big endian style with R being the first byte in memory.
       int ret =
@@ -109,7 +109,7 @@ absl::Status ConvertFromNv12(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandRGBA: {
+    case BufferFormat::kRGBA: {
       // The libyuv ABGR format is interleaved RGBA format in memory.
       int ret = libyuv::NV12ToABGR(
           yuv_data->y_buffer, yuv_data->y_row_stride, yuv_data->u_buffer,
@@ -122,8 +122,8 @@ absl::Status ConvertFromNv12(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21: {
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -143,7 +143,7 @@ absl::Status ConvertFromNv12(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandNV21: {
+    case BufferFormat::kNV21: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -160,7 +160,7 @@ absl::Status ConvertFromNv12(const Buffer& buffer, Buffer& output_buffer) {
                           uv_plane_dimension[1]);
       break;
     }
-    case BufferFormat::kBandGrayScale: {
+    case BufferFormat::kGrayScale: {
       libyuv::CopyPlane(yuv_data->y_buffer, yuv_data->y_row_stride,
                         const_cast<unsigned char*>(output_buffer[0].data),
                         output_buffer[0].row_stride_bytes,
@@ -183,7 +183,7 @@ absl::Status ConvertFromNv21(const Buffer& buffer, Buffer& output_buffer) {
     return yuv_data.status();
   }
   switch (output_buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGB: {
+    case BufferFormat::kRGB: {
       // The RAW format of Libyuv represents the 8-bit interleaved RGB format in
       // the big endian style with R being the first byte in memory.
       int ret =
@@ -197,7 +197,7 @@ absl::Status ConvertFromNv21(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandRGBA: {
+    case BufferFormat::kRGBA: {
       // The libyuv ABGR format is interleaved RGBA format in memory.
       int ret = libyuv::NV21ToABGR(
           yuv_data->y_buffer, yuv_data->y_row_stride, yuv_data->v_buffer,
@@ -210,8 +210,8 @@ absl::Status ConvertFromNv21(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21: {
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -231,7 +231,7 @@ absl::Status ConvertFromNv21(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandNV12: {
+    case BufferFormat::kNV12: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -248,7 +248,7 @@ absl::Status ConvertFromNv21(const Buffer& buffer, Buffer& output_buffer) {
                           uv_plane_dimension[1]);
       break;
     }
-    case BufferFormat::kBandGrayScale: {
+    case BufferFormat::kGrayScale: {
       libyuv::CopyPlane(yuv_data->y_buffer, yuv_data->y_row_stride,
                         const_cast<unsigned char*>(output_buffer[0].data),
                         output_buffer[0].row_stride_bytes,
@@ -272,7 +272,7 @@ absl::Status ConvertFromYv(const Buffer& buffer, Buffer& output_buffer) {
     return yuv_data.status();
   }
   switch (output_buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGB: {
+    case BufferFormat::kRGB: {
       // The RAW format of Libyuv represents the 8-bit interleaved RGB format in
       // the big endian style with R being the first byte in memory.
       int ret = libyuv::I420ToRAW(
@@ -286,7 +286,7 @@ absl::Status ConvertFromYv(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandRGBA: {
+    case BufferFormat::kRGBA: {
       // The libyuv ABGR format is interleaved RGBA format in memory.
       int ret = libyuv::I420ToABGR(
           yuv_data->y_buffer, yuv_data->y_row_stride, yuv_data->u_buffer,
@@ -299,7 +299,7 @@ absl::Status ConvertFromYv(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandNV12: {
+    case BufferFormat::kNV12: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -317,7 +317,7 @@ absl::Status ConvertFromYv(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandNV21: {
+    case BufferFormat::kNV21: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -335,7 +335,7 @@ absl::Status ConvertFromYv(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandGrayScale: {
+    case BufferFormat::kGrayScale: {
       libyuv::CopyPlane(yuv_data->y_buffer, yuv_data->y_row_stride,
                         const_cast<unsigned char*>(output_buffer[0].data),
                         output_buffer[0].row_stride_bytes,
@@ -343,8 +343,8 @@ absl::Status ConvertFromYv(const Buffer& buffer, Buffer& output_buffer) {
                         output_buffer.GetDimension()[1]);
       break;
     }
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21: {
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -414,7 +414,7 @@ absl::Status ResizeNv(const Buffer& buffer, Buffer& output_buffer) {
   }
   const unsigned char* src_uv = input_data->u_buffer;
   const unsigned char* dst_uv = output_data->u_buffer;
-  if (buffer.GetBufferFormat() == BufferFormat::kBandNV21) {
+  if (buffer.GetBufferFormat() == BufferFormat::kNV21) {
     src_uv = input_data->v_buffer;
     dst_uv = output_data->v_buffer;
   }
@@ -438,7 +438,7 @@ absl::Status ResizeNv(const Buffer& buffer, Buffer& output_buffer) {
 // in `dest_argb`.
 absl::Status ConvertRgbToArgb(const Buffer& buffer, unsigned char* dest_argb,
                               int dest_stride_argb) {
-  if (buffer.GetBufferFormat() != BufferFormat::kBandRGB) {
+  if (buffer.GetBufferFormat() != BufferFormat::kRGB) {
     return absl::InternalError("RGB input format is expected.");
   }
 
@@ -465,7 +465,7 @@ absl::Status ConvertRgbToArgb(const Buffer& buffer, unsigned char* dest_argb,
 // stores the conversion result in `output_buffer`.
 absl::Status ConvertArgbToRgb(unsigned char* src_argb, int src_stride_argb,
                               Buffer& output_buffer) {
-  if (output_buffer.GetBufferFormat() != BufferFormat::kBandRGB) {
+  if (output_buffer.GetBufferFormat() != BufferFormat::kRGB) {
     return absl::InternalError("RGB input format is expected.");
   }
 
@@ -495,7 +495,7 @@ absl::Status ConvertArgbToRgb(unsigned char* src_argb, int src_stride_argb,
 // memory) format and stores the conversion result in `dest_argb`.
 absl::Status ConvertRgbaToArgb(const Buffer& buffer, unsigned char* dest_argb,
                                int dest_stride_argb) {
-  if (buffer.GetBufferFormat() != BufferFormat::kBandRGBA) {
+  if (buffer.GetBufferFormat() != BufferFormat::kRGBA) {
     return absl::InternalError("RGBA input format is expected.");
   }
 
@@ -521,7 +521,7 @@ absl::Status ConvertRgbaToArgb(const Buffer& buffer, unsigned char* dest_argb,
 
 // Converts kRGB `buffer` to the `output_buffer` of the target color space.
 absl::Status ConvertFromRgb(const Buffer& buffer, Buffer& output_buffer) {
-  if (output_buffer.GetBufferFormat() == BufferFormat::kBandGrayScale) {
+  if (output_buffer.GetBufferFormat() == BufferFormat::kGrayScale) {
     int ret =
         libyuv::RAWToJ400(buffer[0].data, buffer[0].row_stride_bytes,
                           const_cast<unsigned char*>(output_buffer[0].data),
@@ -531,10 +531,10 @@ absl::Status ConvertFromRgb(const Buffer& buffer, Buffer& output_buffer) {
       return absl::InternalError("Libyuv RAWToJ400 operation failed.");
     }
     return absl::OkStatus();
-  } else if (output_buffer.GetBufferFormat() == BufferFormat::kBandYV12 ||
-             output_buffer.GetBufferFormat() == BufferFormat::kBandYV21 ||
-             output_buffer.GetBufferFormat() == BufferFormat::kBandNV12 ||
-             output_buffer.GetBufferFormat() == BufferFormat::kBandNV21) {
+  } else if (output_buffer.GetBufferFormat() == BufferFormat::kYV12 ||
+             output_buffer.GetBufferFormat() == BufferFormat::kYV21 ||
+             output_buffer.GetBufferFormat() == BufferFormat::kNV12 ||
+             output_buffer.GetBufferFormat() == BufferFormat::kNV21) {
     // libyuv does not support conversion directly from kRGB to kNV12 / kNV21.
     // For kNV12 / kNV21, the implementation converts the kRGB to I420,
     // then converts I420 to kNV12 / kNV21.
@@ -543,15 +543,15 @@ absl::Status ConvertFromRgb(const Buffer& buffer, Buffer& output_buffer) {
     absl::StatusOr<YuvData> yuv_data;
     std::unique_ptr<unsigned char[]> tmp_yuv_buffer;
     std::shared_ptr<Buffer> yuv_frame_buffer;
-    if (output_buffer.GetBufferFormat() == BufferFormat::kBandNV12 ||
-        output_buffer.GetBufferFormat() == BufferFormat::kBandNV21) {
+    if (output_buffer.GetBufferFormat() == BufferFormat::kNV12 ||
+        output_buffer.GetBufferFormat() == BufferFormat::kNV21) {
       tmp_yuv_buffer =
           absl::make_unique<unsigned char[]>(Buffer::GetBufferByteSize(
               buffer.GetDimension(), output_buffer.GetBufferFormat()));
 
       yuv_frame_buffer =
           Buffer::CreateFromRaw(tmp_yuv_buffer.get(), buffer.GetDimension()[0],
-                                buffer.GetDimension()[1], BufferFormat::kBandYV21,
+                                buffer.GetDimension()[1], BufferFormat::kYV21,
                                 buffer.GetOrientation());
       if (!yuv_frame_buffer) {
         return absl::InternalError("Failed to create YV21 buffer.");
@@ -576,8 +576,8 @@ absl::Status ConvertFromRgb(const Buffer& buffer, Buffer& output_buffer) {
     if (ret != 0) {
       return absl::InternalError("Libyuv RAWToI420 operation failed.");
     }
-    if (output_buffer.GetBufferFormat() == BufferFormat::kBandNV12 ||
-        output_buffer.GetBufferFormat() == BufferFormat::kBandNV21) {
+    if (output_buffer.GetBufferFormat() == BufferFormat::kNV12 ||
+        output_buffer.GetBufferFormat() == BufferFormat::kNV21) {
       return ConvertFromYv(*yuv_frame_buffer, output_buffer);
     }
     return absl::OkStatus();
@@ -589,7 +589,7 @@ absl::Status ConvertFromRgb(const Buffer& buffer, Buffer& output_buffer) {
 // Converts kRGBA `buffer` to the `output_buffer` of the target color space.
 absl::Status ConvertFromRgba(const Buffer& buffer, Buffer& output_buffer) {
   switch (output_buffer.GetBufferFormat()) {
-    case BufferFormat::kBandGrayScale: {
+    case BufferFormat::kGrayScale: {
       // libyuv does not support convert kRGBA (ABGR) foramat. In this method,
       // the implementation converts kRGBA format to ARGB and use ARGB buffer
       // for conversion.
@@ -597,7 +597,7 @@ absl::Status ConvertFromRgba(const Buffer& buffer, Buffer& output_buffer) {
 
       // Convert kRGBA to ARGB
       int argb_buffer_size =
-          Buffer::GetBufferByteSize(buffer.GetDimension(), BufferFormat::kBandRGBA);
+          Buffer::GetBufferByteSize(buffer.GetDimension(), BufferFormat::kRGBA);
       auto argb_buffer = absl::make_unique<unsigned char[]>(argb_buffer_size);
       const int argb_row_bytes = buffer.GetDimension()[0] * 4;
 
@@ -618,7 +618,7 @@ absl::Status ConvertFromRgba(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandNV12: {
+    case BufferFormat::kNV12: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -635,7 +635,7 @@ absl::Status ConvertFromRgba(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandNV21: {
+    case BufferFormat::kNV21: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -652,8 +652,8 @@ absl::Status ConvertFromRgba(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21: {
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21: {
       absl::StatusOr<YuvData> output_data = GetYuvDataFromBuffer(output_buffer);
       if (!output_data.ok()) {
         return output_data.status();
@@ -672,7 +672,7 @@ absl::Status ConvertFromRgba(const Buffer& buffer, Buffer& output_buffer) {
       }
       break;
     }
-    case BufferFormat::kBandRGB: {
+    case BufferFormat::kRGB: {
       // ARGB is BGRA in memory and RGB24 is BGR in memory. The removal of the
       // alpha channel will not impact the RGB ordering.
       int ret = libyuv::ARGBToRGB24(
@@ -735,7 +735,7 @@ absl::Status RotateRgb(const Buffer& buffer, int angle_deg,
 
   // Convert RGB to ARGB
   int argb_buffer_size =
-      Buffer::GetBufferByteSize(buffer.GetDimension(), BufferFormat::kBandRGBA);
+      Buffer::GetBufferByteSize(buffer.GetDimension(), BufferFormat::kRGBA);
   auto argb_buffer = absl::make_unique<unsigned char[]>(argb_buffer_size);
   const int argb_row_bytes = buffer.GetDimension()[0] * 4;
 
@@ -815,8 +815,8 @@ absl::Status RotateYv(const Buffer& buffer, int angle_deg,
 // support that.
 absl::Status RotateNv(const Buffer& buffer, int angle_deg,
                       Buffer& output_buffer) {
-  if (buffer.GetBufferFormat() != BufferFormat::kBandNV12 &&
-      buffer.GetBufferFormat() != BufferFormat::kBandNV21) {
+  if (buffer.GetBufferFormat() != BufferFormat::kNV12 &&
+      buffer.GetBufferFormat() != BufferFormat::kNV21) {
     return absl::InternalError("kNV12 or kNV21 input formats are expected.");
   }
   absl::StatusOr<YuvData> input_data = GetYuvDataFromBuffer(buffer);
@@ -828,12 +828,12 @@ absl::Status RotateNv(const Buffer& buffer, int angle_deg,
     return output_data.status();
   }
   const int rotated_buffer_size = Buffer::GetBufferByteSize(
-      output_buffer.GetDimension(), BufferFormat::kBandYV21);
+      output_buffer.GetDimension(), BufferFormat::kYV21);
   auto rotated_yuv_raw_buffer =
       absl::make_unique<unsigned char[]>(rotated_buffer_size);
   std::shared_ptr<Buffer> rotated_yuv_buffer = Buffer::CreateFromRaw(
       rotated_yuv_raw_buffer.get(), output_buffer.GetDimension()[0],
-      output_buffer.GetDimension()[1], BufferFormat::kBandYV21,
+      output_buffer.GetDimension()[1], BufferFormat::kYV21,
       output_buffer.GetOrientation());
   if (!rotated_yuv_buffer) {
     return absl::InternalError("Failed to create YV21 buffer.");
@@ -850,7 +850,7 @@ absl::Status RotateNv(const Buffer& buffer, int angle_deg,
   // by merging the swapped UV planes which produces V first interleaved UV
   // buffer.
   const unsigned char* chroma_buffer =
-      buffer.GetBufferFormat() == BufferFormat::kBandNV12 ? input_data->u_buffer
+      buffer.GetBufferFormat() == BufferFormat::kNV12 ? input_data->u_buffer
                                                      : input_data->v_buffer;
   // Rotate the Y plane and store into the Y plane in `output_buffer`. Rotate
   // the interleaved UV plane and store into the interleaved UV plane in
@@ -873,7 +873,7 @@ absl::Status RotateNv(const Buffer& buffer, int angle_deg,
   // VU buffer for NV21 by putting the U plane in the I420 frame which is
   // actually the V plane from the input buffer first.
   const unsigned char* output_chroma_buffer =
-      buffer.GetBufferFormat() == BufferFormat::kBandNV12 ? output_data->u_buffer
+      buffer.GetBufferFormat() == BufferFormat::kNV12 ? output_data->u_buffer
                                                      : output_data->v_buffer;
   // The width and height arguments of `libyuv::MergeUVPlane()` represent the
   // width and height of the UV planes.
@@ -931,8 +931,8 @@ absl::Status CropPlane(const Buffer& buffer, int x0, int y0, int x1, int y1,
 }
 
 const unsigned char* GetUvRawBuffer(const Buffer& buffer) {
-  if (buffer.GetBufferFormat() != BufferFormat::kBandNV12 &&
-      buffer.GetBufferFormat() != BufferFormat::kBandNV21) {
+  if (buffer.GetBufferFormat() != BufferFormat::kNV12 &&
+      buffer.GetBufferFormat() != BufferFormat::kNV21) {
     return nullptr;
   }
 
@@ -941,7 +941,7 @@ const unsigned char* GetUvRawBuffer(const Buffer& buffer) {
     return nullptr;
   }
 
-  return buffer.GetBufferFormat() == BufferFormat::kBandNV12 ? yuv_data->u_buffer
+  return buffer.GetBufferFormat() == BufferFormat::kNV12 ? yuv_data->u_buffer
                                                         : yuv_data->v_buffer;
 }
 
@@ -1041,11 +1041,11 @@ absl::Status CropResizeYuv(const Buffer& buffer, int x0, int y0, int x1, int y1,
   std::vector<size_t> crop_dimension = Buffer::GetCropDimension(x0, x1, y0, y1);
   if (crop_dimension == output_buffer.GetDimension()) {
     switch (buffer.GetBufferFormat()) {
-      case BufferFormat::kBandNV12:
-      case BufferFormat::kBandNV21:
+      case BufferFormat::kNV12:
+      case BufferFormat::kNV21:
         return CropNv(buffer, x0, y0, x1, y1, output_buffer);
-      case BufferFormat::kBandYV12:
-      case BufferFormat::kBandYV21:
+      case BufferFormat::kYV12:
+      case BufferFormat::kYV21:
         return CropYv(buffer, x0, y0, x1, y1, output_buffer);
       default:
         return absl::InternalError(absl::StrFormat(
@@ -1074,25 +1074,25 @@ absl::Status CropResizeYuv(const Buffer& buffer, int x0, int y0, int x1, int y1,
                                        input_data->uv_pixel_stride};
 
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandNV12: {
+    case BufferFormat::kNV12: {
       std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_u, cropped_plane_v}, crop_dimension,
           buffer.GetBufferFormat(), buffer.GetOrientation());
       return ResizeNv(*cropped_buffer, output_buffer);
     }
-    case BufferFormat::kBandNV21: {
+    case BufferFormat::kNV21: {
       std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_v, cropped_plane_u}, crop_dimension,
           buffer.GetBufferFormat(), buffer.GetOrientation());
       return ResizeNv(*cropped_buffer, output_buffer);
     }
-    case BufferFormat::kBandYV12: {
+    case BufferFormat::kYV12: {
       std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_v, cropped_plane_u}, crop_dimension,
           buffer.GetBufferFormat(), buffer.GetOrientation());
       return ResizeYv(*cropped_buffer, output_buffer);
     }
-    case BufferFormat::kBandYV21: {
+    case BufferFormat::kYV21: {
       std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_u, cropped_plane_v}, crop_dimension,
           buffer.GetBufferFormat(), buffer.GetOrientation());
@@ -1156,7 +1156,7 @@ absl::Status ResizeRgb(const Buffer& buffer, Buffer& output_buffer) {
 
   // Convert RGB to ARGB
   int argb_buffer_size =
-      Buffer::GetBufferByteSize(buffer.GetDimension(), BufferFormat::kBandRGBA);
+      Buffer::GetBufferByteSize(buffer.GetDimension(), BufferFormat::kRGBA);
   auto argb_buffer = absl::make_unique<unsigned char[]>(argb_buffer_size);
   const int argb_row_bytes = buffer.GetDimension()[0] * 4;
 
@@ -1168,7 +1168,7 @@ absl::Status ResizeRgb(const Buffer& buffer, Buffer& output_buffer) {
 
   // Resize ARGB
   int resized_argb_buffer_size = Buffer::GetBufferByteSize(
-      output_buffer.GetDimension(), BufferFormat::kBandRGBA);
+      output_buffer.GetDimension(), BufferFormat::kRGBA);
   auto resized_argb_buffer =
       absl::make_unique<unsigned char[]>(resized_argb_buffer_size);
   int resized_argb_row_bytes = output_buffer.GetDimension()[0] * 4;
@@ -1397,11 +1397,11 @@ absl::Status CropResize(const Buffer& buffer, int x0, int y0, int x1, int y1,
       buffer.GetOrientation());
 
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGB:
+    case BufferFormat::kRGB:
       return ResizeRgb(*adjusted_buffer, output_buffer);
-    case BufferFormat::kBandRGBA:
+    case BufferFormat::kRGBA:
       return ResizeRgba(*adjusted_buffer, output_buffer);
-    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kGrayScale:
       return ResizeGray(*adjusted_buffer, output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(
@@ -1474,11 +1474,11 @@ absl::Status UniformCropResizePlane(const Buffer& buffer,
       output_buffer.GetOrientation());
 
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGB:
+    case BufferFormat::kRGB:
       return ResizeRgb(*adjusted_buffer, *adjusted_output_buffer);
-    case BufferFormat::kBandRGBA:
+    case BufferFormat::kRGBA:
       return ResizeRgba(*adjusted_buffer, *adjusted_output_buffer);
-    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kGrayScale:
       return ResizeGray(*adjusted_buffer, *adjusted_output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(
@@ -1502,11 +1502,11 @@ absl::Status UniformCropResizeYuv(const Buffer& buffer,
     int x1 = crop_coordinates[2];
     int y1 = crop_coordinates[3];
     switch (buffer.GetBufferFormat()) {
-      case BufferFormat::kBandNV12:
-      case BufferFormat::kBandNV21:
+      case BufferFormat::kNV12:
+      case BufferFormat::kNV21:
         return CropNv(buffer, x0, y0, x1, y1, output_buffer);
-      case BufferFormat::kBandYV12:
-      case BufferFormat::kBandYV21:
+      case BufferFormat::kYV12:
+      case BufferFormat::kYV21:
         return CropYv(buffer, x0, y0, x1, y1, output_buffer);
       default:
         return absl::InternalError(absl::StrFormat(
@@ -1550,7 +1550,7 @@ absl::Status UniformCropResizeYuv(const Buffer& buffer,
   }
 
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandNV12: {
+    case BufferFormat::kNV12: {
       int ret = libyuv::NV12Scale(
           adjusted_plane_y.data, adjusted_plane_y.row_stride_bytes,
           adjusted_plane_u.data, adjusted_plane_u.row_stride_bytes,
@@ -1565,7 +1565,7 @@ absl::Status UniformCropResizeYuv(const Buffer& buffer,
       }
       return absl::OkStatus();
     }
-    case BufferFormat::kBandNV21: {
+    case BufferFormat::kNV21: {
       int ret = libyuv::NV12Scale(
           adjusted_plane_y.data, adjusted_plane_y.row_stride_bytes,
           adjusted_plane_v.data, adjusted_plane_v.row_stride_bytes,
@@ -1580,8 +1580,8 @@ absl::Status UniformCropResizeYuv(const Buffer& buffer,
       }
       return absl::OkStatus();
     }
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21: {
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21: {
       int ret = libyuv::I420Scale(
           adjusted_plane_y.data, adjusted_plane_y.row_stride_bytes,
           adjusted_plane_u.data, adjusted_plane_u.row_stride_bytes,
@@ -1609,14 +1609,14 @@ absl::Status UniformCropResizeYuv(const Buffer& buffer,
 absl::Status LibyuvBufferUtils::Crop(const Buffer& buffer, int x0, int y0,
                                      int x1, int y1, Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGBA:
-    case BufferFormat::kBandRGB:
-    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kRGBA:
+    case BufferFormat::kRGB:
+    case BufferFormat::kGrayScale:
       return CropResize(buffer, x0, y0, x1, y1, output_buffer);
-    case BufferFormat::kBandNV12:
-    case BufferFormat::kBandNV21:
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21:
+    case BufferFormat::kNV12:
+    case BufferFormat::kNV21:
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21:
       return CropResizeYuv(buffer, x0, y0, x1, y1, output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(
@@ -1627,17 +1627,17 @@ absl::Status LibyuvBufferUtils::Crop(const Buffer& buffer, int x0, int y0,
 absl::Status LibyuvBufferUtils::Resize(const Buffer& buffer,
                                        Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21:
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21:
       return ResizeYv(buffer, output_buffer);
-    case BufferFormat::kBandNV12:
-    case BufferFormat::kBandNV21:
+    case BufferFormat::kNV12:
+    case BufferFormat::kNV21:
       return ResizeNv(buffer, output_buffer);
-    case BufferFormat::kBandRGB:
+    case BufferFormat::kRGB:
       return ResizeRgb(buffer, output_buffer);
-    case BufferFormat::kBandRGBA:
+    case BufferFormat::kRGBA:
       return ResizeRgba(buffer, output_buffer);
-    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kGrayScale:
       return ResizeGray(buffer, output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(
@@ -1648,17 +1648,17 @@ absl::Status LibyuvBufferUtils::Resize(const Buffer& buffer,
 absl::Status LibyuvBufferUtils::Rotate(const Buffer& buffer, int angle_deg,
                                        Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kGrayScale:
       return RotateGray(buffer, angle_deg, output_buffer);
-    case BufferFormat::kBandRGBA:
+    case BufferFormat::kRGBA:
       return RotateRgba(buffer, angle_deg, output_buffer);
-    case BufferFormat::kBandNV12:
-    case BufferFormat::kBandNV21:
+    case BufferFormat::kNV12:
+    case BufferFormat::kNV21:
       return RotateNv(buffer, angle_deg, output_buffer);
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21:
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21:
       return RotateYv(buffer, angle_deg, output_buffer);
-    case BufferFormat::kBandRGB:
+    case BufferFormat::kRGB:
       return RotateRgb(buffer, angle_deg, output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(
@@ -1669,17 +1669,17 @@ absl::Status LibyuvBufferUtils::Rotate(const Buffer& buffer, int angle_deg,
 absl::Status LibyuvBufferUtils::FlipHorizontally(const Buffer& buffer,
                                                  Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGBA:
+    case BufferFormat::kRGBA:
       return FlipHorizontallyRgba(buffer, output_buffer);
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21:
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21:
       return FlipHorizontallyYv(buffer, output_buffer);
-    case BufferFormat::kBandNV12:
-    case BufferFormat::kBandNV21:
+    case BufferFormat::kNV12:
+    case BufferFormat::kNV21:
       return FlipHorizontallyNv(buffer, output_buffer);
-    case BufferFormat::kBandRGB:
+    case BufferFormat::kRGB:
       return FlipHorizontallyRgb(buffer, output_buffer);
-    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kGrayScale:
       return FlipHorizontallyPlane(buffer, output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(
@@ -1690,15 +1690,15 @@ absl::Status LibyuvBufferUtils::FlipHorizontally(const Buffer& buffer,
 absl::Status LibyuvBufferUtils::FlipVertically(const Buffer& buffer,
                                                Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandRGBA:
-    case BufferFormat::kBandRGB:
-    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kRGBA:
+    case BufferFormat::kRGB:
+    case BufferFormat::kGrayScale:
       return FlipPlaneVertically(buffer, output_buffer);
-    case BufferFormat::kBandNV12:
-    case BufferFormat::kBandNV21:
+    case BufferFormat::kNV12:
+    case BufferFormat::kNV21:
       return FlipVerticallyNv(buffer, output_buffer);
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21:
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21:
       return FlipVerticallyYv(buffer, output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(
@@ -1709,16 +1709,16 @@ absl::Status LibyuvBufferUtils::FlipVertically(const Buffer& buffer,
 absl::Status LibyuvBufferUtils::Convert(const Buffer& buffer,
                                         Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
-    case BufferFormat::kBandNV12:
+    case BufferFormat::kNV12:
       return ConvertFromNv12(buffer, output_buffer);
-    case BufferFormat::kBandNV21:
+    case BufferFormat::kNV21:
       return ConvertFromNv21(buffer, output_buffer);
-    case BufferFormat::kBandYV12:
-    case BufferFormat::kBandYV21:
+    case BufferFormat::kYV12:
+    case BufferFormat::kYV21:
       return ConvertFromYv(buffer, output_buffer);
-    case BufferFormat::kBandRGB:
+    case BufferFormat::kRGB:
       return ConvertFromRgb(buffer, output_buffer);
-    case BufferFormat::kBandRGBA:
+    case BufferFormat::kRGBA:
       return ConvertFromRgba(buffer, output_buffer);
     default:
       return absl::InternalError(absl::StrFormat(

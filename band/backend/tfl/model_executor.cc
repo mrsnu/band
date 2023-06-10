@@ -47,7 +47,7 @@ absl::StatusOr<ModelSpec> TfLiteModelExecutor::InvestigateModelSpec(
   // Analyze entire model based on CPU interpereter
   {
     auto status_or_interpreter =
-        CreateTfLiteInterpreter(model, DeviceFlag::kBandCPU);
+        CreateTfLiteInterpreter(model, DeviceFlag::kCPU);
     if (!status_or_interpreter.ok()) {
       return status_or_interpreter.status();
     }
@@ -112,11 +112,11 @@ absl::StatusOr<ModelSpec> TfLiteModelExecutor::InvestigateModelSpec(
   }
 
   // also check unsupported ops to fill in model_spec.unsupported_ops
-  for (size_t i = 0; i < DeviceFlag::kBandNumDeviceFlag; ++i) {
+  for (size_t i = 0; i < EnumLength<DeviceFlag>(); ++i) {
     DeviceFlag device_flag = static_cast<DeviceFlag>(i);
     unsupported_ops[device_flag] = {};
 
-    if (device_flag == DeviceFlag::kBandCPU) {
+    if (device_flag == DeviceFlag::kCPU) {
       // no need to check supportability for CPU
       continue;
     }
@@ -173,7 +173,7 @@ absl::Status TfLiteModelExecutor::PrepareSubgraph(interface::IModel* model,
 }
 
 BackendType TfLiteModelExecutor::GetBackendType() const {
-  return BackendType::kBandTfLite;
+  return BackendType::kTfLite;
 }
 
 const std::vector<int>& TfLiteModelExecutor::GetInputs(
@@ -277,11 +277,11 @@ DeviceFlag GetNNAPIDeviceFlag(std::string name) {
   };
 
   if (contains_keywords({"gpu"})) {
-    return DeviceFlag::kBandGPU;
+    return DeviceFlag::kGPU;
   }
 
   if (contains_keywords({"dsp"})) {
-    return DeviceFlag::kBandDSP;
+    return DeviceFlag::kDSP;
   }
 
   if (contains_keywords({
@@ -293,7 +293,7 @@ DeviceFlag GetNNAPIDeviceFlag(std::string name) {
                           // "mtk-mdla" #TODO(#139) - Mediatek APU for half
                           // float
       })) {
-    return DeviceFlag::kBandNPU;
+    return DeviceFlag::kNPU;
   }
 
   // TODO #23
@@ -303,7 +303,7 @@ DeviceFlag GetNNAPIDeviceFlag(std::string name) {
   BAND_LOG_PROD(BAND_LOG_WARNING,
                 "Unknown NNAPI device name: %s. Fallback to CPU.",
                 name.c_str());
-  return DeviceFlag::kBandCPU;
+  return DeviceFlag::kCPU;
 }
 
 absl::StatusOr<std::unique_ptr<tflite::Interpreter>>
@@ -328,10 +328,9 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
     return status_or_delegate.status();
   }
   auto delegate = status_or_delegate.value();
-  if ((device != DeviceFlag::kBandCPU) && !delegate) {
-    return absl::InternalError(
-        absl::StrFormat("Failed to create Tensorflow Lite delegate for %s",
-                        ToString(device).c_str()));
+  if ((device != DeviceFlag::kCPU) && !delegate) {
+    return absl::InternalError(absl::StrFormat(
+        "Failed to create Tensorflow Lite delegate for %s", ToString(device)));
   } else {
     builder.AddDelegate(delegate);
   }
@@ -344,13 +343,13 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
   if (builder(&interpreter) != kTfLiteOk) {
     return absl::InternalError(
         absl::StrFormat("Failed to build Tensorflow Lite interpreter for %s",
-                        ToString(device).c_str()));
+                        ToString(device)));
   }
 
   if (interpreter->AllocateTensors() != kTfLiteOk) {
     return absl::InternalError(
         absl::StrFormat("Failed to build Tensorflow Lite interpreter for %s",
-                        ToString(device).c_str()));
+                        ToString(device)));
   }
   return std::move(interpreter);
 }
@@ -366,7 +365,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
 
     std::vector<const char*> string_device_names_list;
     switch (device) {
-      case DeviceFlag::kBandCPU: {
+      case DeviceFlag::kCPU: {
         // TODO #23: XNNPACK seems inefficient than default CPU
         // Only valid case to return Ok with nullptr
         return nullptr;
@@ -374,7 +373,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
       }
 
 #if defined(__ANDROID__)
-      case DeviceFlag::kBandGPU: {
+      case DeviceFlag::kGPU: {
         TfLiteGpuDelegateOptionsV2 gpu_opts =
             TfLiteGpuDelegateOptionsV2Default();
         gpu_opts.inference_priority1 =
@@ -396,8 +395,8 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
         break;
       }
 
-      case DeviceFlag::kBandDSP:
-      case DeviceFlag::kBandNPU: {
+      case DeviceFlag::kDSP:
+      case DeviceFlag::kNPU: {
         string_device_names_list = tflite::nnapi::GetDeviceNamesList();
 
         // TODO #23 : Add more nnapi names
@@ -432,24 +431,24 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
               auto nnapi_options = tflite::StatefulNnApiDelegate::GetOptions(
                   nnapi_delegate.get());
 
-              if (device == DeviceFlag::kBandDSP &&
+              if (device == DeviceFlag::kDSP &&
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
-                      DeviceFlag::kBandDSP) {
+                      DeviceFlag::kDSP) {
                 target_delegate = std::move(nnapi_delegate);
                 BAND_LOG_INTERNAL(
                     BAND_LOG_INFO,
                     "Create Tensorflow Lite NNAPI delegate (%s , %s)",
-                    nnapi_options.accelerator_name, ToString(device).c_str());
+                    nnapi_options.accelerator_name, ToString(device));
               }
 
-              if (device == DeviceFlag::kBandNPU &&
+              if (device == DeviceFlag::kNPU &&
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
-                      DeviceFlag::kBandNPU) {
+                      DeviceFlag::kNPU) {
                 target_delegate = std::move(nnapi_delegate);
                 BAND_LOG_INTERNAL(
                     BAND_LOG_INFO,
                     "Create Tensorflow Lite NNAPI delegate (%s , %s)",
-                    nnapi_options.accelerator_name, ToString(device).c_str());
+                    nnapi_options.accelerator_name, ToString(device));
               }
             }
           }

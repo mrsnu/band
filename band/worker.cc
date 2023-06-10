@@ -24,8 +24,7 @@ absl::Status Worker::Init(const WorkerConfig& config) {
   BAND_LOG_INTERNAL(
       BAND_LOG_INFO,
       "Set affinity of worker (%d,%s) to %s cores for %d threads.", worker_id_,
-      ToString(device_flag_).c_str(),
-      BandCPUMaskToString(config.cpu_masks[worker_id_]),
+      ToString(device_flag_), ToString(config.cpu_masks[worker_id_]),
       config.num_threads[worker_id_]);
 
   const CpuSet worker_mask_set =
@@ -174,7 +173,7 @@ void Worker::Work() {
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
                         "enqueue time %d, invoke time %d, end time %d)",
-                        ToString(device_flag_).c_str(), current_job->model_id,
+                        ToString(device_flag_), current_job->model_id,
                         current_job->subgraph_key.IsValid(),
                         current_job->subgraph_key.GetModelId(),
                         current_job->subgraph_key.GetWorkerId(),

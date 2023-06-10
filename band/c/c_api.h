@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-#include "c_type.h"
+#include "c_api_type.h"
 
 #ifdef SWIG
 #define BAND_CAPI_EXPORT
@@ -26,7 +26,7 @@
 extern "C" {
 #endif  // __cplusplus
 
-// Forward decl of internal types - details are in `c_type.h`
+// Forward decl of internal types - details are in `c_api_type.h`
 typedef struct BandConfigBuilder BandConfigBuilder;
 typedef struct BandConfig BandConfig;
 typedef struct BandModel BandModel;

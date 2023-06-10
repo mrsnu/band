@@ -4,8 +4,8 @@
 #include <gtest/gtest.h>
 
 #include "band/config_builder.h"
-#include "band/engine_interface.h"
 #include "band/cpu.h"
+#include "band/engine_interface.h"
 #include "band/model_spec.h"
 #include "band/test/test_util.h"
 #include "band/time.h"
@@ -54,7 +54,7 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   ProfileConfig config =
       b.AddNumRuns(50).AddNumWarmups(3).AddOnline(true).Build();
 
-  TypeParam worker(&engine, 0, DeviceFlag::kBandCPU);
+  TypeParam worker(&engine, 0, DeviceFlag::kCPU);
   engine.worker = &worker;
 
   worker.Start();
@@ -91,7 +91,7 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   ProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kBandCPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // Explicitly assign worker to mock engine
   engine.worker = &worker;
   // Update worker thread affinity
@@ -109,10 +109,10 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
-                         testing::Values(CPUMaskFlag::kBandAll,
-                                         CPUMaskFlag::kBandLittle,
-                                         CPUMaskFlag::kBandBig,
-                                         CPUMaskFlag::kBandPrimary));
+                         testing::Values(CPUMaskFlag::kAll,
+                                         CPUMaskFlag::kLittle,
+                                         CPUMaskFlag::kBig,
+                                         CPUMaskFlag::kPrimary));
 
 TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
@@ -124,7 +124,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   ProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kBandCPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // Explicitly assign worker to mock engine
   engine.worker = &worker;
   worker.Start();
@@ -148,7 +148,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 
   const std::string profile_path = testing::TempDir() + "log.json";
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kBandCPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // explicitly assign worker to mock engine
   engine.worker = &worker;
   worker.Start();
@@ -200,7 +200,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
 
   const std::string profile_path = testing::TempDir() + "log.json";
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kBandCPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // explicitly assign worker to mock engine
   engine.worker = &worker;
   worker.Start();

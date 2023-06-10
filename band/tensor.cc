@@ -7,18 +7,18 @@
 namespace band {
 Tensor::Tensor(ITensor* tensor_view, bool copy_data)
     : type_(tensor_view->GetType()),
-      quantization_({QuantizationType::kBandNoQuantization, nullptr}),
+      quantization_({QuantizationType::kNoQuantization, nullptr}),
       dims_(tensor_view->GetDims(),
             tensor_view->GetDims() + tensor_view->GetNumDims()),
       data_(new char[tensor_view->GetBytes()]),
       name_(tensor_view->GetName()) {
-  if (copy_data) {
-    memcpy(data_, tensor_view->GetData(), tensor_view->GetBytes());
-  }
   auto status = SetQuantization(tensor_view->GetQuantization());
   if (!status.ok()) {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s",
                   status.message());
+  }
+  if (copy_data) {
+    memcpy(data_, tensor_view->GetData(), tensor_view->GetBytes());
   }
 }
 
@@ -50,7 +50,7 @@ const char* Tensor::GetName() const { return name_.c_str(); }
 Quantization Tensor::GetQuantization() const { return quantization_; }
 
 absl::Status Tensor::SetQuantization(Quantization quantization) {
-  if (quantization_.GetType() == QuantizationType::kBandAffineQuantization) {
+  if (quantization_.GetType() == QuantizationType::kAffineQuantization) {
     AffineQuantizationParams* input_q_params =
         reinterpret_cast<AffineQuantizationParams*>(quantization.GetParams());
 

@@ -1,10 +1,10 @@
 #include "band/model.h"
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/interface/model.h"
 #include "band/logger.h"
 
-#include "absl/strings/str_format.h"
 
 namespace band {
 
@@ -18,7 +18,7 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
   if (GetBackendModel(backend_type)) {
     return absl::InternalError(
         absl::StrFormat("Tried to create %s model again for model id %d",
-                        ToString(backend_type).c_str(), GetId()));
+                        ToString(backend_type), GetId()));
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
@@ -26,9 +26,8 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
       BackendFactory::CreateModel(backend_type, model_id_);
 
   if (!backend_model->FromPath(filename).ok()) {
-    return absl::InternalError(
-        absl::StrFormat("Failed to create %s model from %s",
-                        ToString(backend_type).c_str(), filename));
+    return absl::InternalError(absl::StrFormat(
+        "Failed to create %s model from %s", ToString(backend_type), filename));
   }
   backend_models_[backend_type] =
       std::shared_ptr<interface::IModel>(backend_model);

@@ -25,12 +25,12 @@ class Buffer {
   static std::shared_ptr<Buffer> CreateFromPlanes(
       const std::vector<DataPlane>& data_planes,
       const std::vector<size_t>& dims, BufferFormat buffer_format,
-      BufferOrientation orientation = BufferOrientation::kBandTopLeft);
+      BufferOrientation orientation = BufferOrientation::kTopLeft);
 
   static std::shared_ptr<Buffer> CreateFromRaw(
       const unsigned char* data, size_t width, size_t height,
       BufferFormat buffer_format,
-      BufferOrientation orientation = BufferOrientation::kBandTopLeft,
+      BufferOrientation orientation = BufferOrientation::kTopLeft,
       bool owns_data = false);
 
   static std::shared_ptr<Buffer> CreateFromYUVPlanes(
@@ -38,7 +38,7 @@ class Buffer {
       const unsigned char* v_data, size_t width, size_t height,
       size_t row_stride_y, size_t row_stride_uv, size_t pixel_stride_uv,
       BufferFormat buffer_format,
-      BufferOrientation orientation = BufferOrientation::kBandTopLeft,
+      BufferOrientation orientation = BufferOrientation::kTopLeft,
       bool owns_data = false);
 
   static std::shared_ptr<Buffer> CreateFromTensor(
@@ -46,7 +46,7 @@ class Buffer {
 
   static std::shared_ptr<Buffer> CreateEmpty(
       size_t width, size_t height, BufferFormat buffer_format,
-      BufferOrientation orientation = BufferOrientation::kBandTopLeft);
+      BufferOrientation orientation = BufferOrientation::kTopLeft);
 
   const std::vector<size_t>& GetDimension() const;
   const DataPlane& operator[](size_t index) const;
@@ -84,7 +84,7 @@ class Buffer {
   const std::vector<size_t> dimension_;
   std::vector<DataPlane> data_planes_;
   BufferFormat buffer_format_;
-  DataType data_type_ = DataType::kBandUInt8;
+  DataType data_type_ = DataType::kUInt8;
   BufferOrientation orientation_;
 };
 

@@ -5,12 +5,13 @@
 #include <memory>
 
 #include "band/buffer/buffer.h"
+#include "band/c/c_api_type.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/model.h"
 #include "band/tensor.h"
-#include "band/c/c_type.h"
+
 
 struct BandConfigBuilder {
   band::RuntimeConfigBuilder impl;

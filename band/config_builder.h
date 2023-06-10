@@ -17,7 +17,7 @@ class ProfileConfigBuilder {
                                       // variables
  public:
   ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(DeviceFlag::kBandNumDeviceFlag, 30000);
+    copy_computation_ratio_ = std::vector<int>(EnumLength<DeviceFlag>(), 30000);
   }
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
@@ -85,7 +85,7 @@ class PlannerConfigBuilder {
  private:
   int schedule_window_size_ = INT_MAX;
   std::vector<SchedulerType> schedulers_;
-  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kBandAll;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";
 };
 
@@ -95,12 +95,12 @@ class WorkerConfigBuilder {
 
  public:
   WorkerConfigBuilder() {
-    for (size_t i = 0; i < DeviceFlag::kBandNumDeviceFlag; i++) {
+    for (size_t i = 0; i < EnumLength<DeviceFlag>(); i++) {
       workers_.push_back(static_cast<DeviceFlag>(i));
     }
     cpu_masks_ =
-        std::vector<CPUMaskFlag>(DeviceFlag::kBandNumDeviceFlag, CPUMaskFlag::kBandAll);
-    num_threads_ = std::vector<int>(DeviceFlag::kBandNumDeviceFlag, 1);
+        std::vector<CPUMaskFlag>(EnumLength<DeviceFlag>(), CPUMaskFlag::kAll);
+    num_threads_ = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
     workers_ = workers;
@@ -229,8 +229,8 @@ class RuntimeConfigBuilder {
   WorkerConfigBuilder worker_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
-      SubgraphPreparationType::kBandMergeUnitSubgraph;
-  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kBandAll;
+      SubgraphPreparationType::kMergeUnitSubgraph;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
 };
 
 }  // namespace band

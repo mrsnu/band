@@ -26,7 +26,7 @@ class BackendFactory {
   static interface::IModelExecutor* CreateModelExecutor(
       BackendType backend, ModelId model_id, WorkerId worker_id,
       DeviceFlag device_flag,
-      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlag::kBandAll),
+      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlag::kAll),
       int num_threads = -1);
   static interface::IModel* CreateModel(BackendType backend, ModelId id);
   static interface::IBackendUtil* GetBackendUtil(BackendType backend);

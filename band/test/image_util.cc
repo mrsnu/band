@@ -17,13 +17,13 @@ std::shared_ptr<Buffer> LoadImage(const std::string& filename) {
   }
   return Buffer::CreateFromRaw(
       data, width, height,
-      num_channels == 1 ? BufferFormat::kBandGrayScale : BufferFormat::kBandRGB);
+      num_channels == 1 ? BufferFormat::kGrayScale : BufferFormat::kRGB);
 }
 
 void SaveImage(const std::string& filename, const Buffer& buffer) {
   stbi_write_jpg(filename.c_str(), buffer.GetDimension()[0],
                  buffer.GetDimension()[1],
-                 buffer.GetBufferFormat() == BufferFormat::kBandGrayScale ? 1 : 3,
+                 buffer.GetBufferFormat() == BufferFormat::kGrayScale ? 1 : 3,
                  buffer[0].data, 100);
 }
 

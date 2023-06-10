@@ -47,7 +47,6 @@ config_setting(
     visibility=["//visibility:public"],
 )
 
-
 config_setting(
     name="linux_x86_64_tflite",
     define_values={
@@ -130,25 +129,23 @@ band_cc_library(
     hdrs=[
         "common.h",
         "config.h",
-        "engine_interface.h",
         "cpu.h",
+        "engine_interface.h",
         "error_reporter.h",
         "logger.h",
-        "model_spec.h"
+        "model_spec.h",
     ],
-    linkopts=select(
-        {
-            "//band:android": [
-                "-llog",
-            ],
-            "//conditions:default": [],
-        }
-    ),
+    linkopts=select({
+        "//band:android": [
+            "-llog",
+        ],
+        "//conditions:default": [
+        ],
+    }),
     deps=[
-        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "//band/c:c_type"
     ],
 )
 
@@ -271,8 +268,8 @@ band_cc_library(
         ":common",
         ":config",
         ":cpu",
-        ":time",
         ":job_tracer",
+        ":time",
     ],
 )
 
@@ -313,7 +310,6 @@ band_cc_library(
     deps=[":common", ":scheduler", ":worker", ":job_tracer"],
 )
 
-
 band_cc_library(
     name="job_tracer",
     srcs=[
@@ -327,7 +323,6 @@ band_cc_library(
         "@chrome_tracer//chrome_tracer",
     ],
 )
-
 
 band_cc_library(
     name="latency_estimator",
@@ -421,7 +416,7 @@ band_cc_library(
     ),
     deps=[
         ":common",
-        "@jsoncpp//:jsoncpp",
+        "@jsoncpp",
     ],
 )
 

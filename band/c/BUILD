@@ -1,8 +1,8 @@
 load(
-    "//band:band.bzl", 
-    "clean_dep",
+    "//band:band.bzl",
     "band_cc_library",
     "band_cc_shared_object",
+    "clean_dep",
 )
 
 package(
@@ -21,8 +21,8 @@ band_cc_shared_object(
     }),
     per_os_targets = True,
     deps = [
-      ":c_api",
-      ":version_scripts.lds",
+        ":c_api",
+        ":version_scripts.lds",
     ] + select({
         "//band:tflite": [
             "//band/backend/tfl:tfl_backend",
@@ -64,8 +64,8 @@ band_cc_library(
         "c_api.h",
     ],
     deps = [
-        ":c_type",
         ":c_api_internal",
+        ":c_api_type",
         "//band:config_builder",
         "//band:framework",
     ],
@@ -74,17 +74,17 @@ band_cc_library(
 
 band_cc_library(
     name = "c_api_internal",
-    hdrs = ["c_api_internal.h"],
     srcs = ["c_api_internal.cc"],
+    hdrs = ["c_api_internal.h"],
     visibility = ["//visibility:private"],
     deps = [
-        ":c_type",
-        "//band:framework",
+        ":c_api_type",
         "//band:config_builder",
+        "//band:framework",
     ],
 )
 
 band_cc_library(
-    name = "c_type",
-    hdrs = ["c_type.h"],
+    name = "c_api_type",
+    hdrs = ["c_api_type.h"],
 )

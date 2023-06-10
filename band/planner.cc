@@ -49,24 +49,24 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
-    if (schedulers[i] == SchedulerType::kBandFixedWorker) {
+    if (schedulers[i] == SchedulerType::kFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::kBandFixedWorkerGlobalQueue) {
+    } else if (schedulers[i] == SchedulerType::kFixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::kBandRoundRobin) {
+    } else if (schedulers[i] == SchedulerType::kRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::kBandShortestExpectedLatency) {
-      schedulers_.emplace_back(new ShortestExpectedLatencyScheduler(
-          engine_, schedule_window_size_));
+    } else if (schedulers[i] == SchedulerType::kShortestExpectedLatency) {
+      schedulers_.emplace_back(
+          new ShortestExpectedLatencyScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] ==
-               SchedulerType::kBandHeterogeneousEarliestFinishTime) {
+               SchedulerType::kHeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
           new HEFTScheduler(engine_, schedule_window_size_, false));
-    } else if (schedulers[i] == SchedulerType::kBandLeastSlackTimeFirst) {
+    } else if (schedulers[i] == SchedulerType::kLeastSlackTimeFirst) {
       schedulers_.emplace_back(
           new LeastSlackFirstScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] ==
-               SchedulerType::kBandHeterogeneousEarliestFinishTimeReserved) {
+               SchedulerType::kHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(engine_, schedule_window_size_, true));
     } else {
@@ -92,7 +92,7 @@ absl::Status Planner::Init(const PlannerConfig& config) {
         "All schedulers must have the same worker type.");
   }
 
-  if (config.cpu_mask != CPUMaskFlag::kBandAll) {
+  if (config.cpu_mask != CPUMaskFlag::kAll) {
     cpu_set_ = BandCPUMaskGetSet(config.cpu_mask);
     need_cpu_update_ = true;
   }
@@ -297,7 +297,7 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
   for (auto& action : actions) {
     Job job;
     SubgraphKey target_key;
-    
+
     std::tie(job, target_key) = action;
 
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());

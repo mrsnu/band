@@ -24,7 +24,7 @@ absl::Status CropOperation::Process(const Buffer& input) {
 }
 
 absl::Status CropOperation::IsValid(const Buffer& input) const {
-  if (input.GetBufferFormat() == BufferFormat::kBandRaw) {
+  if (input.GetBufferFormat() == BufferFormat::kRaw) {
     return absl::InvalidArgumentError(
         "CropOperation: Raw buffer format type is not supported.");
   }
@@ -69,7 +69,7 @@ absl::Status ResizeOperation::Process(const Buffer& input) {
 }
 
 absl::Status ResizeOperation::IsValid(const Buffer& input) const {
-  if (input.GetBufferFormat() == BufferFormat::kBandRaw) {
+  if (input.GetBufferFormat() == BufferFormat::kRaw) {
     return absl::InvalidArgumentError(
         "ResizeOperation: Raw buffer format type is not supported.");
   }
@@ -86,20 +86,20 @@ absl::Status ResizeOperation::IsValid(const Buffer& input) const {
 
   if (output_) {
     switch (input.GetBufferFormat()) {
-      case BufferFormat::kBandGrayScale:
-      case BufferFormat::kBandRGB:
-      case BufferFormat::kBandNV12:
-      case BufferFormat::kBandNV21:
-      case BufferFormat::kBandYV12:
-      case BufferFormat::kBandYV21:
+      case BufferFormat::kGrayScale:
+      case BufferFormat::kRGB:
+      case BufferFormat::kNV12:
+      case BufferFormat::kNV21:
+      case BufferFormat::kYV12:
+      case BufferFormat::kYV21:
         if (input.GetBufferFormat() != output_->GetBufferFormat()) {
           return absl::InvalidArgumentError(
               "ResizeOperation: output buffer format type is not compatible.");
         }
         break;
-      case BufferFormat::kBandRGBA:
-        if (output_->GetBufferFormat() != BufferFormat::kBandRGB &&
-            output_->GetBufferFormat() != BufferFormat::kBandRGBA) {
+      case BufferFormat::kRGBA:
+        if (output_->GetBufferFormat() != BufferFormat::kRGB &&
+            output_->GetBufferFormat() != BufferFormat::kRGBA) {
           return absl::InvalidArgumentError(
               "ResizeOperation: output buffer format type is not compatible.");
         }
@@ -136,7 +136,7 @@ absl::Status RotateOperation::Process(const Buffer& input) {
 
 absl::Status RotateOperation::IsValid(const Buffer& input) const {
   if (output_) {
-    if (input.GetBufferFormat() == BufferFormat::kBandRaw) {
+    if (input.GetBufferFormat() == BufferFormat::kRaw) {
       return absl::InvalidArgumentError(
           "RotateOperation: Raw buffer format type is not supported.");
     }
@@ -216,20 +216,20 @@ absl::Status ConvertOperation::IsValid(const Buffer& input) const {
     }
 
     switch (input.GetBufferFormat()) {
-      case BufferFormat::kBandGrayScale:
+      case BufferFormat::kGrayScale:
         return absl::InvalidArgumentError(
             "Grayscale format does not convert to other formats.");
-      case BufferFormat::kBandRGB:
-        if (output_->GetBufferFormat() == BufferFormat::kBandRGBA) {
+      case BufferFormat::kRGB:
+        if (output_->GetBufferFormat() == BufferFormat::kRGBA) {
           return absl::InvalidArgumentError(
               "RGB format does not convert to RGBA");
         }
         return absl::OkStatus();
-      case BufferFormat::kBandRGBA:
-      case BufferFormat::kBandNV12:
-      case BufferFormat::kBandNV21:
-      case BufferFormat::kBandYV12:
-      case BufferFormat::kBandYV21:
+      case BufferFormat::kRGBA:
+      case BufferFormat::kNV12:
+      case BufferFormat::kNV21:
+      case BufferFormat::kYV12:
+      case BufferFormat::kYV21:
         return absl::OkStatus();
       default:
         return absl::InternalError(

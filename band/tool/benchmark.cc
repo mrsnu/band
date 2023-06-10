@@ -210,7 +210,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     builder.AddSchedulers(schedulers);
 
     if (root["cpu_masks"].isString()) {
-      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
+      builder.AddCPUMask(
+          FromString<CPUMaskFlag>(root["cpu_masks"].asCString()));
     }
 
     if (root["log_path"].isString()) {
@@ -235,7 +236,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
         }
         if (worker["cpu_masks"].isString()) {
           cpu_masks.push_back(
-              BandCPUMaskGetFlag(worker["cpu_masks"].asCString()));
+              FromString<CPUMaskFlag>(worker["cpu_masks"].asCString()));
         }
       }
 
@@ -262,7 +263,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
 
     if (root["cpu_masks"].isString()) {
-      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
+      builder.AddCPUMask(
+          FromString<CPUMaskFlag>(root["cpu_masks"].asCString()));
     }
   }
 
@@ -302,8 +304,8 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
     ModelContext* engine = new ModelContext;
 
     {
-      auto status = engine->model.FromPath(target_backend_,
-                                            benchmark_model.path.c_str());
+      auto status =
+          engine->model.FromPath(target_backend_, benchmark_model.path.c_str());
       if (!status.ok()) {
         return status;
       }
@@ -367,37 +369,37 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
           engine_->CreateTensor(model_id, input_index);
       // random value ranges borrowed from tensorflow/lite/tools/benchmark
       switch (input_tensor->GetType()) {
-        case DataType::kBandUInt8:
+        case DataType::kUInt8:
           CreateRandomTensorData<uint8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 254));
           break;
-        case DataType::kBandInt8:
+        case DataType::kInt8:
           CreateRandomTensorData<int8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(-127, 127));
           break;
-        case DataType::kBandInt16:
+        case DataType::kInt16:
           CreateRandomTensorData<int16_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int16_t>(0, 99));
           break;
-        case DataType::kBandInt32:
+        case DataType::kInt32:
           CreateRandomTensorData<int32_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 99));
           break;
-        case DataType::kBandInt64:
+        case DataType::kInt64:
           CreateRandomTensorData<int64_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int64_t>(0, 99));
           break;
-        case DataType::kBandFloat32:
+        case DataType::kFloat32:
           CreateRandomTensorData<float>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<float>(-0.5, 0.5));
           break;
-        case DataType::kBandFloat64:
+        case DataType::kFloat64:
           CreateRandomTensorData<double>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<double>(-0.5, 0.5));

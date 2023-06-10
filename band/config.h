@@ -12,7 +12,7 @@ namespace band {
 
 struct ProfileConfig {
   ProfileConfig() {
-    copy_computation_ratio = std::vector<int>(DeviceFlag::kBandNumDeviceFlag, 0);
+    copy_computation_ratio = std::vector<int>(EnumLength<DeviceFlag>(), 0);
   }
   bool online = true;
   int num_warmups = 1;
@@ -25,18 +25,19 @@ struct ProfileConfig {
 struct PlannerConfig {
   int schedule_window_size = INT_MAX;
   std::vector<SchedulerType> schedulers;
-  CPUMaskFlag cpu_mask = CPUMaskFlag::kBandAll;
+  CPUMaskFlag cpu_mask = CPUMaskFlag::kAll;
   std::string log_path = "";
 };
 
 struct WorkerConfig {
   WorkerConfig() {
     // Add one default worker per device
-    for (size_t i = 0; i < DeviceFlag::kBandNumDeviceFlag; i++) {
+    for (size_t i = 0; i < EnumLength<DeviceFlag>(); i++) {
       workers.push_back(static_cast<DeviceFlag>(i));
     }
-    cpu_masks = std::vector<CPUMaskFlag>(DeviceFlag::kBandNumDeviceFlag, CPUMaskFlag::kBandAll);
-    num_threads = std::vector<int>(DeviceFlag::kBandNumDeviceFlag, 1);
+    cpu_masks =
+        std::vector<CPUMaskFlag>(EnumLength<DeviceFlag>(), CPUMaskFlag::kAll);
+    num_threads = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
   std::vector<DeviceFlag> workers;
   std::vector<CPUMaskFlag> cpu_masks;
@@ -48,7 +49,7 @@ struct WorkerConfig {
 struct SubgraphConfig {
   int minimum_subgraph_size = 7;
   SubgraphPreparationType subgraph_preparation_type =
-      SubgraphPreparationType::kBandMergeUnitSubgraph;
+      SubgraphPreparationType::kMergeUnitSubgraph;
 };
 
 struct RuntimeConfig {
@@ -60,7 +61,7 @@ struct RuntimeConfig {
 
  private:
   friend class RuntimeConfigBuilder;
-  RuntimeConfig() { cpu_mask = CPUMaskFlag::kBandAll; };
+  RuntimeConfig() { cpu_mask = CPUMaskFlag::kAll; };
 };
 
 }  // namespace band
