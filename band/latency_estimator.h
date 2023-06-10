@@ -10,10 +10,10 @@
 #include "band/config.h"
 
 namespace band {
-class Context;
+class IEngine;
 class LatencyEstimator {
  public:
-  explicit LatencyEstimator(Context* context);
+  explicit LatencyEstimator(IEngine* engine);
   absl::Status Init(const ProfileConfig& config);
   void UpdateLatency(const SubgraphKey& key, int64_t latency);
 
@@ -54,14 +54,14 @@ class LatencyEstimator {
   Json::Value profile_database_json_;
 
   std::unordered_map<SubgraphKey, Latency, SubgraphHash> profile_database_;
-  float profile_smoothing_factor_;
+  float profile_smoothing_factor_ = 0.05f;
 
   bool profile_online_;
   int profile_num_warmups_;
   int profile_num_runs_;
   std::vector<int> profile_copy_computation_ratio_;
 
-  Context* const context_;
+  IEngine* const engine_;
 };
 }  // namespace band
 

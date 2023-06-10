@@ -1,23 +1,23 @@
 {
     "models": [
         {
-            "graph": "band/test/data/add.tflite",
-            "period_ms": 30,
-            "batch_size": 3,
-            "slo_us": 30000,
+            "graph": "band/test/data/retinaface_mbv2_quant_160.tflite",
+            "period_ms": 50,
+            "batch_size": 1,
+            "slo_scale": 1.5,
             "device": "CPU"
         },
         {
-            "graph": "band/test/data/add.tflite",
-            "period_ms": 30,
-            "batch_size": 3,
-            "slo_us": 30000,
+            "graph": "band/test/data/retinaface_mbv2_quant_160.tflite",
+            "period_ms": 50,
+            "batch_size": 1,
+            "slo_us": 50000,
             "device": "CPU"
         }
     ],
     "log_path": "band/test/data/log.json",
     "schedulers": [
-        "round_robin"
+        "heterogeneous_earliest_finish_time"
     ],
     "minimum_subgraph_size": 7,
     "subgraph_preparation_type": "merge_unit_subgraph",

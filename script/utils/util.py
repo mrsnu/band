@@ -66,7 +66,7 @@ def get_bazel_options(
     opt = ""
     opt += "-c " + ("dbg" if debug else "opt") + " "
     opt += "--strip " + ("never" if debug else "always") + " "
-    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + ("" if trace == False else " --config trace") + " "
+    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f"_{backend}") + ("" if trace == False else " --config trace") + " "
     return opt
 
 
@@ -108,11 +108,11 @@ def run_binary_android(basepath, path, option=''):
 def get_argument_parser(desc: str):
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('-B', '--backend', type=str,
-                        default='tflite', help='Backend <tflite|none>')
+                        default='all', help='Backend <all|none>')
     parser.add_argument('-android', action="store_true", default=False,
                         help='Test on Android (with adb)')
     parser.add_argument('-docker', action="store_true", default=False,
-                        help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker context has devcontainer built with a /.devcontainer')
+                        help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker engine has devcontainer built with a /.devcontainer')
     parser.add_argument('-s', '--ssh', required=False, default=None, help="SSH host name (e.g. dev@ssh.band.org)")
     parser.add_argument('-t', '--trace', action="store_true", default=True, help='Build with trace (default = True)')
     parser.add_argument('-d', '--debug', action="store_true", default=False,

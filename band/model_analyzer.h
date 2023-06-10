@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "absl/status/statusor.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/model_spec.h"
 
 namespace band {
@@ -27,7 +27,7 @@ std::string SummarizeFallbackPerWorkerSubgraphs(
 class ModelAnalyzer {
  public:
   ModelAnalyzer(
-      const Context& context, bool need_subgraph,
+      const IEngine& engine, bool need_subgraph,
       SubgraphConfig subgraph_config,
       std::shared_ptr<BackendConfig>& backend_config,
       Model* model, BackendType backend_type);
@@ -52,7 +52,7 @@ class ModelAnalyzer {
   bool IsWorkerValid(WorkerId worker_id) const;
   bool IsResolved(const std::set<int> resolved_tensors, int op_index) const;
 
-  const Context& context_;
+  const IEngine& engine_;
   const bool need_fallback_subgraph_;
   const SubgraphConfig subgraph_config_;
   std::shared_ptr<BackendConfig> backend_config_;

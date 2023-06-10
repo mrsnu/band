@@ -30,7 +30,6 @@ TEST(GrpcBackend, WriteModel) {
   bin_model.op_input_tensors = {{0}};
   bin_model.op_output_tensors = {{0}};
   EXPECT_EQ(bin_model.IsInitialized(), true);
-  
   EXPECT_EQ(bin_model.ToPath("test.band"), absl::OkStatus());
 }
 

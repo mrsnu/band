@@ -9,7 +9,7 @@
 
 #include "band/common.h"
 #include "band/config.h"
-#include "band/context.h"
+#include "band/engine_interface.h"
 #include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
@@ -48,7 +48,7 @@ typedef std::vector<interface::ITensor*> Tensors;
  * engine->RequestSync(model.GetId(), {input_tensor}, {output_tensor})
  * // Copy result from output_tensor->GetData()
  */
-class Engine : public Context {
+class Engine : public IEngine {
  public:
   ~Engine() override;
   static std::unique_ptr<Engine> Create(
@@ -78,8 +78,7 @@ class Engine : public Context {
       RequestOption options = RequestOption::GetDefaultOption(),
       Tensors inputs = {});
   absl::StatusOr<std::vector<JobId>> RequestAsync(
-      std::vector<ModelId> model_ids,
-      std::vector<RequestOption> options = {},
+      std::vector<ModelId> model_ids, std::vector<RequestOption> options = {},
       std::vector<Tensors> inputs = {});
 
   absl::Status Wait(JobId job_id, Tensors outputs = {});
@@ -97,7 +96,7 @@ class Engine : public Context {
                                     WorkerId worker_id) const override;
 
  private:
-  /* context */
+  /* engine */
   absl::Status Init(const RuntimeConfig& config) override;
   void UpdateWorkersWaiting() const override;
   WorkerWaitingTime GetWorkerWaitingTime() const override;
@@ -149,8 +148,8 @@ class Engine : public Context {
                                   bool push_front = false) override;
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
-  void EnqueueToWorker(const ScheduleAction& schedule_action) override;
-  void EnqueueToWorkerBatch(
+  bool EnqueueToWorker(const ScheduleAction& schedule_action) override;
+  bool EnqueueToWorkerBatch(
       const std::vector<ScheduleAction>& schedule_action) override;
   const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
