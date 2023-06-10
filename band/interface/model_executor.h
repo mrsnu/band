@@ -24,7 +24,7 @@ class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(
       ModelId model_id, WorkerId worker_id, DeviceFlag device_flag,
-      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlag::kBandAll),
+      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlag::kAll),
       int num_threads = -1)
       : model_id_(model_id),
         worker_id_(worker_id),

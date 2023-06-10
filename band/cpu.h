@@ -24,8 +24,8 @@
 #include <vector>
 
 #include "absl/status/status.h"
-
 #include "band/common.h"
+
 
 #ifdef __ANDROID__
 #define _BAND_SUPPORT_THREAD_AFFINITY
@@ -70,8 +70,6 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
-const char* BandCPUMaskToString(CPUMaskFlag flag);
-const CPUMaskFlag BandCPUMaskGetFlag(const char* name);
 
 }  // namespace band
 

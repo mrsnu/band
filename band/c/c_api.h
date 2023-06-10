@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-#include "c_type.h"
+#include "c_api_type.h"
 
 #ifdef SWIG
 #define BAND_CAPI_EXPORT
@@ -26,7 +26,7 @@
 extern "C" {
 #endif  // __cplusplus
 
-// Forward decl of internal types - details are in `c_type.h`
+// Forward decl of internal types - details are in `c_api_type.h`
 typedef struct BandConfigBuilder BandConfigBuilder;
 typedef struct BandConfig BandConfig;
 typedef struct BandModel BandModel;
@@ -62,8 +62,10 @@ BAND_CAPI_EXPORT extern size_t BandTensorGetNumDims(BandTensor* tensor);
 BAND_CAPI_EXPORT extern const int* BandTensorGetDims(BandTensor* tensor);
 BAND_CAPI_EXPORT extern size_t BandTensorGetBytes(BandTensor* tensor);
 BAND_CAPI_EXPORT extern const char* BandTensorGetName(BandTensor* tensor);
-BAND_CAPI_EXPORT extern BandQuantizationType BandTensorGetQuantizationType(BandTensor* tensor);
-BAND_CAPI_EXPORT extern void* BandTensorGetQuantizationParams(BandTensor* tensor);
+BAND_CAPI_EXPORT extern BandQuantizationType BandTensorGetQuantizationType(
+    BandTensor* tensor);
+BAND_CAPI_EXPORT extern void* BandTensorGetQuantizationParams(
+    BandTensor* tensor);
 
 /* request option */
 BAND_CAPI_EXPORT extern BandRequestOption BandRequestOptionGetDefault();
@@ -146,11 +148,11 @@ typedef BandStatus (*PFN_BandEngineRequestSync)(BandEngine*, BandModel*,
 typedef BandRequestHandle (*PFN_BandEngineRequestAsync)(BandEngine*, BandModel*,
                                                         BandTensor**);
 typedef BandStatus (*PFN_BandEngineRequestSyncOptions)(BandEngine*, BandModel*,
-                                                BandRequestOption,
-                                                BandTensor**, BandTensor**);
-typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(BandEngine*, BandModel*,
-                                                        BandRequestOption,
-                                                        BandTensor**);
+                                                       BandRequestOption,
+                                                       BandTensor**,
+                                                       BandTensor**);
+typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(
+    BandEngine*, BandModel*, BandRequestOption, BandTensor**);
 typedef BandStatus (*PFN_BandEngineWait)(BandEngine*, BandRequestHandle,
                                          BandTensor**, size_t);
 typedef void (*PFN_BandEngineSetOnEndRequest)(BandEngine*,

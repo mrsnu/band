@@ -4,9 +4,47 @@
 
 namespace band {
 
-std::string ToString(BackendType backend_type) {
+template <>
+size_t EnumLength<BackendType>() {
+  return static_cast<size_t>(BackendType::kTfLite) + 1;
+}
+
+template <>
+size_t EnumLength<SchedulerType>() {
+  return static_cast<size_t>(
+             SchedulerType::kHeterogeneousEarliestFinishTimeReserved) +
+         1;
+}
+
+template <>
+size_t EnumLength<CPUMaskFlag>() {
+  return static_cast<size_t>(CPUMaskFlag::kPrimary) + 1;
+}
+
+template <>
+size_t EnumLength<SubgraphPreparationType>() {
+  return static_cast<size_t>(SubgraphPreparationType::kMergeUnitSubgraph) + 1;
+}
+
+template <>
+size_t EnumLength<DataType>() {
+  return static_cast<size_t>(DataType::kFloat64) + 1;
+}
+
+template <>
+size_t EnumLength<DeviceFlag>() {
+  return static_cast<size_t>(DeviceFlag::kNPU) + 1;
+}
+
+template <>
+size_t EnumLength<QuantizationType>() {
+  return static_cast<size_t>(QuantizationType::kAffineQuantization) + 1;
+}
+
+template <>
+const char* ToString(BackendType backend_type) {
   switch (backend_type) {
-    case BackendType::kBandTfLite: {
+    case BackendType::kTfLite: {
       return "Tensorflow Lite";
     } break;
     default: {
@@ -15,18 +53,19 @@ std::string ToString(BackendType backend_type) {
   }
 }
 
-std::string ToString(CPUMaskFlag cpu_mask_flags) {
-  switch (cpu_mask_flags) {
-    case CPUMaskFlag::kBandAll: {
+template <>
+const char* ToString(CPUMaskFlag cpu_mask_flag) {
+  switch (cpu_mask_flag) {
+    case CPUMaskFlag::kAll: {
       return "ALL";
     } break;
-    case CPUMaskFlag::kBandLittle: {
+    case CPUMaskFlag::kLittle: {
       return "LITTLE";
     } break;
-    case CPUMaskFlag::kBandBig: {
+    case CPUMaskFlag::kBig: {
       return "BIG";
     } break;
-    case CPUMaskFlag::kBandPrimary: {
+    case CPUMaskFlag::kPrimary: {
       return "PRIMARY";
     } break;
     default: {
@@ -35,120 +74,124 @@ std::string ToString(CPUMaskFlag cpu_mask_flags) {
   }
 }
 
-std::string ToString(SchedulerType scheduler_type) {
+template <>
+const char* ToString(SchedulerType scheduler_type) {
   switch (scheduler_type) {
-    case SchedulerType::kBandFixedWorker: {
+    case SchedulerType::kFixedWorker: {
       return "fixed_worker";
     } break;
-    case SchedulerType::kBandRoundRobin: {
+    case SchedulerType::kRoundRobin: {
       return "round_robin";
     } break;
-    case SchedulerType::kBandShortestExpectedLatency: {
+    case SchedulerType::kShortestExpectedLatency: {
       return "shortest_expected_latency";
     } break;
-    case SchedulerType::kBandFixedWorkerGlobalQueue: {
+    case SchedulerType::kFixedWorkerGlobalQueue: {
       return "fixed_worker_global_queue";
     } break;
-    case SchedulerType::kBandHeterogeneousEarliestFinishTime: {
+    case SchedulerType::kHeterogeneousEarliestFinishTime: {
       return "heterogeneous_earliest_finish_time";
     } break;
-    case SchedulerType::kBandLeastSlackTimeFirst: {
+    case SchedulerType::kLeastSlackTimeFirst: {
       return "least_slack_time_first";
     } break;
-    case SchedulerType::kBandHeterogeneousEarliestFinishTimeReserved: {
+    case SchedulerType::kHeterogeneousEarliestFinishTimeReserved: {
       return "heterogeneous_earliest_finish_time_reserved";
     } break;
-    default : {
+    default: {
       return "Unknown scheduler type";
     } break;
   }
 }
 
-std::string ToString(SubgraphPreparationType subgraph_preparation_type) {
+template <>
+const char* ToString(SubgraphPreparationType subgraph_preparation_type) {
   switch (subgraph_preparation_type) {
-    case SubgraphPreparationType::kBandNoFallbackSubgraph: {
+    case SubgraphPreparationType::kNoFallbackSubgraph: {
       return "no_fallback_subgraph";
     } break;
-    case SubgraphPreparationType::kBandFallbackPerWorker: {
+    case SubgraphPreparationType::kFallbackPerWorker: {
       return "fallback_per_worker";
     } break;
-    case SubgraphPreparationType::kBandUnitSubgraph: {
+    case SubgraphPreparationType::kUnitSubgraph: {
       return "unit_subgraph";
     } break;
-    case SubgraphPreparationType::kBandMergeUnitSubgraph: {
+    case SubgraphPreparationType::kMergeUnitSubgraph: {
       return "merge_unit_subgraph";
     } break;
-    default : {
+    default: {
       return "Unknown subgraph preparation type";
     } break;
   }
 }
 
-std::string ToString(DataType data_type) {
+template <>
+const char* ToString(DataType data_type) {
   switch (data_type) {
-    case DataType::kBandNoType: {
+    case DataType::kNoType: {
       return "NoType";
     } break;
-    case DataType::kBandFloat32: {
+    case DataType::kFloat32: {
       return "Float32";
     } break;
-    case DataType::kBandInt16: {
+    case DataType::kInt16: {
       return "Int16";
     } break;
-    case DataType::kBandInt32: {
+    case DataType::kInt32: {
       return "Int32";
     } break;
-    case DataType::kBandUInt8: {
+    case DataType::kUInt8: {
       return "UInt8";
     } break;
-    case DataType::kBandInt8: {
+    case DataType::kInt8: {
       return "Int8";
     } break;
-    case DataType::kBandInt64: {
+    case DataType::kInt64: {
       return "Int64";
     } break;
-    case DataType::kBandBool: {
+    case DataType::kBool: {
       return "Bool";
     } break;
-    case DataType::kBandComplex64: {
+    case DataType::kComplex64: {
       return "Complex64";
     } break;
-    case DataType::kBandString: {
+    case DataType::kString: {
       return "String";
     } break;
-    case DataType::kBandFloat16: {
+    case DataType::kFloat16: {
       return "Float16";
     } break;
-    case DataType::kBandFloat64: {
+    case DataType::kFloat64: {
       return "Float64";
     } break;
-    default : {
+    default: {
       return "Unknown data type";
     } break;
   }
 }
 
-std::string ToString(DeviceFlag device_flags) {
-  switch (device_flags) {
-    case DeviceFlag::kBandCPU: {
+template <>
+const char* ToString(DeviceFlag device_flag) {
+  switch (device_flag) {
+    case DeviceFlag::kCPU: {
       return "CPU";
     } break;
-    case DeviceFlag::kBandGPU: {
+    case DeviceFlag::kGPU: {
       return "GPU";
     } break;
-    case DeviceFlag::kBandDSP: {
+    case DeviceFlag::kDSP: {
       return "DSP";
     } break;
-    case DeviceFlag::kBandNPU: {
+    case DeviceFlag::kNPU: {
       return "NPU";
     } break;
-    default : {
+    default: {
       return "Unknown device flag";
     } break;
   }
 }
 
-std::string ToString(JobStatus job_status) {
+const char* ToString(JobStatus job_status) {
   switch (job_status) {
     case JobStatus::kEnqueueFailed: {
       return "EnqueueFailed";
@@ -174,61 +217,6 @@ std::string ToString(JobStatus job_status) {
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", job_status);
   return "Unknown job status";
-}
-
-template <>
-SchedulerType FromString(std::string str) {
-  for (int i = 0; i < SchedulerType::kBandNumSchedulerType; i++) {
-    SchedulerType type = static_cast<SchedulerType>(i);
-    if (ToString(type) == str) {
-      return type;
-    }
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR,
-                "Unknown scheduler type: %s. Fallback to fixed worker",
-                str.c_str());
-  return SchedulerType::kBandFixedWorker;
-}
-
-template <>
-SubgraphPreparationType FromString(std::string str) {
-  for (int i = 0; i < SubgraphPreparationType::kBandNumSubgraphPreparationType; i++) {
-    SubgraphPreparationType type = static_cast<SubgraphPreparationType>(i);
-    if (ToString(type) == str) {
-      return type;
-    }
-  }
-  BAND_LOG_PROD(
-      BAND_LOG_ERROR,
-      "Unknown subgraph preparation type: %s. Fallback to no_fallback_subgraph",
-      str.c_str());
-  return SubgraphPreparationType::kBandNoFallbackSubgraph;
-}
-
-template <>
-DataType FromString(std::string str) {
-  for (int i = 0; i < DataType::kBandNumDataType; i++) {
-    DataType type = static_cast<DataType>(i);
-    if (ToString(type) == str) {
-      return type;
-    }
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown data type: %s. Fallback to Float64",
-                str.c_str());
-  return DataType::kBandFloat64;
-}
-
-template <>
-DeviceFlag FromString(std::string str) {
-  for (int i = 0; i < kBandNumDeviceFlag; i++) {
-    DeviceFlag flag = static_cast<DeviceFlag>(i);
-    if (ToString(flag) == str) {
-      return flag;
-    }
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown device flag: %s. Fallback to CPU",
-                str.c_str());
-  return DeviceFlag::kBandCPU;
 }
 
 std::ostream& operator<<(std::ostream& os, const JobStatus& status) {

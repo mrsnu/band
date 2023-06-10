@@ -36,7 +36,7 @@ typedef std::vector<interface::ITensor*> Tensors;
  * std::unique_ptr<band::Engine> engine = band::Engine::Create(config);
  *
  * Band::Model model;
- * model.FromPath(BackendType::kBandTfLite, "band/test/data/add.tflite");
+ * model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite");
  * engine->RegisterModel(&model);
  *
  * band::Tensor *input_tensor = engine->CreateTensor(model.GetId(),

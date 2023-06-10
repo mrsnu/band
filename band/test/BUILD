@@ -1,4 +1,4 @@
-load("//band:band.bzl", "band_cc_library", "band_cc_android_test")
+load("//band:band.bzl", "band_cc_android_test", "band_cc_library")
 
 exports_files(glob([
     "data/*.tflite",

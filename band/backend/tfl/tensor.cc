@@ -10,7 +10,7 @@ namespace tfl {
 TfLiteTensorView::TfLiteTensorView(TfLiteTensor* tensor) : tensor_(tensor) {}
 
 BackendType TfLiteTensorView::GetBackendType() const {
-  return BackendType::kBandTfLite;
+  return BackendType::kTfLite;
 }
 
 DataType TfLiteTensorView::GetType() const { return DataType(tensor_->type); }
@@ -49,7 +49,7 @@ Quantization TfLiteTensorView::GetQuantization() const {
 absl::Status TfLiteTensorView::SetQuantization(Quantization quantization) {
   tensor_->quantization.type = TfLiteQuantizationType(quantization.GetType());
   switch (quantization.GetType()) {
-    case QuantizationType::kBandAffineQuantization: {
+    case QuantizationType::kAffineQuantization: {
       AffineQuantizationParams* input_q_params =
           reinterpret_cast<AffineQuantizationParams*>(
               tensor_->quantization.params);
@@ -64,7 +64,7 @@ absl::Status TfLiteTensorView::SetQuantization(Quantization quantization) {
              input_q_params->zero_point.size() * sizeof(int32_t));
       q_params->quantized_dimension = input_q_params->quantized_dimension;
     } break;
-    case QuantizationType::kBandNoQuantization:
+    case QuantizationType::kNoQuantization:
       break;
     default:
       break;

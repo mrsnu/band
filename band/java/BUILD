@@ -1,5 +1,5 @@
 load("//band/java:aar_with_jni.bzl", "aar_with_jni")
-load("//band:band.bzl", "clean_dep", "band_cc_library", "band_jni_linkopts", "band_jni_binary")
+load("//band:band.bzl", "band_cc_library", "band_jni_binary", "band_jni_linkopts", "clean_dep")
 load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 
 package(
@@ -23,7 +23,7 @@ aar_with_jni(
     android_library = ":band_runtime",
     headers = [
         "//band/c:c_api.h",
-        "//band/c:c_type.h",
+        "//band/c:c_api_type.h",
     ],
 )
 
@@ -36,9 +36,9 @@ android_library(
         ":band_api",
     ],
     deps = [
-        ":band_native",
         ":band_api",
-        "@org_checkerframework_qual", # Java checker framework
+        ":band_native",
+        "@org_checkerframework_qual",  # Java checker framework
     ],
 )
 
@@ -55,7 +55,7 @@ android_library(
 band_cc_library(
     name = "band_native",
     srcs = [
-        ":band_jni"
+        ":band_jni",
     ],
 )
 

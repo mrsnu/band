@@ -11,8 +11,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "band/c/c_type.h"
-
 namespace band {
 typedef int WorkerId;
 typedef int ModelId;
@@ -21,35 +19,84 @@ typedef int JobId;
 using BitMask = std::bitset<64>;
 
 // Empty template.
-template <typename T>
-T FromString(std::string str) {
-  assert(false && "FromString not implemented for this type.");
+template <typename EnumType>
+size_t EnumLength() {
+  assert(false && "FromString is not implemented for this type.");
+  return 0;
 }
 
-typedef BandBackendType BackendType;
-typedef BandSchedulerType SchedulerType;
-typedef BandCPUMaskFlag CPUMaskFlag;
-typedef BandSubgraphPreparationType SubgraphPreparationType;
-typedef BandDataType DataType;
-typedef BandDeviceFlag DeviceFlag;
-typedef BandQuantizationType QuantizationType;
+template <typename EnumType>
+const char* ToString(EnumType t) {
+  assert(false && "ToString is not implemented for this type.");
+  return "";
+}
 
-std::string ToString(BackendType backend_type);
-std::string ToString(SchedulerType scheduler_type);
-std::string ToString(CPUMaskFlag cpu_mask_flags);
-std::string ToString(SubgraphPreparationType subgraph_preparation_type);
-std::string ToString(DataType data_type);
-std::string ToString(DeviceFlag device_flags);
-std::string ToString(QuantizationType);
+template <typename EnumType>
+EnumType FromString(const char* str) {
+  for (size_t i = 0; i < EnumLength<EnumType>(); i++) {
+    EnumType t = static_cast<EnumType>(i);
+    if (ToString(t) == str) {
+      return t;
+    }
+  }
+  // fallback to the first enum value
+  return static_cast<EnumType>(0);
+}
 
-template <>
-SchedulerType FromString(std::string str);
-template <>
-SubgraphPreparationType FromString(std::string str);
-template <>
-DataType FromString(std::string str);
-template <>
-DeviceFlag FromString(std::string str);
+enum class BackendType : size_t {
+  kTfLite = 0,
+};
+
+enum class SchedulerType : size_t {
+  kFixedWorker = 0,
+  kRoundRobin = 1,
+  kShortestExpectedLatency = 2,
+  kFixedWorkerGlobalQueue = 3,
+  kHeterogeneousEarliestFinishTime = 4,
+  kLeastSlackTimeFirst = 5,
+  kHeterogeneousEarliestFinishTimeReserved = 6,
+};
+
+enum class CPUMaskFlag : size_t {
+  kAll = 0,
+  kLittle = 1,
+  kBig = 2,
+  kPrimary = 3,
+};
+
+enum class SubgraphPreparationType : size_t {
+  kNoFallbackSubgraph = 0,
+  kFallbackPerWorker = 1,
+  kUnitSubgraph = 2,
+  kMergeUnitSubgraph = 3,
+};
+
+enum class DataType : size_t {
+  kNoType = 0,
+  kFloat32 = 1,
+  kInt32 = 2,
+  kUInt8 = 3,
+  kInt64 = 4,
+  kString = 5,
+  kBool = 6,
+  kInt16 = 7,
+  kComplex64 = 8,
+  kInt8 = 9,
+  kFloat16 = 10,
+  kFloat64 = 11,
+};
+
+enum class DeviceFlag : size_t {
+  kCPU = 0,
+  kGPU = 1,
+  kDSP = 2,
+  kNPU = 3,
+};
+
+enum class QuantizationType : size_t {
+  kNoQuantization = 0,
+  kAffineQuantization = 1,
+};
 
 enum class WorkerType : size_t {
   kDeviceQueue = 1,
@@ -66,7 +113,35 @@ enum class JobStatus : size_t {
   kInvokeFailure
 };
 
-std::string ToString(JobStatus job_status);
+template <>
+size_t EnumLength<BackendType>();
+template <>
+size_t EnumLength<SchedulerType>();
+template <>
+size_t EnumLength<CPUMaskFlag>();
+template <>
+size_t EnumLength<SubgraphPreparationType>();
+template <>
+size_t EnumLength<DataType>();
+template <>
+size_t EnumLength<DeviceFlag>();
+template <>
+size_t EnumLength<QuantizationType>();
+
+template <>
+const char* ToString(BackendType backend_type);
+template <>
+const char* ToString(SchedulerType scheduler_type);
+template <>
+const char* ToString(CPUMaskFlag cpu_mask_flag);
+template <>
+const char* ToString(SubgraphPreparationType subgraph_preparation_type);
+template <>
+const char* ToString(DataType data_type);
+template <>
+const char* ToString(DeviceFlag device_flag);
+template <>
+const char* ToString(QuantizationType);
 
 struct AffineQuantizationParams {
   std::vector<float> scale;
