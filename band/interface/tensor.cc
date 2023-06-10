@@ -26,34 +26,36 @@ size_t ITensor::GetBytes() const { return GetPixelBytes() * GetNumElements(); }
 
 size_t ITensor::GetPixelBytes() const {
   switch (GetType()) {
-    case DataType::NoType:
+    case DataType::kBandNoType:
       return 0;
-    case DataType::Float32:
+    case DataType::kBandFloat32:
       return sizeof(float);
-    case DataType::Int32:
+    case DataType::kBandInt32:
       return sizeof(int32_t);
-    case DataType::UInt8:
+    case DataType::kBandUInt8:
       return sizeof(uint8_t);
-    case DataType::Int8:
+    case DataType::kBandInt8:
       return sizeof(int8_t);
-    case DataType::Int16:
+    case DataType::kBandInt16:
       return sizeof(int16_t);
-    case DataType::Int64:
+    case DataType::kBandInt64:
       return sizeof(int64_t);
-    case DataType::String:
+    case DataType::kBandString:
       return sizeof(char);
-    case DataType::Bool:
+    case DataType::kBandBool:
       return sizeof(bool);
-    case DataType::Complex64:
+    case DataType::kBandComplex64:
       return sizeof(double);
-    case DataType::Float16:
+    case DataType::kBandFloat16:
       return sizeof(float) / 2;
-    case DataType::Float64:
+    case DataType::kBandFloat64:
       return sizeof(double);
+    default:
+      break;
   }
 
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported data type : %s",
-                band::GetName(GetType()).c_str());
+                band::ToString(GetType()).c_str());
   return 0;
 }
 

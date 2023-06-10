@@ -63,12 +63,7 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   EXPECT_TRUE(engine);
 
   Model model;
-<<<<<<< HEAD
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()),
-            absl::OkStatus());
-=======
   EXPECT_EQ(model.FromPath(BackendType::kBandTfLite, model_name.c_str()), absl::OkStatus());
->>>>>>> unify_enum
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 }
 
@@ -85,12 +80,8 @@ INSTANTIATE_TEST_SUITE_P(
             "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
             SubgraphPreparationType::kBandMergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
-<<<<<<< HEAD
-                        SubgraphPreparationType::MergeUnitSubgraph)));
-}  // namespace test
-=======
                         SubgraphPreparationType::kBandMergeUnitSubgraph)));
->>>>>>> unify_enum
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

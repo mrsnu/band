@@ -81,16 +81,16 @@ typedef enum {
 
 typedef enum {
   // image format
-  GrayScale = 0,
-  RGB = 1,
-  RGBA = 2,
-  YV12 = 3,
-  YV21 = 4,
-  NV21 = 5,
-  NV12 = 6,
+  kBandGrayScale = 0,
+  kBandRGB = 1,
+  kBandRGBA = 2,
+  kBandYV12 = 3,
+  kBandYV21 = 4,
+  kBandNV21 = 5,
+  kBandNV12 = 6,
   // raw format, from tensor
   // internal format follows DataType
-  Raw = 7,
+  kBandRaw = 7,
   kBandNumBufferFormat = 8,
 } BandBufferFormat;
 
@@ -99,14 +99,15 @@ typedef enum {
 // the image content. See http://jpegclub.org/exif_orientation.html for
 // details.
 typedef enum {
-  TopLeft = 1,
-  TopRight = 2,
-  BottomRight = 3,
-  BottomLeft = 4,
-  LeftTop = 5,
-  RightTop = 6,
-  RightBottom = 7,
-  LeftBottom = 8
+  kBandTopLeft = 1,
+  kBandTopRight = 2,
+  kBandBottomRight = 3,
+  kBandBottomLeft = 4,
+  kBandLeftTop = 5,
+  kBandRightTop = 6,
+  kBandRightBottom = 7,
+  kBandLeftBottom = 8,
+  kBandNumBufferOrientation = 9,
 } BandBufferOrientation;
 
 // Supported Quantization Types.

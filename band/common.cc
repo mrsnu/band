@@ -130,103 +130,105 @@ std::string ToString(DataType data_type) {
 
 template <>
 DataType FromString(std::string str) {
-  for (int i = 0; i < GetSize<DataType>(); i++) {
+  for (int i = 0; i < kBandNumDataType; i++) {
     DataType type = static_cast<DataType>(i);
-    if (GetName(type) == str) {
+    if (ToString(type) == str) {
       return type;
     }
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown data type: %s. Fallback to Float64",
                 str.c_str());
-  return DataType::Float64;
+  return DataType::kBandFloat64;
 }
 
-std::string GetName(BufferFormat format_type) {
+std::string ToString(BufferFormat format_type) {
   switch (format_type) {
-    case BufferFormat::GrayScale: {
-      return "GRAYSCALE";
+    case BufferFormat::kBandGrayScale: {
+      return "GrayScale";
     } break;
-    case BufferFormat::RGB: {
+    case BufferFormat::kBandRGB: {
       return "RGB";
     } break;
-    case BufferFormat::RGBA: {
+    case BufferFormat::kBandRGBA: {
       return "RGBA";
     } break;
-    case BufferFormat::YV12: {
+    case BufferFormat::kBandYV12: {
       return "YV12";
     } break;
-    case BufferFormat::YV21: {
+    case BufferFormat::kBandYV21: {
       return "YV21";
     } break;
-    case BufferFormat::NV21: {
+    case BufferFormat::kBandNV21: {
       return "NV21";
     } break;
-    case BufferFormat::NV12: {
+    case BufferFormat::kBandNV12: {
       return "NV12";
     } break;
-    case BufferFormat::Raw: {
-      return "CUSTOM";
+    case BufferFormat::kBandRaw: {
+      return "Raw";
     } break;
+    default: {
+      return "Unknown format type";
+    }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %d", format_type);
-  return "Unknown format type";
 }
 
 template <>
 BufferFormat FromString(std::string str) {
-  for (int i = 0; i < GetSize<BufferFormat>(); i++) {
+  for (int i = 0; i < kBandNumBufferFormat; i++) {
     BufferFormat type = static_cast<BufferFormat>(i);
-    if (GetName(type) == str) {
+    if (ToString(type) == str) {
       return type;
     }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %s. Fallback to Custom",
+  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %s. Fallback to Raw",
                 str.c_str());
-  return BufferFormat::Raw;
+  return BufferFormat::kBandRaw;
 }
 
-std::string GetName(BufferOrientation format_type) {
+std::string ToString(BufferOrientation format_type) {
   switch (format_type) {
-    case BufferOrientation::TopLeft: {
-      return "TOP_LEFT";
+    case BufferOrientation::kBandTopLeft: {
+      return "TopLeft";
     } break;
-    case BufferOrientation::TopRight: {
-      return "TOP_RIGHT";
+    case BufferOrientation::kBandTopRight: {
+      return "TopRight";
     } break;
-    case BufferOrientation::BottomRight: {
-      return "BOTTOM_RIGHT";
+    case BufferOrientation::kBandBottomRight: {
+      return "BottomRight";
     } break;
-    case BufferOrientation::BottomLeft: {
-      return "BOTTOM_LEFT";
+    case BufferOrientation::kBandBottomLeft: {
+      return "BottomLeft";
     } break;
-    case BufferOrientation::LeftTop: {
-      return "LEFT_TOP";
+    case BufferOrientation::kBandLeftTop: {
+      return "LeftTop";
     } break;
-    case BufferOrientation::RightTop: {
-      return "RIGHT_TOP";
+    case BufferOrientation::kBandRightTop: {
+      return "RightTop";
     } break;
-    case BufferOrientation::RightBottom: {
-      return "RIGHT_BOTTOM";
+    case BufferOrientation::kBandRightBottom: {
+      return "RightBottom";
     } break;
-    case BufferOrientation::LeftBottom: {
-      return "LEFT_BOTTOM";
+    case BufferOrientation::kBandLeftBottom: {
+      return "LeftBottom";
+    } break;
+    default : {
+      return "Unknown format type";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown format type: %d", format_type);
-  return "Unknown format type";
 }
 
 template <>
 BufferOrientation FromString(std::string str) {
-  for (int i = 0; i < GetSize<BufferOrientation>(); i++) {
+  for (int i = 0; i < kBandNumBufferOrientation; i++) {
     BufferOrientation type = static_cast<BufferOrientation>(i);
-    if (GetName(type) == str) {
+    if (ToString(type) == str) {
       return type;
     }
   }
   BAND_LOG_PROD(BAND_LOG_ERROR,
                 "Unknown format type: %s. Fallback to LeftBottom", str.c_str());
-  return BufferOrientation::LeftBottom;
+  return BufferOrientation::kBandLeftBottom;
 }
 
 std::string ToString(DeviceFlag device_flags) {
@@ -304,19 +306,6 @@ SubgraphPreparationType FromString(std::string str) {
       "Unknown subgraph preparation type: %s. Fallback to no_fallback_subgraph",
       str.c_str());
   return SubgraphPreparationType::kBandNoFallbackSubgraph;
-}
-
-template <>
-DataType FromString(std::string str) {
-  for (int i = 0; i < DataType::kBandNumDataType; i++) {
-    DataType type = static_cast<DataType>(i);
-    if (ToString(type) == str) {
-      return type;
-    }
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown data type: %s. Fallback to Float64",
-                str.c_str());
-  return DataType::kBandFloat64;
 }
 
 template <>

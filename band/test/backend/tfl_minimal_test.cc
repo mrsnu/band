@@ -376,23 +376,23 @@ TEST(TFLiteBackend, ClassificationTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::FixedWorker})
+          .AddSchedulers({SchedulerType::kBandFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
+              SubgraphPreparationType::kBandMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kBandAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kBandPrimary)
 #ifdef __ANDROID__
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP,
-                       DeviceFlags::NPU, DeviceFlags::GPU})
+          .AddWorkers({DeviceFlag::kBandCPU, DeviceFlag::kBandCPU, DeviceFlag::kBandDSP,
+                       DeviceFlag::kBandNPU, DeviceFlag::kBandGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little,
-                              CPUMaskFlags::All, CPUMaskFlags::All,
-                              CPUMaskFlags::All})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBandBig, CPUMaskFlag::kBandLittle,
+                              CPUMaskFlag::kBandAll, CPUMaskFlag::kBandAll,
+                              CPUMaskFlag::kBandAll})
 #else
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+          .AddWorkers({DeviceFlag::kBandCPU, DeviceFlag::kBandCPU})
           .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBandBig, CPUMaskFlag::kBandLittle})
 #endif  // __ANDROID__
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
@@ -409,7 +409,7 @@ TEST(TFLiteBackend, ClassificationTest) {
 
   Model model;
   EXPECT_TRUE(model
-                  .FromPath(BackendType::TfLite,
+                  .FromPath(BackendType::kBandTfLite,
                             "band/test/data/mobilenet_v2_1.0_224_quant.tflite")
                   .ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());

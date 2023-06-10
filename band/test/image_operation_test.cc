@@ -13,14 +13,14 @@ TEST(ImageOperationTest, CropOperationSimpleTest) {
   CropOperation crop_op(0, 0, 1, 1);
   std::array<unsigned char, 9> input_data = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   auto input_buffer =
-      Buffer::CreateFromRaw(input_data.data(), 3, 3, BufferFormat::GrayScale);
+      Buffer::CreateFromRaw(input_data.data(), 3, 3, BufferFormat::kBandGrayScale);
   EXPECT_EQ(crop_op.Process(*input_buffer), absl::OkStatus());
   auto output_buffer = crop_op.GetOutput();
   EXPECT_EQ(output_buffer->GetDimension()[0], 2);
   EXPECT_EQ(output_buffer->GetDimension()[1], 2);
   EXPECT_EQ(output_buffer->GetNumPlanes(), 1);
-  EXPECT_EQ(output_buffer->GetBufferFormat(), BufferFormat::GrayScale);
-  EXPECT_EQ(output_buffer->GetOrientation(), BufferOrientation::TopLeft);
+  EXPECT_EQ(output_buffer->GetBufferFormat(), BufferFormat::kBandGrayScale);
+  EXPECT_EQ(output_buffer->GetOrientation(), BufferOrientation::kBandTopLeft);
   EXPECT_EQ(output_buffer->GetNumElements(), 4);
   EXPECT_EQ((*output_buffer)[0].data[0], 1);
   EXPECT_EQ((*output_buffer)[0].data[1], 2);
@@ -48,15 +48,15 @@ TEST(ImageOperationTest, ConvertImageTest) {
   // load 3-channel images
   std::shared_ptr<Buffer> rgb_buffer = LoadImage("band/test/data/hippo.jpg");
 
-  EXPECT_EQ(rgb_buffer->GetBufferFormat(), BufferFormat::RGB);
+  EXPECT_EQ(rgb_buffer->GetBufferFormat(), BufferFormat::kBandRGB);
   // convert to gray scale
   std::shared_ptr<Buffer> output_buffer = Buffer::CreateEmpty(
       rgb_buffer->GetDimension()[0], rgb_buffer->GetDimension()[1],
-      BufferFormat::GrayScale, rgb_buffer->GetOrientation());
+      BufferFormat::kBandGrayScale, rgb_buffer->GetOrientation());
   convert_op.SetOutput(output_buffer.get());
 
   EXPECT_EQ(convert_op.Process(*rgb_buffer), absl::OkStatus());
-  EXPECT_EQ(output_buffer->GetBufferFormat(), BufferFormat::GrayScale);
+  EXPECT_EQ(output_buffer->GetBufferFormat(), BufferFormat::kBandGrayScale);
 
   for (size_t i = 0; i < output_buffer->GetNumElements(); ++i) {
     // we compare use the formula from

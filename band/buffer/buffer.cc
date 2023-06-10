@@ -24,7 +24,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
                                               BufferFormat buffer_format,
                                               BufferOrientation orientation,
                                               bool owns_data) {
-  if (buffer_format <= BufferFormat::RGBA) {
+  if (buffer_format <= BufferFormat::kBandRGBA) {
     return std::shared_ptr<Buffer>(new Buffer(
         std::vector<size_t>{width, height},
         std::vector<DataPlane>{{data,
@@ -34,7 +34,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
   }
 
   switch (buffer_format) {
-    case BufferFormat::NV21: {
+    case BufferFormat::kBandNV21: {
       const int row_stride_uv = (width % 2 == 1) ? (width + 1) / 2 * 2 : width;
       return CreateFromYUVPlanes(data,                       // y
                                  data + width * height + 1,  // u
@@ -42,7 +42,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
                                  width, height, width, row_stride_uv, 2,
                                  buffer_format, orientation, owns_data);
     }
-    case BufferFormat::NV12: {
+    case BufferFormat::kBandNV12: {
       const int row_stride_uv = (width % 2 == 1) ? (width + 1) / 2 * 2 : width;
       return CreateFromYUVPlanes(data,                       // y
                                  data + width * height,      // u
@@ -50,7 +50,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
                                  width, height, width, row_stride_uv, 2,
                                  buffer_format, orientation, owns_data);
     }
-    case BufferFormat::YV21: {
+    case BufferFormat::kBandYV21: {
       std::vector<size_t> uv_dims =
           GetUvDims(std::vector<size_t>{width, height}, buffer_format);
       return CreateFromYUVPlanes(
@@ -60,7 +60,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
           width, height, width, uv_dims[0], 1, buffer_format, orientation,
           owns_data);
     }
-    case BufferFormat::YV12: {
+    case BufferFormat::kBandYV12: {
       std::vector<size_t> uv_dims =
           GetUvDims(std::vector<size_t>{width, height}, buffer_format);
       return CreateFromYUVPlanes(
@@ -72,7 +72,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
     }
     default:
       BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
-                    GetName(buffer_format));
+                    ToString(buffer_format));
       return nullptr;
   }
 }
@@ -83,19 +83,19 @@ std::shared_ptr<Buffer> Buffer::CreateFromYUVPlanes(
     size_t row_stride_y, size_t row_stride_uv, size_t pixel_stride_uv,
     BufferFormat buffer_format, BufferOrientation orientation, bool owns_data) {
   std::vector<DataPlane> data_planes;
-  if (buffer_format == BufferFormat::NV21 ||
-      buffer_format == BufferFormat::YV12) {
+  if (buffer_format == BufferFormat::kBandNV21 ||
+      buffer_format == BufferFormat::kBandYV12) {
     data_planes = {{y_data, row_stride_y, 1},
                    {v_data, row_stride_uv, pixel_stride_uv},
                    {u_data, row_stride_uv, pixel_stride_uv}};
-  } else if (buffer_format == BufferFormat::NV12 ||
-             buffer_format == BufferFormat::YV21) {
+  } else if (buffer_format == BufferFormat::kBandNV12 ||
+             buffer_format == BufferFormat::kBandYV21) {
     data_planes = {{y_data, row_stride_y, 1},
                    {u_data, row_stride_uv, pixel_stride_uv},
                    {v_data, row_stride_uv, pixel_stride_uv}};
   } else {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported YUV format type : %s",
-                  GetName(buffer_format));
+                  ToString(buffer_format));
     return nullptr;
   }
 
@@ -141,7 +141,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromTensor(
         DataPlane{reinterpret_cast<const unsigned char*>(tensor->GetData()),
                   dims[0] * 3, 3});  // RGB
     return std::shared_ptr<Buffer>(new Buffer(
-        dims, data_planes, BufferFormat::RGB, BufferOrientation::TopLeft));
+        dims, data_planes, BufferFormat::kBandRGB, BufferOrientation::kBandTopLeft));
   } else {
     // flatten the tensor into single-row data plane
     data_planes.push_back(
@@ -149,7 +149,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromTensor(
                   tensor->GetBytes(), tensor->GetPixelBytes()});
 
     return std::shared_ptr<Buffer>(new Buffer(
-        dims, data_planes, tensor->GetType(), BufferOrientation::TopLeft));
+        dims, data_planes, tensor->GetType(), BufferOrientation::kBandTopLeft));
   }
 }
 
@@ -159,29 +159,33 @@ std::shared_ptr<Buffer> Buffer::CreateEmpty(size_t width, size_t height,
   size_t total_bytes = GetSize({width, height});
 
   switch (buffer_format) {
-    case BufferFormat::GrayScale:
-    case BufferFormat::RGB:
-    case BufferFormat::RGBA: {
+    case BufferFormat::kBandGrayScale:
+    case BufferFormat::kBandRGB:
+    case BufferFormat::kBandRGBA: {
       // pixel stride bytes
       total_bytes *= GetPixelStrideBytes(buffer_format);
       break;
     }
 
-    case BufferFormat::NV21:
-    case BufferFormat::NV12:
-    case BufferFormat::YV21:
-    case BufferFormat::YV12: {
+    case BufferFormat::kBandNV21:
+    case BufferFormat::kBandNV12:
+    case BufferFormat::kBandYV21:
+    case BufferFormat::kBandYV12: {
       // uv plane has 2 bytes per pixel
       total_bytes += GetSize(GetUvDims({width, height}, buffer_format)) * 2;
       break;
     }
 
-    case BufferFormat::Raw: {
+    case BufferFormat::kBandRaw: {
       BAND_LOG_PROD(BAND_LOG_ERROR,
                     "Raw format type requires external input to create "
                     "empty buffer");
       return nullptr;
     }
+    default:
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
+                    ToString(buffer_format));
+      return nullptr;
   }
 
   return CreateFromRaw(new unsigned char[total_bytes], width, height,
@@ -200,24 +204,24 @@ Buffer::Buffer(std::vector<size_t> dimension,
 Buffer::Buffer(std::vector<size_t> dimension,
                std::vector<DataPlane> data_planes, DataType data_type,
                BufferOrientation orientation, bool owns_data)
-    : Buffer(dimension, data_planes, BufferFormat::Raw, orientation,
+    : Buffer(dimension, data_planes, BufferFormat::kBandRaw, orientation,
              owns_data) {
   data_type_ = data_type;
 }
 
 size_t Buffer::GetPixelStrideBytes(BufferFormat buffer_format) {
   switch (buffer_format) {
-    case BufferFormat::GrayScale:
+    case BufferFormat::kBandGrayScale:
       return 1;
-    case BufferFormat::RGB:
+    case BufferFormat::kBandRGB:
       return 3;
-    case BufferFormat::RGBA:
+    case BufferFormat::kBandRGBA:
       return 4;
     default:
       BAND_LOG_PROD(BAND_LOG_ERROR,
                     "Given format type requires external input to guess the "
                     "pixel stride : %s",
-                    GetName(buffer_format));
+                    ToString(buffer_format));
       return 0;
   }
 }
@@ -235,14 +239,14 @@ std::vector<size_t> Buffer::GetUvDims(const std::vector<size_t>& dims,
   }
 
   switch (buffer_format) {
-    case BufferFormat::NV21:
-    case BufferFormat::NV12:
-    case BufferFormat::YV21:
-    case BufferFormat::YV12:
+    case BufferFormat::kBandNV21:
+    case BufferFormat::kBandNV12:
+    case BufferFormat::kBandYV21:
+    case BufferFormat::kBandYV12:
       return {(dims[0] + 1) / 2, (dims[1] + 1) / 2};
     default:
       BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
-                    GetName(buffer_format));
+                    ToString(buffer_format));
       return std::vector<size_t>();
   }
 }
@@ -250,10 +254,10 @@ std::vector<size_t> Buffer::GetUvDims(const std::vector<size_t>& dims,
 size_t Buffer::GetBufferByteSize(const std::vector<size_t>& dims,
                                  BufferFormat buffer_format) {
   switch (buffer_format) {
-    case BufferFormat::NV21:
-    case BufferFormat::NV12:
-    case BufferFormat::YV21:
-    case BufferFormat::YV12: {
+    case BufferFormat::kBandNV21:
+    case BufferFormat::kBandNV12:
+    case BufferFormat::kBandYV21:
+    case BufferFormat::kBandYV12: {
       std::vector<size_t> uv_dims = GetUvDims(dims, buffer_format);
       if (uv_dims.empty()) {
         return 0;
@@ -304,7 +308,7 @@ size_t Buffer::GetNumElements() const {
 }
 
 size_t Buffer::GetPixelBytes() const {
-  if (buffer_format_ == BufferFormat::Raw) {
+  if (buffer_format_ == BufferFormat::kBandRaw) {
     // custom format type has only one data plane
     return data_planes_[0].pixel_stride_bytes;
   } else {
@@ -322,18 +326,18 @@ BufferOrientation Buffer::GetOrientation() const { return orientation_; }
 
 bool Buffer::IsBufferFormatCompatible(const Buffer& rhs) const {
   switch (buffer_format_) {
-    case BufferFormat::RGB:
-    case BufferFormat::RGBA:
-      return rhs.buffer_format_ == BufferFormat::RGB ||
-             rhs.buffer_format_ == BufferFormat::RGBA;
-    case BufferFormat::NV21:
-    case BufferFormat::NV12:
-    case BufferFormat::YV21:
-    case BufferFormat::YV12:
-      return rhs.buffer_format_ == BufferFormat::NV21 ||
-             rhs.buffer_format_ == BufferFormat::NV12 ||
-             rhs.buffer_format_ == BufferFormat::YV21 ||
-             rhs.buffer_format_ == BufferFormat::YV12;
+    case BufferFormat::kBandRGB:
+    case BufferFormat::kBandRGBA:
+      return rhs.buffer_format_ == BufferFormat::kBandRGB ||
+             rhs.buffer_format_ == BufferFormat::kBandRGBA;
+    case BufferFormat::kBandNV21:
+    case BufferFormat::kBandNV12:
+    case BufferFormat::kBandYV21:
+    case BufferFormat::kBandYV12:
+      return rhs.buffer_format_ == BufferFormat::kBandNV21 ||
+             rhs.buffer_format_ == BufferFormat::kBandNV12 ||
+             rhs.buffer_format_ == BufferFormat::kBandYV21 ||
+             rhs.buffer_format_ == BufferFormat::kBandYV12;
     default:
       return buffer_format_ == rhs.buffer_format_;
   }
