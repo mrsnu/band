@@ -2,12 +2,12 @@
 #define BAND_BUFFER_BUFFER_PROCESSOR_H
 
 #include "absl/status/statusor.h"
-#include "band/buffer/operation.h"
+#include "band/buffer/operator.h"
 
 namespace band {
 
 class Buffer;
-class IOperation;
+class IBufferOperator;
 class BufferProcessor;
 
 class IBufferProcessorBuilder {
@@ -18,20 +18,21 @@ class IBufferProcessorBuilder {
   virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build() = 0;
 
   // Add an operation to the processor.
-  // e.g., builder.AddOperation<OperationType>(args...);
-  virtual absl::Status AddOperation(std::unique_ptr<IOperation> operation) {
+  // e.g., builder.AddOperation<Type>(args...);
+  virtual absl::Status AddOperation(
+      std::unique_ptr<IBufferOperator> operation) {
     operations_.emplace_back(std::move(operation));
     return absl::OkStatus();
   }
 
  protected:
   std::unique_ptr<BufferProcessor> CreateProcessor(
-      std::vector<IOperation*> operations);
+      std::vector<IBufferOperator*> operations);
 
   IBufferProcessorBuilder(const IBufferProcessorBuilder&) = delete;
   IBufferProcessorBuilder& operator=(const IBufferProcessorBuilder&) = delete;
 
-  std::vector<std::unique_ptr<IOperation>> operations_;
+  std::vector<std::unique_ptr<IBufferOperator>> operations_;
 };
 
 // A processor has a collection of sequential operations.
@@ -50,11 +51,11 @@ class BufferProcessor {
 
  protected:
   friend class IBufferProcessorBuilder;
-  BufferProcessor(std::vector<IOperation*> operations);
+  BufferProcessor(std::vector<IBufferOperator*> operations);
   BufferProcessor(const BufferProcessor&) = delete;
   BufferProcessor& operator=(const BufferProcessor&) = delete;
 
-  std::vector<IOperation*> operations_;
+  std::vector<IBufferOperator*> operations_;
 };
 }  // namespace band
 

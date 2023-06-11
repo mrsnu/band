@@ -1,23 +1,23 @@
-#include "band/buffer/operation.h"
+#include "band/buffer/operator.h"
 
 #include "band/logger.h"
-#include "operation.h"
+#include "operator.h"
 
 namespace band {
-IOperation::~IOperation() {
+IBufferOperator::~IBufferOperator() {
   if (output_ != nullptr && !output_assigned_) {
     delete output_;
   }
 }
 
-absl::Status IOperation::Process(const Buffer& input) {
+absl::Status IBufferOperator::Process(const Buffer& input) {
   RETURN_IF_ERROR(ValidateInput(input));
   RETURN_IF_ERROR(ValidateOrCreateOutput(input));
   RETURN_IF_ERROR(ProcessImpl(input));
   return absl::OkStatus();
 }
 
-void IOperation::SetOutput(Buffer* output) {
+void IBufferOperator::SetOutput(Buffer* output) {
   if (!output_assigned_) {
     delete output_;
   }
@@ -25,11 +25,11 @@ void IOperation::SetOutput(Buffer* output) {
   output_assigned_ = true;
 }
 
-absl::Status IOperation::ValidateInput(const Buffer& input) const {
+absl::Status IBufferOperator::ValidateInput(const Buffer& input) const {
   return absl::OkStatus();
 }
 
-absl::Status IOperation::ValidateOrCreateOutput(const Buffer& input) {
+absl::Status IBufferOperator::ValidateOrCreateOutput(const Buffer& input) {
   absl::Status status = output_ == nullptr
                             ? absl::InternalError("Null output buffer")
                             : ValidateOutput(input);

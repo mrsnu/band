@@ -1,16 +1,16 @@
-#include "band/buffer/image_operation.h"
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "band/buffer/buffer.h"
+#include "band/buffer/image_operator.h"
 #include "band/test/image_util.h"
 
 namespace band {
-namespace test {
+using namespace buffer;
 
+namespace test {
 TEST(ImageOperationTest, CropOperationSimpleTest) {
-  CropOperation crop_op(0, 0, 1, 1);
+  Crop crop_op(0, 0, 1, 1);
   std::array<unsigned char, 9> input_data = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   auto input_buffer =
       Buffer::CreateFromRaw(input_data.data(), 3, 3, BufferFormat::kGrayScale);
@@ -29,7 +29,7 @@ TEST(ImageOperationTest, CropOperationSimpleTest) {
 }
 
 TEST(ImageOperationTest, CropOperationImageTest) {
-  CropOperation crop_op(0, 0, 255, 255);
+  Crop crop_op(0, 0, 255, 255);
   std::shared_ptr<Buffer> input_buffer = LoadImage("band/test/data/hippo.jpg");
   std::shared_ptr<Buffer> cropped_buffer =
       LoadImage("band/test/data/hippo_crop_256.jpg");
@@ -44,7 +44,7 @@ TEST(ImageOperationTest, CropOperationImageTest) {
 }
 
 TEST(ImageOperationTest, ConvertImageTest) {
-  ConvertOperation convert_op;
+  Convert convert_op;
   // load 3-channel images
   std::shared_ptr<Buffer> rgb_buffer = LoadImage("band/test/data/hippo.jpg");
 
@@ -70,7 +70,7 @@ TEST(ImageOperationTest, ConvertImageTest) {
 }
 
 TEST(ImageOperationTest, ConvertWithoutImageTest) {
-  ConvertOperation convert_op(BufferFormat::kGrayScale);
+  Convert convert_op(BufferFormat::kGrayScale);
   // load 3-channel images
   std::shared_ptr<Buffer> rgb_buffer = LoadImage("band/test/data/hippo.jpg");
   EXPECT_EQ(convert_op.Process(*rgb_buffer), absl::OkStatus());
@@ -87,7 +87,7 @@ TEST(ImageOperationTest, ConvertWithoutImageTest) {
 }
 
 TEST(ImageOperationTest, RotateImageTest) {
-  RotateOperation rotate_op(90);
+  Rotate rotate_op(90);
   std::shared_ptr<Buffer> input_buffer = LoadImage("band/test/data/hippo.jpg");
   EXPECT_EQ(rotate_op.Process(*input_buffer), absl::OkStatus());
   auto output_buffer = rotate_op.GetOutput();
@@ -96,7 +96,7 @@ TEST(ImageOperationTest, RotateImageTest) {
   EXPECT_EQ(output_buffer->GetDimension()[0], input_buffer->GetDimension()[1]);
   EXPECT_EQ(output_buffer->GetDimension()[1], input_buffer->GetDimension()[0]);
   // rotate back to original
-  RotateOperation rotate_back_op(270);
+  Rotate rotate_back_op(270);
   EXPECT_EQ(rotate_back_op.Process(*output_buffer), absl::OkStatus());
   auto output_buffer2 = rotate_back_op.GetOutput();
 
@@ -109,7 +109,7 @@ TEST(ImageOperationTest, RotateImageTest) {
 }
 
 TEST(ImageOperationTest, ResizeImageTest) {
-  ResizeOperation resize_op(256, 256);
+  Resize resize_op(256, 256);
   std::shared_ptr<Buffer> input_buffer = LoadImage("band/test/data/hippo.jpg");
   EXPECT_EQ(resize_op.Process(*input_buffer), absl::OkStatus());
   auto output_buffer = resize_op.GetOutput();

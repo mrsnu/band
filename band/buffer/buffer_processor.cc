@@ -30,7 +30,7 @@ absl::Status BufferProcessor::Process(const Buffer& input, Buffer& output) {
   return absl::OkStatus();
 }
 
-BufferProcessor::BufferProcessor(std::vector<IOperation*> operations)
+BufferProcessor::BufferProcessor(std::vector<IBufferOperator*> operations)
     : operations_(std::move(operations))
 
 {}
@@ -42,7 +42,7 @@ BufferProcessor::~BufferProcessor() {
 }
 
 std::unique_ptr<BufferProcessor> IBufferProcessorBuilder::CreateProcessor(
-    std::vector<IOperation*> operations) {
+    std::vector<IBufferOperator*> operations) {
   return std::unique_ptr<BufferProcessor>(new BufferProcessor(operations));
 }
 

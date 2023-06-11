@@ -26,7 +26,7 @@ typedef struct BandBuffer;
 typedef struct BandBufferProcessor;
 // A builder for BandBufferProcessor. This is used to build a
 // BandBufferProcessor. By default, the BandBufferProcessorBuilder will create a
-// BandBufferProcessor with single ResizeOperation
+// BandBufferProcessor with single Resize
 typedef struct BandBufferProcessorBuilder;
 
 BAND_CAPI_EXPORT extern BandBuffer* BandBufferCreate();

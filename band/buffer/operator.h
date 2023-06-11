@@ -1,36 +1,37 @@
-#ifndef BAND_BUFFER_OPERATION_H
-#define BAND_BUFFER_OPERATION_H
+#ifndef BAND_BUFFER_OPERATOR_H_
+#define BAND_BUFFER_OPERATOR_H_
 
 #include "absl/status/status.h"
 #include "band/buffer/buffer.h"
 
 namespace band {
-// Interface for buffer operations such as crop, resize, rotate, flip, convert
-// format, etc. Each operation should be able to validate an input buffer and
+// Interface for buffer operators such as crop, resize, rotate, flip, convert
+// format, etc. Each operator should be able to validate an input buffer and
 // process the input buffer to generate the output buffer.
 // The output buffer can be explicitly assigned by calling SetOutput() or
-// automatically created by the operation. Each operation should create
+// automatically created by the operator. Each operator should create
 // output buffer if it is not explicitly assigned and cache the output buffer
-// for future use (e.g. for the next operation with the same input format).
-class IOperation {
+// for future use (e.g. for the next operator with the same input format).
+class IBufferOperator {
  public:
-  IOperation() = default;
-  virtual ~IOperation();
-  // For processor builder to clone the operation
-  virtual IOperation* Clone() const = 0;
+  IBufferOperator() = default;
+  virtual ~IBufferOperator();
+  // For processor builder to clone the operator
+  virtual IBufferOperator* Clone() const = 0;
   absl::Status Process(const Buffer& input);
   void SetOutput(Buffer* output);
   Buffer* GetOutput() { return output_; }
   const Buffer* GetOutput() const { return output_; }
 
-  enum class OperationType : size_t {
-    kImage = 0,
+  enum class Type {
+    kImage,
+    kCommon,
   };
-  virtual OperationType GetOperationType() const = 0;
+  virtual Type GetOpType() const = 0;
 
  protected:
-  IOperation(const IOperation&) = default;
-  IOperation& operator=(const IOperation&) = default;
+  IBufferOperator(const IBufferOperator&) = default;
+  IBufferOperator& operator=(const IBufferOperator&) = default;
   virtual absl::Status ProcessImpl(const Buffer& input) = 0;
   // Validate the input buffer. Return OK if the input buffer is valid for the
   // operation, otherwise return an error status.

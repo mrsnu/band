@@ -13,18 +13,18 @@ band_cc_library(
     srcs = [
         "buffer.cc",
         "buffer_processor.cc",
-        "image_operation.cc",
+        "image_operator.cc",
         "image_processor.cc",
         "libyuv_operation.cc",
-        "operation.cc",
+        "operator.cc",
     ],
     hdrs = [
         "buffer.h",
         "buffer_processor.h",
-        "image_operation.h",
+        "image_operator.h",
         "image_processor.h",
         "libyuv_operation.h",
-        "operation.h",
+        "operator.h",
     ],
     deps = [
         "//band:common",

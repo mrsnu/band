@@ -1,5 +1,5 @@
-#ifndef BAND_BUFFER_IMAGE_PROCESSOR_H
-#define BAND_BUFFER_IMAGE_PROCESSOR_H
+#ifndef BAND_BUFFER_IMAGE_PROCESSOR_H_
+#define BAND_BUFFER_IMAGE_PROCESSOR_H_
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -8,14 +8,14 @@
 
 namespace band {
 
-class IOperation;
+class IBufferOperator;
 class BufferProcessor;
 
 class ImageProcessorBuilder : public IBufferProcessorBuilder {
  public:
   virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build() override;
   virtual absl::Status AddOperation(
-      std::unique_ptr<IOperation> operation) override;
+      std::unique_ptr<IBufferOperator> operation) override;
 };
 }  // namespace band
 
