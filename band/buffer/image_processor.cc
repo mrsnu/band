@@ -10,6 +10,8 @@ namespace band {
 absl::StatusOr<std::unique_ptr<BufferProcessor>>
 ImageProcessorBuilder::Build() {
   std::vector<IOperation*> operations;
+  // TODO(dostos): reorder operations to optimize performance
+  // e.g., crop before color conversion
   for (auto& operation : operations_) {
     operations.push_back(operation->Clone());
   }
