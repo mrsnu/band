@@ -305,4 +305,13 @@ struct JobIdBitMaskHash {
 
 }  // namespace band
 
+// Helper macro to return error status
+#define RETURN_IF_ERROR(expr) \
+  {                           \
+    auto status = (expr);     \
+    if (!status.ok()) {       \
+      return status;          \
+    }                         \
+  }
+
 #endif  // BAND_COMMON_H_

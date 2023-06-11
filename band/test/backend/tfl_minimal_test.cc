@@ -416,13 +416,12 @@ TEST(TFLiteBackend, ClassificationTest) {
 
   Tensor* input_tensor = engine->CreateTensor(
       model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
-  std::shared_ptr<Buffer> tensor_buffer =
-      Buffer::CreateFromTensor(input_tensor);
+  std::shared_ptr<Buffer> tensor_buffer(Buffer::CreateFromTensor(input_tensor));
 
   ImageProcessorBuilder preprocessor_builder;
   // by default, the image is resized to input size
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
-      preprocessor_builder.Build(image_buffer.get(), tensor_buffer.get());
+      preprocessor_builder.Build();
   EXPECT_TRUE(preprocessor.ok());
   EXPECT_TRUE(
       preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());

@@ -22,18 +22,18 @@ class Buffer {
   };
   ~Buffer();
 
-  static std::shared_ptr<Buffer> CreateFromPlanes(
+  static Buffer* CreateFromPlanes(
       const std::vector<DataPlane>& data_planes,
       const std::vector<size_t>& dims, BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::kTopLeft);
 
-  static std::shared_ptr<Buffer> CreateFromRaw(
+  static Buffer* CreateFromRaw(
       const unsigned char* data, size_t width, size_t height,
       BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::kTopLeft,
       bool owns_data = false);
 
-  static std::shared_ptr<Buffer> CreateFromYUVPlanes(
+  static Buffer* CreateFromYUVPlanes(
       const unsigned char* y_data, const unsigned char* u_data,
       const unsigned char* v_data, size_t width, size_t height,
       size_t row_stride_y, size_t row_stride_uv, size_t pixel_stride_uv,
@@ -41,10 +41,9 @@ class Buffer {
       BufferOrientation orientation = BufferOrientation::kTopLeft,
       bool owns_data = false);
 
-  static std::shared_ptr<Buffer> CreateFromTensor(
-      const interface::ITensor* tensor);
+  static Buffer* CreateFromTensor(const interface::ITensor* tensor);
 
-  static std::shared_ptr<Buffer> CreateEmpty(
+  static Buffer* CreateEmpty(
       size_t width, size_t height, BufferFormat buffer_format,
       BufferOrientation orientation = BufferOrientation::kTopLeft);
 

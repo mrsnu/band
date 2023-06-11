@@ -50,9 +50,9 @@ TEST(ImageOperationTest, ConvertImageTest) {
 
   EXPECT_EQ(rgb_buffer->GetBufferFormat(), BufferFormat::kRGB);
   // convert to gray scale
-  std::shared_ptr<Buffer> output_buffer = Buffer::CreateEmpty(
+  std::shared_ptr<Buffer> output_buffer(Buffer::CreateEmpty(
       rgb_buffer->GetDimension()[0], rgb_buffer->GetDimension()[1],
-      BufferFormat::kGrayScale, rgb_buffer->GetOrientation());
+      BufferFormat::kGrayScale, rgb_buffer->GetOrientation()));
   convert_op.SetOutput(output_buffer.get());
 
   EXPECT_EQ(convert_op.Process(*rgb_buffer), absl::OkStatus());
@@ -61,6 +61,23 @@ TEST(ImageOperationTest, ConvertImageTest) {
   for (size_t i = 0; i < output_buffer->GetNumElements(); ++i) {
     // we compare use the formula from
     // https://en.wikipeddia.org/wiki/Grayscale
+    EXPECT_NEAR((*output_buffer)[0].data[i],
+                0.299 * (*rgb_buffer)[0].data[i * 3] +
+                    0.587 * (*rgb_buffer)[0].data[i * 3 + 1] +
+                    0.114 * (*rgb_buffer)[0].data[i * 3 + 2],
+                1);
+  }
+}
+
+TEST(ImageOperationTest, ConvertWithoutImageTest) {
+  ConvertOperation convert_op(BufferFormat::kGrayScale);
+  // load 3-channel images
+  std::shared_ptr<Buffer> rgb_buffer = LoadImage("band/test/data/hippo.jpg");
+  EXPECT_EQ(convert_op.Process(*rgb_buffer), absl::OkStatus());
+  auto output_buffer = convert_op.GetOutput();
+  EXPECT_EQ(output_buffer->GetBufferFormat(), BufferFormat::kGrayScale);
+
+  for (size_t i = 0; i < output_buffer->GetNumElements(); ++i) {
     EXPECT_NEAR((*output_buffer)[0].data[i],
                 0.299 * (*rgb_buffer)[0].data[i * 3] +
                     0.587 * (*rgb_buffer)[0].data[i * 3 + 1] +

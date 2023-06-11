@@ -13,11 +13,9 @@ class BufferProcessor;
 
 class ImageProcessorBuilder : public IBufferProcessorBuilder {
  public:
-  virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build(
-      const Buffer* input = nullptr, Buffer* output = nullptr) override;
-
-  // TODO(dostos): type check for image operations
-  using IBufferProcessorBuilder::AddOperation;
+  virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build() override;
+  virtual absl::Status AddOperation(
+      std::unique_ptr<IOperation> operation) override;
 };
 }  // namespace band
 

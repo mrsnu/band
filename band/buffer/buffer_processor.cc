@@ -9,16 +9,13 @@ absl::Status BufferProcessor::Process(const Buffer& input, Buffer& output) {
     return absl::InternalError("IProcessor: no operations are specified.");
   }
 
+  // set the output buffer for the last operation
   operations_.back()->SetOutput(&output);
 
+  Buffer const* next_input = &input;
   for (size_t i = 0; i < operations_.size(); ++i) {
-    absl::Status status = operations_[i]->Process(input);
-    if (!status.ok()) {
-      return status;
-    }
-    if (i + 1 < operations_.size()) {
-      operations_[i + 1]->SetOutput(operations_[i]->GetOutput());
-    }
+    RETURN_IF_ERROR(operations_[i]->Process(*next_input));
+    next_input = operations_[i]->GetOutput();
   }
 
   return absl::OkStatus();

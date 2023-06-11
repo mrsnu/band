@@ -3,29 +3,33 @@
 
 #include "band/buffer/buffer.h"
 #include "band/buffer/image_operation.h"
+#include "image_processor.h"
 
 namespace band {
 
-absl::StatusOr<std::unique_ptr<BufferProcessor>> ImageProcessorBuilder::Build(
-    const Buffer* input, Buffer* output) {
-  bool requires_validation = input != nullptr && output != nullptr;
-
+absl::StatusOr<std::unique_ptr<BufferProcessor>>
+ImageProcessorBuilder::Build() {
   std::vector<IOperation*> operations;
   for (auto& operation : operations_) {
     operations.push_back(operation->Clone());
   }
   // special case: resize input to output if no operations are specified
-  if (operations_.empty() && requires_validation) {
-    operations.push_back(new ResizeOperation(output->GetDimension()));
+  if (operations_.empty()) {
+    operations.push_back(new ResizeOperation());
   }
-  std::unique_ptr<BufferProcessor> processor = CreateProcessor(operations);
-  if (requires_validation) {
-    absl::Status status = processor->Process(*input, *output);
-    if (!status.ok()) {
-      return status;
-    }
-  }
-  return std::move(processor);
+  return std::move(CreateProcessor(operations));
 }
 
+absl::Status ImageProcessorBuilder::AddOperation(
+    std::unique_ptr<IOperation> operation) {
+  if (operation == nullptr) {
+    return absl::InvalidArgumentError("operation is nullptr.");
+  }
+
+  if (operation->GetOperationType() != IOperation::OperationType::kImage) {
+    return absl::InvalidArgumentError("operation is not an image operation.");
+  }
+
+  return absl::OkStatus();
+}  // namespace band
 }  // namespace band

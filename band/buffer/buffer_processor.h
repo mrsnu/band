@@ -15,11 +15,7 @@ class IBufferProcessorBuilder {
   IBufferProcessorBuilder() = default;
   virtual ~IBufferProcessorBuilder() = default;
   // Build a processor from the operations added to this builder.
-  // The input and output buffers are used to validate the operations.
-  // If the input and output buffers are nullptr, this builder only
-  // validates the connections between operations.
-  virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build(
-      const Buffer* input = nullptr, Buffer* output = nullptr) = 0;
+  virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build() = 0;
 
   // Add an operation to the processor.
   // e.g., builder.AddOperation<OperationType>(args...);
@@ -62,4 +58,4 @@ class BufferProcessor {
 };
 }  // namespace band
 
-#endif // BAND_BUFFER_BUFFER_PROCESSOR_H
+#endif  // BAND_BUFFER_BUFFER_PROCESSOR_H

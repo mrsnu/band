@@ -549,10 +549,10 @@ absl::Status ConvertFromRgb(const Buffer& buffer, Buffer& output_buffer) {
           absl::make_unique<unsigned char[]>(Buffer::GetBufferByteSize(
               buffer.GetDimension(), output_buffer.GetBufferFormat()));
 
-      yuv_frame_buffer =
+      yuv_frame_buffer = std::shared_ptr<Buffer>(
           Buffer::CreateFromRaw(tmp_yuv_buffer.get(), buffer.GetDimension()[0],
                                 buffer.GetDimension()[1], BufferFormat::kYV21,
-                                buffer.GetOrientation());
+                                buffer.GetOrientation()));
       if (!yuv_frame_buffer) {
         return absl::InternalError("Failed to create YV21 buffer.");
       }
@@ -831,10 +831,10 @@ absl::Status RotateNv(const Buffer& buffer, int angle_deg,
       output_buffer.GetDimension(), BufferFormat::kYV21);
   auto rotated_yuv_raw_buffer =
       absl::make_unique<unsigned char[]>(rotated_buffer_size);
-  std::shared_ptr<Buffer> rotated_yuv_buffer = Buffer::CreateFromRaw(
+  std::shared_ptr<Buffer> rotated_yuv_buffer(Buffer::CreateFromRaw(
       rotated_yuv_raw_buffer.get(), output_buffer.GetDimension()[0],
       output_buffer.GetDimension()[1], BufferFormat::kYV21,
-      output_buffer.GetOrientation());
+      output_buffer.GetOrientation()));
   if (!rotated_yuv_buffer) {
     return absl::InternalError("Failed to create YV21 buffer.");
   }
@@ -851,7 +851,7 @@ absl::Status RotateNv(const Buffer& buffer, int angle_deg,
   // buffer.
   const unsigned char* chroma_buffer =
       buffer.GetBufferFormat() == BufferFormat::kNV12 ? input_data->u_buffer
-                                                     : input_data->v_buffer;
+                                                      : input_data->v_buffer;
   // Rotate the Y plane and store into the Y plane in `output_buffer`. Rotate
   // the interleaved UV plane and store into the interleaved UV plane in
   // `rotated_yuv_buffer`.
@@ -874,7 +874,7 @@ absl::Status RotateNv(const Buffer& buffer, int angle_deg,
   // actually the V plane from the input buffer first.
   const unsigned char* output_chroma_buffer =
       buffer.GetBufferFormat() == BufferFormat::kNV12 ? output_data->u_buffer
-                                                     : output_data->v_buffer;
+                                                      : output_data->v_buffer;
   // The width and height arguments of `libyuv::MergeUVPlane()` represent the
   // width and height of the UV planes.
   libyuv::MergeUVPlane(
@@ -942,7 +942,7 @@ const unsigned char* GetUvRawBuffer(const Buffer& buffer) {
   }
 
   return buffer.GetBufferFormat() == BufferFormat::kNV12 ? yuv_data->u_buffer
-                                                        : yuv_data->v_buffer;
+                                                         : yuv_data->v_buffer;
 }
 
 // Crops NV12/NV21 Buffer to the subregion defined by the top left pixel
@@ -1075,27 +1075,27 @@ absl::Status CropResizeYuv(const Buffer& buffer, int x0, int y0, int x1, int y1,
 
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kNV12: {
-      std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
+      std::shared_ptr<Buffer> cropped_buffer(Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_u, cropped_plane_v}, crop_dimension,
-          buffer.GetBufferFormat(), buffer.GetOrientation());
+          buffer.GetBufferFormat(), buffer.GetOrientation()));
       return ResizeNv(*cropped_buffer, output_buffer);
     }
     case BufferFormat::kNV21: {
-      std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
+      std::shared_ptr<Buffer> cropped_buffer(Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_v, cropped_plane_u}, crop_dimension,
-          buffer.GetBufferFormat(), buffer.GetOrientation());
+          buffer.GetBufferFormat(), buffer.GetOrientation()));
       return ResizeNv(*cropped_buffer, output_buffer);
     }
     case BufferFormat::kYV12: {
-      std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
+      std::shared_ptr<Buffer> cropped_buffer(Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_v, cropped_plane_u}, crop_dimension,
-          buffer.GetBufferFormat(), buffer.GetOrientation());
+          buffer.GetBufferFormat(), buffer.GetOrientation()));
       return ResizeYv(*cropped_buffer, output_buffer);
     }
     case BufferFormat::kYV21: {
-      std::shared_ptr<Buffer> cropped_buffer = Buffer::CreateFromPlanes(
+      std::shared_ptr<Buffer> cropped_buffer(Buffer::CreateFromPlanes(
           {cropped_plane_y, cropped_plane_u, cropped_plane_v}, crop_dimension,
-          buffer.GetBufferFormat(), buffer.GetOrientation());
+          buffer.GetBufferFormat(), buffer.GetOrientation()));
       return ResizeYv(*cropped_buffer, output_buffer);
     }
     default:
@@ -1392,9 +1392,9 @@ absl::Status CropResize(const Buffer& buffer, int x0, int y0, int x1, int y1,
   int adjusted_offset = buffer[0].row_stride_bytes * y0 + x0 * pixel_stride;
   Buffer::DataPlane plane = {buffer[0].data + adjusted_offset,
                              buffer[0].row_stride_bytes, pixel_stride};
-  std::shared_ptr<Buffer> adjusted_buffer = Buffer::CreateFromPlanes(
+  std::shared_ptr<Buffer> adjusted_buffer(Buffer::CreateFromPlanes(
       {plane}, crop_dimension, buffer.GetBufferFormat(),
-      buffer.GetOrientation());
+      buffer.GetOrientation()));
 
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kRGB:
@@ -1456,9 +1456,9 @@ absl::Status UniformCropResizePlane(const Buffer& buffer,
   int adjusted_offset = buffer[0].row_stride_bytes * y0 + x0 * pixel_stride;
   Buffer::DataPlane plane = {buffer[0].data + adjusted_offset,
                              buffer[0].row_stride_bytes, pixel_stride};
-  std::shared_ptr<Buffer> adjusted_buffer = Buffer::CreateFromPlanes(
+  std::shared_ptr<Buffer> adjusted_buffer(Buffer::CreateFromPlanes(
       {plane}, input_dimension, buffer.GetBufferFormat(),
-      buffer.GetOrientation());
+      buffer.GetOrientation()));
 
   // Uniform resize is achieved by adjusting the resize dimension to fit the
   // output_buffer and respect the input aspect ratio at the same time. We
@@ -1469,9 +1469,9 @@ absl::Status UniformCropResizePlane(const Buffer& buffer,
       GetScaledDimension(input_dimension, output_buffer.GetDimension());
   Buffer::DataPlane output_plane = output_buffer[0];
 
-  std::shared_ptr<Buffer> adjusted_output_buffer = Buffer::CreateFromPlanes(
+  std::shared_ptr<Buffer> adjusted_output_buffer(Buffer::CreateFromPlanes(
       {output_plane}, adjusted_dimension, output_buffer.GetBufferFormat(),
-      output_buffer.GetOrientation());
+      output_buffer.GetOrientation()));
 
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kRGB:

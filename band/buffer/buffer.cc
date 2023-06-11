@@ -12,25 +12,22 @@ Buffer::~Buffer() {
   }
 }
 
-std::shared_ptr<Buffer> Buffer::CreateFromPlanes(
-    const std::vector<DataPlane>& data_planes, const std::vector<size_t>& dims,
-    BufferFormat buffer_format, BufferOrientation orientation) {
-  return std::shared_ptr<Buffer>(
-      new Buffer(dims, data_planes, buffer_format, orientation));
+Buffer* Buffer::CreateFromPlanes(const std::vector<DataPlane>& data_planes,
+                                 const std::vector<size_t>& dims,
+                                 BufferFormat buffer_format,
+                                 BufferOrientation orientation) {
+  return new Buffer(dims, data_planes, buffer_format, orientation);
 }
 
-std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
-                                              size_t width, size_t height,
-                                              BufferFormat buffer_format,
-                                              BufferOrientation orientation,
-                                              bool owns_data) {
+Buffer* Buffer::CreateFromRaw(const unsigned char* data, size_t width,
+                              size_t height, BufferFormat buffer_format,
+                              BufferOrientation orientation, bool owns_data) {
   if (buffer_format <= BufferFormat::kRGBA) {
-    return std::shared_ptr<Buffer>(new Buffer(
-        std::vector<size_t>{width, height},
-        std::vector<DataPlane>{{data,
-                                width * GetPixelStrideBytes(buffer_format),
-                                GetPixelStrideBytes(buffer_format)}},
-        buffer_format, orientation, owns_data));
+    return new Buffer(std::vector<size_t>{width, height},
+                      std::vector<DataPlane>{
+                          {data, width * GetPixelStrideBytes(buffer_format),
+                           GetPixelStrideBytes(buffer_format)}},
+                      buffer_format, orientation, owns_data);
   }
 
   switch (buffer_format) {
@@ -77,7 +74,7 @@ std::shared_ptr<Buffer> Buffer::CreateFromRaw(const unsigned char* data,
   }
 }
 
-std::shared_ptr<Buffer> Buffer::CreateFromYUVPlanes(
+Buffer* Buffer::CreateFromYUVPlanes(
     const unsigned char* y_data, const unsigned char* u_data,
     const unsigned char* v_data, size_t width, size_t height,
     size_t row_stride_y, size_t row_stride_uv, size_t pixel_stride_uv,
@@ -99,13 +96,11 @@ std::shared_ptr<Buffer> Buffer::CreateFromYUVPlanes(
     return nullptr;
   }
 
-  return std::shared_ptr<Buffer>(new Buffer(std::vector<size_t>{width, height},
-                                            data_planes, buffer_format,
-                                            orientation, owns_data));
+  return new Buffer(std::vector<size_t>{width, height}, data_planes,
+                    buffer_format, orientation, owns_data);
 }
 
-std::shared_ptr<Buffer> Buffer::CreateFromTensor(
-    const interface::ITensor* tensor) {
+Buffer* Buffer::CreateFromTensor(const interface::ITensor* tensor) {
   if (tensor == nullptr) {
     BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor is null");
     return nullptr;
@@ -140,22 +135,22 @@ std::shared_ptr<Buffer> Buffer::CreateFromTensor(
     data_planes.push_back(
         DataPlane{reinterpret_cast<const unsigned char*>(tensor->GetData()),
                   dims[0] * 3, 3});  // RGB
-    return std::shared_ptr<Buffer>(new Buffer(
-        dims, data_planes, BufferFormat::kRGB, BufferOrientation::kTopLeft));
+    return new Buffer(dims, data_planes, BufferFormat::kRGB,
+                      BufferOrientation::kTopLeft);
   } else {
     // flatten the tensor into single-row data plane
     data_planes.push_back(
         DataPlane{reinterpret_cast<const unsigned char*>(tensor->GetData()),
                   tensor->GetBytes(), tensor->GetPixelBytes()});
 
-    return std::shared_ptr<Buffer>(new Buffer(
-        dims, data_planes, tensor->GetType(), BufferOrientation::kTopLeft));
+    return new Buffer(dims, data_planes, tensor->GetType(),
+                      BufferOrientation::kTopLeft);
   }
 }
 
-std::shared_ptr<Buffer> Buffer::CreateEmpty(size_t width, size_t height,
-                                            BufferFormat buffer_format,
-                                            BufferOrientation orientation) {
+Buffer* Buffer::CreateEmpty(size_t width, size_t height,
+                            BufferFormat buffer_format,
+                            BufferOrientation orientation) {
   size_t total_bytes = GetSize({width, height});
 
   switch (buffer_format) {

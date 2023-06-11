@@ -15,9 +15,9 @@ std::shared_ptr<Buffer> LoadImage(const std::string& filename) {
   if (data == nullptr) {
     return nullptr;
   }
-  return Buffer::CreateFromRaw(
+  return std::shared_ptr<Buffer>(Buffer::CreateFromRaw(
       data, width, height,
-      num_channels == 1 ? BufferFormat::kGrayScale : BufferFormat::kRGB);
+      num_channels == 1 ? BufferFormat::kGrayScale : BufferFormat::kRGB));
 }
 
 void SaveImage(const std::string& filename, const Buffer& buffer) {
