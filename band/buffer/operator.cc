@@ -10,7 +10,7 @@ IBufferOperator::~IBufferOperator() {
   }
 }
 
-absl::Status IBufferOperator::Process(const Buffer& input) {
+absl::Status IBufferOperator::Process(Buffer& input) {
   RETURN_IF_ERROR(ValidateInput(input));
   RETURN_IF_ERROR(ValidateOrCreateOutput(input));
   RETURN_IF_ERROR(ProcessImpl(input));

@@ -18,7 +18,7 @@ class IBufferOperator {
   virtual ~IBufferOperator();
   // For processor builder to clone the operator
   virtual IBufferOperator* Clone() const = 0;
-  absl::Status Process(const Buffer& input);
+  absl::Status Process(Buffer& input);
   void SetOutput(Buffer* output);
   Buffer* GetOutput() { return output_; }
   const Buffer* GetOutput() const { return output_; }

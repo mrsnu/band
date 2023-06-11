@@ -64,6 +64,7 @@ class Buffer {
                                        BufferFormat buffer_format);
   static size_t GetBufferByteSize(const std::vector<size_t>& dims,
                                   BufferFormat buffer_format);
+  static bool IsYUV(BufferFormat buffer_format);
 
   static std::vector<size_t> GetCropDimension(size_t x0, size_t x1, size_t y0,
                                               size_t y1);

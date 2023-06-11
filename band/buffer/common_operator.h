@@ -10,6 +10,7 @@ namespace buffer {
 
 class Normalize : public IBufferOperator {
  public:
+  // TODO(dostos): inplace
   Normalize(float mean, float std) : mean_(mean), std_(std) {}
 
   virtual IBufferOperator* Clone() const override;

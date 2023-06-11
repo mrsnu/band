@@ -233,16 +233,13 @@ std::vector<size_t> Buffer::GetUvDims(const std::vector<size_t>& dims,
     return std::vector<size_t>();
   }
 
-  switch (buffer_format) {
-    case BufferFormat::kNV21:
-    case BufferFormat::kNV12:
-    case BufferFormat::kYV21:
-    case BufferFormat::kYV12:
-      return {(dims[0] + 1) / 2, (dims[1] + 1) / 2};
-    default:
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
-                    ToString(buffer_format));
-      return std::vector<size_t>();
+  if (IsYUV(buffer_format)) {
+    // YUV format has 2 bytes per pixel
+    return {(dims[0] + 1) / 2, (dims[1] + 1) / 2};
+  } else {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Given format type is not YUV format : %s",
+                  ToString(buffer_format));
+    return std::vector<size_t>();
   }
 }
 
@@ -318,6 +315,13 @@ DataType Buffer::GetDataType() const { return data_type_; }
 BufferFormat Buffer::GetBufferFormat() const { return buffer_format_; }
 
 BufferOrientation Buffer::GetOrientation() const { return orientation_; }
+
+bool Buffer::IsYUV(BufferFormat buffer_format) {
+  return buffer_format == BufferFormat::kNV21 ||
+         buffer_format == BufferFormat::kNV12 ||
+         buffer_format == BufferFormat::kYV21 ||
+         buffer_format == BufferFormat::kYV12;
+}
 
 bool Buffer::IsBufferFormatCompatible(const Buffer& rhs) const {
   switch (buffer_format_) {

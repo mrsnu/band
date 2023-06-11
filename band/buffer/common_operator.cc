@@ -13,11 +13,12 @@ absl::Status Normalize::ProcessImpl(const Buffer& input) {
 }
 
 absl::Status Normalize::ValidateInput(const Buffer& input) const {
-  if (input.GetBufferFormat() != BufferFormat::kRaw) {
+  if (IsYUV(input.GetBufferFormat())) {
     return absl::InvalidArgumentError(
         absl::StrFormat("input buffer format %d is not supported.",
                         static_cast<int>(input.GetBufferFormat())));
   }
+
   return absl::Status();
 }
 
