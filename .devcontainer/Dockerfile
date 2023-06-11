@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:devel
+FROM tensorflow/tensorflow:2.9.2-gpu
 
 ENV ANDROID_DEV_HOME /android
 RUN mkdir -p ${ANDROID_DEV_HOME}
