@@ -10,7 +10,7 @@ IBufferOperator::~IBufferOperator() {
   }
 }
 
-absl::Status IBufferOperator::Process(Buffer& input) {
+absl::Status IBufferOperator::Process(const Buffer& input) {
   RETURN_IF_ERROR(ValidateInput(input));
   RETURN_IF_ERROR(ValidateOrCreateOutput(input));
   RETURN_IF_ERROR(ProcessImpl(input));
@@ -24,6 +24,9 @@ void IBufferOperator::SetOutput(Buffer* output) {
   output_ = output;
   output_assigned_ = true;
 }
+
+Buffer* IBufferOperator::GetOutput() { return output_; }
+const Buffer* IBufferOperator::GetOutput() const { return output_; }
 
 absl::Status IBufferOperator::ValidateInput(const Buffer& input) const {
   return absl::OkStatus();

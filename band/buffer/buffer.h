@@ -15,6 +15,7 @@ namespace band {
 class Buffer {
  public:
   struct DataPlane {
+    unsigned char* GetMutableData() { return const_cast<unsigned char*>(data); }
     const unsigned char* data;
     // row_stride_bytes is the number of bytes between two consecutive rows.
     size_t row_stride_bytes = 1;

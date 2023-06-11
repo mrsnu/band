@@ -13,6 +13,7 @@ band_cc_library(
     srcs = [
         "buffer.cc",
         "buffer_processor.cc",
+        "common_operator.cc",
         "image_operator.cc",
         "image_processor.cc",
         "libyuv_operation.cc",
@@ -21,6 +22,7 @@ band_cc_library(
     hdrs = [
         "buffer.h",
         "buffer_processor.h",
+        "common_operator.h",
         "image_operator.h",
         "image_processor.h",
         "libyuv_operation.h",

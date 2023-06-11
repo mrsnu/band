@@ -41,6 +41,12 @@ BufferProcessor::~BufferProcessor() {
   }
 }
 
+IBufferProcessorBuilder& IBufferProcessorBuilder::AddOperation(
+    std::unique_ptr<IBufferOperator> operation) {
+  operations_.emplace_back(std::move(operation));
+  return *this;
+}
+
 std::unique_ptr<BufferProcessor> IBufferProcessorBuilder::CreateProcessor(
     std::vector<IBufferOperator*> operations) {
   return std::unique_ptr<BufferProcessor>(new BufferProcessor(operations));

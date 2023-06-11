@@ -19,11 +19,8 @@ class IBufferProcessorBuilder {
 
   // Add an operation to the processor.
   // e.g., builder.AddOperation<Type>(args...);
-  virtual absl::Status AddOperation(
-      std::unique_ptr<IBufferOperator> operation) {
-    operations_.emplace_back(std::move(operation));
-    return absl::OkStatus();
-  }
+  IBufferProcessorBuilder& AddOperation(
+      std::unique_ptr<IBufferOperator> operation);
 
  protected:
   std::unique_ptr<BufferProcessor> CreateProcessor(

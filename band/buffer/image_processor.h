@@ -14,8 +14,6 @@ class BufferProcessor;
 class ImageProcessorBuilder : public IBufferProcessorBuilder {
  public:
   virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build() override;
-  virtual absl::Status AddOperation(
-      std::unique_ptr<IBufferOperator> operation) override;
 };
 }  // namespace band
 
