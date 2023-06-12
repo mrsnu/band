@@ -7,7 +7,7 @@
 namespace band {
 Tensor::Tensor(ITensor* tensor_view)
     : type_(tensor_view->GetType()),
-      quantization_({QuantizationType::NoQuantization, nullptr}),
+      quantization_({QuantizationType::kNoQuantization, nullptr}),
       num_bytes_(tensor_view->GetBytes()),
       dims_(tensor_view->GetDims(),
             tensor_view->GetDims() + tensor_view->GetNumDims()),
@@ -15,11 +15,12 @@ Tensor::Tensor(ITensor* tensor_view)
       name_(tensor_view->GetName()) {
   auto status = SetQuantization(tensor_view->GetQuantization());
   if (!status.ok()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s", status.message());
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s",
+                  status.message());
   }
 }
 
-Tensor::~Tensor() { 
+Tensor::~Tensor() {
   delete[] data_;
   if (quantization_.GetParams() != nullptr) {
     free(quantization_.GetParams());
@@ -49,7 +50,7 @@ const char* Tensor::GetName() const { return name_.c_str(); }
 Quantization Tensor::GetQuantization() const { return quantization_; }
 
 absl::Status Tensor::SetQuantization(Quantization quantization) {
-  if (quantization_.GetType() == QuantizationType::AffineQuantization) {
+  if (quantization_.GetType() == QuantizationType::kAffineQuantization) {
     AffineQuantizationParams* input_q_params =
         reinterpret_cast<AffineQuantizationParams*>(quantization.GetParams());
 
@@ -57,14 +58,15 @@ absl::Status Tensor::SetQuantization(Quantization quantization) {
         reinterpret_cast<AffineQuantizationParams*>(
             malloc(sizeof(AffineQuantizationParams)));
     if (input_q_params == nullptr || q_params == nullptr) {
-      return absl::InternalError("Failed to allocate memory for quantization params");
+      return absl::InternalError(
+          "Failed to allocate memory for quantization params");
     }
 
     q_params->scale = std::vector<float>(input_q_params->scale.size());
     q_params->zero_point = std::vector<int>(input_q_params->zero_point.size());
 
     q_params->scale.insert(q_params->scale.end(), input_q_params->scale.begin(),
-                            input_q_params->scale.end());
+                           input_q_params->scale.end());
     q_params->zero_point.insert(q_params->zero_point.end(),
                                 input_q_params->zero_point.begin(),
                                 input_q_params->zero_point.end());

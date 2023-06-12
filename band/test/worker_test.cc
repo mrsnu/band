@@ -34,7 +34,7 @@ Job GetEmptyJob() {
 
 TYPED_TEST(WorkerSuite, JobHelper) {
   MockContext engine;
-  TypeParam worker(&engine, 0, DeviceFlags::CPU);
+  TypeParam worker(&engine, 0, DeviceFlag::kCPU);
   Job job = GetEmptyJob();
 
   worker.Start();
@@ -56,7 +56,7 @@ TYPED_TEST(WorkerSuite, Wait) {
   EXPECT_CALL(engine, TryCopyInputTensors).Times(testing::AtLeast(1));
   EXPECT_CALL(engine, TryCopyOutputTensors).Times(testing::AtLeast(1));
 
-  TypeParam worker(&engine, 0, DeviceFlags::CPU);
+  TypeParam worker(&engine, 0, DeviceFlag::kCPU);
   Job job = GetEmptyJob();
 
   worker.Start();

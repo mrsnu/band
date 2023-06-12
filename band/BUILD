@@ -47,7 +47,6 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-
 config_setting(
     name = "linux_x86_64_tflite",
     define_values = {
@@ -130,8 +129,8 @@ band_cc_library(
     hdrs = [
         "common.h",
         "config.h",
-        "engine_interface.h",
         "cpu.h",
+        "engine_interface.h",
         "error_reporter.h",
         "logger.h",
         "model_spec.h",
@@ -144,7 +143,7 @@ band_cc_library(
         ],
     }),
     deps = [
-        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
@@ -267,8 +266,8 @@ band_cc_library(
         ":common",
         ":config",
         ":cpu",
-        ":time",
         ":job_tracer",
+        ":time",
     ],
 )
 
@@ -308,12 +307,11 @@ band_cc_library(
     ],
     deps = [
         ":common",
+        ":job_tracer",
         ":scheduler",
         ":worker",
-        ":job_tracer"
     ],
 )
-
 
 band_cc_library(
     name = "job_tracer",
@@ -328,8 +326,6 @@ band_cc_library(
         "@chrome_tracer//chrome_tracer",
     ],
 )
-
-
 
 band_cc_library(
     name = "tensor",
@@ -380,6 +376,7 @@ band_cc_library(
             ":common",
             ":config",
             ":interface",
+            ":job_tracer",
             ":json_util",
             ":latency_estimator",
             ":model",
@@ -389,7 +386,6 @@ band_cc_library(
             ":tensor",
             ":time",
             ":worker",
-            ":job_tracer",
         ],
 )
 
@@ -406,7 +402,7 @@ band_cc_library(
     }),
     deps = [
         ":common",
-        "@jsoncpp//:jsoncpp",
+        "@jsoncpp",
     ],
 )
 

@@ -12,7 +12,7 @@ class ShortestExpectedLatencyScheduler : public IScheduler {
   bool Schedule(JobQueue& requests) override;
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
-  WorkerType GetWorkerType() override { return WorkerType::GlobalQueue; }
+  WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
 
  private:
   const int window_size_;

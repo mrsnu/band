@@ -13,7 +13,7 @@ namespace band {
 namespace tool {
 class Benchmark {
  public:
-  Benchmark(BackendType target_backend = BackendType::TfLite);
+  Benchmark(BackendType target_backend = BackendType::kTfLite);
   ~Benchmark();
   absl::Status Initialize(int argc, const char** argv);
   absl::Status Run();

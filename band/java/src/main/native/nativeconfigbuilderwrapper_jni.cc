@@ -111,21 +111,21 @@ JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addPlannerCPUMask(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint cpuMask) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddPlannerCPUMask(static_cast<band::CPUMaskFlags>(cpuMask));
+      ->AddPlannerCPUMask(static_cast<band::CPUMaskFlag>(cpuMask));
 }
 
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addWorkers(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jintArray workers) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddWorkers(ConvertIntArrayTo<band::DeviceFlags>(env, workers));
+      ->AddWorkers(ConvertIntArrayTo<band::DeviceFlag>(env, workers));
 }
 
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addWorkerCPUMasks(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jintArray cpuMasks) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddWorkerCPUMasks(ConvertIntArrayTo<band::CPUMaskFlags>(env, cpuMasks));
+      ->AddWorkerCPUMasks(ConvertIntArrayTo<band::CPUMaskFlag>(env, cpuMasks));
 }
 
 JNIEXPORT void JNICALL
@@ -174,7 +174,7 @@ JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCPUMask(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint cpuMask) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddCPUMask(static_cast<band::CPUMaskFlags>(cpuMask));
+      ->AddCPUMask(static_cast<band::CPUMaskFlag>(cpuMask));
 }
 
 JNIEXPORT jboolean JNICALL

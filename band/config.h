@@ -12,7 +12,7 @@ namespace band {
 
 struct ProfileConfig {
   ProfileConfig() {
-    copy_computation_ratio = std::vector<int>(GetSize<DeviceFlags>(), 0);
+    copy_computation_ratio = std::vector<int>(EnumLength<DeviceFlag>(), 0);
   }
   bool online = true;
   int num_warmups = 1;
@@ -25,21 +25,22 @@ struct ProfileConfig {
 struct PlannerConfig {
   int schedule_window_size = INT_MAX;
   std::vector<SchedulerType> schedulers;
-  CPUMaskFlags cpu_mask = CPUMaskFlags::All;
+  CPUMaskFlag cpu_mask = CPUMaskFlag::kAll;
   std::string log_path = "";
 };
 
 struct WorkerConfig {
   WorkerConfig() {
     // Add one default worker per device
-    for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
-      workers.push_back(static_cast<DeviceFlags>(i));
+    for (size_t i = 0; i < EnumLength<DeviceFlag>(); i++) {
+      workers.push_back(static_cast<DeviceFlag>(i));
     }
-    cpu_masks = std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
-    num_threads = std::vector<int>(GetSize<DeviceFlags>(), 1);
+    cpu_masks =
+        std::vector<CPUMaskFlag>(EnumLength<DeviceFlag>(), CPUMaskFlag::kAll);
+    num_threads = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
-  std::vector<DeviceFlags> workers;
-  std::vector<CPUMaskFlags> cpu_masks;
+  std::vector<DeviceFlag> workers;
+  std::vector<CPUMaskFlag> cpu_masks;
   std::vector<int> num_threads;
   bool allow_worksteal = false;
   int availability_check_interval_ms = 30000;
@@ -48,11 +49,11 @@ struct WorkerConfig {
 struct SubgraphConfig {
   int minimum_subgraph_size = 7;
   SubgraphPreparationType subgraph_preparation_type =
-      SubgraphPreparationType::MergeUnitSubgraph;
+      SubgraphPreparationType::kMergeUnitSubgraph;
 };
 
 struct RuntimeConfig {
-  CPUMaskFlags cpu_mask;
+  CPUMaskFlag cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
@@ -60,7 +61,7 @@ struct RuntimeConfig {
 
  private:
   friend class RuntimeConfigBuilder;
-  RuntimeConfig() { cpu_mask = CPUMaskFlags::All; };
+  RuntimeConfig() { cpu_mask = CPUMaskFlag::kAll; };
 };
 
 }  // namespace band

@@ -72,7 +72,7 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
 * `profile_online`: Online profile or offline profile [default: true]
 * `profile_warmup_runs`: Number of warmup runs before profile. [default: 1]
 * `profile_num_runs`: Number of runs for profile. [default: 1]
-* `profile_copy_computation_ratio`: Ratio of computation / input-ouput copy in `list[int]`. Used for latency estimation for each device type (e.g., CPU, GPU, DSP, NPU). The length of the list should be equal to the 4 (`GetSize<DeviceFlags>()`). [default: 30000, 30000, 30000, 30000]
+* `profile_copy_computation_ratio`: Ratio of computation / input-ouput copy in `list[int]`. Used for latency estimation for each device type (e.g., CPU, GPU, DSP, NPU). The length of the list should be equal to the 4 (`EnumLength<DeviceFlag>()`). [default: 30000, 30000, 30000, 30000]
 * `schedule_window_size`: The number of planning unit.
 * `workload`: The path to file with workload information. [default: None] 
 

@@ -3,11 +3,11 @@
 namespace band {
 
 #define REPORT_IF_FALSE(engine, expr)                            \
-  do {                                                            \
-    result &= (expr);                                             \
-    if (!(expr)) {                                                \
+  do {                                                           \
+    result &= (expr);                                            \
+    if (!(expr)) {                                               \
       BAND_REPORT_ERROR(error_reporter, "[" #engine "] " #expr); \
-    }                                                             \
+    }                                                            \
   } while (0);
 
 bool ProfileConfigBuilder::IsValid(
@@ -18,8 +18,8 @@ bool ProfileConfigBuilder::IsValid(
   REPORT_IF_FALSE(ProfileConfigBuilder, num_warmups_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder, num_runs_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder,
-                  copy_computation_ratio_.size() == GetSize<DeviceFlags>());
-  for (int i = 0; i < GetSize<DeviceFlags>(); i++) {
+                  copy_computation_ratio_.size() == EnumLength<DeviceFlag>());
+  for (int i = 0; i < EnumLength<DeviceFlag>(); i++) {
     REPORT_IF_FALSE(ProfileConfigBuilder, copy_computation_ratio_[i] >= 0);
   }
   REPORT_IF_FALSE(ProfileConfigBuilder,
@@ -36,10 +36,10 @@ bool PlannerConfigBuilder::IsValid(
   REPORT_IF_FALSE(PlannerConfigBuilder, /*log_path_*/ true);  // Always true
   REPORT_IF_FALSE(PlannerConfigBuilder, schedule_window_size_ > 0);
   REPORT_IF_FALSE(PlannerConfigBuilder, schedulers_.size() > 0);
-  REPORT_IF_FALSE(PlannerConfigBuilder, cpu_mask_ == CPUMaskFlags::All ||
-                                            cpu_mask_ == CPUMaskFlags::Little ||
-                                            cpu_mask_ == CPUMaskFlags::Big ||
-                                            cpu_mask_ == CPUMaskFlags::Primary);
+  REPORT_IF_FALSE(PlannerConfigBuilder, cpu_mask_ == CPUMaskFlag::kAll ||
+                                            cpu_mask_ == CPUMaskFlag::kLittle ||
+                                            cpu_mask_ == CPUMaskFlag::kBig ||
+                                            cpu_mask_ == CPUMaskFlag::kPrimary);
   return result;
 }
 
@@ -47,18 +47,18 @@ bool WorkerConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
   for (int i = 0; i < workers_.size(); i++) {
-    REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlags::CPU ||
-                                             workers_[i] == DeviceFlags::GPU ||
-                                             workers_[i] == DeviceFlags::DSP ||
-                                             workers_[i] == DeviceFlags::NPU);
+    REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlag::kCPU ||
+                                             workers_[i] == DeviceFlag::kGPU ||
+                                             workers_[i] == DeviceFlag::kDSP ||
+                                             workers_[i] == DeviceFlag::kNPU);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
     REPORT_IF_FALSE(WorkerConfigBuilder,
-                    cpu_masks_[i] == CPUMaskFlags::All ||
-                        cpu_masks_[i] == CPUMaskFlags::Little ||
-                        cpu_masks_[i] == CPUMaskFlags::Big ||
-                        cpu_masks_[i] == CPUMaskFlags::Primary);
+                    cpu_masks_[i] == CPUMaskFlag::kAll ||
+                        cpu_masks_[i] == CPUMaskFlag::kLittle ||
+                        cpu_masks_[i] == CPUMaskFlag::kBig ||
+                        cpu_masks_[i] == CPUMaskFlag::kPrimary);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, num_threads_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
@@ -74,19 +74,19 @@ bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
   REPORT_IF_FALSE(RuntimeConfigBuilder, minimum_subgraph_size_ > 0);
-  REPORT_IF_FALSE(
-      RuntimeConfigBuilder,
-      subgraph_preparation_type_ ==
-              SubgraphPreparationType::NoFallbackSubgraph ||
-          subgraph_preparation_type_ ==
-              SubgraphPreparationType::FallbackPerWorker ||
-          subgraph_preparation_type_ == SubgraphPreparationType::UnitSubgraph ||
-          subgraph_preparation_type_ ==
-              SubgraphPreparationType::MergeUnitSubgraph);
-  REPORT_IF_FALSE(RuntimeConfigBuilder, cpu_mask_ == CPUMaskFlags::All ||
-                                            cpu_mask_ == CPUMaskFlags::Little ||
-                                            cpu_mask_ == CPUMaskFlags::Big ||
-                                            cpu_mask_ == CPUMaskFlags::Primary);
+  REPORT_IF_FALSE(RuntimeConfigBuilder,
+                  subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kNoFallbackSubgraph ||
+                      subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kFallbackPerWorker ||
+                      subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kUnitSubgraph ||
+                      subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kMergeUnitSubgraph);
+  REPORT_IF_FALSE(RuntimeConfigBuilder, cpu_mask_ == CPUMaskFlag::kAll ||
+                                            cpu_mask_ == CPUMaskFlag::kLittle ||
+                                            cpu_mask_ == CPUMaskFlag::kBig ||
+                                            cpu_mask_ == CPUMaskFlag::kPrimary);
 
   // Independent validation
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());

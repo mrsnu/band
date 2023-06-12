@@ -47,8 +47,8 @@ void JobTracer::EndSubgraph(const Job& job) {
   }
 }
 
-void JobTracer::AddWorker(DeviceFlags device_flag, size_t id) {
-  std::string stream_name = std::string("(") + GetName(device_flag) +
+void JobTracer::AddWorker(DeviceFlag device_flag, size_t id) {
+  std::string stream_name = std::string("(") + ToString(device_flag) +
                             "Worker ," + std::to_string(id) + ")";
 
   if (id_to_streams_.find(id) == id_to_streams_.end()) {

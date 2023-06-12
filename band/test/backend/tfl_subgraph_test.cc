@@ -31,22 +31,22 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::LeastSlackTimeFirst})
+          .AddSchedulers({SchedulerType::kLeastSlackTimeFirst})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(subgraph_type)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
 #ifdef __ANDROID__
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP,
-                       DeviceFlags::NPU, DeviceFlags::GPU})
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little,
-                              CPUMaskFlags::All, CPUMaskFlags::All,
-                              CPUMaskFlags::All})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
 #else
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
           .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
 #endif  // __ANDROID__
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
@@ -62,7 +62,8 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_EQ(model.FromPath(BackendType::TfLite, model_name.c_str()), absl::OkStatus());
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite, model_name.c_str()),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 }
 
@@ -70,16 +71,16 @@ INSTANTIATE_TEST_SUITE_P(
     ModelPartitionTests, ModelPartitionTestsFixture,
     testing::Values(
         std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-                        SubgraphPreparationType::MergeUnitSubgraph),
+                        SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-                        SubgraphPreparationType::FallbackPerWorker),
+                        SubgraphPreparationType::kFallbackPerWorker),
         std::make_tuple("ICN_quant.tflite",
-                        SubgraphPreparationType::MergeUnitSubgraph),
+                        SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple(
             "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
-            SubgraphPreparationType::MergeUnitSubgraph),
+            SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
-                        SubgraphPreparationType::MergeUnitSubgraph)));
+                        SubgraphPreparationType::kMergeUnitSubgraph)));
 }  // namespace band
 
 int main(int argc, char** argv) {

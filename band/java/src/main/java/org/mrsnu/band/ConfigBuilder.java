@@ -2,7 +2,7 @@ package org.mrsnu.band;
 
 public class ConfigBuilder {
   private NativeConfigBuilderWrapper wrapper;
-  
+
   public ConfigBuilder() {
     Band.init();
     this.wrapper = new NativeConfigBuilderWrapper();
@@ -13,7 +13,8 @@ public class ConfigBuilder {
   }
 
   public void addNumWarmups(int numWarmups) {
-    wrapper.addNumWarmups(numWarmups);;
+    wrapper.addNumWarmups(numWarmups);
+    ;
   }
 
   public void addNumRuns(int numRuns) {
@@ -44,7 +45,7 @@ public class ConfigBuilder {
     wrapper.addSchedulers(scheduers);
   }
 
-  public void addPlannerCPUMask(CpuMaskFlags cpuMasks) {
+  public void addPlannerCPUMask(CpuMaskFlag cpuMasks) {
     wrapper.addPlannerCPUMask(cpuMasks);
   }
 
@@ -52,7 +53,7 @@ public class ConfigBuilder {
     wrapper.addWorkers(workers);
   }
 
-  public void addWorkerCPUMasks(CpuMaskFlags[] cpuMasks) {
+  public void addWorkerCPUMasks(CpuMaskFlag[] cpuMasks) {
     wrapper.addWorkerCPUMasks(cpuMasks);
   }
 
@@ -76,7 +77,7 @@ public class ConfigBuilder {
     wrapper.addSubgraphPreparationType(subgraphPreparationType);
   }
 
-  public void addCPUMask(CpuMaskFlags cpuMask) {
+  public void addCPUMask(CpuMaskFlag cpuMask) {
     wrapper.addCPUMask(cpuMask);
   }
 

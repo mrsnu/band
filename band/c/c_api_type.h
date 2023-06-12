@@ -1,5 +1,5 @@
-#ifndef BAND_C_C_API_TYPE_H_
-#define BAND_C_C_API_TYPE_H_
+#ifndef BAND_C_C_TYPE_H_
+#define BAND_C_C_TYPE_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -11,7 +11,7 @@ extern "C" {
 
 typedef enum BandBackendType {
   kBandTfLite = 0,
-  kBandNumBackendTypes = 1
+  kBandNumBackendType = 1
 } BandBackendType;
 
 typedef enum BandStatus {
@@ -36,13 +36,13 @@ typedef enum BandSchedulerType {
   kBandNumSchedulerType = 7
 } BandSchedulerType;
 
-typedef enum BandCPUMaskFlags {
+typedef enum BandCPUMaskFlag {
   kBandAll = 0,
   kBandLittle = 1,
   kBandBig = 2,
   kBandPrimary = 3,
-  kBandNumCpuMasks = 4
-} BandCPUMaskFlags;
+  kBandNumCpuMask = 4
+} BandCPUMaskFlag;
 
 typedef enum BandSubgraphPreparationType {
   kBandNoFallbackSubgraph = 0,
@@ -76,7 +76,8 @@ typedef enum {
   kBandInt8 = 9,
   kBandFloat16 = 10,
   kBandFloat64 = 11,
-} BandType;
+  kBandNumDataType = 12,
+} BandDataType;
 
 // Supported Quantization Types.
 typedef enum BandQuantizationType {
@@ -89,13 +90,13 @@ typedef enum BandQuantizationType {
 
 // TODO #23, #30
 // Add additional devices for HTA, NPU
-typedef enum BandDeviceFlags {
+typedef enum BandDeviceFlag {
   kBandCPU = 0,
   kBandGPU = 1,
   kBandDSP = 2,
   kBandNPU = 3,
-  kBandNumDevices = 4,
-} BandDeviceFlags;
+  kBandNumDeviceFlag = 4,
+} BandDeviceFlag;
 
 typedef enum BandConfigField {
   BAND_PROFILE_ONLINE = 0,
@@ -129,4 +130,4 @@ typedef struct BandRequestOption {
 }  // extern "C"
 #endif  // __cplusplus
 
-#endif  // BAND_C_C_API_TYPE_H_
+#endif  // BAND_C_C_TYPE_H_
