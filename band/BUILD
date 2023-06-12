@@ -142,7 +142,11 @@ band_cc_library(
         "//conditions:default": [
         ],
     }),
+<<<<<<< HEAD
     deps=[
+=======
+    deps = [
+>>>>>>> master
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -307,7 +311,16 @@ band_cc_library(
         "planner.h",
         "safe_bool.h",
     ],
+<<<<<<< HEAD
     deps=[":common", ":scheduler", ":worker", ":job_tracer"],
+=======
+    deps = [
+        ":common",
+        ":job_tracer",
+        ":scheduler",
+        ":worker",
+    ],
+>>>>>>> master
 )
 
 band_cc_library(
@@ -324,6 +337,7 @@ band_cc_library(
     ],
 )
 
+<<<<<<< HEAD
 band_cc_library(
     name="latency_estimator",
     srcs=[
@@ -343,6 +357,8 @@ band_cc_library(
     ],
 )
 
+=======
+>>>>>>> master
 band_cc_library(
     name="tensor",
     srcs=[
@@ -381,6 +397,7 @@ band_cc_library(
     hdrs=[
         "engine.h",
     ],
+<<<<<<< HEAD
     deps=[
         "//band/buffer:buffer",
         ":backend_factory",
@@ -399,6 +416,25 @@ band_cc_library(
         ":worker",
         ":job_tracer",
     ],
+=======
+    deps =
+        [
+            ":backend_factory",
+            ":common",
+            ":config",
+            ":interface",
+            ":job_tracer",
+            ":json_util",
+            ":latency_estimator",
+            ":model",
+            ":model_analyzer",
+            ":planner",
+            ":scheduler",
+            ":tensor",
+            ":time",
+            ":worker",
+        ],
+>>>>>>> master
 )
 
 band_cc_library(

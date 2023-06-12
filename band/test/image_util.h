@@ -9,6 +9,8 @@ class Buffer;
 namespace test {
 
 std::shared_ptr<Buffer> LoadImage(const std::string& filename);
+std::tuple<unsigned char*, int, int> LoadRGBImageRaw(
+    const std::string& filename);
 void SaveImage(const std::string& filename, const Buffer& buffer);
 
 }  // namespace test

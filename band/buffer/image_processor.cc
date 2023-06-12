@@ -15,6 +15,18 @@ ImageProcessorBuilder::Build() {
   // TODO(dostos): reorder operations to optimize performance
   // e.g., crop before color conversion
 
+  for (size_t i = 0; i < operations_.size(); ++i) {
+    for (size_t j = 1; j < operations_.size(); ++j) {
+      if (i == j) {
+        continue;
+      }
+      if (typeid(*operations_[i]) == typeid(*operations_[j])) {
+        return absl::InvalidArgumentError(absl::StrFormat(
+            "operation %s is duplicated.", typeid(*operations_[i]).name()));
+      }
+    }
+  }
+
   for (auto& operation : operations_) {
     if (operation == nullptr) {
       return absl::InvalidArgumentError("operation is nullptr.");
@@ -30,8 +42,9 @@ ImageProcessorBuilder::Build() {
     operations.push_back(operation->Clone());
   }
 
-  // if no operations are specified, add default operations
-  if (operations_.empty()) {
+  // by default, automatically convert the color space and resize the entire
+  // image.
+  if (operations.empty()) {
     operations.push_back(new AutoConvert());
   }
 

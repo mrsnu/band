@@ -8,7 +8,12 @@
 #include <fstream>
 #include <vector>
 
+#include "band/buffer/buffer.h"
+#include "band/c/c_api_buffer.h"
+#include "band/test/image_util.h"
+
 namespace band {
+namespace test {
 TEST(CApi, ConfigLoad) {
   BandConfigBuilder* b = BandConfigBuilderCreate();
   BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
@@ -163,6 +168,76 @@ TEST(CApi, EngineFixedDeviceFixedWorkerInvoke) {
   BandConfigDelete(config);
 }
 
+TEST(CApi, EngineClassification) {
+  BandConfigBuilder* b = BandConfigBuilderCreate();
+  BandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1,
+                "band/test/data/log.json");
+  BandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1,
+                kBandHeterogeneousEarliestFinishTime);
+  BandConfig* config = BandConfigCreate(b);
+  EXPECT_NE(config, nullptr);
+
+  BandEngine* engine = BandEngineCreate(config);
+  EXPECT_NE(engine, nullptr);
+#ifdef BAND_TFLITE
+
+  BandModel* model = BandModelCreate();
+  EXPECT_NE(model, nullptr);
+  EXPECT_EQ(
+      BandModelAddFromFile(model, kBandTfLite,
+                           "band/test/data/mobilenet_v2_1.0_224_quant.tflite"),
+      kBandOk);
+  EXPECT_EQ(BandEngineRegisterModel(engine, model), kBandOk);
+  // create tensors
+  BandTensor* input_tensor = BandEngineCreateInputTensor(engine, model, 0);
+  BandTensor* output_tensor = BandEngineCreateOutputTensor(engine, model, 0);
+  // create buffer
+  std::tuple<unsigned char*, int, int> image_buffer =
+      LoadRGBImageRaw("band/test/data/cat.jpg");
+  BandBuffer* buffer = BandBufferCreate();
+  BandBufferSetFromRawData(buffer, std::get<0>(image_buffer),
+                           std::get<1>(image_buffer), std::get<2>(image_buffer),
+                           kBandRGB);
+  BandImageProcessorBuilder* builder = BandImageProcessorBuilderCreate();
+  BandImageProcessor* processor = BandImageProcessorBuilderBuild(builder);
+  BandImageProcessorProcess(processor, buffer, input_tensor);
+
+  EXPECT_EQ(BandEngineRequestSync(engine, model, &input_tensor, &output_tensor),
+            kBandOk);
+
+  EXPECT_EQ(BandTensorGetNumDims(output_tensor), 2);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[0], 1);
+  EXPECT_EQ(BandTensorGetDims(output_tensor)[1], 1001);
+  // TODO: post processing library
+  unsigned char* output =
+      static_cast<unsigned char*>(BandTensorGetData(output_tensor));
+
+  size_t max_index = 0;
+  unsigned char max_value = 0;
+  for (size_t i = 0; i < 1001; ++i) {
+    if (output[i] > max_value) {
+      max_value = output[i];
+      max_index = i;
+    }
+  }
+
+  // tiger cat
+  EXPECT_EQ(max_index, 282);
+
+  BandTensorDelete(input_tensor);
+  BandTensorDelete(output_tensor);
+
+  BandImageProcessorBuilderDelete(builder);
+  BandImageProcessorDelete(processor);
+  delete[] std::get<0>(image_buffer);
+
+#endif  // BAND_TFLITE
+
+  BandEngineDelete(engine);
+  BandConfigDelete(config);
+}
+
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

@@ -16,7 +16,7 @@ class Normalize : public IBufferOperator {
   virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
-  void SetOutput(Buffer* output);
+  virtual void SetOutput(Buffer* output) override;
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;

@@ -44,7 +44,7 @@ class IBufferProcessorBuilder {
 class BufferProcessor {
  public:
   virtual ~BufferProcessor();
-  absl::Status Process(const Buffer& input, Buffer& output);
+  virtual absl::Status Process(const Buffer& input, Buffer& output);
 
  protected:
   friend class IBufferProcessorBuilder;

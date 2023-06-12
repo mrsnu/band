@@ -11,23 +11,28 @@ extern "C" {
 // An external buffer interface for Band. This is used to pass user-owned
 // buffers to Band. Band will not take ownership of the buffer, and the buffer
 // must outlive the BandBuffer object.
-typedef struct BandBuffer;
+typedef struct BandBuffer BandBuffer;
 
-// A preprocessing pipeline for BandBuffer. This is used to apply a series of
-// preprocessing operations to a BandBuffer then convert it to a BandTensor.
-// Supported operations are:
+// ImageProcessorBuilder is used to build an ImageProcessor. ImageProcessor
+// defines a series of operations to be applied to a BandBuffer and convert
+// it to a BandTensor. Supported operations are:
 // - Crop (x0, y0, x1, y1 - crop from top-left corner, inclusive)
-// - Resize (width, height - resize to a new size, if -1 is given, the operation
-// automatically calculates the new size based on the output tensor or buffer
-// shape)
-// - Rotate (angle - counter-clockwise, between 0 and 360 in multiples of 90)
+// - Resize (width, height - resize to a new size)
+// - Rotate (angle - counter-clockwise, between 0 and 360 in multiples of
+// 90)
 // - Flip (boolean - horizontal or vertical)
-// - Convert color space
-typedef struct BandBufferProcessor;
-// A builder for BandBufferProcessor. This is used to build a
-// BandBufferProcessor. By default, the BandBufferProcessorBuilder will create a
-// BandBufferProcessor with single Resize
-typedef struct BandBufferProcessorBuilder;
+// - Convert color space (format - target format)
+// - Normalize (mean, std - normalize the buffer with mean and std)
+// - DataTypeConvert (convert the data type to the output data type)
+// E.g., convert from 8-bit RGB to 32-bit float RGB (tensor).
+//
+// By default, builder without any operation will create a ImageProcessor
+// provides a direct mapping from BandBuffer to BandTensor without
+// normalization. E.g., automated color space conversion, resize to the
+// output tensor shape, and data type conversion.
+
+typedef struct BandImageProcessor BandImageProcessor;
+typedef struct BandImageProcessorBuilder BandImageProcessorBuilder;
 
 BAND_CAPI_EXPORT extern BandBuffer* BandBufferCreate();
 BAND_CAPI_EXPORT extern void BandBufferDelete(BandBuffer* buffer);
@@ -55,26 +60,33 @@ BAND_CAPI_EXPORT extern BandStatus BandBufferSetFromYUVData(
     size_t row_stride_uv, size_t pixel_stride_uv,
     BandBufferFormat buffer_format);
 
-BAND_CAPI_EXPORT extern BandBufferProcessorBuilder*
-BandBufferProcessorBuilderCreate();
-BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderDelete(
-    BandBufferProcessorBuilder* builder);
-BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddCrop(
-    BandBufferProcessorBuilder* builder, int x0, int y0, int x1, int y1);
-BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddResize(
-    BandBufferProcessorBuilder* builder, int width, int height);
-BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddRotate(
-    BandBufferProcessorBuilder* builder, int angle);
-BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddFlip(
-    BandBufferProcessorBuilder* builder, bool horizontal);
-BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddConvert(
-    BandBufferProcessorBuilder* builder, BandBufferFormat format);
-BAND_CAPI_EXPORT extern BandBufferProcessor* BandBufferProcessorBuilderBuild(
-    BandBufferProcessorBuilder* builder);
+BAND_CAPI_EXPORT extern BandImageProcessorBuilder*
+BandImageProcessorBuilderCreate();
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderDelete(
+    BandImageProcessorBuilder* builder);
+BAND_CAPI_EXPORT extern BandImageProcessor* BandImageProcessorBuilderBuild(
+    BandImageProcessorBuilder* builder);
 
-BAND_CAPI_EXPORT extern BandBufferProcessor* BandBufferProcessorCreate();
-BAND_CAPI_EXPORT extern void BandBufferProcessorDelete(
-    BandBufferProcessor* processor);
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddCrop(
+    BandImageProcessorBuilder* builder, int x0, int y0, int x1, int y1);
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddResize(
+    BandImageProcessorBuilder* builder, int width, int height);
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddRotate(
+    BandImageProcessorBuilder* builder, int angle);
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddFlip(
+    BandImageProcessorBuilder* builder, bool horizontal);
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddColorSpaceConvert(
+    BandImageProcessorBuilder* builder, BandBufferFormat format);
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddNormalize(
+    BandImageProcessorBuilder* builder, float mean, float std);
+BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddDataTypeConvert(
+    BandImageProcessorBuilder* builder);
+
+BAND_CAPI_EXPORT extern BandStatus BandImageProcessorProcess(
+    BandImageProcessor* image_processor, BandBuffer* buffer,
+    BandTensor* target_tensor);
+BAND_CAPI_EXPORT extern void BandImageProcessorDelete(
+    BandImageProcessor* processor);
 
 #ifdef __cplusplus
 }  // extern "C"
