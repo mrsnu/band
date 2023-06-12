@@ -59,9 +59,11 @@ band_cc_library(
     name = "c_api",
     srcs = [
         "c_api.cc",
+        "c_api_buffer.cc"
     ],
     hdrs = [
         "c_api.h",
+        "c_api_buffer.h"
     ],
     deps = [
         ":c_api_internal",

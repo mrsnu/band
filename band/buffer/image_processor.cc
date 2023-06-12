@@ -42,7 +42,8 @@ ImageProcessorBuilder::Build() {
     operations.push_back(operation->Clone());
   }
 
-  // add auto convert if not specified
+  // by default, automatically convert the color space and resize the entire
+  // image.
   if (operations.empty()) {
     operations.push_back(new AutoConvert());
   }
