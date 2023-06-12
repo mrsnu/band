@@ -504,7 +504,6 @@ TEST(TFLiteBackend, ClassificationTest) {
   ImageProcessorBuilder preprocessor_builder;
   preprocessor_builder.AddOperation(std::make_unique<buffer::Resize>(224, 224))
       .AddOperation(std::make_unique<buffer::Normalize>(127.5f, 127.5f, false));
-  // by default, the image is resized to input size
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
       preprocessor_builder.Build();
   EXPECT_TRUE(preprocessor.ok());

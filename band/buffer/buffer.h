@@ -60,6 +60,8 @@ class Buffer {
   BufferFormat GetBufferFormat() const;
   BufferOrientation GetOrientation() const;
 
+  absl::Status CopyFrom(const Buffer& rhs);
+
   bool IsBufferFormatCompatible(const Buffer& rhs) const;
 
   static std::vector<size_t> GetUvDims(const std::vector<size_t>& dims,

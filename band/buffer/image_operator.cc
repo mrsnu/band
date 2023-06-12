@@ -330,19 +330,28 @@ absl::Status ColorSpaceConvert::CreateOutput(const Buffer& input) {
 }
 
 absl::Status AutoConvert::ProcessImpl(const Buffer& input) {
+  bool is_processed = false;
   Buffer const* current = &input;
   if (RequiresColorSpaceConvert(input)) {
     RETURN_IF_ERROR(color_space_convert_.Process(input));
     current = color_space_convert_.GetOutput();
+    is_processed = true;
   }
 
   if (RequiresResize(*current)) {
     RETURN_IF_ERROR(resize_.Process(*current));
     current = resize_.GetOutput();
+    is_processed = true;
   }
 
   if (RequiresDataTypeConvert(*current)) {
     RETURN_IF_ERROR(data_type_convert_.Process(*current));
+    is_processed = true;
+  }
+
+  // if no operation is performed, copy the input to output
+  if (!is_processed) {
+    RETURN_IF_ERROR(output_->CopyFrom(input));
   }
 
   return absl::Status();
@@ -422,11 +431,6 @@ void AutoConvert::SetOutput(Buffer* output) {
   if (output) {
     output_ = output;
   }
-}
-
-bool AutoConvert::IsNoOp(const Buffer& input, const Buffer& output) const {
-  return !RequiresColorSpaceConvert(input) && !RequiresResize(input) &&
-         !RequiresDataTypeConvert(input);
 }
 
 bool AutoConvert::RequiresColorSpaceConvert(const Buffer& input) const {

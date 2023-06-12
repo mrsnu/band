@@ -1,5 +1,6 @@
 #include "band/buffer/buffer.h"
 
+#include "absl/strings/str_format.h"
 #include "band/logger.h"
 #include "buffer.h"
 
@@ -305,7 +306,7 @@ size_t Buffer::GetPixelBytes() const {
     // custom format type has only one data plane
     return data_planes_[0].pixel_stride_bytes;
   } else {
-    return GetNumPixelElements(buffer_format_);
+    return GetNumPixelElements(buffer_format_) * GetDataTypeBytes(data_type_);
   }
 }
 
@@ -316,6 +317,35 @@ DataType Buffer::GetDataType() const { return data_type_; }
 BufferFormat Buffer::GetBufferFormat() const { return buffer_format_; }
 
 BufferOrientation Buffer::GetOrientation() const { return orientation_; }
+
+absl::Status Buffer::CopyFrom(const Buffer& rhs) {
+  if (data_type_ != rhs.data_type_) {
+    return absl::InvalidArgumentError(
+        absl::StrFormat("Buffer::CopyFrom: data type is not compatible : %s %s",
+                        ToString(data_type_), ToString(rhs.data_type_)));
+  }
+
+  if (buffer_format_ != rhs.buffer_format_) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Buffer::CopyFrom: buffer format is not compatible : %s %s",
+        ToString(buffer_format_), ToString(rhs.buffer_format_)));
+  }
+
+  if (dimension_ != rhs.dimension_) {
+    return absl::InvalidArgumentError(
+        absl::StrFormat("Buffer::CopyFrom: dimension is not compatible : %s %s",
+                        ToString(dimension_), ToString(rhs.dimension_)));
+  }
+
+  if (IsYUV(buffer_format_)) {
+    return absl::InvalidArgumentError(
+        absl::StrFormat("Buffer::CopyFrom: YUV format is not supported"));
+  }
+
+  memcpy(data_planes_[0].GetMutableData(), rhs.data_planes_[0].data,
+         GetBytes());
+  return absl::OkStatus();
+}
 
 bool Buffer::IsYUV(BufferFormat buffer_format) {
   return buffer_format == BufferFormat::kNV21 ||

@@ -17,6 +17,9 @@ ImageProcessorBuilder::Build() {
 
   for (size_t i = 0; i < operations_.size(); ++i) {
     for (size_t j = 1; j < operations_.size(); ++j) {
+      if (i == j) {
+        continue;
+      }
       if (typeid(*operations_[i]) == typeid(*operations_[j])) {
         return absl::InvalidArgumentError(absl::StrFormat(
             "operation %s is duplicated.", typeid(*operations_[i]).name()));
@@ -39,13 +42,11 @@ ImageProcessorBuilder::Build() {
     operations.push_back(operation->Clone());
   }
 
+  // add auto convert if not specified
+  if (operations.empty()) {
+    operations.push_back(new AutoConvert());
+  }
+
   return std::move(CreateProcessor(operations));
 }
-
-ImageProcessor::~ImageProcessor() {}
-
-absl::Status ImageProcessor::Process(const Buffer& input, Buffer& output) {
-  return absl::Status();
-}
-
 }  // namespace band
