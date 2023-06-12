@@ -72,13 +72,13 @@ class Buffer {
 
  private:
   Buffer(std::vector<size_t> dimension, std::vector<DataPlane> data_planes,
-         BufferFormat buffer_format, BufferOrientation orientation,
-         bool owns_data = false);
+         BufferFormat buffer_format, DataType data_type,
+         BufferOrientation orientation, bool owns_data = false);
   Buffer(std::vector<size_t> dimension, std::vector<DataPlane> data_planes,
          DataType data_type, BufferOrientation orientation,
          bool owns_data = false);
 
-  static size_t GetPixelStrideBytes(BufferFormat buffer_format);
+  static size_t GetNumPixelElements(BufferFormat buffer_format);
   static size_t GetSize(const std::vector<size_t>& dims);
 
   bool owns_data_;

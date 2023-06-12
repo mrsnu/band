@@ -26,7 +26,6 @@ struct ITensor {
   bool operator!=(const ITensor& rhs) const;
 
   virtual size_t GetBytes() const;
-  size_t GetPixelBytes() const;
   size_t GetNumElements() const;
   std::vector<int> GetDimsVector() const;
 

@@ -7,6 +7,46 @@
 namespace band {
 namespace buffer {
 
+template <typename InputType, typename OutputType>
+void Normalize(const Buffer& input, Buffer* output, float mean, float std) {
+  // only single plane is supported
+  const InputType* input_data =
+      reinterpret_cast<const InputType*>(input[0].data);
+  OutputType* output_data =
+      reinterpret_cast<OutputType*>((*output)[0].GetMutableData());
+  for (int i = 0; i < input.GetNumElements(); ++i) {
+    output_data[i] = static_cast<OutputType>((input_data[i] - mean)) / std;
+  }
+  BAND_LOG_PROD(BAND_LOG_INFO, "Normalize: %s %s %f %f",
+                ToString(input.GetDataType()), ToString(output->GetDataType()),
+                mean, std);
+}
+
+template <typename InputType>
+void NormalizeFrom(const Buffer& input, Buffer* output, float mean, float std) {
+  switch (output->GetDataType()) {
+    case DataType::kUInt8:
+      Normalize<InputType, uint8_t>(input, output, mean, std);
+      break;
+    case DataType::kInt8:
+      Normalize<InputType, int8_t>(input, output, mean, std);
+      break;
+    case DataType::kInt16:
+      Normalize<InputType, int16_t>(input, output, mean, std);
+      break;
+    case DataType::kInt32:
+      Normalize<InputType, int32_t>(input, output, mean, std);
+      break;
+    case DataType::kFloat32:
+      Normalize<InputType, float>(input, output, mean, std);
+      break;
+    default:
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Normalize: unsupported data type %s",
+                    ToString(output->GetDataType()));
+      break;
+  }
+}
+
 IBufferOperator* Normalize::Clone() const { return new Normalize(*this); }
 
 IBufferOperator::Type Normalize::GetOpType() const { return Type::kCommon; }
@@ -21,37 +61,27 @@ void Normalize::SetOutput(Buffer* output) {
   }
 }
 
-template <typename T>
-void NormalizeImpl(const Buffer& input, Buffer* output, float mean, float std) {
-  // only single plane is supported
-  const T* input_data = reinterpret_cast<const T*>(input[0].data);
-  T* output_data = reinterpret_cast<T*>((*output)[0].GetMutableData());
-  for (int i = 0; i < input.GetNumElements(); ++i) {
-    output_data[i] = (input_data[i] - mean) / std;
-  }
-}
-
 absl::Status Normalize::ProcessImpl(const Buffer& input) {
   Buffer* output = inplace_ ? const_cast<Buffer*>(&input) : GetOutput();
 
   switch (input.GetDataType()) {
     case DataType::kUInt8:
-      NormalizeImpl<uint8_t>(input, output, mean_, std_);
+      NormalizeFrom<uint8_t>(input, output, mean_, std_);
       break;
     case DataType::kInt8:
-      NormalizeImpl<int8_t>(input, output, mean_, std_);
+      NormalizeFrom<int8_t>(input, output, mean_, std_);
       break;
     case DataType::kInt16:
-      NormalizeImpl<int16_t>(input, output, mean_, std_);
+      NormalizeFrom<int16_t>(input, output, mean_, std_);
       break;
     case DataType::kInt32:
-      NormalizeImpl<int32_t>(input, output, mean_, std_);
+      NormalizeFrom<int32_t>(input, output, mean_, std_);
       break;
     case DataType::kFloat32:
-      NormalizeImpl<float>(input, output, mean_, std_);
+      NormalizeFrom<float>(input, output, mean_, std_);
       break;
     case DataType::kFloat64:
-      NormalizeImpl<double>(input, output, mean_, std_);
+      NormalizeFrom<double>(input, output, mean_, std_);
       break;
     default:
       return absl::InvalidArgumentError(
@@ -112,6 +142,20 @@ absl::Status Normalize::CreateOutput(const Buffer& input) {
   }
 
   return absl::Status();
+}
+
+IBufferOperator* DataTypeConvert::Clone() const {
+  return new DataTypeConvert(*this);
+}
+
+absl::Status DataTypeConvert::ValidateOutput(const Buffer& input) const {
+  if (input.GetDataType() == output_->GetDataType()) {
+    return absl::InvalidArgumentError(
+        absl::StrFormat("input data type %d is the same as output data type.",
+                        static_cast<int>(input.GetDataType())));
+  }
+
+  return Normalize::ValidateOutput(input);
 }
 
 }  // namespace buffer

@@ -3,6 +3,7 @@
 #include "absl/strings/str_format.h"
 #include "band/buffer/libyuv_operation.h"
 #include "band/buffer/operator.h"
+#include "band/logger.h"
 #include "image_operator.h"
 
 namespace band {
@@ -41,6 +42,10 @@ IBufferOperator::Type ColorSpaceConvert::GetOpType() const {
 }
 
 absl::Status Crop::ProcessImpl(const Buffer& input) {
+  BAND_LOG_PROD(BAND_LOG_INFO, "Crop: %d x %d -> %d x %d",
+                input.GetDimension()[0], input.GetDimension()[1],
+                output_->GetDimension()[0], output_->GetDimension()[1]);
+
   return LibyuvBufferUtils::Crop(input, x0_, y0_, x1_, y1_, *GetOutput());
 }
 
@@ -101,6 +106,10 @@ absl::Status Crop::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Resize::ProcessImpl(const Buffer& input) {
+  BAND_LOG_PROD(BAND_LOG_INFO, "Resize: %d x %d -> %d x %d",
+                input.GetDimension()[0], input.GetDimension()[1],
+                output_->GetDimension()[0], output_->GetDimension()[1]);
+
   return LibyuvBufferUtils::Resize(input, *GetOutput());
 }
 
@@ -166,6 +175,13 @@ absl::Status Resize::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Rotate::ProcessImpl(const Buffer& input) {
+  BAND_LOG_PROD(BAND_LOG_INFO,
+                "Rotate: input dimension: %d x %d, output dimension: %d x "
+                "%d, angle: %d",
+                input.GetDimension()[0], input.GetDimension()[1],
+                output_->GetDimension()[0], output_->GetDimension()[1],
+                angle_deg_);
+
   return LibyuvBufferUtils::Rotate(input, angle_deg_, *GetOutput());
 }
 
@@ -244,6 +260,10 @@ absl::Status Flip::CreateOutput(const Buffer& input) {
 }
 
 absl::Status ColorSpaceConvert::ProcessImpl(const Buffer& input) {
+  BAND_LOG_PROD(
+      BAND_LOG_INFO, "ColorSpaceConvert: input format: %s, output format: %s",
+      ToString(input.GetBufferFormat()), ToString(output_->GetBufferFormat()));
+
   return LibyuvBufferUtils::ColorSpaceConvert(input, *GetOutput());
 }
 

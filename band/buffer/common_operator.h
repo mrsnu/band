@@ -18,7 +18,7 @@ class Normalize : public IBufferOperator {
 
   void SetOutput(Buffer* output);
 
- private:
+ protected:
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
@@ -26,6 +26,18 @@ class Normalize : public IBufferOperator {
 
   float mean_, std_;
   bool inplace_;
+};
+
+// DataTypeConvert is equivalent to Normalize(0.f, 1.f) without inplace.
+// It automatically converts the internal data type to output data type.
+class DataTypeConvert : public Normalize {
+ public:
+  DataTypeConvert() : Normalize(0.f, 1.f, false) {}
+
+  virtual IBufferOperator* Clone() const override;
+
+ private:
+  virtual absl::Status ValidateOutput(const Buffer& input) const override;
 };
 
 }  // namespace buffer

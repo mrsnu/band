@@ -527,13 +527,13 @@ TEST(TFLiteBackend, ClassificationTest) {
                   .ok());
 
   // TODO: postprocessing library
-  std::vector<unsigned char> output_data;
+  std::vector<float> output_data;
   output_data.resize(output_tensor->GetNumElements());
   memcpy(output_data.data(), output_tensor->GetData(),
-         output_tensor->GetNumElements() * sizeof(unsigned char));
+         output_tensor->GetNumElements() * sizeof(float));
 
   size_t max_index = 0;
-  unsigned char max_value = 0;
+  float max_value = 0;
   for (size_t i = 0; i < output_data.size(); ++i) {
     if (output_data[i] > max_value) {
       max_value = output_data[i];

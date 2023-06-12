@@ -1,6 +1,7 @@
 #include "band/common.h"
 
 #include "band/logger.h"
+#include "common.h"
 
 namespace band {
 
@@ -290,10 +291,44 @@ const char* ToString(BufferOrientation format_type) {
     case BufferOrientation::kLeftBottom: {
       return "LeftBottom";
     } break;
-    default : {
+    default: {
       return "Unknown format type";
     } break;
   }
+}
+
+size_t GetDataTypeBytes(DataType type) {
+  switch (type) {
+    case DataType::kNoType:
+      return 0;
+    case DataType::kFloat32:
+      return sizeof(float);
+    case DataType::kInt32:
+      return sizeof(int32_t);
+    case DataType::kUInt8:
+      return sizeof(uint8_t);
+    case DataType::kInt8:
+      return sizeof(int8_t);
+    case DataType::kInt16:
+      return sizeof(int16_t);
+    case DataType::kInt64:
+      return sizeof(int64_t);
+    case DataType::kString:
+      return sizeof(char);
+    case DataType::kBool:
+      return sizeof(bool);
+    case DataType::kComplex64:
+      return sizeof(double);
+    case DataType::kFloat16:
+      return sizeof(float) / 2;
+    case DataType::kFloat64:
+      return sizeof(double);
+    default:
+      break;
+  }
+
+  BAND_LOG_PROD(BAND_LOG_WARNING, "Unsupported data type : %s", ToString(type));
+  return 0;
 }
 
 std::ostream& operator<<(std::ostream& os, const JobStatus& status) {

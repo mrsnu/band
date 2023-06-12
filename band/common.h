@@ -86,6 +86,8 @@ enum class DataType : size_t {
   kFloat64 = 11,
 };
 
+size_t GetDataTypeBytes(DataType type);
+
 enum class BufferFormat : size_t {
   // image format
   kGrayScale = 0,
