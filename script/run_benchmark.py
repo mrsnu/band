@@ -64,12 +64,17 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         for file in os.listdir(config_path):
             if file.endswith('.json'):
                 config_paths.append(f'{config_path}/{file}')
+
     for config_path in config_paths:
         name = os.path.basename(config_path)
         shutil.copy(config_path, f'{target_base_dir}/{name}')
+        print (f'Push {name} to Android')
+
     push_to_android(f'{target_base_dir}', '')
+
     for config_path in config_paths:
         name = os.path.basename(config_path)
+        print(f'Run {name}')
         run_binary_android('', f'{target_base_dir}/band_benchmark',
                            f'{target_base_dir}/{name}')
 
@@ -84,7 +89,7 @@ if __name__ == '__main__':
 
     # copy from band/test/data/benchmark_config.json 
     if args.config == DEFAULT_CONFIG:
-        shutil.copy('band/test/data/benchmark_config.json', f'{DEFAULT_CONFIG}')
+        shutil.copy('script/config_samples/benchmark_heft.json', f'{DEFAULT_CONFIG}')
 
     if args.rebuild:
         clean_bazel(args.docker)

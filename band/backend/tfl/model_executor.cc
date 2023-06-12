@@ -78,6 +78,9 @@ absl::StatusOr<ModelSpec> TfLiteModelExecutor::InvestigateModelSpec(
       op_input_tensors.push_back({});
       std::set<int> tensor_indices;
       for (int input_tensor : tflite::TfLiteIntArrayView(node.inputs)) {
+        if (input_tensor == kTfLiteOptionalTensor) {
+          continue;
+        }
         tensor_indices.insert(input_tensor);
         // skip input tensors that are always available
         if (primary_subgraph.tensor(input_tensor)->allocation_type !=
@@ -88,6 +91,9 @@ absl::StatusOr<ModelSpec> TfLiteModelExecutor::InvestigateModelSpec(
 
       op_output_tensors.push_back({});
       for (int output_tensor : tflite::TfLiteIntArrayView(node.outputs)) {
+        if (output_tensor == kTfLiteOptionalTensor) {
+          continue;
+        }
         tensor_indices.insert(output_tensor);
         if (primary_subgraph.tensor(output_tensor)->allocation_type !=
             kTfLiteMmapRo) {
