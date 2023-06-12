@@ -1,7 +1,7 @@
 #include "band/buffer/image_operator.h"
 
 #include "absl/strings/str_format.h"
-#include "band/buffer/libyuv_operation.h"
+#include "band/buffer/libyuv_image_operator.h"
 #include "band/buffer/operator.h"
 #include "band/logger.h"
 #include "image_operator.h"

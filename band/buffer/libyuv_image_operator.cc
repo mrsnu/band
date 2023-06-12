@@ -20,7 +20,7 @@ tflite-support/tensorflow_lite_support/cc/task/vision/utils
 by Jingyu Lee <dostos10@gmail.com>
 */
 
-#include "band/buffer/libyuv_operation.h"
+#include "band/buffer/libyuv_image_operator.h"
 
 #include <stdint.h>
 
