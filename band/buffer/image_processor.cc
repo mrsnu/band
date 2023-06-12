@@ -3,6 +3,7 @@
 
 #include "absl/strings/str_format.h"
 #include "band/buffer/buffer.h"
+#include "band/buffer/common_operator.h"
 #include "band/buffer/image_operator.h"
 #include "image_processor.h"
 namespace band {
@@ -13,6 +14,7 @@ ImageProcessorBuilder::Build() {
   std::vector<IBufferOperator*> operations;
   // TODO(dostos): reorder operations to optimize performance
   // e.g., crop before color conversion
+
   for (auto& operation : operations_) {
     if (operation == nullptr) {
       return absl::InvalidArgumentError("operation is nullptr.");
@@ -27,10 +29,15 @@ ImageProcessorBuilder::Build() {
 
     operations.push_back(operation->Clone());
   }
-  // special case: resize input to output if no operations are specified
+
+  // if no operations are specified, add default operations
   if (operations_.empty()) {
+    operations.push_back(new ColorSpaceConvert());
     operations.push_back(new Resize());
   }
+
+  operations.push_back(new DataTypeConvert());
+
   return std::move(CreateProcessor(operations));
 }
 }  // namespace band

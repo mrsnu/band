@@ -96,6 +96,12 @@ class ColorSpaceConvert : public IBufferOperator {
   bool is_format_specified_;
 };
 
+// AutoConvert automatically copies the input buffer to the output buffer
+// regardless of the demension, format, and data type.
+// TODO(dostos): implement this class.
+
+class AutoConvert : public IBufferOperator {};
+
 }  // namespace buffer
 }  // namespace band
 

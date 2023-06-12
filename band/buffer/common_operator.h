@@ -37,7 +37,7 @@ class DataTypeConvert : public Normalize {
   virtual IBufferOperator* Clone() const override;
 
  private:
-  virtual absl::Status ValidateOutput(const Buffer& input) const override;
+  virtual absl::Status ProcessImpl(const Buffer& input) override;
 };
 
 }  // namespace buffer

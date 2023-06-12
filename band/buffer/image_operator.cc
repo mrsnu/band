@@ -109,7 +109,6 @@ absl::Status Resize::ProcessImpl(const Buffer& input) {
   BAND_LOG_PROD(BAND_LOG_INFO, "Resize: %d x %d -> %d x %d",
                 input.GetDimension()[0], input.GetDimension()[1],
                 output_->GetDimension()[0], output_->GetDimension()[1]);
-
   return LibyuvBufferUtils::Resize(input, *GetOutput());
 }
 

@@ -18,6 +18,7 @@ class Buffer {
     unsigned char* GetMutableData() { return const_cast<unsigned char*>(data); }
     const unsigned char* data;
     // row_stride_bytes is the number of bytes between two consecutive rows.
+    // must equal to width * pixel_stride_bytes for interleaved data.
     size_t row_stride_bytes = 1;
     size_t pixel_stride_bytes = 1;
   };

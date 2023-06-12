@@ -148,14 +148,12 @@ IBufferOperator* DataTypeConvert::Clone() const {
   return new DataTypeConvert(*this);
 }
 
-absl::Status DataTypeConvert::ValidateOutput(const Buffer& input) const {
-  if (input.GetDataType() == output_->GetDataType()) {
-    return absl::InvalidArgumentError(
-        absl::StrFormat("input data type %d is the same as output data type.",
-                        static_cast<int>(input.GetDataType())));
+absl::Status DataTypeConvert::ProcessImpl(const Buffer& input) {
+  if (input.GetDataType() != output_->GetDataType()) {
+    return Normalize::ProcessImpl(input);
   }
-
-  return Normalize::ValidateOutput(input);
+  // do nothing if input data type is the same as output data type
+  return absl::Status();
 }
 
 }  // namespace buffer

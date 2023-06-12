@@ -502,9 +502,7 @@ TEST(TFLiteBackend, ClassificationTest) {
   std::shared_ptr<Buffer> tensor_buffer(Buffer::CreateFromTensor(input_tensor));
   // image -> rgb -> normalize
   ImageProcessorBuilder preprocessor_builder;
-  preprocessor_builder
-      .AddOperation(std::make_unique<buffer::Resize>(224, 224))
-      // TODO: add data type conversion
+  preprocessor_builder.AddOperation(std::make_unique<buffer::Resize>(224, 224))
       .AddOperation(std::make_unique<buffer::Normalize>(127.5f, 127.5f, false));
   // by default, the image is resized to input size
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
