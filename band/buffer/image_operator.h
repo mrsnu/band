@@ -3,6 +3,7 @@
 
 #include "absl/status/status.h"
 #include "band/buffer/buffer.h"
+#include "band/buffer/common_operator.h"
 #include "band/buffer/operator.h"
 
 namespace band {
@@ -15,12 +16,12 @@ class Crop : public IBufferOperator {
   virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
- private:
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
+ private:
   int x0_, y0_, x1_, y1_;
 };
 
@@ -33,13 +34,13 @@ class Resize : public IBufferOperator {
   virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
- private:
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
-  bool IsAuto(size_t dim) const { return dims_[dim] == -1; }
 
+ private:
+  bool IsAuto(size_t dim) const { return dims_[dim] == -1; }
   std::vector<int> dims_;
 };
 
@@ -52,12 +53,12 @@ class Rotate : public IBufferOperator {
   virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
- private:
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
+ private:
   int angle_deg_;
 };
 
@@ -69,11 +70,11 @@ class Flip : public IBufferOperator {
   virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
- private:
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
+ private:
   bool horizontal_;
 };
 
@@ -87,20 +88,44 @@ class ColorSpaceConvert : public IBufferOperator {
   virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
- private:
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
+ private:
   BufferFormat output_format_;
   bool is_format_specified_;
 };
 
-// AutoConvert automatically copies the input buffer to the output buffer
-// regardless of the demension, format, and data type.
-// TODO(dostos): implement this class.
+// AutoConvert automatically converts the internal data type to output data
+// type regardless of the dimension and format of the input buffer.
+// It is equivalent to ColorSpaceConvert() + Resize(-1, -1) + DataTypeConvert()
 
-class AutoConvert : public IBufferOperator {};
+// TODO(dostos): this operator could be removed if we can support automatic
+// propagation of parameters across operators. Currently, a last operator
+// is the only once that can infer the parameters from the output buffer.
+// This operator requires the propagation of the target color space and the
+// target dimension from bottom to top.
+class AutoConvert : public IBufferOperator {
+ public:
+  virtual ~AutoConvert() override;
+  virtual IBufferOperator* Clone() const override;
+  virtual Type GetOpType() const override;
+  virtual absl::Status ProcessImpl(const Buffer& input) override;
+  virtual absl::Status ValidateInput(const Buffer& input) const override;
+  virtual absl::Status ValidateOutput(const Buffer& input) const override;
+  virtual absl::Status CreateOutput(const Buffer& input) override;
+  virtual void SetOutput(Buffer* output) override;
+
+ private:
+  bool RequiresColorSpaceConvert(const Buffer& input) const;
+  bool RequiresResize(const Buffer& input) const;
+  bool RequiresDataTypeConvert(const Buffer& input) const;
+
+  ColorSpaceConvert color_space_convert_;
+  Resize resize_;
+  DataTypeConvert data_type_convert_;
+};
 
 }  // namespace buffer
 }  // namespace band

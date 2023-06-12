@@ -90,6 +90,8 @@ class Buffer {
   BufferOrientation orientation_;
 };
 
+std::ostream& operator<<(std::ostream& os, const Buffer& buffer);
+
 }  // namespace band
 
 #endif

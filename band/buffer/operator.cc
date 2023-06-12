@@ -18,11 +18,13 @@ absl::Status IBufferOperator::Process(const Buffer& input) {
 }
 
 void IBufferOperator::SetOutput(Buffer* output) {
-  if (!output_assigned_) {
-    delete output_;
+  if (output) {
+    if (!output_assigned_) {
+      delete output_;
+    }
+    output_ = output;
+    output_assigned_ = true;
   }
-  output_ = output;
-  output_assigned_ = true;
 }
 
 Buffer* IBufferOperator::GetOutput() { return output_; }

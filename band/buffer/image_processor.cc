@@ -32,11 +32,8 @@ ImageProcessorBuilder::Build() {
 
   // if no operations are specified, add default operations
   if (operations_.empty()) {
-    operations.push_back(new ColorSpaceConvert());
-    operations.push_back(new Resize());
+    operations.push_back(new AutoConvert());
   }
-
-  operations.push_back(new DataTypeConvert());
 
   return std::move(CreateProcessor(operations));
 }

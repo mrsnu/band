@@ -1,5 +1,6 @@
 #include "band/buffer/buffer_processor.h"
 
+#include "band/logger.h"
 #include "buffer_processor.h"
 
 namespace band {
@@ -14,7 +15,13 @@ absl::Status BufferProcessor::Process(const Buffer& input, Buffer& output) {
 
   Buffer const* next_input = &input;
   for (size_t i = 0; i < operations_.size(); ++i) {
-    RETURN_IF_ERROR(operations_[i]->Process(*next_input));
+    absl::Status status = operations_[i]->Process(*next_input);
+    // skip cancelled status, and continue current input to the next operation
+    if (!status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "BufferProcessor::Process failed %s",
+                    status.ToString().c_str());
+      return status;
+    }
     next_input = operations_[i]->GetOutput();
   }
 

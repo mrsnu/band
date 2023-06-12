@@ -19,7 +19,7 @@ class IBufferOperator {
   // For processor builder to clone the operator
   virtual IBufferOperator* Clone() const = 0;
   absl::Status Process(const Buffer& input);
-  void SetOutput(Buffer* output);
+  virtual void SetOutput(Buffer* output);
   Buffer* GetOutput();
   const Buffer* GetOutput() const;
 
@@ -28,11 +28,6 @@ class IBufferOperator {
     kCommon,
   };
   virtual Type GetOpType() const = 0;
-
- protected:
-  IBufferOperator(const IBufferOperator&) = default;
-  IBufferOperator& operator=(const IBufferOperator&) = default;
-  virtual absl::Status ProcessImpl(const Buffer& input) = 0;
   // Validate the input buffer. Return OK if the input buffer is valid for the
   // operation, otherwise return an error status.
   virtual absl::Status ValidateInput(const Buffer& input) const;
@@ -47,6 +42,15 @@ class IBufferOperator {
   // Create the output buffer. Return OK if the output buffer is created
   // successfully, otherwise return an error status.
   virtual absl::Status CreateOutput(const Buffer& input) = 0;
+
+ protected:
+  IBufferOperator(const IBufferOperator&) = default;
+  IBufferOperator& operator=(const IBufferOperator&) = default;
+  // Process the input buffer and generate the output buffer.
+  // Returns following status:
+  // - OK: the operation is successful.
+  // - other error status: the operation is failed.
+  virtual absl::Status ProcessImpl(const Buffer& input) = 0;
 
   bool output_assigned_ = false;
   Buffer* output_ = nullptr;

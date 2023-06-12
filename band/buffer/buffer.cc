@@ -342,4 +342,11 @@ bool Buffer::IsBufferFormatCompatible(const Buffer& rhs) const {
       return buffer_format_ == rhs.buffer_format_;
   }
 }
+std::ostream& operator<<(std::ostream& os, const Buffer& buffer) {
+  return os << "Buffer: " << ToString(buffer.GetBufferFormat()) << " "
+            << ToString(buffer.GetDataType()) << " "
+            << ToString(buffer.GetOrientation()) << " "
+            << buffer.GetDimension()[0] << " " << buffer.GetDimension()[1]
+            << " " << buffer.GetNumPlanes() << " " << buffer.GetBytes();
+}
 }  // namespace band

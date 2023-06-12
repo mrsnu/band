@@ -17,13 +17,12 @@ class Normalize : public IBufferOperator {
   virtual Type GetOpType() const override;
 
   void SetOutput(Buffer* output);
-
- protected:
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
+ private:
   float mean_, std_;
   bool inplace_;
 };
