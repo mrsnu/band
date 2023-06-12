@@ -15,6 +15,15 @@ class ImageProcessorBuilder : public IBufferProcessorBuilder {
  public:
   virtual absl::StatusOr<std::unique_ptr<BufferProcessor>> Build() override;
 };
+
+class ImageProcessor : public BufferProcessor {
+ public:
+  virtual ~ImageProcessor();
+  virtual absl::Status Process(const Buffer& input, Buffer& output);
+
+ private:
+  std::unique_ptr<AutoConvert> auto_convert_cache_;
+};
 }  // namespace band
 
 #endif  // BAND_BUFFER_IMAGE_PROCESSOR_H

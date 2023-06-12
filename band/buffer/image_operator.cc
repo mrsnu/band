@@ -424,6 +424,11 @@ void AutoConvert::SetOutput(Buffer* output) {
   }
 }
 
+bool AutoConvert::IsNoOp(const Buffer& input, const Buffer& output) const {
+  return !RequiresColorSpaceConvert(input) && !RequiresResize(input) &&
+         !RequiresDataTypeConvert(input);
+}
+
 bool AutoConvert::RequiresColorSpaceConvert(const Buffer& input) const {
   return input.GetBufferFormat() != output_->GetBufferFormat();
 }

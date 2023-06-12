@@ -67,8 +67,9 @@ BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddRotate(
     BandBufferProcessorBuilder* builder, int angle);
 BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddFlip(
     BandBufferProcessorBuilder* builder, bool horizontal);
-BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddConvert(
+BAND_CAPI_EXPORT extern void BandBufferProcessorBuilderAddConvertColorSpace(
     BandBufferProcessorBuilder* builder, BandBufferFormat format);
+
 BAND_CAPI_EXPORT extern BandBufferProcessor* BandBufferProcessorBuilderBuild(
     BandBufferProcessorBuilder* builder);
 
