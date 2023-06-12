@@ -21,7 +21,7 @@ using BitMask = std::bitset<64>;
 // Empty template.
 template <typename EnumType>
 size_t EnumLength() {
-  assert(false && "FromString is not implemented for this type.");
+  assert(false && "EnumLength is not implemented for this type.");
   return 0;
 }
 
