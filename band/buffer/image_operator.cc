@@ -16,7 +16,9 @@ IBufferOperator* Rotate::Clone() const { return new Rotate(*this); }
 
 IBufferOperator* Flip::Clone() const { return new Flip(*this); }
 
-IBufferOperator* Convert::Clone() const { return new Convert(*this); }
+IBufferOperator* ColorSpaceConvert::Clone() const {
+  return new ColorSpaceConvert(*this);
+}
 
 IBufferOperator::Type Crop::GetOpType() const {
   return IBufferOperator::Type::kImage;
@@ -34,7 +36,7 @@ IBufferOperator::Type Flip::GetOpType() const {
   return IBufferOperator::Type::kImage;
 }
 
-IBufferOperator::Type Convert::GetOpType() const {
+IBufferOperator::Type ColorSpaceConvert::GetOpType() const {
   return IBufferOperator::Type::kImage;
 }
 
@@ -241,13 +243,17 @@ absl::Status Flip::CreateOutput(const Buffer& input) {
   return absl::Status();
 }
 
-absl::Status Convert::ProcessImpl(const Buffer& input) {
-  return LibyuvBufferUtils::Convert(input, *GetOutput());
+absl::Status ColorSpaceConvert::ProcessImpl(const Buffer& input) {
+  return LibyuvBufferUtils::ColorSpaceConvert(input, *GetOutput());
 }
 
-absl::Status Convert::ValidateOutput(const Buffer& input) const {
+absl::Status ColorSpaceConvert::ValidateOutput(const Buffer& input) const {
   if (input.GetBufferFormat() == output_->GetBufferFormat()) {
     return absl::InvalidArgumentError("Formats must be different.");
+  }
+
+  if (input.GetDataType() != output_->GetDataType()) {
+    return absl::InvalidArgumentError("Data types must be the same.");
   }
 
   switch (input.GetBufferFormat()) {
@@ -273,7 +279,7 @@ absl::Status Convert::ValidateOutput(const Buffer& input) const {
   return absl::Status();
 }
 
-absl::Status Convert::CreateOutput(const Buffer& input) {
+absl::Status ColorSpaceConvert::CreateOutput(const Buffer& input) {
   if (!is_format_specified_) {
     return absl::InvalidArgumentError(
         "Convert: output buffer format is not set.");

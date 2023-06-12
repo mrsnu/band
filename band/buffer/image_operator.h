@@ -77,10 +77,11 @@ class Flip : public IBufferOperator {
   bool horizontal_;
 };
 
-class Convert : public IBufferOperator {
+class ColorSpaceConvert : public IBufferOperator {
  public:
-  Convert() : output_format_(BufferFormat::kRaw), is_format_specified_(false) {}
-  Convert(BufferFormat buffer_format)
+  ColorSpaceConvert()
+      : output_format_(BufferFormat::kRaw), is_format_specified_(false) {}
+  ColorSpaceConvert(BufferFormat buffer_format)
       : output_format_(buffer_format), is_format_specified_(true) {}
 
   virtual IBufferOperator* Clone() const override;

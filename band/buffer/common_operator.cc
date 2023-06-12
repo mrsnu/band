@@ -21,27 +21,37 @@ void Normalize::SetOutput(Buffer* output) {
   }
 }
 
+template <typename T>
+void NormalizeImpl(const Buffer& input, Buffer* output, float mean, float std) {
+  // only single plane is supported
+  const T* input_data = reinterpret_cast<const T*>(input[0].data);
+  T* output_data = reinterpret_cast<T*>((*output)[0].GetMutableData());
+  for (int i = 0; i < input.GetNumElements(); ++i) {
+    output_data[i] = (input_data[i] - mean) / std;
+  }
+}
+
 absl::Status Normalize::ProcessImpl(const Buffer& input) {
   Buffer* output = inplace_ ? const_cast<Buffer*>(&input) : GetOutput();
 
   switch (input.GetDataType()) {
     case DataType::kUInt8:
-      NormalizeImpl<uint8_t>(input, output);
+      NormalizeImpl<uint8_t>(input, output, mean_, std_);
       break;
     case DataType::kInt8:
-      NormalizeImpl<int8_t>(input, output);
+      NormalizeImpl<int8_t>(input, output, mean_, std_);
       break;
     case DataType::kInt16:
-      NormalizeImpl<int16_t>(input, output);
+      NormalizeImpl<int16_t>(input, output, mean_, std_);
       break;
     case DataType::kInt32:
-      NormalizeImpl<int32_t>(input, output);
+      NormalizeImpl<int32_t>(input, output, mean_, std_);
       break;
     case DataType::kFloat32:
-      NormalizeImpl<float>(input, output);
+      NormalizeImpl<float>(input, output, mean_, std_);
       break;
     case DataType::kFloat64:
-      NormalizeImpl<double>(input, output);
+      NormalizeImpl<double>(input, output, mean_, std_);
       break;
     default:
       return absl::InvalidArgumentError(

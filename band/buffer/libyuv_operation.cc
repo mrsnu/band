@@ -1706,8 +1706,8 @@ absl::Status LibyuvBufferUtils::FlipVertically(const Buffer& buffer,
   }
 }
 
-absl::Status LibyuvBufferUtils::Convert(const Buffer& buffer,
-                                        Buffer& output_buffer) {
+absl::Status LibyuvBufferUtils::ColorSpaceConvert(const Buffer& buffer,
+                                                  Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kNV12:
       return ConvertFromNv12(buffer, output_buffer);

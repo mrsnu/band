@@ -24,16 +24,6 @@ class Normalize : public IBufferOperator {
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
-  template <typename T>
-  void NormalizeImpl(const Buffer& input, Buffer* output) {
-    // only single plane is supported
-    const T* input_data = reinterpret_cast<const T*>(input[0].data);
-    T* output_data = reinterpret_cast<T*>((*output)[0].GetMutableData());
-    for (int i = 0; i < input.GetNumElements(); ++i) {
-      output_data[i] = (input_data[i] - mean_) / std_;
-    }
-  }
-
   float mean_, std_;
   bool inplace_;
 };

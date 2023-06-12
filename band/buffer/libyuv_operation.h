@@ -61,7 +61,8 @@ class LibyuvBufferUtils {
   // Converts `buffer`'s format to the format of the given `output_buffer`.
   //
   // Grayscale format cannot be converted to other formats.
-  static absl::Status Convert(const Buffer& buffer, Buffer& output_buffer);
+  static absl::Status ColorSpaceConvert(const Buffer& buffer,
+                                        Buffer& output_buffer);
 };
 }  // namespace band
 

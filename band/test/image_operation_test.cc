@@ -44,7 +44,7 @@ TEST(ImageOperationTest, CropOperationImageTest) {
 }
 
 TEST(ImageOperationTest, ConvertImageTest) {
-  Convert convert_op;
+  ColorSpaceConvert convert_op;
   // load 3-channel images
   std::shared_ptr<Buffer> rgb_buffer = LoadImage("band/test/data/hippo.jpg");
 
@@ -70,7 +70,7 @@ TEST(ImageOperationTest, ConvertImageTest) {
 }
 
 TEST(ImageOperationTest, ConvertWithoutImageTest) {
-  Convert convert_op(BufferFormat::kGrayScale);
+  ColorSpaceConvert convert_op(BufferFormat::kGrayScale);
   // load 3-channel images
   std::shared_ptr<Buffer> rgb_buffer = LoadImage("band/test/data/hippo.jpg");
   EXPECT_EQ(convert_op.Process(*rgb_buffer), absl::OkStatus());
