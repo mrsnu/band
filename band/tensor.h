@@ -1,5 +1,5 @@
-#ifndef BAND_TENSOR_TENSOR_H_
-#define BAND_TENSOR_TENSOR_H_
+#ifndef BAND_TENSOR_H_
+#define BAND_TENSOR_H_
 
 #include <string>
 #include <vector>
@@ -35,4 +35,4 @@ class Tensor : public interface::ITensor {
 };
 }  // namespace band
 
-#endif  // BAND_TENSOR_TENSOR_H_
+#endif  // BAND_TENSOR_H_

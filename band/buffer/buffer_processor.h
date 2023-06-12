@@ -1,5 +1,5 @@
-#ifndef BAND_BUFFER_BUFFER_PROCESSOR_H
-#define BAND_BUFFER_BUFFER_PROCESSOR_H
+#ifndef BAND_BUFFER_BUFFER_PROCESSOR_H_
+#define BAND_BUFFER_BUFFER_PROCESSOR_H_
 
 #include "absl/status/statusor.h"
 #include "band/buffer/operator.h"
@@ -56,4 +56,4 @@ class BufferProcessor {
 };
 }  // namespace band
 
-#endif  // BAND_BUFFER_BUFFER_PROCESSOR_H
+#endif  // BAND_BUFFER_BUFFER_PROCESSOR_H_
