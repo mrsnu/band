@@ -20,9 +20,11 @@ ImageProcessorBuilder::Build() {
       if (i == j) {
         continue;
       }
-      if (typeid(*operations_[i]) == typeid(*operations_[j])) {
-        return absl::InvalidArgumentError(absl::StrFormat(
-            "operation %s is duplicated.", typeid(*operations_[i]).name()));
+      IBufferOperator& lhs = *operations_[i];
+      IBufferOperator& rhs = *operations_[j];
+      if (typeid(lhs) == typeid(rhs)) {
+        return absl::InvalidArgumentError(
+            absl::StrFormat("operation %s is duplicated.", typeid(lhs).name()));
       }
     }
   }

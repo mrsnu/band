@@ -56,7 +56,7 @@ absl::Status Crop::ProcessImpl(const Buffer& input) {
                 input.GetDimension()[0], input.GetDimension()[1],
                 output_->GetDimension()[0], output_->GetDimension()[1]);
 
-  return LibyuvBufferUtils::Crop(input, x0_, y0_, x1_, y1_, *GetOutput());
+  return LibyuvImageOperator::Crop(input, x0_, y0_, x1_, y1_, *GetOutput());
 }
 
 absl::Status Crop::ValidateInput(const Buffer& input) const {
@@ -119,7 +119,7 @@ absl::Status Resize::ProcessImpl(const Buffer& input) {
   BAND_LOG_PROD(BAND_LOG_INFO, "Resize: %d x %d -> %d x %d",
                 input.GetDimension()[0], input.GetDimension()[1],
                 output_->GetDimension()[0], output_->GetDimension()[1]);
-  return LibyuvBufferUtils::Resize(input, *GetOutput());
+  return LibyuvImageOperator::Resize(input, *GetOutput());
 }
 
 absl::Status Resize::ValidateInput(const Buffer& input) const {
@@ -197,7 +197,7 @@ absl::Status Rotate::ProcessImpl(const Buffer& input) {
                 output_->GetDimension()[0], output_->GetDimension()[1],
                 angle_deg_);
 
-  return LibyuvBufferUtils::Rotate(input, angle_deg_, *GetOutput());
+  return LibyuvImageOperator::Rotate(input, angle_deg_, *GetOutput());
 }
 
 absl::Status Rotate::ValidateInput(const Buffer& input) const {
@@ -246,8 +246,9 @@ absl::Status Rotate::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Flip::ProcessImpl(const Buffer& input) {
-  return horizontal_ ? LibyuvBufferUtils::FlipHorizontally(input, *GetOutput())
-                     : LibyuvBufferUtils::FlipVertically(input, *GetOutput());
+  return horizontal_
+             ? LibyuvImageOperator::FlipHorizontally(input, *GetOutput())
+             : LibyuvImageOperator::FlipVertically(input, *GetOutput());
 }
 
 absl::Status Flip::ValidateOutput(const Buffer& input) const {
@@ -279,7 +280,7 @@ absl::Status ColorSpaceConvert::ProcessImpl(const Buffer& input) {
       BAND_LOG_INFO, "ColorSpaceConvert: input format: %s, output format: %s",
       ToString(input.GetBufferFormat()), ToString(output_->GetBufferFormat()));
 
-  return LibyuvBufferUtils::ColorSpaceConvert(input, *GetOutput());
+  return LibyuvImageOperator::ColorSpaceConvert(input, *GetOutput());
 }
 
 absl::Status ColorSpaceConvert::ValidateOutput(const Buffer& input) const {
