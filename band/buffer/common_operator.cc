@@ -8,7 +8,8 @@ namespace band {
 namespace buffer {
 
 template <typename InputType, typename OutputType>
-void Normalize(const Buffer& input, Buffer* output, float mean, float std) {
+void NormalizeFromTo(const Buffer& input, Buffer* output, float mean,
+                     float std) {
   // only single plane is supported
   const InputType* input_data =
       reinterpret_cast<const InputType*>(input[0].data);
@@ -26,19 +27,19 @@ template <typename InputType>
 void NormalizeFrom(const Buffer& input, Buffer* output, float mean, float std) {
   switch (output->GetDataType()) {
     case DataType::kUInt8:
-      Normalize<InputType, uint8_t>(input, output, mean, std);
+      NormalizeFromTo<InputType, uint8_t>(input, output, mean, std);
       break;
     case DataType::kInt8:
-      Normalize<InputType, int8_t>(input, output, mean, std);
+      NormalizeFromTo<InputType, int8_t>(input, output, mean, std);
       break;
     case DataType::kInt16:
-      Normalize<InputType, int16_t>(input, output, mean, std);
+      NormalizeFromTo<InputType, int16_t>(input, output, mean, std);
       break;
     case DataType::kInt32:
-      Normalize<InputType, int32_t>(input, output, mean, std);
+      NormalizeFromTo<InputType, int32_t>(input, output, mean, std);
       break;
     case DataType::kFloat32:
-      Normalize<InputType, float>(input, output, mean, std);
+      NormalizeFromTo<InputType, float>(input, output, mean, std);
       break;
     default:
       BAND_LOG_PROD(BAND_LOG_ERROR, "Normalize: unsupported data type %s",
