@@ -101,6 +101,7 @@ filegroup(
     name = "c_api_headers",
     srcs = [
         "c_api.h",
+        "c_api_buffer.h",
         "c_api_type.h",
         "libband.h",
     ],
