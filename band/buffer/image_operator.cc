@@ -15,6 +15,12 @@ IBufferOperator* Resize::Clone() const { return new Resize(*this); }
 
 IBufferOperator* Rotate::Clone() const { return new Rotate(*this); }
 
+Flip::~Flip() {
+  if (intermediate_buffer_) {
+    delete intermediate_buffer_;
+  }
+}
+
 IBufferOperator* Flip::Clone() const { return new Flip(*this); }
 
 IBufferOperator* ColorSpaceConvert::Clone() const {
@@ -246,9 +252,30 @@ absl::Status Rotate::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Flip::ProcessImpl(const Buffer& input) {
-  return horizontal_
-             ? LibyuvImageOperator::FlipHorizontally(input, *GetOutput())
-             : LibyuvImageOperator::FlipVertically(input, *GetOutput());
+  if (horizontal_ && vertical_) {
+    RETURN_IF_ERROR(
+        LibyuvImageOperator::FlipHorizontally(input, *intermediate_buffer_));
+    return LibyuvImageOperator::FlipVertically(*intermediate_buffer_,
+                                               *GetOutput());
+  } else if (horizontal_) {
+    return LibyuvImageOperator::FlipHorizontally(input, *GetOutput());
+  } else {
+    return LibyuvImageOperator::FlipVertically(input, *GetOutput());
+  }
+}
+
+absl::Status Flip::ValidateInput(const Buffer& input) const {
+  if (!horizontal_ && !vertical_) {
+    return absl::InvalidArgumentError(
+        "Flip: either horizontal or vertical flip must be enabled.");
+  }
+
+  if (input.GetBufferFormat() == BufferFormat::kRaw) {
+    return absl::InvalidArgumentError(
+        "Flip: Raw buffer format type is not supported.");
+  }
+
+  return absl::Status();
 }
 
 absl::Status Flip::ValidateOutput(const Buffer& input) const {
@@ -269,6 +296,12 @@ absl::Status Flip::ValidateOutput(const Buffer& input) const {
 }
 
 absl::Status Flip::CreateOutput(const Buffer& input) {
+  if (horizontal_ && vertical_) {
+    intermediate_buffer_ =
+        Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
+                            input.GetBufferFormat(), input.GetOrientation());
+  }
+
   output_ =
       Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
                           input.GetBufferFormat(), input.GetOrientation());

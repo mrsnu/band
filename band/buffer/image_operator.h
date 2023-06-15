@@ -65,17 +65,21 @@ class Rotate : public IBufferOperator {
 class Flip : public IBufferOperator {
  public:
   // horizontal: true for horizontal flip, false for vertical flip
-  Flip(bool horizontal) : horizontal_(horizontal) {}
+  Flip(bool horizontal, bool vertical)
+      : horizontal_(horizontal), vertical_(vertical) {}
+  virtual ~Flip();
 
   virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
   virtual absl::Status ProcessImpl(const Buffer& input) override;
+  virtual absl::Status ValidateInput(const Buffer& input) const override;
   virtual absl::Status ValidateOutput(const Buffer& input) const override;
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
  private:
-  bool horizontal_;
+  Buffer* intermediate_buffer_ = nullptr;
+  bool horizontal_, vertical_;
 };
 
 class ColorSpaceConvert : public IBufferOperator {
