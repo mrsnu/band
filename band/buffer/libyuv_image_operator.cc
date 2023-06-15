@@ -20,7 +20,7 @@ tflite-support/tensorflow_lite_support/cc/task/vision/utils
 by Jingyu Lee <dostos10@gmail.com>
 */
 
-#include "band/buffer/libyuv_operation.h"
+#include "band/buffer/libyuv_image_operator.h"
 
 #include <stdint.h>
 
@@ -1206,7 +1206,7 @@ absl::Status FlipHorizontallyRgb(const Buffer& buffer, Buffer& output_buffer) {
 
   return absl::OkStatus();
 #else
-#error LibyuvBufferUtils requires LIBYUV_VERSION 1747 or above
+#error LibyuvImageOperator requires LIBYUV_VERSION 1747 or above
 #endif  // LIBYUV_VERSION >= 1747
 }
 
@@ -1606,8 +1606,8 @@ absl::Status UniformCropResizeYuv(const Buffer& buffer,
   return absl::OkStatus();
 }
 
-absl::Status LibyuvBufferUtils::Crop(const Buffer& buffer, int x0, int y0,
-                                     int x1, int y1, Buffer& output_buffer) {
+absl::Status LibyuvImageOperator::Crop(const Buffer& buffer, int x0, int y0,
+                                       int x1, int y1, Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kRGBA:
     case BufferFormat::kRGB:
@@ -1624,8 +1624,8 @@ absl::Status LibyuvBufferUtils::Crop(const Buffer& buffer, int x0, int y0,
   }
 }
 
-absl::Status LibyuvBufferUtils::Resize(const Buffer& buffer,
-                                       Buffer& output_buffer) {
+absl::Status LibyuvImageOperator::Resize(const Buffer& buffer,
+                                         Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kYV12:
     case BufferFormat::kYV21:
@@ -1645,8 +1645,8 @@ absl::Status LibyuvBufferUtils::Resize(const Buffer& buffer,
   }
 }
 
-absl::Status LibyuvBufferUtils::Rotate(const Buffer& buffer, int angle_deg,
-                                       Buffer& output_buffer) {
+absl::Status LibyuvImageOperator::Rotate(const Buffer& buffer, int angle_deg,
+                                         Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kGrayScale:
       return RotateGray(buffer, angle_deg, output_buffer);
@@ -1666,8 +1666,8 @@ absl::Status LibyuvBufferUtils::Rotate(const Buffer& buffer, int angle_deg,
   }
 }
 
-absl::Status LibyuvBufferUtils::FlipHorizontally(const Buffer& buffer,
-                                                 Buffer& output_buffer) {
+absl::Status LibyuvImageOperator::FlipHorizontally(const Buffer& buffer,
+                                                   Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kRGBA:
       return FlipHorizontallyRgba(buffer, output_buffer);
@@ -1687,8 +1687,8 @@ absl::Status LibyuvBufferUtils::FlipHorizontally(const Buffer& buffer,
   }
 }
 
-absl::Status LibyuvBufferUtils::FlipVertically(const Buffer& buffer,
-                                               Buffer& output_buffer) {
+absl::Status LibyuvImageOperator::FlipVertically(const Buffer& buffer,
+                                                 Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kRGBA:
     case BufferFormat::kRGB:
@@ -1706,8 +1706,8 @@ absl::Status LibyuvBufferUtils::FlipVertically(const Buffer& buffer,
   }
 }
 
-absl::Status LibyuvBufferUtils::ColorSpaceConvert(const Buffer& buffer,
-                                                  Buffer& output_buffer) {
+absl::Status LibyuvImageOperator::ColorSpaceConvert(const Buffer& buffer,
+                                                    Buffer& output_buffer) {
   switch (buffer.GetBufferFormat()) {
     case BufferFormat::kNV12:
       return ConvertFromNv12(buffer, output_buffer);

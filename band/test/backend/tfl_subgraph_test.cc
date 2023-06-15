@@ -82,10 +82,7 @@ INSTANTIATE_TEST_SUITE_P(
             SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph)));
-<<<<<<< HEAD
-} // namespace test
-=======
->>>>>>> master
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

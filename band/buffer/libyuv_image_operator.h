@@ -20,15 +20,15 @@ tflite-support/tensorflow_lite_support/cc/task/vision/utils
 by Jingyu Lee <dostos10@gmail.com>
 */
 
-#ifndef BAND_BUFFER_LIBYUV_OPERATION_H_
-#define BAND_BUFFER_LIBYUV_OPERATION_H_
+#ifndef BAND_BUFFER_LIBYUV_IMAGE_OPERATOR_H_
+#define BAND_BUFFER_LIBYUV_IMAGE_OPERATOR_H_
 
 #include "absl/status/status.h"
 #include "band/buffer/buffer.h"
 
 namespace band {
 
-class LibyuvBufferUtils {
+class LibyuvImageOperator {
  public:
   // Crops input `buffer` to the specified subregions and resizes the cropped
   // region to the target image resolution defined by the `output_buffer`.
@@ -66,4 +66,4 @@ class LibyuvBufferUtils {
 };
 }  // namespace band
 
-#endif  // BAND_BUFFER_LIBYUV_OPERATION_H_
+#endif  // BAND_BUFFER_LIBYUV_IMAGE_OPERATOR_H_

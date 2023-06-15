@@ -16,7 +16,7 @@ band_cc_library(
         "common_operator.cc",
         "image_operator.cc",
         "image_processor.cc",
-        "libyuv_operation.cc",
+        "libyuv_image_operator.cc",
         "operator.cc",
     ],
     hdrs = [
@@ -25,7 +25,7 @@ band_cc_library(
         "common_operator.h",
         "image_operator.h",
         "image_processor.h",
-        "libyuv_operation.h",
+        "libyuv_image_operator.h",
         "operator.h",
     ],
     deps = [

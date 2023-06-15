@@ -65,7 +65,10 @@ void BandImageProcessorBuilderAddRotate(BandImageProcessorBuilder* builder,
 }
 
 void BandImageProcessorBuilderAddFlip(BandImageProcessorBuilder* builder,
-                                      bool horizontal);
+                                      bool horizontal, bool vertical) {
+  builder->impl->AddOperation(
+      std::make_unique<buffer::Flip>(horizontal, vertical));
+}
 
 void BandImageProcessorBuilderAddColorSpaceConvert(
     BandImageProcessorBuilder* builder, BandBufferFormat format) {

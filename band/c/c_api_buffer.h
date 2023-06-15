@@ -74,7 +74,7 @@ BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddResize(
 BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddRotate(
     BandImageProcessorBuilder* builder, int angle);
 BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddFlip(
-    BandImageProcessorBuilder* builder, bool horizontal);
+    BandImageProcessorBuilder* builder, bool horizontal, bool vertical);
 BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddColorSpaceConvert(
     BandImageProcessorBuilder* builder, BandBufferFormat format);
 BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddNormalize(
