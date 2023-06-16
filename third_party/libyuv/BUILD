@@ -22,7 +22,4 @@ cc_library(
     ],
     includes = ["include"],
     visibility = ["//visibility:public"],
-    copts = [
-        "-DLIBYUV_DISABLE_X86"
-    ]
 )
