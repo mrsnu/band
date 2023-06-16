@@ -208,9 +208,7 @@ void* BandTensorGetQuantizationParams(BandTensor* tensor) {
   return tensor->impl->GetQuantization().GetParams();
 }
 
-BandRequestOption BandRequestOptionGetDefault() {
-  return {-1, true, -1, -1.f};
-}
+BandRequestOption BandRequestOptionGetDefault() { return {-1, true, -1, -1.f}; }
 
 BandEngine* BandEngineCreate(BandConfig* config) {
   std::unique_ptr<band::Engine> engine(band::Engine::Create(config->impl));

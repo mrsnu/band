@@ -5,6 +5,7 @@
 #include "band/buffer/common_operator.h"
 #include "band/buffer/image_operator.h"
 #include "band/c/c_api_internal.h"
+#include "c_api_buffer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,44 +50,6 @@ void BandImageProcessorBuilderDelete(BandImageProcessorBuilder* builder) {
   delete builder;
 }
 
-void BandImageProcessorBuilderAddCrop(BandImageProcessorBuilder* builder,
-                                      int x0, int y0, int x1, int y1) {
-  builder->impl->AddOperation(std::make_unique<buffer::Crop>(x0, y0, x1, y1));
-}
-
-void BandImageProcessorBuilderAddResize(BandImageProcessorBuilder* builder,
-                                        int width, int height) {
-  builder->impl->AddOperation(std::make_unique<buffer::Resize>(width, height));
-}
-
-void BandImageProcessorBuilderAddRotate(BandImageProcessorBuilder* builder,
-                                        int angle) {
-  builder->impl->AddOperation(std::make_unique<buffer::Rotate>(angle));
-}
-
-void BandImageProcessorBuilderAddFlip(BandImageProcessorBuilder* builder,
-                                      bool horizontal, bool vertical) {
-  builder->impl->AddOperation(
-      std::make_unique<buffer::Flip>(horizontal, vertical));
-}
-
-void BandImageProcessorBuilderAddColorSpaceConvert(
-    BandImageProcessorBuilder* builder, BandBufferFormat format) {
-  builder->impl->AddOperation(
-      std::make_unique<buffer::ColorSpaceConvert>(BufferFormat(format)));
-}
-
-void BandImageProcessorBuilderAddNormalize(BandImageProcessorBuilder* builder,
-                                           float mean, float std) {
-  builder->impl->AddOperation(
-      std::make_unique<buffer::Normalize>(mean, std, false));
-}
-
-void BandImageProcessorBuilderAddDataTypeConvert(
-    BandImageProcessorBuilder* builder) {
-  builder->impl->AddOperation(std::make_unique<buffer::DataTypeConvert>());
-}
-
 BandImageProcessor* BandImageProcessorBuilderBuild(
     BandImageProcessorBuilder* builder) {
   absl::StatusOr<std::unique_ptr<BufferProcessor>> status =
@@ -96,6 +59,91 @@ BandImageProcessor* BandImageProcessorBuilderBuild(
   } else {
     return new BandImageProcessor(std::move(status.value()));
   }
+}
+
+BAND_CAPI_EXPORT BandStatus
+BandAddOperator(BandImageProcessorBuilder* builder,
+                BandImageProcessorBuilderField field, int count, ...) {
+  va_list vl;
+  va_start(vl, count);
+  switch (field) {
+    case BandImageProcessorBuilderField::BAND_CROP: {
+      if (count != 4) {
+        return BandStatus::kBandError;
+      }
+
+      int x0 = va_arg(vl, int);
+      int y0 = va_arg(vl, int);
+      int x1 = va_arg(vl, int);
+      int y1 = va_arg(vl, int);
+      builder->impl->AddOperation(
+          std::make_unique<buffer::Crop>(x0, y0, x1, y1));
+      break;
+    }
+    case BandImageProcessorBuilderField::BAND_RESIZE: {
+      if (count != 2) {
+        return BandStatus::kBandError;
+      }
+
+      int width = va_arg(vl, int);
+      int height = va_arg(vl, int);
+      builder->impl->AddOperation(
+          std::make_unique<buffer::Resize>(width, height));
+      break;
+    }
+    case BandImageProcessorBuilderField::BAND_ROTATE: {
+      if (count != 1) {
+        return BandStatus::kBandError;
+      }
+
+      int angle = va_arg(vl, int);
+      builder->impl->AddOperation(std::make_unique<buffer::Rotate>(angle));
+      break;
+    }
+    case BandImageProcessorBuilderField::BAND_FLIP: {
+      if (count != 2) {
+        return BandStatus::kBandError;
+      }
+
+      bool horizontal = va_arg(vl, int);
+      bool vertical = va_arg(vl, int);
+      builder->impl->AddOperation(
+          std::make_unique<buffer::Flip>(horizontal, vertical));
+      break;
+    }
+    case BandImageProcessorBuilderField::BAND_COLOR_SPACE_CONVERT: {
+      if (count != 1) {
+        return BandStatus::kBandError;
+      }
+
+      int format = va_arg(vl, int);
+      builder->impl->AddOperation(
+          std::make_unique<buffer::ColorSpaceConvert>(BufferFormat(format)));
+      break;
+    }
+    case BandImageProcessorBuilderField::BAND_NORMALIZE: {
+      if (count != 2) {
+        return BandStatus::kBandError;
+      }
+
+      float mean = va_arg(vl, double);
+      float std = va_arg(vl, double);
+      builder->impl->AddOperation(
+          std::make_unique<buffer::Normalize>(mean, std, false));
+      break;
+    }
+    case BandImageProcessorBuilderField::BAND_DATA_TYPE_CONVERT: {
+      if (count != 0) {
+        return BandStatus::kBandError;
+      }
+
+      builder->impl->AddOperation(std::make_unique<buffer::DataTypeConvert>());
+      break;
+    }
+  }
+  va_end(vl);
+
+  return BandStatus::kBandOk;
 }
 
 BandStatus BandImageProcessorProcess(BandImageProcessor* image_processor,

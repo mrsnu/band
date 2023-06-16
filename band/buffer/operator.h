@@ -16,8 +16,6 @@ class IBufferOperator {
  public:
   IBufferOperator() = default;
   virtual ~IBufferOperator();
-  // For processor builder to clone the operator
-  virtual IBufferOperator* Clone() const = 0;
   absl::Status Process(const Buffer& input);
   virtual void SetOutput(Buffer* output);
   Buffer* GetOutput();
@@ -44,6 +42,7 @@ class IBufferOperator {
   virtual absl::Status CreateOutput(const Buffer& input) = 0;
 
  protected:
+  friend class ImageProcessorBuilder;
   IBufferOperator(const IBufferOperator&) = default;
   IBufferOperator& operator=(const IBufferOperator&) = default;
   // Process the input buffer and generate the output buffer.
@@ -51,6 +50,8 @@ class IBufferOperator {
   // - OK: the operation is successful.
   // - other error status: the operation is failed.
   virtual absl::Status ProcessImpl(const Buffer& input) = 0;
+  // For processor builder to clone the operator
+  virtual IBufferOperator* Clone() const = 0;
 
   bool output_assigned_ = false;
   Buffer* output_ = nullptr;

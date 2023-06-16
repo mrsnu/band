@@ -78,9 +78,6 @@ band_cc_android_test(
     name = "benchmark_test",
     size = "medium",
     srcs = ["tool/benchmark_test.cc"],
-    copts = [
-        "-DTF_LITE_STRIP_ERROR_STRINGS",
-    ],
     data = [
         "//band/test:data/add.tflite",
         "//band/test:data/benchmark_config.json",

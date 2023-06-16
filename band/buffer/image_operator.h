@@ -12,8 +12,6 @@ namespace buffer {
 class Crop : public IBufferOperator {
  public:
   Crop(int x0, int y0, int x1, int y1) : x0_(x0), y0_(y0), x1_(x1), y1_(y1) {}
-
-  virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
   virtual absl::Status ProcessImpl(const Buffer& input) override;
@@ -22,6 +20,7 @@ class Crop : public IBufferOperator {
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
  private:
+  virtual IBufferOperator* Clone() const override;
   int x0_, y0_, x1_, y1_;
 };
 
@@ -31,7 +30,6 @@ class Resize : public IBufferOperator {
   Resize(int width = -1, int height = -1) : dims_({width, height}) {}
   Resize(const std::vector<int>& dims) : dims_(dims) {}
 
-  virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
   virtual absl::Status ProcessImpl(const Buffer& input) override;
@@ -40,6 +38,7 @@ class Resize : public IBufferOperator {
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
  private:
+  virtual IBufferOperator* Clone() const override;
   bool IsAuto(size_t dim) const { return dims_[dim] == -1; }
   std::vector<int> dims_;
 };
@@ -50,7 +49,6 @@ class Rotate : public IBufferOperator {
  public:
   Rotate(int angle_deg) : angle_deg_(angle_deg) {}
 
-  virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
   virtual absl::Status ProcessImpl(const Buffer& input) override;
@@ -59,6 +57,7 @@ class Rotate : public IBufferOperator {
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
  private:
+  virtual IBufferOperator* Clone() const override;
   int angle_deg_;
 };
 
@@ -69,7 +68,6 @@ class Flip : public IBufferOperator {
       : horizontal_(horizontal), vertical_(vertical) {}
   virtual ~Flip();
 
-  virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
   virtual absl::Status ProcessImpl(const Buffer& input) override;
@@ -78,6 +76,8 @@ class Flip : public IBufferOperator {
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
  private:
+  virtual IBufferOperator* Clone() const override;
+
   Buffer* intermediate_buffer_ = nullptr;
   bool horizontal_, vertical_;
 };
@@ -89,7 +89,6 @@ class ColorSpaceConvert : public IBufferOperator {
   ColorSpaceConvert(BufferFormat buffer_format)
       : output_format_(buffer_format), is_format_specified_(true) {}
 
-  virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
   virtual absl::Status ProcessImpl(const Buffer& input) override;
@@ -97,6 +96,8 @@ class ColorSpaceConvert : public IBufferOperator {
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
  private:
+  virtual IBufferOperator* Clone() const override;
+
   BufferFormat output_format_;
   bool is_format_specified_;
 };
@@ -113,7 +114,6 @@ class ColorSpaceConvert : public IBufferOperator {
 class AutoConvert : public IBufferOperator {
  public:
   virtual ~AutoConvert() override;
-  virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
@@ -122,6 +122,8 @@ class AutoConvert : public IBufferOperator {
   virtual void SetOutput(Buffer* output) override;
 
  private:
+  virtual IBufferOperator* Clone() const override;
+
   bool RequiresColorSpaceConvert(const Buffer& input) const;
   bool RequiresResize(const Buffer& input) const;
   bool RequiresDataTypeConvert(const Buffer& input) const;

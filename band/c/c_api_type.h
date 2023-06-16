@@ -150,6 +150,16 @@ typedef enum BandConfigField {
   BAND_CPU_MASK = 17,
 } BandConfigField;
 
+typedef enum BandImageProcessorBuilderField {
+  BAND_CROP = 0,
+  BAND_RESIZE = 1,
+  BAND_ROTATE = 2,
+  BAND_FLIP = 3,
+  BAND_COLOR_SPACE_CONVERT = 4,
+  BAND_NORMALIZE = 5,
+  BAND_DATA_TYPE_CONVERT = 6,
+} BandImageProcessorBuilderField;
+
 typedef struct BandRequestOption {
   int target_worker;
   bool require_callback;

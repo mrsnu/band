@@ -1,5 +1,5 @@
-#ifndef BAND_TENSOR_TENSOR_RING_BUFFER_H_
-#define BAND_TENSOR_TENSOR_RING_BUFFER_H_
+#ifndef BAND_TENSOR_RING_BUFFER_H_
+#define BAND_TENSOR_RING_BUFFER_H_
 
 #include <array>
 #include <map>
@@ -53,4 +53,4 @@ class TensorRingBuffer {
 };
 }  // namespace band
 
-#endif  // BAND_TENSOR_TENSOR_RING_BUFFER_H_
+#endif  // BAND_TENSOR_RING_BUFFER_H_

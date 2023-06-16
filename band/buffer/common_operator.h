@@ -12,8 +12,6 @@ class Normalize : public IBufferOperator {
  public:
   Normalize(float mean, float std, bool inplace)
       : mean_(mean), std_(std), inplace_(inplace) {}
-
-  virtual IBufferOperator* Clone() const override;
   virtual Type GetOpType() const override;
 
   virtual void SetOutput(Buffer* output) override;
@@ -23,6 +21,8 @@ class Normalize : public IBufferOperator {
   virtual absl::Status CreateOutput(const Buffer& input) override;
 
  private:
+  virtual IBufferOperator* Clone() const override;
+
   float mean_, std_;
   bool inplace_;
 };
@@ -33,9 +33,8 @@ class DataTypeConvert : public Normalize {
  public:
   DataTypeConvert() : Normalize(0.f, 1.f, false) {}
 
-  virtual IBufferOperator* Clone() const override;
-
  private:
+  virtual IBufferOperator* Clone() const override;
   virtual absl::Status ProcessImpl(const Buffer& input) override;
 };
 

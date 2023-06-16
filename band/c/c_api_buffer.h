@@ -16,14 +16,16 @@ typedef struct BandBuffer BandBuffer;
 // ImageProcessorBuilder is used to build an ImageProcessor. ImageProcessor
 // defines a series of operations to be applied to a BandBuffer and convert
 // it to a BandTensor. Supported operations are:
-// - Crop (x0, y0, x1, y1 - crop from top-left corner, inclusive)
-// - Resize (width, height - resize to a new size)
-// - Rotate (angle - counter-clockwise, between 0 and 360 in multiples of
-// 90)
-// - Flip (boolean - horizontal or vertical)
-// - Convert color space (format - target format)
-// - Normalize (mean, std - normalize the buffer with mean and std)
-// - DataTypeConvert (convert the data type to the output data type)
+// - Crop (int x0, int y0, int x1, int y1) - crop from top-left corner,
+// inclusive
+// - Resize (int width, int height) - resize to a new size
+// - Rotate (float angle) - counter-clockwise, between 0 and 360 in multiples of
+// 90
+// - Flip (bool horizontal, bool vertical)
+// - Convert color space (BandBufferFormat target_format) - convert the color
+// space
+// - Normalize (float mean, float std)
+// - DataTypeConvert () convert the data type to the output data type
 // E.g., convert from 8-bit RGB to 32-bit float RGB (tensor).
 //
 // By default, builder without any operation will create a ImageProcessor
@@ -67,26 +69,41 @@ BAND_CAPI_EXPORT extern void BandImageProcessorBuilderDelete(
 BAND_CAPI_EXPORT extern BandImageProcessor* BandImageProcessorBuilderBuild(
     BandImageProcessorBuilder* builder);
 
-BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddCrop(
-    BandImageProcessorBuilder* builder, int x0, int y0, int x1, int y1);
-BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddResize(
-    BandImageProcessorBuilder* builder, int width, int height);
-BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddRotate(
-    BandImageProcessorBuilder* builder, int angle);
-BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddFlip(
-    BandImageProcessorBuilder* builder, bool horizontal, bool vertical);
-BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddColorSpaceConvert(
-    BandImageProcessorBuilder* builder, BandBufferFormat format);
-BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddNormalize(
-    BandImageProcessorBuilder* builder, float mean, float std);
-BAND_CAPI_EXPORT extern void BandImageProcessorBuilderAddDataTypeConvert(
-    BandImageProcessorBuilder* builder);
+// Add an operator to the builder. The order of the operators will be the
+// order of the operations applied to the input buffer.
+// E.g., BandAddOperator(builder, BAND_IMAGE_PROCESSOR_CROP, 4, 0, 0, 100, 100);
+// will crop the input buffer from (0, 0) to (100, 100).
+// This will return kBandError if the given variadic arguments are invalid.
+BAND_CAPI_EXPORT extern BandStatus BandAddOperator(
+    BandImageProcessorBuilder* b, BandImageProcessorBuilderField field,
+    int count, ...);
 
 BAND_CAPI_EXPORT extern BandStatus BandImageProcessorProcess(
     BandImageProcessor* image_processor, BandBuffer* buffer,
     BandTensor* target_tensor);
 BAND_CAPI_EXPORT extern void BandImageProcessorDelete(
     BandImageProcessor* processor);
+
+typedef BandBuffer* (*PFN_BandBufferCreate)();
+typedef void (*PFN_BandBufferDelete)(BandBuffer*);
+typedef BandStatus (*PFN_BandBufferSetFromRawData)(BandBuffer*, const void*,
+                                                   size_t, size_t,
+                                                   BandBufferFormat);
+typedef BandStatus (*PFN_BandBufferSetFromYUVData)(BandBuffer*, const void*,
+                                                   const void*, const void*,
+                                                   size_t, size_t, size_t,
+                                                   size_t, size_t,
+                                                   BandBufferFormat);
+typedef BandImageProcessorBuilder* (*PFN_BandImageProcessorBuilderCreate)();
+typedef void (*PFN_BandImageProcessorBuilderDelete)(BandImageProcessorBuilder*);
+typedef BandImageProcessor* (*PFN_BandImageProcessorBuilderBuild)(
+    BandImageProcessorBuilder*);
+typedef BandStatus (*PFN_BandAddOperator)(BandImageProcessorBuilder*,
+                                          BandImageProcessorBuilderField, int,
+                                          ...);
+typedef BandStatus (*PFN_BandImageProcessorProcess)(BandImageProcessor*,
+                                                    BandBuffer*, BandTensor*);
+typedef void (*PFN_BandImageProcessorDelete)(BandImageProcessor*);
 
 #ifdef __cplusplus
 }  // extern "C"
