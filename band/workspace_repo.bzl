@@ -45,12 +45,9 @@ def workspace():
 
     http_archive(
         name = "libyuv",
-        urls = ["https://chromium.googlesource.com/libyuv/libyuv/+archive/39240f7149cffde62e3620344d222c8ab2c21178.tar.gz"],
-        # Adding the constrain of sha256 and strip_prefix will cause failure as of
-        # Jan 2021. It seems that the downloaded libyuv was different every time,
-        # so that the specified sha256 and strip_prefix cannot match.
-        # sha256 = "01c2e30eb8e83880f9ba382f6bece9c38cd5b07f9cadae46ef1d5a69e07fafaf",
-        # strip_prefix = "libyuv-39240f7149cffde62e3620344d222c8ab2c21178",
+        urls = ["https://github.com/mrsnu/libyuv/archive/refs/tags/v1.0.0.zip"],
+        sha256 = "27ea6ddea93fefcdacb8175c0627c896488c3aebdcd7efd97e4cb2972a316195",
+        strip_prefix = "libyuv-1.0.0",
         build_file = Label("//third_party/libyuv:BUILD"),
     )
 
