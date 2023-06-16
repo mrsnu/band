@@ -1,132 +1,132 @@
 load("//band:band.bzl", "band_cc_library")
 
 package(
-    default_visibility=[
+    default_visibility = [
         "//band:__subpackages__",
     ],
-    licenses=["notice"],  # Apache 2.0
+    licenses = ["notice"],  # Apache 2.0
 )
 
 config_setting(
-    name="debug",
-    values={
+    name = "debug",
+    values = {
         "compilation_mode": "dbg",
     },
-    visibility=["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name="optimized",
-    values={
+    name = "optimized",
+    values = {
         "compilation_mode": "opt",
     },
-    visibility=["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 # TFLite backend setting.
 config_setting(
-    name="tflite",
-    define_values={
+    name = "tflite",
+    define_values = {
         "tflite": "true",
     },
-    visibility=["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 # Linux config settings
 config_setting(
-    name="linux",
-    flag_values={},
-    values={},
-    visibility=["//visibility:public"],
+    name = "linux",
+    flag_values = {},
+    values = {},
+    visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name="linux_x86_64",
-    flag_values={},
-    values={"cpu": "k8"},
-    visibility=["//visibility:public"],
+    name = "linux_x86_64",
+    flag_values = {},
+    values = {"cpu": "k8"},
+    visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name="linux_x86_64_tflite",
-    define_values={
+    name = "linux_x86_64_tflite",
+    define_values = {
         "tflite": "true",
     },
-    flag_values={},
-    values={"cpu": "k8"},
-    visibility=["//visibility:public"],
+    flag_values = {},
+    values = {"cpu": "k8"},
+    visibility = ["//visibility:public"],
 )
 
 # Android config settings
 config_setting(
-    name="android",
-    flag_values={},
-    values={
+    name = "android",
+    flag_values = {},
+    values = {
         "crosstool_top": "//external:android/crosstool",
     },
-    visibility=["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name="android_arm64",
-    flag_values={},
-    values=dict(
+    name = "android_arm64",
+    flag_values = {},
+    values = dict(
         {"crosstool_top": "//external:android/crosstool"},
-        cpu="arm64-v8a",
+        cpu = "arm64-v8a",
     ),
-    visibility=["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name="android_arm64_tflite",
-    define_values={
+    name = "android_arm64_tflite",
+    define_values = {
         "tflite": "true",
     },
-    flag_values={},
-    values=dict(
+    flag_values = {},
+    values = dict(
         {"crosstool_top": "//external:android/crosstool"},
-        cpu="arm64-v8a",
+        cpu = "arm64-v8a",
     ),
-    visibility=["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 # Windows config settings
 config_setting(
-    name="windows",
-    flag_values={},
-    values={"cpu": "x64_windows"},
-    visibility=["//visibility:public"],
+    name = "windows",
+    flag_values = {},
+    values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
 )
 
 config_setting(
-    name="windows_tflite",
-    define_values={
+    name = "windows_tflite",
+    define_values = {
         "tflite": "true",
     },
-    flag_values={},
-    values={"cpu": "x64_windows"},
-    visibility=["//visibility:public"],
+    flag_values = {},
+    values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
 )
 
 # Tracer config setting
 
 config_setting(
-    name="trace",
-    define_values={
+    name = "trace",
+    define_values = {
         "trace": "true",
     },
-    visibility=["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 band_cc_library(
-    name="common",
-    srcs=[
+    name = "common",
+    srcs = [
         "common.cc",
         "error_reporter.cc",
         "logger.cc",
         "model_spec.cc",
     ],
-    hdrs=[
+    hdrs = [
         "common.h",
         "config.h",
         "cpu.h",
@@ -135,14 +135,14 @@ band_cc_library(
         "logger.h",
         "model_spec.h",
     ],
-    linkopts=select({
+    linkopts = select({
         "//band:android": [
             "-llog",
         ],
         "//conditions:default": [
         ],
     }),
-    deps=[
+    deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -150,102 +150,102 @@ band_cc_library(
 )
 
 band_cc_library(
-    name="interface",
-    srcs=[
+    name = "interface",
+    srcs = [
         "interface/tensor.cc",
     ],
-    hdrs=[
+    hdrs = [
         "interface/backend.h",
         "interface/model.h",
         "interface/model_executor.h",
         "interface/tensor.h",
         "interface/tensor_view.h",
     ],
-    deps=[
+    deps = [
         ":common",
     ],
 )
 
 band_cc_library(
-    name="backend_factory",
-    srcs=[
+    name = "backend_factory",
+    srcs = [
         "backend_factory.cc",
     ],
-    hdrs=[
+    hdrs = [
         "backend_factory.h",
     ],
-    deps=[
+    deps = [
         ":common",
         ":interface",
     ],
 )
 
 band_cc_library(
-    name="cpu",
-    srcs=[
+    name = "cpu",
+    srcs = [
         "cpu.cc",
     ],
-    hdrs=[
+    hdrs = [
         "cpu.h",
     ],
-    deps=[
+    deps = [
         ":common",
     ],
 )
 
 band_cc_library(
-    name="config",
-    hdrs=[
+    name = "config",
+    hdrs = [
         "config.h",
     ],
-    linkopts=select(
+    linkopts = select(
         {
             "//band:windows": [],
             "//conditions:default": [
                 "-lm",
                 "-ldl",
             ],
-        }
+        },
     ),
-    deps=[
+    deps = [
         ":common",
         ":cpu",
     ],
 )
 
 band_cc_library(
-    name="time",
-    srcs=[
+    name = "time",
+    srcs = [
         "time.cc",
     ],
-    hdrs=[
+    hdrs = [
         "time.h",
     ],
 )
 
 band_cc_library(
-    name="model",
-    srcs=[
+    name = "model",
+    srcs = [
         "model.cc",
     ],
-    hdrs=[
+    hdrs = [
         "model.h",
     ],
-    deps=[
+    deps = [
         ":backend_factory",
         ":interface",
     ],
 )
 
 band_cc_library(
-    name="model_analyzer",
-    srcs=[
+    name = "model_analyzer",
+    srcs = [
         "model_analyzer.cc",
     ],
-    hdrs=[
+    hdrs = [
         "model_analyzer.h",
     ],
-    deps=[
+    deps = [
         ":backend_factory",
         ":common",
         ":interface",
@@ -255,16 +255,16 @@ band_cc_library(
 )
 
 band_cc_library(
-    name="worker",
-    srcs=[
+    name = "worker",
+    srcs = [
         "worker.cc",
         "worker_device_queue.cc",
         "worker_global_queue.cc",
     ],
-    hdrs=[
+    hdrs = [
         "worker.h",
     ],
-    deps=[
+    deps = [
         ":common",
         ":config",
         ":cpu",
@@ -274,8 +274,8 @@ band_cc_library(
 )
 
 band_cc_library(
-    name="scheduler",
-    srcs=[
+    name = "scheduler",
+    srcs = [
         "scheduler/fixed_worker_global_queue_scheduler.cc",
         "scheduler/fixed_worker_scheduler.cc",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.cc",
@@ -283,7 +283,7 @@ band_cc_library(
         "scheduler/round_robin_scheduler.cc",
         "scheduler/shortest_expected_latency_scheduler.cc",
     ],
-    hdrs=[
+    hdrs = [
         "scheduler/fixed_worker_scheduler.h",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.h",
         "scheduler/least_slack_first_scheduler.h",
@@ -291,50 +291,55 @@ band_cc_library(
         "scheduler/scheduler.h",
         "scheduler/shortest_expected_latency_scheduler.h",
     ],
-    deps=[
+    deps = [
         ":common",
         ":time",
     ],
 )
 
 band_cc_library(
-    name="planner",
-    srcs=[
+    name = "planner",
+    srcs = [
         "planner.cc",
         "safe_bool.cc",
     ],
-    hdrs=[
+    hdrs = [
         "planner.h",
         "safe_bool.h",
     ],
-    deps=[":common", ":scheduler", ":worker", ":job_tracer"],
+    deps = [
+        ":common",
+        ":job_tracer",
+        ":scheduler",
+        ":worker",
+    ],
 )
 
 band_cc_library(
-    name="job_tracer",
-    srcs=[
+    name = "job_tracer",
+    srcs = [
         "job_tracer.cc",
     ],
-    hdrs=[
+    hdrs = [
         "job_tracer.h",
     ],
-    deps=[
+    deps = [
         ":common",
         "@chrome_tracer//chrome_tracer",
     ],
 )
 
 band_cc_library(
-    name="latency_estimator",
-    srcs=[
+    name = "latency_estimator",
+    srcs = [
         "latency_estimator.cc",
         "profiler.cc",
     ],
-    hdrs=[
+    hdrs = [
         "latency_estimator.h",
         "profiler.h",
     ],
-    deps=[
+    deps = [
         ":common",
         ":config",
         ":cpu",
@@ -344,49 +349,48 @@ band_cc_library(
 )
 
 band_cc_library(
-    name="tensor",
-    srcs=[
+    name = "tensor",
+    srcs = [
         "tensor.cc",
     ],
-    hdrs=[
+    hdrs = [
         "tensor.h",
     ],
-    deps=[
+    deps = [
         ":common",
         ":interface",
     ],
 )
 
 band_cc_library(
-    name="tensor_ring_buffer",
-    srcs=[
+    name = "tensor_ring_buffer",
+    srcs = [
         "tensor_ring_buffer.cc",
     ],
-    hdrs=[
+    hdrs = [
         "tensor_ring_buffer.h",
     ],
-    deps=[
-        ":tensor",
+    deps = [
         ":common",
         ":interface",
+        ":tensor",
     ],
 )
 
-
 band_cc_library(
-    name="framework",
-    srcs=[
+    name = "framework",
+    srcs = [
         "engine.cc",
     ],
-    hdrs=[
+    hdrs = [
         "engine.h",
     ],
-    deps=[
-        "//band/buffer:buffer",
+    deps = [
         ":backend_factory",
         ":common",
         ":config",
         ":interface",
+        ":job_tracer",
         ":json_util",
         ":latency_estimator",
         ":model",
@@ -397,34 +401,34 @@ band_cc_library(
         ":tensor_ring_buffer",
         ":time",
         ":worker",
-        ":job_tracer",
+        "//band/buffer",
     ],
 )
 
 band_cc_library(
-    name="json_util",
-    srcs=["json_util.cc"],
-    hdrs=["json_util.h"],
-    linkopts=select(
+    name = "json_util",
+    srcs = ["json_util.cc"],
+    hdrs = ["json_util.h"],
+    linkopts = select(
         {
             "//band:windows": [],
             "//conditions:default": [
                 "-lm",
                 "-ldl",
             ],
-        }
+        },
     ),
-    deps=[
+    deps = [
         ":common",
         "@jsoncpp",
     ],
 )
 
 band_cc_library(
-    name="config_builder",
-    srcs=["config_builder.cc"],
-    hdrs=["config_builder.h"],
-    deps=[
+    name = "config_builder",
+    srcs = ["config_builder.cc"],
+    hdrs = ["config_builder.h"],
+    deps = [
         ":common",
         ":config",
         ":cpu",
