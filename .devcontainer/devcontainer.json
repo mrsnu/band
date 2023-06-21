@@ -16,6 +16,11 @@
 	"extensions": [
 		"ms-vscode.cpptools",
 		"bazelbuild.vscode-bazel"
+	],
+
+	"runArgs": [
+		"--gpus",
+		"all"
 	]
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

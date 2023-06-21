@@ -14,6 +14,7 @@ def band_copts():
             "-Wno-unknown-pragmas",
             "-Wno-unused-variable",
             "-Wno-sign-compare",
+            "-Wno-deprecated-declarations",
         ],
     }) + select({
         clean_dep("//band:android"): [

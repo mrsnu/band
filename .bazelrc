@@ -144,4 +144,5 @@ test:windows_all --config=tflite
 test:windows_all --config=grpc
 
 try-import %workspace%/.band_android_config.bazelrc
+try-import %workspace%/.band_tensorrt_config.bazelrc
 try-import %workspace%/.tflite_config.bazelrc

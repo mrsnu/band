@@ -1,10 +1,10 @@
 """Initialize Band workspace"""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("//third_party/android:android.bzl", android = "repo")
+load("//third_party/tensorrt:tensorrt_configure.bzl", "tensorrt_configure")
 
-def workspace():
-    """Workspace initialization for dependencies."""
+def repo():
+    """Repo initialization for dependencies."""
 
     ######## Remote repositories ########
     http_archive(
@@ -35,7 +35,6 @@ def workspace():
         strip_prefix = "chrome-tracer-0.0.2",
     )
 
-    ######## Android repositories ########
-    android(name = "android_repo")
+    tensorrt_configure(name = "com_nvidia_tensorrt")
 
-workspace_repo = workspace
+workspace_repo = repo

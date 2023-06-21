@@ -60,6 +60,14 @@ def validate_android_api_level(sdk_path, api_level):
     return True
 
 
+def validate_tensorrt(tensorrt_include_path, tensorrt_lib_path):
+    if not os.path.exists(tensorrt_include_path):
+        return os.path.exists(os.path.join(tensorrt_include_path, "NvInfer.h"))
+    if not os.path.exists(tensorrt_lib_path):
+        return os.path.exists(os.path.join(tensorrt_lib_path, "libnvinfer.so"))
+    return True
+
+
 class BazelConfig(object):
     def __init__(self):
         self.build_configs = {}
@@ -73,7 +81,7 @@ class BazelConfig(object):
             result += f"build --action_env {k}=\"{v}\"" + "\n"
         return result
 
-    def save(self, filename=".band_android_config.bazelrc"):
+    def save(self, filename):
         with open(filename, "w") as f:
             f.write(self.get_bazel_build_config())
 
@@ -83,8 +91,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--workspace', type=str,
                         default=os.path.abspath(os.path.dirname(__file__)), required=False)
-    parser.add_argument('--output', type=str,
-                        default=".band_android_config.bazelrc", required=False)
     args = parser.parse_args()
 
     ROOT_DIR = args.workspace
@@ -112,16 +118,27 @@ def main():
     # ANDROID_NDK_API_LEVEL
     android_ndk_api_level = get_var("ANDROID_NDK_API_LEVEL", "21")
     
-    config_file_path = os.path.join(ROOT_DIR, args.output)
-    bazel_config = BazelConfig()
-    bazel_config.add_config("ANDROID_BUILD_TOOLS_VERSION", android_build_tools_version)
-    bazel_config.add_config("ANDROID_SDK_API_LEVEL", android_api_level)
-    bazel_config.add_config("ANDROID_SDK_HOME", android_sdk_path)
-    bazel_config.add_config("ANDROID_NDK_API_LEVEL", android_ndk_api_level)
-    bazel_config.add_config("ANDROID_NDK_HOME", android_ndk_path)
-    bazel_config.save(config_file_path)
+    config_file_path = os.path.join(ROOT_DIR, ".band_android_config.bazelrc")
+    android_bazel_config = BazelConfig()
+    android_bazel_config.add_config("ANDROID_BUILD_TOOLS_VERSION", android_build_tools_version)
+    android_bazel_config.add_config("ANDROID_SDK_API_LEVEL", android_api_level)
+    android_bazel_config.add_config("ANDROID_SDK_HOME", android_sdk_path)
+    android_bazel_config.add_config("ANDROID_NDK_API_LEVEL", android_ndk_api_level)
+    android_bazel_config.add_config("ANDROID_NDK_HOME", android_ndk_path)
+    android_bazel_config.save(config_file_path)
     print(f"Successfully saved Android configuration to {config_file_path}")
 
+    # TensorRT include & lib path
+    tensorrt_include_path = get_var(
+        "TENSORRT_INCLUDE_PATH", "/usr/include/x86_64-linux-gnu")
+    tensorrt_lib_path = get_var(
+        "TENSORRT_LIB_PATH", "/usr/lib/x86_64-linux-gnu")
+    config_file_path = os.path.join(ROOT_DIR, ".band_tensorrt_config.bazelrc")
+    tensorrt_bazel_config = BazelConfig()
+    tensorrt_bazel_config.add_config("TENSORRT_INCLUDE_PATH", tensorrt_include_path)
+    tensorrt_bazel_config.add_config("TENSORRT_LIB_PATH", tensorrt_lib_path)
+    tensorrt_bazel_config.save(config_file_path)
+    print(f"Successfully saved TensorRT configuration to {config_file_path}")
 
 if __name__ == "__main__":
     main()
