@@ -89,7 +89,11 @@ if __name__ == '__main__':
 
     # copy from band/test/data/benchmark_config.json 
     if args.config == DEFAULT_CONFIG:
-        shutil.copy('script/config_samples/benchmark_heft.json', f'{DEFAULT_CONFIG}')
+        if args.android:
+            shutil.copy('script/config_samples/benchmark_heft.json', f'{DEFAULT_CONFIG}')
+        else:
+            args.config = 'band/test/data/benchmark_config.json'
+
 
     if args.rebuild:
         clean_bazel(args.docker)
