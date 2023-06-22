@@ -79,6 +79,37 @@ typedef enum {
   kBandNumDataType = 12,
 } BandDataType;
 
+typedef enum {
+  // image format
+  kBandGrayScale = 0,
+  kBandRGB = 1,
+  kBandRGBA = 2,
+  kBandYV12 = 3,
+  kBandYV21 = 4,
+  kBandNV21 = 5,
+  kBandNV12 = 6,
+  // raw format, from tensor
+  // internal format follows DataType
+  kBandRaw = 7,
+  kBandNumBufferFormat = 8,
+} BandBufferFormat;
+
+// Buffer content orientation follows EXIF specification. The name of
+// each enum value defines the position of the 0th row and the 0th column of
+// the image content. See http://jpegclub.org/exif_orientation.html for
+// details.
+typedef enum {
+  kBandTopLeft = 1,
+  kBandTopRight = 2,
+  kBandBottomRight = 3,
+  kBandBottomLeft = 4,
+  kBandLeftTop = 5,
+  kBandRightTop = 6,
+  kBandRightBottom = 7,
+  kBandLeftBottom = 8,
+  kBandNumBufferOrientation = 9,
+} BandBufferOrientation;
+
 // Supported Quantization Types.
 typedef enum BandQuantizationType {
   // No quantization.
@@ -118,6 +149,16 @@ typedef enum BandConfigField {
   BAND_SUBGRAPH_PREPARATION_TYPE = 16,
   BAND_CPU_MASK = 17,
 } BandConfigField;
+
+typedef enum BandImageProcessorBuilderField {
+  BAND_CROP = 0,
+  BAND_RESIZE = 1,
+  BAND_ROTATE = 2,
+  BAND_FLIP = 3,
+  BAND_COLOR_SPACE_CONVERT = 4,
+  BAND_NORMALIZE = 5,
+  BAND_DATA_TYPE_CONVERT = 6,
+} BandImageProcessorBuilderField;
 
 typedef struct BandRequestOption {
   int target_worker;

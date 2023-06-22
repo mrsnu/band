@@ -198,13 +198,15 @@ band_cc_library(
     hdrs = [
         "config.h",
     ],
-    linkopts = select({
-        "//band:windows": [],
-        "//conditions:default": [
-            "-lm",
-            "-ldl",
-        ],
-    }),
+    linkopts = select(
+        {
+            "//band:windows": [],
+            "//conditions:default": [
+                "-lm",
+                "-ldl",
+            ],
+        },
+    ),
     deps = [
         ":common",
         ":cpu",
@@ -328,20 +330,6 @@ band_cc_library(
 )
 
 band_cc_library(
-    name = "tensor",
-    srcs = [
-        "tensor.cc",
-    ],
-    hdrs = [
-        "tensor.h",
-    ],
-    deps = [
-        ":common",
-        ":interface",
-    ],
-)
-
-band_cc_library(
     name = "latency_estimator",
     srcs = [
         "latency_estimator.cc",
@@ -361,45 +349,75 @@ band_cc_library(
 )
 
 band_cc_library(
-    name = "framework",
+    name = "tensor",
     srcs = [
-        "engine.cc",
+        "tensor.cc",
+    ],
+    hdrs = [
+        "tensor.h",
+    ],
+    deps = [
+        ":common",
+        ":interface",
+    ],
+)
+
+band_cc_library(
+    name = "tensor_ring_buffer",
+    srcs = [
         "tensor_ring_buffer.cc",
     ],
     hdrs = [
-        "engine.h",
         "tensor_ring_buffer.h",
     ],
-    deps =
-        [
-            ":backend_factory",
-            ":common",
-            ":config",
-            ":interface",
-            ":job_tracer",
-            ":json_util",
-            ":latency_estimator",
-            ":model",
-            ":model_analyzer",
-            ":planner",
-            ":scheduler",
-            ":tensor",
-            ":time",
-            ":worker",
-        ],
+    deps = [
+        ":common",
+        ":interface",
+        ":tensor",
+    ],
+)
+
+band_cc_library(
+    name = "framework",
+    srcs = [
+        "engine.cc",
+    ],
+    hdrs = [
+        "engine.h",
+    ],
+    deps = [
+        ":backend_factory",
+        ":common",
+        ":config",
+        ":interface",
+        ":job_tracer",
+        ":json_util",
+        ":latency_estimator",
+        ":model",
+        ":model_analyzer",
+        ":planner",
+        ":scheduler",
+        ":tensor",
+        ":tensor_ring_buffer",
+        ":time",
+        ":worker",
+        "//band/buffer",
+    ],
 )
 
 band_cc_library(
     name = "json_util",
     srcs = ["json_util.cc"],
     hdrs = ["json_util.h"],
-    linkopts = select({
-        "//band:windows": [],
-        "//conditions:default": [
-            "-lm",
-            "-ldl",
-        ],
-    }),
+    linkopts = select(
+        {
+            "//band:windows": [],
+            "//conditions:default": [
+                "-lm",
+                "-ldl",
+            ],
+        },
+    ),
     deps = [
         ":common",
         "@jsoncpp",

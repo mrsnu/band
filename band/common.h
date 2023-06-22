@@ -86,6 +86,37 @@ enum class DataType : size_t {
   kFloat64 = 11,
 };
 
+size_t GetDataTypeBytes(DataType type);
+
+enum class BufferFormat : size_t {
+  // image format
+  kGrayScale = 0,
+  kRGB = 1,
+  kRGBA = 2,
+  kYV12 = 3,
+  kYV21 = 4,
+  kNV21 = 5,
+  kNV12 = 6,
+  // raw format, from tensor
+  // internal format follows DataType
+  kRaw = 7
+};
+
+// Buffer content orientation follows EXIF specification. The name of
+// each enum value defines the position of the 0th row and the 0th column of
+// the image content. See http://jpegclub.org/exif_orientation.html for
+// details.
+enum class BufferOrientation : size_t {
+  kTopLeft = 1,
+  kTopRight = 2,
+  kBottomRight = 3,
+  kBottomLeft = 4,
+  kLeftTop = 5,
+  kRightTop = 6,
+  kRightBottom = 7,
+  kLeftBottom = 8,
+};
+
 enum class DeviceFlag : size_t {
   kCPU = 0,
   kGPU = 1,
@@ -124,6 +155,10 @@ size_t EnumLength<SubgraphPreparationType>();
 template <>
 size_t EnumLength<DataType>();
 template <>
+size_t EnumLength<BufferFormat>();
+template <>
+size_t EnumLength<BufferOrientation>();
+template <>
 size_t EnumLength<DeviceFlag>();
 template <>
 size_t EnumLength<QuantizationType>();
@@ -139,9 +174,15 @@ const char* ToString(SubgraphPreparationType subgraph_preparation_type);
 template <>
 const char* ToString(DataType data_type);
 template <>
+const char* ToString(BufferFormat buffer_format);
+template <>
+const char* ToString(BufferOrientation buffer_orientation);
+template <>
 const char* ToString(DeviceFlag device_flag);
 template <>
 const char* ToString(QuantizationType);
+template <>
+const char* ToString(JobStatus job_status);
 
 struct AffineQuantizationParams {
   std::vector<float> scale;
@@ -265,5 +306,14 @@ struct JobIdBitMaskHash {
 };
 
 }  // namespace band
+
+// Helper macro to return error status
+#define RETURN_IF_ERROR(expr) \
+  {                           \
+    auto status = (expr);     \
+    if (!status.ok()) {       \
+      return status;          \
+    }                         \
+  }
 
 #endif  // BAND_COMMON_H_

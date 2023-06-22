@@ -54,7 +54,8 @@ BAND_CAPI_EXPORT extern BandStatus BandModelAddFromFile(
     BandModel* model, BandBackendType backend_type, const char* model_path);
 
 /* tensor */
-// Band intetionally `only` expose getters to ensure
+// Band intetionally `only` expose getters to ensure the tensor shape is
+// immutable from C API.
 BAND_CAPI_EXPORT extern void BandTensorDelete(BandTensor* tensor);
 BAND_CAPI_EXPORT extern BandDataType BandTensorGetType(BandTensor* tensor);
 BAND_CAPI_EXPORT extern void* BandTensorGetData(BandTensor* tensor);
@@ -71,7 +72,6 @@ BAND_CAPI_EXPORT extern void* BandTensorGetQuantizationParams(
 BAND_CAPI_EXPORT extern BandRequestOption BandRequestOptionGetDefault();
 
 /* engine */
-// TODO: Error reporter
 BAND_CAPI_EXPORT extern BandEngine* BandEngineCreate(BandConfig* config);
 BAND_CAPI_EXPORT extern void BandEngineDelete(BandEngine* engine);
 BAND_CAPI_EXPORT extern BandStatus BandEngineRegisterModel(BandEngine* engine,

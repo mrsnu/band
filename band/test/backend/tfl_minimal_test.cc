@@ -10,14 +10,20 @@
 #include "band/backend/tfl/model_executor.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend_factory.h"
+#include "band/buffer/buffer.h"
+#include "band/buffer/common_operator.h"
+#include "band/buffer/image_operator.h"
+#include "band/buffer/image_processor.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/model.h"
 #include "band/tensor.h"
+#include "band/test/image_util.h"
 
 namespace band {
+namespace test {
 using namespace interface;
 TEST(TFLiteBackend, BackendInvoke) {
   tfl::TfLiteModel bin_model(0);
@@ -367,6 +373,175 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
     EXPECT_EQ(execution_count, worker_id + 1);
   }
 }
+
+TEST(TFLiteBackend, ClassificationQuantTest) {
+  RuntimeConfigBuilder b;
+  RuntimeConfig config =
+      b.AddPlannerLogPath("band/test/data/log.json")
+          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddMinimumSubgraphSize(7)
+          .AddSubgraphPreparationType(
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+#ifdef __ANDROID__
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1, 1, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
+#else
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
+          .AddWorkerNumThreads({3, 4})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
+#endif  // __ANDROID__
+          .AddSmoothingFactor(0.1)
+          .AddProfileDataPath("band/test/data/profile.json")
+          .AddOnline(true)
+          .AddNumWarmups(1)
+          .AddNumRuns(1)
+          .AddAllowWorkSteal(true)
+          .AddAvailabilityCheckIntervalMs(30000)
+          .AddScheduleWindowSize(10)
+          .Build();
+
+  auto engine = Engine::Create(config);
+  std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
+
+  Model model;
+  EXPECT_TRUE(model
+                  .FromPath(BackendType::kTfLite,
+                            "band/test/data/mobilenet_v2_1.0_224_quant.tflite")
+                  .ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
+
+  Tensor* input_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
+  std::shared_ptr<Buffer> tensor_buffer(Buffer::CreateFromTensor(input_tensor));
+
+  ImageProcessorBuilder preprocessor_builder;
+  // by default, the image is resized to input size
+  absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
+      preprocessor_builder.Build();
+  EXPECT_TRUE(preprocessor.ok());
+  EXPECT_TRUE(
+      preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
+  // confirm that the image is resized to 224x224 and converted to RGB
+  Tensor* output_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
+  EXPECT_TRUE(engine
+                  ->RequestSync(model.GetId(), {0, false, -1, -1},
+                                {input_tensor}, {output_tensor})
+                  .ok());
+
+  // TODO: postprocessing library
+  std::vector<unsigned char> output_data;
+  output_data.resize(output_tensor->GetNumElements());
+  memcpy(output_data.data(), output_tensor->GetData(),
+         output_tensor->GetNumElements() * sizeof(unsigned char));
+
+  size_t max_index = 0;
+  unsigned char max_value = 0;
+  for (size_t i = 0; i < output_data.size(); ++i) {
+    if (output_data[i] > max_value) {
+      max_value = output_data[i];
+      max_index = i;
+    }
+  }
+  // tiger cat
+  EXPECT_EQ(max_index, 282);
+}
+
+TEST(TFLiteBackend, ClassificationTest) {
+  RuntimeConfigBuilder b;
+  RuntimeConfig config =
+      b.AddPlannerLogPath("band/test/data/log.json")
+          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddMinimumSubgraphSize(7)
+          .AddSubgraphPreparationType(
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+#ifdef __ANDROID__
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1, 1, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
+#else
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
+          .AddWorkerNumThreads({3, 4})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
+#endif  // __ANDROID__
+          .AddSmoothingFactor(0.1)
+          .AddProfileDataPath("band/test/data/profile.json")
+          .AddOnline(true)
+          .AddNumWarmups(1)
+          .AddNumRuns(1)
+          .AddAllowWorkSteal(true)
+          .AddAvailabilityCheckIntervalMs(30000)
+          .AddScheduleWindowSize(10)
+          .Build();
+
+  auto engine = Engine::Create(config);
+  std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
+
+  Model model;
+  EXPECT_TRUE(
+      model
+          .FromPath(
+              BackendType::kTfLite,
+              "band/test/data/lite-model_mobilenet_v2_100_224_fp32_1.tflite")
+          .ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
+
+  Tensor* input_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
+  std::shared_ptr<Buffer> tensor_buffer(Buffer::CreateFromTensor(input_tensor));
+  // image -> rgb -> normalize
+  ImageProcessorBuilder preprocessor_builder;
+  preprocessor_builder.AddOperation(std::make_unique<buffer::Resize>(224, 224))
+      .AddOperation(std::make_unique<buffer::Normalize>(127.5f, 127.5f, false));
+  absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
+      preprocessor_builder.Build();
+  EXPECT_TRUE(preprocessor.ok());
+  EXPECT_TRUE(
+      preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
+
+  for (size_t i = 0; i < input_tensor->GetNumElements(); ++i) {
+    EXPECT_GT(reinterpret_cast<float*>(input_tensor->GetData())[i], -1.0f);
+    EXPECT_LT(reinterpret_cast<float*>(input_tensor->GetData())[i], 1.0f);
+  }
+
+  // confirm that the image is resized to 224x224 and converted to RGB
+  Tensor* output_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
+  EXPECT_TRUE(engine
+                  ->RequestSync(model.GetId(), {0, false, -1, -1},
+                                {input_tensor}, {output_tensor})
+                  .ok());
+
+  // TODO: postprocessing library
+  std::vector<float> output_data;
+  output_data.resize(output_tensor->GetNumElements());
+  memcpy(output_data.data(), output_tensor->GetData(),
+         output_tensor->GetNumElements() * sizeof(float));
+
+  size_t max_index = 0;
+  float max_value = 0;
+  for (size_t i = 0; i < output_data.size(); ++i) {
+    if (output_data[i] > max_value) {
+      max_value = output_data[i];
+      max_index = i;
+    }
+  }
+  // tiger cat
+  EXPECT_EQ(max_index, 282);
+}
+
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

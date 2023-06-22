@@ -18,6 +18,7 @@
 #include "band/tensor.h"
 
 namespace band {
+namespace test {
 using namespace interface;
 
 struct ModelPartitionTestsFixture
@@ -81,6 +82,7 @@ INSTANTIATE_TEST_SUITE_P(
             SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph)));
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

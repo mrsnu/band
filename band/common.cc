@@ -1,6 +1,7 @@
 #include "band/common.h"
 
 #include "band/logger.h"
+#include "common.h"
 
 namespace band {
 
@@ -29,6 +30,16 @@ size_t EnumLength<SubgraphPreparationType>() {
 template <>
 size_t EnumLength<DataType>() {
   return static_cast<size_t>(DataType::kFloat64) + 1;
+}
+
+template <>
+size_t EnumLength<BufferFormat>() {
+  return static_cast<size_t>(BufferFormat::kRaw) + 1;
+}
+
+template <>
+size_t EnumLength<BufferOrientation>() {
+  return static_cast<size_t>(BufferOrientation::kLeftBottom) + 1;
 }
 
 template <>
@@ -191,6 +202,7 @@ const char* ToString(DeviceFlag device_flag) {
   }
 }
 
+template <>
 const char* ToString(JobStatus job_status) {
   switch (job_status) {
     case JobStatus::kEnqueueFailed: {
@@ -217,6 +229,106 @@ const char* ToString(JobStatus job_status) {
   }
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", job_status);
   return "Unknown job status";
+}
+
+template <>
+const char* ToString(BufferFormat format_type) {
+  switch (format_type) {
+    case BufferFormat::kGrayScale: {
+      return "GrayScale";
+    } break;
+    case BufferFormat::kRGB: {
+      return "RGB";
+    } break;
+    case BufferFormat::kRGBA: {
+      return "RGBA";
+    } break;
+    case BufferFormat::kYV12: {
+      return "YV12";
+    } break;
+    case BufferFormat::kYV21: {
+      return "YV21";
+    } break;
+    case BufferFormat::kNV21: {
+      return "NV21";
+    } break;
+    case BufferFormat::kNV12: {
+      return "NV12";
+    } break;
+    case BufferFormat::kRaw: {
+      return "Raw";
+    } break;
+    default: {
+      return "Unknown format type";
+    }
+  }
+}
+
+template <>
+const char* ToString(BufferOrientation format_type) {
+  switch (format_type) {
+    case BufferOrientation::kTopLeft: {
+      return "TopLeft";
+    } break;
+    case BufferOrientation::kTopRight: {
+      return "TopRight";
+    } break;
+    case BufferOrientation::kBottomRight: {
+      return "BottomRight";
+    } break;
+    case BufferOrientation::kBottomLeft: {
+      return "BottomLeft";
+    } break;
+    case BufferOrientation::kLeftTop: {
+      return "LeftTop";
+    } break;
+    case BufferOrientation::kRightTop: {
+      return "RightTop";
+    } break;
+    case BufferOrientation::kRightBottom: {
+      return "RightBottom";
+    } break;
+    case BufferOrientation::kLeftBottom: {
+      return "LeftBottom";
+    } break;
+    default: {
+      return "Unknown format type";
+    } break;
+  }
+}
+
+size_t GetDataTypeBytes(DataType type) {
+  switch (type) {
+    case DataType::kNoType:
+      return 0;
+    case DataType::kFloat32:
+      return sizeof(float);
+    case DataType::kInt32:
+      return sizeof(int32_t);
+    case DataType::kUInt8:
+      return sizeof(uint8_t);
+    case DataType::kInt8:
+      return sizeof(int8_t);
+    case DataType::kInt16:
+      return sizeof(int16_t);
+    case DataType::kInt64:
+      return sizeof(int64_t);
+    case DataType::kString:
+      return sizeof(char);
+    case DataType::kBool:
+      return sizeof(bool);
+    case DataType::kComplex64:
+      return sizeof(double);
+    case DataType::kFloat16:
+      return sizeof(float) / 2;
+    case DataType::kFloat64:
+      return sizeof(double);
+    default:
+      break;
+  }
+
+  BAND_LOG_PROD(BAND_LOG_WARNING, "Unsupported data type : %s", ToString(type));
+  return 0;
 }
 
 std::ostream& operator<<(std::ostream& os, const JobStatus& status) {

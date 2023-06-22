@@ -10,10 +10,9 @@ namespace band {
 /*
   Tensor interface that tensor view / band tensor shares
 */
-
 class Tensor : public interface::ITensor {
  public:
-  explicit Tensor(interface::ITensor* tensor_view);
+  explicit Tensor(interface::ITensor* tensor_view, bool copy_data = false);
   ~Tensor();
 
   DataType GetType() const override;
@@ -23,7 +22,6 @@ class Tensor : public interface::ITensor {
   const int* GetDims() const override;
   size_t GetNumDims() const override;
   void SetDims(const std::vector<int>& dims) override;
-  size_t GetBytes() const override;
   const char* GetName() const override;
   Quantization GetQuantization() const override;
   absl::Status SetQuantization(Quantization quantization) override;
@@ -31,7 +29,6 @@ class Tensor : public interface::ITensor {
  private:
   DataType type_;
   Quantization quantization_;
-  size_t num_bytes_;
   std::vector<int> dims_;
   char* data_;
   std::string name_;
