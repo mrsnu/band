@@ -171,7 +171,7 @@ void Planner::WaitAll() {
 }
 
 void Planner::EnqueueFinishedJob(Job& job) {
-  std::lock_guard<std::mutex> finished_lock(job_finished_mtx_);
+  std::unique_lock<std::mutex> finished_lock(job_finished_mtx_);
   const bool is_finished =
       engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
   // record finished / failed job
@@ -180,6 +180,9 @@ void Planner::EnqueueFinishedJob(Job& job) {
     num_finished_jobs_++;
     end_invoke_.notify_all();
   }
+  // make sure to unlock before calling callback to avoid
+  // potential recursive locking from client code
+  finished_lock.unlock();
 
   // report end invoke using callback
   if (on_end_request_ && job.require_callback && is_finished) {
