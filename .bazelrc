@@ -19,7 +19,6 @@ test:windows --host_cxxopt=/std:c++14
 # Supress warnings from external libraries.
 build:linux --per_file_copt=external/.*@-w
 build:android --per_file_copt=external/.*@-w
-build:windows --per_file_copt=external/.*@/W0
 
 # Band build config for backend setting.
 build:tflite --define tflite=true
