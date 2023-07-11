@@ -352,7 +352,7 @@ int GetTargetMaxFrequencyKhz(int cpu) {
                          "/cpufreq/scaling_max_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
                          std::to_string(cpu) + "/scaling_max_freq"});
-#elif
+#else
   return -1;
 #endif
 }
@@ -379,7 +379,7 @@ int GetTargetMinFrequencyKhz(int cpu) {
                          "/cpufreq/scaling_min_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
                          std::to_string(cpu) + "/scaling_min_freq"});
-#elif
+#else
   return -1;
 #endif
 }
@@ -432,7 +432,7 @@ int GetFrequencyKhz(int cpu) {
                          "/cpufreq/cpuinfo_cur_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
                          std::to_string(cpu) + "/cpuinfo_cur_freq"});
-#elif
+#else
   return -1;
 #endif
 }
@@ -450,7 +450,7 @@ int GetFrequencyKhz(const CpuSet& cpu_set) {
   } else {
     return -1;
   }
-#elif
+#else
   return -1;
 #endif
 }
@@ -568,7 +568,7 @@ int GetTotalTransitionCount(const CpuSet& cpu_set) {
   } else {
     return -1;
   }
-#elif
+#else
   return -1;
 #endif
 }

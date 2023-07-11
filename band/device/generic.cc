@@ -1,7 +1,9 @@
 #include "band/device/generic.h"
-#include "band/device/util.h"
 
 #include <cstring>
+
+#include "band/device/util.h"
+
 #if defined __ANDROID__ || defined __linux__
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -16,13 +18,15 @@ std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
 #if defined __ANDROID__ || defined __linux__
   // TODO: Add more device-specific path
   if (device_flag == DeviceFlag::kNPU) {
-	device_paths = {
-		"/sys/devices/platform/17000060.devfreq_npu/devfreq/17000060.devfreq_npu/"  // Galaxy S21
-	};
+    device_paths = {
+        "/sys/devices/platform/17000060.devfreq_npu/devfreq/"
+        "17000060.devfreq_npu/"  // Galaxy S21
+    };
   } else if (device_flag == DeviceFlag::kDSP) {
-	device_paths = {
-	  "/sys/devices/platform/soc/soc:qcom,cdsp-cdsp-l3-lat/devfreq/soc:qcom,cdsp-cdsp-l3-lat/" // Pixel 4 Hexagon DSP
-	};
+    device_paths = {
+        "/sys/devices/platform/soc/soc:qcom,cdsp-cdsp-l3-lat/devfreq/"
+        "soc:qcom,cdsp-cdsp-l3-lat/"  // Pixel 4 Hexagon DSP
+    };
   }
 #endif
   for (size_t i = 0; i < device_paths.size(); i++) {
@@ -31,11 +35,10 @@ std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
   return device_paths;
 }
 
-
 int GetMinFrequencyKhz(DeviceFlag device_flag) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths(device_flag, "min_freq")) / 1000;
-#elif
+#else
   return -1;
 #endif
 }
@@ -43,7 +46,7 @@ int GetMinFrequencyKhz(DeviceFlag device_flag) {
 int GetMaxFrequencyKhz(DeviceFlag device_flag) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths(device_flag, "max_freq")) / 1000;
-#elif
+#else
   return -1;
 #endif
 }
@@ -51,7 +54,7 @@ int GetMaxFrequencyKhz(DeviceFlag device_flag) {
 int GetFrequencyKhz(DeviceFlag device_flag) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths(device_flag, "cur_freq")) / 1000;
-#elif
+#else
   return -1;
 #endif
 }
@@ -59,7 +62,7 @@ int GetFrequencyKhz(DeviceFlag device_flag) {
 int GetTargetFrequencyKhz(DeviceFlag device_flag) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths(device_flag, "target_freq")) / 1000;
-#elif
+#else
   return -1;
 #endif
 }
@@ -67,13 +70,13 @@ int GetTargetFrequencyKhz(DeviceFlag device_flag) {
 int GetPollingIntervalMs(DeviceFlag device_flag) {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths(device_flag, "polling_interval"));
-#elif
+#else
   return -1;
 #endif
 }
 
 std::vector<int> GetAvailableFrequenciesKhz(DeviceFlag device_flag) {
-  std::vector<int> frequencies; // hz
+  std::vector<int> frequencies;  // hz
 #if defined __ANDROID__ || defined __linux__
   frequencies = TryReadInts(GetPaths(device_flag, "available_frequencies"));
   for (size_t i = 0; i < frequencies.size(); i++) {
@@ -88,7 +91,8 @@ std::vector<std::pair<int, int>> GetClockStats(DeviceFlag device_flag) {
 
 #if defined __ANDROID__ || defined __linux__
   std::vector<int> frequencies = GetAvailableFrequenciesKhz(device_flag);
-  std::vector<int> clock_stats = TryReadInts(GetPaths(device_flag, "time_in_state"));
+  std::vector<int> clock_stats =
+      TryReadInts(GetPaths(device_flag, "time_in_state"));
 
   frequency_stats.resize(frequencies.size());
   for (size_t i = 0; i < frequency_stats.size(); i++) {
@@ -98,5 +102,5 @@ std::vector<std::pair<int, int>> GetClockStats(DeviceFlag device_flag) {
   return frequency_stats;
 }
 
-} // namespace generic
+}  // namespace generic
 }  // namespace band

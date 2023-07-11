@@ -1,7 +1,9 @@
 #include "band/device/gpu.h"
-#include "band/device/util.h"
 
 #include <cstring>
+
+#include "band/device/util.h"
+
 #if defined __ANDROID__ || defined __linux__
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -16,8 +18,8 @@ std::vector<std::string> GetPaths(std::string suffix) {
 #if defined __ANDROID__ || defined __linux__
   // TODO: Add more device-specific GPU path
   device_paths = {
-      "/sys/class/kgsl/kgsl-3d0/",  // Pixel4
-      "/sys/class/misc/mali0/device/" // Galaxy S21 (Mali)
+      "/sys/class/kgsl/kgsl-3d0/",     // Pixel4
+      "/sys/class/misc/mali0/device/"  // Galaxy S21 (Mali)
   };
 #endif
   for (size_t i = 0; i < device_paths.size(); i++) {
@@ -29,7 +31,7 @@ std::vector<std::string> GetPaths(std::string suffix) {
 int GetMinFrequencyKhz() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("min_clock_mhz")) * 1000;
-#elif
+#else
   return -1;
 #endif
 }
@@ -37,7 +39,7 @@ int GetMinFrequencyKhz() {
 int GetMaxFrequencyKhz() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("max_clock_mhz")) * 1000;
-#elif
+#else
   return -1;
 #endif
 }
@@ -45,7 +47,7 @@ int GetMaxFrequencyKhz() {
 int GetFrequencyKhz() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("clock_mhz")) * 1000;
-#elif
+#else
   return -1;
 #endif
 }
@@ -53,7 +55,7 @@ int GetFrequencyKhz() {
 int GetPollingIntervalMs() {
 #if defined __ANDROID__ || defined __linux__
   return TryReadInt(GetPaths("devfreq/polling_interval"));
-#elif
+#else
   return -1;
 #endif
 }
