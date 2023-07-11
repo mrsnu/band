@@ -282,8 +282,6 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #if BAND_SUPPORT_DEVICE
   int gsaret = GetSchedAffinity(thread_affinity_mask);
-  std::cout << "GetCPUThreadAffinity" << thread_affinity_mask.ToString()
-            << std::endl;
   if (gsaret != 0) {
     return absl::InternalError("Failed to get the CPU affinity.");
   }
@@ -529,6 +527,7 @@ absl::StatusOr<std::vector<size_t> > GetAvailableFrequenciesKhz(
                "/scaling_available_frequencies"});
     }
   }
+
   return absl::NotFoundError("No available frequencies found");
 #else
   return absl::UnavailableError("Device not supported");

@@ -86,6 +86,7 @@ TEST_P(CPUMaskFixture, FrequencyCPUSetStatusTest) {
 
   EXPECT_EQ(SetCPUThreadAffinity(target_set), expected_status);
   EXPECT_EQ(GetCPUThreadAffinity(target_set), expected_status);
+
   if (device::IsRooted()) {
     EXPECT_EQ(cpu::GetTargetFrequencyKhz(target_set).status(), expected_status);
     EXPECT_EQ(cpu::GetTargetMaxFrequencyKhz(target_set).status(),
