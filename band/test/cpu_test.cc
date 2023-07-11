@@ -66,7 +66,7 @@ TEST_P(AffinityMasksFixture, FrequencyCPUSetTest) {
   EXPECT_NE(cpu::GetTargetMaxFrequencyKhz(target_set), -1);
   EXPECT_NE(cpu::GetTargetMinFrequencyKhz(target_set), -1);
   std::vector<int> available_frequencies =
-      GetAvailableFrequenciesKhz(target_set);
+      cpu::GetAvailableFrequenciesKhz(target_set);
   EXPECT_NE(available_frequencies.size(), 0);
   // GetFrequencyKhz requires sudo
   EXPECT_NE(cpu::GetUpTransitionLatencyMs(target_set), -1);
