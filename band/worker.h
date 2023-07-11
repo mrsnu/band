@@ -8,7 +8,7 @@
 
 #include "band/config.h"
 #include "band/engine_interface.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 
 namespace band {
 

@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "band/config_builder.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 #include "band/engine_interface.h"
 #include "band/model_spec.h"
 #include "band/test/test_util.h"

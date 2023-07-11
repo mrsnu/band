@@ -71,6 +71,42 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
 
+// Wrap frequency-related helper functions for consistency with *pu
+namespace cpu {
+
+// Get scaling frequency (current target frequency of the governor)
+int GetTargetFrequencyKhz(int cpu);
+int GetTargetFrequencyKhz(const CpuSet &cpu_set);
+
+// Get scaling max frequency (current target frequency of the governor)
+int GetTargetMaxFrequencyKhz(int cpu);
+int GetTargetMaxFrequencyKhz(const CpuSet &cpu_set);
+
+// Get scaling min frequency (current target frequency of the governor)
+int GetTargetMinFrequencyKhz(int cpu);
+int GetTargetMinFrequencyKhz(const CpuSet &cpu_set);
+
+// Get current frequency (requires sudo)
+int GetFrequencyKhz(int cpu);
+int GetFrequencyKhz(const CpuSet &cpu_set);
+
+std::vector<int> GetAvailableFrequenciesKhz(const CpuSet &cpu_set);
+
+// Time interval limit of frequency rise
+int GetUpTransitionLatencyMs(int cpu);
+int GetUpTransitionLatencyMs(const CpuSet& cpu_set);
+
+// Time interval limit of frequency down
+int GetDownTransitionLatencyMs(int cpu);
+int GetDownTransitionLatencyMs(const CpuSet& cpu_set);
+
+// Total transition count
+// Note that cores in same cluster (little/big/primary)
+// shares this value
+int GetTotalTransitionCount(int cpu);
+int GetTotalTransitionCount(const CpuSet& cpu_set);
+} // namespace cpu
+
 }  // namespace band
 
 #endif  // BAND_CPU_H_

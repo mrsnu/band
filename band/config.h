@@ -5,8 +5,9 @@
 #include <vector>
 
 #include "band/common.h"
-#include "band/cpu.h"
 #include "band/error_reporter.h"
+
+#include <limits>
 
 namespace band {
 
@@ -23,7 +24,7 @@ struct ProfileConfig {
 };
 
 struct PlannerConfig {
-  int schedule_window_size = INT_MAX;
+  int schedule_window_size = std::numeric_limits<int>::max();
   std::vector<SchedulerType> schedulers;
   CPUMaskFlag cpu_mask = CPUMaskFlag::kAll;
   std::string log_path = "";

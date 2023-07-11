@@ -8,10 +8,11 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "band/common.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 #include "band/interface/backend.h"
 #include "band/interface/model.h"
 #include "band/model_spec.h"
+
 
 namespace band {
 namespace interface {

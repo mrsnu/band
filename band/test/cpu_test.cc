@@ -1,5 +1,5 @@
 
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 
 #include <gtest/gtest.h>
 
