@@ -4,7 +4,7 @@
 
 #include "band/device/util.h"
 
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -15,7 +15,7 @@ namespace gpu {
 
 std::vector<std::string> GetPaths(std::string suffix) {
   std::vector<std::string> device_paths;
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   // TODO: Add more device-specific GPU path
   device_paths = {
       "/sys/class/kgsl/kgsl-3d0/",     // Pixel4
@@ -29,7 +29,7 @@ std::vector<std::string> GetPaths(std::string suffix) {
 }
 
 int GetMinFrequencyKhz() {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths("min_clock_mhz")) * 1000;
 #else
   return -1;
@@ -37,7 +37,7 @@ int GetMinFrequencyKhz() {
 }
 
 int GetMaxFrequencyKhz() {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths("max_clock_mhz")) * 1000;
 #else
   return -1;
@@ -45,7 +45,7 @@ int GetMaxFrequencyKhz() {
 }
 
 int GetFrequencyKhz() {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths("clock_mhz")) * 1000;
 #else
   return -1;
@@ -53,7 +53,7 @@ int GetFrequencyKhz() {
 }
 
 int GetPollingIntervalMs() {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths("devfreq/polling_interval"));
 #else
   return -1;
@@ -62,7 +62,7 @@ int GetPollingIntervalMs() {
 
 std::vector<int> GetAvailableFrequenciesKhz() {
   std::vector<int> frequenciesMhz;
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   frequenciesMhz = TryReadInts(GetPaths("freq_table_mhz"));
   if (frequenciesMhz.empty()) {
     frequenciesMhz = TryReadInts(GetPaths("dvfs_table"));
@@ -77,7 +77,7 @@ std::vector<int> GetAvailableFrequenciesKhz() {
 std::vector<std::pair<int, int>> GetClockStats() {
   std::vector<std::pair<int, int>> frequency_stats;
 
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   std::vector<int> frequencies = GetAvailableFrequenciesKhz();
   std::vector<int> clock_stats = TryReadInts(GetPaths("gpu_clock_stats"));
 

@@ -7,7 +7,7 @@ namespace band {
 namespace test {
 struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlag> {};
 
-#ifdef _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
 TEST_P(AffinityMasksFixture, AffinitySetTest) {
   CpuSet target_set = BandCPUMaskGetSet(GetParam());
   // this fails if target_set is null

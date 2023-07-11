@@ -1,8 +1,8 @@
 #include "band/device/util.h"
 
 #include <fstream>
-#include <sstream>
 #include <mutex>
+#include <sstream>
 
 namespace band {
 template <typename T>
@@ -43,7 +43,7 @@ bool IsRooted() {
   static std::once_flag flag;
   static bool is_rooted = false;
 
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   std::call_once(
       flag,
       [](bool& is_rooted) {

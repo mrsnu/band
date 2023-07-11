@@ -4,6 +4,12 @@
 #include <string>
 #include <vector>
 
+#ifdef __ANDROID__
+#define BAND_SUPPORT_DEVICE 1
+#else
+#define BAND_SUPPORT_DEVICE 0
+#endif
+
 namespace band {
 
 int TryReadInt(std::vector<std::string> paths);

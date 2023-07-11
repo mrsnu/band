@@ -4,7 +4,7 @@
 
 #include "band/device/util.h"
 
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -15,7 +15,7 @@ namespace generic {
 
 std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
   std::vector<std::string> device_paths;
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   // TODO: Add more device-specific path
   if (device_flag == DeviceFlag::kNPU) {
     device_paths = {
@@ -36,7 +36,7 @@ std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
 }
 
 int GetMinFrequencyKhz(DeviceFlag device_flag) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths(device_flag, "min_freq")) / 1000;
 #else
   return -1;
@@ -44,7 +44,7 @@ int GetMinFrequencyKhz(DeviceFlag device_flag) {
 }
 
 int GetMaxFrequencyKhz(DeviceFlag device_flag) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths(device_flag, "max_freq")) / 1000;
 #else
   return -1;
@@ -52,7 +52,7 @@ int GetMaxFrequencyKhz(DeviceFlag device_flag) {
 }
 
 int GetFrequencyKhz(DeviceFlag device_flag) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths(device_flag, "cur_freq")) / 1000;
 #else
   return -1;
@@ -60,7 +60,7 @@ int GetFrequencyKhz(DeviceFlag device_flag) {
 }
 
 int GetTargetFrequencyKhz(DeviceFlag device_flag) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths(device_flag, "target_freq")) / 1000;
 #else
   return -1;
@@ -68,7 +68,7 @@ int GetTargetFrequencyKhz(DeviceFlag device_flag) {
 }
 
 int GetPollingIntervalMs(DeviceFlag device_flag) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt(GetPaths(device_flag, "polling_interval"));
 #else
   return -1;
@@ -77,7 +77,7 @@ int GetPollingIntervalMs(DeviceFlag device_flag) {
 
 std::vector<int> GetAvailableFrequenciesKhz(DeviceFlag device_flag) {
   std::vector<int> frequencies;  // hz
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   frequencies = TryReadInts(GetPaths(device_flag, "available_frequencies"));
   for (size_t i = 0; i < frequencies.size(); i++) {
     frequencies[i] /= 1000;
@@ -89,7 +89,7 @@ std::vector<int> GetAvailableFrequenciesKhz(DeviceFlag device_flag) {
 std::vector<std::pair<int, int>> GetClockStats(DeviceFlag device_flag) {
   std::vector<std::pair<int, int>> frequency_stats;
 
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   std::vector<int> frequencies = GetAvailableFrequenciesKhz(device_flag);
   std::vector<int> clock_stats =
       TryReadInts(GetPaths(device_flag, "time_in_state"));

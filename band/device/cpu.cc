@@ -22,7 +22,7 @@
 #include "band/device/util.h"
 #include "band/logger.h"
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
 #include <errno.h>
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -34,7 +34,7 @@
 
 namespace band {
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
 CpuSet::CpuSet() { DisableAll(); }
 
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
@@ -66,7 +66,7 @@ int CpuSet::NumEnabled() const {
   return NumEnabled;
 }
 
-#else   // defined _BAND_SUPPORT_THREAD_AFFINITY
+#else   // defined BAND_SUPPORT_DEVICE
 CpuSet::CpuSet() {}
 
 void CpuSet::Enable(int /* cpu */) {}
@@ -84,7 +84,7 @@ bool CpuSet::operator==(const CpuSet& rhs) const { return true; }
 bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
 int CpuSet::NumEnabled() const { return GetCPUCount(); }
-#endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
+#endif  // defined BAND_SUPPORT_DEVICE
 
 CPUMaskFlag CpuSet::GetCPUMaskFlag() const {
   for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
@@ -109,7 +109,7 @@ int GetCPUCount() {
     count = emscripten_num_logical_cores();
   else
     count = 1;
-#elif defined _BAND_SUPPORT_THREAD_AFFINITY
+#elif defined BAND_SUPPORT_DEVICE
   // get cpu count from /proc/cpuinfo
   FILE* fp = fopen("/proc/cpuinfo", "rb");
   if (!fp) return 1;
@@ -145,7 +145,7 @@ int GetBigCPUCount() {
   return BandCPUMaskGetSet(CPUMaskFlag::kBig).NumEnabled();
 }
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
 static int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
   char path[256];
@@ -251,10 +251,10 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
 
   return 0;
 }
-#endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
+#endif  // defined BAND_SUPPORT_DEVICE
 
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
   int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
   if (ssaret != 0) {
@@ -268,7 +268,7 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 }
 
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
   int gsaret = GetSchedAffinity(thread_affinity_mask);
   if (gsaret != 0) {
     return absl::InternalError("Failed to get the CPU affinity.");
@@ -280,7 +280,7 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 int SetupThreadAffinityMasks() {
   g_thread_affinity_mask_all.DisableAll();
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
   int max_freq_khz_min = INT_MAX;
   int max_freq_khz_max = 0;
   std::vector<int> cpu_max_freq_khz(g_cpucount);
@@ -347,7 +347,7 @@ const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag) {
 
 namespace cpu {
 int GetTargetMaxFrequencyKhz(int cpu) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/scaling_max_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
@@ -358,7 +358,7 @@ int GetTargetMaxFrequencyKhz(int cpu) {
 }
 
 int GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
@@ -374,7 +374,7 @@ int GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
 }
 
 int GetTargetMinFrequencyKhz(int cpu) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/scaling_min_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
@@ -385,7 +385,7 @@ int GetTargetMinFrequencyKhz(int cpu) {
 }
 
 int GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
@@ -401,7 +401,7 @@ int GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
 }
 
 int GetTargetFrequencyKhz(int cpu) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/scaling_cur_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
@@ -411,7 +411,7 @@ int GetTargetFrequencyKhz(int cpu) {
 }
 
 int GetTargetFrequencyKhz(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
@@ -427,7 +427,7 @@ int GetTargetFrequencyKhz(const CpuSet& cpu_set) {
 }
 
 int GetFrequencyKhz(int cpu) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/cpuinfo_cur_freq",
                      "/sys/devices/system/cpu/cpufreq/policy" +
@@ -438,7 +438,7 @@ int GetFrequencyKhz(int cpu) {
 }
 
 int GetFrequencyKhz(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
@@ -456,7 +456,7 @@ int GetFrequencyKhz(const CpuSet& cpu_set) {
 }
 
 std::vector<int> GetAvailableFrequenciesKhz(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     // Assuming that there is one cluster group
     if (cpu_set.IsEnabled(cpu)) {
@@ -476,7 +476,7 @@ std::vector<int> GetAvailableFrequenciesKhz(const CpuSet& cpu_set) {
 }
 
 int GetUpTransitionLatencyMs(int cpu) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   int cpu_transition =
       TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" +
                   std::to_string(cpu) + "/schedutil/up_rate_limit_us"}) /
@@ -494,7 +494,7 @@ int GetUpTransitionLatencyMs(int cpu) {
 
 // Assuming that there is one cluster group
 int GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     for (int i = 0; i < GetCPUCount(); i++) {
       if (cpu_set.IsEnabled(i)) {
@@ -510,7 +510,7 @@ int GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
 }
 
 int GetDownTransitionLatencyMs(int cpu) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   int cpu_transition =
       TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" +
                   std::to_string(cpu) + "/schedutil/down_rate_limit_us"}) /
@@ -528,7 +528,7 @@ int GetDownTransitionLatencyMs(int cpu) {
 
 // Assuming that there is one cluster group
 int GetDownTransitionLatencyMs(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   for (int i = 0; i < GetCPUCount(); i++) {
     if (cpu_set.IsEnabled(i)) {
       int transition_latency = GetDownTransitionLatencyMs(i);
@@ -545,7 +545,7 @@ int GetDownTransitionLatencyMs(const CpuSet& cpu_set) {
 // Note that cores in same cluster (little/big/primary)
 // shares this value
 int GetTotalTransitionCount(int cpu) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                          "/cpufreq/stats/total_trans",
                      "/sys/devices/system/cpu/cpufreq/policy" +
@@ -555,7 +555,7 @@ int GetTotalTransitionCount(int cpu) {
 }
 
 int GetTotalTransitionCount(const CpuSet& cpu_set) {
-#if defined __ANDROID__ || defined __linux__
+#if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_transition_count = 0;
 

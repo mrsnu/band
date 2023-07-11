@@ -25,13 +25,9 @@
 
 #include "absl/status/status.h"
 #include "band/common.h"
+#include "band/device/util.h"
 
-
-#ifdef __ANDROID__
-#define _BAND_SUPPORT_THREAD_AFFINITY
-#endif
-
-#ifdef _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
 #include <sched.h>  // cpu_set_t
 #endif
 
@@ -50,7 +46,7 @@ class CpuSet {
   std::vector<unsigned long> GetMaskBitsVector() const;
   bool operator==(const CpuSet& rhs) const;
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_SUPPORT_DEVICE
   const cpu_set_t& GetCpuSet() const { return cpu_set_; }
   cpu_set_t& GetCpuSet() { return cpu_set_; }
 
@@ -76,21 +72,21 @@ namespace cpu {
 
 // Get scaling frequency (current target frequency of the governor)
 int GetTargetFrequencyKhz(int cpu);
-int GetTargetFrequencyKhz(const CpuSet &cpu_set);
+int GetTargetFrequencyKhz(const CpuSet& cpu_set);
 
 // Get scaling max frequency (current target frequency of the governor)
 int GetTargetMaxFrequencyKhz(int cpu);
-int GetTargetMaxFrequencyKhz(const CpuSet &cpu_set);
+int GetTargetMaxFrequencyKhz(const CpuSet& cpu_set);
 
 // Get scaling min frequency (current target frequency of the governor)
 int GetTargetMinFrequencyKhz(int cpu);
-int GetTargetMinFrequencyKhz(const CpuSet &cpu_set);
+int GetTargetMinFrequencyKhz(const CpuSet& cpu_set);
 
 // Get current frequency (requires sudo)
 int GetFrequencyKhz(int cpu);
-int GetFrequencyKhz(const CpuSet &cpu_set);
+int GetFrequencyKhz(const CpuSet& cpu_set);
 
-std::vector<int> GetAvailableFrequenciesKhz(const CpuSet &cpu_set);
+std::vector<int> GetAvailableFrequenciesKhz(const CpuSet& cpu_set);
 
 // Time interval limit of frequency rise
 int GetUpTransitionLatencyMs(int cpu);
@@ -105,7 +101,7 @@ int GetDownTransitionLatencyMs(const CpuSet& cpu_set);
 // shares this value
 int GetTotalTransitionCount(int cpu);
 int GetTotalTransitionCount(const CpuSet& cpu_set);
-} // namespace cpu
+}  // namespace cpu
 
 }  // namespace band
 
