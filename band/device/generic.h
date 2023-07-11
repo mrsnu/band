@@ -1,10 +1,14 @@
 #ifndef BAND_DEVICE_GENERIC_H_
 #define BAND_DEVICE_GENERIC_H_
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
+
 #include <vector>
-#include <limits.h>
+
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
 
 namespace band {
@@ -14,15 +18,17 @@ namespace generic {
 // that utilizes devfreq structure
 // https://www.kernel.org/doc/html/latest/driver-api/devfreq.html
 
-int GetMinFrequencyKhz(DeviceFlag device_flag);
-int GetMaxFrequencyKhz(DeviceFlag device_flag);
-int GetFrequencyKhz(DeviceFlag device_flag);
-int GetTargetFrequencyKhz(DeviceFlag device_flag);
-int GetPollingIntervalMs(DeviceFlag device_flag);
-std::vector<int> GetAvailableFrequenciesKhz(DeviceFlag device_flag);
-std::vector<std::pair<int, int>> GetClockStats(DeviceFlag device_flag);
+absl::StatusOr<size_t> GetMinFrequencyKhz(DeviceFlag device_flag);
+absl::StatusOr<size_t> GetMaxFrequencyKhz(DeviceFlag device_flag);
+absl::StatusOr<size_t> GetFrequencyKhz(DeviceFlag device_flag);
+absl::StatusOr<size_t> GetTargetFrequencyKhz(DeviceFlag device_flag);
+absl::StatusOr<size_t> GetPollingIntervalMs(DeviceFlag device_flag);
+absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz(
+    DeviceFlag device_flag);
+absl::StatusOr<std::vector<std::pair<size_t, size_t>>> GetClockStats(
+    DeviceFlag device_flag);
 
-} // namespace generic
-} // namespace band
+}  // namespace generic
+}  // namespace band
 
-#endif // BAND_DEVICE_GENERIC_H_
+#endif  // BAND_DEVICE_GENERIC_H_

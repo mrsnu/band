@@ -56,7 +56,8 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
       worker->Wait();
       // invoke target subgraph in an isolated thread
       std::thread profile_thread([&]() {
-        if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
+        if (device::SupportsDevice() &&
+            worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
             !SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()).ok()) {
           return absl::InternalError(absl::StrFormat(
               "Failed to propagate thread affinity of worker id "
@@ -175,8 +176,7 @@ size_t LatencyEstimator::GetProfileHash() const {
   auto hash_func = std::hash<int>();
   std::size_t hash = hash_func(engine_->GetNumWorkers());
   for (int i = 0; i < engine_->GetNumWorkers(); i++) {
-    hash ^=
-        hash_func(static_cast<int>(engine_->GetWorker(i)->GetDeviceFlag()));
+    hash ^= hash_func(static_cast<int>(engine_->GetWorker(i)->GetDeviceFlag()));
     hash ^= hash_func(engine_->GetWorker(i)->GetNumThreads());
     hash ^= hash_func(static_cast<int>(
         engine_->GetWorker(i)->GetWorkerThreadAffinity().GetCPUMaskFlag()));

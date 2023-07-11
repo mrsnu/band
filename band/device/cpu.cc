@@ -33,6 +33,7 @@
 #endif
 
 namespace band {
+using namespace device;
 
 #if BAND_SUPPORT_DEVICE
 CpuSet::CpuSet() { DisableAll(); }
@@ -57,13 +58,13 @@ bool CpuSet::operator==(const CpuSet& rhs) const {
   return CPU_EQUAL(&cpu_set_, &rhs.cpu_set_) != 0;
 }
 
-int CpuSet::NumEnabled() const {
-  int NumEnabled = 0;
+size_t CpuSet::NumEnabled() const {
+  size_t num_enabled = 0;
   for (int i = 0; i < (int)sizeof(cpu_set_t) * 8; i++) {
-    if (IsEnabled(i)) NumEnabled++;
+    if (IsEnabled(i)) num_enabled++;
   }
 
-  return NumEnabled;
+  return num_enabled;
 }
 
 #else   // defined BAND_SUPPORT_DEVICE
@@ -83,8 +84,20 @@ bool CpuSet::operator==(const CpuSet& rhs) const { return true; }
 
 bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
-int CpuSet::NumEnabled() const { return GetCPUCount(); }
+size_t CpuSet::NumEnabled() const { return GetCPUCount(); }
 #endif  // defined BAND_SUPPORT_DEVICE
+
+std::string CpuSet::ToString() const {
+  std::string str;
+  for (int i = 0; i < GetCPUCount(); i++) {
+    if (IsEnabled(i)) {
+      str += std::to_string(i);
+      str += ",";
+    }
+  }
+
+  return str;
+}
 
 CPUMaskFlag CpuSet::GetCPUMaskFlag() const {
   for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
@@ -100,10 +113,10 @@ static CpuSet g_thread_affinity_mask_all;
 static CpuSet g_thread_affinity_mask_little;
 static CpuSet g_thread_affinity_mask_big;
 static CpuSet g_thread_affinity_mask_primary;
-static int g_cpucount = GetCPUCount();
+static size_t g_cpucount = GetCPUCount();
 
-int GetCPUCount() {
-  int count = 0;
+size_t GetCPUCount() {
+  size_t count = 0;
 #ifdef __EMSCRIPTEN__
   if (emscripten_has_threading_support())
     count = emscripten_num_logical_cores();
@@ -137,16 +150,16 @@ int GetCPUCount() {
   return count;
 }
 
-int GetLittleCPUCount() {
+size_t GetLittleCPUCount() {
   return BandCPUMaskGetSet(CPUMaskFlag::kLittle).NumEnabled();
 }
 
-int GetBigCPUCount() {
+size_t GetBigCPUCount() {
   return BandCPUMaskGetSet(CPUMaskFlag::kBig).NumEnabled();
 }
 
 #if BAND_SUPPORT_DEVICE
-static int get_max_freq_khz(int cpuid) {
+int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
   char path[256];
   sprintf(path, "/sys/devices/system/cpu/cpufreq/stats/cpu%d/time_in_state",
@@ -255,26 +268,29 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
 
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if BAND_SUPPORT_DEVICE
-  int num_threads = thread_affinity_mask.NumEnabled();
   int ssaret = SetSchedAffinity(thread_affinity_mask);
   if (ssaret != 0) {
-    return absl::InternalError("Failed to set the CPU affinity.");
+    return absl::InternalError("Failed to set the CPU affinity: " +
+                               thread_affinity_mask.ToString());
   }
-#else
-  BAND_LOG_PROD(BAND_LOG_INFO, "Thread affinity control is off. Ignore mask %s",
-                ToString(thread_affinity_mask.GetCPUMaskFlag()));
-#endif
   return absl::OkStatus();
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
 }
 
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #if BAND_SUPPORT_DEVICE
   int gsaret = GetSchedAffinity(thread_affinity_mask);
+  std::cout << "GetCPUThreadAffinity" << thread_affinity_mask.ToString()
+            << std::endl;
   if (gsaret != 0) {
     return absl::InternalError("Failed to get the CPU affinity.");
   }
-#endif
   return absl::OkStatus();
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
 }
 
 int SetupThreadAffinityMasks() {
@@ -346,230 +362,290 @@ const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag) {
 }
 
 namespace cpu {
-int GetTargetMaxFrequencyKhz(int cpu) {
+absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(int cpu) {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                         "/cpufreq/scaling_max_freq",
-                     "/sys/devices/system/cpu/cpufreq/policy" +
-                         std::to_string(cpu) + "/scaling_max_freq"});
-#else
-  return -1;
-#endif
-}
-
-int GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
-  if (cpu_set.NumEnabled() > 0) {
-    int accumulated_frequency = 0;
-
-    for (int i = 0; i < GetCPUCount(); i++) {
-      if (cpu_set.IsEnabled(i))
-        accumulated_frequency += GetTargetMaxFrequencyKhz(i);
-    }
-
-    return accumulated_frequency / cpu_set.NumEnabled();
+  if (!IsRooted()) {
+    return absl::UnavailableError("Device not rooted");
   }
-#endif
-  return -1;
-}
-
-int GetTargetMinFrequencyKhz(int cpu) {
-#if BAND_SUPPORT_DEVICE
-  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                         "/cpufreq/scaling_min_freq",
-                     "/sys/devices/system/cpu/cpufreq/policy" +
-                         std::to_string(cpu) + "/scaling_min_freq"});
+  return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                           "/cpufreq/scaling_max_freq",
+                       "/sys/devices/system/cpu/cpufreq/policy" +
+                           std::to_string(cpu) + "/scaling_max_freq"});
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 
-int GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
+absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
 #if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
     for (int i = 0; i < GetCPUCount(); i++) {
-      if (cpu_set.IsEnabled(i))
-        accumulated_frequency += GetTargetMinFrequencyKhz(i);
-    }
-
-    return accumulated_frequency / cpu_set.NumEnabled();
-  }
-#endif
-  return -1;
-}
-
-int GetTargetFrequencyKhz(int cpu) {
-#if BAND_SUPPORT_DEVICE
-  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                         "/cpufreq/scaling_cur_freq",
-                     "/sys/devices/system/cpu/cpufreq/policy" +
-                         std::to_string(cpu) + "/scaling_cur_freq"});
-#endif
-  return -1;
-}
-
-int GetTargetFrequencyKhz(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
-  if (cpu_set.NumEnabled() > 0) {
-    int accumulated_frequency = 0;
-
-    for (int i = 0; i < GetCPUCount(); i++) {
-      if (cpu_set.IsEnabled(i))
-        accumulated_frequency += GetTargetFrequencyKhz(i);
-    }
-
-    return accumulated_frequency / cpu_set.NumEnabled();
-  }
-#endif
-  return -1;
-}
-
-int GetFrequencyKhz(int cpu) {
-#if BAND_SUPPORT_DEVICE
-  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                         "/cpufreq/cpuinfo_cur_freq",
-                     "/sys/devices/system/cpu/cpufreq/policy" +
-                         std::to_string(cpu) + "/cpuinfo_cur_freq"});
-#else
-  return -1;
-#endif
-}
-
-int GetFrequencyKhz(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
-  if (cpu_set.NumEnabled() > 0) {
-    int accumulated_frequency = 0;
-
-    for (int i = 0; i < GetCPUCount(); i++) {
-      if (cpu_set.IsEnabled(i)) accumulated_frequency += GetFrequencyKhz(i);
+      if (cpu_set.IsEnabled(i)) {
+        auto freq = GetTargetMaxFrequencyKhz(i);
+        if (freq.ok()) {
+          accumulated_frequency += freq.value();
+        } else {
+          return freq.status();
+        }
+      }
     }
 
     return accumulated_frequency / cpu_set.NumEnabled();
   } else {
-    return -1;
+    return 0;
   }
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 
-std::vector<int> GetAvailableFrequenciesKhz(const CpuSet& cpu_set) {
+absl::StatusOr<size_t> GetTargetMinFrequencyKhz(int cpu) {
+#if BAND_SUPPORT_DEVICE
+  return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                           "/cpufreq/scaling_min_freq",
+                       "/sys/devices/system/cpu/cpufreq/policy" +
+                           std::to_string(cpu) + "/scaling_min_freq"});
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<size_t> GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
+#if BAND_SUPPORT_DEVICE
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_frequency = 0;
+
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i)) {
+        auto freq = GetTargetMinFrequencyKhz(i);
+        if (freq.ok()) {
+          accumulated_frequency += freq.value();
+        } else {
+          return freq.status();
+        }
+      }
+    }
+
+    return accumulated_frequency / cpu_set.NumEnabled();
+  } else {
+    return 0;
+  }
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<size_t> GetTargetFrequencyKhz(int cpu) {
+#if BAND_SUPPORT_DEVICE
+  return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                           "/cpufreq/scaling_cur_freq",
+                       "/sys/devices/system/cpu/cpufreq/policy" +
+                           std::to_string(cpu) + "/scaling_cur_freq"});
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<size_t> GetTargetFrequencyKhz(const CpuSet& cpu_set) {
+#if BAND_SUPPORT_DEVICE
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_frequency = 0;
+
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i)) {
+        auto freq = GetTargetFrequencyKhz(i);
+        if (freq.ok()) {
+          accumulated_frequency += freq.value();
+        } else {
+          return freq.status();
+        }
+      }
+    }
+
+    return accumulated_frequency / cpu_set.NumEnabled();
+  } else {
+    return 0;
+  }
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<size_t> GetFrequencyKhz(int cpu) {
+#if BAND_SUPPORT_DEVICE
+  if (!IsRooted()) {
+    return absl::UnavailableError("Device not rooted");
+  }
+  return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                           "/cpufreq/cpuinfo_cur_freq",
+                       "/sys/devices/system/cpu/cpufreq/policy" +
+                           std::to_string(cpu) + "/cpuinfo_cur_freq"});
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<size_t> GetFrequencyKhz(const CpuSet& cpu_set) {
+#if BAND_SUPPORT_DEVICE
+  if (!IsRooted()) {
+    return absl::UnavailableError("Device not rooted");
+  }
+
+  if (cpu_set.NumEnabled() > 0) {
+    int accumulated_frequency = 0;
+
+    for (int i = 0; i < GetCPUCount(); i++) {
+      if (cpu_set.IsEnabled(i)) {
+        auto freq = GetFrequencyKhz(i);
+        if (freq.ok()) {
+          accumulated_frequency += freq.value();
+        } else {
+          return freq.status();
+        }
+      }
+    }
+
+    return accumulated_frequency / cpu_set.NumEnabled();
+  } else {
+    return 0;
+  }
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<std::vector<size_t> > GetAvailableFrequenciesKhz(
+    const CpuSet& cpu_set) {
 #if BAND_SUPPORT_DEVICE
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     // Assuming that there is one cluster group
     if (cpu_set.IsEnabled(cpu)) {
-      std::vector<int> frequencies = TryReadInts(
+      return TryReadSizeTs(
           {"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                "/cpufreq/scaling_available_frequencies",
            "/sys/devices/system/cpu/cpufreq/policy" + std::to_string(cpu) +
                "/scaling_available_frequencies"});
-      if (frequencies.size()) {
-        return frequencies;
-      }
     }
   }
-
+  return absl::NotFoundError("No available frequencies found");
+#else
+  return absl::UnavailableError("Device not supported");
 #endif
-  return {};
 }
 
-int GetUpTransitionLatencyMs(int cpu) {
+absl::StatusOr<size_t> GetUpTransitionLatencyMs(int cpu) {
 #if BAND_SUPPORT_DEVICE
-  int cpu_transition =
-      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" +
-                  std::to_string(cpu) + "/schedutil/up_rate_limit_us"}) /
-      1000;
-  if (cpu_transition == 0) {
-    return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                       "/cpufreq/cpuinfo_transition_latency"}) /
-           1000000;
-  } else {
-    return cpu_transition;
+  absl::StatusOr<size_t> cpu_transition =
+      TryReadSizeT({"/sys/devices/system/cpu/cpufreq/policy" +
+                    std::to_string(cpu) + "/schedutil/up_rate_limit_us"});
+  if (cpu_transition.ok()) {
+    return cpu_transition.value() == 0 ? 0 : cpu_transition.value() / 1000;
   }
+
+  cpu_transition =
+      TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                    "/cpufreq/cpuinfo_transition_latency"});
+  if (cpu_transition.ok()) {
+    return cpu_transition.value() == 0 ? 0 : cpu_transition.value() / 1000000;
+  }
+
+  return absl::NotFoundError("No up transition latency found");
+#else
+  return absl::UnavailableError("Device not supported");
 #endif
-  return -1;
 }
 
 // Assuming that there is one cluster group
-int GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
+absl::StatusOr<size_t> GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
 #if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     for (int i = 0; i < GetCPUCount(); i++) {
       if (cpu_set.IsEnabled(i)) {
-        int transition_latency = GetUpTransitionLatencyMs(i);
-        if (transition_latency > 0) {
-          return transition_latency;
-        }
+        return GetUpTransitionLatencyMs(i);
       }
     }
+  } else {
+    return 0;
   }
 #endif
-  return -1;
+  return absl::UnavailableError("Device not supported");
 }
 
-int GetDownTransitionLatencyMs(int cpu) {
+absl::StatusOr<size_t> GetDownTransitionLatencyMs(int cpu) {
 #if BAND_SUPPORT_DEVICE
-  int cpu_transition =
-      TryReadInt({"/sys/devices/system/cpu/cpufreq/policy" +
-                  std::to_string(cpu) + "/schedutil/down_rate_limit_us"}) /
-      1000;
-  if (cpu_transition == 0) {
-    return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                       "/cpufreq/cpuinfo_transition_latency"}) /
-           1000000;
-  } else {
-    return cpu_transition;
+  absl::StatusOr<size_t> cpu_transition =
+      TryReadSizeT({"/sys/devices/system/cpu/cpufreq/policy" +
+                    std::to_string(cpu) + "/schedutil/down_rate_limit_us"});
+  if (cpu_transition.ok()) {
+    return cpu_transition.value() == 0 ? 0 : cpu_transition.value() / 1000;
   }
+
+  cpu_transition =
+      TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                    "/cpufreq/cpuinfo_transition_latency"});
+
+  if (cpu_transition.ok()) {
+    return cpu_transition.value() == 0 ? 0 : cpu_transition.value() / 1000000;
+  }
+
+  return absl::NotFoundError("No down transition latency found");
+#else
+  return absl::UnavailableError("Device not supported");
 #endif
-  return -1;
 }
 
 // Assuming that there is one cluster group
-int GetDownTransitionLatencyMs(const CpuSet& cpu_set) {
+absl::StatusOr<size_t> GetDownTransitionLatencyMs(const CpuSet& cpu_set) {
 #if BAND_SUPPORT_DEVICE
   for (int i = 0; i < GetCPUCount(); i++) {
     if (cpu_set.IsEnabled(i)) {
-      int transition_latency = GetDownTransitionLatencyMs(i);
-      if (transition_latency > 0) {
-        return transition_latency;
-      }
+      return GetDownTransitionLatencyMs(i);
     }
   }
+  return 0;
+#else
+  return absl::UnavailableError("Device not supported");
 #endif
-  return -1;
 }
 
 // Total transition count
 // Note that cores in same cluster (little/big/primary)
 // shares this value
-int GetTotalTransitionCount(int cpu) {
+absl::StatusOr<size_t> GetTotalTransitionCount(int cpu) {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
-                         "/cpufreq/stats/total_trans",
-                     "/sys/devices/system/cpu/cpufreq/policy" +
-                         std::to_string(cpu) + "/stats/total_trans"});
+  return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
+                           "/cpufreq/stats/total_trans",
+                       "/sys/devices/system/cpu/cpufreq/policy" +
+                           std::to_string(cpu) + "/stats/total_trans"});
+#else
+  return absl::UnavailableError("Device not supported");
 #endif
-  return -1;
 }
 
-int GetTotalTransitionCount(const CpuSet& cpu_set) {
+absl::StatusOr<size_t> GetTotalTransitionCount(const CpuSet& cpu_set) {
 #if BAND_SUPPORT_DEVICE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_transition_count = 0;
 
     for (int i = 0; i < GetCPUCount(); i++) {
-      if (cpu_set.IsEnabled(i))
-        accumulated_transition_count += GetTotalTransitionCount(i);
+      if (cpu_set.IsEnabled(i)) {
+        absl::StatusOr<size_t> transition_count = GetTotalTransitionCount(i);
+        if (!transition_count.ok()) {
+          return transition_count.status();
+        } else {
+          accumulated_transition_count += transition_count.value();
+        }
+      }
     }
 
     return accumulated_transition_count / cpu_set.NumEnabled();
   } else {
-    return -1;
+    return 0;
   }
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 }  // namespace cpu

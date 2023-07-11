@@ -126,6 +126,17 @@ band_cc_android_test(
 )
 
 band_cc_android_test(
+    name = "device_test",
+    size = "small",
+    srcs = ["device_test.cc"],
+    data = [],
+    deps = [
+        "//band/device",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
     name = "tfl_minimal_test",
     size = "small",
     srcs = ["backend/tfl_minimal_test.cc"],

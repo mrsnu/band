@@ -4,9 +4,12 @@
 #include <mutex>
 #include <sstream>
 
+#include "band/logger.h"
+
 namespace band {
+namespace device {
 template <typename T>
-T TryRead(std::vector<std::string> paths) {
+absl::StatusOr<T> TryRead(std::vector<std::string> paths) {
   for (const std::string& path : paths) {
     std::fstream fs(path, std::fstream::in);
     if (fs.is_open()) {
@@ -15,28 +18,39 @@ T TryRead(std::vector<std::string> paths) {
       return output;
     }
   }
-  return T();
+  return absl::NotFoundError("No available path");
 }
 
-int TryReadInt(std::vector<std::string> paths) { return TryRead<int>(paths); }
+absl::StatusOr<size_t> TryReadSizeT(std::vector<std::string> paths) {
+  return TryRead<size_t>(paths);
+}
 
-std::vector<int> TryReadInts(std::vector<std::string> paths) {
+absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
+    std::vector<std::string> paths) {
   for (const std::string& path : paths) {
     std::fstream fs(path, std::fstream::in);
     if (fs.is_open()) {
-      std::vector<int> outputs;
-      int output;
+      std::vector<size_t> outputs;
+      size_t output;
       while (fs >> output) {
         outputs.push_back(output);
       }
       return outputs;
     }
   }
-  return {};
+  return absl::NotFoundError("No available path");
 }
 
-std::string TryReadString(std::vector<std::string> paths) {
+absl::StatusOr<std::string> TryReadString(std::vector<std::string> paths) {
   return TryRead<std::string>(paths);
+}
+
+bool SupportsDevice() {
+#if BAND_SUPPORT_DEVICE
+  return true;
+#else
+  return false;
+#endif
 }
 
 bool IsRooted() {
@@ -47,12 +61,25 @@ bool IsRooted() {
   std::call_once(
       flag,
       [](bool& is_rooted) {
-        is_rooted = system("ps | grep root > /dev/null 2> /dev/null") == 0;
+        std::string command = "su -c 'echo Rooted'";
+        std::string result = "";
+
+        FILE* pipe = popen(command.c_str(), "r");
+        if (pipe != nullptr) {
+          char buffer[128];
+          while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+            result += buffer;
+          }
+          pclose(pipe);
+        }
+
+        is_rooted = result.find("Rooted") != std::string::npos;
+        BAND_LOG_PROD(BAND_LOG_INFO, "Is rooted: %d", is_rooted);
       },
       is_rooted);
 #endif
 
   return is_rooted;
 }
-
+}  // namespace device
 }  // namespace band

@@ -1,13 +1,13 @@
-#include "band/device/processor.h"
+#include "band/device/device.h"
 
 #include "band/device/cpu.h"
-#include "band/device/gpu.h"
 #include "band/device/generic.h"
+#include "band/device/gpu.h"
 #include "band/device/util.h"
 
 namespace band {
-namespace processor {
-int GetUpdateIntervalMs(DeviceFlag flag, CpuSet cpu_set) {
+namespace device {
+absl::StatusOr<size_t> GetUpdateIntervalMs(DeviceFlag flag, CpuSet cpu_set) {
   if (flag == DeviceFlag::kCPU) {
     // Use longer interval (Down transition for CPU)
     return cpu::GetDownTransitionLatencyMs(cpu_set);
@@ -18,7 +18,7 @@ int GetUpdateIntervalMs(DeviceFlag flag, CpuSet cpu_set) {
   }
 }
 
-int GetFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
+absl::StatusOr<size_t> GetFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   if (flag == DeviceFlag::kCPU) {
     return cpu::GetFrequencyKhz(cpu_set);
   } else if (flag == DeviceFlag::kGPU) {
@@ -28,7 +28,7 @@ int GetFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   }
 }
 
-int GetMinFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
+absl::StatusOr<size_t> GetMinFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   if (flag == DeviceFlag::kCPU) {
     return cpu::GetTargetMinFrequencyKhz(cpu_set);
   } else if (flag == DeviceFlag::kGPU) {
@@ -38,7 +38,7 @@ int GetMinFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   }
 }
 
-int GetMaxFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
+absl::StatusOr<size_t> GetMaxFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   if (flag == DeviceFlag::kCPU) {
     return cpu::GetTargetMaxFrequencyKhz(cpu_set);
   } else if (flag == DeviceFlag::kGPU) {
@@ -48,7 +48,7 @@ int GetMaxFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   }
 }
 
-int GetTargetFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
+absl::StatusOr<size_t> GetTargetFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   if (flag == DeviceFlag::kCPU) {
     return cpu::GetTargetFrequencyKhz(cpu_set);
   } else if (flag == DeviceFlag::kGPU) {
@@ -58,7 +58,8 @@ int GetTargetFrequencyKhz(DeviceFlag flag, CpuSet cpu_set) {
   }
 }
 
-std::vector<int> GetAvailableFrequenciesKhz(DeviceFlag flag, CpuSet cpu_set) {
+absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz(DeviceFlag flag,
+                                                               CpuSet cpu_set) {
   if (flag == DeviceFlag::kCPU) {
     return cpu::GetAvailableFrequenciesKhz(cpu_set);
   } else if (flag == DeviceFlag::kGPU) {
@@ -68,5 +69,5 @@ std::vector<int> GetAvailableFrequenciesKhz(DeviceFlag flag, CpuSet cpu_set) {
   }
 }
 
-}  // namespace processor
+}  // namespace device
 }  // namespace band

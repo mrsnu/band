@@ -11,6 +11,7 @@
 #endif
 
 namespace band {
+using namespace device;
 namespace generic {
 
 std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
@@ -35,71 +36,112 @@ std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
   return device_paths;
 }
 
-int GetMinFrequencyKhz(DeviceFlag device_flag) {
+absl::StatusOr<size_t> GetMinFrequencyKhz(DeviceFlag device_flag) {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths(device_flag, "min_freq")) / 1000;
+  absl::StatusOr<size_t> min_freq =
+      TryReadSizeT(GetPaths(device_flag, "min_freq"));
+  if (min_freq.ok()) {
+    return min_freq.value() / 1000;
+  } else {
+    return min_freq.status();
+  }
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 
-int GetMaxFrequencyKhz(DeviceFlag device_flag) {
+absl::StatusOr<size_t> GetMaxFrequencyKhz(DeviceFlag device_flag) {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths(device_flag, "max_freq")) / 1000;
+  absl::StatusOr<size_t> max_freq =
+      TryReadSizeT(GetPaths(device_flag, "max_freq"));
+  if (max_freq.ok()) {
+    return max_freq.value() / 1000;
+  } else {
+    return max_freq.status();
+  }
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 
-int GetFrequencyKhz(DeviceFlag device_flag) {
+absl::StatusOr<size_t> GetFrequencyKhz(DeviceFlag device_flag) {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths(device_flag, "cur_freq")) / 1000;
+  absl::StatusOr<size_t> cur_freq =
+      TryReadSizeT(GetPaths(device_flag, "cur_freq"));
+  if (cur_freq.ok()) {
+    return cur_freq.value() / 1000;
+  } else {
+    return cur_freq.status();
+  }
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 
-int GetTargetFrequencyKhz(DeviceFlag device_flag) {
+absl::StatusOr<size_t> GetTargetFrequencyKhz(DeviceFlag device_flag) {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths(device_flag, "target_freq")) / 1000;
+  absl::StatusOr<size_t> target_freq =
+      TryReadSizeT(GetPaths(device_flag, "target_freq"));
+  if (target_freq.ok()) {
+    return target_freq.value() / 1000;
+  } else {
+    return target_freq.status();
+  }
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 
-int GetPollingIntervalMs(DeviceFlag device_flag) {
+absl::StatusOr<size_t> GetPollingIntervalMs(DeviceFlag device_flag) {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths(device_flag, "polling_interval"));
+  return TryReadSizeT(GetPaths(device_flag, "polling_interval"));
 #else
-  return -1;
+  return absl::UnavailableError("Device not supported");
 #endif
 }
 
-std::vector<int> GetAvailableFrequenciesKhz(DeviceFlag device_flag) {
-  std::vector<int> frequencies;  // hz
+absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz(
+    DeviceFlag device_flag) {
 #if BAND_SUPPORT_DEVICE
-  frequencies = TryReadInts(GetPaths(device_flag, "available_frequencies"));
-  for (size_t i = 0; i < frequencies.size(); i++) {
-    frequencies[i] /= 1000;
+  absl::StatusOr<std::vector<size_t>> frequencies;  // hz
+  frequencies = TryReadSizeTs(GetPaths(device_flag, "available_frequencies"));
+  if (!frequencies.ok()) {
+    return frequencies.status();
+  } else {
+    std::vector<size_t> frequency_values = frequencies.value();
+    for (size_t i = 0; i < frequency_values.size(); i++) {
+      frequency_values[i] /= 1000;
+    }
+    return frequency_values;
   }
 #endif
-  return frequencies;
+  return absl::UnavailableError("Device not supported");
 }
 
-std::vector<std::pair<int, int>> GetClockStats(DeviceFlag device_flag) {
-  std::vector<std::pair<int, int>> frequency_stats;
-
+absl::StatusOr<std::vector<std::pair<size_t, size_t>>> GetClockStats(
+    DeviceFlag device_flag) {
 #if BAND_SUPPORT_DEVICE
-  std::vector<int> frequencies = GetAvailableFrequenciesKhz(device_flag);
-  std::vector<int> clock_stats =
-      TryReadInts(GetPaths(device_flag, "time_in_state"));
+  std::vector<std::pair<size_t, size_t>> frequency_stats;
 
-  frequency_stats.resize(frequencies.size());
+  absl::StatusOr<std::vector<size_t>> frequencies =
+      GetAvailableFrequenciesKhz(device_flag);
+  absl::StatusOr<std::vector<size_t>> clock_stats =
+      TryReadSizeTs(GetPaths(device_flag, "time_in_state"));
+
+  if (!frequencies.ok()) {
+    return frequencies.status();
+  } else if (!clock_stats.ok()) {
+    return clock_stats.status();
+  }
+
+  frequency_stats.resize(frequencies.value().size());
   for (size_t i = 0; i < frequency_stats.size(); i++) {
-    frequency_stats[i] = {frequencies[i], clock_stats[i]};
+    frequency_stats[i] = {frequencies.value()[i], clock_stats.value()[i]};
   }
-#endif
   return frequency_stats;
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
 }
 
 }  // namespace generic

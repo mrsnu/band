@@ -507,15 +507,17 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       }
     }
 
-    const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
-    auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
+    if (device::SupportsDevice()) {
+      const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
+      auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
 
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
-                      ToString(cpu_mask));
+      BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
+                        ToString(cpu_mask));
 
-    auto status = SetCPUThreadAffinity(cpu_mask_set);
-    if (!status.ok()) {
-      return status;
+      auto status = SetCPUThreadAffinity(cpu_mask_set);
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
 

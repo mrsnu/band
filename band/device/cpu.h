@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
 #include "band/device/util.h"
 
@@ -40,10 +41,11 @@ class CpuSet {
   void Disable(int cpu);
   void DisableAll();
   bool IsEnabled(int cpu) const;
-  int NumEnabled() const;
+  size_t NumEnabled() const;
   CPUMaskFlag GetCPUMaskFlag() const;
   const unsigned long* GetMaskBits() const;
   std::vector<unsigned long> GetMaskBitsVector() const;
+  std::string ToString() const;
   bool operator==(const CpuSet& rhs) const;
 
 #if BAND_SUPPORT_DEVICE
@@ -56,9 +58,9 @@ class CpuSet {
 };
 
 // cpu info
-int GetCPUCount();
-int GetLittleCPUCount();
-int GetBigCPUCount();
+size_t GetCPUCount();
+size_t GetLittleCPUCount();
+size_t GetBigCPUCount();
 
 // set explicit thread affinity
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
@@ -71,36 +73,38 @@ const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
 namespace cpu {
 
 // Get scaling frequency (current target frequency of the governor)
-int GetTargetFrequencyKhz(int cpu);
-int GetTargetFrequencyKhz(const CpuSet& cpu_set);
+absl::StatusOr<size_t> GetTargetFrequencyKhz(int cpu);
+absl::StatusOr<size_t> GetTargetFrequencyKhz(const CpuSet& cpu_set);
 
 // Get scaling max frequency (current target frequency of the governor)
-int GetTargetMaxFrequencyKhz(int cpu);
-int GetTargetMaxFrequencyKhz(const CpuSet& cpu_set);
+// This requires sudo in some devices (e.g., Pixel 6)
+absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(int cpu);
+absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(const CpuSet& cpu_set);
 
 // Get scaling min frequency (current target frequency of the governor)
-int GetTargetMinFrequencyKhz(int cpu);
-int GetTargetMinFrequencyKhz(const CpuSet& cpu_set);
+absl::StatusOr<size_t> GetTargetMinFrequencyKhz(int cpu);
+absl::StatusOr<size_t> GetTargetMinFrequencyKhz(const CpuSet& cpu_set);
 
 // Get current frequency (requires sudo)
-int GetFrequencyKhz(int cpu);
-int GetFrequencyKhz(const CpuSet& cpu_set);
+absl::StatusOr<size_t> GetFrequencyKhz(int cpu);
+absl::StatusOr<size_t> GetFrequencyKhz(const CpuSet& cpu_set);
 
-std::vector<int> GetAvailableFrequenciesKhz(const CpuSet& cpu_set);
+absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz(
+    const CpuSet& cpu_set);
 
 // Time interval limit of frequency rise
-int GetUpTransitionLatencyMs(int cpu);
-int GetUpTransitionLatencyMs(const CpuSet& cpu_set);
+absl::StatusOr<size_t> GetUpTransitionLatencyMs(int cpu);
+absl::StatusOr<size_t> GetUpTransitionLatencyMs(const CpuSet& cpu_set);
 
 // Time interval limit of frequency down
-int GetDownTransitionLatencyMs(int cpu);
-int GetDownTransitionLatencyMs(const CpuSet& cpu_set);
+absl::StatusOr<size_t> GetDownTransitionLatencyMs(int cpu);
+absl::StatusOr<size_t> GetDownTransitionLatencyMs(const CpuSet& cpu_set);
 
 // Total transition count
 // Note that cores in same cluster (little/big/primary)
 // shares this value
-int GetTotalTransitionCount(int cpu);
-int GetTotalTransitionCount(const CpuSet& cpu_set);
+absl::StatusOr<size_t> GetTotalTransitionCount(int cpu);
+absl::StatusOr<size_t> GetTotalTransitionCount(const CpuSet& cpu_set);
 }  // namespace cpu
 
 }  // namespace band

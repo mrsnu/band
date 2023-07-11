@@ -11,6 +11,7 @@
 #endif
 
 namespace band {
+using namespace device;
 namespace gpu {
 
 std::vector<std::string> GetPaths(std::string suffix) {
@@ -28,65 +29,93 @@ std::vector<std::string> GetPaths(std::string suffix) {
   return device_paths;
 }
 
-int GetMinFrequencyKhz() {
+absl::StatusOr<size_t> GetMinFrequencyKhz() {
 #if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths("min_clock_mhz")) * 1000;
-#else
-  return -1;
-#endif
-}
-
-int GetMaxFrequencyKhz() {
-#if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths("max_clock_mhz")) * 1000;
-#else
-  return -1;
-#endif
-}
-
-int GetFrequencyKhz() {
-#if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths("clock_mhz")) * 1000;
-#else
-  return -1;
-#endif
-}
-
-int GetPollingIntervalMs() {
-#if BAND_SUPPORT_DEVICE
-  return TryReadInt(GetPaths("devfreq/polling_interval"));
-#else
-  return -1;
-#endif
-}
-
-std::vector<int> GetAvailableFrequenciesKhz() {
-  std::vector<int> frequenciesMhz;
-#if BAND_SUPPORT_DEVICE
-  frequenciesMhz = TryReadInts(GetPaths("freq_table_mhz"));
-  if (frequenciesMhz.empty()) {
-    frequenciesMhz = TryReadInts(GetPaths("dvfs_table"));
+  auto min_freq = TryReadSizeT(GetPaths("min_clock_mhz"));
+  if (min_freq.ok()) {
+    return min_freq.value() * 1000;
+  } else {
+    return min_freq.status();
   }
-  for (size_t i = 0; i < frequenciesMhz.size(); i++) {
-    frequenciesMhz[i] *= 1000;
-  }
+#else
+  return absl::UnavailableError("Device not supported");
 #endif
+}
+
+absl::StatusOr<size_t> GetMaxFrequencyKhz() {
+#if BAND_SUPPORT_DEVICE
+  auto max_freq = TryReadSizeT(GetPaths("max_clock_mhz"));
+  if (max_freq.ok()) {
+    return max_freq.value() * 1000;
+  } else {
+    return max_freq.status();
+  }
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<size_t> GetFrequencyKhz() {
+#if BAND_SUPPORT_DEVICE
+  auto freq = TryReadSizeT(GetPaths("clock_mhz"));
+  if (freq.ok()) {
+    return freq.value() * 1000;
+  } else {
+    return freq.status();
+  }
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<size_t> GetPollingIntervalMs() {
+#if BAND_SUPPORT_DEVICE
+  return TryReadSizeT(GetPaths("devfreq/polling_interval"));
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
+}
+
+absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz() {
+#if BAND_SUPPORT_DEVICE
+  absl::StatusOr<std::vector<size_t>> frequenciesMhz;
+  frequenciesMhz = TryReadSizeTs(GetPaths("freq_table_mhz"));
+  if (!frequenciesMhz.ok() || frequenciesMhz.value().empty()) {
+    frequenciesMhz = TryReadSizeTs(GetPaths("dvfs_table"));
+  }
+  for (size_t i = 0; i < frequenciesMhz.value().size(); i++) {
+    frequenciesMhz.value()[i] *= 1000;
+  }
   return frequenciesMhz;
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
 }
 
-std::vector<std::pair<int, int>> GetClockStats() {
-  std::vector<std::pair<int, int>> frequency_stats;
-
+absl::StatusOr<std::vector<std::pair<size_t, size_t>>> GetClockStats() {
 #if BAND_SUPPORT_DEVICE
-  std::vector<int> frequencies = GetAvailableFrequenciesKhz();
-  std::vector<int> clock_stats = TryReadInts(GetPaths("gpu_clock_stats"));
+  std::vector<std::pair<size_t, size_t>> frequency_stats;
 
-  frequency_stats.resize(frequencies.size());
-  for (size_t i = 0; i < frequency_stats.size(); i++) {
-    frequency_stats[i] = {frequencies[i], clock_stats[i]};
+  absl::StatusOr<std::vector<size_t>> frequencies =
+      GetAvailableFrequenciesKhz();
+  absl::StatusOr<std::vector<size_t>> clock_stats =
+      TryReadSizeTs(GetPaths("gpu_clock_stats"));
+
+  if (!frequencies.ok()) {
+    return frequencies.status();
+  } else if (!clock_stats.ok()) {
+    return clock_stats.status();
   }
-#endif
+
+  frequency_stats.resize(frequencies.value().size());
+  for (size_t i = 0; i < frequency_stats.size(); i++) {
+    frequency_stats[i] = {frequencies.value()[i], clock_stats.value()[i]};
+  }
+
   return frequency_stats;
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
 }
 
 }  // namespace gpu

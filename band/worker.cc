@@ -138,14 +138,16 @@ absl::Status Worker::TryUpdateWorkerThread() {
     // internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
     // internal_backend->SetMaxNumThreads(num_threads_);
 
-    if (cpu_set_.NumEnabled() == 0) {
-      return absl::OkStatus();
-    }
+    if (device::SupportsDevice()) {
+      if (cpu_set_.NumEnabled() == 0) {
+        return absl::OkStatus();
+      }
 
-    if (!SetCPUThreadAffinity(cpu_set_).ok()) {
-      return absl::InternalError(
-          absl::StrFormat("Worker (%d, %s) failed to set cpu thread affinity",
-                          worker_id_, ToString(device_flag_)));
+      if (!SetCPUThreadAffinity(cpu_set_).ok()) {
+        return absl::InternalError(
+            absl::StrFormat("Worker (%d, %s) failed to set cpu thread affinity",
+                            worker_id_, ToString(device_flag_)));
+      }
     }
   }
   return absl::OkStatus();
