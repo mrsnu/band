@@ -48,6 +48,32 @@ TEST(CPUTest, EnableTest) {
   EXPECT_EQ(set, BandCPUMaskGetSet(CPUMaskFlag::kAll));
 }
 
+TEST(CPUTest, FrequencyTest) {
+  for (size_t i = 0; i < GetCPUCount(); i++) {
+    EXPECT_NE(cpu::GetTargetFrequencyKhz(i), -1);
+    EXPECT_NE(cpu::GetTargetMaxFrequencyKhz(i), -1);
+    EXPECT_NE(cpu::GetTargetMinFrequencyKhz(i), -1);
+    // GetFrequencyKhz requires sudo
+    EXPECT_NE(cpu::GetUpTransitionLatencyMs(i), -1);
+    EXPECT_NE(cpu::GetDownTransitionLatencyMs(i), -1);
+    EXPECT_NE(cpu::GetTotalTransitionCount(i), -1);
+  }
+}
+
+TEST_P(AffinityMasksFixture, FrequencyCPUSetTest) {
+  CpuSet target_set = BandCPUMaskGetSet(GetParam());
+  EXPECT_NE(cpu::GetTargetFrequencyKhz(target_set), -1);
+  EXPECT_NE(cpu::GetTargetMaxFrequencyKhz(target_set), -1);
+  EXPECT_NE(cpu::GetTargetMinFrequencyKhz(target_set), -1);
+  std::vector<int> available_frequencies =
+      GetAvailableFrequenciesKhz(target_set);
+  EXPECT_NE(available_frequencies.size(), 0);
+  // GetFrequencyKhz requires sudo
+  EXPECT_NE(cpu::GetUpTransitionLatencyMs(target_set), -1);
+  EXPECT_NE(cpu::GetDownTransitionLatencyMs(target_set), -1);
+  EXPECT_NE(cpu::GetTotalTransitionCount(target_set), -1);
+}
+
 INSTANTIATE_TEST_SUITE_P(AffinitySetTests, AffinityMasksFixture,
                          testing::Values(CPUMaskFlag::kAll,
                                          CPUMaskFlag::kLittle,
