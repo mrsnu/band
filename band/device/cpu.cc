@@ -90,12 +90,8 @@ size_t CpuSet::NumEnabled() const { return GetCPUCount(); }
 std::string CpuSet::ToString() const {
   std::string str;
   for (int i = 0; i < GetCPUCount(); i++) {
-    if (IsEnabled(i)) {
-      str += std::to_string(i);
-      str += ",";
-    }
+    str += IsEnabled(i) ? "1" : "0";
   }
-
   return str;
 }
 
@@ -220,7 +216,11 @@ int get_max_freq_khz(int cpuid) {
   return max_freq_khz;
 }
 
-int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
+#endif  // defined BAND_SUPPORT_DEVICE
+
+absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
+#if BAND_SUPPORT_DEVICE
+
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
@@ -235,15 +235,19 @@ int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
   if (syscallret != 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Set sched affinity error: %s",
-                      strerror(err));
-    return -1;
+    return absl::InternalError(
+        "Failed to set the CPU affinity - " + thread_affinity_mask.ToString() +
+        " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
   }
-  return 0;
+  return absl::OkStatus();
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
 }
 
-int GetSchedAffinity(CpuSet& thread_affinity_mask) {
-  // set affinity for thread
+absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
+#if BAND_SUPPORT_DEVICE
+
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
 #else
@@ -257,33 +261,9 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
   if (syscallret != 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Get sched affinity error :%s",
-                      strerror(err));
-    return -1;
-  }
-
-  return 0;
-}
-#endif  // defined BAND_SUPPORT_DEVICE
-
-absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
-#if BAND_SUPPORT_DEVICE
-  int ssaret = SetSchedAffinity(thread_affinity_mask);
-  if (ssaret != 0) {
-    return absl::InternalError("Failed to set the CPU affinity: " +
-                               thread_affinity_mask.ToString());
-  }
-  return absl::OkStatus();
-#else
-  return absl::UnavailableError("Device not supported");
-#endif
-}
-
-absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
-#if BAND_SUPPORT_DEVICE
-  int gsaret = GetSchedAffinity(thread_affinity_mask);
-  if (gsaret != 0) {
-    return absl::InternalError("Failed to get the CPU affinity.");
+    return absl::InternalError(
+        "Failed to get the CPU affinity - " + thread_affinity_mask.ToString() +
+        " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
   }
   return absl::OkStatus();
 #else
@@ -331,6 +311,14 @@ int SetupThreadAffinityMasks() {
     g_thread_affinity_mask_primary.DisableAll();
   }
 
+  BAND_LOG_INTERNAL(
+      BAND_LOG_INFO,
+      "CPU affinity masks: all(%s), little(%s), big(%s), primary(%s)",
+      g_thread_affinity_mask_all.ToString().c_str(),
+      g_thread_affinity_mask_little.ToString().c_str(),
+      g_thread_affinity_mask_big.ToString().c_str(),
+      g_thread_affinity_mask_primary.ToString().c_str());
+
 #else
   // TODO implement me for other platforms
   g_thread_affinity_mask_little.DisableAll();
@@ -362,9 +350,6 @@ const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag) {
 namespace cpu {
 absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(int cpu) {
 #if BAND_SUPPORT_DEVICE
-  if (!IsRooted()) {
-    return absl::UnavailableError("Device not rooted");
-  }
   return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                            "/cpufreq/scaling_max_freq",
                        "/sys/devices/system/cpu/cpufreq/policy" +
@@ -473,9 +458,6 @@ absl::StatusOr<size_t> GetTargetFrequencyKhz(const CpuSet& cpu_set) {
 
 absl::StatusOr<size_t> GetFrequencyKhz(int cpu) {
 #if BAND_SUPPORT_DEVICE
-  if (!IsRooted()) {
-    return absl::UnavailableError("Device not rooted");
-  }
   return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                            "/cpufreq/cpuinfo_cur_freq",
                        "/sys/devices/system/cpu/cpufreq/policy" +

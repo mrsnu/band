@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "band/logger.h"
+#include "util.h"
 
 namespace band {
 namespace device {
@@ -74,7 +75,7 @@ bool IsRooted() {
         }
 
         is_rooted = result.find("Rooted") != std::string::npos;
-        BAND_LOG_PROD(BAND_LOG_INFO, "Is rooted: %d", is_rooted);
+        BAND_LOG_INTERNAL(BAND_LOG_INFO, "Is rooted: %d", is_rooted);
       },
       is_rooted);
 #endif

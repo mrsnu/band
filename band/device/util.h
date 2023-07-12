@@ -24,7 +24,6 @@ absl::StatusOr<std::string> TryReadString(std::vector<std::string> paths);
 
 bool SupportsDevice();
 bool IsRooted();
-
 }  // namespace device
 }  // namespace band
 
