@@ -383,6 +383,7 @@ band_cc_library(
         ":model",
         ":model_analyzer",
         ":planner",
+        ":resource_monitor",
         ":scheduler",
         ":tensor",
         ":tensor_ring_buffer",
@@ -419,5 +420,16 @@ band_cc_library(
         ":common",
         ":config",
         "//band/device",
+    ],
+)
+
+band_cc_library(
+    name = "resource_monitor",
+    srcs = ["resource_monitor.cc"],
+    hdrs = ["resource_monitor.h"],
+    deps = [
+        ":common",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
