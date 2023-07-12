@@ -1,5 +1,7 @@
 """TensorRT configuration utility"""
 
+load("//third_party:common.bzl", "copy_files_rule")
+
 _TENSORRT_INCLUDE_PATH = "TENSORRT_INCLUDE_PATH"
 _TENSORRT_LIB_PATH = "TENSORRT_LIB_PATH"
 
@@ -16,21 +18,6 @@ _TENSORRT_HEADERS = [
     "NvInferPlugin.h",
 ]
 
-def copy_files_rule(repository_ctx, name, srcs, outs):
-    """Returns a rule to copy a set of files."""
-    cmds = []
-
-    # Copy files.
-    for src, out in zip(srcs, outs):
-        cmds.append('cp -f "%s" "$(location %s)"' % (src, out))
-    outs = [('        "%s",' % out) for out in outs]
-    return """genrule(
-    name = "%s",
-    outs = [
-%s
-    ],
-    cmd = \"""%s \""",
-)""" % (name, "\n".join(outs), " && \\\n".join(cmds))
 
 def _tensorrt_configure_impl(ctx):
     copy_rules = []

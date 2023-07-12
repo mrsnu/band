@@ -6,12 +6,22 @@ package(
 )
 
 band_cc_library(
-    name = "loader",
-    hdrs = ["loader.h"],
+    name = "trt_loader",
+    hdrs = ["trt_loader.h"],
     deps = [
         "//band/server/util:dso_loader",
         "//band:common",
         "@com_nvidia_tensorrt//:tensorrt",
+    ]
+)
+
+band_cc_library(
+    name = "cuda_loader",
+    hdrs = ["cuda_loader.h"],
+    deps = [
+        "//band/server/util:dso_loader",
+        "//band:common",
+        "@com_nvidia_cuda//:cuda",
     ]
 )
 

@@ -5,7 +5,7 @@ band_cc_android_test(
     size = "small",
     srcs = ["loader_test.cc"],
     deps = [
-        "//band/server/backend/tensorrt:loader",
+        "//band/server/backend/tensorrt:trt_loader",
         "@com_google_googletest//:gtest",
     ],
 )

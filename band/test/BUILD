@@ -127,9 +127,6 @@ band_cc_android_test(
         "//band:tflite": [
             "//band/backend/tfl:tfl_backend",
         ],
-        "//band:grpc": [
-            "//band/backend/grpc:grpc_backend",
-        ],
         "//conditions:default": [
         ],
     }),

@@ -1,4 +1,4 @@
-#include "band/server/backend/tensorrt/loader.h"
+#include "band/server/backend/tensorrt/trt_loader.h"
 
 #include <gtest/gtest.h>
 
