@@ -4,7 +4,7 @@ namespace band {
 
 bool GraphBuilder::IsValid() const {
   for (auto& invariant : invariants_) {
-    if (!invariant->Check(*this).ok()) {
+    if (!invariant->Check(*this)) {
       return false;
     }
   }

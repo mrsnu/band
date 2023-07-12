@@ -27,19 +27,24 @@ class Node {
   Node(GraphBuilder* builder, size_t id, std::string name)
       : builder_(builder), id_(id), name_(name) {}
   std::string GetName() const { return name_; }
-  virtual NodeType GetType() = 0;
 
   size_t id() const { return id_; }
   GraphBuilder* builder() const { return builder_; }
-  virtual DataType GetInputTensorType(size_t index) const = 0;
-  virtual DataType GetOutputTensorType(size_t index) const = 0;
-  virtual std::vector<int> GetInputTensorDims(size_t index) const = 0;
-  virtual std::vector<int> GetOutputTensorDims(size_t index) const = 0;
+
+  virtual NodeType GetType() = 0;
+  DataType GetInputTensorType(size_t index) const;
+  DataType GetOutputTensorType(size_t index) const;
+  std::vector<int> GetInputTensorDims(size_t index) const;
+  std::vector<int> GetOutputTensorDims(size_t index) const;
 
  private:
+  GraphBuilder* builder_ = nullptr;
   size_t id_;
   std::string name_;
-  GraphBuilder* builder_;
+  DataType input_tensor_type_ = DataType::NoType;
+  DataType output_tensor_type_ = DataType::NoType;
+  std::vector<int> input_tensor_dims_ = {};
+  std::vector<int> output_tensor_dims_ = {};
 };
 
 class EntryNode : public Node {

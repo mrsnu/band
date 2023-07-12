@@ -11,19 +11,6 @@
 
 namespace band {
 
-namespace {
-
-std::vector<std::unique_ptr<Invariant>> GetDefaultInvariants() {
-  std::vector<std::unique_ptr<Invariant>> invariants;
-  invariants.push_back(std::make_unique<NoCycle>());
-  invariants.push_back(std::make_unique<NoIsolatedNode>());
-  invariants.push_back(std::make_unique<NoDuplicateEdge>());
-  invariants.push_back(std::make_unique<NoMismatchedEdge>());
-  return invariants;
-}
-
-}  // anonymous namespace
-
 using Edge = std::pair<size_t, size_t>;
 
 class GraphBuilder : public IGraph {
@@ -31,8 +18,9 @@ class GraphBuilder : public IGraph {
   GraphBuilder(std::string name) : name_(name) {
     nodes_.push_back(std::make_shared<EntryNode>(this, 0, "Entry"));
     nodes_.push_back(std::make_shared<ExitNode>(this, 1, "Exit"));
+
+    SetDefaultInvariants();
   }
-  ~GraphBuilder();
   bool IsValid() const;
   absl::StatusOr<Graph> Build();
 
@@ -46,7 +34,7 @@ class GraphBuilder : public IGraph {
                                      std::shared_ptr<Node> operand,
                                      std::string name = "");
   void AddInvariant(std::unique_ptr<Invariant> invariant) {
-    invariants_.push_back(invariant);
+    invariants_.push_back(std::move(invariant));
   }
 
   std::shared_ptr<Node> GetEntryNode() { return nodes_[0]; }
@@ -56,11 +44,18 @@ class GraphBuilder : public IGraph {
   std::vector<Edge> edges() const override { return edges_; }
 
  private:
+  void SetDefaultInvariants() {
+    invariants_.emplace_back(new NoCycle());
+    invariants_.emplace_back(new NoIsolatedNode());
+    invariants_.emplace_back(new NoDuplicateEdge());
+    invariants_.emplace_back(new NoMismatchedEdge());
+  }
+
   std::string name_;
   std::vector<std::shared_ptr<Node>> nodes_;
   std::vector<Edge> edges_;
 
-  std::vector<std::unique_ptr<Invariant>> invariants_ = GetDefaultInvariants();
+  std::vector<std::unique_ptr<Invariant>> invariants_;
 };
 
 }  // namespace band

@@ -9,27 +9,27 @@ class GraphBuilder;
 
 class Invariant {
  public:
-  virtual bool Check(const GraphBuilder graph) const = 0;
+  virtual bool Check(const GraphBuilder& graph) const = 0;
 };
 
 class NoCycle : public Invariant {
  public:
-  bool Check(const GraphBuilder graph) const override;
+  bool Check(const GraphBuilder& graph) const override;
 };
 
 class NoIsolatedNode : public Invariant {
  public:
-  bool Check(const GraphBuilder graph) const override;
+  bool Check(const GraphBuilder& graph) const override;
 };
 
 class NoDuplicateEdge : public Invariant {
  public:
-  bool Check(const GraphBuilder graph) const override;
+  bool Check(const GraphBuilder& graph) const override;
 };
 
 class NoMismatchedEdge : public Invariant {
  public:
-  bool Check(const GraphBuilder graph) const override;
+  bool Check(const GraphBuilder& graph) const override;
 };
 
 }  // namespace band
