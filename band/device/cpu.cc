@@ -89,7 +89,7 @@ size_t CpuSet::NumEnabled() const { return GetCPUCount(); }
 
 std::string CpuSet::ToString() const {
   std::string str;
-  for (int i = 0; i < GetCPUCount(); i++) {
+  for (size_t i = 0; i < GetCPUCount(); i++) {
     str += IsEnabled(i) ? "1" : "0";
   }
   return str;
