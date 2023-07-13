@@ -4,7 +4,7 @@
 
 #include "band/device/util.h"
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -16,7 +16,7 @@ namespace gpu {
 
 std::vector<std::string> GetPaths(std::string suffix) {
   std::vector<std::string> device_paths;
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   // TODO: Add more device-specific GPU path
   device_paths = {
       "/sys/class/kgsl/kgsl-3d0/",     // Pixel4
@@ -30,7 +30,7 @@ std::vector<std::string> GetPaths(std::string suffix) {
 }
 
 absl::StatusOr<size_t> GetMinFrequencyKhz() {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   auto min_freq = TryReadSizeT(GetPaths("min_clock_mhz"));
   if (min_freq.ok()) {
     return min_freq.value() * 1000;
@@ -43,7 +43,7 @@ absl::StatusOr<size_t> GetMinFrequencyKhz() {
 }
 
 absl::StatusOr<size_t> GetMaxFrequencyKhz() {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   auto max_freq = TryReadSizeT(GetPaths("max_clock_mhz"));
   if (max_freq.ok()) {
     return max_freq.value() * 1000;
@@ -56,7 +56,7 @@ absl::StatusOr<size_t> GetMaxFrequencyKhz() {
 }
 
 absl::StatusOr<size_t> GetFrequencyKhz() {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   auto freq = TryReadSizeT(GetPaths("clock_mhz"));
   if (freq.ok()) {
     return freq.value() * 1000;
@@ -69,7 +69,7 @@ absl::StatusOr<size_t> GetFrequencyKhz() {
 }
 
 absl::StatusOr<size_t> GetPollingIntervalMs() {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   return TryReadSizeT(GetPaths("devfreq/polling_interval"));
 #else
   return absl::UnavailableError("Device not supported");
@@ -77,7 +77,7 @@ absl::StatusOr<size_t> GetPollingIntervalMs() {
 }
 
 absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz() {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<std::vector<size_t>> frequenciesMhz;
   frequenciesMhz = TryReadSizeTs(GetPaths("freq_table_mhz"));
   if (!frequenciesMhz.ok() || frequenciesMhz.value().empty()) {
@@ -93,7 +93,7 @@ absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz() {
 }
 
 absl::StatusOr<std::vector<std::pair<size_t, size_t>>> GetClockStats() {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   std::vector<std::pair<size_t, size_t>> frequency_stats;
 
   absl::StatusOr<std::vector<size_t>> frequencies =

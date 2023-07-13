@@ -4,7 +4,7 @@
 
 #include "band/device/util.h"
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -16,7 +16,7 @@ namespace generic {
 
 std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
   std::vector<std::string> device_paths;
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   // TODO: Add more device-specific path
   if (device_flag == DeviceFlag::kNPU) {
     device_paths = {
@@ -37,7 +37,7 @@ std::vector<std::string> GetPaths(DeviceFlag device_flag, std::string suffix) {
 }
 
 absl::StatusOr<size_t> GetMinFrequencyKhz(DeviceFlag device_flag) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<size_t> min_freq =
       TryReadSizeT(GetPaths(device_flag, "min_freq"));
   if (min_freq.ok()) {
@@ -51,7 +51,7 @@ absl::StatusOr<size_t> GetMinFrequencyKhz(DeviceFlag device_flag) {
 }
 
 absl::StatusOr<size_t> GetMaxFrequencyKhz(DeviceFlag device_flag) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<size_t> max_freq =
       TryReadSizeT(GetPaths(device_flag, "max_freq"));
   if (max_freq.ok()) {
@@ -65,7 +65,7 @@ absl::StatusOr<size_t> GetMaxFrequencyKhz(DeviceFlag device_flag) {
 }
 
 absl::StatusOr<size_t> GetFrequencyKhz(DeviceFlag device_flag) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<size_t> cur_freq =
       TryReadSizeT(GetPaths(device_flag, "cur_freq"));
   if (cur_freq.ok()) {
@@ -79,7 +79,7 @@ absl::StatusOr<size_t> GetFrequencyKhz(DeviceFlag device_flag) {
 }
 
 absl::StatusOr<size_t> GetTargetFrequencyKhz(DeviceFlag device_flag) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<size_t> target_freq =
       TryReadSizeT(GetPaths(device_flag, "target_freq"));
   if (target_freq.ok()) {
@@ -93,7 +93,7 @@ absl::StatusOr<size_t> GetTargetFrequencyKhz(DeviceFlag device_flag) {
 }
 
 absl::StatusOr<size_t> GetPollingIntervalMs(DeviceFlag device_flag) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   return TryReadSizeT(GetPaths(device_flag, "polling_interval"));
 #else
   return absl::UnavailableError("Device not supported");
@@ -102,7 +102,7 @@ absl::StatusOr<size_t> GetPollingIntervalMs(DeviceFlag device_flag) {
 
 absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz(
     DeviceFlag device_flag) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<std::vector<size_t>> frequencies;  // hz
   frequencies = TryReadSizeTs(GetPaths(device_flag, "available_frequencies"));
   if (!frequencies.ok()) {
@@ -120,7 +120,7 @@ absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz(
 
 absl::StatusOr<std::vector<std::pair<size_t, size_t>>> GetClockStats(
     DeviceFlag device_flag) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   std::vector<std::pair<size_t, size_t>> frequency_stats;
 
   absl::StatusOr<std::vector<size_t>> frequencies =

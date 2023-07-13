@@ -28,7 +28,7 @@
 #include "band/common.h"
 #include "band/device/util.h"
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 #include <sched.h>  // cpu_set_t
 #endif
 
@@ -48,7 +48,7 @@ class CpuSet {
   std::string ToString() const;
   bool operator==(const CpuSet& rhs) const;
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   const cpu_set_t& GetCpuSet() const { return cpu_set_; }
   cpu_set_t& GetCpuSet() { return cpu_set_; }
 

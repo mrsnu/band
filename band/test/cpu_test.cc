@@ -10,7 +10,7 @@
 namespace band {
 namespace test {
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 // NOTE: set may be different from kAll due to device-specific limitation
 // e.g., Galaxy S20 can only set affinity to first 6 cores
 TEST(CPUTest, AffinitySetTest) {
@@ -62,11 +62,11 @@ TEST(CPUTest, FrequencyStatusTest) {
   for (auto mask : masks) {
     CpuSet target_set = BandCPUMaskGetSet(mask);
     auto is_ok = [](absl::Status status) -> bool {
-      if (device::SupportsDevice()) {
-        return status.ok() || status.code() == absl::StatusCode::kNotFound;
-      } else {
-        return status.code() == absl::StatusCode::kUnavailable;
-      }
+#if BAND_IS_MOBILE
+      return status.ok() || status.code() == absl::StatusCode::kNotFound;
+#else
+      return status.code() == absl::StatusCode::kUnavailable;
+#endif
     };
 
     EXPECT_TRUE(is_ok(cpu::GetTargetFrequencyKhz(target_set).status()));
@@ -76,10 +76,10 @@ TEST(CPUTest, FrequencyStatusTest) {
     EXPECT_TRUE(is_ok(cpu::GetUpTransitionLatencyMs(target_set).status()));
     EXPECT_TRUE(is_ok(cpu::GetDownTransitionLatencyMs(target_set).status()));
     EXPECT_TRUE(is_ok(cpu::GetTotalTransitionCount(target_set).status()));
-  }
+  };
 }
-
 }  // namespace test
+
 }  // namespace band
 
 int main(int argc, char** argv) {

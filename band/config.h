@@ -1,13 +1,12 @@
 #ifndef BAND_CONFIG_H_
 #define BAND_CONFIG_H_
 
+#include <limits>
 #include <string>
 #include <vector>
 
 #include "band/common.h"
 #include "band/error_reporter.h"
-
-#include <limits>
 
 namespace band {
 
@@ -53,12 +52,17 @@ struct SubgraphConfig {
       SubgraphPreparationType::kMergeUnitSubgraph;
 };
 
+struct DeviceConfig {
+  std::map<DeviceFlag, std::string> device_freq_paths;
+};
+
 struct RuntimeConfig {
   CPUMaskFlag cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  DeviceConfig device_config;
 
  private:
   friend class RuntimeConfigBuilder;

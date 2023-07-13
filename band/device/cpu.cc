@@ -22,7 +22,7 @@
 #include "band/device/util.h"
 #include "band/logger.h"
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 #include <errno.h>
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -35,7 +35,7 @@
 namespace band {
 using namespace device;
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 CpuSet::CpuSet() { DisableAll(); }
 
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
@@ -67,7 +67,7 @@ size_t CpuSet::NumEnabled() const {
   return num_enabled;
 }
 
-#else   // defined BAND_SUPPORT_DEVICE
+#else   // defined BAND_IS_MOBILE
 CpuSet::CpuSet() {}
 
 void CpuSet::Enable(int /* cpu */) {}
@@ -85,7 +85,7 @@ bool CpuSet::operator==(const CpuSet& rhs) const { return true; }
 bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
 size_t CpuSet::NumEnabled() const { return GetCPUCount(); }
-#endif  // defined BAND_SUPPORT_DEVICE
+#endif  // defined BAND_IS_MOBILE
 
 std::string CpuSet::ToString() const {
   std::string str;
@@ -118,7 +118,7 @@ size_t GetCPUCount() {
     count = emscripten_num_logical_cores();
   else
     count = 1;
-#elif defined BAND_SUPPORT_DEVICE
+#elif defined BAND_IS_MOBILE
   // get cpu count from /proc/cpuinfo
   FILE* fp = fopen("/proc/cpuinfo", "rb");
   if (!fp) return 1;
@@ -154,7 +154,7 @@ size_t GetBigCPUCount() {
   return BandCPUMaskGetSet(CPUMaskFlag::kBig).NumEnabled();
 }
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
   char path[256];
@@ -216,10 +216,10 @@ int get_max_freq_khz(int cpuid) {
   return max_freq_khz;
 }
 
-#endif  // defined BAND_SUPPORT_DEVICE
+#endif  // defined BAND_IS_MOBILE
 
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
@@ -246,7 +246,7 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 }
 
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
 
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
@@ -274,7 +274,7 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 int SetupThreadAffinityMasks() {
   g_thread_affinity_mask_all.DisableAll();
 
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   int max_freq_khz_min = INT_MAX;
   int max_freq_khz_max = 0;
   std::vector<int> cpu_max_freq_khz(g_cpucount);
@@ -349,7 +349,7 @@ const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag) {
 
 namespace cpu {
 absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(int cpu) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                            "/cpufreq/scaling_max_freq",
                        "/sys/devices/system/cpu/cpufreq/policy" +
@@ -360,7 +360,7 @@ absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(int cpu) {
 }
 
 absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
@@ -385,7 +385,7 @@ absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(const CpuSet& cpu_set) {
 }
 
 absl::StatusOr<size_t> GetTargetMinFrequencyKhz(int cpu) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                            "/cpufreq/scaling_min_freq",
                        "/sys/devices/system/cpu/cpufreq/policy" +
@@ -396,7 +396,7 @@ absl::StatusOr<size_t> GetTargetMinFrequencyKhz(int cpu) {
 }
 
 absl::StatusOr<size_t> GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
@@ -421,7 +421,7 @@ absl::StatusOr<size_t> GetTargetMinFrequencyKhz(const CpuSet& cpu_set) {
 }
 
 absl::StatusOr<size_t> GetTargetFrequencyKhz(int cpu) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                            "/cpufreq/scaling_cur_freq",
                        "/sys/devices/system/cpu/cpufreq/policy" +
@@ -432,7 +432,7 @@ absl::StatusOr<size_t> GetTargetFrequencyKhz(int cpu) {
 }
 
 absl::StatusOr<size_t> GetTargetFrequencyKhz(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_frequency = 0;
 
@@ -457,7 +457,7 @@ absl::StatusOr<size_t> GetTargetFrequencyKhz(const CpuSet& cpu_set) {
 }
 
 absl::StatusOr<size_t> GetFrequencyKhz(int cpu) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                            "/cpufreq/cpuinfo_cur_freq",
                        "/sys/devices/system/cpu/cpufreq/policy" +
@@ -468,7 +468,7 @@ absl::StatusOr<size_t> GetFrequencyKhz(int cpu) {
 }
 
 absl::StatusOr<size_t> GetFrequencyKhz(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   if (!IsRooted()) {
     return absl::UnavailableError("Device not rooted");
   }
@@ -498,7 +498,7 @@ absl::StatusOr<size_t> GetFrequencyKhz(const CpuSet& cpu_set) {
 
 absl::StatusOr<std::vector<size_t> > GetAvailableFrequenciesKhz(
     const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   for (int cpu = 0; cpu < GetCPUCount(); cpu++) {
     // Assuming that there is one cluster group
     if (cpu_set.IsEnabled(cpu)) {
@@ -517,7 +517,7 @@ absl::StatusOr<std::vector<size_t> > GetAvailableFrequenciesKhz(
 }
 
 absl::StatusOr<size_t> GetUpTransitionLatencyMs(int cpu) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<size_t> cpu_transition =
       TryReadSizeT({"/sys/devices/system/cpu/cpufreq/policy" +
                     std::to_string(cpu) + "/schedutil/up_rate_limit_us"});
@@ -540,7 +540,7 @@ absl::StatusOr<size_t> GetUpTransitionLatencyMs(int cpu) {
 
 // Assuming that there is one cluster group
 absl::StatusOr<size_t> GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   if (cpu_set.NumEnabled() > 0) {
     for (int i = 0; i < GetCPUCount(); i++) {
       if (cpu_set.IsEnabled(i)) {
@@ -555,7 +555,7 @@ absl::StatusOr<size_t> GetUpTransitionLatencyMs(const CpuSet& cpu_set) {
 }
 
 absl::StatusOr<size_t> GetDownTransitionLatencyMs(int cpu) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   absl::StatusOr<size_t> cpu_transition =
       TryReadSizeT({"/sys/devices/system/cpu/cpufreq/policy" +
                     std::to_string(cpu) + "/schedutil/down_rate_limit_us"});
@@ -579,7 +579,7 @@ absl::StatusOr<size_t> GetDownTransitionLatencyMs(int cpu) {
 
 // Assuming that there is one cluster group
 absl::StatusOr<size_t> GetDownTransitionLatencyMs(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   for (int i = 0; i < GetCPUCount(); i++) {
     if (cpu_set.IsEnabled(i)) {
       return GetDownTransitionLatencyMs(i);
@@ -595,7 +595,7 @@ absl::StatusOr<size_t> GetDownTransitionLatencyMs(const CpuSet& cpu_set) {
 // Note that cores in same cluster (little/big/primary)
 // shares this value
 absl::StatusOr<size_t> GetTotalTransitionCount(int cpu) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   return TryReadSizeT({"/sys/devices/system/cpu/cpu" + std::to_string(cpu) +
                            "/cpufreq/stats/total_trans",
                        "/sys/devices/system/cpu/cpufreq/policy" +
@@ -606,7 +606,7 @@ absl::StatusOr<size_t> GetTotalTransitionCount(int cpu) {
 }
 
 absl::StatusOr<size_t> GetTotalTransitionCount(const CpuSet& cpu_set) {
-#if BAND_SUPPORT_DEVICE
+#if BAND_IS_MOBILE
   if (cpu_set.NumEnabled() > 0) {
     int accumulated_transition_count = 0;
 
