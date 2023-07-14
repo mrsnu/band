@@ -252,7 +252,6 @@ TEST(ResourceMonitorTest, LogTest) {
   }
   // check if the log file is not empty
   EXPECT_TRUE(lines.size() > 0);
-  std::cout << "Log file: " << line << std::endl;
 #endif  // BAND_IS_MOBILE
 }
 

@@ -143,12 +143,13 @@ class ResourceMonitorConfigBuilder {
     resource_monitor_log_path_ = log_path;
     return *this;
   }
-  ResourceMonitorConfigBuilder& AddDeviceFreqPaths(
-      std::map<DeviceFlag, std::string> device_freq_paths) {
-    device_freq_paths_ = device_freq_paths;
+  ResourceMonitorConfigBuilder& AddResourceMonitorDeviceFreqPath(
+      DeviceFlag device, std::string device_freq_path) {
+    device_freq_paths_.insert({device, device_freq_path});
     return *this;
   }
-  ResourceMonitorConfigBuilder& AddMonitorIntervalMs(int monitor_interval_ms) {
+  ResourceMonitorConfigBuilder& AddResourceMonitorIntervalMs(
+      int monitor_interval_ms) {
     monitor_interval_ms_ = monitor_interval_ms;
     return *this;
   }
@@ -240,13 +241,14 @@ class RuntimeConfigBuilder {
     device_config_builder_.AddResourceMonitorLogPath(resource_monitor_log_path);
     return *this;
   }
-  RuntimeConfigBuilder& AddDeviceFreqPaths(
-      std::map<DeviceFlag, std::string> device_freq_paths) {
-    device_config_builder_.AddDeviceFreqPaths(device_freq_paths);
+  RuntimeConfigBuilder& AddResourceMonitorDeviceFreqPath(
+      DeviceFlag device, std::string device_freq_path) {
+    device_config_builder_.AddResourceMonitorDeviceFreqPath(device,
+                                                            device_freq_path);
     return *this;
   }
-  RuntimeConfigBuilder& AddMonitorIntervalMs(int monitor_interval_ms) {
-    device_config_builder_.AddMonitorIntervalMs(monitor_interval_ms);
+  RuntimeConfigBuilder& AddResourceMonitorIntervalMs(int monitor_interval_ms) {
+    device_config_builder_.AddResourceMonitorIntervalMs(monitor_interval_ms);
     return *this;
   }
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {

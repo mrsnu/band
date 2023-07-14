@@ -170,6 +170,8 @@ const char* ToString<CpuFreqFlag>(CpuFreqFlag flag) {
       return "DOWN_TRANSITION_LATENCY";
     case CpuFreqFlag::TRANSITION_COUNT:
       return "TRANSITION_COUNT";
+    default:
+      return "UNKNOWN";
   }
 }
 

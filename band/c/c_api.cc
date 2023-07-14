@@ -143,6 +143,20 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       int arg = va_arg(vl, int);
       b->impl.AddCPUMask(static_cast<band::CPUMaskFlag>(arg));
     } break;
+    case BAND_RESOURCE_MONITOR_DEVICE_PATH: {
+      int flag = va_arg(vl, int);
+      char* path = va_arg(vl, char*);
+      b->impl.AddResourceMonitorDeviceFreqPath(
+          static_cast<band::DeviceFlag>(flag), path);
+    } break;
+    case BAND_RESOURCE_MONITOR_INTERVAL_MS: {
+      int arg = va_arg(vl, int);
+      b->impl.AddResourceMonitorIntervalMs(arg);
+    } break;
+    case BAND_RESOURCE_MONITOR_LOG_PATH: {
+      char* arg = va_arg(vl, char*);
+      b->impl.AddResourceMonitorLogPath(arg);
+    } break;
   }
   va_end(vl);
 }

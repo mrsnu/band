@@ -172,6 +172,13 @@ int main() {
   printf("BandAddConfig, BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS\n");
   pBandAddConfig(b, BAND_PLANNER_SCHEDULE_WINDOW_SIZE, /*count=*/1, 10);
   printf("BandAddConfig, BAND_PLANNER_SCHEDULE_WINDOW_SIZE\n");
+  pBandAddConfig(
+      b, BAND_RESOURCE_MONITOR_DEVICE_PATH, /*count=*/2, kBandDSP,
+      "/sys/class/devfreq/18590000.qcom,devfreq-l3:qcom,cdsp-cdsp-l3-lat/");
+  printf("BandAddConfig, BAND_RESOURCE_MONITOR_DEVICE_PATH\n");
+  pBandAddConfig(b, BAND_RESOURCE_MONITOR_INTERVAL_MS, /*count=*/1, 1000);
+  printf("BandAddConfig, BAND_RESOURCE_MONITOR_INTERVAL_MS\n");
+
   BandConfig* config = pBandConfigCreate(b);
   printf("BandConfigCreate\n");
 
