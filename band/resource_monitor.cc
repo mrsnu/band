@@ -515,7 +515,8 @@ absl::Status ResourceMonitor::AddDevFreqResource(DeviceFlag device_flag,
     case DevFreqFlag::POLLING_INTERVAL: {
       require_continuous_monitoring = false;
       path_candidates = {base_path + "/polling_interval"};
-      multipliers = {1.f};
+      // ms to us
+      multipliers = {1000.f};
     } break;
     default:
       return absl::InternalError(absl::StrFormat(

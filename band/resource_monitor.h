@@ -20,7 +20,9 @@ enum class ThermalFlag {
   TZ_TEMPERATURE = 0,
 };
 
-// NOTE: All frequency values are in KHz
+// NOTE:
+// All frequency values are in KHz
+// All latency values are in us
 enum class DevFreqFlag {
   CUR_FREQ = 0,
   TARGET_FREQ = 1,
