@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <thread>
+
 namespace band {
 namespace test {
 
@@ -83,7 +86,7 @@ TEST(ResourceMonitorTest, GetDevFreqTest) {
     }
   }
 
-  sleep(1);
+  std::this_thread::sleep_for(std::chrono::milliseconds(15));
 
   for (auto& valid_device : valid_devices) {
     auto cur_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::CUR_FREQ);
@@ -126,7 +129,6 @@ TEST(ResourceMonitorTest, GetCpuFreqTest) {
     }
 
     valid_cpus.push_back(flag);
-
     EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::CUR_FREQ),
               absl::OkStatus());
     EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::TARGET_FREQ),
@@ -142,10 +144,13 @@ TEST(ResourceMonitorTest, GetCpuFreqTest) {
         monitor.AddCpuFreqResource(flag, CpuFreqFlag::DOWN_TRANSITION_LATENCY),
         absl::OkStatus());
     // This is optional. E.g., Pixel 4 doesn't have this.
-    monitor.AddCpuFreqResource(flag, CpuFreqFlag::TRANSITION_COUNT);
+    auto status =
+        monitor.AddCpuFreqResource(flag, CpuFreqFlag::TRANSITION_COUNT);
+    std::cout << "AddCpuFreqResource " << ToString(flag)
+              << " TRANSITION_COUNT: " << status << std::endl;
   }
 
-  sleep(1);
+  std::this_thread::sleep_for(std::chrono::milliseconds(15));
 
   for (auto& cpu_mask : valid_cpus) {
     auto cur_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::CUR_FREQ);

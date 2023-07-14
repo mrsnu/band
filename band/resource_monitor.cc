@@ -404,6 +404,7 @@ absl::Status ResourceMonitor::AddCpuFreqResource(CPUMaskFlag cpu_flag,
 
   absl::StatusOr<std::string> path = GetFirstAvailablePath(path_candidates);
   RETURN_IF_ERROR(path.status());
+  BAND_LOG_PROD(BAND_LOG_INFO, "CPU frequency path: %s", path.value().c_str());
   cpu_freq_resources_[key] = {path.value(), multiplier};
   return absl::OkStatus();
 }  // namespace band
@@ -538,7 +539,7 @@ absl::StatusOr<std::string> ResourceMonitor::GetCpuFreqPath(
 absl::StatusOr<std::string> ResourceMonitor::GetFirstAvailablePath(
     const std::vector<std::string>& paths) const {
   for (auto& path : paths) {
-    if (IsFileAvailable(path)) {
+    if (IsFileAvailable(path) && TryReadSizeT({path}).ok()) {
       return path;
     }
   }
