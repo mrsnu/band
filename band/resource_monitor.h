@@ -14,19 +14,6 @@
 #include "band/config.h"
 #include "band/device/cpu.h"
 
-#define DEFINE_TO_JSON                                          \
-  std::string ToJson() const {                                  \
-    std::string ret = "{";                                      \
-    for (auto& pair : status) {                                 \
-      auto& key = pair.first;                                   \
-      auto& value = pair.second;                                \
-      ret += "\"" + key + "\": " + std::to_string(value) + ","; \
-    }                                                           \
-    ret.pop_back();                                             \
-    ret += "}";                                                 \
-    return ret;                                                 \
-  }
-
 namespace band {
 
 enum class ThermalFlag {
@@ -53,6 +40,20 @@ enum class CpuFreqFlag {
 };
 
 enum class NetworkFlag {};
+
+template <>
+size_t EnumLength<ThermalFlag>();
+template <>
+size_t EnumLength<DevFreqFlag>();
+template <>
+size_t EnumLength<CpuFreqFlag>();
+
+template <>
+const char* ToString<ThermalFlag>(ThermalFlag flag);
+template <>
+const char* ToString<DevFreqFlag>(DevFreqFlag flag);
+template <>
+const char* ToString<CpuFreqFlag>(CpuFreqFlag flag);
 
 class ResourceMonitor {
  public:

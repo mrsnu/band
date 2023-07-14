@@ -22,16 +22,24 @@ TEST(ResourceMonitorTest, CreationTest) {
   for (auto& path : tz_paths) {
     std::cout << path << std::endl;
   }
+
   auto devfreq_paths = monitor.GetDevFreqPaths();
   std::cout << "Devfreq paths: " << std::endl;
   for (auto& path : devfreq_paths) {
     std::cout << path << std::endl;
   }
+
   auto cpu_freq_paths = monitor.GetCpuFreqPaths();
   std::cout << "CPU freq paths: " << std::endl;
   for (auto& path : cpu_freq_paths) {
     std::cout << path << std::endl;
   }
+
+  bool callback_called = false;
+  monitor.AddOnUpdate(
+      [&callback_called](const ResourceMonitor&) { callback_called = true; });
+  std::this_thread::sleep_for(std::chrono::milliseconds(22));
+  EXPECT_TRUE(callback_called);
 #endif  // BAND_IS_MOBILE
 }
 
@@ -47,7 +55,7 @@ TEST(ResourceMonitorTest, GetThermalTest) {
               absl::OkStatus());
   }
 
-  sleep(1);
+  std::this_thread::sleep_for(std::chrono::milliseconds(22));
 
   for (size_t i = 0; i < num_tz; ++i) {
     auto temp = monitor.GetThermal(ThermalFlag::TZ_TEMPERATURE, i);
@@ -86,7 +94,7 @@ TEST(ResourceMonitorTest, GetDevFreqTest) {
     }
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(15));
+  std::this_thread::sleep_for(std::chrono::milliseconds(22));
 
   for (auto& valid_device : valid_devices) {
     auto cur_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::CUR_FREQ);
@@ -150,7 +158,7 @@ TEST(ResourceMonitorTest, GetCpuFreqTest) {
               << " TRANSITION_COUNT: " << status << std::endl;
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(15));
+  std::this_thread::sleep_for(std::chrono::milliseconds(22));
 
   for (auto& cpu_mask : valid_cpus) {
     auto cur_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::CUR_FREQ);
@@ -191,6 +199,61 @@ TEST(ResourceMonitorTest, GetCpuFreqTest) {
     }
   }
 #endif
+}
+
+TEST(ResourceMonitorTest, LogTest) {
+  std::string log_path = "/data/local/tmp/example_log.json";
+#if BAND_IS_MOBILE
+  {
+    ResourceMonitorConfig config{log_path, {}, 10};
+    ResourceMonitor monitor;
+    EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+    // add some resources
+    size_t num_tz = monitor.NumThermalResources(ThermalFlag::TZ_TEMPERATURE);
+    for (size_t i = 0; i < num_tz; ++i) {
+      EXPECT_EQ(monitor.AddThermalResource(ThermalFlag::TZ_TEMPERATURE, i),
+                absl::OkStatus());
+    }
+
+    std::vector<DeviceFlag> valid_devices;
+    for (size_t i = 0; i < EnumLength<DeviceFlag>(); ++i) {
+      if (monitor.IsValidDevice(static_cast<DeviceFlag>(i))) {
+        valid_devices.push_back(static_cast<DeviceFlag>(i));
+
+        EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                             DevFreqFlag::CUR_FREQ),
+                  absl::OkStatus());
+        EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                             DevFreqFlag::TARGET_FREQ),
+                  absl::OkStatus());
+        EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                             DevFreqFlag::MIN_FREQ),
+                  absl::OkStatus());
+        EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                             DevFreqFlag::MAX_FREQ),
+                  absl::OkStatus());
+        EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                             DevFreqFlag::POLLING_INTERVAL),
+                  absl::OkStatus());
+      }
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  std::ifstream log_file(log_path);
+  // check if the log file is created and not empty
+  EXPECT_TRUE(log_file.is_open() && log_file.good());
+  // get all the lines
+  std::string line;
+  std::vector<std::string> lines;
+  while (std::getline(log_file, line)) {
+    lines.push_back(line);
+  }
+  // check if the log file is not empty
+  EXPECT_TRUE(lines.size() > 0);
+  std::cout << "Log file: " << line << std::endl;
+#endif  // BAND_IS_MOBILE
 }
 
 }  // namespace test
