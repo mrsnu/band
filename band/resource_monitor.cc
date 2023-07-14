@@ -221,6 +221,10 @@ std::vector<std::string> ResourceMonitor::GetDevFreqPaths() const {
   return ret;
 }
 
+bool ResourceMonitor::IsValidDevice(DeviceFlag flag) const {
+  return dev_freq_paths_.find(flag) != dev_freq_paths_.end();
+}
+
 absl::StatusOr<size_t> ResourceMonitor::GetThermal(ThermalFlag flag,
                                                    size_t id) const {
   std::lock_guard<std::mutex> lock(head_mtx_);
@@ -235,7 +239,7 @@ absl::StatusOr<size_t> ResourceMonitor::GetThermal(ThermalFlag flag,
 }
 
 size_t ResourceMonitor::NumThermalResources(ThermalFlag flag) const {
-  std::once_flag once_flag;
+  static std::once_flag once_flag;
   static size_t tzs_size = 0;
   static size_t cooling_device_size = 0;
   std::call_once(once_flag, [&]() {
@@ -255,6 +259,20 @@ size_t ResourceMonitor::NumThermalResources(ThermalFlag flag) const {
       return tzs_size;
     default:
       return 0;
+  }
+}
+
+absl::StatusOr<size_t> ResourceMonitor::GetDevFreq(DeviceFlag device_flag,
+                                                   DevFreqFlag flag) const {
+  std::lock_guard<std::mutex> lock(head_mtx_);
+  DevFreqKey key{flag, device_flag};
+  if (dev_freq_status_[status_head_].find(key) ==
+      dev_freq_status_[status_head_].end()) {
+    return absl::InternalError(absl::StrFormat(
+        "Device frequency for flag %s and device %s not registered.",
+        ToString(flag), ToString(device_flag)));
+  } else {
+    return dev_freq_status_[status_head_].at(key);
   }
 }
 

@@ -61,9 +61,13 @@ class ResourceMonitor {
 
   absl::Status Init(const ResourceMonitorConfig& config);
 
+  // for debugging. print out all the paths found
   std::vector<std::string> GetThermalPaths() const;
   std::vector<std::string> GetCpuFreqPaths() const;
   std::vector<std::string> GetDevFreqPaths() const;
+
+  // check if the device is valid (after Init() is called)
+  bool IsValidDevice(DeviceFlag flag) const;
 
   // get thermal resource (thermal zone or cooling device)
   absl::StatusOr<size_t> GetThermal(ThermalFlag flag, size_t id = 0) const;

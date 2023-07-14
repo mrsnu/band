@@ -8,10 +8,9 @@ namespace test {
 TEST(ResourceMonitorTest, CreationTest) {
   ResourceMonitorConfig config{"", {}, 10};
   ResourceMonitor monitor;
-  auto status = monitor.Init(config);
+  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
 
 #if BAND_IS_MOBILE
-  EXPECT_TRUE(status.ok());
   size_t num_tz = monitor.NumThermalResources(ThermalFlag::TZ_TEMPERATURE);
   std::cout << "Found " << num_tz << " thermal zones" << std::endl;
 
@@ -30,7 +29,163 @@ TEST(ResourceMonitorTest, CreationTest) {
   for (auto& path : cpu_freq_paths) {
     std::cout << path << std::endl;
   }
-#endif  // __ANDROID__
+#endif  // BAND_IS_MOBILE
+}
+
+TEST(ResourceMonitorTest, GetThermalTest) {
+  ResourceMonitorConfig config{"", {}, 10};
+  ResourceMonitor monitor;
+  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+
+#if BAND_IS_MOBILE
+  size_t num_tz = monitor.NumThermalResources(ThermalFlag::TZ_TEMPERATURE);
+  for (size_t i = 0; i < num_tz; ++i) {
+    EXPECT_EQ(monitor.AddThermalResource(ThermalFlag::TZ_TEMPERATURE, i),
+              absl::OkStatus());
+  }
+
+  sleep(1);
+
+  for (size_t i = 0; i < num_tz; ++i) {
+    auto temp = monitor.GetThermal(ThermalFlag::TZ_TEMPERATURE, i);
+    EXPECT_TRUE(temp.ok());
+    std::cout << "Thermal " << i << ": " << temp.value() << std::endl;
+  }
+#endif  // BAND_IS_MOBILE
+}
+
+TEST(ResourceMonitorTest, GetDevFreqTest) {
+  ResourceMonitorConfig config{"", {}, 10};
+  ResourceMonitor monitor;
+  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+
+#if BAND_IS_MOBILE
+  std::vector<DeviceFlag> valid_devices;
+  for (size_t i = 0; i < EnumLength<DeviceFlag>(); ++i) {
+    if (monitor.IsValidDevice(static_cast<DeviceFlag>(i))) {
+      valid_devices.push_back(static_cast<DeviceFlag>(i));
+
+      EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                           DevFreqFlag::CUR_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                           DevFreqFlag::TARGET_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                           DevFreqFlag::MIN_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                           DevFreqFlag::MAX_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(monitor.AddDevFreqResource(static_cast<DeviceFlag>(i),
+                                           DevFreqFlag::POLLING_INTERVAL),
+                absl::OkStatus());
+    }
+  }
+
+  sleep(1);
+
+  for (auto& valid_device : valid_devices) {
+    auto cur_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::CUR_FREQ);
+    EXPECT_TRUE(cur_freq.ok());
+    std::cout << "DevFreq " << ToString(valid_device)
+              << " CUR_FREQ: " << cur_freq.value() << std::endl;
+    auto target_freq =
+        monitor.GetDevFreq(valid_device, DevFreqFlag::TARGET_FREQ);
+    EXPECT_TRUE(target_freq.ok());
+    std::cout << "DevFreq " << ToString(valid_device)
+              << " TARGET_FREQ: " << target_freq.value() << std::endl;
+    auto min_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::MIN_FREQ);
+    EXPECT_TRUE(min_freq.ok());
+    std::cout << "DevFreq " << ToString(valid_device)
+              << " MIN_FREQ: " << min_freq.value() << std::endl;
+    auto max_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::MAX_FREQ);
+    EXPECT_TRUE(max_freq.ok());
+    std::cout << "DevFreq " << ToString(valid_device)
+              << " MAX_FREQ: " << max_freq.value() << std::endl;
+    auto polling_interval =
+        monitor.GetDevFreq(valid_device, DevFreqFlag::POLLING_INTERVAL);
+    EXPECT_TRUE(polling_interval.ok());
+    std::cout << "DevFreq " << ToString(valid_device)
+              << " POLLING_INTERVAL: " << polling_interval.value() << std::endl;
+  }
+#endif  // BAND_IS_MOBILE
+}
+
+TEST(ResourceMonitorTest, GetCpuFreqTest) {
+  ResourceMonitorConfig config{"", {}, 10};
+  ResourceMonitor monitor;
+  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+
+#if BAND_IS_MOBILE
+  std::vector<CPUMaskFlag> valid_cpus;
+  for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
+    const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);
+    if (flag == CPUMaskFlag::kAll) {
+      continue;
+    }
+
+    valid_cpus.push_back(flag);
+
+    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::CUR_FREQ),
+              absl::OkStatus());
+    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::TARGET_FREQ),
+              absl::OkStatus());
+    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::MIN_FREQ),
+              absl::OkStatus());
+    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::MAX_FREQ),
+              absl::OkStatus());
+    EXPECT_EQ(
+        monitor.AddCpuFreqResource(flag, CpuFreqFlag::UP_TRANSITION_LATENCY),
+        absl::OkStatus());
+    EXPECT_EQ(
+        monitor.AddCpuFreqResource(flag, CpuFreqFlag::DOWN_TRANSITION_LATENCY),
+        absl::OkStatus());
+    // This is optional. E.g., Pixel 4 doesn't have this.
+    monitor.AddCpuFreqResource(flag, CpuFreqFlag::TRANSITION_COUNT);
+  }
+
+  sleep(1);
+
+  for (auto& cpu_mask : valid_cpus) {
+    auto cur_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::CUR_FREQ);
+    EXPECT_TRUE(cur_freq.ok());
+    std::cout << "CpuFreq " << ToString(cpu_mask)
+              << " CUR_FREQ: " << cur_freq.value() << std::endl;
+    auto target_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::TARGET_FREQ);
+    EXPECT_TRUE(target_freq.ok());
+    std::cout << "CpuFreq " << ToString(cpu_mask)
+              << " TARGET_FREQ: " << target_freq.value() << std::endl;
+    auto min_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MIN_FREQ);
+    EXPECT_TRUE(min_freq.ok());
+    std::cout << "CpuFreq " << ToString(cpu_mask)
+              << " MIN_FREQ: " << min_freq.value() << std::endl;
+    auto max_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MAX_FREQ);
+    EXPECT_TRUE(max_freq.ok());
+    std::cout << "CpuFreq " << ToString(cpu_mask)
+              << " MAX_FREQ: " << max_freq.value() << std::endl;
+    auto up_transition_latency =
+        monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::UP_TRANSITION_LATENCY);
+    EXPECT_TRUE(up_transition_latency.ok());
+    std::cout << "CpuFreq " << ToString(cpu_mask)
+              << " UP_TRANSITION_LATENCY: " << up_transition_latency.value()
+              << std::endl;
+    auto down_transition_latency =
+        monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::DOWN_TRANSITION_LATENCY);
+    EXPECT_TRUE(down_transition_latency.ok());
+    std::cout << "CpuFreq " << ToString(cpu_mask)
+              << " DOWN_TRANSITION_LATENCY: " << down_transition_latency.value()
+              << std::endl;
+    auto transition_count =
+        monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::TRANSITION_COUNT);
+    // This is optional, so we don't check if it's ok.
+    if (transition_count.ok()) {
+      std::cout << "CpuFreq " << ToString(cpu_mask)
+                << " TRANSITION_COUNT: " << transition_count.value()
+                << std::endl;
+    }
+  }
+#endif
 }
 
 }  // namespace test
