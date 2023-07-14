@@ -10,42 +10,6 @@
 
 namespace band {
 namespace device {
-template <typename T>
-absl::StatusOr<T> TryRead(std::vector<std::string> paths) {
-  for (const std::string& path : paths) {
-    std::fstream fs(path, std::fstream::in);
-    if (fs.is_open()) {
-      T output;
-      fs >> output;
-      return output;
-    }
-  }
-  return absl::NotFoundError("No available path");
-}
-
-absl::StatusOr<size_t> TryReadSizeT(std::vector<std::string> paths) {
-  return TryRead<size_t>(paths);
-}
-
-absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
-    std::vector<std::string> paths) {
-  for (const std::string& path : paths) {
-    std::fstream fs(path, std::fstream::in);
-    if (fs.is_open()) {
-      std::vector<size_t> outputs;
-      size_t output;
-      while (fs >> output) {
-        outputs.push_back(output);
-      }
-      return outputs;
-    }
-  }
-  return absl::NotFoundError("No available path");
-}
-
-absl::StatusOr<std::string> TryReadString(std::vector<std::string> paths) {
-  return TryRead<std::string>(paths);
-}
 
 std::string RunCommand(const std::string& command) {
   std::string result = "";

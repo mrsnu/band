@@ -52,8 +52,10 @@ struct SubgraphConfig {
       SubgraphPreparationType::kMergeUnitSubgraph;
 };
 
-struct DeviceConfig {
+struct ResourceMonitorConfig {
+  std::string resource_monitor_log_path = "";
   std::map<DeviceFlag, std::string> device_freq_paths;
+  int monitor_interval_ms = 10;
 };
 
 struct RuntimeConfig {
@@ -62,7 +64,7 @@ struct RuntimeConfig {
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
-  DeviceConfig device_config;
+  ResourceMonitorConfig device_config;
 
  private:
   friend class RuntimeConfigBuilder;

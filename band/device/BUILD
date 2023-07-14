@@ -7,16 +7,10 @@ cc_library(
     name = "device",
     srcs = [
         "cpu.cc",
-        "device.cc",
-        "generic.cc",
-        "gpu.cc",
         "util.cc",
     ],
     hdrs = [
         "cpu.h",
-        "device.h",
-        "generic.h",
-        "gpu.h",
         "util.h",
     ],
     deps = [

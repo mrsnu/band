@@ -1,5 +1,7 @@
 #include "band/config_builder.h"
 
+#include "config_builder.h"
+
 namespace band {
 
 #define REPORT_IF_FALSE(engine, expr)                            \
@@ -145,6 +147,29 @@ WorkerConfig WorkerConfigBuilder::Build(
   return worker_config;
 }
 
+ResourceMonitorConfig ResourceMonitorConfigBuilder::Build(
+    ErrorReporter* error_reporter) {
+  if (!IsValid(error_reporter)) {
+    abort();
+  }
+
+  ResourceMonitorConfig device_config;
+  device_config.resource_monitor_log_path = resource_monitor_log_path_;
+  device_config.device_freq_paths = device_freq_paths_;
+  device_config.monitor_interval_ms = monitor_interval_ms_;
+  return device_config;
+}
+
+bool ResourceMonitorConfigBuilder::IsValid(ErrorReporter* error_reporter) {
+  bool result = true;
+
+  REPORT_IF_FALSE(
+      ResourceMonitorConfigBuilder,
+      resource_monitor_log_path_ == "" ||
+          resource_monitor_log_path_.find(".json") != std::string::npos);
+  return result;
+}
+
 RuntimeConfig RuntimeConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // TODO(widiba03304): This should not terminate the program. After employing
@@ -157,6 +182,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   ProfileConfig profile_config = profile_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
+  ResourceMonitorConfig device_config = device_config_builder_.Build();
   runtime_config.subgraph_config = {minimum_subgraph_size_,
                                     subgraph_preparation_type_};
 
@@ -164,6 +190,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   runtime_config.profile_config = profile_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;
+  runtime_config.device_config = device_config;
   return runtime_config;
 }
 

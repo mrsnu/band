@@ -3,11 +3,16 @@
 
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <tuple>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "band/common.h"
+#include "band/config.h"
+#include "band/device/cpu.h"
 
 #define DEFINE_TO_JSON                                          \
   std::string ToJson() const {                                  \
@@ -24,59 +29,104 @@
 
 namespace band {
 
-struct Thermal {
-  std::map<std::string, int32_t> status;
-  DEFINE_TO_JSON;
+enum class ThermalFlag {
+  TZ_TEMPERATURE = 0,
 };
 
-struct Frequency {
-  std::map<std::string, int32_t> status;
-  DEFINE_TO_JSON;
+// NOTE: All frequency values are in KHz
+enum class DevFreqFlag {
+  CUR_FREQ = 0,
+  TARGET_FREQ = 1,
+  MIN_FREQ = 2,
+  MAX_FREQ = 3,
+  POLLING_INTERVAL = 4,
 };
 
-struct Network {
-  std::map<std::string, int32_t> status;
-  DEFINE_TO_JSON;
+enum class CpuFreqFlag {
+  CUR_FREQ = 0,
+  TARGET_FREQ = 1,
+  MIN_FREQ = 2,
+  MAX_FREQ = 3,
+  UP_TRANSITION_LATENCY = 4,
+  DOWN_TRANSITION_LATENCY = 5,
+  TRANSITION_COUNT = 6,
 };
+
+enum class NetworkFlag {};
 
 class ResourceMonitor {
  public:
   ~ResourceMonitor();
-  static ResourceMonitor& Create(std::string log_path = "");
-  absl::Status Init(std::string log_path);
-
-  absl::StatusOr<const Thermal> GetCurrentThermal() const;
-  absl::StatusOr<const Frequency> GetCurrentFrequency() const;
-  absl::StatusOr<const Network> GetCurrentNetwork() const;
-  absl::StatusOr<std::tuple<const Thermal, const Frequency, const Network>>
-  GetCurrentStatus() const;
-
-  absl::Status AddTemperatureResource(std::string resource_path);
-  absl::Status AddCPUFrequencyResource(std::string resource_path);
-  absl::Status AddDevFrequencyResource(std::string resource_path);
-  absl::Status AddNetworkResource(std::string resource_path);
-
-  std::vector<std::string> GetDetectedThermalZonePaths() const;
-  std::vector<std::string> GetDetectedCpuFreqPaths() const;
-  std::vector<std::string> GetDetectedDevFreqPaths() const;
-  std::vector<std::string> GetDetectedNetworkPaths() const;
-
- private:
   ResourceMonitor() = default;
-  std::vector<std::string> GetThermalZonePaths() const;
+
+  absl::Status Init(const ResourceMonitorConfig& config);
+
+  std::vector<std::string> GetThermalPaths() const;
   std::vector<std::string> GetCpuFreqPaths() const;
   std::vector<std::string> GetDevFreqPaths() const;
-  std::vector<std::string> GetNetworkPaths() const;
 
-  const char* THERMAL_ZONE_BASE_PATH = "/sys/class/thermal/";
-  const char* CPUFREQ_BASE_PATH = "/sys/devices/system/cpu/cpufreq/";
-  const char* DEVFREQ_BASE_PATH = "/sys/class/devfreq/";
+  // get thermal resource (thermal zone or cooling device)
+  absl::StatusOr<size_t> GetThermal(ThermalFlag flag, size_t id = 0) const;
+  // get number of thermal resources corresponding to the flag
+  size_t NumThermalResources(ThermalFlag flag) const;
+  absl::StatusOr<size_t> GetDevFreq(DeviceFlag device_flag,
+                                    DevFreqFlag flag) const;
+  absl::StatusOr<std::vector<size_t>> GetAvailableDevFreqs(
+      DeviceFlag flag) const;
+  absl::StatusOr<size_t> GetCpuFreq(CPUMaskFlag cpu_flag,
+                                    CpuFreqFlag flag) const;
+  absl::StatusOr<std::vector<size_t>> GetAvailableCpuFreqs(
+      CPUMaskFlag cpu_flag) const;
+
+  // register target resource to monitor
+  absl::Status AddThermalResource(ThermalFlag flag, size_t id);
+  absl::Status AddCpuFreqResource(CPUMaskFlag cpu_flag, CpuFreqFlag flag);
+  absl::Status AddDevFreqResource(DeviceFlag device_flag, DevFreqFlag flag);
+  absl::Status AddNetworkResource(NetworkFlag flag);
+
+  // add listener to the resource update
+  void AddOnUpdate(std::function<void(const ResourceMonitor&)> callback);
+
+ private:
+  static const char* GetThermalBasePath();
+  static const char* GetCpuFreqBasePath();
+  static const char* GetDevFreqBasePath();
+
+  std::map<DeviceFlag, std::string> dev_freq_paths_;
+  absl::StatusOr<std::string> GetDevFreqPath(DeviceFlag flag) const;
+  absl::StatusOr<std::string> GetCpuFreqPath(CPUMaskFlag flag) const;
+
+  // Read from the first available path, return absl::NotFoundError if none of
+  // the paths exist.
+  absl::StatusOr<std::string> GetFirstAvailablePath(
+      const std::vector<std::string>& paths) const;
+
+  std::thread monitor_thread_;
+  bool is_monitoring_ = false;
+  // main monitoring loop
+  void Monitor(size_t interval_ms);
 
   mutable std::ofstream log_file_;
 
-  std::vector<std::string> tzs_;
-  std::vector<std::string> cpufreqs_;
-  std::vector<std::string> devfreqs_;
+  using ThermalKey = std::pair<ThermalFlag, size_t>;
+  using CpuFreqKey = std::pair<CpuFreqFlag, CPUMaskFlag>;
+  using DevFreqKey = std::pair<DevFreqFlag, DeviceFlag>;
+
+  mutable std::mutex path_mtx_;
+  // registered thermal resources
+  // (flag, multiplier)
+  std::map<ThermalKey, std::pair<std::string, float>> thermal_resources_;
+  std::map<CpuFreqKey, std::pair<std::string, float>> cpu_freq_resources_;
+  std::map<DevFreqKey, std::pair<std::string, float>> dev_freq_resources_;
+
+  mutable std::mutex head_mtx_;
+  size_t status_head_ = 0;
+  std::array<std::map<ThermalKey, size_t>, 2> thermal_status_;
+  std::array<std::map<CpuFreqKey, size_t>, 2> cpu_freq_status_;
+  std::array<std::map<DevFreqKey, size_t>, 2> dev_freq_status_;
+
+  std::mutex callback_mtx_;
+  std::vector<std::function<void(const ResourceMonitor&)>> on_update_callbacks_;
 };
 
 }  // namespace band

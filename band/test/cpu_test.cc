@@ -55,29 +55,6 @@ TEST(CPUTest, EnableTest) {
   EXPECT_EQ(GetCPUThreadAffinity(set), absl::OkStatus());
 }
 #endif
-
-TEST(CPUTest, FrequencyStatusTest) {
-  std::vector<CPUMaskFlag> masks = {CPUMaskFlag::kAll, CPUMaskFlag::kLittle,
-                                    CPUMaskFlag::kBig, CPUMaskFlag::kPrimary};
-  for (auto mask : masks) {
-    CpuSet target_set = BandCPUMaskGetSet(mask);
-    auto is_ok = [](absl::Status status) -> bool {
-#if BAND_IS_MOBILE
-      return status.ok() || status.code() == absl::StatusCode::kNotFound;
-#else
-      return status.code() == absl::StatusCode::kUnavailable;
-#endif
-    };
-
-    EXPECT_TRUE(is_ok(cpu::GetTargetFrequencyKhz(target_set).status()));
-    EXPECT_TRUE(is_ok(cpu::GetTargetMaxFrequencyKhz(target_set).status()));
-    EXPECT_TRUE(is_ok(cpu::GetTargetMinFrequencyKhz(target_set).status()));
-    EXPECT_TRUE(is_ok(cpu::GetAvailableFrequenciesKhz(target_set).status()));
-    EXPECT_TRUE(is_ok(cpu::GetUpTransitionLatencyMs(target_set).status()));
-    EXPECT_TRUE(is_ok(cpu::GetDownTransitionLatencyMs(target_set).status()));
-    EXPECT_TRUE(is_ok(cpu::GetTotalTransitionCount(target_set).status()));
-  };
-}
 }  // namespace test
 
 }  // namespace band

@@ -68,45 +68,6 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
-
-// Wrap frequency-related helper functions for consistency with *pu
-namespace cpu {
-
-// Get scaling frequency (current target frequency of the governor)
-absl::StatusOr<size_t> GetTargetFrequencyKhz(int cpu);
-absl::StatusOr<size_t> GetTargetFrequencyKhz(const CpuSet& cpu_set);
-
-// Get scaling max frequency (current target frequency of the governor)
-// This requires sudo in some devices (e.g., Pixel 6)
-absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(int cpu);
-absl::StatusOr<size_t> GetTargetMaxFrequencyKhz(const CpuSet& cpu_set);
-
-// Get scaling min frequency (current target frequency of the governor)
-absl::StatusOr<size_t> GetTargetMinFrequencyKhz(int cpu);
-absl::StatusOr<size_t> GetTargetMinFrequencyKhz(const CpuSet& cpu_set);
-
-// Get current frequency (requires sudo)
-absl::StatusOr<size_t> GetFrequencyKhz(int cpu);
-absl::StatusOr<size_t> GetFrequencyKhz(const CpuSet& cpu_set);
-
-absl::StatusOr<std::vector<size_t>> GetAvailableFrequenciesKhz(
-    const CpuSet& cpu_set);
-
-// Time interval limit of frequency rise
-absl::StatusOr<size_t> GetUpTransitionLatencyMs(int cpu);
-absl::StatusOr<size_t> GetUpTransitionLatencyMs(const CpuSet& cpu_set);
-
-// Time interval limit of frequency down
-absl::StatusOr<size_t> GetDownTransitionLatencyMs(int cpu);
-absl::StatusOr<size_t> GetDownTransitionLatencyMs(const CpuSet& cpu_set);
-
-// Total transition count
-// Note that cores in same cluster (little/big/primary)
-// shares this value
-absl::StatusOr<size_t> GetTotalTransitionCount(int cpu);
-absl::StatusOr<size_t> GetTotalTransitionCount(const CpuSet& cpu_set);
-}  // namespace cpu
-
 }  // namespace band
 
 #endif  // BAND_CPU_H_
