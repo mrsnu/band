@@ -164,9 +164,12 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
 void BandConfigBuilderDelete(BandConfigBuilder* b) { delete b; }
 
 BandConfig* BandConfigCreate(BandConfigBuilder* b) {
-  // TODO(widiba03304): Error handling is not properly done here.
-  BandConfig* config = new BandConfig(b->impl.Build());
-  return config;
+  auto config = b->impl.Build();
+  if (config.status() != absl::OkStatus()) {
+    return nullptr;
+  } else {
+    return new BandConfig(config.value());
+  }
 }
 
 void BandConfigDelete(BandConfig* config) { delete config; }

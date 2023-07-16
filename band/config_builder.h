@@ -69,7 +69,9 @@ class PlannerConfigBuilder {
     return *this;
   }
   PlannerConfigBuilder& AddSchedulers(std::vector<SchedulerType> schedulers) {
-    schedulers_ = schedulers;
+    if (schedulers.size() != 0) {
+      schedulers_ = schedulers;
+    }
     return *this;
   }
   PlannerConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
@@ -105,15 +107,21 @@ class WorkerConfigBuilder {
     num_threads_ = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
-    workers_ = workers;
+    if (workers.size() != 0) {
+      workers_ = workers;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
-    cpu_masks_ = cpu_masks;
+    if (cpu_masks.size() != 0) {
+      cpu_masks_ = cpu_masks;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddNumThreads(std::vector<int> num_threads) {
-    num_threads_ = num_threads;
+    if (num_threads.size() != 0) {
+      num_threads_ = num_threads;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddAllowWorkSteal(bool allow_worksteal) {

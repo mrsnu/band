@@ -268,12 +268,14 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
   }
 
-  if (!builder.IsValid()) {
-    std::cout << "Please check if given runtime config is valid" << std::endl;
+  auto builder_status = builder.Build();
+  if (builder_status.status() != absl::OkStatus()) {
+    std::cout << "Please check if given runtime config is valid. "
+              << builder_status.status().message() << std::endl;
     return false;
   }
 
-  runtime_config_ = new RuntimeConfig(builder.Build());
+  runtime_config_ = new RuntimeConfig(builder_status.value());
 
   return true;
 }
