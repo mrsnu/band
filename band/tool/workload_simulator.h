@@ -5,10 +5,12 @@
 #include <vector>
 
 #include "band/common.h"
-#include "band/config.h"
+#include "band/engine.h"
 #include "band/model.h"
+#include "band/tool/benchmark_config.h"
 
 namespace band {
+namespace tool {
 
 struct Frame {
   struct ModelRequest {
@@ -21,6 +23,8 @@ struct Frame {
 
   // job id to requests
   std::map<int, ModelRequest> requests;
+  std::vector<int> root_requests;
+  std::vector<std::pair<int, int>> edges;
 };
 
 class WorkloadSimulator {
@@ -45,9 +49,10 @@ class WorkloadSimulator {
 };
 
 absl::Status ParseWorkloadFromJson(std::string json_fname,
-                                   std::map<int, ModelConfig>& model_config,
+                                   const BenchmarkConfig& benchmark_config,
                                    WorkloadSimulator& workload);
 
+}  // namespace tool
 }  // namespace band
 
 #endif  // BAND_TOOLS_WORKLOAD_SIMULATOR_H_

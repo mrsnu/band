@@ -6,6 +6,32 @@
 namespace band {
 namespace tool {
 
+/* BenchmarkConfig
+
+- app_defs (ApplicationConfig) : graph-based DNN workloads to be
+    executed in a single application
+  - model_configs
+    - name
+    - path
+    - batch_size (optional) : default 1
+    - worker_id (optional) : only for fixed-worker mode to specify the worker
+  - edges
+    - (from, to): from and to are ModelConfig's name
+
+- engine_instance (EngineInstanceConfig) : a set of applications to be executed
+in a single engine
+  - apps
+    - name
+    - period_ms (optional) : only for periodic execution mode
+    - execution_mode
+  - running_time_ms
+  - log_path
+  -
+
+- share_engine : whether to share the engine among applications
+-
+*/
+
 struct ModelConfig {
   /* mendatory */
   std::string path;
@@ -31,7 +57,7 @@ struct ModelConfig {
   }
 };
 
-struct BenchmarkConfig {
+struct BenchmarkInstanceConfig {
   std::vector<ModelConfig> model_configs;
   std::string execution_mode;
   size_t running_time_ms = 60000;

@@ -3,11 +3,13 @@
 #include <algorithm>
 #include <set>
 
-#include "tensorflow/lite/config.h"
-#include "tensorflow/lite/minimal_logging.h"
-#include "tensorflow/lite/tools/workload_simulator.h"
+#include "band/common.h"
+#include "band/config.h"
+#include "band/model.h"
 
-namespace tflite {
+namespace band {
+
+namespace tool {
 Frame::ModelRequest::ModelRequest(Job job, int id, int count,
                                   std::vector<int> parent_requests)
     : job(job), id(id), count(count), parent_requests(parent_requests) {}
@@ -17,9 +19,8 @@ WorkloadSimulator::WorkloadSimulator() {}
 WorkloadSimulator::WorkloadSimulator(std::vector<Frame> frames)
     : frames_(frames) {}
 
-TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(
-    tflite::Interpreter* interpreter,
-    const std::vector<Tensors>& model_input_tensors,
+absl::Status WorkloadSimulator::ExecuteCurrentFrame(
+    Engine* engine, const std::vector<Tensors>& model_input_tensors,
     const std::vector<Tensors>& model_output_tensors) {
   if (IsFinished()) {
     return kTfLiteError;
@@ -45,7 +46,7 @@ TfLiteStatus WorkloadSimulator::ExecuteCurrentFrame(
     interpreter->InvokeModelsSync(next_batch, inputs, outputs);
   };
 
-  return kTfLiteOk;
+  return absl::OkStatus();
 }
 
 void WorkloadSimulator::Reset() { current_frame_ = 0; }
@@ -95,7 +96,7 @@ std::vector<Job> WorkloadSimulator::GetNextRequests(
   return next_requests;
 }
 
-TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
+absl::Status ParseWorkloadFromJson(std::string json_fname,
                                    std::map<int, ModelConfig>& model_config,
                                    WorkloadSimulator& workload) {
   std::ifstream config(json_fname, std::ifstream::binary);
@@ -153,6 +154,8 @@ TfLiteStatus ParseWorkloadFromJson(std::string json_fname,
 
   workload = WorkloadSimulator(frames);
 
-  return kTfLiteOk;
+  return absl::OkStatus();
 }
-}  // namespace tflite
+
+}  // namespace tool
+}  // namespace band
