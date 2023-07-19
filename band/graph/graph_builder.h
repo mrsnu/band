@@ -3,11 +3,12 @@
 
 #include <string>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "band/graph/graph.h"
 #include "band/graph/invariant.h"
 #include "band/model.h"
+
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 
 namespace band {
 
@@ -22,6 +23,7 @@ class GraphBuilder : public IGraph {
     SetDefaultInvariants();
   }
   bool IsValid() const;
+  
   absl::StatusOr<Graph> Build();
 
   std::shared_ptr<Node> AddModelNode(Model model, std::shared_ptr<Node> operand,

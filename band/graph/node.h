@@ -12,6 +12,10 @@ namespace band {
 using Tensors = std::vector<interface::ITensor*>;
 using TensorFunction = std::function<Tensors(Tensors)>;
 
+using Dims = std::vector<size_t>;
+using Shape = std::pair<DataType, Dims>;
+using NodeInterface = std::pair<Shape, Shape>;
+
 class GraphBuilder;
 
 enum class NodeType {
@@ -36,6 +40,12 @@ class Node {
   DataType GetOutputTensorType(size_t index) const;
   std::vector<int> GetInputTensorDims(size_t index) const;
   std::vector<int> GetOutputTensorDims(size_t index) const;
+
+  bool IsConcrete() const {
+    return input_tensor_type_ != DataType::NoType &&
+           output_tensor_type_ != DataType::NoType &&
+           !input_tensor_dims_.empty() && !output_tensor_dims_.empty();
+  }
 
  private:
   GraphBuilder* builder_ = nullptr;
