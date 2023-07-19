@@ -12,28 +12,19 @@
 #include "band/profiler.h"
 #include "band/tensor.h"
 #include "band/time.h"
-#include "band/tool/benchmark_instance.h"
+#include "band/tool/engine_runner.h"
 #include "benchmark.h"
 
 namespace band {
 namespace tool {
 
-Benchmark::~Benchmark() {
-  for (auto benchmark_instance : benchmark_instances_) {
-    delete benchmark_instance;
-  }
-}
-
 absl::Status Benchmark::Run() {
-  for (auto benchmark_instance : benchmark_instances_) {
-    auto status = benchmark_instance->Run();
-    if (!status.ok()) {
-      return status;
-    }
+  for (size_t i = 0; i < children_.size(); i++) {
+    RETURN_IF_ERROR(children_[i]->Run());
   }
 
-  for (auto benchmark_instance : benchmark_instances_) {
-    benchmark_instance->Join();
+  for (auto engine_runner : children_) {
+    engine_runner->Join();
   }
 
   return LogResults();
@@ -104,26 +95,28 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
     band::Logger::SetVerbosity(BAND_LOG_WARNING);
   }
 
+  auto try_create_engine_runner =
+      [this](const Json::Value& engine_runner_config)
+      -> absl::StatusOr<EngineRunner*> {
+    EngineRunner* engine_runner = new EngineRunner();
+    absl::Status status = engine_runner->Initialize(engine_runner_config);
+    if (!status.ok()) {
+      delete engine_runner;
+      return status;
+    }
+    children_.push_back(engine_runner);
+    return absl::OkStatus();
+  };
+
   Json::Value json_config = json::LoadFromFile(argv[1]);
+
   if (json_config.isArray()) {
     // iterate through all benchmark instances (app, benchmark instance config)
     for (int i = 0; i < json_config.size(); ++i) {
-      BenchmarkInstance* benchmark_instance = new BenchmarkInstance();
-      absl::Status status = benchmark_instance->Initialize(json_config[i]);
-      if (!status.ok()) {
-        delete benchmark_instance;
-        return status;
-      }
-      benchmark_instances_.push_back(benchmark_instance);
+      try_create_engine_runner(json_config[i]);
     }
   } else {
-    BenchmarkInstance* benchmark_instance = new BenchmarkInstance();
-    absl::Status status = benchmark_instance->Initialize(json_config);
-    if (!status.ok()) {
-      delete benchmark_instance;
-      return status;
-    }
-    benchmark_instances_.push_back(benchmark_instance);
+    try_create_engine_runner(json_config);
   }
 
   return absl::OkStatus();
@@ -135,15 +128,7 @@ absl::Status Benchmark::LogResults() {
   std::cout << std::setfill('-') << std::setw(length) << std::fixed;
   std::cout << header << std::endl;
 
-  for (size_t i = 0; i < benchmark_instances_.size(); i++) {
-    auto benchmark_instance = benchmark_instances_[i];
-    auto status = benchmark_instance->LogResults(i);
-    if (!status.ok()) {
-      return status;
-    }
-  }
-
-  return absl::OkStatus();
+  return IRunner::LogResults(0);
 }
 
 }  // namespace tool

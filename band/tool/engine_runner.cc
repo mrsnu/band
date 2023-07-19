@@ -1,4 +1,4 @@
-#include "band/tool/benchmark_instance.h"
+#include "band/tool/engine_runner.h"
 
 #include <algorithm>
 #include <iomanip>
@@ -14,73 +14,20 @@
 #include "band/tensor.h"
 #include "band/time.h"
 #include "band/tool/benchmark.h"
-#include "benchmark_instance.h"
+#include "engine_runner.h"
 
 namespace band {
 namespace tool {
-BenchmarkInstance::BenchmarkInstance(BackendType target_backend)
+EngineRunner::EngineRunner(BackendType target_backend)
     : target_backend_(target_backend) {}
 
-BenchmarkInstance::~BenchmarkInstance() {
+EngineRunner::~EngineRunner() {
   if (runtime_config_) {
     delete runtime_config_;
   }
-  for (auto model_context : model_contexts_) {
-    delete model_context;
-  }
 }
 
-absl::Status BenchmarkInstance::Run() {
-  // return error if thread is running
-  if (runner_thread_.joinable()) {
-    return absl::InternalError("Benchmark thread is already running");
-  }
-
-  runner_thread_ = std::thread(&BenchmarkInstance::RunInternal, this);
-  return absl::OkStatus();
-}
-
-void BenchmarkInstance::Join() {
-  if (runner_thread_.joinable()) {
-    runner_thread_.join();
-  }
-}
-
-BenchmarkInstance::ModelContext::~ModelContext() {
-  auto delete_tensors = [](Tensors& tensors) {
-    for (auto t : tensors) {
-      delete t;
-    }
-  };
-
-  for (auto request_inputs : model_request_inputs) {
-    delete_tensors(request_inputs);
-  }
-
-  for (auto request_outputs : model_request_outputs) {
-    delete_tensors(request_outputs);
-  }
-
-  delete_tensors(model_inputs);
-}
-
-absl::Status BenchmarkInstance::ModelContext::PrepareInput() {
-  for (int batch_index = 0; batch_index < model_request_inputs.size();
-       batch_index++) {
-    for (int input_index = 0; input_index < model_inputs.size();
-         input_index++) {
-      auto status =
-          model_request_inputs[batch_index][input_index]->CopyDataFrom(
-              model_inputs[input_index]);
-      if (!status.ok()) {
-        return status;
-      }
-    }
-  }
-  return absl::OkStatus();
-}
-
-absl::Status BenchmarkInstance::LoadBenchmarkConfigs(const Json::Value& root) {
+absl::Status EngineRunner::LoadBenchmarkConfigs(const Json::Value& root) {
   if (!json::Validate(root, {"execution_mode", "models"})) {
     return absl::InvalidArgumentError(
         "Please check if argument `execution_mode` and `models` are given");
@@ -98,6 +45,14 @@ absl::Status BenchmarkInstance::LoadBenchmarkConfigs(const Json::Value& root) {
 
   json::AssignIfValid(benchmark_config_.running_time_ms, root,
                       "running_time_ms");
+
+  if (benchmark_config_.execution_mode == "periodic") {
+    if (!json::AssignIfValid(benchmark_config_.period_ms, root, "period_ms") ||
+        benchmark_config_.period_ms == 0) {
+      return absl::InvalidArgumentError(
+          "Please check if argument `period_ms` is given and >= 0");
+    }
+  }
 
   if (benchmark_config_.running_time_ms == 0) {
     return absl::InvalidArgumentError(
@@ -141,8 +96,7 @@ absl::Status BenchmarkInstance::LoadBenchmarkConfigs(const Json::Value& root) {
   return absl::OkStatus();
 }
 
-absl::Status tool::BenchmarkInstance::LoadRuntimeConfigs(
-    const Json::Value& root) {
+absl::Status tool::EngineRunner::LoadRuntimeConfigs(const Json::Value& root) {
   if (!json::Validate(root, {"schedulers"})) {
     return absl::InvalidArgumentError(
         "Please check if argument `schedulers` is given");
@@ -267,7 +221,7 @@ void CreateRandomTensorData(void* target_ptr, int num_elements,
   });
 }
 
-absl::Status BenchmarkInstance::Initialize(const Json::Value& root) {
+absl::Status EngineRunner::Initialize(const Json::Value& root) {
   RETURN_IF_ERROR(LoadBenchmarkConfigs(root));
   RETURN_IF_ERROR(LoadRuntimeConfigs(root));
 
@@ -394,183 +348,10 @@ absl::Status BenchmarkInstance::Initialize(const Json::Value& root) {
   return absl::OkStatus();
 }
 
-void BenchmarkInstance::RunInternal() {
-  if (benchmark_config_.execution_mode == "periodic") {
-    RunPeriodic();
-  } else if (benchmark_config_.execution_mode == "stream") {
-    RunStream();
-  } else if (benchmark_config_.execution_mode == "workload") {
-    RunWorkload();
+absl::Status EngineRunner::Run() {
+  for (size_t i = 0; i < children_.size(); i++) {
+    RETURN_IF_ERROR(children_[i]->Run());
   }
 }
-
-void BenchmarkInstance::RunPeriodic() {
-  for (int model_index = 0; model_index < model_contexts_.size();
-       model_index++) {
-    std::thread t(
-        [this](ModelContext* model_context, const size_t period_us) {
-          while (true) {
-            if (!model_context->PrepareInput().ok()) {
-              BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
-              continue;
-            }
-
-            size_t id = model_context->profiler.BeginEvent();
-            auto status = engine_->RequestSync(
-                model_context->model_ids, model_context->request_options,
-                model_context->model_request_inputs,
-                model_context->model_request_outputs);
-            model_context->profiler.EndEvent(id, status);
-
-            if (kill_app_) return;
-
-            size_t elapsed_us =
-                model_context->profiler
-                    .GetElapsedTimeAt<std::chrono::microseconds>(id);
-
-            if (elapsed_us < period_us) {
-              std::this_thread::sleep_for(
-                  std::chrono::microseconds(period_us - elapsed_us));
-            }
-          }
-        },
-        model_contexts_[model_index],
-        benchmark_config_.model_configs[model_index].period_ms * 1000);
-
-    t.detach();
-  }
-  // wait for some time until we stop the benchmark
-  std::this_thread::sleep_for(
-      std::chrono::milliseconds(benchmark_config_.running_time_ms));
-  kill_app_ = true;
-  engine_->WaitAll();
-}
-
-void BenchmarkInstance::RunStream() {
-  int run_duration_us = benchmark_config_.running_time_ms * 1000;
-  int64_t start = time::NowMicros();
-  while (true) {
-    std::vector<ModelId> model_ids;
-    std::vector<RequestOption> request_options;
-    std::vector<Tensors> inputs;
-    std::vector<Tensors> outputs;
-
-    for (auto model_context : model_contexts_) {
-      if (!model_context->PrepareInput().ok()) {
-        BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
-        continue;
-      }
-
-      model_ids.insert(model_ids.end(), model_context->model_ids.begin(),
-                       model_context->model_ids.end());
-      request_options.insert(request_options.end(),
-                             model_context->request_options.begin(),
-                             model_context->request_options.end());
-      inputs.insert(inputs.end(), model_context->model_request_inputs.begin(),
-                    model_context->model_request_inputs.end());
-      outputs.insert(outputs.end(),
-                     model_context->model_request_outputs.begin(),
-                     model_context->model_request_outputs.end());
-    }
-
-    size_t id = global_profiler_.BeginEvent();
-    auto status =
-        engine_->RequestSync(model_ids, request_options, inputs, outputs);
-    global_profiler_.EndEvent(id, status);
-    int64_t current = time::NowMicros();
-    if (current - start >= run_duration_us) break;
-  }
-}
-
-void BenchmarkInstance::RunWorkload() { BAND_NOT_IMPLEMENTED; }
-
-void PrintHeader(std::string key, size_t indent_level = 0) {
-  std::cout << std::left << std::string(indent_level * 2, ' ') << "<" << key
-            << ">" << std::endl;
-}
-
-template <typename T>
-void PrintLine(std::string key, const T& value, size_t indent_level = 0) {
-  std::cout << std::left << std::string(indent_level * 2, ' ') << "[" << key
-            << "] : " << std::right << value << std::endl;
-}
-
-absl::Status BenchmarkInstance::LogResults(size_t instance_id) {
-  const std::string header =
-      "--\t\t\t Instance " + std::to_string(instance_id) + " \t\t\t--";
-  size_t length = header.size();
-  std::cout << std::setfill('-') << std::setw(length) << std::fixed;
-  std::cout << header << std::endl;
-
-  PrintHeader("Option");
-  PrintLine("Execution mode", benchmark_config_.execution_mode, 1);
-  PrintLine("Running time (ms)", benchmark_config_.running_time_ms, 1);
-  for (auto& scheduler : runtime_config_->planner_config.schedulers) {
-    PrintLine("Scheduler", ToString(scheduler), 1);
-  }
-
-  PrintHeader("Model");
-  for (auto& model_config : benchmark_config_.model_configs) {
-    PrintHeader(model_config.path, 1);
-    PrintLine("Batch size", model_config.batch_size, 2);
-    PrintLine("Request period (ms)", model_config.period_ms, 2);
-    PrintLine("SLO (us)", model_config.slo_us, 2);
-    PrintLine("SLO scale", model_config.slo_scale, 2);
-  }
-
-  auto print_profiler = [](const std::string& prefix,
-                           const BenchmarkProfiler& profiler,
-                           const ModelConfig* model_config = nullptr) {
-    const double batch_size = model_config ? model_config->batch_size : 1;
-    double average_ms =
-        (profiler.GetAverageElapsedTime<std::chrono::milliseconds>() /
-         batch_size);
-    double average_fps = 1000 / average_ms;
-
-    PrintHeader("Result - " + prefix);
-    PrintLine("# Processed requests", profiler.GetNumEvents() * batch_size, 1);
-    PrintLine("Avg. Latency (ms)", average_ms, 1);
-    PrintLine("Avg. FPS", average_fps, 1);
-    PrintLine("Total # requests", profiler.GetNumEvents() * batch_size, 1);
-    PrintLine("Total # canceled requests",
-              profiler.GetNumCanceledEvents() * batch_size, 1);
-
-    if (model_config && model_config->slo_us > 0) {
-      double slo_satisfactory_count = 0;
-      for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
-        if (!profiler.IsEventCanceled(i) &&
-            profiler.GetElapsedTimeAt<std::chrono::microseconds>(i) <
-                model_config->slo_us) {
-          slo_satisfactory_count++;
-        }
-      }
-
-      double num_events =
-          profiler.GetNumEvents() - profiler.GetNumCanceledEvents();
-
-      PrintLine("SLO Satisfactory Rate (%)",
-                slo_satisfactory_count / num_events * 100, 1);
-    }
-  };
-
-  if (global_profiler_.GetNumEvents() > 0) {
-    print_profiler("Global", global_profiler_);
-  }
-
-  for (size_t model_index = 0; model_index < model_contexts_.size();
-       model_index++) {
-    auto& model_context = model_contexts_[model_index];
-    auto& model_config = benchmark_config_.model_configs[model_index];
-
-    if (model_context->profiler.GetNumEvents() > 0) {
-      print_profiler(
-          model_context->model.GetBackendModel(target_backend_)->GetPath(),
-          model_context->profiler, &model_config);
-    }
-  }
-
-  return absl::OkStatus();
-}
-
 }  // namespace tool
 }  // namespace band

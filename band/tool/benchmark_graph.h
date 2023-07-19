@@ -8,11 +8,11 @@
 
 namespace band {
 namespace tool {
-class BenchmarkInstanceConfig;
+class EngineRunnerConfig;
 class BenchmarkGraph {
  public:
   static absl::StatusOr<BenchmarkGraph*> Create(
-      const BenchmarkInstanceConfig& config);
+      const EngineRunnerConfig& config);
 
   struct Vertex {
     ModelId model_id;

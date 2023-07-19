@@ -1,7 +1,5 @@
-#ifndef BAND_TOOL_BENCHMARK_INSTANCE_H_
-#define BAND_TOOL_BENCHMARK_INSTANCE_H_
-#include <memory>
 #include <thread>
+#include <vector>
 
 #include "band/engine.h"
 #include "band/json_util.h"
@@ -9,19 +7,19 @@
 #include "band/profiler.h"
 #include "band/tool/benchmark_config.h"
 #include "band/tool/benchmark_profiler.h"
+#include "band/tool/runner.h"
 
 namespace band {
 namespace tool {
-class BenchmarkInstance {
+class GraphRunner : public IRunner {
  public:
-  BenchmarkInstance(BackendType target_backend = BackendType::kTfLite);
-  ~BenchmarkInstance();
-
-  absl::Status Initialize(const Json::Value& root);
-
-  absl::Status Run();
-  void Join();
-  absl::Status LogResults(size_t instance_id);
+  GraphRunner(BackendType target_backend, Engine& engine)
+      : target_backend_(target_backend), engine_(engine) {}
+  ~GraphRunner();
+  virtual absl::Status Initialize(const Json::Value& root) override;
+  virtual absl::Status Run() override;
+  virtual void Join() override;
+  virtual absl::Status LogResults(size_t instance_id) override;
 
  private:
   struct ModelContext {
@@ -42,7 +40,6 @@ class BenchmarkInstance {
 
   // initialization
   absl::Status LoadBenchmarkConfigs(const Json::Value& root);
-  absl::Status LoadRuntimeConfigs(const Json::Value& root);
 
   // runner
   void RunInternal();
@@ -53,14 +50,10 @@ class BenchmarkInstance {
   std::thread runner_thread_;
 
   const BackendType target_backend_;
-  BenchmarkInstanceConfig benchmark_config_;
-  RuntimeConfig* runtime_config_ = nullptr;
-  std::unique_ptr<Engine> engine_ = nullptr;
-  std::vector<ModelContext*> model_contexts_;
-  BenchmarkProfiler global_profiler_;
+  Engine& const engine_;
+  GraphRunnerConfig config_;
   bool kill_app_ = false;
+  std::vector<ModelContext*> model_contexts_;
 };
-
 }  // namespace tool
 }  // namespace band
-#endif  // BAND_TOOL_BENCHMARK_INSTANCE_H_

@@ -20,19 +20,18 @@ struct ModelConfig {
   }
 };
 
-struct BenchmarkInstanceConfig {
-  // graph definition
+struct GraphRunnerConfig {
   std::vector<ModelConfig> model_configs;
   std::vector<std::pair<size_t /* from */, size_t /* to */>> edges;
-
-  // runtime configs
   std::string execution_mode;
-  size_t running_time_ms = 60000;
   size_t period_ms;
   int slo_us = -1;
   float slo_scale = -1.f;
+};
 
-  // TODO: add workload simulator
+// global config for engine runner
+struct EngineRunnerConfig {
+  size_t running_time_ms = 60000;
 };
 }  // namespace tool
 }  // namespace band

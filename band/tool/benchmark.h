@@ -12,41 +12,18 @@
 namespace band {
 namespace tool {
 
-class BenchmarkInstance;
-class Benchmark {
+class EngineRunner;
+class Benchmark : public IRunner {
  public:
   Benchmark() = default;
-  ~Benchmark();
   absl::Status Initialize(int argc, const char** argv);
-  absl::Status Run();
+  virtual absl::Status Run() override;
 
  private:
-  struct ModelContext {
-    ~ModelContext();
-    // simulate input tensor copy from model_inputs to model_request_inputs
-    absl::Status PrepareInput();
-
-    Model model;
-    BenchmarkProfiler profiler;
-    // pre-allocated model tensors for runtime requests
-    std::vector<ModelId> model_ids;
-    std::vector<RequestOption> request_options;
-    std::vector<Tensors> model_request_inputs;
-    std::vector<Tensors> model_request_outputs;
-    // randomly generated input
-    Tensors model_inputs;
-  };
-
   // initialization
   bool ParseArgs(int argc, const char** argv);
 
-  // runner
-  void RunPeriodic();
-  void RunStream();
-  void RunWorkload();
-
   absl::Status LogResults();
-  std::vector<BenchmarkInstance*> benchmark_instances_;
 };
 
 }  // namespace tool

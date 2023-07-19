@@ -11,7 +11,7 @@ BenchmarkGraph::BenchmarkGraph(const BenchmarkGraph& rhs)
     : vertices_(rhs.vertices_), edges_(rhs.edges_) {}
 
 absl::StatusOr<BenchmarkGraph*> BenchmarkGraph::Create(
-    const BenchmarkInstanceConfig& config) {
+    const EngineRunnerConfig& config) {
   BenchmarkGraph* graph = new BenchmarkGraph();
 
   // Create vertices
