@@ -18,8 +18,8 @@ namespace tool {
   - edges
     - (from, to): from and to are ModelConfig's name
 
-- engine_instance (EngineInstanceConfig) : a set of applications to be executed
-in a single engine
+- engine_instance (BenchmarkInstanceConfig) : a set of applications to be
+executed in a single engine
   - apps
     - name
     - period_ms (optional) : only for periodic execution mode

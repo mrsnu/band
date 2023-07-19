@@ -32,12 +32,14 @@ band_cc_library(
     name = "benchmark",
     srcs = [
         "benchmark.cc",
-        "benchmark_profiler.cc"
+        "benchmark_profiler.cc",
+        "benchmark_instance.cc"
     ],
     hdrs = [
         "benchmark.h",
         "benchmark_config.h",
-        "benchmark_profiler.h"
+        "benchmark_profiler.h",
+        "benchmark_instance.h"
     ],
     deps = [
         "//band:framework",
