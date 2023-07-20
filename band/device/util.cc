@@ -15,13 +15,21 @@ namespace device {
 std::string RunCommand(const std::string& command) {
   std::string result = "";
   // suppress stderr
+#ifdef _WIN32
+  FILE* pipe = _popen((command + "2>&1").c_str(), "r");
+#else
   FILE* pipe = popen((command + "2>&1").c_str(), "r");
+#endif
   if (pipe != nullptr) {
     char buffer[128];
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
       result += buffer;
     }
+#ifdef _WIN32
+    _pclose(pipe);
+#else
     pclose(pipe);
+#endif
   }
   return result;
 }
