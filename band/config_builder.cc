@@ -130,18 +130,16 @@ absl::StatusOr<ResourceMonitorConfig> ResourceMonitorConfigBuilder::Build() {
   RETURN_IF_ERROR(IsValid());
 
   ResourceMonitorConfig resource_monitor_config;
-  resource_monitor_config.log_path = resource_monitor_log_path_;
+  resource_monitor_config.log_path = log_path_;
   resource_monitor_config.device_freq_paths = device_freq_paths_;
   resource_monitor_config.monitor_interval_ms = monitor_interval_ms_;
   return resource_monitor_config;
 }
 
-absl::Status ResourceMonitorConfigBuilder::IsValid(
-    ErrorReporter* error_reporter) {
+absl::Status ResourceMonitorConfigBuilder::IsValid() {
   REPORT_IF_FALSE(
       ResourceMonitorConfigBuilder,
-      resource_monitor_log_path_ == "" ||
-          resource_monitor_log_path_.find(".json") != std::string::npos);
+      log_path_ == "" || log_path_.find(".json") != std::string::npos);
   return absl::OkStatus();
 }
 

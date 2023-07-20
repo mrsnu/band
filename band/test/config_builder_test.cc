@@ -19,10 +19,10 @@ TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   EXPECT_EQ(config_ok.num_warmups, 3);
 
   b.AddNumRuns(-1);
-  EXPECT_NE(b.IsValid(), absl::OkStatus());
+  EXPECT_FALSE(b.Build().ok());
   b.AddNumRuns(1);
   b.AddOnline(true);
-  EXPECT_EQ(b.IsValid(), absl::OkStatus());
+  EXPECT_TRUE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
@@ -38,7 +38,7 @@ TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
   EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlag::kAll);
 
   b.AddScheduleWindowSize(-1);
-  EXPECT_NE(b.IsValid(), absl::OkStatus());
+  EXPECT_FALSE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
@@ -58,9 +58,10 @@ TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   EXPECT_EQ(config_ok.num_threads.size(), config_ok.workers.size());
 
   b.AddWorkers({DeviceFlag::kCPU});
-  EXPECT_NE(b.IsValid(), absl::OkStatus());
+
+  EXPECT_FALSE(b.Build().ok());
   b.AddWorkers({DeviceFlag::kCPU, DeviceFlag::kGPU});
-  EXPECT_EQ(b.IsValid(), absl::OkStatus());
+  EXPECT_TRUE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {

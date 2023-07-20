@@ -84,9 +84,10 @@ class PlannerConfigBuilder {
   }
 
   absl::StatusOr<PlannerConfig> Build();
-  absl::Status IsValid();
 
  private:
+  absl::Status IsValid();
+
   int schedule_window_size_ = INT_MAX;
   std::vector<SchedulerType> schedulers_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
@@ -134,9 +135,10 @@ class WorkerConfigBuilder {
     return *this;
   }
   absl::StatusOr<WorkerConfig> Build();
-  absl::Status IsValid();
 
  private:
+  absl::Status IsValid();
+
   std::vector<DeviceFlag> workers_;
   std::vector<CPUMaskFlag> cpu_masks_;
   std::vector<int> num_threads_;
@@ -150,7 +152,7 @@ class ResourceMonitorConfigBuilder {
  public:
   ResourceMonitorConfigBuilder& AddResourceMonitorLogPath(
       std::string log_path) {
-    resource_monitor_log_path_ = log_path;
+    log_path_ = log_path;
     return *this;
   }
   ResourceMonitorConfigBuilder& AddResourceMonitorDeviceFreqPath(
@@ -165,10 +167,11 @@ class ResourceMonitorConfigBuilder {
   }
 
   absl::StatusOr<ResourceMonitorConfig> Build();
-  absl::Status IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  std::string resource_monitor_log_path_ = "";
+  absl::Status IsValid();
+
+  std::string log_path_ = "";
   std::map<DeviceFlag, std::string> device_freq_paths_;
   int monitor_interval_ms_ = 10;
 };
@@ -275,9 +278,10 @@ class RuntimeConfigBuilder {
   }
 
   absl::StatusOr<RuntimeConfig> Build();
-  absl::Status IsValid();
 
  private:
+  absl::Status IsValid();
+
   ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;

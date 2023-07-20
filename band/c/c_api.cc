@@ -165,7 +165,7 @@ void BandConfigBuilderDelete(BandConfigBuilder* b) { delete b; }
 
 BandConfig* BandConfigCreate(BandConfigBuilder* b) {
   auto config = b->impl.Build();
-  if (config.status() != absl::OkStatus()) {
+  if (!config.status().ok()) {
     return nullptr;
   } else {
     return new BandConfig(config.value());
