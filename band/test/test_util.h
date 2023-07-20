@@ -4,12 +4,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "band/context.h"
+#include "band/engine_interface.h"
 
 namespace band {
 namespace test {
 
-struct MockContextBase : public Context {
+struct MockContextBase : public IEngine {
   MockContextBase() = default;
 
   MOCK_CONST_METHOD0(UpdateWorkersWaiting, void(void));
@@ -59,8 +59,8 @@ struct MockContextBase : public Context {
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
   MOCK_METHOD1(PrepareReenqueue, void(Job&));
   MOCK_METHOD1(EnqueueFinishedJob, void(Job&));
-  MOCK_METHOD1(EnqueueToWorker, void(const ScheduleAction&));
-  MOCK_METHOD1(EnqueueToWorkerBatch, void(const std::vector<ScheduleAction>&));
+  MOCK_METHOD1(EnqueueToWorker, bool(const ScheduleAction&));
+  MOCK_METHOD1(EnqueueToWorkerBatch, bool(const std::vector<ScheduleAction>&));
 
   /* getters */
   ErrorReporter* GetErrorReporter() { return DefaultErrorReporter(); }

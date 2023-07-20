@@ -1,10 +1,10 @@
 #include "band/model.h"
 
+#include "absl/strings/str_format.h"
 #include "band/backend_factory.h"
 #include "band/interface/model.h"
 #include "band/logger.h"
 
-#include "absl/strings/str_format.h"
 
 namespace band {
 
@@ -18,7 +18,7 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
   if (GetBackendModel(backend_type)) {
     return absl::InternalError(
         absl::StrFormat("Tried to create %s model again for model id %d",
-                        GetName(backend_type).c_str(), GetId()));
+                        ToString(backend_type), GetId()));
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
@@ -26,9 +26,8 @@ absl::Status Model::FromPath(BackendType backend_type, const char* filename) {
       BackendFactory::CreateModel(backend_type, model_id_);
 
   if (!backend_model->FromPath(filename).ok()) {
-    return absl::InternalError(
-        absl::StrFormat("Failed to create %s model from %s",
-                        GetName(backend_type).c_str(), filename));
+    return absl::InternalError(absl::StrFormat(
+        "Failed to create %s model from %s", ToString(backend_type), filename));
   }
   backend_models_[backend_type] =
       std::shared_ptr<interface::IModel>(backend_model);
@@ -40,7 +39,7 @@ absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
   if (GetBackendModel(backend_type)) {
     return absl::InternalError(
         absl::StrFormat("Tried to create %s model again for model id %d",
-                        GetName(backend_type), GetId()));
+                        ToString(backend_type), GetId()));
   }
   // TODO: check whether new model shares input / output shapes with existing
   // backend's model
@@ -49,7 +48,7 @@ absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
   if (backend_model == nullptr) {
     return absl::InternalError(absl::StrFormat(
         "The given backend type `%s` is not registered in the binary.",
-        GetName(backend_type)));
+        ToString(backend_type)));
   }
   if (backend_model->FromBuffer(buffer, buffer_size).ok()) {
     backend_models_[backend_type] =
@@ -57,7 +56,7 @@ absl::Status Model::FromBuffer(BackendType backend_type, const char* buffer,
     return absl::OkStatus();
   } else {
     return absl::InternalError(absl::StrFormat(
-        "Failed to create %s model from buffer", GetName(backend_type)));
+        "Failed to create %s model from buffer", ToString(backend_type)));
   }
   return absl::OkStatus();
 }

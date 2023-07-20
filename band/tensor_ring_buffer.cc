@@ -4,12 +4,11 @@
 #include <cstring>  // memcpy
 #include <mutex>
 
+#include "absl/strings/str_format.h"
 #include "band/error_reporter.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 #include "band/tensor.h"
-
-#include "absl/strings/str_format.h"
 
 namespace band {
 TensorRingBuffer::TensorRingBuffer(

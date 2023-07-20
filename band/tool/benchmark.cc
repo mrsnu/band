@@ -35,8 +35,6 @@ absl::Status Benchmark::Run() {
     RunStream();
   } else if (benchmark_config_.execution_mode == "workload") {
     RunWorkload();
-  } else if (benchmark_config_.execution_mode == "thermal") {
-    RunThermal();
   } else {
     return absl::InvalidArgumentError("Invalid execution mode");
   }
@@ -80,9 +78,23 @@ absl::Status Benchmark::ModelContext::PrepareInput() {
 
 bool Benchmark::ParseArgs(int argc, const char** argv) {
   if (argc < 2) {
-    std::cout << "Usage:\n\tbenchmark <config-json-path>" << std::endl;
+    std::cout << "Usage:\n\tbenchmark <config-json-path> [<verbosity> = "
+                 "default value: WARNING]"
+              << std::endl;
+    std::cout << "List of valid verbosity levels:" << std::endl;
+    for (int i = 0; i < BAND_LOG_NUM_SEVERITIES; i++) {
+      std::cout << "\t" << i << " : "
+                << band::Logger::GetSeverityName(static_cast<LogSeverity>(i))
+                << std::endl;
+    }
     return false;
   }
+  if (argc >= 3) {
+    band::Logger::SetVerbosity(atoi(argv[2]));
+  } else {
+    band::Logger::SetVerbosity(BAND_LOG_WARNING);
+  }
+
   Json::Value json_config = json::LoadFromFile(argv[1]);
   return LoadBenchmarkConfigs(json_config) && LoadRuntimeConfigs(json_config);
 }
@@ -202,7 +214,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     builder.AddSchedulers(schedulers);
 
     if (root["cpu_masks"].isString()) {
-      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
+      builder.AddCPUMask(
+          FromString<CPUMaskFlag>(root["cpu_masks"].asCString()));
     }
 
     if (root["log_path"].isString()) {
@@ -213,21 +226,21 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   // Worker config
   {
     if (!root["workers"].isNull()) {
-      std::vector<DeviceFlags> workers;
-      std::vector<CPUMaskFlags> cpu_masks;
+      std::vector<DeviceFlag> workers;
+      std::vector<CPUMaskFlag> cpu_masks;
       std::vector<int> num_threads;
 
       for (auto worker : root["workers"]) {
         if (worker["device"].isString()) {
           workers.push_back(
-              FromString<DeviceFlags>(worker["device"].asCString()));
+              FromString<DeviceFlag>(worker["device"].asCString()));
         }
         if (worker["num_threads"].isInt()) {
           num_threads.push_back(worker["num_threads"].asInt());
         }
         if (worker["cpu_masks"].isString()) {
           cpu_masks.push_back(
-              BandCPUMaskGetFlag(worker["cpu_masks"].asCString()));
+              FromString<CPUMaskFlag>(worker["cpu_masks"].asCString()));
         }
       }
 
@@ -254,11 +267,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
 
     if (root["cpu_masks"].isString()) {
-      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
-    }
-
-    if (root["splash_log_path"].isString()) {
-      builder.AddSplashLogPath(root["splash_log_path"].asCString());
+      builder.AddCPUMask(
+          FromString<CPUMaskFlag>(root["cpu_masks"].asCString()));
     }
   }
 
@@ -283,23 +293,24 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
   }
 
   // load models
-  for (auto benchmark_model : benchmark_config_.model_configs) {
-    ModelContext* context = new ModelContext;
+  for (auto& benchmark_model : benchmark_config_.model_configs) {
+    ModelContext* engine = new ModelContext;
+
     {
-      auto status = context->model.FromPath(target_backend_,
-                                            benchmark_model.path.c_str());
+      auto status =
+          engine->model.FromPath(target_backend_, benchmark_model.path.c_str());
       if (!status.ok()) {
         return status;
       }
     }
     {
-      auto status = engine_->RegisterModel(&context->model);
+      auto status = engine_->RegisterModel(&engine->model);
       if (!status.ok()) {
         return status;
       }
     }
 
-    const int model_id = context->model.GetId();
+    const int model_id = engine->model.GetId();
     const auto input_indices = engine_->GetInputTensorIndices(model_id);
     const auto output_indices = engine_->GetOutputTensorIndices(model_id);
 
@@ -314,13 +325,34 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
         outputs.push_back(engine_->CreateTensor(model_id, output_index));
       }
 
-      context->model_request_inputs.push_back(inputs);
-      context->model_request_outputs.push_back(outputs);
+      engine->model_request_inputs.push_back(inputs);
+      engine->model_request_outputs.push_back(outputs);
     }
 
-    context->model_ids =
+    if (benchmark_model.slo_us <= 0 && benchmark_model.slo_scale > 0.f) {
+      int64_t worst_us = 0;
+
+      // calculate worst case latency
+      for (int worker_id = 0; worker_id < engine_->GetNumWorkers();
+           worker_id++) {
+        worst_us = std::max(engine_->GetProfiled(engine_->GetLargestSubgraphKey(
+                                model_id, worker_id)),
+                            worst_us);
+      }
+
+      if (worst_us == 0) {
+        std::cout << "Failed to get worst case latency for model "
+                  << benchmark_model.path << std::endl;
+        std::cout << "Please check if given planner types require profiling"
+                  << std::endl;
+      } else {
+        benchmark_model.slo_us = worst_us * benchmark_model.slo_scale;
+      }
+    }
+
+    engine->model_ids =
         std::vector<ModelId>(benchmark_model.batch_size, model_id);
-    context->request_options = std::vector<RequestOption>(
+    engine->request_options = std::vector<RequestOption>(
         benchmark_model.batch_size, benchmark_model.GetRequestOption());
 
     // pre-allocate random input tensor to feed in run-time
@@ -330,37 +362,37 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
           engine_->CreateTensor(model_id, input_index);
       // random value ranges borrowed from tensorflow/lite/tools/benchmark
       switch (input_tensor->GetType()) {
-        case DataType::UInt8:
+        case DataType::kUInt8:
           CreateRandomTensorData<uint8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 254));
           break;
-        case DataType::Int8:
+        case DataType::kInt8:
           CreateRandomTensorData<int8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(-127, 127));
           break;
-        case DataType::Int16:
+        case DataType::kInt16:
           CreateRandomTensorData<int16_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int16_t>(0, 99));
           break;
-        case DataType::Int32:
+        case DataType::kInt32:
           CreateRandomTensorData<int32_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 99));
           break;
-        case DataType::Int64:
+        case DataType::kInt64:
           CreateRandomTensorData<int64_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int64_t>(0, 99));
           break;
-        case DataType::Float32:
+        case DataType::kFloat32:
           CreateRandomTensorData<float>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<float>(-0.5, 0.5));
           break;
-        case DataType::Float64:
+        case DataType::kFloat64:
           CreateRandomTensorData<double>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<double>(-0.5, 0.5));
@@ -371,8 +403,8 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       }
       inputs.push_back(input_tensor);
     }
-    context->model_inputs = inputs;
-    model_contexts_.push_back(context);
+    engine->model_inputs = inputs;
+    model_contexts_.push_back(engine);
   }
 
   return absl::OkStatus();
@@ -385,12 +417,8 @@ void Benchmark::RunPeriodic() {
         [this](ModelContext* model_context, const size_t period_us) {
           while (true) {
             if (!model_context->PrepareInput().ok()) {
-              std::cout << "Failed to copy input for model "
-                        << model_context->model
-                               .GetBackendModel(target_backend_)
-                               ->GetPath()
-                        << std::endl;
-              return;
+              BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+              continue;
             }
 
             size_t id = model_context->profiler.BeginEvent();
@@ -398,15 +426,7 @@ void Benchmark::RunPeriodic() {
                 model_context->model_ids, model_context->request_options,
                 model_context->model_request_inputs,
                 model_context->model_request_outputs);
-            if (!status.ok()) {
-              std::cout << "Failed to run model "
-                        << model_context->model
-                               .GetBackendModel(target_backend_)
-                               ->GetPath()
-                        << std::endl;
-              return;
-            }
-            model_context->profiler.EndEvent(id);
+            model_context->profiler.EndEvent(id, status);
 
             if (kill_app_) return;
 
@@ -434,7 +454,7 @@ void Benchmark::RunPeriodic() {
 
 void Benchmark::RunStream() {
   int run_duration_us = benchmark_config_.running_time_ms * 1000;
-  int64_t start = Time::NowMicros();
+  int64_t start = time::NowMicros();
   while (true) {
     std::vector<ModelId> model_ids;
     std::vector<RequestOption> request_options;
@@ -443,10 +463,8 @@ void Benchmark::RunStream() {
 
     for (auto model_context : model_contexts_) {
       if (!model_context->PrepareInput().ok()) {
-        std::cout
-            << "Failed to copy input for model "
-            << model_context->model.GetBackendModel(target_backend_)->GetPath()
-            << std::endl;
+        BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+        continue;
       }
 
       model_ids.insert(model_ids.end(), model_context->model_ids.begin(),
@@ -464,74 +482,13 @@ void Benchmark::RunStream() {
     size_t id = global_profiler_.BeginEvent();
     auto status =
         engine_->RequestSync(model_ids, request_options, inputs, outputs);
-    if (!status.ok()) {
-      std::cout << "Failed to run model: " << status.message() << std::endl;
-    }
-    global_profiler_.EndEvent(id);
-    int64_t current = Time::NowMicros();
+    global_profiler_.EndEvent(id, status);
+    int64_t current = time::NowMicros();
     if (current - start >= run_duration_us) break;
   }
 }
 
 void Benchmark::RunWorkload() { BAND_NOT_IMPLEMENTED; }
-
-void Benchmark::RunThermal() {
-  engine_->ProfileResources();
-
-  for (int model_index = 0; model_index < model_contexts_.size();
-       model_index++) {
-    std::thread t(
-        [this](ModelContext* model_context, const size_t period_us) {
-          while (true) {
-            if (!model_context->PrepareInput().ok()) {
-              std::cout << "Failed to copy input for model "
-                        << model_context->model
-                               .GetBackendModel(target_backend_)
-                               ->GetPath()
-                        << std::endl;
-              return;
-            }
-
-            size_t id = model_context->profiler.BeginEvent();
-            auto status = engine_->RequestSync(
-                model_context->model_ids, model_context->request_options,
-                model_context->model_request_inputs,
-                model_context->model_request_outputs);
-            if (!status.ok()) {
-              std::cout << "Failed to run model "
-                        << model_context->model
-                               .GetBackendModel(target_backend_)
-                               ->GetPath()
-                        << ": "
-                        << status.message()
-                        << std::endl;
-              return;
-            }
-            model_context->profiler.EndEvent(id);
-
-            if (kill_app_) return;
-
-            size_t elapsed_us =
-                model_context->profiler
-                    .GetElapsedTimeAt<std::chrono::microseconds>(id);
-
-            if (elapsed_us < period_us) {
-              std::this_thread::sleep_for(
-                  std::chrono::microseconds(period_us - elapsed_us));
-            }
-          }
-        },
-        model_contexts_[model_index],
-        benchmark_config_.model_configs[model_index].period_ms * 1000);
-
-    t.detach();
-  }
-  // wait for some time until we stop the benchmark
-  std::this_thread::sleep_for(
-      std::chrono::milliseconds(benchmark_config_.running_time_ms));
-  kill_app_ = true;
-  engine_->WaitAll();
-}
 
 void PrintHeader(std::string key, size_t indent_level = 0) {
   std::cout << std::left << std::string(indent_level * 2, ' ') << "<" << key
@@ -553,6 +510,9 @@ absl::Status Benchmark::LogResults() {
   PrintHeader("Option");
   PrintLine("Execution mode", benchmark_config_.execution_mode, 1);
   PrintLine("Running time (ms)", benchmark_config_.running_time_ms, 1);
+  for (auto& scheduler : runtime_config_->planner_config.schedulers) {
+    PrintLine("Scheduler", ToString(scheduler), 1);
+  }
 
   PrintHeader("Model");
   for (auto& model_config : benchmark_config_.model_configs) {
@@ -563,7 +523,8 @@ absl::Status Benchmark::LogResults() {
     PrintLine("SLO scale", model_config.slo_scale, 2);
   }
 
-  auto print_profiler = [](const std::string& prefix, const Profiler& profiler,
+  auto print_profiler = [](const std::string& prefix,
+                           const BenchmarkProfiler& profiler,
                            const ModelConfig* model_config = nullptr) {
     const double batch_size = model_config ? model_config->batch_size : 1;
     double average_ms =
@@ -575,6 +536,26 @@ absl::Status Benchmark::LogResults() {
     PrintLine("# Processed requests", profiler.GetNumEvents() * batch_size, 1);
     PrintLine("Avg. Latency (ms)", average_ms, 1);
     PrintLine("Avg. FPS", average_fps, 1);
+    PrintLine("Total # requests", profiler.GetNumEvents() * batch_size, 1);
+    PrintLine("Total # canceled requests",
+              profiler.GetNumCanceledEvents() * batch_size, 1);
+
+    if (model_config && model_config->slo_us > 0) {
+      double slo_satisfactory_count = 0;
+      for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
+        if (!profiler.IsEventCanceled(i) &&
+            profiler.GetElapsedTimeAt<std::chrono::microseconds>(i) <
+                model_config->slo_us) {
+          slo_satisfactory_count++;
+        }
+      }
+
+      double num_events =
+          profiler.GetNumEvents() - profiler.GetNumCanceledEvents();
+
+      PrintLine("SLO Satisfactory Rate (%)",
+                slo_satisfactory_count / num_events * 100, 1);
+    }
   };
 
   if (global_profiler_.GetNumEvents() > 0) {

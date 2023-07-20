@@ -19,110 +19,171 @@ typedef int JobId;
 
 using BitMask = std::bitset<64>;
 
-enum class SchedulerType : size_t;
-enum class SubgraphPreparationType : size_t;
-enum class DataType : size_t;
-enum class DeviceFlags : size_t;
-
 // Empty template.
-template <typename T>
-T FromString(std::string str) {
-  assert(false && "FromString not implemented for this type.");
+template <typename EnumType>
+size_t EnumLength() {
+  assert(false && "EnumLength is not implemented for this type.");
+  return 0;
 }
 
-template <typename T>
-size_t GetSize() {
-  assert(false && "GetSize not implemented for this type.");
-  return -1;
+template <typename EnumType>
+const char* ToString(EnumType t) {
+  assert(false && "ToString is not implemented for this type.");
+  return "";
 }
 
-enum class BackendType : size_t { TfLite = 0 };
-std::string GetName(BackendType backend_type);
+template <typename EnumType>
+EnumType FromString(const char* str) {
+  for (size_t i = 0; i < EnumLength<EnumType>(); i++) {
+    EnumType t = static_cast<EnumType>(i);
+    if (ToString(t) == str) {
+      return t;
+    }
+  }
+  // fallback to the first enum value
+  return static_cast<EnumType>(0);
+}
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class CPUMaskFlags : size_t { All = 0, Little = 1, Big = 2, Primary = 3 };
-template <>
-size_t GetSize<CPUMaskFlags>();
-std::string GetName(CPUMaskFlags cpu_mask_flags);
+enum class BackendType : size_t {
+  kTfLite = 0,
+};
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class SchedulerType : size_t {
-  FixedWorker = 0,
-  RoundRobin = 1,
-  ShortestExpectedLatency = 2,
-  FixedWorkerGlobalQueue = 3,
-  HeterogeneousEarliestFinishTime = 4,
-  LeastSlackTimeFirst = 5,
-  HeterogeneousEarliestFinishTimeReserved = 6
+  kFixedWorker = 0,
+  kRoundRobin = 1,
+  kShortestExpectedLatency = 2,
+  kFixedWorkerGlobalQueue = 3,
+  kHeterogeneousEarliestFinishTime = 4,
+  kLeastSlackTimeFirst = 5,
+  kHeterogeneousEarliestFinishTimeReserved = 6,
 };
-template <>
-size_t GetSize<SchedulerType>();
-std::string GetName(SchedulerType scheduler_type);
-template <>
-SchedulerType FromString(std::string str);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
+enum class CPUMaskFlag : size_t {
+  kAll = 0,
+  kLittle = 1,
+  kBig = 2,
+  kPrimary = 3,
+};
+
 enum class SubgraphPreparationType : size_t {
-  NoFallbackSubgraph = 0,
-  FallbackPerWorker = 1,
-  UnitSubgraph = 2,
-  MergeUnitSubgraph = 3
+  kNoFallbackSubgraph = 0,
+  kFallbackPerWorker = 1,
+  kUnitSubgraph = 2,
+  kMergeUnitSubgraph = 3,
 };
-template <>
-size_t GetSize<SubgraphPreparationType>();
-std::string GetName(SubgraphPreparationType subgraph_preparation_type);
-template <>
-SubgraphPreparationType FromString(std::string str);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
 enum class DataType : size_t {
-  NoType = 0,
-  Float32 = 1,
-  Int32 = 2,
-  UInt8 = 3,
-  Int64 = 4,
-  String = 5,
-  Bool = 6,
-  Int16 = 7,
-  Complex64 = 8,
-  Int8 = 9,
-  Float16 = 10,
-  Float64 = 11
+  kNoType = 0,
+  kFloat32 = 1,
+  kInt32 = 2,
+  kUInt8 = 3,
+  kInt64 = 4,
+  kString = 5,
+  kBool = 6,
+  kInt16 = 7,
+  kComplex64 = 8,
+  kInt8 = 9,
+  kFloat16 = 10,
+  kFloat64 = 11,
 };
-template <>
-size_t GetSize<DataType>();
-std::string GetName(DataType data_type);
-template <>
-DataType FromString(std::string str);
 
-// NOTE: Please update the GetSize() function when adding a new scheduler type.
-enum class DeviceFlags : size_t { CPU = 0, GPU = 1, DSP = 2, NPU = 3 };
-template <>
-size_t GetSize<DeviceFlags>();
-std::string GetName(DeviceFlags device_flags);
-template <>
-DeviceFlags FromString(std::string str);
+size_t GetDataTypeBytes(DataType type);
+
+enum class BufferFormat : size_t {
+  // image format
+  kGrayScale = 0,
+  kRGB = 1,
+  kRGBA = 2,
+  kYV12 = 3,
+  kYV21 = 4,
+  kNV21 = 5,
+  kNV12 = 6,
+  // raw format, from tensor
+  // internal format follows DataType
+  kRaw = 7
+};
+
+// Buffer content orientation follows EXIF specification. The name of
+// each enum value defines the position of the 0th row and the 0th column of
+// the image content. See http://jpegclub.org/exif_orientation.html for
+// details.
+enum class BufferOrientation : size_t {
+  kTopLeft = 1,
+  kTopRight = 2,
+  kBottomRight = 3,
+  kBottomLeft = 4,
+  kLeftTop = 5,
+  kRightTop = 6,
+  kRightBottom = 7,
+  kLeftBottom = 8,
+};
+
+enum class DeviceFlag : size_t {
+  kCPU = 0,
+  kGPU = 1,
+  kDSP = 2,
+  kNPU = 3,
+};
+
+enum class QuantizationType : size_t {
+  kNoQuantization = 0,
+  kAffineQuantization = 1,
+};
 
 enum class WorkerType : size_t {
-  DeviceQueue = 1,
-  GlobalQueue = 2,
+  kDeviceQueue = 1,
+  kGlobalQueue = 2,
 };
 
 enum class JobStatus : size_t {
-  Queued,
-  Success,
-  SLOViolation,
-  InputCopyFailure,
-  OutputCopyFailure,
-  InvokeFailure
+  kEnqueueFailed,
+  kQueued,
+  kSuccess,
+  kSLOViolation,
+  kInputCopyFailure,
+  kOutputCopyFailure,
+  kInvokeFailure
 };
-std::string GetName(JobStatus job_status);
 
-enum class QuantizationType {
-  NoQuantization = 0,
-  AffineQuantization = 1,
-};
-std::string GetName(QuantizationType);
+template <>
+size_t EnumLength<BackendType>();
+template <>
+size_t EnumLength<SchedulerType>();
+template <>
+size_t EnumLength<CPUMaskFlag>();
+template <>
+size_t EnumLength<SubgraphPreparationType>();
+template <>
+size_t EnumLength<DataType>();
+template <>
+size_t EnumLength<BufferFormat>();
+template <>
+size_t EnumLength<BufferOrientation>();
+template <>
+size_t EnumLength<DeviceFlag>();
+template <>
+size_t EnumLength<QuantizationType>();
+
+template <>
+const char* ToString(BackendType backend_type);
+template <>
+const char* ToString(SchedulerType scheduler_type);
+template <>
+const char* ToString(CPUMaskFlag cpu_mask_flag);
+template <>
+const char* ToString(SubgraphPreparationType subgraph_preparation_type);
+template <>
+const char* ToString(DataType data_type);
+template <>
+const char* ToString(BufferFormat buffer_format);
+template <>
+const char* ToString(BufferOrientation buffer_orientation);
+template <>
+const char* ToString(DeviceFlag device_flag);
+template <>
+const char* ToString(QuantizationType);
+template <>
+const char* ToString(JobStatus job_status);
 
 struct AffineQuantizationParams {
   std::vector<float> scale;
@@ -231,7 +292,7 @@ struct Job {
   WorkerId target_worker_id = -1;
 
   // Current status for execution (Valid after planning)
-  JobStatus status = JobStatus::Queued;
+  JobStatus status = JobStatus::kQueued;
   SubgraphKey subgraph_key;
   std::vector<Job> following_jobs;
 
@@ -250,5 +311,14 @@ struct JobIdBitMaskHash {
 };
 
 }  // namespace band
+
+// Helper macro to return error status
+#define RETURN_IF_ERROR(expr) \
+  {                           \
+    auto status = (expr);     \
+    if (!status.ok()) {       \
+      return status;          \
+    }                         \
+  }
 
 #endif  // BAND_COMMON_H_

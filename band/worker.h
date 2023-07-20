@@ -7,8 +7,8 @@
 #include <thread>
 
 #include "band/config.h"
-#include "band/context.h"
-#include "band/cpu.h"
+#include "band/engine_interface.h"
+#include "band/device/cpu.h"
 
 namespace band {
 
@@ -16,17 +16,17 @@ class Planner;
 
 class Worker {
  public:
-  explicit Worker(Context* context, WorkerId worker_id,
-                  DeviceFlags device_flag);
+  explicit Worker(IEngine* engine, WorkerId worker_id,
+                  DeviceFlag device_flag);
   virtual ~Worker();
 
   absl::Status Init(const WorkerConfig& config);
-  DeviceFlags GetDeviceFlag() const { return device_flag_; }
+  DeviceFlag GetDeviceFlag() const { return device_flag_; }
   WorkerId GetId() const { return worker_id_; }
   std::mutex& GetDeviceMtx() { return device_mtx_; }
   std::condition_variable& GetRequestCv() { return request_cv_; }
   absl::Status UpdateWorkerThread(const CpuSet thread_affinity_mask,
-                                int num_threads);
+                                  int num_threads);
   void WaitUntilDeviceAvailable(SubgraphKey& subgraph);
   bool IsAvailable() const;
 
@@ -57,11 +57,11 @@ class Worker {
   virtual void EndEnqueue() = 0;
   virtual void HandleDeviceError(Job& current_job) = 0;
 
-  Context* const context_;
+  IEngine* const engine_;
 
   std::once_flag device_cpu_start_flag_;
   std::thread device_cpu_thread_;
-  std::mutex device_mtx_;
+  mutable std::mutex device_mtx_;
   std::condition_variable request_cv_;
   std::condition_variable wait_cv_;
   bool kill_worker_ = false;
@@ -75,16 +75,16 @@ class Worker {
   bool need_cpu_update_ = false;
   std::mutex cpu_mtx_;
 
-  const DeviceFlags device_flag_;
+  const DeviceFlag device_flag_;
 
   static const int64_t LARGE_WAITING_TIME = INT_MAX / 2;
 };
 
 class DeviceQueueWorker : public Worker {
  public:
-  explicit DeviceQueueWorker(Context* context, WorkerId worker_id,
-                             DeviceFlags device_flag)
-      : Worker(context, worker_id, device_flag) {}
+  explicit DeviceQueueWorker(IEngine* engine, WorkerId worker_id,
+                             DeviceFlag device_flag)
+      : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;
@@ -106,9 +106,9 @@ class DeviceQueueWorker : public Worker {
 
 class GlobalQueueWorker : public Worker {
  public:
-  explicit GlobalQueueWorker(Context* context, WorkerId worker_id,
-                             DeviceFlags device_flag)
-      : Worker(context, worker_id, device_flag) {}
+  explicit GlobalQueueWorker(IEngine* engine, WorkerId worker_id,
+                             DeviceFlag device_flag)
+      : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
   int64_t GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;

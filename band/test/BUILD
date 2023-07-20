@@ -1,16 +1,30 @@
-load("//band:band.bzl", "band_cc_library", "band_cc_android_test")
+load("//band:band.bzl", "band_cc_android_test", "band_cc_library")
 
 exports_files(glob([
     "data/*.tflite",
     "data/*.json",
+    "data/*.jpg",
 ]))
 
 band_cc_library(
     name = "test_util",
-    hdrs = ["test_util.h"],
+    srcs = [
+        "image_util.cc",
+    ],
+    hdrs = [
+        "image_util.h",
+        "test_util.h",
+    ],
+    copts = [
+        "-DSTB_IMAGE_IMPLEMENTATION",
+        "-DSTB_IMAGE_WRITE_IMPLEMENTATION",
+    ],
     deps = [
         "//band:common",
+        "//band/buffer",
         "@com_google_googletest//:gtest",
+        "@stblib//:stb_image",
+        "@stblib//:stb_image_write",
     ],
 )
 
@@ -62,11 +76,12 @@ band_cc_android_test(
 
 band_cc_android_test(
     name = "benchmark_test",
-    size = "small",
+    size = "medium",
     srcs = ["tool/benchmark_test.cc"],
     data = [
         "//band/test:data/add.tflite",
         "//band/test:data/benchmark_config.json",
+        "//band/test:data/retinaface_mbv2_quant_160.tflite",
     ],
     deps = [
         ":test_util",
@@ -105,7 +120,7 @@ band_cc_android_test(
     srcs = ["cpu_test.cc"],
     data = [],
     deps = [
-        "//band:cpu",
+        "//band/device",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -130,10 +145,29 @@ band_cc_android_test(
     ],
     data = [
         "//band/test:data/add.tflite",
+        "//band/test:data/cat.jpg",
+        "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
+        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
     ],
     deps = [
         "//band:config_builder",
         "//band/backend/tfl:tfl_backend",
+        "//band/test:test_util",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
+    name = "image_operation_test",
+    size = "small",
+    srcs = ["image_operation_test.cc"],
+    data = [
+        "//band/test:data/hippo.jpg",
+        "//band/test:data/hippo_crop_256.jpg",
+        "//band/test:data/hippo_resize_256.jpg",
+    ],
+    deps = [
+        "//band/test:test_util",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -164,10 +198,14 @@ band_cc_android_test(
     srcs = ["c/c_api_test.cc"],
     data = [
         "//band/test:data/add.tflite",
+        "//band/test:data/cat.jpg",
+        "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
+        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
     ],
     deps = [
         "//band:framework",
         "//band/c:c_api",
+        "//band/test:test_util",
         "@com_google_googletest//:gtest",
     ] + select({
         "//band:tflite": [

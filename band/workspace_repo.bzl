@@ -35,6 +35,22 @@ def workspace():
         strip_prefix = "chrome-tracer-0.0.2",
     )
 
+    http_archive(
+        name = "stblib",
+        strip_prefix = "stb-b42009b3b9d4ca35bc703f5310eedc74f584be58",
+        sha256 = "13a99ad430e930907f5611325ec384168a958bf7610e63e60e2fd8e7b7379610",
+        urls = ["https://github.com/nothings/stb/archive/b42009b3b9d4ca35bc703f5310eedc74f584be58.tar.gz"],
+        build_file = Label("//third_party/stblib:BUILD"),
+    )
+
+    http_archive(
+        name = "libyuv",
+        urls = ["https://github.com/mrsnu/libyuv/archive/refs/tags/v1.0.0.zip"],
+        sha256 = "27ea6ddea93fefcdacb8175c0627c896488c3aebdcd7efd97e4cb2972a316195",
+        strip_prefix = "libyuv-1.0.0",
+        build_file = Label("//third_party/libyuv:BUILD"),
+    )
+
     ######## Android repositories ########
     android(name = "android_repo")
 

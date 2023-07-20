@@ -8,11 +8,13 @@ enum LogSeverity {
   BAND_LOG_INFO = 0,
   BAND_LOG_WARNING = 1,
   BAND_LOG_ERROR = 2,
+  BAND_LOG_NUM_SEVERITIES = 3,
 };
 
 class Logger {
  public:
   static void SetVerbosity(int severity);
+  static const char* GetSeverityName(LogSeverity severity);
 
   // Logging hook that takes variadic args.
   static void Log(LogSeverity severity, const char* format, ...);
@@ -24,7 +26,6 @@ class Logger {
  private:
   // Only accept logs with higher severity than verbosity level.
   static LogSeverity verbosity;
-  static const char* GetSeverityName(LogSeverity severity);
 };
 }  // namespace band
 

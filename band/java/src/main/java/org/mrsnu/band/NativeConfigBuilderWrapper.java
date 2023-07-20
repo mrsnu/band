@@ -13,7 +13,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
 
   public void addNumWarmups(int numWarmups) {
     addNumWarmups(nativeHandle, numWarmups);
-
   }
 
   public void addNumRuns(int numRuns) {
@@ -48,7 +47,7 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addSchedulers(nativeHandle, tmpArray);
   }
 
-  public void addPlannerCPUMask(CpuMaskFlags cpuMask) {
+  public void addPlannerCPUMask(CpuMaskFlag cpuMask) {
     addPlannerCPUMask(nativeHandle, cpuMask.getValue());
   }
 
@@ -60,7 +59,7 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addWorkers(nativeHandle, tmpArray);
   }
 
-  public void addWorkerCPUMasks(CpuMaskFlags[] cpuMasks) {
+  public void addWorkerCPUMasks(CpuMaskFlag[] cpuMasks) {
     int[] tmpArray = new int[cpuMasks.length];
     for (int i = 0; i < cpuMasks.length; i++) {
       tmpArray[i] = cpuMasks[i].getValue();
@@ -88,8 +87,20 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addSubgraphPreparationType(nativeHandle, subgraphPreparationType.getValue());
   }
 
-  public void addCPUMask(CpuMaskFlags cpuMask) {
+  public void addCPUMask(CpuMaskFlag cpuMask) {
     addCPUMask(nativeHandle, cpuMask.getValue());
+  }
+
+  public void addResourceMonitorDeviceFreqPath(Device flag, String devicePath) {
+    addResourceMonitorDeviceFreqPath(nativeHandle, flag.getValue(), devicePath);
+  }
+
+  public void addResourceMonitorIntervalMs(int intervalMs) {
+    addResourceMonitorIntervalMs(nativeHandle, intervalMs);
+  }
+
+  public void addResourceMonitorLogPath(String logPath) {
+    addResourceMonitorLogPath(nativeHandle, logPath);
   }
 
   public Config build() {
@@ -145,14 +156,22 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
 
   private native void addAllowWorkSteal(long configBuilderHandle, boolean allowWorkSteal);
 
-  private native void addAvailabilityCheckIntervalMs(long configBuilderHandle, int availabilityCheckIntervalMs);
+  private native void addAvailabilityCheckIntervalMs(
+      long configBuilderHandle, int availabilityCheckIntervalMs);
 
   private native void addMinimumSubgraphSize(long configBuilderHandle, int minimumSubgraphSize);
 
-  private native void addSubgraphPreparationType(long configBuilderHandle,
-      int subgraphPreparationType);
+  private native void addSubgraphPreparationType(
+      long configBuilderHandle, int subgraphPreparationType);
 
   private native void addCPUMask(long configBuilderHandle, int cpuMask);
+
+  private native void addResourceMonitorDeviceFreqPath(
+      long configBuilderHandle, int deviceFlag, String devicePath);
+
+  private native void addResourceMonitorIntervalMs(long configBuilderHandle, int intervalMs);
+
+  private native void addResourceMonitorLogPath(long configBuilderHandle, String logPath);
 
   private native boolean isValid(long configBuilderHandle);
 

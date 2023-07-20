@@ -1,13 +1,15 @@
 #include "band/config_builder.h"
 
+#include "config_builder.h"
+
 namespace band {
 
-#define REPORT_IF_FALSE(context, expr)                            \
-  do {                                                            \
-    result &= (expr);                                             \
-    if (!(expr)) {                                                \
-      BAND_REPORT_ERROR(error_reporter, "[" #context "] " #expr); \
-    }                                                             \
+#define REPORT_IF_FALSE(engine, expr)                            \
+  do {                                                           \
+    result &= (expr);                                            \
+    if (!(expr)) {                                               \
+      BAND_REPORT_ERROR(error_reporter, "[" #engine "] " #expr); \
+    }                                                            \
   } while (0);
 
 bool ProfileConfigBuilder::IsValid(
@@ -18,8 +20,8 @@ bool ProfileConfigBuilder::IsValid(
   REPORT_IF_FALSE(ProfileConfigBuilder, num_warmups_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder, num_runs_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder,
-                  copy_computation_ratio_.size() == GetSize<DeviceFlags>());
-  for (int i = 0; i < GetSize<DeviceFlags>(); i++) {
+                  copy_computation_ratio_.size() == EnumLength<DeviceFlag>());
+  for (int i = 0; i < EnumLength<DeviceFlag>(); i++) {
     REPORT_IF_FALSE(ProfileConfigBuilder, copy_computation_ratio_[i] >= 0);
   }
   REPORT_IF_FALSE(ProfileConfigBuilder,
@@ -36,10 +38,10 @@ bool PlannerConfigBuilder::IsValid(
   REPORT_IF_FALSE(PlannerConfigBuilder, /*log_path_*/ true);  // Always true
   REPORT_IF_FALSE(PlannerConfigBuilder, schedule_window_size_ > 0);
   REPORT_IF_FALSE(PlannerConfigBuilder, schedulers_.size() > 0);
-  REPORT_IF_FALSE(PlannerConfigBuilder, cpu_mask_ == CPUMaskFlags::All ||
-                                            cpu_mask_ == CPUMaskFlags::Little ||
-                                            cpu_mask_ == CPUMaskFlags::Big ||
-                                            cpu_mask_ == CPUMaskFlags::Primary);
+  REPORT_IF_FALSE(PlannerConfigBuilder, cpu_mask_ == CPUMaskFlag::kAll ||
+                                            cpu_mask_ == CPUMaskFlag::kLittle ||
+                                            cpu_mask_ == CPUMaskFlag::kBig ||
+                                            cpu_mask_ == CPUMaskFlag::kPrimary);
   return result;
 }
 
@@ -47,18 +49,18 @@ bool WorkerConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
   for (int i = 0; i < workers_.size(); i++) {
-    REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlags::CPU ||
-                                             workers_[i] == DeviceFlags::GPU ||
-                                             workers_[i] == DeviceFlags::DSP ||
-                                             workers_[i] == DeviceFlags::NPU);
+    REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlag::kCPU ||
+                                             workers_[i] == DeviceFlag::kGPU ||
+                                             workers_[i] == DeviceFlag::kDSP ||
+                                             workers_[i] == DeviceFlag::kNPU);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, cpu_masks_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
     REPORT_IF_FALSE(WorkerConfigBuilder,
-                    cpu_masks_[i] == CPUMaskFlags::All ||
-                        cpu_masks_[i] == CPUMaskFlags::Little ||
-                        cpu_masks_[i] == CPUMaskFlags::Big ||
-                        cpu_masks_[i] == CPUMaskFlags::Primary);
+                    cpu_masks_[i] == CPUMaskFlag::kAll ||
+                        cpu_masks_[i] == CPUMaskFlag::kLittle ||
+                        cpu_masks_[i] == CPUMaskFlag::kBig ||
+                        cpu_masks_[i] == CPUMaskFlag::kPrimary);
   }
   REPORT_IF_FALSE(WorkerConfigBuilder, num_threads_.size() == workers_.size());
   for (int i = 0; i < workers_.size(); i++) {
@@ -70,39 +72,28 @@ bool WorkerConfigBuilder::IsValid(
   return result;
 }
 
-bool SplashConfigBuilder::IsValid(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  bool result = true;
-  REPORT_IF_FALSE(SplashConfigBuilder, /*splash_log_path_*/ true);  // Always true
-  REPORT_IF_FALSE(SplashConfigBuilder, latency_smoothing_factor_ > 0);
-  REPORT_IF_FALSE(SplashConfigBuilder, thermal_window_size_ > 0);
-  return result;
-}
-
 bool RuntimeConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
   REPORT_IF_FALSE(RuntimeConfigBuilder, minimum_subgraph_size_ > 0);
-  REPORT_IF_FALSE(
-      RuntimeConfigBuilder,
-      subgraph_preparation_type_ ==
-              SubgraphPreparationType::NoFallbackSubgraph ||
-          subgraph_preparation_type_ ==
-              SubgraphPreparationType::FallbackPerWorker ||
-          subgraph_preparation_type_ == SubgraphPreparationType::UnitSubgraph ||
-          subgraph_preparation_type_ ==
-              SubgraphPreparationType::MergeUnitSubgraph);
-  REPORT_IF_FALSE(RuntimeConfigBuilder, cpu_mask_ == CPUMaskFlags::All ||
-                                            cpu_mask_ == CPUMaskFlags::Little ||
-                                            cpu_mask_ == CPUMaskFlags::Big ||
-                                            cpu_mask_ == CPUMaskFlags::Primary);
-  REPORT_IF_FALSE(RuntimeConfigBuilder, /*resource_log_path_*/true);
+  REPORT_IF_FALSE(RuntimeConfigBuilder,
+                  subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kNoFallbackSubgraph ||
+                      subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kFallbackPerWorker ||
+                      subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kUnitSubgraph ||
+                      subgraph_preparation_type_ ==
+                          SubgraphPreparationType::kMergeUnitSubgraph);
+  REPORT_IF_FALSE(RuntimeConfigBuilder, cpu_mask_ == CPUMaskFlag::kAll ||
+                                            cpu_mask_ == CPUMaskFlag::kLittle ||
+                                            cpu_mask_ == CPUMaskFlag::kBig ||
+                                            cpu_mask_ == CPUMaskFlag::kPrimary);
 
   // Independent validation
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, planner_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, worker_config_builder_.IsValid());
-  REPORT_IF_FALSE(RuntimeConfigBuilder, splash_config_builder_.IsValid());
 
   return result;
 }
@@ -156,15 +147,27 @@ WorkerConfig WorkerConfigBuilder::Build(
   return worker_config;
 }
 
-SplashConfig SplashConfigBuilder::Build(ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+ResourceMonitorConfig ResourceMonitorConfigBuilder::Build(
+    ErrorReporter* error_reporter) {
   if (!IsValid(error_reporter)) {
     abort();
   }
-  SplashConfig splash_config;
-  splash_config.splash_log_path = splash_log_path_;
-  splash_config.latency_smoothing_factor = latency_smoothing_factor_;
-  splash_config.thermal_window_size = thermal_window_size_;
-  return splash_config;
+
+  ResourceMonitorConfig device_config;
+  device_config.resource_monitor_log_path = resource_monitor_log_path_;
+  device_config.device_freq_paths = device_freq_paths_;
+  device_config.monitor_interval_ms = monitor_interval_ms_;
+  return device_config;
+}
+
+bool ResourceMonitorConfigBuilder::IsValid(ErrorReporter* error_reporter) {
+  bool result = true;
+
+  REPORT_IF_FALSE(
+      ResourceMonitorConfigBuilder,
+      resource_monitor_log_path_ == "" ||
+          resource_monitor_log_path_.find(".json") != std::string::npos);
+  return result;
 }
 
 RuntimeConfig RuntimeConfigBuilder::Build(
@@ -179,7 +182,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   ProfileConfig profile_config = profile_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
-  SplashConfig splash_config = splash_config_builder_.Build();
+  ResourceMonitorConfig device_config = device_config_builder_.Build();
   runtime_config.subgraph_config = {minimum_subgraph_size_,
                                     subgraph_preparation_type_};
 
@@ -187,6 +190,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   runtime_config.profile_config = profile_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;
+  runtime_config.device_config = device_config;
   return runtime_config;
 }
 

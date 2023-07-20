@@ -1,14 +1,17 @@
 #include <algorithm>
 
 #include "band/common.h"
+#include "band/logger.h"
 #include "band/time.h"
 #include "band/worker.h"
 #include "worker.h"
+
 
 namespace band {
 
 bool GlobalQueueWorker::EnqueueJob(Job& job) {
   if (!IsEnqueueReady()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Worker is not ready to enqueue");
     return false;
   }
 
@@ -36,10 +39,10 @@ void GlobalQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
-  context_->PrepareReenqueue(current_job);
+  engine_->PrepareReenqueue(current_job);
   lock.unlock();
 
-  context_->EnqueueRequest(current_job, true);
+  engine_->EnqueueRequest(current_job, true);
   WaitUntilDeviceAvailable(current_job.subgraph_key);
 
   lock.lock();
@@ -85,14 +88,14 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // no need to hold on to the lock anymore
   lock.unlock();
 
-  int64_t profiled_latency = context_->GetExpected(current_job_.subgraph_key);
+  int64_t profiled_latency = engine_->GetExpected(current_job_.subgraph_key);
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet
     return profiled_latency;
   }
 
-  int64_t current_time = Time::NowMicros();
+  int64_t current_time = time::NowMicros();
   int64_t progress = current_time - invoke_time;
   return std::max((long)(profiled_latency - progress), 0L);
 }

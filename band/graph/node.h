@@ -42,8 +42,8 @@ class Node {
   std::vector<int> GetOutputTensorDims(size_t index) const;
 
   bool IsConcrete() const {
-    return input_tensor_type_ != DataType::NoType &&
-           output_tensor_type_ != DataType::NoType &&
+    return input_tensor_type_ != DataType::kNoType &&
+           output_tensor_type_ != DataType::kNoType &&
            !input_tensor_dims_.empty() && !output_tensor_dims_.empty();
   }
 
@@ -51,8 +51,8 @@ class Node {
   GraphBuilder* builder_ = nullptr;
   size_t id_;
   std::string name_;
-  DataType input_tensor_type_ = DataType::NoType;
-  DataType output_tensor_type_ = DataType::NoType;
+  DataType input_tensor_type_ = DataType::kNoType;
+  DataType output_tensor_type_ = DataType::kNoType;
   std::vector<int> input_tensor_dims_ = {};
   std::vector<int> output_tensor_dims_ = {};
 };

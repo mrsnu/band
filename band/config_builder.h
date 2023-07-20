@@ -6,7 +6,7 @@
 
 #include "band/common.h"
 #include "band/config.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 #include "band/error_reporter.h"
 
 namespace band {
@@ -17,7 +17,7 @@ class ProfileConfigBuilder {
                                       // variables
  public:
   ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(GetSize<DeviceFlags>(), 30000);
+    copy_computation_ratio_ = std::vector<int>(EnumLength<DeviceFlag>(), 30000);
   }
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
@@ -70,7 +70,7 @@ class PlannerConfigBuilder {
     schedulers_ = schedulers;
     return *this;
   }
-  PlannerConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
+  PlannerConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -85,7 +85,7 @@ class PlannerConfigBuilder {
  private:
   int schedule_window_size_ = INT_MAX;
   std::vector<SchedulerType> schedulers_;
-  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";
 };
 
@@ -95,18 +95,18 @@ class WorkerConfigBuilder {
 
  public:
   WorkerConfigBuilder() {
-    for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
-      workers_.push_back(static_cast<DeviceFlags>(i));
+    for (size_t i = 0; i < EnumLength<DeviceFlag>(); i++) {
+      workers_.push_back(static_cast<DeviceFlag>(i));
     }
     cpu_masks_ =
-        std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
-    num_threads_ = std::vector<int>(GetSize<DeviceFlags>(), 1);
+        std::vector<CPUMaskFlag>(EnumLength<DeviceFlag>(), CPUMaskFlag::kAll);
+    num_threads_ = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
-  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
+  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
     workers_ = workers;
     return *this;
   }
-  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
+  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
     cpu_masks_ = cpu_masks;
     return *this;
   }
@@ -127,40 +127,44 @@ class WorkerConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  std::vector<DeviceFlags> workers_;
-  std::vector<CPUMaskFlags> cpu_masks_;
+  std::vector<DeviceFlag> workers_;
+  std::vector<CPUMaskFlag> cpu_masks_;
   std::vector<int> num_threads_;
   bool allow_worksteal_ = false;
   int availability_check_interval_ms_ = 30000;
 };
 
-class SplashConfigBuilder {
+class ResourceMonitorConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
  public:
-  SplashConfigBuilder& AddSplashLogPath(std::string splash_log_path) {
-    splash_log_path_ = splash_log_path;
+  ResourceMonitorConfigBuilder& AddResourceMonitorLogPath(
+      std::string log_path) {
+    resource_monitor_log_path_ = log_path;
+    return *this;
+  }
+  ResourceMonitorConfigBuilder& AddResourceMonitorDeviceFreqPath(
+      DeviceFlag device, std::string device_freq_path) {
+    device_freq_paths_.insert({device, device_freq_path});
+    return *this;
+  }
+  ResourceMonitorConfigBuilder& AddResourceMonitorIntervalMs(
+      int monitor_interval_ms) {
+    monitor_interval_ms_ = monitor_interval_ms;
     return *this;
   }
 
-  SplashConfigBuilder& AddLatencySmoothingFactor(
-      float latency_smoothing_factor) {
-    latency_smoothing_factor_ = latency_smoothing_factor;
-    return *this;
-  }
-
-  SplashConfigBuilder& AddThermalWindowSize(int32_t thermal_window_size) {
-    thermal_window_size_ = thermal_window_size;
-    return *this;
-  }
-
-  SplashConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
+  ResourceMonitorConfig Build(
+      ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  std::string splash_log_path_ = "";
-  float latency_smoothing_factor_ = 0.1f;
-  int32_t thermal_window_size_ = 10;
+  std::string resource_monitor_log_path_ = "";
+  std::map<DeviceFlag, std::string> device_freq_paths_;
+  int monitor_interval_ms_ = 10;
 };
 
+// Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
   // Add ProfileConfig
@@ -204,17 +208,17 @@ class RuntimeConfigBuilder {
     planner_config_builder_.AddSchedulers(schedulers);
     return *this;
   }
-  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlags cpu_masks) {
+  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlag cpu_masks) {
     planner_config_builder_.AddCPUMask(cpu_masks);
     return *this;
   }
 
   // Add WorkerConfig
-  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
+  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
     worker_config_builder_.AddWorkers(workers);
     return *this;
   }
-  RuntimeConfigBuilder& AddWorkerCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
+  RuntimeConfigBuilder& AddWorkerCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
     worker_config_builder_.AddCPUMasks(cpu_masks);
     return *this;
   }
@@ -232,22 +236,21 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
-  // Add SplashConfig
-  RuntimeConfigBuilder& AddSplashLogPath(std::string splash_log_path) {
-    splash_config_builder_.AddSplashLogPath(splash_log_path);
+  RuntimeConfigBuilder& AddResourceMonitorLogPath(
+      std::string resource_monitor_log_path) {
+    device_config_builder_.AddResourceMonitorLogPath(resource_monitor_log_path);
     return *this;
   }
-  RuntimeConfigBuilder& AddLatencySmoothingFactor(
-      float latency_smoothing_factor) {
-    splash_config_builder_.AddLatencySmoothingFactor(
-        latency_smoothing_factor);
+  RuntimeConfigBuilder& AddResourceMonitorDeviceFreqPath(
+      DeviceFlag device, std::string device_freq_path) {
+    device_config_builder_.AddResourceMonitorDeviceFreqPath(device,
+                                                            device_freq_path);
     return *this;
   }
-  RuntimeConfigBuilder& AddThermalWindowSize(int32_t thermal_window_size) {
-    splash_config_builder_.AddThermalWindowSize(thermal_window_size);
+  RuntimeConfigBuilder& AddResourceMonitorIntervalMs(int monitor_interval_ms) {
+    device_config_builder_.AddResourceMonitorIntervalMs(monitor_interval_ms);
     return *this;
   }
-  // Add other configs
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
     minimum_subgraph_size_ = minimum_subgraph_size;
     return *this;
@@ -257,7 +260,7 @@ class RuntimeConfigBuilder {
     subgraph_preparation_type_ = subgraph_preparation_type;
     return *this;
   }
-  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
+  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -269,11 +272,11 @@ class RuntimeConfigBuilder {
   ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
-  SplashConfigBuilder splash_config_builder_;
+  ResourceMonitorConfigBuilder device_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
-      SubgraphPreparationType::MergeUnitSubgraph;
-  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
+      SubgraphPreparationType::kMergeUnitSubgraph;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
 };
 
 }  // namespace band

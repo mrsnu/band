@@ -27,11 +27,11 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
-    int64_t expected_latency = context_->GetExpected(it->subgraph_key);
+    int64_t expected_latency = engine_->GetExpected(it->subgraph_key);
 
     total += expected_latency;
     if (it == requests_.begin()) {
-      int64_t current_time = Time::NowMicros();
+      int64_t current_time = time::NowMicros();
       int64_t invoke_time = (*it).invoke_time;
       if (invoke_time > 0 && current_time > invoke_time) {
         int64_t progress = (current_time - invoke_time) > expected_latency
@@ -50,6 +50,9 @@ bool DeviceQueueWorker::EnqueueJob(Job& job) {
   if (!IsEnqueueReady()) {
     return false;
   }
+
+  BAND_LOG_PROD(BAND_LOG_INFO, "Enqueue job %d to worker %d", job.job_id,
+                worker_id_);
 
   requests_.push_back(job);
   request_cv_.notify_one();
@@ -74,12 +77,12 @@ void DeviceQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
   is_throttling_ = true;
-  context_->PrepareReenqueue(current_job);
+  engine_->PrepareReenqueue(current_job);
   std::vector<Job> jobs(requests_.begin(), requests_.end());
   requests_.clear();
   lock.unlock();
 
-  context_->EnqueueBatch(jobs, true);
+  engine_->EnqueueBatch(jobs, true);
   WaitUntilDeviceAvailable(current_job.subgraph_key);
 
   lock.lock();

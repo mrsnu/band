@@ -7,17 +7,6 @@
 
 namespace band {
 namespace interface {
-size_t ITensor::GetNumElements() const {
-  size_t num_elements = 1;
-  for (auto dim : GetDimsVector()) {
-    num_elements *= dim;
-  }
-  return num_elements;
-}
-
-std::vector<int> ITensor::GetDimsVector() const {
-  return std::vector<int>(GetDims(), GetDims() + GetNumDims());
-}
 
 bool ITensor::operator==(const ITensor& rhs) const {
   if (GetType() != rhs.GetType()) {
@@ -31,8 +20,22 @@ bool ITensor::operator==(const ITensor& rhs) const {
   return true;
 }
 
-bool ITensor::operator!=(const ITensor& rhs) const {
-  return !(*this == rhs);
+bool ITensor::operator!=(const ITensor& rhs) const { return !(*this == rhs); }
+
+size_t ITensor::GetBytes() const {
+  return GetDataTypeBytes(GetType()) * GetNumElements();
+}
+
+size_t ITensor::GetNumElements() const {
+  size_t num_elements = 1;
+  for (auto dim : GetDimsVector()) {
+    num_elements *= dim;
+  }
+  return num_elements;
+}
+
+std::vector<int> ITensor::GetDimsVector() const {
+  return std::vector<int>(GetDims(), GetDims() + GetNumDims());
 }
 
 absl::Status ITensor::CopyDataFrom(const ITensor& rhs) {
