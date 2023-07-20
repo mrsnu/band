@@ -1,11 +1,11 @@
 #ifndef BAND_CONFIG_H_
 #define BAND_CONFIG_H_
 
+#include <limits>
 #include <string>
 #include <vector>
 
 #include "band/common.h"
-#include "band/cpu.h"
 #include "band/error_reporter.h"
 
 namespace band {
@@ -23,7 +23,7 @@ struct ProfileConfig {
 };
 
 struct PlannerConfig {
-  int schedule_window_size = INT_MAX;
+  int schedule_window_size = std::numeric_limits<int>::max();
   std::vector<SchedulerType> schedulers;
   CPUMaskFlag cpu_mask = CPUMaskFlag::kAll;
   std::string log_path = "";
@@ -52,12 +52,19 @@ struct SubgraphConfig {
       SubgraphPreparationType::kMergeUnitSubgraph;
 };
 
+struct ResourceMonitorConfig {
+  std::string resource_monitor_log_path = "";
+  std::map<DeviceFlag, std::string> device_freq_paths;
+  int monitor_interval_ms = 10;
+};
+
 struct RuntimeConfig {
   CPUMaskFlag cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  ResourceMonitorConfig device_config;
 
  private:
   friend class RuntimeConfigBuilder;

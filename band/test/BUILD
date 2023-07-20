@@ -120,7 +120,18 @@ band_cc_android_test(
     srcs = ["cpu_test.cc"],
     data = [],
     deps = [
-        "//band:cpu",
+        "//band/device",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_android_test(
+    name = "resource_monitor_test",
+    size = "small",
+    srcs = ["resource_monitor_test.cc"],
+    data = [],
+    deps = [
+        "//band:resource_monitor",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -135,8 +146,8 @@ band_cc_android_test(
     data = [
         "//band/test:data/add.tflite",
         "//band/test:data/cat.jpg",
-        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
         "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
+        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
     ],
     deps = [
         "//band:config_builder",
@@ -188,8 +199,8 @@ band_cc_android_test(
     data = [
         "//band/test:data/add.tflite",
         "//band/test:data/cat.jpg",
-        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
         "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
+        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
     ],
     deps = [
         "//band:framework",

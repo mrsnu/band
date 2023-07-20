@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "band/config_builder.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 #include "band/engine_interface.h"
 #include "band/model_spec.h"
 #include "band/test/test_util.h"
@@ -67,9 +67,9 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   worker.End();
 }
 
-struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlag> {};
+struct CPUMaskFixture : public testing::TestWithParam<CPUMaskFlag> {};
 
-TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
+TEST_P(CPUMaskFixture, AffinityPropagateTest) {
   CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
     CpuSet thread_cpu_set;
     if (!GetCPUThreadAffinity(thread_cpu_set).ok()) {
@@ -108,7 +108,7 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   worker.End();
 }
 
-INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
+INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, CPUMaskFixture,
                          testing::Values(CPUMaskFlag::kAll,
                                          CPUMaskFlag::kLittle,
                                          CPUMaskFlag::kBig,

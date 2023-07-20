@@ -129,7 +129,6 @@ band_cc_library(
     hdrs = [
         "common.h",
         "config.h",
-        "cpu.h",
         "engine_interface.h",
         "error_reporter.h",
         "logger.h",
@@ -163,6 +162,7 @@ band_cc_library(
     ],
     deps = [
         ":common",
+        "//band/device",
     ],
 )
 
@@ -177,19 +177,6 @@ band_cc_library(
     deps = [
         ":common",
         ":interface",
-    ],
-)
-
-band_cc_library(
-    name = "cpu",
-    srcs = [
-        "cpu.cc",
-    ],
-    hdrs = [
-        "cpu.h",
-    ],
-    deps = [
-        ":common",
     ],
 )
 
@@ -209,7 +196,7 @@ band_cc_library(
     ),
     deps = [
         ":common",
-        ":cpu",
+        "//band/device",
     ],
 )
 
@@ -267,9 +254,9 @@ band_cc_library(
     deps = [
         ":common",
         ":config",
-        ":cpu",
         ":job_tracer",
         ":time",
+        "//band/device",
     ],
 )
 
@@ -342,9 +329,9 @@ band_cc_library(
     deps = [
         ":common",
         ":config",
-        ":cpu",
         ":json_util",
         ":worker",
+        "//band/device",
     ],
 )
 
@@ -396,6 +383,7 @@ band_cc_library(
         ":model",
         ":model_analyzer",
         ":planner",
+        ":resource_monitor",
         ":scheduler",
         ":tensor",
         ":tensor_ring_buffer",
@@ -431,6 +419,18 @@ band_cc_library(
     deps = [
         ":common",
         ":config",
-        ":cpu",
+        "//band/device",
+    ],
+)
+
+band_cc_library(
+    name = "resource_monitor",
+    srcs = ["resource_monitor.cc"],
+    hdrs = ["resource_monitor.h"],
+    deps = [
+        ":common",
+        "//band/device",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
     ],
 )

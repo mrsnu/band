@@ -4,7 +4,7 @@
 #include "band/backend/tfl/tensor.h"
 #include "band/backend/tfl/util.h"
 #include "band/common.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 #include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/worker.h"

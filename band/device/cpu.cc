@@ -14,14 +14,15 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 
 #include <cstring>
 #include <mutex>  // call_once
 
+#include "band/device/util.h"
 #include "band/logger.h"
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_IS_MOBILE
 #include <errno.h>
 #include <stdint.h>
 #include <sys/syscall.h>
@@ -32,8 +33,9 @@
 #endif
 
 namespace band {
+using namespace device;
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_IS_MOBILE
 CpuSet::CpuSet() { DisableAll(); }
 
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
@@ -56,16 +58,16 @@ bool CpuSet::operator==(const CpuSet& rhs) const {
   return CPU_EQUAL(&cpu_set_, &rhs.cpu_set_) != 0;
 }
 
-int CpuSet::NumEnabled() const {
-  int NumEnabled = 0;
+size_t CpuSet::NumEnabled() const {
+  size_t num_enabled = 0;
   for (int i = 0; i < (int)sizeof(cpu_set_t) * 8; i++) {
-    if (IsEnabled(i)) NumEnabled++;
+    if (IsEnabled(i)) num_enabled++;
   }
 
-  return NumEnabled;
+  return num_enabled;
 }
 
-#else   // defined _BAND_SUPPORT_THREAD_AFFINITY
+#else   // defined BAND_IS_MOBILE
 CpuSet::CpuSet() {}
 
 void CpuSet::Enable(int /* cpu */) {}
@@ -82,8 +84,16 @@ bool CpuSet::operator==(const CpuSet& rhs) const { return true; }
 
 bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
 
-int CpuSet::NumEnabled() const { return GetCPUCount(); }
-#endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
+size_t CpuSet::NumEnabled() const { return GetCPUCount(); }
+#endif  // defined BAND_IS_MOBILE
+
+std::string CpuSet::ToString() const {
+  std::string str;
+  for (size_t i = 0; i < GetCPUCount(); i++) {
+    str += IsEnabled(i) ? "1" : "0";
+  }
+  return str;
+}
 
 CPUMaskFlag CpuSet::GetCPUMaskFlag() const {
   for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
@@ -99,16 +109,16 @@ static CpuSet g_thread_affinity_mask_all;
 static CpuSet g_thread_affinity_mask_little;
 static CpuSet g_thread_affinity_mask_big;
 static CpuSet g_thread_affinity_mask_primary;
-static int g_cpucount = GetCPUCount();
+static size_t g_cpucount = GetCPUCount();
 
-int GetCPUCount() {
-  int count = 0;
+size_t GetCPUCount() {
+  size_t count = 0;
 #ifdef __EMSCRIPTEN__
   if (emscripten_has_threading_support())
     count = emscripten_num_logical_cores();
   else
     count = 1;
-#elif defined _BAND_SUPPORT_THREAD_AFFINITY
+#elif BAND_IS_MOBILE
   // get cpu count from /proc/cpuinfo
   FILE* fp = fopen("/proc/cpuinfo", "rb");
   if (!fp) return 1;
@@ -136,16 +146,16 @@ int GetCPUCount() {
   return count;
 }
 
-int GetLittleCPUCount() {
+size_t GetLittleCPUCount() {
   return BandCPUMaskGetSet(CPUMaskFlag::kLittle).NumEnabled();
 }
 
-int GetBigCPUCount() {
+size_t GetBigCPUCount() {
   return BandCPUMaskGetSet(CPUMaskFlag::kBig).NumEnabled();
 }
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
-static int get_max_freq_khz(int cpuid) {
+#if BAND_IS_MOBILE
+int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
   char path[256];
   sprintf(path, "/sys/devices/system/cpu/cpufreq/stats/cpu%d/time_in_state",
@@ -206,7 +216,11 @@ static int get_max_freq_khz(int cpuid) {
   return max_freq_khz;
 }
 
-int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
+#endif  // defined BAND_IS_MOBILE
+
+absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
+#if BAND_IS_MOBILE
+
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
@@ -221,15 +235,19 @@ int SetSchedAffinity(const CpuSet& thread_affinity_mask) {
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
   if (syscallret != 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Set sched affinity error: %s",
-                      strerror(err));
-    return -1;
+    return absl::InternalError(
+        "Failed to set the CPU affinity - " + thread_affinity_mask.ToString() +
+        " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
   }
-  return 0;
+  return absl::OkStatus();
+#else
+  return absl::UnavailableError("Device not supported");
+#endif
 }
 
-int GetSchedAffinity(CpuSet& thread_affinity_mask) {
-  // set affinity for thread
+absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
+#if BAND_IS_MOBILE
+
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
 #else
@@ -243,43 +261,20 @@ int GetSchedAffinity(CpuSet& thread_affinity_mask) {
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
   if (syscallret != 0) {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Get sched affinity error :%s",
-                      strerror(err));
-    return -1;
+    return absl::InternalError(
+        "Failed to get the CPU affinity - " + thread_affinity_mask.ToString() +
+        " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
   }
-
-  return 0;
-}
-#endif  // defined _BAND_SUPPORT_THREAD_AFFINITY
-
-absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
-  int num_threads = thread_affinity_mask.NumEnabled();
-  int ssaret = SetSchedAffinity(thread_affinity_mask);
-  if (ssaret != 0) {
-    return absl::InternalError("Failed to set the CPU affinity.");
-  }
+  return absl::OkStatus();
 #else
-  BAND_LOG_PROD(BAND_LOG_INFO, "Thread affinity control is off. Ignore mask %s",
-                ToString(thread_affinity_mask.GetCPUMaskFlag()));
+  return absl::UnavailableError("Device not supported");
 #endif
-  return absl::OkStatus();
-}
-
-absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
-  int gsaret = GetSchedAffinity(thread_affinity_mask);
-  if (gsaret != 0) {
-    return absl::InternalError("Failed to get the CPU affinity.");
-  }
-#endif
-  return absl::OkStatus();
 }
 
 int SetupThreadAffinityMasks() {
   g_thread_affinity_mask_all.DisableAll();
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_IS_MOBILE
   int max_freq_khz_min = INT_MAX;
   int max_freq_khz_max = 0;
   std::vector<int> cpu_max_freq_khz(g_cpucount);
@@ -316,6 +311,14 @@ int SetupThreadAffinityMasks() {
     g_thread_affinity_mask_primary.DisableAll();
   }
 
+  BAND_LOG_INTERNAL(
+      BAND_LOG_INFO,
+      "CPU affinity masks: all(%s), little(%s), big(%s), primary(%s)",
+      g_thread_affinity_mask_all.ToString().c_str(),
+      g_thread_affinity_mask_little.ToString().c_str(),
+      g_thread_affinity_mask_big.ToString().c_str(),
+      g_thread_affinity_mask_primary.ToString().c_str());
+
 #else
   // TODO implement me for other platforms
   g_thread_affinity_mask_little.DisableAll();
@@ -343,5 +346,4 @@ const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag) {
       return g_thread_affinity_mask_all;
   }
 }
-
 }  // namespace band
