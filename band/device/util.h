@@ -17,6 +17,9 @@
 
 namespace band {
 namespace device {
+std::vector<std::string> ListFilesInPath(const char* path);
+std::vector<std::string> ListDirectoriesInPath(const char* path);
+bool IsFileAvailable(std::string path);
 bool IsRooted();
 std::string RunCommand(const std::string& command);
 absl::StatusOr<std::string> GetDeviceProperty(const std::string& property);

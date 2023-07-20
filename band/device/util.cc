@@ -1,5 +1,11 @@
 #include "band/device/util.h"
 
+#if defined(_POSIX_VERSION)
+#include <dirent.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#endif
+
 #include <cstdio>
 #include <fstream>
 #include <map>
@@ -11,6 +17,84 @@
 
 namespace band {
 namespace device {
+
+std::vector<std::string> ListFilesInPath(const char* path) {
+  std::vector<std::string> ret;
+
+#if defined(_POSIX_VERSION)
+  DIR* dir = opendir(path);
+  if (dir == nullptr) {
+    return {};
+  }
+  struct dirent* entry = readdir(dir);
+
+  while (entry != nullptr) {
+    if (entry->d_type == DT_REG) {
+      ret.push_back(entry->d_name);
+    }
+    entry = readdir(dir);
+  }
+  closedir(dir);
+#elif defined(_WIN32)
+  WIN32_FIND_DATAA find_data;
+  HANDLE find_handle =
+      FindFirstFileA((std::string(path) + "/*").c_str(), &find_data);
+  if (find_handle == INVALID_HANDLE_VALUE) {
+    return {};
+  }
+  do {
+    if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      continue;
+    }
+    ret.push_back(find_data.cFileName);
+  } while (FindNextFileA(find_handle, &find_data));
+  FindClose(find_handle);
+#else
+#error "Unsupported platform"
+#endif
+
+  return ret;
+}
+
+std::vector<std::string> ListDirectoriesInPath(const char* path) {
+  std::vector<std::string> ret;
+#if defined(_POSIX_VERSION)
+  DIR* dir = opendir(path);
+  if (dir == nullptr) {
+    return {};
+  }
+  struct dirent* entry = readdir(dir);
+
+  while (entry != nullptr) {
+    if (entry->d_type == DT_DIR || entry->d_type == DT_LNK) {
+      ret.push_back(entry->d_name);
+    }
+    entry = readdir(dir);
+  }
+  closedir(dir);
+#elif defined(_WIN32)
+  // list all directories in path
+  WIN32_FIND_DATAA find_data;
+  HANDLE find_handle =
+      FindFirstFileA((std::string(path) + "/*").c_str(), &find_data);
+  if (find_handle == INVALID_HANDLE_VALUE) {
+    return {};
+  }
+  do {
+    if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+      ret.push_back(find_data.cFileName);
+    }
+  } while (FindNextFileA(find_handle, &find_data));
+  FindClose(find_handle);
+#else
+#error "Unsupported platform"
+#endif
+  return ret;
+}
+
+bool IsFileAvailable(std::string path) {
+  return access(path.c_str(), F_OK) != -1;
+}
 
 std::string RunCommand(const std::string& command) {
   std::string result = "";

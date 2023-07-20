@@ -70,52 +70,6 @@ absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
   }
   return absl::NotFoundError("No available path");
 }
-
-std::vector<std::string> ListFilesInPath(const char* path) {
-  std::vector<std::string> ret;
-
-#if BAND_IS_MOBILE
-  DIR* dir = opendir(path);
-  if (dir == nullptr) {
-    return {};
-  }
-  struct dirent* entry = readdir(dir);
-
-  while (entry != nullptr) {
-    if (entry->d_type == DT_REG) {
-      ret.push_back(entry->d_name);
-    }
-    entry = readdir(dir);
-  }
-  closedir(dir);
-#endif
-
-  return ret;
-}
-
-std::vector<std::string> ListDirectoriesInPath(const char* path) {
-  std::vector<std::string> ret;
-#if BAND_IS_MOBILE
-  DIR* dir = opendir(path);
-  if (dir == nullptr) {
-    return {};
-  }
-  struct dirent* entry = readdir(dir);
-
-  while (entry != nullptr) {
-    if (entry->d_type == DT_DIR || entry->d_type == DT_LNK) {
-      ret.push_back(entry->d_name);
-    }
-    entry = readdir(dir);
-  }
-  closedir(dir);
-#endif
-  return ret;
-}
-
-bool IsFileAvailable(std::string path) {
-  return access(path.c_str(), F_OK) != -1;
-}
 }  // anonymous namespace
 
 template <>
@@ -211,7 +165,8 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
   }
 
   dev_freq_paths_ = config.device_freq_paths;
-  auto dev_freq_path_candidates = ListDirectoriesInPath(GetDevFreqBasePath());
+  auto dev_freq_path_candidates =
+      device::ListDirectoriesInPath(GetDevFreqBasePath());
 
   // add default dev freq paths
   std::map<DeviceFlag, std::vector<std::string>> target_keywords;
@@ -238,7 +193,7 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
   }
 
   for (auto it = dev_freq_paths_.begin(); it != dev_freq_paths_.end(); it++) {
-    if (!IsFileAvailable(GetDevFreqBasePath() + it->second)) {
+    if (!device::IsFileAvailable(GetDevFreqBasePath() + it->second)) {
       return absl::NotFoundError(
           absl::StrFormat("Device frequency path %s not found.", it->second));
     }
@@ -252,7 +207,7 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
 }
 
 std::vector<std::string> ResourceMonitor::GetThermalPaths() const {
-  return ListDirectoriesInPath(GetThermalBasePath());
+  return device::ListDirectoriesInPath(GetThermalBasePath());
 }
 
 std::vector<std::string> ResourceMonitor::GetCpuFreqPaths() const {
@@ -267,7 +222,7 @@ std::vector<std::string> ResourceMonitor::GetCpuFreqPaths() const {
     if (cpu_freq_path.ok()) {
       BAND_LOG_PROD(BAND_LOG_INFO, "CPU frequency path: %s",
                     cpu_freq_path.value().c_str());
-      auto pathes = ListFilesInPath(cpu_freq_path.value().c_str());
+      auto pathes = device::ListFilesInPath(cpu_freq_path.value().c_str());
       for (auto& path : pathes) {
         ret.push_back(cpu_freq_path.value() + "/" + path);
       }
@@ -290,7 +245,7 @@ std::vector<std::string> ResourceMonitor::GetDevFreqPaths() const {
     }
     auto dev_freq_path = GetDevFreqPath(device_flag);
     if (dev_freq_path.ok()) {
-      auto pathes = ListFilesInPath(dev_freq_path.value().c_str());
+      auto pathes = device::ListFilesInPath(dev_freq_path.value().c_str());
       for (auto& path : pathes) {
         ret.push_back(dev_freq_path.value() + "/" + path);
       }
@@ -326,7 +281,7 @@ size_t ResourceMonitor::NumThermalResources(ThermalFlag flag) const {
   static size_t cooling_device_size = 0;
   std::call_once(once_flag, [&]() {
     std::vector<std::string> ret;
-    auto thermals = ListDirectoriesInPath(GetThermalBasePath());
+    auto thermals = device::ListDirectoriesInPath(GetThermalBasePath());
     for (auto& thermal : thermals) {
       if (thermal.find("thermal_zone") != std::string::npos) {
         tzs_size++;
@@ -409,7 +364,7 @@ absl::Status ResourceMonitor::AddThermalResource(ThermalFlag flag, size_t id) {
           "Thermal resource for flag %s not supported.", ToString(flag)));
   }
 
-  if (!IsFileAvailable(path)) {
+  if (!device::IsFileAvailable(path)) {
     return absl::NotFoundError(absl::StrFormat("Path %s not found.", path));
   }
 
@@ -583,7 +538,7 @@ absl::StatusOr<std::string> ResourceMonitor::GetCpuFreqPath(
   static std::map<CPUMaskFlag, std::string> cpu_freq_paths;
   static std::once_flag once_flag;
   std::call_once(once_flag, [&]() {
-    auto cpu_freqs = ListDirectoriesInPath(GetCpuFreqBasePath());
+    auto cpu_freqs = device::ListDirectoriesInPath(GetCpuFreqBasePath());
 
     std::map<size_t, CPUMaskFlag> representative_cpu_ids;
     for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
@@ -625,7 +580,7 @@ absl::StatusOr<std::string> ResourceMonitor::GetCpuFreqPath(
 absl::StatusOr<std::string> ResourceMonitor::GetFirstAvailablePath(
     const std::vector<std::string>& paths) const {
   for (auto& path : paths) {
-    if (IsFileAvailable(path) && TryReadSizeT({path}).ok()) {
+    if (device::IsFileAvailable(path) && TryReadSizeT({path}).ok()) {
       return path;
     }
   }
