@@ -1,5 +1,6 @@
 #include "band/device/util.h"
 
+#include <cstdio>
 #include <fstream>
 #include <map>
 #include <mutex>
@@ -67,20 +68,6 @@ absl::StatusOr<std::string> GetDeviceProperty(const std::string& property) {
   } else {
     return absl::NotFoundError("Property not found");
   }
-}
-
-std::map<DeviceFlag, std::string> GetDevfreqPaths() {
-  std::string model = GetDeviceProperty("ro.product.model").value_or("");
-  // galaxy s20 (todo: fix this)
-  if (model == "SM-981N") {
-    return {
-        {DeviceFlag::kDSP, "/sys/class/devfreq/exynos5-busfreq-dmc/cur_freq"},
-        {DeviceFlag::kGPU, "/sys/class/devfreq/exynos5-busfreq-mif/cur_freq"},
-        {DeviceFlag::kNPU, "/sys/class/devfreq/exynos5-busfreq-mif/cur_freq"}};
-  }
-  // other devices
-
-  return std::map<DeviceFlag, std::string>();
 }
 
 }  // namespace device

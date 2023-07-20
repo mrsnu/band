@@ -118,7 +118,7 @@ size_t GetCPUCount() {
     count = emscripten_num_logical_cores();
   else
     count = 1;
-#elif defined BAND_IS_MOBILE
+#elif BAND_IS_MOBILE
   // get cpu count from /proc/cpuinfo
   FILE* fp = fopen("/proc/cpuinfo", "rb");
   if (!fp) return 1;
