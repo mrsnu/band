@@ -22,24 +22,20 @@ class GraphRunner : public IRunner {
   virtual absl::Status LogResults(size_t instance_id) override;
 
  private:
-  struct ModelContext {
-    ~ModelContext();
-    // simulate input tensor copy from model_inputs to model_request_inputs
-    absl::Status PrepareInput();
+  struct Vertex {
+    std::string path;
+    size_t batch_size = 1;
+    int worker_id = -1;
+    size_t model_id;
 
-    Model model;
-    BenchmarkProfiler profiler;
-    // pre-allocated model tensors for runtime requests
-    std::vector<ModelId> model_ids;
-    std::vector<RequestOption> request_options;
-    std::vector<Tensors> model_request_inputs;
-    std::vector<Tensors> model_request_outputs;
-    // randomly generated input
-    Tensors model_inputs;
+    const RequestOption GetRequestOption() const {
+      RequestOption option = RequestOption::GetDefaultOption();
+      if (worker_id >= 0) {
+        option.target_worker = worker_id;
+      }
+      return option;
+    }
   };
-
-  // initialization
-  absl::Status LoadBenchmarkConfigs(const Json::Value& root);
 
   // runner
   void RunInternal();
@@ -51,10 +47,9 @@ class GraphRunner : public IRunner {
 
   const BackendType target_backend_;
   EngineRunner& const engine_runner_;
-  GraphRunnerConfig config_;
   bool kill_app_ = false;
 
-  std::vector<ModelContext*> model_contexts_;
+  std::vector<Vertex*> model_contexts_;
 };
 }  // namespace tool
 }  // namespace band

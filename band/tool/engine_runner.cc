@@ -14,10 +14,57 @@
 #include "band/time.h"
 #include "band/tool/benchmark.h"
 #include "band/tool/graph_runner.h"
-#include "engine_runner.h"
 
 namespace band {
 namespace tool {
+
+// motivated from /tensorflow/lite/tools/benchmark
+template <typename T, typename Distribution>
+void CreateRandomTensorData(void* target_ptr, int num_elements,
+                            Distribution distribution) {
+  std::mt19937 random_engine;
+  T* target_head = static_cast<T*>(target_ptr);
+  std::generate_n(target_head, num_elements, [&]() {
+    return static_cast<T>(distribution(random_engine));
+  });
+}
+
+ModelContext::ModelContext() : model(std::move(model)) {}
+
+ModelContext::~ModelContext() {
+  auto delete_tensors = [](Tensors& tensors) {
+    for (auto t : tensors) {
+      delete t;
+    }
+  };
+
+  for (auto request_inputs : model_request_inputs) {
+    delete_tensors(request_inputs);
+  }
+
+  for (auto request_outputs : model_request_outputs) {
+    delete_tensors(request_outputs);
+  }
+
+  delete_tensors(model_inputs);
+}
+
+absl::Status ModelContext::PrepareInput() {
+  for (int batch_index = 0; batch_index < model_request_inputs.size();
+       batch_index++) {
+    for (int input_index = 0; input_index < model_inputs.size();
+         input_index++) {
+      auto status =
+          model_request_inputs[batch_index][input_index]->CopyDataFrom(
+              model_inputs[input_index]);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+  }
+  return absl::OkStatus();
+}
+
 EngineRunner::EngineRunner(BackendType target_backend)
     : target_backend_(target_backend) {}
 
@@ -31,32 +78,46 @@ EngineRunner::~EngineRunner() {
   }
 }
 
-absl::StatusOr<Model&> EngineRunner::GetOrRegisterModel(
-    const std::string& model_name) {
+absl::StatusOr<Model&> EngineRunner::GetModel(const std::string& model_key) {
   std::lock_guard<std::mutex> lock(model_mutex_);
-  if (registered_models_.find(model_name) == registered_models_.end()) {
-    Model* model = new Model();
-    RETURN_IF_ERROR(model->FromPath(target_backend_, model_name.c_str()));
-    RETURN_IF_ERROR(engine_->RegisterModel(model));
-    registered_models_[model_name] = model;
+  if (registered_models_.find(model_key) == registered_models_.end()) {
+    return absl::NotFoundError("Model not found");
+  } else {
+    return *registered_models_[model_key];
   }
-  return *registered_models_[model_name];
 }
 
 absl::Status EngineRunner::LoadRunnerConfigs(const Json::Value& root) {
-  if (!json::Validate(root, {"running_time_ms", "graphs", "models"})) {
+  if (!json::Validate(root, {"running_time_ms", "graph_workloads", "models"})) {
     return absl::InvalidArgumentError(
-        "Please check if argument `running_time_ms` and `graphs` are given");
+        "Please check if argument `running_time_ms` and `graph_workloads` are "
+        "given");
   }
 
-  json::AssignIfValid(runner_config_.running_time_ms, root, "running_time_ms");
+  json::AssignIfValid(running_time_ms_, root, "running_time_ms");
 
-  if (runner_config_.running_time_ms <= 0) {
+  if (running_time_ms_ <= 0) {
     return absl::InvalidArgumentError(
         "Please check if argument running_time_ms >= 0");
   }
 
-  for (auto& graph : root["graphs"]) {
+  for (auto& model_key : root["models"].getMemberNames()) {
+    if (!root["models"][model_key].isString()) {
+      return absl::InvalidArgumentError(
+          absl::StrFormat("Please check if model path for model %s is "
+                          "given",
+                          model_key.c_str()));
+    }
+    std::string model_path = root["models"][model_key].asString();
+    if (registered_models_.find(model_key) == registered_models_.end()) {
+      Model* model = new Model();
+      RETURN_IF_ERROR(model->FromPath(target_backend_, model_path.c_str()));
+      RETURN_IF_ERROR(engine_->RegisterModel(model));
+      registered_models_[model_path] = model;
+    }
+  }
+
+  for (auto& graph : root["graph_workloads"]) {
     std::unique_ptr<GraphRunner> graph_runner =
         std::make_unique<GraphRunner>(target_backend_, *engine_);
     RETURN_IF_ERROR(graph_runner->Initialize(graph));

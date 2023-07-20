@@ -1,5 +1,5 @@
 {
-    "workloads": [
+    "graph_workloads": [
         {
             "period_ms": 1000,
             "slo_ms": 1000,
@@ -11,13 +11,13 @@
                 "1": {
                     "name": "classifier",
                     "batch_size": 1
-                },
+                }
             },
             "edges": [
-                {
-                    "src": "classifier",
-                    "dst": "classifier",
-                }
+                [
+                    "0",
+                    "1"
+                ]
             ]
         }
     ],

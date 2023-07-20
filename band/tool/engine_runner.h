@@ -14,6 +14,23 @@
 namespace band {
 namespace tool {
 
+struct ModelContext {
+  ModelContext(std::unique_ptr<Model> model);
+  ~ModelContext();
+  // simulate input tensor copy from model_inputs to model_request_inputs
+  absl::Status PrepareInput();
+
+  std::unique_ptr<Model> model;
+  BenchmarkProfiler profiler;
+  // pre-allocated model tensors for runtime requests
+  std::vector<ModelId> model_ids;
+  std::vector<RequestOption> request_options;
+  std::vector<Tensors> model_request_inputs;
+  std::vector<Tensors> model_request_outputs;
+  // randomly generated input
+  Tensors model_inputs;
+};
+
 class EngineRunner : public IRunner {
  public:
   EngineRunner(BackendType target_backend = BackendType::kTfLite);
@@ -25,14 +42,15 @@ class EngineRunner : public IRunner {
   virtual absl::Status LogResults(size_t instance_id);
 
   Engine& GetEngine() { return *engine_; }
-  absl::StatusOr<Model&> GetOrRegisterModel(const std::string& model_name);
+  absl::StatusOr<Model&> GetModel(const std::string& model_name);
 
  private:
   absl::Status LoadRunnerConfigs(const Json::Value& root);
   absl::StatusOr<RuntimeConfig*> LoadRuntimeConfigs(const Json::Value& root);
 
   const BackendType target_backend_;
-  EngineRunnerConfig runner_config_;
+
+  size_t running_time_ms_;
   RuntimeConfig* runtime_config_ = nullptr;
   std::unique_ptr<Engine> engine_ = nullptr;
 
