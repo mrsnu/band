@@ -49,7 +49,7 @@ struct MockContextBase : public IEngine {
                                  const std::set<WorkerId>&));
 
   /* profiler */
-  MOCK_METHOD2(UpdateLatency, void(const SubgraphKey&, int64_t));
+  MOCK_METHOD2(Update, void(const SubgraphKey&, int64_t));
   MOCK_CONST_METHOD1(GetProfiled, int64_t(const SubgraphKey&));
   MOCK_CONST_METHOD1(GetExpected, int64_t(const SubgraphKey&));
 

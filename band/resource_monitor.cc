@@ -442,7 +442,7 @@ absl::Status ResourceMonitor::AddCpuFreqResource(CPUMaskFlag cpu_flag,
   }
 
   return absl::OkStatus();
-}  // namespace band
+}
 
 absl::Status ResourceMonitor::AddDevFreqResource(DeviceFlag device_flag,
                                                  DevFreqFlag flag) {
@@ -682,4 +682,5 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
         (std::chrono::high_resolution_clock::now() - start));
   }
 }
+
 }  // namespace band

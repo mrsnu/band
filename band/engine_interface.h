@@ -89,7 +89,7 @@ class IEngine {
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* profiler */
-  virtual void UpdateLatency(const SubgraphKey& key, int64_t latency) = 0;
+  virtual void Update(const SubgraphKey& key, int64_t latency) = 0;
   virtual int64_t GetProfiled(const SubgraphKey& key) const = 0;
   virtual int64_t GetExpected(const SubgraphKey& key) const = 0;
 

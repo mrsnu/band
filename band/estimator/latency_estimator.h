@@ -1,29 +1,31 @@
-#ifndef BAND_LATENCY_ESTIMATOR_H_
-#define BAND_LATENCY_ESTIMATOR_H_
-
-#include <json/json.h>
+#ifndef BAND_ESTIMATOR_LATENCY_ESTIMATOR_H_
+#define BAND_ESTIMATOR_LATENCY_ESTIMATOR_H_
 
 #include <chrono>
 #include <unordered_map>
 
-#include "absl/status/status.h"
 #include "band/common.h"
 #include "band/config.h"
+#include "band/estimator/estimator_interface.h"
+
+#include "json/json.h"
+#include "absl/status/status.h"
 
 namespace band {
+
 class IEngine;
-class LatencyEstimator {
+class LatencyEstimator : public IEstimator {
  public:
-  explicit LatencyEstimator(IEngine* engine);
-  absl::Status Init(const ProfileConfig& config);
-  void UpdateLatency(const SubgraphKey& key, int64_t latency);
+  explicit LatencyEstimator(IEngine* engine) : IEstimator(engine) {}
+  absl::Status Init(const ProfileConfig& config) override;
+  void Update(const SubgraphKey& key, int64_t latency) override;
 
-  absl::Status ProfileModel(ModelId model_id);
-  int64_t GetProfiled(const SubgraphKey& key) const;
-  int64_t GetExpected(const SubgraphKey& key) const;
-  int64_t GetWorst(ModelId model_id) const;
+  absl::Status Profile(ModelId model_id) override;
+  int64_t GetProfiled(const SubgraphKey& key) const override;
+  int64_t GetExpected(const SubgraphKey& key) const override;
+  int64_t GetWorst(ModelId model_id) const override;
 
-  absl::Status DumpProfile();
+  absl::Status DumpProfile() override;
 
   // latency in microseconds
   struct Latency {
@@ -61,9 +63,7 @@ class LatencyEstimator {
   int profile_num_warmups_;
   int profile_num_runs_;
   std::vector<int> profile_copy_computation_ratio_;
-
-  IEngine* const engine_;
 };
 }  // namespace band
 
-#endif  // BAND_LATENCY_ESTIMATOR_H_
+#endif  // BAND_ESTIMATOR_LATENCY_ESTIMATOR_H_

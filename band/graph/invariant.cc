@@ -7,7 +7,7 @@
 
 namespace band {
 
-bool NoCycle::Check(const GraphBuilder& graph) const {
+bool NoCycleInvariant::Check(const GraphBuilder& graph) const {
   // Return false if cycle detected.
   std::stack<size_t> stack;
   std::set<size_t> visited;
@@ -29,7 +29,7 @@ bool NoCycle::Check(const GraphBuilder& graph) const {
   return true;
 }
 
-bool NoIsolatedNode::Check(const GraphBuilder& graph) const {
+bool NoIsolatedNodeInvariant::Check(const GraphBuilder& graph) const {
   std::set<size_t> nodes;
   for (auto& edge : graph.edges()) {
     nodes.insert(edge.first);
@@ -44,7 +44,7 @@ bool NoIsolatedNode::Check(const GraphBuilder& graph) const {
   return true;
 }
 
-bool NoDuplicateEdge::Check(const GraphBuilder& graph) const {
+bool NoDuplicateEdgeInvariant::Check(const GraphBuilder& graph) const {
   std::set<Edge> unique_edges;
   for (auto& edge : graph.edges()) {
     if (unique_edges.find(edge) != unique_edges.end()) {
@@ -55,7 +55,7 @@ bool NoDuplicateEdge::Check(const GraphBuilder& graph) const {
   return true;
 }
 
-bool NoMismatchedEdge::Check(const GraphBuilder& graph) const {
+bool NoMismatchedEdgeInvariant::Check(const GraphBuilder& graph) const {
   for (auto& edge : graph.edges()) {
     if (edge.first >= graph.nodes().size() || edge.second >= graph.nodes().size()) {
       return false;

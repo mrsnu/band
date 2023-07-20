@@ -47,10 +47,10 @@ class GraphBuilder : public IGraph {
 
  private:
   void SetDefaultInvariants() {
-    invariants_.emplace_back(new NoCycle());
-    invariants_.emplace_back(new NoIsolatedNode());
-    invariants_.emplace_back(new NoDuplicateEdge());
-    invariants_.emplace_back(new NoMismatchedEdge());
+    invariants_.emplace_back(new NoCycleInvariant());
+    invariants_.emplace_back(new NoIsolatedNodeInvariant());
+    invariants_.emplace_back(new NoDuplicateEdgeInvariant());
+    invariants_.emplace_back(new NoMismatchedEdgeInvariant());
   }
 
   std::string name_;

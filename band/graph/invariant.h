@@ -12,22 +12,22 @@ class Invariant {
   virtual bool Check(const GraphBuilder& graph) const = 0;
 };
 
-class NoCycle : public Invariant {
+class NoCycleInvariant : public Invariant {
  public:
   bool Check(const GraphBuilder& graph) const override;
 };
 
-class NoIsolatedNode : public Invariant {
+class NoIsolatedNodeInvariant : public Invariant {
  public:
   bool Check(const GraphBuilder& graph) const override;
 };
 
-class NoDuplicateEdge : public Invariant {
+class NoDuplicateEdgeInvariant : public Invariant {
  public:
   bool Check(const GraphBuilder& graph) const override;
 };
 
-class NoMismatchedEdge : public Invariant {
+class NoMismatchedEdgeInvariant : public Invariant {
  public:
   bool Check(const GraphBuilder& graph) const override;
 };

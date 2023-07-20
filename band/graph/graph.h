@@ -26,7 +26,7 @@ class Graph : public IGraph {
 
  public:
   std::string GetGraphVizText() const;
-  void SaveGraphViz(std::string path) const;
+  absl::Status SaveGraphViz(std::string path) const;
 
   std::vector<std::shared_ptr<Node>> nodes() const override { return nodes_; }
   std::vector<Edge> edges() const override { return edges_; }

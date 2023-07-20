@@ -9,7 +9,6 @@
 #include "band/engine_interface.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
-#include "band/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/model_analyzer.h"
@@ -17,6 +16,7 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
+#include "band/estimator/latency_estimator.h"
 
 namespace band {
 
@@ -243,7 +243,7 @@ absl::Status Engine::RegisterModel(Model* model) {
     }
 
     if (planner_->NeedProfile()) {
-      auto status = latency_estimator_->ProfileModel(model_id);
+      auto status = latency_estimator_->Profile(model_id);
       if (!status.ok()) {
         return status;
       }
@@ -884,8 +884,8 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
   return {min_key, min_latency};
 }
 
-void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
-  if (latency_estimator_) latency_estimator_->UpdateLatency(key, latency);
+void Engine::Update(const SubgraphKey& key, int64_t latency) {
+  if (latency_estimator_) latency_estimator_->Update(key, latency);
 }
 
 int64_t Engine::GetProfiled(const SubgraphKey& key) const {

@@ -1,14 +1,13 @@
 #ifndef BAND_JSON_UTIL_H_
 #define BAND_JSON_UTIL_H_
 
-#include <json/json.h>
-
 #include <type_traits>
 #include <typeinfo>
 
 #include "band/common.h"
 #include "band/logger.h"
 
+#include "json/json.h"
 #include "absl/status/status.h"
 
 namespace band {

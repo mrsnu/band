@@ -87,9 +87,13 @@ std::string Graph::GetGraphVizText() const {
   return ret;
 }
 
-void Graph::SaveGraphViz(std::string path) const {
+absl::Status Graph::SaveGraphViz(std::string path) const {
   std::ofstream file(path);
+  if (!file.is_open()) {
+    return absl::InternalError("Failed to open file: " + path);
+  }
   file << GetGraphVizText();
+  return absl::OkStatus();
 }
 
 std::vector<size_t> Graph::GetTopologicalOrder() const {

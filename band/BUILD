@@ -317,22 +317,16 @@ band_cc_library(
 )
 
 band_cc_library(
-    name = "latency_estimator",
+    name = "profiler",
     srcs = [
-        "latency_estimator.cc",
         "profiler.cc",
     ],
     hdrs = [
-        "latency_estimator.h",
         "profiler.h",
     ],
     deps = [
         ":common",
-        ":config",
-        ":json_util",
-        ":worker",
-        "//band/device",
-    ],
+    ]
 )
 
 band_cc_library(
@@ -379,7 +373,6 @@ band_cc_library(
         ":interface",
         ":job_tracer",
         ":json_util",
-        ":latency_estimator",
         ":model",
         ":model_analyzer",
         ":planner",
@@ -389,6 +382,8 @@ band_cc_library(
         ":tensor_ring_buffer",
         ":time",
         ":worker",
+        "//band/estimator:latency_estimator",
+        "//band/graph:graph",
         "//band/buffer",
     ],
 )

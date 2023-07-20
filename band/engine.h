@@ -15,6 +15,7 @@
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
 #include "band/resource_monitor.h"
+#include "band/graph/graph.h"
 
 namespace band {
 
@@ -81,10 +82,14 @@ class Engine : public IEngine {
   absl::StatusOr<std::vector<JobId>> RequestAsync(
       std::vector<ModelId> model_ids, std::vector<RequestOption> options = {},
       std::vector<Tensors> inputs = {});
+  // Graph Execution
+//   absl::Status RequestGraphSync(Graph graph, Tensors inputs = {}, Tensors outputs = {});
+//   absl::StatusOr<JobId> RequestGraphAsync(Graph graph, Tensors inputs = {});
 
   absl::Status Wait(JobId job_id, Tensors outputs = {});
   absl::Status Wait(std::vector<JobId> job_ids,
                     std::vector<Tensors> outputs = {});
+//   absl::Status Wait(GraphJobId graph_job_id, Tensors outputs = {});
   void WaitAll();
   absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 
@@ -139,7 +144,7 @@ class Engine : public IEngine {
       const std::map<WorkerId, int64_t>& worker_waiting) const;
 
   /* latency estimator */
-  void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
+  void Update(const SubgraphKey& key, int64_t latency) override;
   int64_t GetWorst(ModelId model_id) const;
 
   /* planner */
@@ -178,6 +183,7 @@ class Engine : public IEngine {
       model_executors_;
   std::vector<std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
+//   std::unique_ptr<ThermalEstimator> thermal_estimator_;
   std::unique_ptr<LatencyEstimator> latency_estimator_;
   std::unique_ptr<Planner> planner_;
 

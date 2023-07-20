@@ -108,8 +108,8 @@ band_cc_android_test(
     deps = [
         ":test_util",
         "//band:config_builder",
-        "//band:latency_estimator",
         "//band:worker",
+        "//band/estimator:latency_estimator",
         "@com_google_googletest//:gtest",
     ],
 )

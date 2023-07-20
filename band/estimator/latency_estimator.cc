@@ -1,4 +1,4 @@
-#include "band/latency_estimator.h"
+#include "band/estimator/latency_estimator.h"
 
 #include "absl/strings/str_format.h"
 #include "band/engine_interface.h"
@@ -9,7 +9,6 @@
 #include "band/worker.h"
 
 namespace band {
-LatencyEstimator::LatencyEstimator(IEngine* engine) : engine_(engine) {}
 
 absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   profile_data_path_ = config.profile_data_path;
@@ -30,7 +29,7 @@ absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   return absl::OkStatus();
 }
 
-void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
+void LatencyEstimator::Update(const SubgraphKey& key, int64_t latency) {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
     int64_t prev_latency = it->second.moving_averaged;
@@ -39,13 +38,13 @@ void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
         (1 - profile_smoothing_factor_) * prev_latency;
   } else {
     BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::UpdateLatency] The given SubgraphKey %s "
+                  "[LatencyEstimator::Update] The given SubgraphKey %s "
                   "cannot be found.",
                   key.ToString().c_str());
   }
 }
 
-absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
+absl::Status LatencyEstimator::Profile(ModelId model_id) {
   if (profile_online_) {
     for (WorkerId worker_id = 0; worker_id < engine_->GetNumWorkers();
          worker_id++) {
