@@ -1,9 +1,22 @@
 #include "band/tool/graph_runner.h"
 
+#include <random>
+
 #include "graph_runner.h"
 
 namespace band {
 namespace tool {
+
+// motivated from /tensorflow/lite/tools/benchmark
+template <typename T, typename Distribution>
+void CreateRandomTensorData(void* target_ptr, int num_elements,
+                            Distribution distribution) {
+  std::mt19937 random_engine;
+  T* target_head = static_cast<T*>(target_ptr);
+  std::generate_n(target_head, num_elements, [&]() {
+    return static_cast<T>(distribution(random_engine));
+  });
+}
 
 GraphRunner::ModelContext::~ModelContext() {
   auto delete_tensors = [](Tensors& tensors) {
@@ -48,13 +61,71 @@ GraphRunner::~GraphRunner() {
 absl::Status GraphRunner::Initialize(const Json::Value& root) {
   RETURN_IF_ERROR(LoadBenchmarkConfigs(root));
 
+  if (!json::Validate(root, {"execution_mode", "models"})) {
+    return absl::InvalidArgumentError(
+        "Please check if argument `execution_mode` and `models` are given");
+  }
+
+  json::AssignIfValid(runner_config_.execution_mode, root, "execution_mode");
+
+  std::set<std::string> supported_execution_modes{"periodic", "stream"};
+  if (supported_execution_modes.find(runner_config_.execution_mode) ==
+      supported_execution_modes.end()) {
+    return absl::InvalidArgumentError(
+        absl::StrFormat("Please check if argument execution mode %s is valid",
+                        runner_config_.execution_mode));
+  }
+
+  if (runner_config_.execution_mode == "periodic") {
+    if (!json::AssignIfValid(runner_config_.period_ms, root, "period_ms") ||
+        runner_config_.period_ms == 0) {
+      return absl::InvalidArgumentError(
+          "Please check if argument `period_ms` is given and >= 0");
+    }
+  }
+
+  if (root["models"].size() == 0) {
+    return absl::InvalidArgumentError("Please specify at list one model");
+  }
+
+  // Set Model Configurations
+  for (int i = 0; i < root["models"].size(); ++i) {
+    ModelConfig model;
+    Json::Value model_json_value = root["models"][i];
+
+    // Set model filepath.
+    // Required for all cases.
+    if (!json::AssignIfValid(model.path, model_json_value, "graph")) {
+      return absl::InvalidArgumentError(
+          "Please check if argument `graph` is given in the model configs");
+    }
+
+    // Set `period_ms`.
+    // Required for `periodic` mode.
+    if (runner_config_.execution_mode == "periodic") {
+      if (!json::AssignIfValid(model.period_ms, model_json_value,
+                               "period_ms") ||
+          model.period_ms == 0) {
+        return absl::InvalidArgumentError(
+            "Please check if argument `period_ms` is given and >= 0");
+      }
+    }
+
+    json::AssignIfValid(model.batch_size, model_json_value, "batch_size");
+    json::AssignIfValid(model.worker_id, model_json_value, "worker_id");
+    json::AssignIfValid(model.slo_us, model_json_value, "slo_us");
+    json::AssignIfValid(model.slo_scale, model_json_value, "slo_scale");
+
+    runner_config_.model_configs.push_back(model);
+  }
+
   // load models
   for (auto& benchmark_model : model_contexts_) {
     ModelContext* engine = new ModelContext;
 
     {
-      auto status = engine->model.FromPath(target_backend_,
-                                           benchmark_model->path.c_str());
+      auto status =
+          engine->model.FromPath(target_backend_, benchmark_model.path.c_str());
       if (!status.ok()) {
         return status;
       }
@@ -70,7 +141,7 @@ absl::Status GraphRunner::Initialize(const Json::Value& root) {
     const auto input_indices = engine_.GetInputTensorIndices(model_id);
     const auto output_indices = engine_.GetOutputTensorIndices(model_id);
 
-    for (int i = 0; i < benchmark_model->batch_size; i++) {
+    for (int i = 0; i < benchmark_model.batch_size; i++) {
       // pre-allocate tensors
       Tensors inputs, outputs;
       for (int input_index : input_indices) {
@@ -85,7 +156,7 @@ absl::Status GraphRunner::Initialize(const Json::Value& root) {
       engine->model_request_outputs.push_back(outputs);
     }
 
-    if (benchmark_model->slo_us <= 0 && benchmark_model->slo_scale > 0.f) {
+    if (benchmark_model.slo_us <= 0 && benchmark_model.slo_scale > 0.f) {
       int64_t worst_us = 0;
 
       // calculate worst case latency
@@ -98,18 +169,18 @@ absl::Status GraphRunner::Initialize(const Json::Value& root) {
 
       if (worst_us == 0) {
         std::cout << "Failed to get worst case latency for model "
-                  << benchmark_model->path << std::endl;
+                  << benchmark_model.path << std::endl;
         std::cout << "Please check if given planner types require profiling"
                   << std::endl;
       } else {
-        benchmark_model->slo_us = worst_us * benchmark_model->slo_scale;
+        benchmark_model.slo_us = worst_us * benchmark_model.slo_scale;
       }
     }
 
     engine->model_ids =
-        std::vector<ModelId>(benchmark_model->batch_size, model_id);
+        std::vector<ModelId>(benchmark_model.batch_size, model_id);
     engine->request_options = std::vector<RequestOption>(
-        benchmark_model->batch_size, benchmark_model->GetRequestOption());
+        benchmark_model.batch_size, benchmark_model.GetRequestOption());
 
     // pre-allocate random input tensor to feed in run-time
     Tensors inputs;

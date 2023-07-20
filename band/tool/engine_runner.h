@@ -13,6 +13,7 @@
 
 namespace band {
 namespace tool {
+
 class EngineRunner : public IRunner {
  public:
   EngineRunner(BackendType target_backend = BackendType::kTfLite);
@@ -23,13 +24,20 @@ class EngineRunner : public IRunner {
   virtual void Join();
   virtual absl::Status LogResults(size_t instance_id);
 
+  Engine& GetEngine() { return *engine_; }
+  absl::StatusOr<Model&> GetOrRegisterModel(const std::string& model_name);
+
  private:
-  absl::Status LoadRuntimeConfigs(const Json::Value& root);
+  absl::Status LoadRunnerConfigs(const Json::Value& root);
+  absl::StatusOr<RuntimeConfig*> LoadRuntimeConfigs(const Json::Value& root);
 
   const BackendType target_backend_;
-  EngineRunnerConfig benchmark_config_;
+  EngineRunnerConfig runner_config_;
   RuntimeConfig* runtime_config_ = nullptr;
   std::unique_ptr<Engine> engine_ = nullptr;
+
+  std::mutex model_mutex_;
+  std::map<std::string, Model*> registered_models_;
 };
 
 }  // namespace tool

@@ -13,8 +13,8 @@ namespace band {
 namespace tool {
 class GraphRunner : public IRunner {
  public:
-  GraphRunner(BackendType target_backend, Engine& engine)
-      : target_backend_(target_backend), engine_(engine) {}
+  GraphRunner(BackendType target_backend, EngineRunner& engine_runner)
+      : target_backend_(target_backend), engine_runner_(engine_runner) {}
   ~GraphRunner();
   virtual absl::Status Initialize(const Json::Value& root) override;
   virtual absl::Status Run() override;
@@ -50,9 +50,10 @@ class GraphRunner : public IRunner {
   std::thread runner_thread_;
 
   const BackendType target_backend_;
-  Engine& const engine_;
+  EngineRunner& const engine_runner_;
   GraphRunnerConfig config_;
   bool kill_app_ = false;
+
   std::vector<ModelContext*> model_contexts_;
 };
 }  // namespace tool

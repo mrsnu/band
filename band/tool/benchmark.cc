@@ -23,56 +23,11 @@ absl::Status Benchmark::Run() {
     RETURN_IF_ERROR(children_[i]->Run());
   }
 
-  for (auto engine_runner : children_) {
+  for (auto& engine_runner : children_) {
     engine_runner->Join();
   }
 
   return LogResults();
-}
-
-Benchmark::ModelContext::~ModelContext() {
-  auto delete_tensors = [](Tensors& tensors) {
-    for (auto t : tensors) {
-      delete t;
-    }
-  };
-
-  for (auto request_inputs : model_request_inputs) {
-    delete_tensors(request_inputs);
-  }
-
-  for (auto request_outputs : model_request_outputs) {
-    delete_tensors(request_outputs);
-  }
-
-  delete_tensors(model_inputs);
-}
-
-absl::Status Benchmark::ModelContext::PrepareInput() {
-  for (int batch_index = 0; batch_index < model_request_inputs.size();
-       batch_index++) {
-    for (int input_index = 0; input_index < model_inputs.size();
-         input_index++) {
-      auto status =
-          model_request_inputs[batch_index][input_index]->CopyDataFrom(
-              model_inputs[input_index]);
-      if (!status.ok()) {
-        return status;
-      }
-    }
-  }
-  return absl::OkStatus();
-}
-
-// motivated from /tensorflow/lite/tools/benchmark
-template <typename T, typename Distribution>
-void CreateRandomTensorData(void* target_ptr, int num_elements,
-                            Distribution distribution) {
-  std::mt19937 random_engine;
-  T* target_head = static_cast<T*>(target_ptr);
-  std::generate_n(target_head, num_elements, [&]() {
-    return static_cast<T>(distribution(random_engine));
-  });
 }
 
 absl::Status Benchmark::Initialize(int argc, const char** argv) {
@@ -96,15 +51,11 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
   }
 
   auto try_create_engine_runner =
-      [this](const Json::Value& engine_runner_config)
-      -> absl::StatusOr<EngineRunner*> {
-    EngineRunner* engine_runner = new EngineRunner();
-    absl::Status status = engine_runner->Initialize(engine_runner_config);
-    if (!status.ok()) {
-      delete engine_runner;
-      return status;
-    }
-    children_.push_back(engine_runner);
+      [this](const Json::Value& engine_runner_config) -> absl::Status {
+    std::unique_ptr<EngineRunner> engine_runner =
+        std::make_unique<EngineRunner>();
+    RETURN_IF_ERROR(engine_runner->Initialize(engine_runner_config));
+    children_.emplace_back(engine_runner);
     return absl::OkStatus();
   };
 
@@ -113,10 +64,10 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
   if (json_config.isArray()) {
     // iterate through all benchmark instances (app, benchmark instance config)
     for (int i = 0; i < json_config.size(); ++i) {
-      try_create_engine_runner(json_config[i]);
+      RETURN_IF_ERROR(try_create_engine_runner(json_config[i]));
     }
   } else {
-    try_create_engine_runner(json_config);
+    RETURN_IF_ERROR(try_create_engine_runner(json_config));
   }
 
   return absl::OkStatus();

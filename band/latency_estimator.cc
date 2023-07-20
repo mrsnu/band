@@ -9,7 +9,7 @@
 #include "band/worker.h"
 
 namespace band {
-LatencyEstimator::LatencyEstimator(IEngine* engine) : engine_(engine) {}
+LatencyEstimator::LatencyEstimator(IEngine* engine) : engine_runner_(engine) {}
 
 absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   profile_data_path_ = config.profile_data_path;
@@ -47,9 +47,9 @@ void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
 
 absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
   if (profile_online_) {
-    for (WorkerId worker_id = 0; worker_id < engine_->GetNumWorkers();
+    for (WorkerId worker_id = 0; worker_id < engine_runner_->GetNumWorkers();
          worker_id++) {
-      Worker* worker = engine_->GetWorker(worker_id);
+      Worker* worker = engine_runner_->GetWorker(worker_id);
       // pause worker for profiling, must resume before continue
       worker->Pause();
       // wait for workers to finish current job
@@ -64,7 +64,8 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
               worker_id));
         }
 
-        engine_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
+        engine_runner_->ForEachSubgraph([&](const SubgraphKey& subgraph_key)
+                                            -> void {
           if (subgraph_key.GetWorkerId() == worker_id &&
               subgraph_key.GetModelId() == model_id) {
             Profiler average_profiler;
@@ -72,7 +73,7 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
             // (L1143-,tensorflow_band/lite/model_executor.cc)
 
             for (int i = 0; i < profile_num_warmups_; i++) {
-              if (!engine_->Invoke(subgraph_key).ok()) {
+              if (!engine_runner_->Invoke(subgraph_key).ok()) {
                 BAND_LOG_PROD(BAND_LOG_ERROR,
                               "Profiler failed to invoke largest subgraph of "
                               "model %d in worker %d",
@@ -83,7 +84,7 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
             for (int i = 0; i < profile_num_runs_; i++) {
               const size_t event_id = average_profiler.BeginEvent();
 
-              if (!engine_->Invoke(subgraph_key).ok()) {
+              if (!engine_runner_->Invoke(subgraph_key).ok()) {
                 BAND_LOG_PROD(BAND_LOG_ERROR,
                               "Profiler failed to invoke largest subgraph of "
                               "model %d in worker %d",
@@ -113,8 +114,9 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
       worker->Resume();
     }
   } else {
-    if (engine_ && engine_->GetModelSpec(model_id)) {
-      const std::string model_name = engine_->GetModelSpec(model_id)->path;
+    if (engine_runner_ && engine_runner_->GetModelSpec(model_id)) {
+      const std::string model_name =
+          engine_runner_->GetModelSpec(model_id)->path;
       auto model_profile = JsonToModelProfile(model_name, model_id);
       if (model_profile.size() > 0) {
         profile_database_.insert(model_profile.begin(), model_profile.end());
@@ -173,13 +175,14 @@ absl::Status LatencyEstimator::DumpProfile() {
 
 size_t LatencyEstimator::GetProfileHash() const {
   auto hash_func = std::hash<int>();
-  std::size_t hash = hash_func(engine_->GetNumWorkers());
-  for (int i = 0; i < engine_->GetNumWorkers(); i++) {
-    hash ^=
-        hash_func(static_cast<int>(engine_->GetWorker(i)->GetDeviceFlag()));
-    hash ^= hash_func(engine_->GetWorker(i)->GetNumThreads());
-    hash ^= hash_func(static_cast<int>(
-        engine_->GetWorker(i)->GetWorkerThreadAffinity().GetCPUMaskFlag()));
+  std::size_t hash = hash_func(engine_runner_->GetNumWorkers());
+  for (int i = 0; i < engine_runner_->GetNumWorkers(); i++) {
+    hash ^= hash_func(
+        static_cast<int>(engine_runner_->GetWorker(i)->GetDeviceFlag()));
+    hash ^= hash_func(engine_runner_->GetWorker(i)->GetNumThreads());
+    hash ^= hash_func(static_cast<int>(engine_runner_->GetWorker(i)
+                                           ->GetWorkerThreadAffinity()
+                                           .GetCPUMaskFlag()));
   }
   return hash;
 }
@@ -259,7 +262,7 @@ Json::Value LatencyEstimator::ProfileToJson() {
     const int64_t profiled_latency = pair.second.profiled;
 
     // check the string name of this model id
-    auto model_spec = engine_->GetModelSpec(model_id);
+    auto model_spec = engine_runner_->GetModelSpec(model_id);
     if (model_spec && !model_spec->path.empty()) {
       // copy all entries in id_profile --> database_json
       name_profile[model_spec->path][key.GetUnitIndicesString()]
