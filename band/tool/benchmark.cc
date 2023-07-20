@@ -462,6 +462,9 @@ void Benchmark::RunPeriodic() {
 void Benchmark::RunStream() {
   int run_duration_us = benchmark_config_.running_time_ms * 1000;
   int64_t start = time::NowMicros();
+  std::thread thermal_level_profile_thread =
+    create_thermal_level_profile_thread();
+  thermal_level_profile_thread.detach();
   while (true) {
     std::vector<ModelId> model_ids;
     std::vector<RequestOption> request_options;
@@ -493,6 +496,31 @@ void Benchmark::RunStream() {
     int64_t current = time::NowMicros();
     if (current - start >= run_duration_us) break;
   }
+  kill_app_ = true;
+}
+
+std::thread Benchmark::create_thermal_level_profile_thread() {
+  return std::thread(
+    [this](const size_t period_us) {
+      while (true) {
+        size_t id = global_profiler_.BeginEvent();
+
+        std::cout << status << std::endl;
+        global_profiler_.EndEvent(id, absl::OkStatus());
+
+        if (kill_app_) return;
+
+        size_t elapsed_us =
+            global_profiler_.GetElapsedTimeAt<std::chrono::microseconds>(id);
+
+        if (elapsed_us < period_us) {
+          std::this_thread::sleep_for(
+              std::chrono::microseconds(period_us - elapsed_us));
+        }
+      }
+    },
+    1000 * 1000
+  );
 }
 
 void Benchmark::RunWorkload() { BAND_NOT_IMPLEMENTED; }

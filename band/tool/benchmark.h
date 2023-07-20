@@ -1,6 +1,7 @@
 #ifndef BAND_TOOL_BENCHMARK_H_
 #define BAND_TOOL_BENCHMARK_H_
 #include <memory>
+#include <thread>
 
 #include "band/engine.h"
 #include "band/json_util.h"
@@ -46,6 +47,8 @@ class Benchmark {
   void RunWorkload();
 
   absl::Status LogResults();
+
+  std::thread create_thermal_level_profile_thread();
 
   const BackendType target_backend_;
   BenchmarkConfig benchmark_config_;
