@@ -1,6 +1,9 @@
 #include "band/resource_monitor.h"
 
+// check whether posix
+#if BAND_IS_MOBILE
 #include <dirent.h>
+#endif
 
 #include <iostream>
 
@@ -71,6 +74,8 @@ absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
 
 std::vector<std::string> ListFilesInPath(const char* path) {
   std::vector<std::string> ret;
+
+#if BAND_IS_MOBILE
   DIR* dir = opendir(path);
   if (dir == nullptr) {
     return {};
@@ -84,11 +89,14 @@ std::vector<std::string> ListFilesInPath(const char* path) {
     entry = readdir(dir);
   }
   closedir(dir);
+#endif
+
   return ret;
 }
 
 std::vector<std::string> ListDirectoriesInPath(const char* path) {
   std::vector<std::string> ret;
+#if BAND_IS_MOBILE
   DIR* dir = opendir(path);
   if (dir == nullptr) {
     return {};
@@ -102,6 +110,7 @@ std::vector<std::string> ListDirectoriesInPath(const char* path) {
     entry = readdir(dir);
   }
   closedir(dir);
+#endif
   return ret;
 }
 
