@@ -1,6 +1,5 @@
 #include "band/resource_monitor.h"
 
-// check whether posix
 #if BAND_IS_MOBILE
 #include <dirent.h>
 #endif
