@@ -4,6 +4,8 @@
 #include <dirent.h>
 #elif defined(_WIN32)
 #include <windows.h>
+#else
+#error "Unsupported platform"
 #endif
 
 #include <cstdio>
@@ -49,8 +51,6 @@ std::vector<std::string> ListFilesInPath(const char* path) {
     ret.push_back(find_data.cFileName);
   } while (FindNextFileA(find_handle, &find_data));
   FindClose(find_handle);
-#else
-#error "Unsupported platform"
 #endif
 
   return ret;
@@ -86,14 +86,16 @@ std::vector<std::string> ListDirectoriesInPath(const char* path) {
     }
   } while (FindNextFileA(find_handle, &find_data));
   FindClose(find_handle);
-#else
-#error "Unsupported platform"
 #endif
   return ret;
 }
 
 bool IsFileAvailable(std::string path) {
+#if defined(_POSIX_VERSION)
   return access(path.c_str(), F_OK) != -1;
+#elif defined(_WIN32)
+  return GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES;
+#endif
 }
 
 std::string RunCommand(const std::string& command) {
