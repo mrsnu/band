@@ -1,10 +1,14 @@
+#ifndef BAND_TOOL_RUNNER_H_
+#define BAND_TOOL_RUNNER_H_
+
 namespace band {
 namespace tool {
+
+#include <json/json.h>
 
 #include <memory>
 
 #include "absl/status/status.h"
-#include "json.h"
 
 class IRunner {
  public:
@@ -20,3 +24,5 @@ class IRunner {
 
 }  // namespace tool
 }  // namespace band
+
+#endif  // BAND_TOOL_RUNNER_H_

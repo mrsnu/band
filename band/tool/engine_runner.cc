@@ -18,53 +18,6 @@
 namespace band {
 namespace tool {
 
-// motivated from /tensorflow/lite/tools/benchmark
-template <typename T, typename Distribution>
-void CreateRandomTensorData(void* target_ptr, int num_elements,
-                            Distribution distribution) {
-  std::mt19937 random_engine;
-  T* target_head = static_cast<T*>(target_ptr);
-  std::generate_n(target_head, num_elements, [&]() {
-    return static_cast<T>(distribution(random_engine));
-  });
-}
-
-ModelContext::ModelContext() : model(std::move(model)) {}
-
-ModelContext::~ModelContext() {
-  auto delete_tensors = [](Tensors& tensors) {
-    for (auto t : tensors) {
-      delete t;
-    }
-  };
-
-  for (auto request_inputs : model_request_inputs) {
-    delete_tensors(request_inputs);
-  }
-
-  for (auto request_outputs : model_request_outputs) {
-    delete_tensors(request_outputs);
-  }
-
-  delete_tensors(model_inputs);
-}
-
-absl::Status ModelContext::PrepareInput() {
-  for (int batch_index = 0; batch_index < model_request_inputs.size();
-       batch_index++) {
-    for (int input_index = 0; input_index < model_inputs.size();
-         input_index++) {
-      auto status =
-          model_request_inputs[batch_index][input_index]->CopyDataFrom(
-              model_inputs[input_index]);
-      if (!status.ok()) {
-        return status;
-      }
-    }
-  }
-  return absl::OkStatus();
-}
-
 EngineRunner::EngineRunner(BackendType target_backend)
     : target_backend_(target_backend) {}
 
@@ -78,12 +31,13 @@ EngineRunner::~EngineRunner() {
   }
 }
 
-absl::StatusOr<Model&> EngineRunner::GetModel(const std::string& model_key) {
+absl::StatusOr<const Model&> EngineRunner::GetModel(
+    const std::string& model_key) const {
   std::lock_guard<std::mutex> lock(model_mutex_);
   if (registered_models_.find(model_key) == registered_models_.end()) {
     return absl::NotFoundError("Model not found");
   } else {
-    return *registered_models_[model_key];
+    return *registered_models_.at(model_key);
   }
 }
 
