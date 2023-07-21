@@ -12,7 +12,7 @@
 #include "band/profiler.h"
 #include "band/tensor.h"
 #include "band/time.h"
-#include "band/tool/benchmark_util.h"
+#include "benchmark.h"
 
 namespace band {
 namespace tool {
@@ -35,8 +35,6 @@ absl::Status Benchmark::Run() {
     RunStream();
   } else if (benchmark_config_.execution_mode == "workload") {
     RunWorkload();
-  } else {
-    return absl::InvalidArgumentError("Invalid execution mode");
   }
 
   return LogResults();
@@ -106,8 +104,7 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
 
   json::AssignIfValid(benchmark_config_.execution_mode, root, "execution_mode");
 
-  std::set<std::string> supported_execution_modes{"periodic", "stream",
-                                                  "thermal"};
+  std::set<std::string> supported_execution_modes{"periodic", "stream"};
   if (supported_execution_modes.find(benchmark_config_.execution_mode) ==
       supported_execution_modes.end()) {
     std::cout << "Please check if argument execution mode "
@@ -146,8 +143,7 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
 
     // Set `period_ms`.
     // Required for `periodic` mode.
-    if (benchmark_config_.execution_mode == "periodic" ||
-        benchmark_config_.execution_mode == "thermal") {
+    if (benchmark_config_.execution_mode == "periodic") {
       if (!json::AssignIfValid(model.period_ms, model_json_value,
                                "period_ms") ||
           model.period_ms == 0) {
@@ -161,7 +157,6 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
     json::AssignIfValid(model.worker_id, model_json_value, "worker_id");
     json::AssignIfValid(model.slo_us, model_json_value, "slo_us");
     json::AssignIfValid(model.slo_scale, model_json_value, "slo_scale");
-    json::AssignIfValid(model.target_device, model_json_value, "device");
 
     benchmark_config_.model_configs.push_back(model);
   }
@@ -283,6 +278,17 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   return true;
 }
 
+// motivated from /tensorflow/lite/tools/benchmark
+template <typename T, typename Distribution>
+void CreateRandomTensorData(void* target_ptr, int num_elements,
+                            Distribution distribution) {
+  std::mt19937 random_engine;
+  T* target_head = static_cast<T*>(target_ptr);
+  std::generate_n(target_head, num_elements, [&]() {
+    return static_cast<T>(distribution(random_engine));
+  });
+}
+
 absl::Status Benchmark::Initialize(int argc, const char** argv) {
   if (!ParseArgs(argc, argv)) {
     return absl::InternalError("Failed to parse arguments");
@@ -337,8 +343,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       for (int worker_id = 0; worker_id < engine_->GetNumWorkers();
            worker_id++) {
         worst_us = std::max(engine_->GetProfiled(engine_->GetLargestSubgraphKey(
-                                                     model_id, worker_id),
-                                                 EstimatorType::kLatency),
+                                model_id, worker_id)),
                             worst_us);
       }
 

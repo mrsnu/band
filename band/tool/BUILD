@@ -8,36 +8,6 @@ package(
     licenses = ["notice"],  # Apache 2.0
 )
 
-band_cc_library(
-    name = "benchmark_util",
-    hdrs = ["benchmark_util.h"],
-    deps = [],
-)
-
-band_cc_library(
-    name = "benchmark",
-    srcs = [
-        "benchmark.cc",
-        "benchmark_profiler.cc"
-    ],
-    hdrs = [
-        "benchmark.h",
-        "benchmark_config.h",
-        "benchmark_profiler.h"
-    ],
-    deps = [
-        ":benchmark_util",
-        "//band:framework",
-        "//band:config_builder",
-    ] + select({
-        "//band:tflite": [
-            "//band/backend/tfl:tfl_backend",
-        ],
-        "//conditions:default": [
-        ],
-    }),
-)
-
 cc_binary(
     name = "band_benchmark",
     srcs = [
@@ -55,4 +25,28 @@ cc_binary(
     deps = [
         ":benchmark",
     ],
+)
+
+
+band_cc_library(
+    name = "benchmark",
+    srcs = [
+        "benchmark.cc",
+        "benchmark_profiler.cc"
+    ],
+    hdrs = [
+        "benchmark.h",
+        "benchmark_config.h",
+        "benchmark_profiler.h"
+    ],
+    deps = [
+        "//band:framework",
+        "//band:config_builder",
+    ] + select({
+        "//band:tflite": [
+            "//band/backend/tfl:tfl_backend",
+        ],
+        "//conditions:default": [
+        ],
+    }),
 )
