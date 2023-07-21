@@ -11,7 +11,7 @@
 namespace band {
 namespace test {
 
-struct MockContext : public MockContextBase {
+struct MockEngine : public MockEngineBase {
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
   absl::Status Invoke(const SubgraphKey& key) override {
     time::SleepForMicros(50);
@@ -33,7 +33,7 @@ Job GetEmptyJob() {
 }
 
 TYPED_TEST(WorkerSuite, JobHelper) {
-  MockContext engine;
+  MockEngine engine;
   TypeParam worker(&engine, 0, DeviceFlag::kCPU);
   Job job = GetEmptyJob();
 
@@ -50,7 +50,7 @@ TYPED_TEST(WorkerSuite, JobHelper) {
 }
 
 TYPED_TEST(WorkerSuite, Wait) {
-  MockContext engine;
+  MockEngine engine;
   EXPECT_CALL(engine, Update).Times(testing::AtLeast(1));
   EXPECT_CALL(engine, Trigger).Times(testing::AtLeast(1));
   EXPECT_CALL(engine, TryCopyInputTensors).Times(testing::AtLeast(1));

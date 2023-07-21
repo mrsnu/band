@@ -13,8 +13,8 @@
 
 namespace band {
 namespace test {
-struct CustomWorkerMockContext : public MockContextBase {
-  CustomWorkerMockContext() { model_spec.path = "dummy"; }
+struct CustomWorkerMockEngine : public MockEngineBase {
+  CustomWorkerMockEngine() { model_spec.path = "dummy"; }
   Worker* GetWorker(WorkerId id) override { return worker; }
   size_t GetNumWorkers() const override { return 1; }
   const ModelSpec* GetModelSpec(ModelId model_id) const override {
@@ -30,8 +30,8 @@ struct CustomWorkerMockContext : public MockContextBase {
   ModelSpec model_spec;
 };
 
-struct CustomInvokeMockContext : public CustomWorkerMockContext {
-  CustomInvokeMockContext(
+struct CustomInvokeMockEngine : public CustomWorkerMockEngine {
+  CustomInvokeMockEngine(
       std::function<absl::Status(const SubgraphKey&)> invoke_lambda)
       : invoke_lambda(invoke_lambda) {}
 
@@ -47,7 +47,7 @@ struct WorkerTypesSuite : testing::Test {};
 TYPED_TEST_SUITE(WorkerTypesSuite, WorkerTypeList);
 
 TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
-  CustomWorkerMockContext engine;
+  CustomWorkerMockEngine engine;
   EXPECT_CALL(engine, Invoke).Times(testing::Exactly(53));
 
   ProfileConfigBuilder b;
@@ -70,7 +70,7 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
 struct CPUMaskFixture : public testing::TestWithParam<CPUMaskFlag> {};
 
 TEST_P(CPUMaskFixture, AffinityPropagateTest) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     CpuSet thread_cpu_set;
     if (!GetCPUThreadAffinity(thread_cpu_set).ok()) {
       return absl::InternalError("GetCPUThreadAffinity");
@@ -115,7 +115,7 @@ INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, CPUMaskFixture,
                                          CPUMaskFlag::kPrimary));
 
 TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return absl::OkStatus();
   });
@@ -141,7 +141,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
 }
 
 TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return absl::OkStatus();
   });
@@ -193,7 +193,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 }
 
 TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return absl::OkStatus();
   });
