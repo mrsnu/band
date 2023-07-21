@@ -210,7 +210,7 @@ class Engine : public IEngine {
       unit_subgraphs_to_subgraph_keys_;
 
   // Resource monitor
-  ResourceMonitor* resource_monitor_;
+  std::unique_ptr<ResourceMonitor> resource_monitor_;
   std::map<EstimatorType, std::unique_ptr<IEstimator>> estimators_;
 };  // namespace band
 }  // namespace band

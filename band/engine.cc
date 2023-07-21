@@ -499,6 +499,15 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     return status;
   }
 
+  // Initialize resource monitor
+  {
+    resource_monitor_ = std::make_unique<ResourceMonitor>();
+    auto status = resource_monitor_->Init(config.device_config);
+    if (!status.ok()) {
+      return status;
+    }
+  }
+
   // Setup for estimators
   {
     auto estimator_types = planner_->GetEstimatorTypes();
