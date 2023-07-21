@@ -93,9 +93,9 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config =
+  auto config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kRoundRobin})
+          .AddSchedulers({SchedulerType::kFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -113,8 +113,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
-
-  auto engine = Engine::Create(config);
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  auto engine = Engine::Create(config.value());
   EXPECT_TRUE(engine);
 
   Model model;
@@ -170,7 +170,8 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
@@ -207,7 +208,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
@@ -275,7 +277,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
@@ -345,7 +348,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
@@ -404,7 +408,8 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
@@ -483,7 +488,8 @@ TEST(TFLiteBackend, ClassificationTest) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");

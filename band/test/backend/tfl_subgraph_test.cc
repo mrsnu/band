@@ -57,7 +57,8 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
