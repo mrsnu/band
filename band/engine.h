@@ -11,11 +11,12 @@
 #include "band/config.h"
 #include "band/engine_interface.h"
 #include "band/error_reporter.h"
+#include "band/estimator/estimator_interface.h"
+#include "band/graph/graph.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
-#include "band/tensor_ring_buffer.h"
 #include "band/resource_monitor.h"
-#include "band/graph/graph.h"
+#include "band/tensor_ring_buffer.h"
 
 namespace band {
 
@@ -83,21 +84,24 @@ class Engine : public IEngine {
       std::vector<ModelId> model_ids, std::vector<RequestOption> options = {},
       std::vector<Tensors> inputs = {});
   // Graph Execution
-//   absl::Status RequestGraphSync(Graph graph, Tensors inputs = {}, Tensors outputs = {});
-//   absl::StatusOr<JobId> RequestGraphAsync(Graph graph, Tensors inputs = {});
+  //   absl::Status RequestGraphSync(Graph graph, Tensors inputs = {}, Tensors
+  //   outputs = {}); absl::StatusOr<JobId> RequestGraphAsync(Graph graph,
+  //   Tensors inputs = {});
 
   absl::Status Wait(JobId job_id, Tensors outputs = {});
   absl::Status Wait(std::vector<JobId> job_ids,
                     std::vector<Tensors> outputs = {});
-//   absl::Status Wait(GraphJobId graph_job_id, Tensors outputs = {});
+  //   absl::Status Wait(GraphJobId graph_job_id, Tensors outputs = {});
   void WaitAll();
   absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
 
-  int64_t GetProfiled(const SubgraphKey& key) const override;
-  int64_t GetExpected(const SubgraphKey& key) const override;
+  int64_t GetProfiled(const SubgraphKey& key,
+                      EstimatorType est_type) const override;
+  int64_t GetExpected(const SubgraphKey& key,
+                      EstimatorType est_type) const override;
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
 
@@ -144,8 +148,9 @@ class Engine : public IEngine {
       const std::map<WorkerId, int64_t>& worker_waiting) const;
 
   /* latency estimator */
-  void Update(const SubgraphKey& key, int64_t latency) override;
-  int64_t GetWorst(ModelId model_id) const;
+  void Update(const SubgraphKey& key, EstimatorType est_type,
+              int64_t new_value) override;
+  int64_t GetWorst(ModelId model_id, EstimatorType est_type) const;
 
   /* planner */
   void Trigger() override;
@@ -181,10 +186,8 @@ class Engine : public IEngine {
   std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<interface::IModelExecutor>>
       model_executors_;
-  std::vector<std::unique_ptr<Worker>> workers_;
   mutable WorkerWaitingTime workers_waiting_;
-//   std::unique_ptr<ThermalEstimator> thermal_estimator_;
-  std::unique_ptr<LatencyEstimator> latency_estimator_;
+  std::vector<std::unique_ptr<Worker>> workers_;
   std::unique_ptr<Planner> planner_;
 
   // Models
@@ -208,6 +211,7 @@ class Engine : public IEngine {
 
   // Resource monitor
   ResourceMonitor* resource_monitor_;
+  std::map<EstimatorType, std::unique_ptr<IEstimator>> estimators_;
 };  // namespace band
 }  // namespace band
 

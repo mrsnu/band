@@ -58,7 +58,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
           }
 
           reserved_time[job_subgraph_key.second.GetWorkerId()] +=
-              engine_.GetExpected(job_subgraph_key.second);
+              engine_.GetExpected(job_subgraph_key.second, EstimatorType::kLatency);
         }
 
         std::pair<std::vector<SubgraphKey>, int64_t> best_subgraph =
@@ -85,7 +85,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
       // even if this job is the "most urgent" one
       const int worker_id = target_subgraph_key.GetWorkerId();
       if (idle_workers.find(worker_id) == idle_workers.end()) {
-        waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
+        waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key, EstimatorType::kLatency);
         auto requests_it = requests.begin() + target_job_index;
         Job job = *requests_it;
         jobs_to_yield.insert(job.job_id);

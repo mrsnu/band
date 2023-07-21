@@ -27,7 +27,7 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
-    int64_t expected_latency = engine_->GetExpected(it->subgraph_key);
+    int64_t expected_latency = engine_->GetExpected(it->subgraph_key, EstimatorType::kLatency);
 
     total += expected_latency;
     if (it == requests_.begin()) {

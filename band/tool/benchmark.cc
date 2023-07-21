@@ -106,7 +106,8 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
 
   json::AssignIfValid(benchmark_config_.execution_mode, root, "execution_mode");
 
-  std::set<std::string> supported_execution_modes{"periodic", "stream", "thermal"};
+  std::set<std::string> supported_execution_modes{"periodic", "stream",
+                                                  "thermal"};
   if (supported_execution_modes.find(benchmark_config_.execution_mode) ==
       supported_execution_modes.end()) {
     std::cout << "Please check if argument execution mode "
@@ -336,7 +337,8 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       for (int worker_id = 0; worker_id < engine_->GetNumWorkers();
            worker_id++) {
         worst_us = std::max(engine_->GetProfiled(engine_->GetLargestSubgraphKey(
-                                model_id, worker_id)),
+                                                     model_id, worker_id),
+                                                 EstimatorType::kLatency),
                             worst_us);
       }
 

@@ -13,6 +13,9 @@ class HEFTScheduler : public IScheduler {
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
+  std::set<EstimatorType> GetEstimatorTypes() override {
+    return {EstimatorType::kLatency};
+  }
 
  private:
   // job_id --> subgraph_key

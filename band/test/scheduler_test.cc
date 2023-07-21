@@ -54,7 +54,9 @@ struct MockContext : public MockContextBase {
     return map;
   }
 
-  int64_t GetExpected(const SubgraphKey& key) const override { return 10; }
+  int64_t GetExpected(const SubgraphKey& key, EstimatorType) const override {
+    return 10;
+  }
   bool EnqueueToWorker(const ScheduleAction& action) override {
     action_.push_back(action);
     return true;

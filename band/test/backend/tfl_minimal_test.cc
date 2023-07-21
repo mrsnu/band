@@ -180,10 +180,12 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
       model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
-  EXPECT_GE(
-      engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
-  EXPECT_GE(
-      engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
+  EXPECT_GE(engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0),
+                                EstimatorType::kLatency),
+            0);
+  EXPECT_GE(engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0),
+                                EstimatorType::kLatency),
+            0);
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {

@@ -13,6 +13,9 @@ class LeastSlackFirstScheduler : public IScheduler {
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
+  std::set<EstimatorType> GetEstimatorTypes() override {
+    return {EstimatorType::kLatency};
+  }
 
  private:
   int64_t GetSlackTime(int64_t current_time, const Job& job);

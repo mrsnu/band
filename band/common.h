@@ -59,6 +59,12 @@ enum class SchedulerType : size_t {
   kHeterogeneousEarliestFinishTimeReserved = 6,
 };
 
+enum class EstimatorType : size_t {
+  kLatency = 1,
+  kThermal = 2,
+  kNetwork = 3,
+};
+
 enum class CPUMaskFlag : size_t {
   kAll = 0,
   kLittle = 1,
@@ -151,6 +157,8 @@ size_t EnumLength<BackendType>();
 template <>
 size_t EnumLength<SchedulerType>();
 template <>
+size_t EnumLength<EstimatorType>();
+template <>
 size_t EnumLength<CPUMaskFlag>();
 template <>
 size_t EnumLength<SubgraphPreparationType>();
@@ -169,6 +177,8 @@ template <>
 const char* ToString(BackendType backend_type);
 template <>
 const char* ToString(SchedulerType scheduler_type);
+template <>
+const char* ToString(EstimatorType estimator_type);
 template <>
 const char* ToString(CPUMaskFlag cpu_mask_flag);
 template <>

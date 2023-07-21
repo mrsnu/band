@@ -1,5 +1,5 @@
-#ifndef BAND_ESTIMATOR_THERMAL_ESTIMATOR_H_
-#define BAND_ESTIMATOR_THERMAL_ESTIMATOR_H_
+#ifndef BAND_ESTIMATOR_NETWORK_ESTIMATOR_H_
+#define BAND_ESTIMATOR_NETWORK_ESTIMATOR_H_
 
 #include <chrono>
 #include <unordered_map>
@@ -14,9 +14,9 @@
 namespace band {
 
 class IEngine;
-class ThermalEstimator : public IEstimator {
+class NetworkEstimator : public IEstimator {
  public:
-  explicit ThermalEstimator(IEngine* engine) : IEstimator(engine) {}
+  explicit NetworkEstimator(IEngine* engine) : IEstimator(engine) {}
   absl::Status Init(const ProfileConfig& config) override;
   void Update(const SubgraphKey& key, int64_t latency) override;
 
@@ -30,4 +30,4 @@ class ThermalEstimator : public IEstimator {
 
 }  // namespace band
 
-#endif  // BAND_ESTIMATOR_THERMAL_ESTIMATOR_H_
+#endif  // BAND_ESTIMATOR_NETWORK_ESTIMATOR_H_

@@ -13,7 +13,7 @@ namespace test {
 
 struct MockContext : public MockContextBase {
   void PrepareReenqueue(Job&) override{};
-  void Update(const SubgraphKey&, int64_t) override{};
+  void Update(const SubgraphKey&, EstimatorType, int64_t) override{};
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
   void Trigger() override {}
 

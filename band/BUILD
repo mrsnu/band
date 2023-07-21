@@ -382,7 +382,7 @@ band_cc_library(
         ":tensor_ring_buffer",
         ":time",
         ":worker",
-        "//band/estimator:latency_estimator",
+        "//band/estimator:estimators",
         "//band/graph:graph",
         "//band/buffer",
     ],
