@@ -40,6 +40,11 @@ absl::StatusOr<size_t> TryReadSizeT(std::vector<std::string> paths,
   return TryRead<size_t>(paths, multipliers);
 }
 
+absl::StatusOr<int> TryReadInt(std::vector<std::string> paths,
+                                  std::vector<float> multipliers = {}) {
+  return TryRead<int>(paths, multipliers);
+}
+
 absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
     std::vector<std::string> paths, std::vector<float> multipliers = {}) {
   // get from path and multiply by multiplier
@@ -343,7 +348,16 @@ absl::StatusOr<std::vector<size_t>> ResourceMonitor::GetAvailableCpuFreqs(
 absl::StatusOr<int> ResourceMonitor::GetPowerSupply(
     PowerSupplyDeviceFlag power_supply_device_flag,
     PowerSupplyFlag power_supply_flag) const {
-  return 0;
+  std::lock_guard<std::mutex> lock(head_mtx_);
+  PowerSupplyKey key{power_supply_flag, power_supply_device_flag};
+  if (power_supply_status_[status_head_].find(key) ==
+      power_supply_status_[status_head_].end()) {
+    return absl::InternalError(
+        absl::StrFormat("Powre supply resource %s of device %s is not registered.",
+          ToString(power_supply_flag), ToString(power_supply_device_flag)));
+  } else {
+    return power_supply_status_[status_head_].at(key);
+  }
 }
 
 absl::Status ResourceMonitor::AddThermalResource(ThermalFlag flag, size_t id) {
@@ -511,6 +525,28 @@ absl::Status ResourceMonitor::AddNetworkResource(NetworkFlag) {
 absl::Status ResourceMonitor::AddPowerSupplyResource(
     PowerSupplyDeviceFlag power_supply_device_flag,
     PowerSupplyFlag power_supply_flag) {
+  std::lock_guard<std::mutex> lock(path_mtx_);
+  PowerSupplyKey key{power_supply_flag, power_supply_device_flag};
+  if (power_supply_resources_.find(key) != power_supply_resources_.end()) {
+    return absl::InternalError(
+        absl::StrFormat("Power supply resource %s of device %s is already registered.",
+        ToString(power_supply_flag),
+        ToString(power_supply_device_flag)));
+  }
+
+  std::string base_path = GetPowerSupplyBasePath();
+  std::string path = absl::StrFormat("%s/%s/%s", base_path,
+    ToString(power_supply_device_flag), ToString(power_supply_flag));
+
+  if (!device::IsFileAvailable(path)) {
+    return absl::NotFoundError(absl::StrFormat("Path %s not found.", path));
+  }
+
+  power_supply_resources_[key] = {path, 1.f};
+  // add initial value
+  int value = TryReadInt({path}).value();
+  power_supply_status_[0][key] = value;
+  power_supply_status_[1][key] = value;
   return absl::OkStatus();
 }
 
@@ -587,36 +623,6 @@ absl::StatusOr<std::string> ResourceMonitor::GetCpuFreqPath(
   } else {
     return GetCpuFreqBasePath() + cpu_freq_paths.at(flag);
   }
-}
-
-absl::StatusOr<std::string> ResourceMonitor::GetPowerSupplyPath(
-    PowerSupplyDeviceFlag power_supply_device_flag,
-    PowerSupplyFlag power_supply_flag) const {
-  static std::map<PowerSupplyDeviceFlag,
-    std::map<PowerSupplyFlag, absl::StatusOr<std::string>>> device_path_map =
-      std::map<PowerSupplyDeviceFlag,
-        std::map<PowerSupplyFlag, absl::StatusOr<std::string>>>();
-  static std::once_flag once_flag;
-  std::call_once(once_flag, [&]() {
-    if (device_path_map.find(power_supply_device_flag) == device_path_map.end()) {
-      device_path_map[power_supply_device_flag] =
-        std::map<PowerSupplyFlag, absl::StatusOr<std::string>>();
-    }
-    auto& path_map = device_path_map[power_supply_device_flag];
-    auto path = std::string(GetPowerSupplyBasePath()) + ToString(power_supply_device_flag)
-      + "/" + ToString(power_supply_flag);
-    if (path_map.find(power_supply_flag) == path_map.end()) {
-      if (device::IsFileAvailable(path)) {
-        path_map[power_supply_flag] = path;
-      } else {
-        path_map[power_supply_flag] = absl::InternalError(absl::StrFormat(
-          "Power Supply resource for flag %s of device %s not found.",
-          ToString(power_supply_flag),
-          ToString(power_supply_device_flag)));
-      }
-    }
-  });
-  return device_path_map[power_supply_device_flag][power_supply_flag];
 }
 
 absl::StatusOr<std::string> ResourceMonitor::GetFirstAvailablePath(

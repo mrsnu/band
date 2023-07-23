@@ -109,9 +109,6 @@ class ResourceMonitor {
   std::map<DeviceFlag, std::string> dev_freq_paths_;
   absl::StatusOr<std::string> GetDevFreqPath(DeviceFlag flag) const;
   absl::StatusOr<std::string> GetCpuFreqPath(CPUMaskFlag flag) const;
-  absl::StatusOr<std::string> GetPowerSupplyPath(
-    PowerSupplyDeviceFlag power_supply_device_flag,
-    PowerSupplyFlag power_supply_flag) const;
 
   // Read from the first available path, return absl::NotFoundError if none of
   // the paths exist.
@@ -128,6 +125,7 @@ class ResourceMonitor {
   using ThermalKey = std::pair<ThermalFlag, size_t>;
   using CpuFreqKey = std::pair<CpuFreqFlag, CPUMaskFlag>;
   using DevFreqKey = std::pair<DevFreqFlag, DeviceFlag>;
+  using PowerSupplyKey = std::pair<PowerSupplyFlag, PowerSupplyDeviceFlag>;
 
   mutable std::mutex path_mtx_;
   // registered thermal resources
@@ -135,12 +133,14 @@ class ResourceMonitor {
   std::map<ThermalKey, std::pair<std::string, float>> thermal_resources_;
   std::map<CpuFreqKey, std::pair<std::string, float>> cpu_freq_resources_;
   std::map<DevFreqKey, std::pair<std::string, float>> dev_freq_resources_;
+  std::map<PowerSupplyKey, std::pair<std::string, float>> power_supply_resources_;
 
   mutable std::mutex head_mtx_;
   size_t status_head_ = 0;
   std::array<std::map<ThermalKey, size_t>, 2> thermal_status_;
   std::array<std::map<CpuFreqKey, size_t>, 2> cpu_freq_status_;
   std::array<std::map<DevFreqKey, size_t>, 2> dev_freq_status_;
+  std::array<std::map<PowerSupplyKey, int>, 2> power_supply_status_;
 
   std::mutex callback_mtx_;
   std::vector<std::function<void(const ResourceMonitor&)>> on_update_callbacks_;
