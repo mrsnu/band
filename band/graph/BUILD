@@ -8,6 +8,7 @@ package(
 band_cc_library(
     name = "graph",
     hdrs = [
+        "graph_interface.h",
         "graph.h",
         "node.h",
         "graph_builder.h",

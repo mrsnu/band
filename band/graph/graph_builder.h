@@ -1,5 +1,5 @@
-#ifndef BAND_MODEL_GRAPH_GRAPH_BUILDER_H_
-#define BAND_MODEL_GRAPH_GRAPH_BUILDER_H_
+#ifndef BAND_GRAPH_GRAPH_BUILDER_H_
+#define BAND_GRAPH_GRAPH_BUILDER_H_
 
 #include <string>
 
@@ -12,11 +12,9 @@
 
 namespace band {
 
-using Edge = std::pair<size_t, size_t>;
-
 class GraphBuilder : public IGraph {
  public:
-  GraphBuilder(std::string name) : name_(name) {
+  GraphBuilder(std::string name) : IGraph(name) {
     nodes_.push_back(std::make_shared<EntryNode>(this, 0, "Entry"));
     nodes_.push_back(std::make_shared<ExitNode>(this, 1, "Exit"));
 
@@ -42,9 +40,6 @@ class GraphBuilder : public IGraph {
   std::shared_ptr<Node> GetEntryNode() { return nodes_[0]; }
   std::shared_ptr<Node> GetExitNode() { return nodes_[1]; }
 
-  std::vector<std::shared_ptr<Node>> nodes() const override { return nodes_; }
-  std::vector<Edge> edges() const override { return edges_; }
-
  private:
   void SetDefaultInvariants() {
     invariants_.emplace_back(new NoCycleInvariant());
@@ -52,10 +47,6 @@ class GraphBuilder : public IGraph {
     invariants_.emplace_back(new NoDuplicateEdgeInvariant());
     invariants_.emplace_back(new NoMismatchedEdgeInvariant());
   }
-
-  std::string name_;
-  std::vector<std::shared_ptr<Node>> nodes_;
-  std::vector<Edge> edges_;
 
   std::vector<std::unique_ptr<Invariant>> invariants_;
 };
