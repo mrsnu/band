@@ -115,7 +115,7 @@ class ModelNode : public Node {
 std::shared_ptr<Node> BasicOp(TensorFunction func,
                               std::shared_ptr<Node> operand,
                               std::string name = "");
-std::shared_ptr<Node> ModelOp(Model model, std::shared_ptr<Node> operand,
+std::shared_ptr<Node> ModelOp(const Model& model, std::shared_ptr<Node> operand,
                               std::string name = "");
 std::shared_ptr<Node> ModelOp(BackendType backend, std::string model_path,
                               std::shared_ptr<Node> operand,
