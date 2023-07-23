@@ -41,6 +41,13 @@ enum class CpuFreqFlag {
   TRANSITION_COUNT = 6,
 };
 
+enum class PowerSupplyFlag {
+  CURRENT_NOW = 0,
+  CURRENT_AVG = 1,
+  VOLTAGE_NOW = 2,
+  VOLTAGE_AVG = 3,
+};
+
 enum class NetworkFlag {};
 
 template <>
@@ -85,7 +92,7 @@ class ResourceMonitor {
   absl::StatusOr<std::vector<size_t>> GetAvailableCpuFreqs(
       CPUMaskFlag cpu_flag) const;
   absl::StatusOr<int> GetPowerSupply(
-    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyMaskFlag power_supply_device_flag,
     PowerSupplyFlag power_supply_flag) const;
 
   // register target resource to monitor
@@ -94,7 +101,7 @@ class ResourceMonitor {
   absl::Status AddDevFreqResource(DeviceFlag device_flag, DevFreqFlag flag);
   absl::Status AddNetworkResource(NetworkFlag flag);
   absl::Status AddPowerSupplyResource(
-    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyMaskFlag power_supply_device_flag,
     PowerSupplyFlag power_supply_flag);
 
   // add listener to the resource update
@@ -125,7 +132,7 @@ class ResourceMonitor {
   using ThermalKey = std::pair<ThermalFlag, size_t>;
   using CpuFreqKey = std::pair<CpuFreqFlag, CPUMaskFlag>;
   using DevFreqKey = std::pair<DevFreqFlag, DeviceFlag>;
-  using PowerSupplyKey = std::pair<PowerSupplyFlag, PowerSupplyDeviceFlag>;
+  using PowerSupplyKey = std::pair<PowerSupplyFlag, PowerSupplyMaskFlag>;
 
   mutable std::mutex path_mtx_;
   // registered thermal resources

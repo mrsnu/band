@@ -89,6 +89,11 @@ size_t EnumLength<CpuFreqFlag>() {
 }
 
 template <>
+size_t EnumLength<PowerSupplyFlag>() {
+  return static_cast<size_t>(PowerSupplyFlag::CURRENT_NOW) + 1;
+}
+
+template <>
 const char* ToString<ThermalFlag>(ThermalFlag flag) {
   switch (flag) {
     case ThermalFlag::TZ_TEMPERATURE:
@@ -133,6 +138,22 @@ const char* ToString<CpuFreqFlag>(CpuFreqFlag flag) {
       return "DOWN_TRANSITION_LATENCY";
     case CpuFreqFlag::TRANSITION_COUNT:
       return "TRANSITION_COUNT";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+template <>
+const char* ToString<PowerSupplyFlag>(PowerSupplyFlag flag) {
+  switch (flag) {
+    case PowerSupplyFlag::CURRENT_NOW:
+      return "CUR_FREQ";
+    case PowerSupplyFlag::CURRENT_AVG:
+      return "TARGET_FREQ";
+    case PowerSupplyFlag::VOLTAGE_NOW:
+      return "MIN_FREQ";
+    case PowerSupplyFlag::VOLTAGE_AVG:
+      return "MAX_FREQ";
     default:
       return "UNKNOWN";
   }
@@ -346,7 +367,7 @@ absl::StatusOr<std::vector<size_t>> ResourceMonitor::GetAvailableCpuFreqs(
 }
 
 absl::StatusOr<int> ResourceMonitor::GetPowerSupply(
-    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyMaskFlag power_supply_device_flag,
     PowerSupplyFlag power_supply_flag) const {
   std::lock_guard<std::mutex> lock(head_mtx_);
   PowerSupplyKey key{power_supply_flag, power_supply_device_flag};
@@ -523,27 +544,58 @@ absl::Status ResourceMonitor::AddNetworkResource(NetworkFlag) {
 }
 
 absl::Status ResourceMonitor::AddPowerSupplyResource(
-    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyMaskFlag power_supply_mask_flag,
     PowerSupplyFlag power_supply_flag) {
   std::lock_guard<std::mutex> lock(path_mtx_);
-  PowerSupplyKey key{power_supply_flag, power_supply_device_flag};
+  PowerSupplyKey key{power_supply_flag, power_supply_mask_flag};
   if (power_supply_resources_.find(key) != power_supply_resources_.end()) {
     return absl::InternalError(
         absl::StrFormat("Power supply resource %s of device %s is already registered.",
         ToString(power_supply_flag),
-        ToString(power_supply_device_flag)));
+        ToString(power_supply_mask_flag)));
   }
 
   std::string base_path = GetPowerSupplyBasePath();
-  std::string path = absl::StrFormat("%s/%s/%s", base_path,
-    ToString(power_supply_device_flag), ToString(power_supply_flag));
+  std::string device_dirname;
+  switch (power_supply_mask_flag) {
+  case PowerSupplyMaskFlag::kCharger:
+    device_dirname = "charger";
+    break;
+  case PowerSupplyMaskFlag::kBattery:
+    device_dirname = "battery";
+    break;
+  default:
+    return absl::InternalError(absl::StrFormat(
+        "Power supply device %s not supported",
+        ToString(power_supply_mask_flag)));
+  }
+  std::string filename;
+  switch (power_supply_flag) {
+    case PowerSupplyFlag::CURRENT_NOW:
+      filename = "current_now";
+      break;
+    case PowerSupplyFlag::CURRENT_AVG:
+      filename = "current_avg";
+      break;
+    case PowerSupplyFlag::VOLTAGE_NOW:
+      filename = "voltage_now";
+      break;
+    case PowerSupplyFlag::VOLTAGE_AVG:
+      filename = "voltage_avg";
+      break;
+    default:
+      return absl::InternalError(absl::StrFormat(
+        "Power supply resource for flag %s not supported",
+        ToString(power_supply_flag)));
+  }
+
+  std::string path = base_path + device_dirname + "/" + filename;
 
   if (!device::IsFileAvailable(path)) {
     return absl::NotFoundError(absl::StrFormat("Path %s not found.", path));
   }
 
   power_supply_resources_[key] = {path, 1.f};
-  // add initial value
   int value = TryReadInt({path}).value();
   power_supply_status_[0][key] = value;
   power_supply_status_[1][key] = value;

@@ -53,13 +53,8 @@ size_t EnumLength<QuantizationType>() {
 }
 
 template <>
-size_t EnumLength<PowerSupplyDeviceFlag>() {
-  return static_cast<size_t>(PowerSupplyDeviceFlag::battery) + 1;
-}
-
-template <>
-size_t EnumLength<PowerSupplyFlag>() {
-  return static_cast<size_t>(PowerSupplyFlag::CURRENT_AVG) + 1;
+size_t EnumLength<PowerSupplyMaskFlag>() {
+  return static_cast<size_t>(PowerSupplyMaskFlag::kBattery) + 1;
 }
 
 template <>
@@ -308,22 +303,13 @@ const char* ToString(BufferOrientation format_type) {
 }
 
 template <>
-const char* ToString(PowerSupplyDeviceFlag power_supply_device_flag) {
+const char* ToString(PowerSupplyMaskFlag power_supply_device_flag) {
   switch (power_supply_device_flag) {
-    case PowerSupplyDeviceFlag::battery: {
+    case PowerSupplyMaskFlag::kCharger: {
+      return "charger";
+    } break;
+    case PowerSupplyMaskFlag::kBattery: {
       return "battery";
-    } break;
-    default: {
-      return "Unknown format type";
-    } break;
-  }
-}
-
-template <>
-const char* ToString(PowerSupplyFlag power_supply_flag) {
-  switch (power_supply_flag) {
-    case PowerSupplyFlag::CURRENT_AVG: {
-      return "current_avg";
     } break;
     default: {
       return "Unknown format type";

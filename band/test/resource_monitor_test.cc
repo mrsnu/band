@@ -262,8 +262,8 @@ TEST(ResourceMonitorTest, GetPowerSupplyTest) {
   auto status = monitor.Init(config);
 
 #if BAND_IS_MOBILE
-  for (size_t i = 0; i < EnumLength<PowerSupplyDeviceFlag>(); i++) {
-    const PowerSupplyDeviceFlag power_supply_type = static_cast<PowerSupplyDeviceFlag>(i);
+  for (size_t i = 0; i < EnumLength<PowerSupplyMaskFlag>(); i++) {
+    const PowerSupplyMaskFlag power_supply_type = static_cast<PowerSupplyMaskFlag>(i);
     for (size_t j = 0; j < EnumLength<PowerSupplyFlag>(); j++) {
       const PowerSupplyFlag power_supply_flag = static_cast<PowerSupplyFlag>(j);
       EXPECT_EQ(monitor.AddPowerSupplyResource(
@@ -273,8 +273,8 @@ TEST(ResourceMonitorTest, GetPowerSupplyTest) {
 
   std::this_thread::sleep_for(std::chrono::milliseconds(22));
 
-  for (size_t i = 0; i < EnumLength<PowerSupplyDeviceFlag>(); i++) {
-    const PowerSupplyDeviceFlag power_supply_type = static_cast<PowerSupplyDeviceFlag>(i);
+  for (size_t i = 0; i < EnumLength<PowerSupplyMaskFlag>(); i++) {
+    const PowerSupplyMaskFlag power_supply_type = static_cast<PowerSupplyMaskFlag>(i);
     for (size_t j = 0; j < EnumLength<PowerSupplyFlag>(); j++) {
       const PowerSupplyFlag power_supply_flag = static_cast<PowerSupplyFlag>(j);
       auto power_supply = monitor.GetPowerSupply(power_supply_type, power_supply_flag);
