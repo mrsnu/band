@@ -64,6 +64,14 @@ enum class CPUMaskFlag : size_t {
   kPrimary = 3,
 };
 
+enum class PowerSupplyDeviceFlag : size_t {
+  battery = 0,
+};
+
+enum class PowerSupplyFlag : size_t {
+  CURRENT_AVG = 0,
+};
+
 enum class SubgraphPreparationType : size_t {
   kNoFallbackSubgraph = 0,
   kFallbackPerWorker = 1,
@@ -162,6 +170,10 @@ template <>
 size_t EnumLength<DeviceFlag>();
 template <>
 size_t EnumLength<QuantizationType>();
+template <>
+size_t EnumLength<PowerSupplyDeviceFlag>();
+template <>
+size_t EnumLength<PowerSupplyFlag>();
 
 template <>
 const char* ToString(BackendType backend_type);
@@ -183,6 +195,10 @@ template <>
 const char* ToString(QuantizationType);
 template <>
 const char* ToString(JobStatus job_status);
+template<>
+const char* ToString(PowerSupplyDeviceFlag power_supply_device_flag);
+template<>
+const char* ToString(PowerSupplyFlag power_supply_flag);
 
 struct AffineQuantizationParams {
   std::vector<float> scale;

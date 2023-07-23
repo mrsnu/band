@@ -340,6 +340,12 @@ absl::StatusOr<std::vector<size_t>> ResourceMonitor::GetAvailableCpuFreqs(
       {cpu_freq_path.value() + "/scaling_available_frequencies"});
 }
 
+absl::StatusOr<int> ResourceMonitor::GetPowerSupply(
+    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyFlag power_supply_flag) const {
+  return 0;
+}
+
 absl::Status ResourceMonitor::AddThermalResource(ThermalFlag flag, size_t id) {
   std::lock_guard<std::mutex> lock(path_mtx_);
   ThermalKey key{flag, id};
@@ -502,6 +508,12 @@ absl::Status ResourceMonitor::AddNetworkResource(NetworkFlag) {
   return absl::Status();
 }
 
+absl::Status ResourceMonitor::AddPowerSupplyResource(
+    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyFlag power_supply_flag) {
+  return absl::OkStatus();
+}
+
 void ResourceMonitor::AddOnUpdate(
     std::function<void(const ResourceMonitor&)> callback) {
   std::lock_guard<std::mutex> lock(callback_mtx_);
@@ -518,6 +530,10 @@ const char* ResourceMonitor::GetCpuFreqBasePath() {
 
 const char* ResourceMonitor::GetDevFreqBasePath() {
   return "/sys/class/devfreq/";
+}
+
+const char* ResourceMonitor::GetPowerSupplyBasePath() {
+  return "/sys/class/power_supply/";
 }
 
 absl::StatusOr<std::string> ResourceMonitor::GetDevFreqPath(
@@ -571,6 +587,36 @@ absl::StatusOr<std::string> ResourceMonitor::GetCpuFreqPath(
   } else {
     return GetCpuFreqBasePath() + cpu_freq_paths.at(flag);
   }
+}
+
+absl::StatusOr<std::string> ResourceMonitor::GetPowerSupplyPath(
+    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyFlag power_supply_flag) const {
+  static std::map<PowerSupplyDeviceFlag,
+    std::map<PowerSupplyFlag, absl::StatusOr<std::string>>> device_path_map =
+      std::map<PowerSupplyDeviceFlag,
+        std::map<PowerSupplyFlag, absl::StatusOr<std::string>>>();
+  static std::once_flag once_flag;
+  std::call_once(once_flag, [&]() {
+    if (device_path_map.find(power_supply_device_flag) == device_path_map.end()) {
+      device_path_map[power_supply_device_flag] =
+        std::map<PowerSupplyFlag, absl::StatusOr<std::string>>();
+    }
+    auto& path_map = device_path_map[power_supply_device_flag];
+    auto path = std::string(GetPowerSupplyBasePath()) + ToString(power_supply_device_flag)
+      + "/" + ToString(power_supply_flag);
+    if (path_map.find(power_supply_flag) == path_map.end()) {
+      if (device::IsFileAvailable(path)) {
+        path_map[power_supply_flag] = path;
+      } else {
+        path_map[power_supply_flag] = absl::InternalError(absl::StrFormat(
+          "Power Supply resource for flag %s of device %s not found.",
+          ToString(power_supply_flag),
+          ToString(power_supply_device_flag)));
+      }
+    }
+  });
+  return device_path_map[power_supply_device_flag][power_supply_flag];
 }
 
 absl::StatusOr<std::string> ResourceMonitor::GetFirstAvailablePath(

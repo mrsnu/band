@@ -255,6 +255,38 @@ TEST(ResourceMonitorTest, LogTest) {
 #endif  // BAND_IS_MOBILE
 }
 
+TEST(ResourceMonitorTest, GetPowerSupplyTest) {
+  ResourceMonitorConfig config{"", {}, 10};
+  ResourceMonitor monitor;
+  // EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+  auto status = monitor.Init(config);
+
+#if BAND_IS_MOBILE
+  for (size_t i = 0; i < EnumLength<PowerSupplyDeviceFlag>(); i++) {
+    const PowerSupplyDeviceFlag power_supply_type = static_cast<PowerSupplyDeviceFlag>(i);
+    for (size_t j = 0; j < EnumLength<PowerSupplyFlag>(); j++) {
+      const PowerSupplyFlag power_supply_flag = static_cast<PowerSupplyFlag>(j);
+      EXPECT_EQ(monitor.AddPowerSupplyResource(
+        power_supply_type, power_supply_flag), absl::OkStatus());
+    }
+  }
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(22));
+
+  for (size_t i = 0; i < EnumLength<PowerSupplyDeviceFlag>(); i++) {
+    const PowerSupplyDeviceFlag power_supply_type = static_cast<PowerSupplyDeviceFlag>(i);
+    for (size_t j = 0; j < EnumLength<PowerSupplyFlag>(); j++) {
+      const PowerSupplyFlag power_supply_flag = static_cast<PowerSupplyFlag>(j);
+      auto power_supply = monitor.GetPowerSupply(power_supply_type, power_supply_flag);
+      EXPECT_TRUE(power_supply.ok());
+      std::cout << "PowerSupply " << ToString(power_supply_type) << " "
+                << ToString(power_supply_flag) << " : " << power_supply.value()
+                << std::endl;
+    }
+  }
+#endif
+}
+
 }  // namespace test
 }  // namespace band
 

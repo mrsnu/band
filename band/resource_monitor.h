@@ -84,12 +84,18 @@ class ResourceMonitor {
                                     CpuFreqFlag flag) const;
   absl::StatusOr<std::vector<size_t>> GetAvailableCpuFreqs(
       CPUMaskFlag cpu_flag) const;
+  absl::StatusOr<int> GetPowerSupply(
+    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyFlag power_supply_flag) const;
 
   // register target resource to monitor
   absl::Status AddThermalResource(ThermalFlag flag, size_t id);
   absl::Status AddCpuFreqResource(CPUMaskFlag cpu_flag, CpuFreqFlag flag);
   absl::Status AddDevFreqResource(DeviceFlag device_flag, DevFreqFlag flag);
   absl::Status AddNetworkResource(NetworkFlag flag);
+  absl::Status AddPowerSupplyResource(
+    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyFlag power_supply_flag);
 
   // add listener to the resource update
   void AddOnUpdate(std::function<void(const ResourceMonitor&)> callback);
@@ -98,10 +104,14 @@ class ResourceMonitor {
   static const char* GetThermalBasePath();
   static const char* GetCpuFreqBasePath();
   static const char* GetDevFreqBasePath();
+  static const char* GetPowerSupplyBasePath();
 
   std::map<DeviceFlag, std::string> dev_freq_paths_;
   absl::StatusOr<std::string> GetDevFreqPath(DeviceFlag flag) const;
   absl::StatusOr<std::string> GetCpuFreqPath(CPUMaskFlag flag) const;
+  absl::StatusOr<std::string> GetPowerSupplyPath(
+    PowerSupplyDeviceFlag power_supply_device_flag,
+    PowerSupplyFlag power_supply_flag) const;
 
   // Read from the first available path, return absl::NotFoundError if none of
   // the paths exist.
