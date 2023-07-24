@@ -206,7 +206,7 @@ void Worker::Work() {
         engine_->UpdateLatency(
             subgraph_key, (current_job->end_time - current_job->invoke_time));
         if (current_job->following_jobs.size() != 0) {
-          engine_->EnqueueBatch(current_job->following_jobs);
+          engine_->EnqueueBatch(current_job->following_jobs, true);
         }
         {
           auto status = engine_->TryCopyOutputTensors(*current_job);
