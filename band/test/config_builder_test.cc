@@ -121,7 +121,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.planner_config.log_path, "");
   EXPECT_EQ(config_ok.planner_config.schedulers[0],
             SchedulerType::kFixedWorker);
-  EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);
+  EXPECT_EQ(config_ok.planner_config.schedule_window_size, std::numeric_limits<int>::max());
   EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlag::kAll);
   EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlag::kCPU);
   EXPECT_EQ(config_ok.worker_config.workers[1], DeviceFlag::kGPU);

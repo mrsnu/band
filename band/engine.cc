@@ -641,9 +641,9 @@ bool Engine::HasSubgraph(const SubgraphKey& key) const {
 }
 
 void Engine::ForEachSubgraph(
-    std::function<void(const SubgraphKey&)> iterator) const {
+    std::function<void(const SubgraphKey&)> visitor) const {
   for (auto& model_executor : model_executors_) {
-    model_executor.second->ForEachSubgraph(iterator);
+    model_executor.second->ForEachSubgraph(visitor);
   }
 }
 
@@ -755,7 +755,7 @@ Engine::GetShortestLatencyWithUnitSubgraph(
 
   // Initialize memo.
   for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>({}, INT_MAX);
+    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>({}, std::numeric_limits<int>::max());
   }
 
   // `i` and `j` refer to an unit subgraph idx.

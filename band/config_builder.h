@@ -83,7 +83,7 @@ class PlannerConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  int schedule_window_size_ = INT_MAX;
+  int schedule_window_size_ = std::numeric_limits<int>::max();
   std::vector<SchedulerType> schedulers_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";

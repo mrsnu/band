@@ -275,7 +275,7 @@ int SetupThreadAffinityMasks() {
   g_thread_affinity_mask_all.DisableAll();
 
 #if BAND_IS_MOBILE
-  int max_freq_khz_min = INT_MAX;
+  int max_freq_khz_min = std::numeric_limits<int>::max();
   int max_freq_khz_max = 0;
   std::vector<int> cpu_max_freq_khz(g_cpucount);
   for (int i = 0; i < g_cpucount; i++) {
