@@ -84,7 +84,7 @@ size_t EnumLength<CpuFreqFlag>() {
 }
 
 template <>
-const char* ToString<ThermalFlag>(ThermalFlag flag) {
+std::string ToString<ThermalFlag>(ThermalFlag flag) {
   switch (flag) {
     case ThermalFlag::TZ_TEMPERATURE:
       return "TZ_TEMPERATURE";
@@ -94,7 +94,7 @@ const char* ToString<ThermalFlag>(ThermalFlag flag) {
 }
 
 template <>
-const char* ToString<DevFreqFlag>(DevFreqFlag flag) {
+std::string ToString<DevFreqFlag>(DevFreqFlag flag) {
   switch (flag) {
     case DevFreqFlag::CUR_FREQ:
       return "CUR_FREQ";
@@ -112,7 +112,7 @@ const char* ToString<DevFreqFlag>(DevFreqFlag flag) {
 }
 
 template <>
-const char* ToString<CpuFreqFlag>(CpuFreqFlag flag) {
+std::string ToString<CpuFreqFlag>(CpuFreqFlag flag) {
   switch (flag) {
     case CpuFreqFlag::CUR_FREQ:
       return "CUR_FREQ";
