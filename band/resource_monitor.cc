@@ -1,9 +1,5 @@
 #include "band/resource_monitor.h"
 
-#if BAND_IS_MOBILE
-#include <dirent.h>
-#endif
-
 #include <iostream>
 
 #include "absl/strings/str_format.h"
@@ -153,11 +149,11 @@ ResourceMonitor::~ResourceMonitor() {
 }
 
 absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
-  if (config.resource_monitor_log_path.size() > 0) {
+  if (config.log_path.size() > 0) {
     // remove existing log file if exists
-    std::remove(config.resource_monitor_log_path.c_str());
+    std::remove(config.log_path.c_str());
     // open log file and start from the beginning
-    log_file_.open(config.resource_monitor_log_path, std::ios::out);
+    log_file_.open(config.log_path, std::ios::out);
     if (!log_file_.is_open()) {
       return absl::NotFoundError("Cannot open log file.");
     }

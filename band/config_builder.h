@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/device/cpu.h"
@@ -45,8 +47,8 @@ class ProfileConfigBuilder {
     return *this;
   }
 
-  ProfileConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<ProfileConfig> Build();
+  absl::Status IsValid();
 
  private:
   bool online_ = true;
@@ -67,7 +69,9 @@ class PlannerConfigBuilder {
     return *this;
   }
   PlannerConfigBuilder& AddSchedulers(std::vector<SchedulerType> schedulers) {
-    schedulers_ = schedulers;
+    if (schedulers.size() != 0) {
+      schedulers_ = schedulers;
+    }
     return *this;
   }
   PlannerConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
@@ -79,10 +83,11 @@ class PlannerConfigBuilder {
     return *this;
   }
 
-  PlannerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<PlannerConfig> Build();
 
  private:
+  absl::Status IsValid();
+
   int schedule_window_size_ = std::numeric_limits<int>::max();
   std::vector<SchedulerType> schedulers_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
@@ -103,15 +108,21 @@ class WorkerConfigBuilder {
     num_threads_ = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
-    workers_ = workers;
+    if (workers.size() != 0) {
+      workers_ = workers;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
-    cpu_masks_ = cpu_masks;
+    if (cpu_masks.size() != 0) {
+      cpu_masks_ = cpu_masks;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddNumThreads(std::vector<int> num_threads) {
-    num_threads_ = num_threads;
+    if (num_threads.size() != 0) {
+      num_threads_ = num_threads;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddAllowWorkSteal(bool allow_worksteal) {
@@ -123,10 +134,11 @@ class WorkerConfigBuilder {
     availability_check_interval_ms_ = availability_check_interval_ms;
     return *this;
   }
-  WorkerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<WorkerConfig> Build();
 
  private:
+  absl::Status IsValid();
+
   std::vector<DeviceFlag> workers_;
   std::vector<CPUMaskFlag> cpu_masks_;
   std::vector<int> num_threads_;
@@ -140,7 +152,7 @@ class ResourceMonitorConfigBuilder {
  public:
   ResourceMonitorConfigBuilder& AddResourceMonitorLogPath(
       std::string log_path) {
-    resource_monitor_log_path_ = log_path;
+    log_path_ = log_path;
     return *this;
   }
   ResourceMonitorConfigBuilder& AddResourceMonitorDeviceFreqPath(
@@ -154,12 +166,12 @@ class ResourceMonitorConfigBuilder {
     return *this;
   }
 
-  ResourceMonitorConfig Build(
-      ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<ResourceMonitorConfig> Build();
 
  private:
-  std::string resource_monitor_log_path_ = "";
+  absl::Status IsValid();
+
+  std::string log_path_ = "";
   std::map<DeviceFlag, std::string> device_freq_paths_;
   int monitor_interval_ms_ = 10;
 };
@@ -236,19 +248,19 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
-  RuntimeConfigBuilder& AddResourceMonitorLogPath(
-      std::string resource_monitor_log_path) {
-    device_config_builder_.AddResourceMonitorLogPath(resource_monitor_log_path);
+  RuntimeConfigBuilder& AddResourceMonitorLogPath(std::string log_path) {
+    resource_monitor_config_builder_.AddResourceMonitorLogPath(log_path);
     return *this;
   }
   RuntimeConfigBuilder& AddResourceMonitorDeviceFreqPath(
       DeviceFlag device, std::string device_freq_path) {
-    device_config_builder_.AddResourceMonitorDeviceFreqPath(device,
-                                                            device_freq_path);
+    resource_monitor_config_builder_.AddResourceMonitorDeviceFreqPath(
+        device, device_freq_path);
     return *this;
   }
   RuntimeConfigBuilder& AddResourceMonitorIntervalMs(int monitor_interval_ms) {
-    device_config_builder_.AddResourceMonitorIntervalMs(monitor_interval_ms);
+    resource_monitor_config_builder_.AddResourceMonitorIntervalMs(
+        monitor_interval_ms);
     return *this;
   }
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
@@ -265,14 +277,15 @@ class RuntimeConfigBuilder {
     return *this;
   }
 
-  RuntimeConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<RuntimeConfig> Build();
 
  private:
+  absl::Status IsValid();
+
   ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
-  ResourceMonitorConfigBuilder device_config_builder_;
+  ResourceMonitorConfigBuilder resource_monitor_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
       SubgraphPreparationType::kMergeUnitSubgraph;
