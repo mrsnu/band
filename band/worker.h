@@ -77,7 +77,7 @@ class Worker {
 
   const DeviceFlag device_flag_;
 
-  static const int64_t LARGE_WAITING_TIME = INT_MAX / 2;
+  static const int64_t LARGE_WAITING_TIME = std::numeric_limits<int>::max() / 2;
 };
 
 class DeviceQueueWorker : public Worker {

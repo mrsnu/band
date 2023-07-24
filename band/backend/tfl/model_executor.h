@@ -31,7 +31,7 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
 
   absl::Status ExecuteSubgraph(const SubgraphKey& key) override;
   void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) override;
+      std::function<void(const SubgraphKey&)> visitor) override;
 
  private:
   friend class TfLiteUtil;

@@ -106,7 +106,7 @@ class Engine : public IEngine {
   bool IsEnd(const SubgraphKey& key) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
   void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) const override;
+      std::function<void(const SubgraphKey&)> visitor) const override;
   absl::Status Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
