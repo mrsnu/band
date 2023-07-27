@@ -125,6 +125,7 @@ band_cc_library(
         "error_reporter.cc",
         "logger.cc",
         "model_spec.cc",
+        "job.cc",
     ],
     hdrs = [
         "common.h",
@@ -133,6 +134,7 @@ band_cc_library(
         "error_reporter.h",
         "logger.h",
         "model_spec.h",
+        "job.h",
     ],
     linkopts = select({
         "//band:android": [

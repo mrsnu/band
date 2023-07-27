@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "band/common.h"
+#include "band/job.h"
 #include "chrome_tracer/tracer.h"
 
 namespace band {

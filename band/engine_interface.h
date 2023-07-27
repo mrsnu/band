@@ -8,6 +8,7 @@
 
 #include "absl/status/status.h"
 #include "band/common.h"
+#include "band/job.h"
 #include "band/config.h"
 #include "band/error_reporter.h"
 

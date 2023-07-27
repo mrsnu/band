@@ -7,10 +7,7 @@
 #include <set>
 #include <vector>
 
-#include "band/common.h"
-#include "band/config.h"
 #include "band/engine_interface.h"
-#include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"

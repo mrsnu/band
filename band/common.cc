@@ -203,35 +203,6 @@ std::string ToString(DeviceFlag device_flag) {
 }
 
 template <>
-std::string ToString(JobStatus job_status) {
-  switch (job_status) {
-    case JobStatus::kEnqueueFailed: {
-      return "EnqueueFailed";
-    } break;
-    case JobStatus::kQueued: {
-      return "Queued";
-    } break;
-    case JobStatus::kSuccess: {
-      return "Success";
-    } break;
-    case JobStatus::kSLOViolation: {
-      return "SLOViolation";
-    } break;
-    case JobStatus::kInputCopyFailure: {
-      return "InputCopyFailure";
-    } break;
-    case JobStatus::kOutputCopyFailure: {
-      return "OutputCopyFailure";
-    } break;
-    case JobStatus::kInvokeFailure: {
-      return "InvokeFailure";
-    } break;
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", job_status);
-  return "Unknown job status";
-}
-
-template <>
 std::string ToString(BufferFormat format_type) {
   switch (format_type) {
     case BufferFormat::kGrayScale: {
@@ -331,34 +302,6 @@ size_t GetDataTypeBytes(DataType type) {
   return 0;
 }
 
-std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
-  switch (status) {
-    case JobStatus::kEnqueueFailed: {
-      return os << "EnqueueFailed";
-    } break;
-    case JobStatus::kQueued: {
-      return os << "Queued";
-    } break;
-    case JobStatus::kSuccess: {
-      return os << "Success";
-    } break;
-    case JobStatus::kSLOViolation: {
-      return os << "SLOViolation";
-    } break;
-    case JobStatus::kInputCopyFailure: {
-      return os << "InputCopyFailure";
-    } break;
-    case JobStatus::kOutputCopyFailure: {
-      return os << "OutputCopyFailure";
-    } break;
-    case JobStatus::kInvokeFailure: {
-      return os << "InvokeFailure";
-    } break;
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", status);
-  return os;
-}
-
 SubgraphKey::SubgraphKey() {}
 // special case - entire model subgraph
 SubgraphKey::SubgraphKey(ModelId model_id, WorkerId worker_id,
@@ -440,25 +383,4 @@ std::size_t SubgraphHash::operator()(const SubgraphKey& p) const {
   return hash;
 }
 
-std::string Job::ToJson() const {
-  return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
-         ",\"invoke_time\":" + std::to_string(invoke_time) +
-         ",\"end_time\":" + std::to_string(end_time) +
-         ",\"profiled_execution_time\":" +
-         std::to_string(profiled_execution_time) +
-         ",\"expected_execution_time\":" +
-         std::to_string(expected_execution_time) +
-         ",\"expected_latency\":" + std::to_string(expected_latency) +
-         ",\"slo_us\":" + std::to_string(slo_us) +
-         ",\"model_id\":" + std::to_string(model_id) +
-         (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
-         ",\"unit_indices\":" + subgraph_key.GetUnitIndicesString() +
-         ",\"job_id\":" + std::to_string(job_id) + "}";
-}
-
-std::size_t JobIdBitMaskHash::operator()(
-    const std::pair<int, BitMask>& p) const {
-  auto hash_func = std::hash<int>();
-  return hash_func(p.first) ^ hash_func(p.second.to_ullong());
-}
 }  // namespace band

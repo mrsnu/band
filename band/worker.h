@@ -6,6 +6,7 @@
 #include <mutex>
 #include <thread>
 
+#include "band/job.h"
 #include "band/config.h"
 #include "band/engine_interface.h"
 #include "band/device/cpu.h"
