@@ -173,7 +173,7 @@ void Planner::WaitAll() {
 void Planner::EnqueueFinishedJob(Job& job) {
   std::unique_lock<std::mutex> finished_lock(job_finished_mtx_);
   const bool is_finished =
-      engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
+      engine_.IsEnd(job.subgraph_key) || job.status != Job::Status::kSuccess;
   // record finished / failed job
   if (is_finished) {
     jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
@@ -186,7 +186,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
 
   // report end invoke using callback
   if (on_end_request_ && job.require_callback && is_finished) {
-    on_end_request_(job.job_id, job.status == JobStatus::kSuccess
+    on_end_request_(job.job_id, job.status == Job::Status::kSuccess
                                     ? absl::OkStatus()
                                     : absl::InternalError("Job failed."));
   }
@@ -309,11 +309,11 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
                     "EnqueueToWorker failed. Requests scheduled to null worker "
                     "id %d",
                     target_key.GetWorkerId());
-      job.status = JobStatus::kEnqueueFailed;
+      job.status = Job::Status::kEnqueueFailed;
       EnqueueFinishedJob(job);
     } else if (IsSLOViolated(job)) {
       // no point in running this job anymore
-      job.status = JobStatus::kSLOViolation;
+      job.status = Job::Status::kSLOViolation;
       // mark this as -1 to differentiate it from the default value, 0
       job.invoke_time = -1;
       // mark the time of this decision (of early-dropping this job)
@@ -341,7 +341,7 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 }
 
 bool Planner::IsSLOViolated(Job& job) {
-  if (job.status == JobStatus::kSLOViolation) {
+  if (job.status == Job::Status::kSLOViolation) {
     return true;
   }
   // this job has an SLO; check if it's not too late already

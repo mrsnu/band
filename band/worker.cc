@@ -214,7 +214,7 @@ void Worker::Work() {
             BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
           }
         }
-        current_job->status = JobStatus::kSuccess;
+        current_job->status = Job::Status::kSuccess;
       } else if (!status.ok()) {
         HandleDeviceError(*current_job);
         engine_->Trigger();
@@ -226,13 +226,13 @@ void Worker::Work() {
         // !requests_.empty(), so it's safe to update it w/o grabbing the lock
         current_job->end_time = time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
-        current_job->status = JobStatus::kInvokeFailure;
+        current_job->status = Job::Status::kInvokeFailure;
       }
     } else {
       BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to copy input",
                     worker_id_);
       // TODO #21: Handle errors in multi-thread environment
-      current_job->status = JobStatus::kInputCopyFailure;
+      current_job->status = Job::Status::kInputCopyFailure;
     }
     BAND_TRACER_END_SUBGRAPH(*current_job);
     engine_->EnqueueFinishedJob(*current_job);

@@ -7,16 +7,6 @@ typedef int JobId;
 
 namespace band {
 
-enum class JobStatus : size_t {
-  kEnqueueFailed,
-  kQueued,
-  kSuccess,
-  kSLOViolation,
-  kInputCopyFailure,
-  kOutputCopyFailure,
-  kInvokeFailure
-};
-
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618
 struct JobIdBitMaskHash {
@@ -26,6 +16,16 @@ struct JobIdBitMaskHash {
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
 struct Job {
+  enum class Status : size_t {
+    kEnqueueFailed,
+    kQueued,
+    kSuccess,
+    kSLOViolation,
+    kInputCopyFailure,
+    kOutputCopyFailure,
+    kInvokeFailure
+  };
+
   explicit Job() : model_id(-1) {}
   explicit Job(ModelId model_id) : model_id(model_id) {}
   explicit Job(ModelId model_id, int64_t slo)
@@ -58,7 +58,7 @@ struct Job {
   WorkerId target_worker_id = -1;
 
   // Current status for execution (Valid after planning)
-  JobStatus status = JobStatus::kQueued;
+  Status status = Status::kQueued;
   SubgraphKey subgraph_key;
   std::vector<Job> following_jobs;
 

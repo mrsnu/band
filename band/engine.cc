@@ -464,9 +464,9 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
         absl::StrFormat("Invalid output handle : %d", job.output_handle));
   }
 
-  if (job.status == JobStatus::kSLOViolation) {
+  if (job.status == Job::Status::kSLOViolation) {
     return absl::DeadlineExceededError("SLO violation");
-  } else if (job.status != JobStatus::kSuccess) {
+  } else if (job.status != Job::Status::kSuccess) {
     return absl::InternalError(
         absl::StrFormat("Job failed with status : %s", ToString(job.status)));
   }
