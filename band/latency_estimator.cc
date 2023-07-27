@@ -118,7 +118,7 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
   } else {
     if (engine_ && engine_->GetModelSpec(model_id)) {
       const std::string model_name = engine_->GetModelSpec(model_id)->path;
-      auto model_profile = JsonToModelProfile(model_name, model_id);
+      auto model_profile = JsonToModelProfile(model_id);
       if (model_profile.size() > 0) {
         profile_database_.insert(model_profile.begin(), model_profile.end());
         BAND_LOG_PROD(
@@ -187,8 +187,7 @@ size_t LatencyEstimator::GetProfileHash() const {
 }
 
 std::map<SubgraphKey, LatencyEstimator::Latency>
-LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
-                                     const int model_id) {
+LatencyEstimator::JsonToModelProfile(const int model_id) {
   auto string_to_indices = [](std::string index_string) {
     std::set<int> node_indices;
     std::stringstream ss(index_string);
@@ -215,16 +214,6 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
   for (auto profile_it = profile_database_json_.begin();
        profile_it != profile_database_json_.end(); ++profile_it) {
     std::string model_name = profile_it.key().asString();
-
-    if (model_name != model_fname) {
-      // We're only interested in `model_fname`.
-      // NOTE: In case a model is using a different string name alias for
-      // some other reason (e.g., two instances of the same model), we won't
-      // be able to detect that the model can indeed reuse this profile.
-      // An ad-hoc fix would be to add yet another "model name" field,
-      // solely for profiling purposes.
-      continue;
-    }
 
     const Json::Value idx_profile = *profile_it;
     for (auto idx_profile_it = idx_profile.begin();

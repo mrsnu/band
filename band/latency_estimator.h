@@ -36,8 +36,7 @@ class LatencyEstimator {
 
   // Convert entries in the json value to ModelDeviceToLatency format,
   // for the given model name and target model id.
-  std::map<SubgraphKey, Latency> JsonToModelProfile(
-      const std::string& model_fname, const int model_id);
+  std::map<SubgraphKey, Latency> JsonToModelProfile(const int model_id);
 
   // Convert model integer ids back to string-type names for model profiles,
   // and returns the json format identical to `profile_database_json_`.

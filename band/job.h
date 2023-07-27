@@ -15,31 +15,34 @@ struct JobIdBitMaskHash {
 
 // Job struct is the scheduling and executing unit.
 // The request can specify a model by indication the model id
-struct Job {
+class Job {
+ public:
   enum class Status : size_t {
-    kEnqueueFailed,
+    kNone,
     kQueued,
     kSuccess,
+    kFinished,
     kSLOViolation,
+    kEnqueueFailed,
     kInputCopyFailure,
     kOutputCopyFailure,
-    kInvokeFailure
+    kInvokeFailure,
   };
 
-  explicit Job() : model_id(-1) {}
+  explicit Job() {}
   explicit Job(ModelId model_id) : model_id(model_id) {}
   explicit Job(ModelId model_id, int64_t slo)
       : model_id(model_id), slo_us(slo) {}
 
+  bool IsInitialized() const;
   std::string ToJson() const;
 
   // Constant variables (Valid after invoke)
   // TODO: better job life-cycle to change these to `const`
-  ModelId model_id;
+  ModelId model_id = -1;;
   int input_handle = -1;
   int output_handle = -1;
   JobId job_id = -1;
-  std::string model_fname;
   bool require_callback = true;
 
   // For record (Valid after execution)
@@ -58,13 +61,15 @@ struct Job {
   WorkerId target_worker_id = -1;
 
   // Current status for execution (Valid after planning)
-  Status status = Status::kQueued;
+  Status status = Status::kNone;
   SubgraphKey subgraph_key;
   std::vector<Job> following_jobs;
 
   // Resolved unit subgraphs and executed subgraph keys
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
+ private:
+  
 };
 
 }  // namespace band

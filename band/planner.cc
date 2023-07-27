@@ -298,10 +298,8 @@ void Planner::CopyToLocalQueues() {
 bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
   bool success = true;
   for (auto& action : actions) {
-    Job job;
-    SubgraphKey target_key;
-
-    std::tie(job, target_key) = action;
+    Job job = action.first;
+    SubgraphKey target_key = action.second;
 
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
@@ -366,7 +364,6 @@ void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
 
   if (!engine_.IsEnd(target_key)) {
     Job remaining_ops(job.model_id);
-    remaining_ops.model_fname = job.model_fname;
     remaining_ops.slo_us = job.slo_us;
     remaining_ops.enqueue_time = job.enqueue_time;
     remaining_ops.following_jobs = job.following_jobs;
