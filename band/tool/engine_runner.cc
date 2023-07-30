@@ -75,7 +75,7 @@ absl::Status EngineRunner::LoadRunnerConfigs(const Json::Value& root) {
     std::unique_ptr<GraphRunner> graph_runner =
         std::make_unique<GraphRunner>(target_backend_, *engine_);
     RETURN_IF_ERROR(graph_runner->Initialize(graph));
-    children_.emplace_back(graph_runner);
+    children_.push_back(graph_runner.release());
   }
 
   return absl::OkStatus();

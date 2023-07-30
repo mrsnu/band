@@ -6,6 +6,12 @@
 namespace band {
 namespace tool {
 
+IRunner::~IRunner() {
+  for (size_t i = 0; i < children_.size(); i++) {
+    delete children_[i];
+  }
+}
+
 absl::Status IRunner::Initialize(const Json::Value& root) {
   return absl::OkStatus();
 }

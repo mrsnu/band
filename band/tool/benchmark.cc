@@ -55,7 +55,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
     std::unique_ptr<EngineRunner> engine_runner =
         std::make_unique<EngineRunner>();
     RETURN_IF_ERROR(engine_runner->Initialize(engine_runner_config));
-    children_.emplace_back(engine_runner);
+    children_.emplace_back(engine_runner.release());
     return absl::OkStatus();
   };
 

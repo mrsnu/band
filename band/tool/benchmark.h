@@ -7,6 +7,7 @@
 #include "band/model.h"
 #include "band/profiler.h"
 #include "band/tool/benchmark_profiler.h"
+#include "band/tool/runner.h"
 
 namespace band {
 namespace tool {
