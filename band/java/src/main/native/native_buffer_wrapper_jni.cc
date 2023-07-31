@@ -1,0 +1,60 @@
+#include <jni.h>
+
+#include "band/buffer/buffer.h"
+#include "band/java/src/main/native/jni_utils.h"
+
+/*
+
+
+  private native long createBuffer();
+
+  private native void deleteBuffer(long bufferHandle);
+
+  private native void setFromByteBuffer(
+      long bufferHandle, final byte[] buffer, int width, int height, int
+  bufferFormat);
+
+  private native void setFromYUVBuffer(long bufferHandle, final byte[] y, final
+  byte[] u, final byte[] v, int width, int height, int yRowStride, int
+  uvRowStride, int uvPixelStride);
+
+*/
+
+using band::Buffer;
+
+extern "C" {
+
+JNIEXPORT void JNICALL Java_org_mrsnu_band_Buffer_deleteBuffer(
+    JNIEnv* env, jclass clazz, jlong bufferHandle) {
+  delete reinterpret_cast<Buffer*>(bufferHandle);
+}
+
+JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromByteBuffer(
+    JNIEnv* env, jclass clazz, jbyteArray raw_buffer, jint width, jint height,
+    jint bufferFormat) {
+  jbyte* raw_buffer_bytes = env->GetByteArrayElements(raw_buffer, nullptr);
+  Buffer* buffer = Buffer::CreateFromRaw(
+      reinterpret_cast<const unsigned char*>(raw_buffer_bytes), width, height,
+      band::BufferFormat(bufferFormat));
+  env->ReleaseByteArrayElements(raw_buffer, raw_buffer_bytes, 0);
+  return reinterpret_cast<jlong>(buffer);
+}
+
+JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromYUVBuffer(
+    JNIEnv* env, jclass clazz, jbyteArray y, jbyteArray u, jbyteArray v,
+    jint width, jint height, jint yRowStride, jint uvRowStride,
+    jint uvPixelStride, jint bufferFormat) {
+  jbyte* y_bytes = env->GetByteArrayElements(y, nullptr);
+  jbyte* u_bytes = env->GetByteArrayElements(u, nullptr);
+  jbyte* v_bytes = env->GetByteArrayElements(v, nullptr);
+  Buffer* buffer = Buffer::CreateFromYUVPlanes(
+      reinterpret_cast<const unsigned char*>(y_bytes),
+      reinterpret_cast<const unsigned char*>(u_bytes),
+      reinterpret_cast<const unsigned char*>(v_bytes), width, height,
+      yRowStride, uvRowStride, uvPixelStride, band::BufferFormat(bufferFormat));
+  env->ReleaseByteArrayElements(y, y_bytes, 0);
+  env->ReleaseByteArrayElements(u, u_bytes, 0);
+  env->ReleaseByteArrayElements(v, v_bytes, 0);
+  return reinterpret_cast<jlong>(buffer);
+}
+}  // extern "C"

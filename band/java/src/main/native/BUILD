@@ -29,14 +29,16 @@ filegroup(
 filegroup(
     name = "native_srcs",
     srcs = [
-        "jni_utils.cc",
         "band_jni.cc",
         "config_jni.cc",
-        "nativeconfigbuilderwrapper_jni.cc",
-        "nativeimageprocessorbuilderwrapper_jni.cc",
-        "nativeenginewrapper_jni.cc",
-        "nativemodelwrapper_jni.cc",
-        "nativetensorwrapper_jni.cc",
+        "image_processor_jni.cc",
+        "jni_utils.cc",
+        "native_buffer_wrapper_jni.cc",
+        "native_config_builder_wrapper_jni.cc",
+        "native_engine_wrapper_jni.cc",
+        "native_image_processor_builder_wrapper_jni.cc",
+        "native_model_wrapper_jni.cc",
+        "native_tensor_wrapper_jni.cc",
     ],
 )
 

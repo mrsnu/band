@@ -112,6 +112,10 @@ Tensor* ConvertLongToTensor(JNIEnv* env, jlong handle) {
   return CastLongToPointer<Tensor>(env, handle);
 }
 
+Buffer* ConvertLongToBuffer(JNIEnv* env, jlong handle) {
+  return CastLongToPointer<Buffer>(env, handle);
+}
+
 int ConvertLongToJobId(jint request_handle) {
   return static_cast<int>(request_handle);
 }
