@@ -3,6 +3,7 @@
 
 #include <jni.h>
 
+#include "band/buffer/buffer.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
@@ -10,6 +11,7 @@
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/tensor.h"
+
 
 namespace band {
 namespace jni {
@@ -98,6 +100,8 @@ RuntimeConfig* ConvertLongToConfig(JNIEnv* env, jlong handle);
 Model* ConvertLongToModel(JNIEnv* env, jlong handle);
 
 Tensor* ConvertLongToTensor(JNIEnv* env, jlong handle);
+
+Buffer* ConvertLongToBuffer(JNIEnv* env, jlong handle);
 
 int ConvertLongToJobId(jint request_handle);
 
