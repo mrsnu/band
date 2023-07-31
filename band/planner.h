@@ -70,7 +70,7 @@ class Planner {
   // Sets the callback function pointer to report the end of invoke.
   CallbackId SetOnEndRequest(
       std::function<void(int, absl::Status)> on_end_request);
-  void UnsetOnEndRequest(CallbackId callback_id);
+  absl::Status UnsetOnEndRequest(CallbackId callback_id);
 
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);

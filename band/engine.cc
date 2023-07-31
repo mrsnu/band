@@ -490,8 +490,8 @@ CallbackId Engine::SetOnEndRequest(
   return planner_->SetOnEndRequest(on_end_request);
 }
 
-void Engine::UnsetOnEndRequest(CallbackId callback_id) {
-  planner_->UnsetOnEndRequest(callback_id);
+absl::Status Engine::UnsetOnEndRequest(CallbackId callback_id) {
+  return planner_->UnsetOnEndRequest(callback_id);
 }
 
 absl::Status Engine::Init(const RuntimeConfig& config) {
@@ -760,7 +760,8 @@ Engine::GetShortestLatencyWithUnitSubgraph(
 
   // Initialize memo.
   for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>({}, std::numeric_limits<int>::max());
+    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>(
+        {}, std::numeric_limits<int>::max());
   }
 
   // `i` and `j` refer to an unit subgraph idx.

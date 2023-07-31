@@ -235,14 +235,18 @@ CallbackId Planner::SetOnEndRequest(
     std::function<void(int, absl::Status)> on_end_request) {
   std::lock_guard<std::mutex> lock(on_end_request_mtx_);
   on_end_request_callbacks_[next_callback_id_] = on_end_request;
+  return next_callback_id_++;
 }
 
-void Planner::UnsetOnEndRequest(CallbackId callback_id) {
+absl::Status Planner::UnsetOnEndRequest(CallbackId callback_id) {
   std::lock_guard<std::mutex> lock(on_end_request_mtx_);
-  if (on_end_request_callbacks_.find(callback_id) !=
+  if (on_end_request_callbacks_.find(callback_id) ==
       on_end_request_callbacks_.end()) {
-    on_end_request_callbacks_.erase(callback_id);
+    return absl::InternalError("Callback id not found.");
   }
+
+  on_end_request_callbacks_.erase(callback_id);
+  return absl::OkStatus();
 }
 
 int Planner::GetWorkerType() const {
