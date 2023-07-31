@@ -19,6 +19,7 @@ filegroup(
         "band_jni.cc",
         "config_jni.cc",
         "nativeconfigbuilderwrapper_jni.cc",
+        "nativeimageprocessorbuilderwrapper_jni.cc",
         "nativeenginewrapper_jni.cc",
         "nativemodelwrapper_jni.cc",
         "nativetensorwrapper_jni.cc",
