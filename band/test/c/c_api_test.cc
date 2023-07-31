@@ -187,12 +187,13 @@ TEST(CApi, EngineSimpleAsyncInvoke) {
   EXPECT_EQ(BandTensorGetDims(output_tensor)[1], 8);
   EXPECT_EQ(BandTensorGetDims(output_tensor)[2], 8);
   EXPECT_EQ(BandTensorGetDims(output_tensor)[3], 3);
-#endif  // BAND_TFLITE
 
   EXPECT_EQ(BandEngineUnsetOnEndRequest(engine, callback_handle), kBandOk);
 
   BandTensorDelete(input_tensor);
   BandTensorDelete(output_tensor);
+#endif  // BAND_TFLITE
+
   BandEngineDelete(engine);
   BandConfigDelete(config);
   BandModelDelete(model);
