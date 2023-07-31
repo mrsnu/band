@@ -3,10 +3,12 @@
 #include "band/buffer/buffer.h"
 #include "band/buffer/image_operator.h"
 #include "band/buffer/image_processor.h"
+#include "band/java/src/main/native/jni_utils.h"
 
 using band::BufferFormat;
 using namespace band::buffer;
 using band::ImageProcessorBuilder;
+using band::jni::JNIImageProcessor;
 
 extern "C" {
 
@@ -67,7 +69,7 @@ Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_addNormalize(
     JNIEnv* env, jclass clazz, jlong imageProcessorBuilderHandle, jfloat mean,
     jfloat std) {
   reinterpret_cast<ImageProcessorBuilder*>(imageProcessorBuilderHandle)
-      ->AddOperation(std::make_unique<Normalize>(mean, std));
+      ->AddOperation(std::make_unique<Normalize>(mean, std, false));
 }
 
 JNIEXPORT void JNICALL
@@ -90,9 +92,9 @@ Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_build(
   if (!status.ok()) {
     return nullptr;
   } else {
-    return env->NewObject(
-        imageProcessor_cls, imageProcessor_constructor,
-        reinterpret_cast<jlong>(new JNIImageProcessor(status.value())));
+    return env->NewObject(imageProcessor_cls, imageProcessor_constructor,
+                          reinterpret_cast<jlong>(new JNIImageProcessor(
+                              std::move(status.value()))));
   }
 }
 }
