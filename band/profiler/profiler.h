@@ -1,5 +1,5 @@
-#ifndef BAND_PROFILER_H_
-#define BAND_PROFILER_H_
+#ifndef BAND_PROFILER_PROFILER_H_
+#define BAND_PROFILER_PROFILER_H_
 
 #include <chrono>
 #include <vector>

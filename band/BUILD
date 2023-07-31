@@ -319,20 +319,41 @@ band_cc_library(
 )
 
 band_cc_library(
+    name = "record",
+    hdrs = [
+        "profiler/record.h",
+        "profiler/latency_record.h",
+    ],
+)
+
+band_cc_library(
+    name = "profiler",
+    srcs = [
+        "profiler/profiler.cc",
+    ],
+    hdrs = [
+        "profiler/profiler.h",
+    ],
+    deps = [
+        ":common",
+        ":record",
+    ]
+)
+
+band_cc_library(
     name = "latency_estimator",
     srcs = [
         "latency_estimator.cc",
-        "profiler.cc",
     ],
     hdrs = [
         "latency_estimator.h",
-        "profiler.h",
     ],
     deps = [
         ":common",
         ":config",
         ":json_util",
         ":worker",
+        ":profiler",
         "//band/device",
     ],
 )

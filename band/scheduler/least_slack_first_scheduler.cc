@@ -38,9 +38,12 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     SubgraphKey target_subgraph_key = best_exec_plan.first.front();
 
     // Change job status and schedule if the execution plan already exceeded SLO
-    if (job.slo_us > 0 &&
-        current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
-      job.status = Job::Status::kSLOViolation;
+    if (job.HasSLO() &&
+        current_time + best_exec_plan.second > job.enqueue_time + job.slo_us()) {
+      auto status = job.SLOViolation();
+      if (!status.ok()) {
+        success = false;
+      }
       success &= engine_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
@@ -67,8 +70,8 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
 int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
                                                const Job& job) {
-  if (job.slo_us > 0) {
-    int64_t deadline = job.enqueue_time + job.slo_us;
+  if (job.HasSLO()) {
+    int64_t deadline = job.enqueue_time + job.slo_us();
     int64_t remaining_execution_time = job.expected_latency;
     return deadline - current_time - remaining_execution_time;
   } else {

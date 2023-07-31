@@ -35,7 +35,7 @@ struct MockEngine : public MockEngineBase {
   std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
       const Job& job, const WorkerWaitingTime& worker_waiting) const override {
     return std::pair<std::vector<SubgraphKey>, int64_t>(
-        {SubgraphKey(job.model_id, *idle_workers_.begin(), {0})},
+        {SubgraphKey(job.model_id(), *idle_workers_.begin(), {0})},
         0 /*shortest expected latency*/);
   }
 
@@ -92,7 +92,7 @@ TEST_P(LSTTestsFixture, LSTTest) {
 
   std::deque<Job> requests;
   for (int i = 0; i < request_models.size(); i++) {
-    requests.emplace_back(Job(request_models[i], request_slos[i]));
+    requests.emplace_back(Job(request_models[i], 0, 0, request_slos[i]));
   }
   const int count_requests = requests.size();
 
@@ -123,7 +123,7 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
 
   std::deque<Job> requests;
   for (auto it = request_models.begin(); it != request_models.end(); it++) {
-    requests.emplace_back(Job(*it));
+    requests.emplace_back(Job(*it, 0, 0));
   }
   const int count_requests = requests.size();
 
@@ -148,7 +148,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerTest) {
 
   std::deque<Job> requests;
   for (auto it = request_models.begin(); it != request_models.end(); it++) {
-    requests.emplace_back(Job(*it));
+    requests.emplace_back(Job(*it, 0, 0));
   }
   const int count_requests = requests.size();
 
@@ -186,8 +186,9 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
 
   std::deque<Job> requests;
   for (auto it = request_models.begin(); it != request_models.end(); it++) {
-    Job job = Job(*it);
-    job.target_worker_id = target_worker;
+    Job job = Job(*it, 0, 0);
+    auto status = job.SetTargetWorker(target_worker);
+    EXPECT_EQ(status, absl::OkStatus());
     requests.emplace_back(job);
   }
   const int count_requests = requests.size();

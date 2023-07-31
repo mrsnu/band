@@ -1,4 +1,4 @@
-#include "band/profiler.h"
+#include "band/profiler/profiler.h"
 
 #include "band/logger.h"
 

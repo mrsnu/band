@@ -12,7 +12,7 @@ namespace band {
 namespace test {
 
 struct MockEngine : public MockEngineBase {
-  void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
+  void EnqueueFinishedJob(Job& job) override { finished.insert(job.id()); }
   absl::Status Invoke(const SubgraphKey& key) override {
     time::SleepForMicros(50);
     return absl::OkStatus();
@@ -26,7 +26,7 @@ struct WorkerSuite : testing::Test {};
 TYPED_TEST_SUITE(WorkerSuite, WorkerTypeList);
 
 Job GetEmptyJob() {
-  Job job(0);
+  Job job(0, 0, 0);
   job.subgraph_key = SubgraphKey(0, 0);
   job.enqueue_time = time::NowMicros();
   return job;
@@ -44,7 +44,7 @@ TYPED_TEST(WorkerSuite, JobHelper) {
 
   EXPECT_TRUE(worker.EnqueueJob(job));
   EXPECT_TRUE(worker.HasJob());
-  EXPECT_EQ(worker.GetCurrentJobId(), job.job_id);
+  EXPECT_EQ(worker.GetCurrentJobId(), job.id());
 
   worker.End();
 }
@@ -70,7 +70,7 @@ TYPED_TEST(WorkerSuite, Wait) {
   auto now1 = time::NowMicros();
   EXPECT_GE(now1, now0 + 50);
 
-  EXPECT_NE(engine.finished.find(job.job_id), engine.finished.end());
+  EXPECT_NE(engine.finished.find(job.id()), engine.finished.end());
   worker.End();
 }
 

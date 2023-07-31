@@ -14,7 +14,7 @@ namespace test {
 struct MockEngine : public MockEngineBase {
   void PrepareReenqueue(Job&) override{};
   void UpdateLatency(const SubgraphKey&, int64_t) override{};
-  void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
+  void EnqueueFinishedJob(Job& job) override { finished.insert(job.id()); }
   void Trigger() override {}
 
   absl::Status Invoke(const SubgraphKey& key) override {

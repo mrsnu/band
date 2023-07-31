@@ -122,7 +122,7 @@ class GlobalQueueWorker : public Worker {
   void HandleDeviceError(Job& current_job) override;
 
  private:
-  Job current_job_{-1};
+  Job current_job_;
   bool is_busy_ = false;
 };
 

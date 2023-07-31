@@ -27,7 +27,7 @@ bool GlobalQueueWorker::IsEnqueueReady() const {
 
 bool GlobalQueueWorker::HasJob() { return is_busy_; }
 
-int GlobalQueueWorker::GetCurrentJobId() { return current_job_.job_id; }
+int GlobalQueueWorker::GetCurrentJobId() { return current_job_.id(); }
 
 Job* GlobalQueueWorker::GetCurrentJob() {
   return HasJob() ? &current_job_ : nullptr;

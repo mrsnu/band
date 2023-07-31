@@ -121,7 +121,7 @@ const ErrorReporter* Worker::GetErrorReporter() const {
 }
 
 bool Worker::IsValid(Job& job) {
-  return job.model_id >= 0 && job.subgraph_key.IsValid() &&
+  return job.model_id() >= 0 && job.subgraph_key.IsValid() &&
          job.enqueue_time > 0 && job.invoke_time == 0 && job.end_time == 0;
 }
 
@@ -175,7 +175,7 @@ void Worker::Work() {
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
                         "enqueue time %d, invoke time %d, end time %d)",
-                        ToString(device_flag_), current_job->model_id,
+                        ToString(device_flag_).c_str(), current_job->model_id(),
                         current_job->subgraph_key.IsValid(),
                         current_job->subgraph_key.GetModelId(),
                         current_job->subgraph_key.GetWorkerId(),
@@ -214,25 +214,35 @@ void Worker::Work() {
             BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
           }
         }
-        current_job->status = Job::Status::kSuccess;
+        auto status = current_job->Success();
+        if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
+        }
       } else if (!status.ok()) {
         HandleDeviceError(*current_job);
         engine_->Trigger();
         BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to invoke job %d",
-                      worker_id_, current_job->job_id);
+                      worker_id_, current_job->id());
         continue;
       } else {
         // end_time is never read/written by any other thread as long as
         // !requests_.empty(), so it's safe to update it w/o grabbing the lock
         current_job->end_time = time::NowMicros();
         // TODO #21: Handle errors in multi-thread environment
-        current_job->status = Job::Status::kInvokeFailure;
+        auto status = current_job->InvokeFailure();
+        if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
+          continue;
+        }
       }
     } else {
       BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to copy input",
                     worker_id_);
       // TODO #21: Handle errors in multi-thread environment
-      current_job->status = Job::Status::kInputCopyFailure;
+      auto status = current_job->InputCopyFailure();
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
+      }
     }
     BAND_TRACER_END_SUBGRAPH(*current_job);
     engine_->EnqueueFinishedJob(*current_job);
@@ -243,7 +253,7 @@ void Worker::Work() {
 
     engine_->Trigger();
     BAND_LOG_PROD(BAND_LOG_INFO, "Worker %d finished job %d", worker_id_,
-                  current_job->job_id);
+                  current_job->id());
   }
 }
 

@@ -1,6 +1,7 @@
 #ifndef BAND_JOB_H_
 #define BAND_JOB_H_
 
+#include "absl/status/status.h"
 #include "band/common.h"
 
 typedef int JobId;
@@ -23,27 +24,68 @@ class Job {
     kSuccess,
     kFinished,
     kSLOViolation,
-    kEnqueueFailed,
+    kEnqueueFailure,
     kInputCopyFailure,
     kOutputCopyFailure,
     kInvokeFailure,
   };
 
   explicit Job() {}
-  explicit Job(ModelId model_id) : model_id(model_id) {}
-  explicit Job(ModelId model_id, int64_t slo)
-      : model_id(model_id), slo_us(slo) {}
+  explicit Job(ModelId model_id, int input_handle, int output_handle,
+               int64_t slo_us = -1)
+      : model_id_(model_id),
+        input_handle_(input_handle),
+        output_handle_(output_handle),
+        slo_us_(slo_us) {}
 
-  bool IsInitialized() const;
+  Status status() const { return status_; }
+  ModelId model_id() const { return model_id_; }
+  int input_handle() const { return input_handle_; }
+  int output_handle() const { return output_handle_; }
+  JobId id() const { return id_; }
+  int64_t slo_us() const { return slo_us_; }
+  bool require_callback() const { return require_callback_; }
+  WorkerId target_worker_id() const { return target_worker_id_; }
+
+  bool HasSLO() const { return slo_us_ > 0; };
+  bool HasTargetWorker() const { return target_worker_id_ != -1; };
+
+  bool IsEnqueued() const;
   std::string ToJson() const;
 
+  // Methods for job construction.
+  absl::Status RequireCallback() {
+    if (status_ != Status::kNone) {
+      return absl::InternalError("Job is already enqueued");
+    }
+    require_callback_ = true;
+    return absl::OkStatus();
+  };
+
+  absl::Status SetTargetWorker(WorkerId target_worker_id) {
+    if (status_ != Status::kNone) {
+      return absl::InternalError("Job is already enqueued");
+    }
+    target_worker_id_ = target_worker_id;
+    return absl::OkStatus();
+  }
+
+  // Normal states
+  absl::Status Enqueue(JobId id);
+
+  absl::Status Success();
+
+  // Failure states
+  absl::Status SLOViolation();
+  absl::Status EnqueueFailure();
+  absl::Status InputCopyFailure();
+  absl::Status OutputCopyFailure();
+  absl::Status InvokeFailure();
+
+  Job Next(const SubgraphKey& target_key, int profiled_execution_time,
+           int expected_execution_time, bool last);
+
   // Constant variables (Valid after invoke)
-  // TODO: better job life-cycle to change these to `const`
-  ModelId model_id = -1;;
-  int input_handle = -1;
-  int output_handle = -1;
-  JobId job_id = -1;
-  bool require_callback = true;
 
   // For record (Valid after execution)
   int64_t enqueue_time = 0;
@@ -55,21 +97,27 @@ class Job {
   int64_t expected_execution_time = 0;
   // Expected total latency
   int64_t expected_latency = 0;
-  int64_t slo_us;
-
-  // Target worker id (only for fixed worker request)
-  WorkerId target_worker_id = -1;
 
   // Current status for execution (Valid after planning)
-  Status status = Status::kNone;
   SubgraphKey subgraph_key;
   std::vector<Job> following_jobs;
 
   // Resolved unit subgraphs and executed subgraph keys
-  BitMask resolved_unit_subgraphs;
+  BitMask resolved_unit_subgraphs = 0;
   std::list<SubgraphKey> previous_subgraph_keys;
+
  private:
-  
+  Status status_ = Status::kNone;
+
+  ModelId model_id_ = -1;
+  int input_handle_ = -1;
+  int output_handle_ = -1;
+  JobId id_ = -1;
+  int64_t slo_us_ = -1;
+  bool require_callback_ = false;
+
+  // Target worker id (only for fixed worker request)
+  WorkerId target_worker_id_ = -1;
 };
 
 }  // namespace band

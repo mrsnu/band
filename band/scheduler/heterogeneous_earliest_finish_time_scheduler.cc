@@ -38,12 +38,12 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
            ++it) {
         Job job = *it;
 
-        if (jobs_to_yield.find(job.job_id) != jobs_to_yield.end()) {
+        if (jobs_to_yield.find(job.id()) != jobs_to_yield.end()) {
           continue;
         }
 
         std::pair<int, BitMask> job_to_search =
-            std::make_pair(job.model_id, job.resolved_unit_subgraphs);
+            std::make_pair(job.model_id(), job.resolved_unit_subgraphs);
         if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
           continue;
         } else {
@@ -53,7 +53,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
         // update waiting_time for all future jobs in reserved_
         WorkerWaitingTime reserved_time(waiting_time);
         for (auto job_subgraph_key : reserved_) {
-          if (job_subgraph_key.first == job.job_id) {
+          if (job_subgraph_key.first == job.id()) {
             continue;
           }
 
@@ -88,7 +88,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
         waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
         auto requests_it = requests.begin() + target_job_index;
         Job job = *requests_it;
-        jobs_to_yield.insert(job.job_id);
+        jobs_to_yield.insert(job.id());
         continue;
       } else {
         break;
@@ -114,9 +114,9 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     if (reserve_) {
       // add next job to reserved_, if one exists
       if (target_subgraph_key_next != SubgraphKey()) {
-        reserved_[job.job_id] = target_subgraph_key_next;
+        reserved_[job.id()] = target_subgraph_key_next;
       } else {
-        reserved_.erase(job.job_id);
+        reserved_.erase(job.id());
       }
     }
   }

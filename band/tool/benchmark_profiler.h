@@ -4,7 +4,7 @@
 #include <set>
 
 #include "absl/status/status.h"
-#include "band/profiler.h"
+#include "band/profiler/profiler.h"
 
 namespace band {
 namespace tool {

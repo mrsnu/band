@@ -44,7 +44,7 @@ bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       Job& next_job = *it;
 
       std::pair<int, BitMask> job_to_search =
-          std::make_pair(next_job.model_id, next_job.resolved_unit_subgraphs);
+          std::make_pair(next_job.model_id(), next_job.resolved_unit_subgraphs);
       if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
         continue;
       } else {

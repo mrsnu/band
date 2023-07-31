@@ -12,13 +12,13 @@ bool RoundRobinScheduler::Schedule(JobQueue& requests) {
     if (!requests.empty()) {
       auto available_job = std::find_if(
           requests.begin(), requests.end(), [this, worker_id](const Job& job) {
-            return engine_.GetLargestSubgraphKey(job.model_id, worker_id)
+            return engine_.GetLargestSubgraphKey(job.model_id(), worker_id)
                 .IsValid();
           });
       if (available_job != requests.end()) {
         Job to_execute = *available_job;
         SubgraphKey key =
-            engine_.GetLargestSubgraphKey(to_execute.model_id, worker_id);
+            engine_.GetLargestSubgraphKey(to_execute.model_id(), worker_id);
         success &= engine_.EnqueueToWorker({to_execute, key});
         requests.erase(available_job);
       }

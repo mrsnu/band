@@ -16,7 +16,7 @@ int DeviceQueueWorker::GetCurrentJobId() {
   if (requests_.empty()) {
     return -1;
   }
-  return requests_.front().job_id;
+  return requests_.front().id();
 }
 
 int64_t DeviceQueueWorker::GetWaitingTime() {
@@ -51,7 +51,7 @@ bool DeviceQueueWorker::EnqueueJob(Job& job) {
     return false;
   }
 
-  BAND_LOG_PROD(BAND_LOG_INFO, "Enqueue job %d to worker %d", job.job_id,
+  BAND_LOG_PROD(BAND_LOG_INFO, "Enqueue job %d to worker %d", job.id(),
                 worker_id_);
 
   requests_.push_back(job);
@@ -130,7 +130,7 @@ void DeviceQueueWorker::TryWorkSteal() {
 
       Subgraph* orig_subgraph = interpreter_ptr->subgraph(job.subgraph_idx);
       SubgraphKey& orig_key = orig_subgraph->GetKey();
-      SubgraphKey new_key(job.model_id, device_flag_, orig_key.input_ops,
+      SubgraphKey new_key(job.model_id(), device_flag_, orig_key.input_ops,
                           orig_key.output_ops);
       int64_t expected_latency = interpreter_ptr->GetExpectedLatency(new_key);
       if (expected_latency == -1 || expected_latency > waiting_time) {

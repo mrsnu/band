@@ -15,6 +15,7 @@ namespace band {
 typedef int WorkerId;
 typedef int ModelId;
 
+// Assuming that the number of unit subgraphs in a model is less than 64.
 using BitMask = std::bitset<64>;
 
 // Empty template.

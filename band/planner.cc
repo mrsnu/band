@@ -16,7 +16,8 @@
 
 namespace band {
 
-Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
+Planner::Planner(IEngine& engine)
+    : num_submitted_jobs_(0), num_finished_jobs_(0), engine_(engine) {
   planner_thread_ = std::thread([this] {
     auto status = this->Plan();
     if (!status.ok()) {
@@ -122,15 +123,19 @@ std::vector<JobId> Planner::EnqueueBatch(std::vector<Job> jobs,
     auto enqueue_time = time::NowMicros();
     for (int i = 0; i < jobs.size(); i++) {
       Job& job = jobs[i];
+      // job may already be initialized if this model contains a fallback
+      // op, in which case we do not overwrite the set value
       if (job.enqueue_time == 0) {
-        // job.enqueue_time may already be set if this model contains a fallback
-        // op, in which case we do not overwrite the set value
         job.enqueue_time = enqueue_time;
       }
-      if (job.job_id == -1) {
-        job.job_id = num_submitted_jobs_++;
+      if (!job.IsEnqueued()) {
+        auto status = job.Enqueue(num_submitted_jobs_++);
+        if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR, "Enqueue failed: %s", status.message());
+          return {};
+        }
       }
-      job_ids[i] = job.job_id;
+      job_ids[i] = job.id();
     }
 
     auto insert_position =
@@ -152,7 +157,7 @@ void Planner::Wait(std::vector<int> job_ids) {
       if (!IsJobIdValid(job_id)) {
         continue;
       }
-      if (jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != job_id) {
+      if (jobs_finished_record_[GetJobRecordIndex(job_id)].id() != job_id) {
         return false;
       }
     }
@@ -173,10 +178,10 @@ void Planner::WaitAll() {
 void Planner::EnqueueFinishedJob(Job& job) {
   std::unique_lock<std::mutex> finished_lock(job_finished_mtx_);
   const bool is_finished =
-      engine_.IsEnd(job.subgraph_key) || job.status != Job::Status::kSuccess;
+      engine_.IsEnd(job.subgraph_key) || job.status() != Job::Status::kSuccess;
   // record finished / failed job
   if (is_finished) {
-    jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
+    jobs_finished_record_[GetJobRecordIndex(job.id())] = job;
     num_finished_jobs_++;
     end_invoke_.notify_all();
   }
@@ -185,10 +190,10 @@ void Planner::EnqueueFinishedJob(Job& job) {
   finished_lock.unlock();
 
   // report end invoke using callback
-  if (on_end_request_ && job.require_callback && is_finished) {
-    on_end_request_(job.job_id, job.status == Job::Status::kSuccess
-                                    ? absl::OkStatus()
-                                    : absl::InternalError("Job failed."));
+  if (on_end_request_ && job.require_callback() && is_finished) {
+    on_end_request_(job.id(), job.status() == Job::Status::kSuccess
+                                  ? absl::OkStatus()
+                                  : absl::InternalError("Job failed."));
   }
 }
 
@@ -220,7 +225,7 @@ void Planner::SetWindowSize(int schedule_window_size) {
 Job Planner::GetFinishedJob(int job_id) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
   if (IsJobIdValid(job_id) &&
-      jobs_finished_record_[GetJobRecordIndex(job_id)].job_id != -1) {
+      jobs_finished_record_[GetJobRecordIndex(job_id)].id() != -1) {
     return jobs_finished_record_[GetJobRecordIndex(job_id)];
   } else {
     return Job();
@@ -282,7 +287,7 @@ void Planner::CopyToLocalQueues() {
     } else if (schedulers_.size() == 2) {
       // TODO: general method for assigning SLO/non-SLO requests
       for (Job& job : requests) {
-        if (job.slo_us > 0) {
+        if (job.HasSLO()) {
           local_queues_[0].push_back(std::move(job));
         } else {
           local_queues_[1].push_back(std::move(job));
@@ -307,11 +312,18 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
                     "EnqueueToWorker failed. Requests scheduled to null worker "
                     "id %d",
                     target_key.GetWorkerId());
-      job.status = Job::Status::kEnqueueFailed;
+      auto status = job.EnqueueFailure();
+      if (!status.ok()) {
+        success = false;
+      }
       EnqueueFinishedJob(job);
     } else if (IsSLOViolated(job)) {
       // no point in running this job anymore
-      job.status = Job::Status::kSLOViolation;
+      auto status = job.SLOViolation();
+      if (!status.ok()) {
+        // TODO(widiba03304): Handle failure to switch job's status.
+        success = false;
+      }
       // mark this as -1 to differentiate it from the default value, 0
       job.invoke_time = -1;
       // mark the time of this decision (of early-dropping this job)
@@ -323,7 +335,9 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
 
       if (worker->IsEnqueueReady()) {
-        UpdateJobScheduleStatus(job, target_key);
+        job = job.Next(target_key, engine_.GetProfiled(target_key),
+                       engine_.GetExpected(target_key),
+                       engine_.IsEnd(target_key));
         if (!worker->EnqueueJob(job)) {
           BAND_LOG_PROD(BAND_LOG_ERROR,
                         "EnqueueToWorker failed. Requests scheduled to "
@@ -339,16 +353,16 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 }
 
 bool Planner::IsSLOViolated(Job& job) {
-  if (job.status == Job::Status::kSLOViolation) {
+  if (job.status() == Job::Status::kSLOViolation) {
     return true;
   }
   // this job has an SLO; check if it's not too late already
-  if (job.slo_us > 0) {
+  if (job.HasSLO()) {
     WorkerWaitingTime workers_waiting = engine_.GetWorkerWaitingTime();
     int64_t current_time = time::NowMicros();
     int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
                                job.expected_execution_time;
-    int64_t remaining_time = job.slo_us - (current_time - job.enqueue_time);
+    int64_t remaining_time = job.slo_us() - (current_time - job.enqueue_time);
     if (expected_latency > remaining_time) {
       return true;
     }
@@ -357,27 +371,24 @@ bool Planner::IsSLOViolated(Job& job) {
 }
 
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
-  job.subgraph_key = target_key;
-  job.profiled_execution_time = engine_.GetProfiled(target_key);
-  job.expected_execution_time = engine_.GetExpected(target_key);
-  job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
+  // job.subgraph_key = target_key;
+  // job.profiled_execution_time = engine_.GetProfiled(target_key);
+  // job.expected_execution_time = engine_.GetExpected(target_key);
+  // job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
-  if (!engine_.IsEnd(target_key)) {
-    Job remaining_ops(job.model_id);
-    remaining_ops.slo_us = job.slo_us;
-    remaining_ops.enqueue_time = job.enqueue_time;
-    remaining_ops.following_jobs = job.following_jobs;
-    remaining_ops.expected_latency = job.expected_latency;
-    remaining_ops.job_id = job.job_id;
-    remaining_ops.input_handle = job.input_handle;
-    remaining_ops.output_handle = job.output_handle;
-    remaining_ops.resolved_unit_subgraphs = job.resolved_unit_subgraphs;
-    remaining_ops.previous_subgraph_keys = job.previous_subgraph_keys;
-    remaining_ops.previous_subgraph_keys.emplace_back(job.subgraph_key);
+  // if (!engine_.IsEnd(target_key)) {
+  //   Job remaining_ops(job.id(), job.model_id(), job.input_handle(),
+  //                     job.output_handle(), job.slo_us());
+  //   remaining_ops.enqueue_time = job.enqueue_time;
+  //   remaining_ops.following_jobs = job.following_jobs;
+  //   remaining_ops.expected_latency = job.expected_latency;
+  //   remaining_ops.resolved_unit_subgraphs = job.resolved_unit_subgraphs;
+  //   remaining_ops.previous_subgraph_keys = job.previous_subgraph_keys;
+  //   remaining_ops.previous_subgraph_keys.emplace_back(job.subgraph_key);
 
-    job.following_jobs.clear();
-    job.following_jobs.push_back(remaining_ops);
-  }
+  //   job.following_jobs.clear();
+  //   job.following_jobs.push_back(remaining_ops);
+  // }
 }
 
 bool Planner::IsJobIdValid(int job_id) {

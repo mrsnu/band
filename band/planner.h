@@ -114,8 +114,8 @@ class Planner {
 
   std::mutex job_finished_mtx_;
   std::array<Job, NUM_FINISHED_RECORDS> jobs_finished_record_;
-  std::atomic<int> num_submitted_jobs_;
-  int num_finished_jobs_ = 0;
+  std::atomic<uint32_t> num_submitted_jobs_;
+  std::atomic<uint32_t> num_finished_jobs_;
 
   std::condition_variable end_invoke_;
   std::string log_path_;

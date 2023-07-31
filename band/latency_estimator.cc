@@ -5,7 +5,7 @@
 #include "band/json_util.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
-#include "band/profiler.h"
+#include "band/profiler/profiler.h"
 #include "band/worker.h"
 
 namespace band {
