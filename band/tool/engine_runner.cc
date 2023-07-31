@@ -22,6 +22,10 @@ EngineRunner::EngineRunner(BackendType target_backend)
     : target_backend_(target_backend) {}
 
 EngineRunner::~EngineRunner() {
+  if (engine_) {
+    delete engine_;
+  }
+
   if (runtime_config_) {
     delete runtime_config_;
   }
@@ -31,13 +35,13 @@ EngineRunner::~EngineRunner() {
   }
 }
 
-absl::StatusOr<const Model&> EngineRunner::GetModel(
+absl::StatusOr<const Model*> EngineRunner::GetModel(
     const std::string& model_key) const {
   std::lock_guard<std::mutex> lock(model_mutex_);
   if (registered_models_.find(model_key) == registered_models_.end()) {
     return absl::NotFoundError("Model not found");
   } else {
-    return *registered_models_.at(model_key);
+    return registered_models_.at(model_key);
   }
 }
 
@@ -73,7 +77,7 @@ absl::Status EngineRunner::LoadRunnerConfigs(const Json::Value& root) {
 
   for (auto& graph : root["graph_workloads"]) {
     std::unique_ptr<GraphRunner> graph_runner =
-        std::make_unique<GraphRunner>(target_backend_, *engine_);
+        std::make_unique<GraphRunner>(target_backend_, *this);
     RETURN_IF_ERROR(graph_runner->Initialize(graph));
     children_.push_back(graph_runner.release());
   }
@@ -187,11 +191,10 @@ absl::StatusOr<RuntimeConfig*> EngineRunner::LoadRuntimeConfigs(
     }
   }
 
-  if (!builder.IsValid()) {
-    return absl::InvalidArgumentError("Invalid runtime config");
-  }
+  auto profile_config_status = builder.Build();
+  RETURN_IF_ERROR(profile_config_status.status());
 
-  return new RuntimeConfig(builder.Build());
+  return new RuntimeConfig(profile_config_status.value());
 }
 
 absl::Status EngineRunner::Initialize(const Json::Value& root) {
@@ -199,7 +202,7 @@ absl::Status EngineRunner::Initialize(const Json::Value& root) {
   RETURN_IF_ERROR(runtime_config.status());
   RETURN_IF_ERROR(LoadRunnerConfigs(root));
 
-  engine_ = Engine::Create(*runtime_config.value());
+  engine_ = Engine::Create(*runtime_config.value()).release();
   runtime_config_ = runtime_config.value();
 
   if (!engine_) {

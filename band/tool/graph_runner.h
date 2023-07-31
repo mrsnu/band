@@ -9,6 +9,7 @@
 #include "band/json_util.h"
 #include "band/model.h"
 #include "band/profiler.h"
+#include "band/safe_bool.h"
 #include "band/tool/benchmark_profiler.h"
 #include "band/tool/runner.h"
 
@@ -20,8 +21,8 @@ class EngineRunner;
 
 class GraphRunner : public IRunner {
  public:
-  GraphRunner(BackendType target_backend, EngineRunner& engine_runner)
-      : target_backend_(target_backend), engine_runner_(engine_runner) {}
+  GraphRunner(BackendType target_backend, EngineRunner& engine_runner);
+  virtual ~GraphRunner();
   virtual absl::Status Initialize(const Json::Value& root) override;
   virtual absl::Status Run() override;
   virtual void Join() override;
@@ -35,19 +36,25 @@ class GraphRunner : public IRunner {
   void RunWorkload();
 
   // callback listener for engine
-  void OnJobFinished(JobId job_id);
+  void OnJobFinished(JobId job_id, absl::Status status);
 
   const BackendType target_backend_;
-  EngineRunner& const engine_runner_;
-  BenchmarkProfiler profiler;
+  EngineRunner& engine_runner_;
+  BenchmarkProfiler profiler_;
+
+  Json::Value root_;
+  CallbackId callback_id_;
 
   std::string execution_mode_;
   size_t period_ms_;
   size_t slo_ms_;
   float slo_scale_;
 
-  std::vector<std::unique_ptr<GraphContext>> graphs_;
+  std::mutex mutex_;
+  std::vector<std::unique_ptr<GraphContext>> graph_contexts_;
   std::map<JobId, std::pair<GraphContext*, size_t>> job_id_to_graph_vertex_;
+
+  SafeBool runner_safe_bool_;
   std::thread runner_thread_;
   bool kill_app_ = false;
 };

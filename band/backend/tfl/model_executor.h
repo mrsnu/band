@@ -26,6 +26,8 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
 
   std::shared_ptr<interface::ITensorView> GetTensorView(const SubgraphKey& key,
                                                         int index) override;
+  std::shared_ptr<const interface::ITensorView> GetTensorView(
+      const SubgraphKey& key, int index) const override;
   SubgraphKey GetLargestSubgraphKey() const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
 

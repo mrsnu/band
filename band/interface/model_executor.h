@@ -13,7 +13,6 @@
 #include "band/interface/model.h"
 #include "band/model_spec.h"
 
-
 namespace band {
 namespace interface {
 /*
@@ -46,6 +45,8 @@ class IModelExecutor : public IBackendSpecific {
   virtual size_t GetNumTensors(const SubgraphKey& key) const = 0;
   virtual size_t GetNumNodes(const SubgraphKey& key) const = 0;
 
+  virtual std::shared_ptr<const ITensorView> GetTensorView(
+      const SubgraphKey& key, int index) const = 0;
   virtual std::shared_ptr<ITensorView> GetTensorView(const SubgraphKey& key,
                                                      int index) = 0;
 

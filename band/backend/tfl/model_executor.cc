@@ -215,6 +215,11 @@ std::shared_ptr<interface::ITensorView> TfLiteModelExecutor::GetTensorView(
   return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
 }
 
+std::shared_ptr<const interface::ITensorView>
+TfLiteModelExecutor::GetTensorView(const SubgraphKey& key, int index) const {
+  return std::make_shared<TfLiteTensorView>(GetInterpreter(key)->tensor(index));
+}
+
 SubgraphKey TfLiteModelExecutor::GetLargestSubgraphKey() const {
   SubgraphKey largest_key;
   size_t largest_num_ops = 0;

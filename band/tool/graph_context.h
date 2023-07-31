@@ -20,19 +20,14 @@ class GraphContext {
   ~GraphContext();
 
   struct Vertex {
-    Vertex(const Model& model, size_t batch_size, int worker_id,
-           size_t vertex_id)
-        : model(model),
-          batch_size(batch_size),
-          worker_id(worker_id),
-          vertex_id(vertex_id) {}
+    Vertex(const Engine& engine, const Model& model, size_t batch_size,
+           int worker_id, size_t vertex_id);
     ~Vertex();
 
-    void InitializeContext(Engine& engine);
+    void InitializeContext(const Engine& engine);
     const RequestOption GetRequestOption() const;
     absl::Status PrepareInput();
 
-    const Model& model;
     size_t batch_size;
     int worker_id;
     size_t vertex_id;

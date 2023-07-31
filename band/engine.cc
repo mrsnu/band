@@ -281,12 +281,12 @@ absl::Status Engine::UnregisterModel(Model* model) {
   return absl::OkStatus();
 }
 
-Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
+Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) const {
   // TODO: What if there are multiple backends?
   SubgraphKey model_subgraph_key =
       GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlag::kCPU));
 
-  if (interface::IModelExecutor* model_executor =
+  if (const interface::IModelExecutor* model_executor =
           GetModelExecutor(model_subgraph_key)) {
     return new Tensor(
         model_executor->GetTensorView(model_subgraph_key, tensor_index).get());

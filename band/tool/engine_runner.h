@@ -26,7 +26,7 @@ class EngineRunner : public IRunner {
 
   const Engine& GetEngine() const { return *engine_; }
   Engine& GetEngine() { return *engine_; }
-  absl::StatusOr<const Model&> GetModel(const std::string& model_name) const;
+  absl::StatusOr<const Model*> GetModel(const std::string& model_name) const;
 
  private:
   absl::Status LoadRunnerConfigs(const Json::Value& root);
@@ -36,7 +36,7 @@ class EngineRunner : public IRunner {
 
   size_t running_time_ms_;
   RuntimeConfig* runtime_config_ = nullptr;
-  std::unique_ptr<Engine> engine_ = nullptr;
+  Engine* engine_ = nullptr;
 
   mutable std::mutex model_mutex_;
   std::map<std::string, Model*> registered_models_;

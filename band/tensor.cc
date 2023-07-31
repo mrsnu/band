@@ -5,7 +5,7 @@
 #include "band/logger.h"
 
 namespace band {
-Tensor::Tensor(ITensor* tensor_view, bool copy_data)
+Tensor::Tensor(const ITensor* tensor_view, bool copy_data)
     : type_(tensor_view->GetType()),
       quantization_({QuantizationType::kNoQuantization, nullptr}),
       dims_(tensor_view->GetDims(),

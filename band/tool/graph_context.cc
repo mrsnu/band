@@ -9,6 +9,7 @@
 #include "band/model.h"
 #include "band/tensor.h"
 #include "band/tool/engine_runner.h"
+#include "graph_context.h"
 
 namespace band {
 namespace tool {
@@ -23,42 +24,9 @@ void CreateRandomTensorData(void* target_ptr, int num_elements,
     return static_cast<T>(distribution(random_engine));
   });
 }
-
-GraphContext::Vertex::~Vertex() {
-  auto delete_tensors = [](Tensors& tensors) {
-    for (auto t : tensors) {
-      delete t;
-    }
-  };
-
-  for (auto request_inputs : model_request_inputs) {
-    delete_tensors(request_inputs);
-  }
-
-  for (auto request_outputs : model_request_outputs) {
-    delete_tensors(request_outputs);
-  }
-
-  delete_tensors(model_inputs);
-}
-
-absl::Status GraphContext::Vertex::PrepareInput() {
-  for (int batch_index = 0; batch_index < model_request_inputs.size();
-       batch_index++) {
-    for (int input_index = 0; input_index < model_inputs.size();
-         input_index++) {
-      auto status =
-          model_request_inputs[batch_index][input_index]->CopyDataFrom(
-              model_inputs[input_index]);
-      if (!status.ok()) {
-        return status;
-      }
-    }
-  }
-  return absl::OkStatus();
-}
-
-void GraphContext::Vertex::InitializeContext(Engine& engine) {
+GraphContext::Vertex::Vertex(const Engine& engine, const Model& model,
+                             size_t batch_size, int worker_id, size_t vertex_id)
+    : batch_size(batch_size), worker_id(worker_id), vertex_id(vertex_id) {
   const int model_id = model.GetId();
   const auto input_indices = engine.GetInputTensorIndices(model_id);
   const auto output_indices = engine.GetOutputTensorIndices(model_id);
@@ -130,6 +98,40 @@ void GraphContext::Vertex::InitializeContext(Engine& engine) {
   }
 }
 
+GraphContext::Vertex::~Vertex() {
+  auto delete_tensors = [](Tensors& tensors) {
+    for (auto t : tensors) {
+      delete t;
+    }
+  };
+
+  for (auto request_inputs : model_request_inputs) {
+    delete_tensors(request_inputs);
+  }
+
+  for (auto request_outputs : model_request_outputs) {
+    delete_tensors(request_outputs);
+  }
+
+  delete_tensors(model_inputs);
+}
+
+absl::Status GraphContext::Vertex::PrepareInput() {
+  for (int batch_index = 0; batch_index < model_request_inputs.size();
+       batch_index++) {
+    for (int input_index = 0; input_index < model_inputs.size();
+         input_index++) {
+      auto status =
+          model_request_inputs[batch_index][input_index]->CopyDataFrom(
+              model_inputs[input_index]);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+  }
+  return absl::OkStatus();
+}
+
 const RequestOption GraphContext::Vertex::GetRequestOption() const {
   RequestOption option = RequestOption::GetDefaultOption();
   if (worker_id >= 0) {
@@ -190,8 +192,12 @@ absl::Status GraphContext::Initialize(const Json::Value& root,
 
     size_t vertex_id = vertices_.size();
     vertex_names_.push_back(vertex_key);
-    vertices_.push_back(
-        new Vertex(model.value(), batch_size, worker_id, vertex_id));
+    vertices_.push_back(new Vertex(engine_runner.GetEngine(), *model.value(),
+                                   batch_size, worker_id, vertex_id));
+  }
+
+  for (auto& vertex : vertices_) {
+    vertex->InitializeContext(engine_runner.GetEngine());
   }
 
   for (auto edge : root["vertices"]["edges"]) {

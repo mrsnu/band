@@ -12,7 +12,8 @@ namespace band {
 */
 class Tensor : public interface::ITensor {
  public:
-  explicit Tensor(interface::ITensor* tensor_view, bool copy_data = false);
+  explicit Tensor(const interface::ITensor* tensor_view,
+                  bool copy_data = false);
   ~Tensor();
 
   DataType GetType() const override;

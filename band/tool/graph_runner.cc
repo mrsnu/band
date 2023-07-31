@@ -6,11 +6,28 @@
 #include "band/engine.h"
 #include "band/tool/engine_runner.h"
 #include "band/tool/graph_context.h"
+#include "graph_runner.h"
 
 namespace band {
 namespace tool {
+GraphRunner::GraphRunner(BackendType target_backend,
+                         EngineRunner& engine_runner)
+    : target_backend_(target_backend), engine_runner_(engine_runner) {
+  callback_id_ = engine_runner_.GetEngine().SetOnEndRequest(
+      std::bind(&GraphRunner::OnJobFinished, this, std::placeholders::_1,
+                std::placeholders::_2));
+}
+
+GraphRunner::~GraphRunner() {
+  Join();
+  engine_runner_.GetEngine().UnsetOnEndRequest(callback_id_);
+}
 
 absl::Status GraphRunner::Initialize(const Json::Value& root) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  graph_contexts_.clear();
+  job_id_to_graph_vertex_.clear();
+
   if (!json::Validate(root, {"execution_mode", "vertices"})) {
     return absl::InvalidArgumentError(
         "Please check if argument `execution_mode` and `vertices` are given");
@@ -50,9 +67,16 @@ absl::Status GraphRunner::Initialize(const Json::Value& root) {
     return absl::InvalidArgumentError("Please specify at list one model");
   }
 
+  root_ = root;
+
+  // create a single graph context and see if it is valid
+  // execution mode requires multiple contexts (such as periodic)
+  // will create multiple contexts later
   std::unique_ptr<GraphContext> temp_ctx =
       std::make_unique<GraphContext>(engine_runner_.GetEngine());
-  return temp_ctx->Initialize(root, engine_runner_);
+  RETURN_IF_ERROR(temp_ctx->Initialize(root, engine_runner_));
+  graph_contexts_.emplace_back(std::move(temp_ctx));
+  return absl::OkStatus();
 }
 
 absl::Status GraphRunner::Run() {
@@ -67,6 +91,7 @@ absl::Status GraphRunner::Run() {
 
 void GraphRunner::Join() {
   if (runner_thread_.joinable()) {
+    runner_safe_bool_.terminate();
     runner_thread_.join();
   }
 }
@@ -82,6 +107,12 @@ void GraphRunner::RunInternal() {
 }
 
 void GraphRunner::RunPeriodic() {
+  while (true) {
+    if (runner_safe_bool_.wait()) {
+      break;
+    }
+  }
+
   for (int model_index = 0; model_index < vertices_.size(); model_index++) {
     std::thread t(
         [this](ModelContext* model_context, const size_t period_us) {
@@ -91,17 +122,17 @@ void GraphRunner::RunPeriodic() {
               continue;
             }
 
-            size_t id = model_context->profiler.BeginEvent();
+            size_t id = model_context->profiler_.BeginEvent();
             auto status = engine_.RequestSync(
                 model_context->model_ids, model_context->request_options,
                 model_context->model_request_inputs,
                 model_context->model_request_outputs);
-            model_context->profiler.EndEvent(id, status);
+            model_context->profiler_.EndEvent(id, status);
 
             if (kill_app_) return;
 
             size_t elapsed_us =
-                model_context->profiler
+                model_context->profiler_
                     .GetElapsedTimeAt<std::chrono::microseconds>(id);
 
             if (elapsed_us < period_us) {
@@ -123,42 +154,70 @@ void GraphRunner::RunPeriodic() {
 }
 
 void GraphRunner::RunStream() {
-  int run_duration_us = config_.running_time_ms * 1000;
-  int64_t start = time::NowMicros();
+  // get the only graph context
+  size_t graph_index = 0;
+  GraphContext* graph_context = graph_contexts_[0].get();
+  graph_index = profiler_.BeginEvent();
+  // prepare input for all vertices
+  graph_context->InitializeExecutionContext();
+
   while (true) {
-    std::vector<ModelId> model_ids;
-    std::vector<RequestOption> request_options;
-    std::vector<Tensors> inputs;
-    std::vector<Tensors> outputs;
-
-    for (auto model_context : vertices_) {
-      if (!model_context->PrepareInput().ok()) {
-        BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
-        continue;
-      }
-
-      model_ids.insert(model_ids.end(), model_context->model_ids.begin(),
-                       model_context->model_ids.end());
-      request_options.insert(request_options.end(),
-                             model_context->request_options.begin(),
-                             model_context->request_options.end());
-      inputs.insert(inputs.end(), model_context->model_request_inputs.begin(),
-                    model_context->model_request_inputs.end());
-      outputs.insert(outputs.end(),
-                     model_context->model_request_outputs.begin(),
-                     model_context->model_request_outputs.end());
+    // wait until all vertices are finished
+    if (runner_safe_bool_.wait()) {
+      break;
     }
 
-    size_t id = global_profiler_.BeginEvent();
+    if (graph_context->IsFinished()) {
+      profiler_.EndEvent(graph_index);
+      graph_index = profiler_.BeginEvent();
+      graph_context->InitializeExecutionContext();
+    }
+
+    // get next vertices to run
+    auto vertices = graph_context->GetNextVertices();
+    // aggregate model ids and request options
+    std::vector<ModelId> model_ids;
+    std::vector<RequestOption> request_options;
+    std::vector<Tensors> model_request_inputs;
+    std::vector<Tensors> model_request_outputs;
+
+    for (auto& vertex : vertices) {
+      model_ids.insert(model_ids.end(), vertex->model_ids.begin(),
+                       vertex->model_ids.end());
+      request_options.insert(request_options.end(),
+                             vertex->request_options.begin(),
+                             vertex->request_options.end());
+      model_request_inputs.insert(model_request_inputs.end(),
+                                  vertex->model_request_inputs.begin(),
+                                  vertex->model_request_inputs.end());
+      model_request_outputs.insert(model_request_outputs.end(),
+                                   vertex->model_request_outputs.begin(),
+                                   vertex->model_request_outputs.end());
+    }
+
+    size_t id = profiler_.BeginEvent();
     auto status =
-        engine_.RequestSync(model_ids, request_options, inputs, outputs);
-    global_profiler_.EndEvent(id, status);
-    int64_t current = time::NowMicros();
-    if (current - start >= run_duration_us) break;
+        engine_.RequestSync(model_ids, request_options, model_request_inputs,
+                            model_request_outputs);
   }
 }
 
 void GraphRunner::RunWorkload() { BAND_NOT_IMPLEMENTED; }
+
+void GraphRunner::OnJobFinished(JobId job_id, absl::Status status) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = job_id_to_graph_vertex_.find(job_id);
+  if (it == job_id_to_graph_vertex_.end()) {
+    BAND_LOG_PROD(BAND_LOG_WARNING,
+                  "Job id %d is not found in job_id_to_graph_vertex_", job_id);
+    return;
+  }
+  it->second.first->OnVertexFinished(it->second.second);
+  job_id_to_graph_vertex_.erase(it);
+
+  // notify runner thread if all vertices are finished for a single graph
+  runner_safe_bool_.notify();
+}
 
 void PrintHeader(std::string key, size_t indent_level = 0) {
   std::cout << std::left << std::string(indent_level * 2, ' ') << "<" << key
@@ -194,35 +253,35 @@ absl::Status GraphRunner::LogResults(size_t instance_id) {
     PrintLine("SLO scale", model_config.slo_scale, 2);
   }
 
-  auto print_profiler = [](const std::string& prefix,
-                           const BenchmarkProfiler& profiler,
-                           const Vertex* model_config = nullptr) {
+  auto print_profiler_ = [](const std::string& prefix,
+                            const BenchmarkProfiler& profiler_,
+                            const Vertex* model_config = nullptr) {
     const double batch_size = model_config ? model_config->batch_size : 1;
     double average_ms =
-        (profiler.GetAverageElapsedTime<std::chrono::milliseconds>() /
+        (profiler_.GetAverageElapsedTime<std::chrono::milliseconds>() /
          batch_size);
     double average_fps = 1000 / average_ms;
 
     PrintHeader("Result - " + prefix);
-    PrintLine("# Processed requests", profiler.GetNumEvents() * batch_size, 1);
+    PrintLine("# Processed requests", profiler_.GetNumEvents() * batch_size, 1);
     PrintLine("Avg. Latency (ms)", average_ms, 1);
     PrintLine("Avg. FPS", average_fps, 1);
-    PrintLine("Total # requests", profiler.GetNumEvents() * batch_size, 1);
+    PrintLine("Total # requests", profiler_.GetNumEvents() * batch_size, 1);
     PrintLine("Total # canceled requests",
-              profiler.GetNumCanceledEvents() * batch_size, 1);
+              profiler_.GetNumCanceledEvents() * batch_size, 1);
 
     if (model_config && model_config->slo_us > 0) {
       double slo_satisfactory_count = 0;
-      for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
-        if (!profiler.IsEventCanceled(i) &&
-            profiler.GetElapsedTimeAt<std::chrono::microseconds>(i) <
+      for (size_t i = 0; i < profiler_.GetNumEvents(); i++) {
+        if (!profiler_.IsEventCanceled(i) &&
+            profiler_.GetElapsedTimeAt<std::chrono::microseconds>(i) <
                 model_config->slo_us) {
           slo_satisfactory_count++;
         }
       }
 
       double num_events =
-          profiler.GetNumEvents() - profiler.GetNumCanceledEvents();
+          profiler_.GetNumEvents() - profiler_.GetNumCanceledEvents();
 
       PrintLine("SLO Satisfactory Rate (%)",
                 slo_satisfactory_count / num_events * 100, 1);
@@ -233,15 +292,14 @@ absl::Status GraphRunner::LogResults(size_t instance_id) {
     auto& model_context = vertices_[model_index];
     auto& model_config = config_.model_configs[model_index];
 
-    if (model_context->profiler.GetNumEvents() > 0) {
-      print_profiler(
+    if (model_context->profiler_.GetNumEvents() > 0) {
+      print_profiler_(
           model_context->model.GetBackendModel(target_backend_)->GetPath(),
-          model_context->profiler, &model_config);
+          model_context->profiler_, &model_config);
     }
   }
 
   return absl::OkStatus();
 }
 }  // namespace tool
-}  // namespace band
 }  // namespace band

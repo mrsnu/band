@@ -58,7 +58,7 @@ class Engine : public IEngine {
   absl::Status RegisterModel(Model* model);
   absl::Status UnregisterModel(Model* model);
 
-  Tensor* CreateTensor(ModelId model_id, int tensor_index);
+  Tensor* CreateTensor(ModelId model_id, int tensor_index) const;
   std::vector<int> GetOutputTensorIndices(ModelId model_id) const;
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
