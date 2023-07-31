@@ -1,5 +1,5 @@
-#ifndef BAND_TOOL_BENCHMARK_GRAPH_H_
-#define BAND_TOOL_BENCHMARK_GRAPH_H_
+#ifndef BAND_TOOL_GRAPH_CONTEXT_H_
+#define BAND_TOOL_GRAPH_CONTEXT_H_
 
 #include <map>
 #include <mutex>
@@ -14,10 +14,10 @@ namespace band {
 namespace tool {
 class EngineRunner;
 
-class BenchmarkGraph {
+class GraphContext {
  public:
-  BenchmarkGraph() = default;
-  ~BenchmarkGraph();
+  GraphContext() = default;
+  ~GraphContext();
 
   struct Vertex {
     Vertex(const Model& model, size_t batch_size, int worker_id,

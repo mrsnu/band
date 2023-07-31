@@ -15,7 +15,7 @@
 namespace band {
 namespace tool {
 
-class BenchmarkGraph;
+class GraphContext;
 class EngineRunner;
 
 class GraphRunner : public IRunner {
@@ -34,6 +34,9 @@ class GraphRunner : public IRunner {
   void RunStream();
   void RunWorkload();
 
+  // callback listener for engine
+  void OnJobFinished(JobId job_id);
+
   const BackendType target_backend_;
   EngineRunner& const engine_runner_;
   BenchmarkProfiler profiler;
@@ -43,7 +46,8 @@ class GraphRunner : public IRunner {
   size_t slo_ms_;
   float slo_scale_;
 
-  std::unique_ptr<BenchmarkGraph> graph_;
+  std::vector<std::unique_ptr<GraphContext>> graphs_;
+  std::map<JobId, std::pair<GraphContext*, size_t>> job_id_to_graph_vertex_;
   std::thread runner_thread_;
   bool kill_app_ = false;
 };

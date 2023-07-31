@@ -4,8 +4,8 @@
 
 #include "absl/strings/str_format.h"
 #include "band/engine.h"
-#include "band/tool/benchmark_graph.h"
 #include "band/tool/engine_runner.h"
+#include "band/tool/graph_context.h"
 
 namespace band {
 namespace tool {
@@ -50,8 +50,9 @@ absl::Status GraphRunner::Initialize(const Json::Value& root) {
     return absl::InvalidArgumentError("Please specify at list one model");
   }
 
-  graph_ = std::make_unique<BenchmarkGraph>(engine_runner_.GetEngine());
-  return graph_->Initialize(root, engine_runner_);
+  std::unique_ptr<GraphContext> temp_ctx =
+      std::make_unique<GraphContext>(engine_runner_.GetEngine());
+  return temp_ctx->Initialize(root, engine_runner_);
 }
 
 absl::Status GraphRunner::Run() {

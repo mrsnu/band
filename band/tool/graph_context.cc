@@ -1,4 +1,4 @@
-#include "band/tool/benchmark_graph.h"
+#include "band/tool/graph_context.h"
 
 #include <algorithm>
 #include <queue>
@@ -24,7 +24,7 @@ void CreateRandomTensorData(void* target_ptr, int num_elements,
   });
 }
 
-BenchmarkGraph::Vertex::~Vertex() {
+GraphContext::Vertex::~Vertex() {
   auto delete_tensors = [](Tensors& tensors) {
     for (auto t : tensors) {
       delete t;
@@ -42,7 +42,7 @@ BenchmarkGraph::Vertex::~Vertex() {
   delete_tensors(model_inputs);
 }
 
-absl::Status BenchmarkGraph::Vertex::PrepareInput() {
+absl::Status GraphContext::Vertex::PrepareInput() {
   for (int batch_index = 0; batch_index < model_request_inputs.size();
        batch_index++) {
     for (int input_index = 0; input_index < model_inputs.size();
@@ -58,7 +58,7 @@ absl::Status BenchmarkGraph::Vertex::PrepareInput() {
   return absl::OkStatus();
 }
 
-void BenchmarkGraph::Vertex::InitializeContext(Engine& engine) {
+void GraphContext::Vertex::InitializeContext(Engine& engine) {
   const int model_id = model.GetId();
   const auto input_indices = engine.GetInputTensorIndices(model_id);
   const auto output_indices = engine.GetOutputTensorIndices(model_id);
@@ -130,7 +130,7 @@ void BenchmarkGraph::Vertex::InitializeContext(Engine& engine) {
   }
 }
 
-const RequestOption BenchmarkGraph::Vertex::GetRequestOption() const {
+const RequestOption GraphContext::Vertex::GetRequestOption() const {
   RequestOption option = RequestOption::GetDefaultOption();
   if (worker_id >= 0) {
     option.target_worker = worker_id;
@@ -138,14 +138,14 @@ const RequestOption BenchmarkGraph::Vertex::GetRequestOption() const {
   return option;
 }
 
-BenchmarkGraph::~BenchmarkGraph() {
+GraphContext::~GraphContext() {
   for (auto vertex : vertices_) {
     delete vertex;
   }
 }
 
-absl::Status BenchmarkGraph::Initialize(const Json::Value& root,
-                                        const EngineRunner& engine_runner) {
+absl::Status GraphContext::Initialize(const Json::Value& root,
+                                      const EngineRunner& engine_runner) {
   for (auto vertex_key : root["vertices"].getMemberNames()) {
     if (!root["vertices"][vertex_key].isObject()) {
       return absl::InvalidArgumentError(
@@ -236,13 +236,12 @@ absl::Status BenchmarkGraph::Initialize(const Json::Value& root,
   return CheckCycles();
 }
 
-void BenchmarkGraph::InitializeExecutionContext() {
+void GraphContext::InitializeExecutionContext() {
   std::lock_guard<std::mutex> lock(mutex_);
   finished_vertices_.clear();
 }
 
-std::vector<const BenchmarkGraph::Vertex*> BenchmarkGraph::GetNextVertices()
-    const {
+std::vector<const GraphContext::Vertex*> GraphContext::GetNextVertices() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<const Vertex*> vertices;
   std::set<size_t> resolved_vertex_ids = GetResolvedVertexIds();
@@ -258,17 +257,17 @@ std::vector<const BenchmarkGraph::Vertex*> BenchmarkGraph::GetNextVertices()
   return vertices;
 }
 
-void BenchmarkGraph::OnVertexFinished(size_t vertex_id) {
+void GraphContext::OnVertexFinished(size_t vertex_id) {
   std::lock_guard<std::mutex> lock(mutex_);
   finished_vertices_.insert(vertex_id);
 }
 
-bool BenchmarkGraph::IsFinished() const {
+bool GraphContext::IsFinished() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return finished_vertices_.size() == vertices_.size();
 }
 
-std::set<size_t> BenchmarkGraph::GetResolvedVertexIds() const {
+std::set<size_t> GraphContext::GetResolvedVertexIds() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::set<size_t> resolved_vertices;
   // A vertex is resolved if all its incoming edges are resolved
@@ -288,7 +287,7 @@ std::set<size_t> BenchmarkGraph::GetResolvedVertexIds() const {
   return resolved_vertices;
 }
 
-absl::Status BenchmarkGraph::CheckCycles() const {
+absl::Status GraphContext::CheckCycles() const {
   std::vector<size_t> num_incoming_edges(vertices_.size(), 0);
   std::queue<size_t> queue;
   size_t num_visited_vertices = 0;
