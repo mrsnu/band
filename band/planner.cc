@@ -186,10 +186,13 @@ void Planner::EnqueueFinishedJob(Job& job) {
   finished_lock.unlock();
 
   // report end invoke using callback
-  if (on_end_request_ && job.require_callback && is_finished) {
-    on_end_request_(job.job_id, job.status == JobStatus::kSuccess
-                                    ? absl::OkStatus()
-                                    : absl::InternalError("Job failed."));
+  if (job.require_callback && is_finished) {
+    std::unique_lock<std::mutex> callback_lock(on_end_request_mtx_);
+    for (auto& id_callback : on_end_request_callbacks_) {
+      id_callback.second(job.job_id, job.status == JobStatus::kSuccess
+                                         ? absl::OkStatus()
+                                         : absl::InternalError("Job failed."));
+    }
   }
 }
 
