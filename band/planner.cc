@@ -13,6 +13,7 @@
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
+#include "planner.h"
 
 namespace band {
 
@@ -227,9 +228,18 @@ Job Planner::GetFinishedJob(int job_id) {
   }
 }
 
-void Planner::SetOnEndRequest(
+CallbackId Planner::SetOnEndRequest(
     std::function<void(int, absl::Status)> on_end_request) {
-  on_end_request_ = on_end_request;
+  std::lock_guard<std::mutex> lock(on_end_request_mtx_);
+  on_end_request_callbacks_[next_callback_id_] = on_end_request;
+}
+
+void Planner::UnsetOnEndRequest(CallbackId callback_id) {
+  std::lock_guard<std::mutex> lock(on_end_request_mtx_);
+  if (on_end_request_callbacks_.find(callback_id) !=
+      on_end_request_callbacks_.end()) {
+    on_end_request_callbacks_.erase(callback_id);
+  }
 }
 
 int Planner::GetWorkerType() const {
