@@ -19,6 +19,7 @@
 
 #include <jni.h>
 
+#include "band/buffer/image_processor.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
@@ -56,6 +57,13 @@ struct JNIRuntimeConfig {
   JNIRuntimeConfig(RuntimeConfig config) : impl(config) {}
 
   RuntimeConfig impl;
+};
+
+struct JNIImageProcessor {
+  JNIImageProcessor(std::unique_ptr<BufferProcessor> processor)
+      : impl(std::move(processor)) {}
+
+  std::unique_ptr<BufferProcessor> impl;
 };
 
 void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...);
