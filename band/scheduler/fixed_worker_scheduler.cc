@@ -3,6 +3,7 @@
 #include "band/error_reporter.h"
 
 namespace band {
+
 bool FixedWorkerScheduler::Schedule(JobQueue& requests) {
   bool success = true;
   // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
@@ -15,8 +16,8 @@ bool FixedWorkerScheduler::Schedule(JobQueue& requests) {
     // (1) : direct request from the engine
     // (2) : predefined mapping from the config
     WorkerId worker_id = to_execute.HasTargetWorker()
-                             ? engine_.GetModelWorker(model_id)
-                             : to_execute.target_worker_id();
+                             ? to_execute.target_worker_id()
+                             : engine_.GetModelWorker(model_id);
     SubgraphKey key = engine_.GetLargestSubgraphKey(model_id, worker_id);
     success &= engine_.EnqueueToWorker({to_execute, key});
   }

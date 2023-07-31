@@ -222,14 +222,14 @@ void Planner::SetWindowSize(int schedule_window_size) {
   schedule_window_size_ = schedule_window_size;
 }
 
-Job Planner::GetFinishedJob(int job_id) {
+absl::StatusOr<Job> Planner::GetFinishedJob(int job_id) {
   std::lock_guard<std::mutex> request_lock(requests_.mtx);
-  if (IsJobIdValid(job_id) &&
+  if (!IsJobIdValid(job_id) &&
       jobs_finished_record_[GetJobRecordIndex(job_id)].id() != -1) {
-    return jobs_finished_record_[GetJobRecordIndex(job_id)];
-  } else {
-    return Job();
+    return absl::InternalError(
+        absl::StrFormat("Job id %d is not valid.", job_id));
   }
+  return jobs_finished_record_[GetJobRecordIndex(job_id)];
 }
 
 void Planner::SetOnEndRequest(
@@ -305,7 +305,8 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
   for (auto& action : actions) {
     Job job = action.first;
     SubgraphKey target_key = action.second;
-
+    BAND_LOG_PROD(BAND_LOG_INFO, "SubgraphKey: %s",
+                  target_key.ToString().c_str());
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
       BAND_LOG_PROD(BAND_LOG_ERROR,
@@ -368,27 +369,6 @@ bool Planner::IsSLOViolated(Job& job) {
     }
   }
   return false;
-}
-
-void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
-  // job.subgraph_key = target_key;
-  // job.profiled_execution_time = engine_.GetProfiled(target_key);
-  // job.expected_execution_time = engine_.GetExpected(target_key);
-  // job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
-
-  // if (!engine_.IsEnd(target_key)) {
-  //   Job remaining_ops(job.id(), job.model_id(), job.input_handle(),
-  //                     job.output_handle(), job.slo_us());
-  //   remaining_ops.enqueue_time = job.enqueue_time;
-  //   remaining_ops.following_jobs = job.following_jobs;
-  //   remaining_ops.expected_latency = job.expected_latency;
-  //   remaining_ops.resolved_unit_subgraphs = job.resolved_unit_subgraphs;
-  //   remaining_ops.previous_subgraph_keys = job.previous_subgraph_keys;
-  //   remaining_ops.previous_subgraph_keys.emplace_back(job.subgraph_key);
-
-  //   job.following_jobs.clear();
-  //   job.following_jobs.push_back(remaining_ops);
-  // }
 }
 
 bool Planner::IsJobIdValid(int job_id) {

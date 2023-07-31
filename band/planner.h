@@ -70,7 +70,7 @@ class Planner {
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
   // Get the Job instance with the `job_id`.
-  Job GetFinishedJob(int job_id);
+  absl::StatusOr<Job> GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
   std::map<ModelId, WorkerId>& GetModelWorkerMap() { return model_worker_map_; }
@@ -87,8 +87,6 @@ class Planner {
   // This func assumes that workers_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.
   bool IsSLOViolated(Job& job);
-  // Update the job information based on next target key
-  void UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key);
   // Update `model_worker_map_`.
   void TryUpdateModelWorkerMapping();
   bool IsJobIdValid(int job_id);

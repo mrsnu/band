@@ -51,7 +51,6 @@ class Job {
   bool HasTargetWorker() const { return target_worker_id_ != -1; };
 
   bool IsEnqueued() const;
-  std::string ToJson() const;
 
   // Methods for job construction.
   absl::Status RequireCallback() {
@@ -85,6 +84,9 @@ class Job {
   Job Next(const SubgraphKey& target_key, int profiled_execution_time,
            int expected_execution_time, bool last);
 
+  std::string ToJson() const;
+  std::string ToString() const;
+
   // Constant variables (Valid after invoke)
 
   // For record (Valid after execution)
@@ -109,10 +111,10 @@ class Job {
  private:
   Status status_ = Status::kNone;
 
+  JobId id_ = -1;
   ModelId model_id_ = -1;
   int input_handle_ = -1;
   int output_handle_ = -1;
-  JobId id_ = -1;
   int64_t slo_us_ = -1;
   bool require_callback_ = false;
 

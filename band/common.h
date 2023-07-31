@@ -26,7 +26,7 @@ size_t EnumLength() {
 }
 
 template <typename EnumType>
-std::string ToString(EnumType t) {
+const char* ToString(EnumType t) {
   assert(false && "ToString is not implemented for this type.");
   return "";
 }
@@ -154,23 +154,23 @@ template <>
 size_t EnumLength<QuantizationType>();
 
 template <>
-std::string ToString(BackendType backend_type);
+const char* ToString(BackendType backend_type);
 template <>
-std::string ToString(SchedulerType scheduler_type);
+const char* ToString(SchedulerType scheduler_type);
 template <>
-std::string ToString(CPUMaskFlag cpu_mask_flag);
+const char* ToString(CPUMaskFlag cpu_mask_flag);
 template <>
-std::string ToString(SubgraphPreparationType subgraph_preparation_type);
+const char* ToString(SubgraphPreparationType subgraph_preparation_type);
 template <>
-std::string ToString(DataType data_type);
+const char* ToString(DataType data_type);
 template <>
-std::string ToString(BufferFormat buffer_format);
+const char* ToString(BufferFormat buffer_format);
 template <>
-std::string ToString(BufferOrientation buffer_orientation);
+const char* ToString(BufferOrientation buffer_orientation);
 template <>
-std::string ToString(DeviceFlag device_flag);
+const char* ToString(DeviceFlag device_flag);
 template <>
-std::string ToString(QuantizationType);
+const char* ToString(QuantizationType);
 
 struct AffineQuantizationParams {
   std::vector<float> scale;

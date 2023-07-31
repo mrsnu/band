@@ -173,11 +173,12 @@ ModelAnalyzer::ModelAnalyzer(const IEngine& engine, bool need_fallback_subgraph,
   for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
     BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
                   SetToString(device_unsupported_ops.second).c_str(),
-                  ToString(device_unsupported_ops.first).c_str());
+                  ToString(device_unsupported_ops.first));
   }
 
   for (auto device : model_spec_->unavailable_devices) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", ToString(device));
+    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s",
+                  ToString(device));
   }
 }
 
@@ -271,7 +272,7 @@ ModelAnalyzer::CreateSubgraphs() {
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d subgraphs for model %s with mode %s %s",
                 subgraph_defs.size(), model_spec_->path.c_str(),
-                ToString(subgraph_config_.subgraph_preparation_type).c_str(),
+                ToString(subgraph_config_.subgraph_preparation_type),
                 subgraph_summary.c_str());
 
   return std::make_pair(*model_spec_, subgraph_defs);

@@ -175,7 +175,7 @@ void Worker::Work() {
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
                         "enqueue time %d, invoke time %d, end time %d)",
-                        ToString(device_flag_).c_str(), current_job->model_id(),
+                        ToString(device_flag_), current_job->model_id(),
                         current_job->subgraph_key.IsValid(),
                         current_job->subgraph_key.GetModelId(),
                         current_job->subgraph_key.GetWorkerId(),

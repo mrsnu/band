@@ -407,14 +407,14 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
 
     {
       if (i < inputs.size()) {
-        int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
+        int input_handle_ = model_input_buffer_[model_ids[i]]->Alloc();
         if (!model_input_buffer_[model_ids[i]]
-                 ->PutTensorsToHandle(inputs[i], input_handle)
+                 ->PutTensorsToHandle(inputs[i], input_handle_)
                  .ok()) {
           return absl::InternalError(
               absl::StrFormat("Input copy failure for model %d", model_ids[i]));
         }
-        input_handle = input_handle;
+        input_handle = input_handle_;
         output_handle = model_output_buffer_[model_ids[i]]->Alloc();
       }
     }
@@ -458,7 +458,11 @@ absl::Status Engine::Wait(std::vector<JobId> job_ids,
 void Engine::WaitAll() { planner_->WaitAll(); }
 
 absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
-  Job job = planner_->GetFinishedJob(job_id);
+  auto status_or_job = planner_->GetFinishedJob(job_id);
+  if (!status_or_job.ok()) {
+    return status_or_job.status();
+  }
+  Job job = status_or_job.value();
 
   if (outputs.empty() || job_id == -1) {
     return absl::InternalError(
