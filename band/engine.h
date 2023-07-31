@@ -107,7 +107,6 @@ class Engine : public IEngine {
   absl::Status Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
-  WorkerId GetModelWorker(ModelId model_id) const override;
 
   /* utility funtions for unit-level scheduling */
   std::pair<SubgraphKey, int64_t> GetShortestLatency(

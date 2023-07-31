@@ -39,13 +39,6 @@ struct MockEngine : public MockEngineBase {
         0 /*shortest expected latency*/);
   }
 
-  WorkerId GetModelWorker(ModelId model_id) const override {
-    if (w > list_idle_workers_.size())
-      return -1;
-    else
-      return list_idle_workers_[w++];
-  }
-
   WorkerWaitingTime GetWorkerWaitingTime() const override {
     WorkerWaitingTime map;
     for (auto worker_id : list_idle_workers_) {
@@ -148,7 +141,10 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerTest) {
 
   std::deque<Job> requests;
   for (auto it = request_models.begin(); it != request_models.end(); it++) {
-    requests.emplace_back(Job(*it, 0, 0));
+    Job job(*it, 0, 0);
+    auto status = job.SetTargetWorker(0);
+    EXPECT_EQ(status, absl::OkStatus());
+    requests.emplace_back(job);
   }
   const int count_requests = requests.size();
 

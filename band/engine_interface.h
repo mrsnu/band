@@ -63,7 +63,6 @@ class IEngine {
 
   /* model */
   virtual const ModelSpec* GetModelSpec(ModelId model_id) const = 0;
-  virtual WorkerId GetModelWorker(ModelId model_id) const = 0;
 
   /* scheduling */
 

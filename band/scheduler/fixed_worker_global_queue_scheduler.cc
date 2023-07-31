@@ -25,7 +25,7 @@ bool FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
   //   if (worker_id >= 0 && GetModelExecutor()->GetNumWorkers()) {
   //     worker_id = to_execute.worker_id;
   //   } else {
-  //     worker_id = planner_->GetModelWorkerMap()[model_id];
+  //     worker_id = 0;
   //   }
 
   //   auto idle_workers_it = idle_workers.find(worker_id);

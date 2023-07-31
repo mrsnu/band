@@ -59,7 +59,7 @@ TEST(ResourceMonitorTest, GetThermalTest) {
 
   for (size_t i = 0; i < num_tz; ++i) {
     auto temp = monitor.GetThermal(ThermalFlag::TZ_TEMPERATURE, i);
-    EXPECT_TRUE(temp.ok());
+    EXPECT_EQ(temp, absl::OkStatus());
     std::cout << "Thermal " << i << ": " << temp.value() << std::endl;
   }
 #endif  // BAND_IS_MOBILE
@@ -98,25 +98,25 @@ TEST(ResourceMonitorTest, GetDevFreqTest) {
 
   for (auto& valid_device : valid_devices) {
     auto cur_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::CUR_FREQ);
-    EXPECT_TRUE(cur_freq.ok());
+    EXPECT_EQ(cur_freq, absl::OkStatus());
     std::cout << "DevFreq " << ToString(valid_device)
               << " CUR_FREQ: " << cur_freq.value() << std::endl;
     auto target_freq =
         monitor.GetDevFreq(valid_device, DevFreqFlag::TARGET_FREQ);
-    EXPECT_TRUE(target_freq.ok());
+    EXPECT_EQ(target_freq, absl::OkStatus());
     std::cout << "DevFreq " << ToString(valid_device)
               << " TARGET_FREQ: " << target_freq.value() << std::endl;
     auto min_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::MIN_FREQ);
-    EXPECT_TRUE(min_freq.ok());
+    EXPECT_EQ(min_freq, absl::OkStatus());
     std::cout << "DevFreq " << ToString(valid_device)
               << " MIN_FREQ: " << min_freq.value() << std::endl;
     auto max_freq = monitor.GetDevFreq(valid_device, DevFreqFlag::MAX_FREQ);
-    EXPECT_TRUE(max_freq.ok());
+    EXPECT_EQ(max_freq, absl::OkStatus());
     std::cout << "DevFreq " << ToString(valid_device)
               << " MAX_FREQ: " << max_freq.value() << std::endl;
     auto polling_interval =
         monitor.GetDevFreq(valid_device, DevFreqFlag::POLLING_INTERVAL);
-    EXPECT_TRUE(polling_interval.ok());
+    EXPECT_EQ(polling_interval, absl::OkStatus());
     std::cout << "DevFreq " << ToString(valid_device)
               << " POLLING_INTERVAL: " << polling_interval.value() << std::endl;
   }
@@ -162,30 +162,30 @@ TEST(ResourceMonitorTest, GetCpuFreqTest) {
 
   for (auto& cpu_mask : valid_cpus) {
     auto cur_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::CUR_FREQ);
-    EXPECT_TRUE(cur_freq.ok());
+    EXPECT_EQ(cur_freq, absl::OkStatus());
     std::cout << "CpuFreq " << ToString(cpu_mask)
               << " CUR_FREQ: " << cur_freq.value() << std::endl;
     auto target_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::TARGET_FREQ);
-    EXPECT_TRUE(target_freq.ok());
+    EXPECT_EQ(target_freq, absl::OkStatus());
     std::cout << "CpuFreq " << ToString(cpu_mask)
               << " TARGET_FREQ: " << target_freq.value() << std::endl;
     auto min_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MIN_FREQ);
-    EXPECT_TRUE(min_freq.ok());
+    EXPECT_EQ(min_freq, absl::OkStatus());
     std::cout << "CpuFreq " << ToString(cpu_mask)
               << " MIN_FREQ: " << min_freq.value() << std::endl;
     auto max_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MAX_FREQ);
-    EXPECT_TRUE(max_freq.ok());
+    EXPECT_EQ(max_freq, absl::OkStatus());
     std::cout << "CpuFreq " << ToString(cpu_mask)
               << " MAX_FREQ: " << max_freq.value() << std::endl;
     auto up_transition_latency =
         monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::UP_TRANSITION_LATENCY);
-    EXPECT_TRUE(up_transition_latency.ok());
+    EXPECT_EQ(up_transition_latency, absl::OkStatus());
     std::cout << "CpuFreq " << ToString(cpu_mask)
               << " UP_TRANSITION_LATENCY: " << up_transition_latency.value()
               << std::endl;
     auto down_transition_latency =
         monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::DOWN_TRANSITION_LATENCY);
-    EXPECT_TRUE(down_transition_latency.ok());
+    EXPECT_EQ(down_transition_latency, absl::OkStatus());
     std::cout << "CpuFreq " << ToString(cpu_mask)
               << " DOWN_TRANSITION_LATENCY: " << down_transition_latency.value()
               << std::endl;

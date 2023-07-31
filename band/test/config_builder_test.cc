@@ -22,7 +22,7 @@ TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   EXPECT_FALSE(b.Build().ok());
   b.AddNumRuns(1);
   b.AddOnline(true);
-  EXPECT_TRUE(b.Build().ok());
+  EXPECT_EQ(b.Build().status(), absl::OkStatus());
 }
 
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
@@ -61,7 +61,7 @@ TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
 
   EXPECT_FALSE(b.Build().ok());
   b.AddWorkers({DeviceFlag::kCPU, DeviceFlag::kGPU});
-  EXPECT_TRUE(b.Build().ok());
+  EXPECT_EQ(b.Build().status(), absl::OkStatus());
 }
 
 TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {

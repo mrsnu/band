@@ -73,7 +73,6 @@ class Planner {
   absl::StatusOr<Job> GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
   int GetWorkerType() const;
-  std::map<ModelId, WorkerId>& GetModelWorkerMap() { return model_worker_map_; }
 
  private:
   // Main loop for planner_thread_
@@ -87,8 +86,6 @@ class Planner {
   // This func assumes that workers_waiting_, job.profiled_time,
   // job.device_id, and job.enqueue_time are all up to date.
   bool IsSLOViolated(Job& job);
-  // Update `model_worker_map_`.
-  void TryUpdateModelWorkerMapping();
   bool IsJobIdValid(int job_id);
   int GetJobRecordIndex(int job_id) const;
 
@@ -121,8 +118,6 @@ class Planner {
   int schedule_window_size_ = std::numeric_limits<int>::max();
 
   std::thread planner_thread_;
-  // Map structure to find assigned worker of model idx (model_id, worker_id)
-  std::map<ModelId, WorkerId> model_worker_map_;
   IEngine& engine_;
 };
 

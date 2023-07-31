@@ -621,10 +621,6 @@ const ModelSpec* Engine::GetModelSpec(ModelId model_id) const {
   }
 }
 
-WorkerId Engine::GetModelWorker(ModelId model_id) const {
-  return planner_->GetModelWorkerMap()[model_id];
-}
-
 bool Engine::IsBegin(const SubgraphKey& key) const {
   const ModelSpec* model_spec = GetModelSpec(key.GetModelId());
   if (!model_spec) {

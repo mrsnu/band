@@ -30,9 +30,9 @@ TEST(TFLiteBackend, BackendInvoke) {
   EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
   tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlag::kCPU);
   EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), absl::OkStatus());
-  EXPECT_TRUE(
-      model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey())
-          .ok());
+  EXPECT_EQ(
+      model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey()),
+      absl::OkStatus());
 }
 
 TEST(TFLiteBackend, ModelSpec) {
@@ -118,8 +118,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite"),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -137,7 +137,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
   EXPECT_EQ(
-      engine->RequestSync(model.GetId(), RequestOption::GetDefaultOption(),
+      engine->RequestSync(model.GetId(), {0, true, -1, -1.f},
                           {input_tensor}, {output_tensor}),
       absl::OkStatus());
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
@@ -176,8 +176,8 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite"),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   EXPECT_GE(
@@ -214,8 +214,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite"),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -283,8 +283,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite"),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -302,11 +302,10 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
     std::cout << "Run on worker (device: "
               << ToString(engine->GetWorkerDevice(worker_id)) << ")"
               << std::endl;
-    EXPECT_TRUE(engine
-                    ->RequestSync(model.GetId(),
+    EXPECT_EQ(engine->RequestSync(model.GetId(),
                                   {static_cast<int>(worker_id), true, -1, -1},
-                                  {input_tensor}, {output_tensor})
-                    .ok());
+                                  {input_tensor}, {output_tensor}),
+              absl::OkStatus());
     EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
     EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
 
@@ -354,8 +353,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   EXPECT_TRUE(engine);
 
   Model model;
-  EXPECT_TRUE(
-      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite"),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   int execution_count = 0;
@@ -364,15 +363,13 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   });
 
   for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
-    EXPECT_TRUE(engine
-                    ->RequestSync(model.GetId(),
-                                  {static_cast<int>(worker_id), true, -1, -1})
-                    .ok());
+    EXPECT_EQ(engine->RequestSync(model.GetId(),
+                                  {static_cast<int>(worker_id), true, -1, -1}),
+              absl::OkStatus());
     EXPECT_EQ(execution_count, worker_id + 1);
-    EXPECT_TRUE(engine
-                    ->RequestSync(model.GetId(),
-                                  {static_cast<int>(worker_id), false, -1, -1})
-                    .ok());
+    EXPECT_EQ(engine->RequestSync(model.GetId(),
+                                  {static_cast<int>(worker_id), false, -1, -1}),
+              absl::OkStatus());
     EXPECT_EQ(execution_count, worker_id + 1);
   }
 }
@@ -414,10 +411,9 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
   std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
 
   Model model;
-  EXPECT_TRUE(model
-                  .FromPath(BackendType::kTfLite,
-                            "band/test/data/mobilenet_v2_1.0_224_quant.tflite")
-                  .ok());
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite,
+                           "band/test/data/mobilenet_v2_1.0_224_quant.tflite"),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -428,16 +424,15 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
   // by default, the image is resized to input size
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
       preprocessor_builder.Build();
-  EXPECT_TRUE(preprocessor.ok());
-  EXPECT_TRUE(
-      preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
+  EXPECT_EQ(preprocessor.status(), absl::OkStatus());
+  EXPECT_EQ(
+      preprocessor.value()->Process(*image_buffer, *tensor_buffer), absl::OkStatus());
   // confirm that the image is resized to 224x224 and converted to RGB
   Tensor* output_tensor = engine->CreateTensor(
       model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-  EXPECT_TRUE(engine
-                  ->RequestSync(model.GetId(), {0, false, -1, -1},
-                                {input_tensor}, {output_tensor})
-                  .ok());
+  EXPECT_EQ(engine->RequestSync(model.GetId(), {0, false, -1, -1},
+                                {input_tensor}, {output_tensor}),
+            absl::OkStatus());
 
   // TODO: postprocessing library
   std::vector<unsigned char> output_data;
@@ -494,12 +489,12 @@ TEST(TFLiteBackend, ClassificationTest) {
   std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
 
   Model model;
-  EXPECT_TRUE(
+  EXPECT_EQ(
       model
           .FromPath(
               BackendType::kTfLite,
               "band/test/data/lite-model_mobilenet_v2_100_224_fp32_1.tflite")
-          .ok());
+          , absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -511,9 +506,9 @@ TEST(TFLiteBackend, ClassificationTest) {
       .AddOperation(std::make_unique<buffer::Normalize>(127.5f, 127.5f, false));
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
       preprocessor_builder.Build();
-  EXPECT_TRUE(preprocessor.ok());
-  EXPECT_TRUE(
-      preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
+  EXPECT_EQ(preprocessor.status(), absl::OkStatus());
+  EXPECT_EQ(
+      preprocessor.value()->Process(*image_buffer, *tensor_buffer), absl::OkStatus());
 
   for (size_t i = 0; i < input_tensor->GetNumElements(); ++i) {
     EXPECT_GT(reinterpret_cast<float*>(input_tensor->GetData())[i], -1.0f);
@@ -523,10 +518,10 @@ TEST(TFLiteBackend, ClassificationTest) {
   // confirm that the image is resized to 224x224 and converted to RGB
   Tensor* output_tensor = engine->CreateTensor(
       model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-  EXPECT_TRUE(engine
+  EXPECT_EQ(engine
                   ->RequestSync(model.GetId(), {0, false, -1, -1},
                                 {input_tensor}, {output_tensor})
-                  .ok());
+                  , absl::OkStatus());
 
   // TODO: postprocessing library
   std::vector<float> output_data;

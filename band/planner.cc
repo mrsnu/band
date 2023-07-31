@@ -305,8 +305,6 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
   for (auto& action : actions) {
     Job job = action.first;
     SubgraphKey target_key = action.second;
-    BAND_LOG_PROD(BAND_LOG_INFO, "SubgraphKey: %s",
-                  target_key.ToString().c_str());
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
       BAND_LOG_PROD(BAND_LOG_ERROR,

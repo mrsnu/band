@@ -12,12 +12,13 @@ TEST(BenchmarkTest, BenchmarkConfigLoadSuccess) {
 }
 
 TEST(BenchmarkTest, BenchmarkConfigLoadFail) {
-  // intentionally silent the log, to avoid the test failure due to the error log
+  // intentionally silent the log, to avoid the test failure due to the error
+  // log
   Logger::SetVerbosity(BAND_LOG_NUM_SEVERITIES);
   tool::Benchmark benchmark;
   const char* argv[] = {"", ""};
-  EXPECT_TRUE(!benchmark.Initialize(2, argv).ok());
-  EXPECT_TRUE(!benchmark.Initialize(1, argv).ok());
+  EXPECT_FALSE(benchmark.Initialize(2, argv).ok());
+  EXPECT_FALSE(benchmark.Initialize(1, argv).ok());
 }
 
 TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
