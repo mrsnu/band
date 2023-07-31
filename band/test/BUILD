@@ -140,9 +140,6 @@ band_cc_android_test(
     name = "tfl_minimal_test",
     size = "small",
     srcs = ["backend/tfl_minimal_test.cc"],
-    copts = [
-        "-DTF_LITE_STRIP_ERROR_STRINGS",
-    ],
     data = [
         "//band/test:data/add.tflite",
         "//band/test:data/cat.jpg",
@@ -176,9 +173,6 @@ band_cc_android_test(
     name = "tfl_subgraph_test",
     size = "enormous",
     srcs = ["backend/tfl_subgraph_test.cc"],
-    copts = [
-        "-DTF_LITE_STRIP_ERROR_STRINGS",
-    ],
     data = [
         "//band/test:data/ICN_quant.tflite",
         "//band/test:data/lite-model_efficientdet_lite0_int8_1.tflite",

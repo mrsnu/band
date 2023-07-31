@@ -2,12 +2,11 @@
 #ifndef BAND_BACKEND_TFL_UTIL_H_
 #define BAND_BACKEND_TFL_UTIL_H_
 
+#include "absl/status/status.h"
+#include "band/backend/tfl/tensorflow.h"
 #include "band/common.h"
 #include "band/interface/backend.h"
 
-#include "tensorflow/lite/c/common.h"
-
-#include "absl/status/status.h"
 
 namespace band {
 namespace tfl {

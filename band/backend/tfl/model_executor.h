@@ -1,8 +1,8 @@
 #ifndef BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 #define BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 
+#include "band/backend/tfl/tensorflow.h"
 #include "band/interface/model_executor.h"
-#include "tensorflow/lite/interpreter.h"
 
 namespace band {
 namespace tfl {

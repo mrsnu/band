@@ -19,14 +19,12 @@ band_cc_library(
         "model_executor.h",
         "model.h",
         "tensor.h",
+        "tensorflow.h",
         "util.h",
     ],
     # force to link band::TfLiteRegisterCreators (in backend.cc)
     # to override the weak symbol in //band:backend_factory
     alwayslink = True,
-    copts = [
-        "-DTF_LITE_STRIP_ERROR_STRINGS"
-    ],
     deps = [
         "//band:framework",
         "@org_tensorflow//tensorflow/lite:framework",

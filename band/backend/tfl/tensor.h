@@ -1,8 +1,8 @@
 #ifndef BAND_BACKEND_TFL_TENSOR_H_
 #define BAND_BACKEND_TFL_TENSOR_H_
 
+#include "band/backend/tfl/tensorflow.h"
 #include "band/interface/tensor_view.h"
-#include "tensorflow/lite/c/common.h"
 
 namespace band {
 namespace tfl {
