@@ -77,8 +77,6 @@ class Planner {
  private:
   // Main loop for planner_thread_
   absl::Status Plan();
-  // Write job logs and delete the job from the finished queue.
-  void FlushFinishedJobs();
   // Copy the Job instances from the `requests_` to the local queue.
   // Note that this function is to minimize the hold time for the queue lock.
   void CopyToLocalQueues();
