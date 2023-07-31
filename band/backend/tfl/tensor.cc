@@ -1,6 +1,6 @@
 #include "band/backend/tfl/tensor.h"
 
-#include "tensorflow/lite/context_util.h"
+#include "band/backend/tfl/tensorflow.h"
 
 // memcpy
 #include <string.h>

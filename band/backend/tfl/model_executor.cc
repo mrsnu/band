@@ -8,17 +8,6 @@
 #include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/worker.h"
-#include "tensorflow/lite/context_util.h"
-#include "tensorflow/lite/core/subgraph.h"
-
-#if defined(__ANDROID__)
-#include "tensorflow/lite/delegates/gpu/delegate.h"
-#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
-#include "tensorflow/lite/nnapi/nnapi_util.h"
-#endif  // __ANDROID__
-#include "absl/strings/str_format.h"
-#include "tensorflow/lite/interpreter_builder.h"
-#include "tensorflow/lite/kernels/register.h"
 
 namespace band {
 namespace tfl {
