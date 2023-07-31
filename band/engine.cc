@@ -17,6 +17,7 @@
 #include "band/planner.h"
 #include "band/tensor.h"
 #include "band/worker.h"
+#include "engine.h"
 
 namespace band {
 
@@ -484,9 +485,13 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   return absl::OkStatus();
 }
 
-void Engine::SetOnEndRequest(
+CallbackId Engine::SetOnEndRequest(
     std::function<void(int, absl::Status)> on_end_request) {
-  planner_->SetOnEndRequest(on_end_request);
+  return planner_->SetOnEndRequest(on_end_request);
+}
+
+void Engine::UnsetOnEndRequest(CallbackId callback_id) {
+  planner_->UnsetOnEndRequest(callback_id);
 }
 
 absl::Status Engine::Init(const RuntimeConfig& config) {

@@ -15,6 +15,7 @@ namespace band {
 typedef int WorkerId;
 typedef int ModelId;
 typedef int JobId;
+typedef int CallbackId;
 
 using BitMask = std::bitset<64>;
 
