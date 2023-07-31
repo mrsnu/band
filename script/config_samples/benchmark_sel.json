@@ -6,7 +6,7 @@
             "batch_size": 3
         }
     ],
-    "log_path": "/data/local/tmp/log.csv",
+    "log_path": "/data/local/tmp/log.json",
     "schedulers": [
         "shortest_expected_latency"
     ],

@@ -51,11 +51,11 @@ template <>
 size_t EnumLength<CpuFreqFlag>();
 
 template <>
-const char* ToString<ThermalFlag>(ThermalFlag flag);
+std::string ToString<ThermalFlag>(ThermalFlag flag);
 template <>
-const char* ToString<DevFreqFlag>(DevFreqFlag flag);
+std::string ToString<DevFreqFlag>(DevFreqFlag flag);
 template <>
-const char* ToString<CpuFreqFlag>(CpuFreqFlag flag);
+std::string ToString<CpuFreqFlag>(CpuFreqFlag flag);
 
 class ResourceMonitor {
  public:

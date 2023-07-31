@@ -135,7 +135,7 @@ int main() {
   }
   BandConfigBuilder* b = pBandConfigBuilderCreate();
   printf("BandConfigBuilder\n");
-  pBandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1, "log.tsv");
+  pBandAddConfig(b, BAND_PLANNER_LOG_PATH, /*count=*/1, "log.json");
   printf("BandAddConfig, BAND_PLANNER_LOG_PATH\n");
   pBandAddConfig(b, BAND_PLANNER_SCHEDULERS, /*count=*/1, kBandRoundRobin);
   printf("BandAddConfig, BAND_PLANNER_SCHEDULERS\n");

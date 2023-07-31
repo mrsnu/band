@@ -53,7 +53,7 @@ size_t EnumLength<QuantizationType>() {
 }
 
 template <>
-const char* ToString(BackendType backend_type) {
+std::string ToString(BackendType backend_type) {
   switch (backend_type) {
     case BackendType::kTfLite: {
       return "Tensorflow Lite";
@@ -65,7 +65,7 @@ const char* ToString(BackendType backend_type) {
 }
 
 template <>
-const char* ToString(CPUMaskFlag cpu_mask_flag) {
+std::string ToString(CPUMaskFlag cpu_mask_flag) {
   switch (cpu_mask_flag) {
     case CPUMaskFlag::kAll: {
       return "ALL";
@@ -86,7 +86,7 @@ const char* ToString(CPUMaskFlag cpu_mask_flag) {
 }
 
 template <>
-const char* ToString(SchedulerType scheduler_type) {
+std::string ToString(SchedulerType scheduler_type) {
   switch (scheduler_type) {
     case SchedulerType::kFixedWorker: {
       return "fixed_worker";
@@ -116,7 +116,7 @@ const char* ToString(SchedulerType scheduler_type) {
 }
 
 template <>
-const char* ToString(SubgraphPreparationType subgraph_preparation_type) {
+std::string ToString(SubgraphPreparationType subgraph_preparation_type) {
   switch (subgraph_preparation_type) {
     case SubgraphPreparationType::kNoFallbackSubgraph: {
       return "no_fallback_subgraph";
@@ -137,7 +137,7 @@ const char* ToString(SubgraphPreparationType subgraph_preparation_type) {
 }
 
 template <>
-const char* ToString(DataType data_type) {
+std::string ToString(DataType data_type) {
   switch (data_type) {
     case DataType::kNoType: {
       return "NoType";
@@ -182,7 +182,7 @@ const char* ToString(DataType data_type) {
 }
 
 template <>
-const char* ToString(DeviceFlag device_flag) {
+std::string ToString(DeviceFlag device_flag) {
   switch (device_flag) {
     case DeviceFlag::kCPU: {
       return "CPU";
@@ -203,7 +203,7 @@ const char* ToString(DeviceFlag device_flag) {
 }
 
 template <>
-const char* ToString(JobStatus job_status) {
+std::string ToString(JobStatus job_status) {
   switch (job_status) {
     case JobStatus::kEnqueueFailed: {
       return "EnqueueFailed";
@@ -232,7 +232,7 @@ const char* ToString(JobStatus job_status) {
 }
 
 template <>
-const char* ToString(BufferFormat format_type) {
+std::string ToString(BufferFormat format_type) {
   switch (format_type) {
     case BufferFormat::kGrayScale: {
       return "GrayScale";
@@ -265,7 +265,7 @@ const char* ToString(BufferFormat format_type) {
 }
 
 template <>
-const char* ToString(BufferOrientation format_type) {
+std::string ToString(BufferOrientation format_type) {
   switch (format_type) {
     case BufferOrientation::kTopLeft: {
       return "TopLeft";
