@@ -33,6 +33,7 @@ typedef struct BandModel BandModel;
 typedef struct BandTensor BandTensor;
 typedef struct BandEngine BandEngine;
 typedef int BandRequestHandle;
+typedef int BandCallbackHandle;
 
 /* config builder */
 BAND_CAPI_EXPORT extern BandConfigBuilder* BandConfigBuilderCreate();
@@ -107,10 +108,13 @@ BAND_CAPI_EXPORT extern BandStatus BandEngineWait(BandEngine* engine,
                                                   BandRequestHandle handle,
                                                   BandTensor** output_tensors,
                                                   size_t num_outputs);
-BAND_CAPI_EXPORT extern void BandEngineSetOnEndRequest(
+BAND_CAPI_EXPORT extern BandCallbackHandle BandEngineSetOnEndRequest(
     BandEngine* engine,
-    void (*on_end_invoke)(void* user_data, int job_id, BandStatus status),
+    void (*on_end_invoke)(void* user_data, BandRequestHandle job_id,
+                          BandStatus status),
     void* user_data);
+BAND_CAPI_EXPORT extern BandStatus BandEngineUnsetOnEndRequest(
+    BandEngine* engine, BandCallbackHandle callback_handle);
 
 typedef BandConfigBuilder* (*PFN_BandConfigBuilderCreate)();
 typedef void (*PFN_BandAddConfig)(BandConfigBuilder*, int, int, ...);
@@ -155,9 +159,10 @@ typedef BandRequestHandle (*PFN_BandEngineRequestAsyncOptions)(
     BandEngine*, BandModel*, BandRequestOption, BandTensor**);
 typedef BandStatus (*PFN_BandEngineWait)(BandEngine*, BandRequestHandle,
                                          BandTensor**, size_t);
-typedef void (*PFN_BandEngineSetOnEndRequest)(BandEngine*,
-                                              void (*)(void*, int, BandStatus),
-                                              void*);
+typedef BandCallbackHandle (*PFN_BandEngineSetOnEndRequest)(
+    BandEngine*, void (*)(void*, int, BandStatus), void*);
+typedef BandStatus (*PFN_BandEngineUnsetOnEndRequest)(BandEngine*,
+                                                      BandCallbackHandle);
 
 #ifdef __cplusplus
 }  // extern "C"

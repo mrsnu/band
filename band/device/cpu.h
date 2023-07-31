@@ -24,14 +24,11 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
+#include "band/device/util.h"
 
-
-#ifdef __ANDROID__
-#define _BAND_SUPPORT_THREAD_AFFINITY
-#endif
-
-#ifdef _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_IS_MOBILE
 #include <sched.h>  // cpu_set_t
 #endif
 
@@ -44,13 +41,14 @@ class CpuSet {
   void Disable(int cpu);
   void DisableAll();
   bool IsEnabled(int cpu) const;
-  int NumEnabled() const;
+  size_t NumEnabled() const;
   CPUMaskFlag GetCPUMaskFlag() const;
   const unsigned long* GetMaskBits() const;
   std::vector<unsigned long> GetMaskBitsVector() const;
+  std::string ToString() const;
   bool operator==(const CpuSet& rhs) const;
 
-#if defined _BAND_SUPPORT_THREAD_AFFINITY
+#if BAND_IS_MOBILE
   const cpu_set_t& GetCpuSet() const { return cpu_set_; }
   cpu_set_t& GetCpuSet() { return cpu_set_; }
 
@@ -60,9 +58,9 @@ class CpuSet {
 };
 
 // cpu info
-int GetCPUCount();
-int GetLittleCPUCount();
-int GetBigCPUCount();
+size_t GetCPUCount();
+size_t GetLittleCPUCount();
+size_t GetBigCPUCount();
 
 // set explicit thread affinity
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask);
@@ -70,7 +68,6 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
-
 }  // namespace band
 
 #endif  // BAND_CPU_H_

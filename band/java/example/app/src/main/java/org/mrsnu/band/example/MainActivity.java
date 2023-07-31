@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     ConfigBuilder b = new ConfigBuilder();
     Engine engine = null;
 
-    b.addPlannerLogPath("/data/data/org.mrsnu.band.example/log.tsv");
+    b.addPlannerLogPath("/data/data/org.mrsnu.band.example/log.json");
     b.addSchedulers(new SchedulerType[] {SchedulerType.ROUND_ROBIN});
     b.addMinimumSubgraphSize(7);
     b.addSubgraphPreparationType(SubgraphPreparationType.MERGE_UNIT_SUBGRAPH);

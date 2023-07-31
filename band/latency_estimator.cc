@@ -56,6 +56,8 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
       worker->Wait();
       // invoke target subgraph in an isolated thread
       std::thread profile_thread([&]() {
+
+#if BAND_IS_MOBILE
         if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
             !SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()).ok()) {
           return absl::InternalError(absl::StrFormat(
@@ -63,6 +65,7 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
               "%d to profile thread",
               worker_id));
         }
+#endif
 
         engine_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
           if (subgraph_key.GetWorkerId() == worker_id &&

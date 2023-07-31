@@ -81,6 +81,18 @@ public class ConfigBuilder {
     wrapper.addCPUMask(cpuMask);
   }
 
+  public void addResourceMonitorDeviceFreqPath(Device deviceFlag, String devicePath) {
+    wrapper.addResourceMonitorDeviceFreqPath(deviceFlag, devicePath);
+  }
+
+  public void addResourceMonitorIntervalMs(int resourceMonitorIntervalMs) {
+    wrapper.addResourceMonitorIntervalMs(resourceMonitorIntervalMs);
+  }
+
+  public void addResourceMonitorLogPath(String resourceMonitorLogPath) {
+    wrapper.addResourceMonitorLogPath(resourceMonitorLogPath);
+  }
+
   public boolean isValid() {
     return wrapper.isValid();
   }

@@ -177,11 +177,39 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCPUMask(
       ->AddCPUMask(static_cast<band::CPUMaskFlag>(cpuMask));
 }
 
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorDeviceFreqPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint deviceFlag,
+    jstring devicePath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddResourceMonitorDeviceFreqPath(
+          static_cast<band::DeviceFlag>(deviceFlag),
+          ConvertJstringToString(env, devicePath));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorIntervalMs(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
+    jint resourceMonitorIntervalMs) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddResourceMonitorIntervalMs(
+          static_cast<int>(resourceMonitorIntervalMs));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorLogPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
+    jstring resourceMonitorLogPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddResourceMonitorLogPath(
+          ConvertJstringToString(env, resourceMonitorLogPath));
+}
+
 JNIEXPORT jboolean JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_isValid(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle) {
   return static_cast<jboolean>(
-      ConvertLongToConfigBuilder(env, configBuilderHandle)->IsValid());
+      ConvertLongToConfigBuilder(env, configBuilderHandle)->IsValid().ok());
 }
 
 JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
@@ -190,9 +218,14 @@ JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
   static jmethodID config_ctor = env->GetMethodID(config_cls, "<init>", "(J)V");
   RuntimeConfigBuilder* b =
       ConvertLongToConfigBuilder(env, configBuilderHandle);
-  return env->NewObject(
-      config_cls, config_ctor,
-      reinterpret_cast<jlong>(new JNIRuntimeConfig(b->Build())));
+  auto runtime_config = b->Build();
+  if (!runtime_config.ok()) {
+    return nullptr;
+  } else {
+    return env->NewObject(
+        config_cls, config_ctor,
+        reinterpret_cast<jlong>(new JNIRuntimeConfig(runtime_config.value())));
+  }
 }
 
 }  // extern "C"

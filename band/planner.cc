@@ -235,14 +235,18 @@ CallbackId Planner::SetOnEndRequest(
     std::function<void(int, absl::Status)> on_end_request) {
   std::lock_guard<std::mutex> lock(on_end_request_mtx_);
   on_end_request_callbacks_[next_callback_id_] = on_end_request;
+  return next_callback_id_++;
 }
 
-void Planner::UnsetOnEndRequest(CallbackId callback_id) {
+absl::Status Planner::UnsetOnEndRequest(CallbackId callback_id) {
   std::lock_guard<std::mutex> lock(on_end_request_mtx_);
-  if (on_end_request_callbacks_.find(callback_id) !=
+  if (on_end_request_callbacks_.find(callback_id) ==
       on_end_request_callbacks_.end()) {
-    on_end_request_callbacks_.erase(callback_id);
+    return absl::InternalError("Callback id not found.");
   }
+
+  on_end_request_callbacks_.erase(callback_id);
+  return absl::OkStatus();
 }
 
 int Planner::GetWorkerType() const {
@@ -373,7 +377,6 @@ bool Planner::IsSLOViolated(Job& job) {
 
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
-  job.sched_id = IssueSchedId();
   job.profiled_execution_time = engine_.GetProfiled(target_key);
   job.expected_execution_time = engine_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
@@ -385,7 +388,6 @@ void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
     remaining_ops.enqueue_time = job.enqueue_time;
     remaining_ops.following_jobs = job.following_jobs;
     remaining_ops.expected_latency = job.expected_latency;
-    remaining_ops.sched_id = job.sched_id;
     remaining_ops.job_id = job.job_id;
     remaining_ops.input_handle = job.input_handle;
     remaining_ops.output_handle = job.output_handle;

@@ -9,8 +9,8 @@
 namespace band {
 namespace test {
 
-struct MockContextBase : public IEngine {
-  MockContextBase() = default;
+struct MockEngineBase : public IEngine {
+  MockEngineBase() = default;
 
   MOCK_CONST_METHOD0(UpdateWorkersWaiting, void(void));
   MOCK_CONST_METHOD0(GetWorkerWaitingTime, WorkerWaitingTime(void));

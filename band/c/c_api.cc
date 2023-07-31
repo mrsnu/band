@@ -143,6 +143,20 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       int arg = va_arg(vl, int);
       b->impl.AddCPUMask(static_cast<band::CPUMaskFlag>(arg));
     } break;
+    case BAND_RESOURCE_MONITOR_DEVICE_PATH: {
+      int flag = va_arg(vl, int);
+      char* path = va_arg(vl, char*);
+      b->impl.AddResourceMonitorDeviceFreqPath(
+          static_cast<band::DeviceFlag>(flag), path);
+    } break;
+    case BAND_RESOURCE_MONITOR_INTERVAL_MS: {
+      int arg = va_arg(vl, int);
+      b->impl.AddResourceMonitorIntervalMs(arg);
+    } break;
+    case BAND_RESOURCE_MONITOR_LOG_PATH: {
+      char* arg = va_arg(vl, char*);
+      b->impl.AddResourceMonitorLogPath(arg);
+    } break;
   }
   va_end(vl);
 }
@@ -150,9 +164,12 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
 void BandConfigBuilderDelete(BandConfigBuilder* b) { delete b; }
 
 BandConfig* BandConfigCreate(BandConfigBuilder* b) {
-  // TODO(widiba03304): Error handling is not properly done here.
-  BandConfig* config = new BandConfig(b->impl.Build());
-  return config;
+  auto config = b->impl.Build();
+  if (!config.status().ok()) {
+    return nullptr;
+  } else {
+    return new BandConfig(config.value());
+  }
 }
 
 void BandConfigDelete(BandConfig* config) { delete config; }
@@ -313,11 +330,10 @@ BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
       handle, BandTensorArrayToVec(output_tensors, num_outputs)));
 }
 
-void BandEngineSetOnEndRequest(BandEngine* engine,
-                               void (*on_end_invoke)(void* user_data,
-                                                     int job_id,
-                                                     BandStatus status),
-                               void* user_data) {
+BandCallbackHandle BandEngineSetOnEndRequest(
+    BandEngine* engine,
+    void (*on_end_invoke)(void* user_data, int job_id, BandStatus status),
+    void* user_data) {
   auto user_data_invoke = std::bind(
       on_end_invoke, user_data, std::placeholders::_1, std::placeholders::_2);
   std::function<void(int, absl::Status)> new_on_end_invoke =
@@ -325,6 +341,11 @@ void BandEngineSetOnEndRequest(BandEngine* engine,
         user_data_invoke(job_id, ToBandStatus(status));
       };
   return engine->impl->SetOnEndRequest(new_on_end_invoke);
+}
+
+BandStatus BandEngineUnsetOnEndRequest(BandEngine* engine,
+                                       BandCallbackHandle handle) {
+  return ToBandStatus(engine->impl->UnsetOnEndRequest(handle));
 }
 
 #ifdef __cplusplus

@@ -90,7 +90,7 @@ class Engine : public IEngine {
   // Sets the callback function pointer to report the end of invoke.
   CallbackId SetOnEndRequest(
       std::function<void(int, absl::Status)> on_end_request);
-  void UnsetOnEndRequest(CallbackId callback_id);
+  absl::Status UnsetOnEndRequest(CallbackId callback_id);
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
@@ -108,7 +108,7 @@ class Engine : public IEngine {
   bool IsEnd(const SubgraphKey& key) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
   void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) const override;
+      std::function<void(const SubgraphKey&)> visitor) const override;
   absl::Status Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;

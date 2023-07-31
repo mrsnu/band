@@ -51,7 +51,6 @@ class Planner {
   // Returns true if the request is successfully enqueued.
   bool EnqueueToWorker(const std::vector<ScheduleAction>& action);
   void Trigger() { planner_safe_bool_.notify(); }
-  int IssueSchedId() { return sched_id_++; }
 
   // Check whether profiling is required or not.
   bool NeedProfile();
@@ -71,7 +70,7 @@ class Planner {
   // Sets the callback function pointer to report the end of invoke.
   CallbackId SetOnEndRequest(
       std::function<void(int, absl::Status)> on_end_request);
-  void UnsetOnEndRequest(CallbackId callback_id);
+  absl::Status UnsetOnEndRequest(CallbackId callback_id);
 
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
@@ -127,8 +126,7 @@ class Planner {
   std::condition_variable end_invoke_;
   std::string log_path_;
 
-  int schedule_window_size_ = INT_MAX;
-  int sched_id_ = 0;
+  int schedule_window_size_ = std::numeric_limits<int>::max();
 
   std::thread planner_thread_;
   // Map structure to find assigned worker of model idx (model_id, worker_id)

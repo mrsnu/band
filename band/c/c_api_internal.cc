@@ -19,8 +19,7 @@ const char* BandSchedulerToString(BandSchedulerType type) {
       return "least_slack_time_first";
     case kBandHeterogeneousEarliestFinishTimeReserved:
       return "heterogeneous_earliest_finish_time_reserved";
-    default: {
-    }
+    default: {}
   }
   return "Unknown type";
 }
@@ -46,8 +45,7 @@ const char* BandSubgraphPreparationToString(BandSubgraphPreparationType type) {
       return "unit_subgraph";
     case kBandMergeUnitSubgraph:
       return "merge_unit_subgraph";
-    default: {
-    }
+    default: {}
   }
   return "Unknown type";
 }
@@ -89,8 +87,7 @@ const char* BandDataTypeToString(BandDataType type) {
       return "FLOAT16";
     case kBandFloat64:
       return "FLOAT64";
-    default: {
-    }
+    default: {}
   }
   return "Unknown type";
 }
@@ -105,8 +102,7 @@ const char* BandDeviceToString(BandDeviceFlag flag) {
       return "DSP";
     case kBandNPU:
       return "NPU";
-    default: {
-    }
+    default: {}
   }
   return "Unknown type";
 }
@@ -126,8 +122,7 @@ const char* BandBackendToString(BandBackendType flag) {
   switch (flag) {
     case kBandTfLite:
       return "Tensorflow Lite";
-    default: {
-    }
+    default: {}
   }
   return "Unknown type";
 }
@@ -135,7 +130,8 @@ const char* BandBackendToString(BandBackendType flag) {
 const BandBackendType BandBackendGetType(const char* name) {
   for (int i = 0; i < kBandNumBackendType; i++) {
     BandBackendType flag = (BandBackendType)i;
-    if (strcmp(BandBackendToString(flag), name) == 0) {
+    if (strncmp(BandBackendToString(flag), name,
+                strlen(BandBackendToString(flag))) == 0) {
       return flag;
     }
   }
@@ -150,8 +146,7 @@ const char* BandStatusToString(BandStatus status) {
       return "DelegateError";
     case kBandError:
       return "Error";
-    default: {
-    }
+    default: {}
   }
   return "Unknown type";
 }

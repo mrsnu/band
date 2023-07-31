@@ -6,6 +6,7 @@
 #include <queue>
 #include <unordered_map>
 
+#include "absl/status/status.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/error_reporter.h"
@@ -56,7 +57,7 @@ class IEngine {
   virtual bool IsEnd(const SubgraphKey& key) const = 0;
   virtual bool HasSubgraph(const SubgraphKey& key) const = 0;
   virtual void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) const = 0;
+      std::function<void(const SubgraphKey&)> visitor) const = 0;
   virtual absl::Status Invoke(const SubgraphKey& key) = 0;
 
   /* model */

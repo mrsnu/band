@@ -41,7 +41,7 @@ Each configuration field is optional or required. If a field is optional, then i
 - `profile_data_path` [type: `std::string`, default: `""`]: The input path to the file for offline profile results. If not specified, this will be ignored and will not generate the result file. 
 
 ## `PlannerConfig`
-- `schedule_window_size` [type: `int`, default: `INT_MAX`]: The size of window that scheduler will use.
+- `schedule_window_size` [type: `int`, default: `std::numeric_limits<int>::max()`]: The size of window that scheduler will use.
 - `schedulers` [type: `std::vector<SchedulerType>`, __required__]: The types of schedulers. If `N` schedulers are specified, `N` queues will be generated.
 - `cpu_mask` [type: `CPUMaskFlag`, default: `CPUMaskFlag::kAll`]: CPU masks to set CPU affinity.
 - `log_path` [type: `std::string`, default: `""`]: The output path to the file for planner's log. If not specified, this will be ignored and will not generate the result file. 

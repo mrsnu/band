@@ -27,13 +27,13 @@ size_t EnumLength() {
 }
 
 template <typename EnumType>
-const char* ToString(EnumType t) {
+std::string ToString(EnumType t) {
   assert(false && "ToString is not implemented for this type.");
   return "";
 }
 
 template <typename EnumType>
-EnumType FromString(const char* str) {
+EnumType FromString(std::string str) {
   for (size_t i = 0; i < EnumLength<EnumType>(); i++) {
     EnumType t = static_cast<EnumType>(i);
     if (ToString(t) == str) {
@@ -165,25 +165,25 @@ template <>
 size_t EnumLength<QuantizationType>();
 
 template <>
-const char* ToString(BackendType backend_type);
+std::string ToString(BackendType backend_type);
 template <>
-const char* ToString(SchedulerType scheduler_type);
+std::string ToString(SchedulerType scheduler_type);
 template <>
-const char* ToString(CPUMaskFlag cpu_mask_flag);
+std::string ToString(CPUMaskFlag cpu_mask_flag);
 template <>
-const char* ToString(SubgraphPreparationType subgraph_preparation_type);
+std::string ToString(SubgraphPreparationType subgraph_preparation_type);
 template <>
-const char* ToString(DataType data_type);
+std::string ToString(DataType data_type);
 template <>
-const char* ToString(BufferFormat buffer_format);
+std::string ToString(BufferFormat buffer_format);
 template <>
-const char* ToString(BufferOrientation buffer_orientation);
+std::string ToString(BufferOrientation buffer_orientation);
 template <>
-const char* ToString(DeviceFlag device_flag);
+std::string ToString(DeviceFlag device_flag);
 template <>
-const char* ToString(QuantizationType);
+std::string ToString(QuantizationType);
 template <>
-const char* ToString(JobStatus job_status);
+std::string ToString(JobStatus job_status);
 
 struct AffineQuantizationParams {
   std::vector<float> scale;
@@ -272,7 +272,6 @@ struct Job {
   int input_handle = -1;
   int output_handle = -1;
   JobId job_id = -1;
-  int sched_id = -1;
   std::string model_fname;
   bool require_callback = true;
 
