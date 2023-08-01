@@ -56,20 +56,19 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
           if (job_subgraph_key.first == job.id()) {
             continue;
           }
-          auto status_or_expected_time =
+          auto maybe_expected_time =
               engine_.GetExpected(job_subgraph_key.second);
-          if (!status_or_expected_time.ok()) {
-            BAND_LOG_PROD(BAND_LOG_WARNING,
+          if (!maybe_expected_time.has_value()) {
+            BAND_LOG_PROD(BAND_LOG_ERROR,
                           "Failed to get expected latency for subgraph key %s",
                           job_subgraph_key.second.ToString().c_str());
-            return false;
           }
-          int64_t expected_time = status_or_expected_time.value();
+          int64_t expected_time = maybe_expected_time.value();
           reserved_time[job_subgraph_key.second.GetWorkerId()] += expected_time;
         }
 
         std::pair<std::vector<SubgraphKey>, int64_t> best_subgraph =
-            engine_.GetSubgraphWithShortestLatency(job, reserved_time);
+            engine_.GetSubgraphWithShortestLatency(job, reserved_time).value();
 
         if (largest_shortest_latency < best_subgraph.second) {
           largest_shortest_latency = best_subgraph.second;
@@ -92,14 +91,14 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
       // even if this job is the "most urgent" one
       const int worker_id = target_subgraph_key.GetWorkerId();
       if (idle_workers.find(worker_id) == idle_workers.end()) {
-        auto status_or_expected_time = engine_.GetExpected(target_subgraph_key);
-        if (!status_or_expected_time.ok()) {
-          BAND_LOG_PROD(BAND_LOG_WARNING,
+        auto maybe_expected_time = engine_.GetExpected(target_subgraph_key);
+        if (!maybe_expected_time.has_value()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR,
                         "Failed to get expected latency for subgraph key %s",
                         target_subgraph_key.ToString().c_str());
           return false;
         }
-        int64_t expected_time = status_or_expected_time.value();
+        int64_t expected_time = maybe_expected_time.value();
         waiting_time[worker_id] += expected_time;
         auto requests_it = requests.begin() + target_job_index;
         Job job = *requests_it;

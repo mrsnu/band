@@ -90,12 +90,12 @@ class Engine : public IEngine {
                                     WorkerId worker_id) const override;
 
   /* latency estimator */
-  absl::Status UpdateLatency(const SubgraphKey& key, int64_t latency) override;
-  absl::StatusOr<LatencyRecord> GetLatency(
+  void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
+  absl::optional<LatencyRecord> GetLatency(
       const SubgraphKey& key) const override;
-  absl::StatusOr<int64_t> GetProfiled(const SubgraphKey& key) const override;
-  absl::StatusOr<int64_t> GetExpected(const SubgraphKey& key) const override;
-  absl::StatusOr<int64_t> GetWorst(ModelId model_id) const;
+  absl::optional<int64_t> GetProfiled(const SubgraphKey& key) const override;
+  absl::optional<int64_t> GetExpected(const SubgraphKey& key) const override;
+  absl::optional<int64_t> GetWorst(ModelId model_id) const;
 
  private:
   /* engine */
@@ -114,27 +114,28 @@ class Engine : public IEngine {
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
 
   /* utility funtions for unit-level scheduling */
-  std::pair<SubgraphKey, int64_t> GetShortestLatency(
+  absl::StatusOr<std::pair<SubgraphKey, int64_t>> GetShortestLatency(
       ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
-  std::pair<std::vector<SubgraphKey>, int64_t>
+  absl::StatusOr<std::pair<std::vector<SubgraphKey>, int64_t>>
   GetShortestLatencyWithUnitSubgraph(
       ModelId model_id, int start_unit_idx,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
-  std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
+  absl::StatusOr<std::pair<std::vector<SubgraphKey>, int64_t>>
+  GetSubgraphWithShortestLatency(
       const Job& job,
       const std::map<WorkerId, int64_t>& worker_waiting) const override;
 
-  SubgraphKey GetSubgraphIdxSatisfyingSLO(
+  absl::StatusOr<SubgraphKey> GetSubgraphIdxSatisfyingSLO(
       const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
 
-  std::vector<SubgraphKey> GetSubgraphCandidates(
+  absl::StatusOr<std::vector<SubgraphKey>> GetSubgraphCandidates(
       ModelId model_id, BitMask resolved_unit_subgraphs) const;
 
-  std::pair<SubgraphKey, int64_t> GetShortestSubgraphKey(
+  absl::StatusOr<std::pair<SubgraphKey, int64_t>> GetShortestSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting) const;
 

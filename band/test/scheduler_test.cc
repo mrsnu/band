@@ -32,7 +32,8 @@ struct MockEngine : public MockEngineBase {
     return SubgraphKey(model_id, worker_id, {0});
   }
 
-  std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
+  absl::StatusOr<std::pair<std::vector<SubgraphKey>, int64_t>>
+  GetSubgraphWithShortestLatency(
       const Job& job, const WorkerWaitingTime& worker_waiting) const override {
     return std::pair<std::vector<SubgraphKey>, int64_t>(
         {SubgraphKey(job.model_id(), *idle_workers_.begin(), {0})},
@@ -47,7 +48,7 @@ struct MockEngine : public MockEngineBase {
     return map;
   }
 
-  absl::StatusOr<int64_t> GetExpected(const SubgraphKey& key) const override {
+  absl::optional<int64_t> GetExpected(const SubgraphKey& key) const override {
     return 10;
   }
   bool EnqueueToWorker(const ScheduleAction& action) override {

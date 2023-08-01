@@ -337,12 +337,9 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       // calculate worst case latency
       for (int worker_id = 0; worker_id < engine_->GetNumWorkers();
            worker_id++) {
-        auto status_or_profiled = engine_->GetProfiled(
+        auto maybe_profiled = engine_->GetProfiled(
             engine_->GetLargestSubgraphKey(model_id, worker_id));
-        if (!status_or_profiled.ok()) {
-          return status_or_profiled.status();
-        }
-        worst_us = std::max(status_or_profiled.value(), worst_us);
+        worst_us = std::max(maybe_profiled.value_or(-1), worst_us);
       }
 
       if (worst_us == 0) {

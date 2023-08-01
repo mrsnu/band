@@ -135,8 +135,7 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
 
   auto status_or_profiled = latency_estimator.GetProfiled(key);
-  EXPECT_EQ(status_or_profiled.status(), absl::OkStatus());
-  EXPECT_EQ(status_or_profiled.value(), -1);
+  EXPECT_FALSE(status_or_profiled.status().ok());
 
   EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
 
@@ -192,8 +191,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
 
     auto status_or_profiled = latency_estimator.GetProfiled(key);
-    EXPECT_EQ(status_or_profiled.status(), absl::OkStatus());
-    EXPECT_EQ(status_or_profiled.value(), -1);
+    EXPECT_FALSE(status_or_profiled.status().ok());
 
     EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     
@@ -256,8 +254,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
 
     auto status_or_profiled = latency_estimator.GetProfiled(key);
-    EXPECT_EQ(status_or_profiled.status(), absl::OkStatus());
-    EXPECT_EQ(status_or_profiled.value(), -1);
+    EXPECT_FALSE(status_or_profiled.status().ok());
 
     EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     // fails to load due to worker update

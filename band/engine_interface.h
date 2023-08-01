@@ -8,11 +8,12 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/types/optional.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/error_reporter.h"
-#include "band/job.h"
 #include "band/estimator/record.h"
+#include "band/job.h"
 
 namespace band {
 namespace interface {
@@ -75,31 +76,31 @@ class IEngine {
   // the final op (of the model) in mind.
 
   // TODO: replace subgraph idx to subgraph key in below functions
-  virtual std::pair<SubgraphKey, int64_t> GetShortestLatency(
+  virtual absl::StatusOr<std::pair<SubgraphKey, int64_t>> GetShortestLatency(
       int model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
-  virtual std::pair<std::vector<SubgraphKey>, int64_t>
+  virtual absl::StatusOr<std::pair<std::vector<SubgraphKey>, int64_t>>
   GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
       const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
-  virtual std::pair<std::vector<SubgraphKey>, int64_t>
+  virtual absl::StatusOr<std::pair<std::vector<SubgraphKey>, int64_t>>
   GetSubgraphWithShortestLatency(
       const Job& job,
       const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
 
-  virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
+  virtual absl::StatusOr<SubgraphKey> GetSubgraphIdxSatisfyingSLO(
       const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* profiler */
-  virtual absl::Status UpdateLatency(const SubgraphKey& key,
+  virtual void UpdateLatency(const SubgraphKey& key,
                                      int64_t latency) = 0;
-  virtual absl::StatusOr<LatencyRecord> GetLatency(
+  virtual absl::optional<LatencyRecord> GetLatency(
       const SubgraphKey& key) const = 0;
-  virtual absl::StatusOr<int64_t> GetProfiled(const SubgraphKey& key) const = 0;
-  virtual absl::StatusOr<int64_t> GetExpected(const SubgraphKey& key) const = 0;
+  virtual absl::optional<int64_t> GetProfiled(const SubgraphKey& key) const = 0;
+  virtual absl::optional<int64_t> GetExpected(const SubgraphKey& key) const = 0;
 
   /* planner */
   virtual void Trigger() = 0;

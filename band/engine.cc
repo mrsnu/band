@@ -7,9 +7,9 @@
 #include "band/backend_factory.h"
 #include "band/common.h"
 #include "band/engine_interface.h"
+#include "band/estimator/latency_estimator.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
-#include "band/estimator/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/model_analyzer.h"
@@ -242,7 +242,7 @@ absl::Status Engine::RegisterModel(Model* model) {
       }
     }
 
-    if (planner_->NeedProfile()) {
+    if (latency_estimator_) {
       auto status = latency_estimator_->ProfileModel(model_id);
       if (!status.ok()) {
         return status;
@@ -385,12 +385,14 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
               absl::StrFormat("Specified slo_scale is invalid (%f <= 0)",
                               options[i].slo_scale));
         }
-        auto status_or_worst = GetWorst(model_ids[i]);
-        if (!status_or_worst.ok()) {
-          return status_or_worst.status();
+        auto worst = GetWorst(model_ids[i]);
+        if (worst.has_value()) {
+          target_slo_us = worst.value() * options[i].slo_scale;
+        } else {
+          return absl::InternalError(
+              "Specifying SLO scale requires profiling. Please check if the "
+              "schedulers require profiling or not.");
         }
-        auto worst = status_or_worst.value();
-        target_slo_us = worst * options[i].slo_scale;
       }
       // override, if `slo_us` is specified
       if (options[i].slo_us != -1) {
@@ -446,10 +448,6 @@ absl::Status Engine::Wait(JobId job_id, Tensors outputs) {
 
 absl::Status Engine::Wait(std::vector<JobId> job_ids,
                           std::vector<Tensors> outputs) {
-  for (auto job_id : job_ids) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Wait for job %d", job_id);
-  }
-
   planner_->Wait(job_ids);
   for (size_t i = 0; i < outputs.size(); i++) {
     auto status = GetOutputTensors(job_ids[i], outputs[i]);
@@ -673,9 +671,16 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
   return model_executor_it->second->ExecuteSubgraph(key);
 }
 
-std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
+absl::StatusOr<std::pair<SubgraphKey, int64_t>> Engine::GetShortestLatency(
     ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
     const std::map<WorkerId, int64_t>& worker_waiting) const {
+  auto status_or_candidates =
+      GetSubgraphCandidates(model_id, resolved_unit_subgraphs);
+  if (!status_or_candidates.ok()) {
+    return status_or_candidates.status();
+  }
+  const std::vector<SubgraphKey>& candidates = status_or_candidates.value();
+
   // lookup key for cache
   std::pair<ModelId, BitMask> cache_key = {model_id, resolved_unit_subgraphs};
 
@@ -696,12 +701,9 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
       // the stored latency value assumes a start_time of 0,
       // so we need to add our own start_time to the stored value to get the
       // correct return value
-      return {pair.first, pair.second + start_time};
+      return std::make_pair(pair.first, pair.second + start_time);
     }
   }
-
-  std::vector<SubgraphKey> candidates =
-      GetSubgraphCandidates(model_id, resolved_unit_subgraphs);
 
   auto bit_mask_comparator = [](const BitMask& lhs, const BitMask& rhs) {
     return lhs.to_ullong() < rhs.to_ullong();
@@ -719,17 +721,25 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
   for (const auto& it : unit_indicies_subgraphs) {
     // first, filter out the subgraphs that take longer than others with the
     // same start/end indices, since there's no reason to pick them
-    std::pair<SubgraphKey, int64_t> target_subgraph =
+    auto status_or_target_subgraph =
         GetShortestSubgraphKey(it.second, start_time, worker_waiting);
+    if (!status_or_target_subgraph.ok()) {
+      return status_or_target_subgraph.status();
+    }
+    auto target_subgraph = status_or_target_subgraph.value();
 
     std::pair<SubgraphKey, int64_t> local_min;
     if (IsEnd(target_subgraph.first)) {
       local_min = target_subgraph;
     } else {
-      local_min = GetShortestLatency(
+      auto status_or_latency = GetShortestLatency(
           model_id,
           resolved_unit_subgraphs | target_subgraph.first.GetUnitIndices(),
           target_subgraph.second, worker_waiting);
+      if (!status_or_latency.ok()) {
+        return status_or_latency.status();
+      }
+      local_min = status_or_latency.value();
     }
 
     // check if this subgraph is better than the best one
@@ -757,7 +767,7 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
   return subgraph_min_latency;
 }
 
-std::pair<std::vector<SubgraphKey>, int64_t>
+absl::StatusOr<std::pair<std::vector<SubgraphKey>, int64_t>>
 Engine::GetShortestLatencyWithUnitSubgraph(
     ModelId model_id, int start_unit_idx,
     const std::map<WorkerId, int64_t>& worker_waiting) const {
@@ -792,8 +802,12 @@ Engine::GetShortestLatencyWithUnitSubgraph(
       const auto& subgraph_keys =
           unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).at(j);
       int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
-      std::pair<SubgraphKey, int64_t> target_subgraph =
+      auto status_or_target_subgraph =
           GetShortestSubgraphKey(subgraph_keys, start, worker_waiting);
+      if (!status_or_target_subgraph.ok()) {
+        return status_or_target_subgraph.status();
+      }
+      auto target_subgraph = status_or_target_subgraph.value();
 
       if (local_min.second == -1 || target_subgraph.second < local_min.second) {
         if (i > start_unit_idx) {
@@ -813,14 +827,19 @@ Engine::GetShortestLatencyWithUnitSubgraph(
   return memo[num_unit_subgraphs - 1];
 }
 
-std::pair<std::vector<SubgraphKey>, int64_t>
+absl::StatusOr<std::pair<std::vector<SubgraphKey>, int64_t>>
 Engine::GetSubgraphWithShortestLatency(
     const Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
   if (subgraph_config_.subgraph_preparation_type ==
       SubgraphPreparationType::kFallbackPerWorker) {
-    auto pair = GetShortestLatency(job.model_id(), job.resolved_unit_subgraphs,
-                                   0, worker_waiting);
+    auto status_or_pair = GetShortestLatency(
+        job.model_id(), job.resolved_unit_subgraphs, 0, worker_waiting);
+    if (!status_or_pair.ok()) {
+      return status_or_pair.status();
+    }
+    auto pair = status_or_pair.value();
+
     std::pair<std::vector<SubgraphKey>, int64_t> ret =
         std::pair<std::vector<SubgraphKey>, int64_t>({}, pair.second);
     ret.first.push_back(pair.first);
@@ -838,15 +857,15 @@ Engine::GetSubgraphWithShortestLatency(
   }
 }
 
-SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
+absl::StatusOr<SubgraphKey> Engine::GetSubgraphIdxSatisfyingSLO(
     const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
     const std::set<WorkerId>& idle_workers) const {
   // TODO: implement this with SLO-based scheduler e.g., LSF
   BAND_NOT_IMPLEMENTED;
-  return {};
+  return SubgraphKey();
 }
 
-std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
+absl::StatusOr<std::vector<SubgraphKey>> Engine::GetSubgraphCandidates(
     ModelId model_id, BitMask resolved_unit_subgraphs) const {
   std::vector<SubgraphKey> candidates;
   if (resolved_unit_subgraphs.none()) {
@@ -883,22 +902,23 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
   return candidates;
 }
 
-std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
+absl::StatusOr<std::pair<SubgraphKey, int64_t>> Engine::GetShortestSubgraphKey(
     const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
     const std::map<WorkerId, int64_t>& worker_waiting) const {
   int64_t min_latency = std::numeric_limits<int64_t>::max();
   SubgraphKey min_key = {};
 
   for (const auto& key : subgraph_keys) {
-    // TODO: safety check to avoid contention with profiler?
-    auto status_or_expected_latency = GetExpected(key);
-    if (!status_or_expected_latency.ok()) {
-      return {key, std::numeric_limits<int64_t>::max()};
+    auto expected_latency = GetExpected(key);
+    if (!expected_latency.has_value()) {
+      return absl::InternalError(
+          absl::StrFormat("Failed to get expected latency for subgraph key: %s",
+                          key.ToString()));
     }
-    
+
     int64_t waiting_time = worker_waiting.at(key.GetWorkerId());
-    int64_t expected_latency = status_or_expected_latency.value();
-    int64_t total = expected_latency + std::max(waiting_time, start_time);
+    int64_t total =
+        expected_latency.value() + std::max(waiting_time, start_time);
 
     if (min_latency >= total) {
       min_latency = total;
@@ -906,43 +926,46 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
     }
   }
 
-  return {min_key, min_latency};
+  return std::make_pair(min_key, min_latency);
 }
 
-absl::Status Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
+void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
   if (latency_estimator_ == nullptr) {
-    return absl::InternalError("Latency estimator is not initialized");
+    return;
   }
-  return latency_estimator_->UpdateLatency(key, latency);
+  auto status = latency_estimator_->UpdateLatency(key, latency);
+  if (!status.ok()) {
+    BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Failed to update latency: %s",
+                      status.ToString());
+  }
 }
 
-absl::StatusOr<LatencyRecord> Engine::GetLatency(
-    const SubgraphKey& key) const {
+absl::optional<LatencyRecord> Engine::GetLatency(const SubgraphKey& key) const {
   if (latency_estimator_ == nullptr) {
-    return absl::InternalError("Latency estimator is not initialized");
+    return absl::nullopt;
   }
-  return latency_estimator_->GetLatency(key);
+  return latency_estimator_->GetLatency(key).value();
 }
 
-absl::StatusOr<int64_t> Engine::GetProfiled(const SubgraphKey& key) const {
+absl::optional<int64_t> Engine::GetProfiled(const SubgraphKey& key) const {
   if (latency_estimator_ == nullptr) {
-    return absl::InternalError("Latency estimator is not initialized");
+    return absl::nullopt;
   }
-  return latency_estimator_->GetProfiled(key);
+  return latency_estimator_->GetProfiled(key).value();
 }
 
-absl::StatusOr<int64_t> Engine::GetExpected(const SubgraphKey& key) const {
+absl::optional<int64_t> Engine::GetExpected(const SubgraphKey& key) const {
   if (latency_estimator_ == nullptr) {
-    return absl::InternalError("Latency estimator is not initialized");
+    return absl::nullopt;
   }
-  return latency_estimator_->GetExpected(key);
+  return latency_estimator_->GetExpected(key).value();
 }
 
-absl::StatusOr<int64_t> Engine::GetWorst(ModelId model_id) const {
+absl::optional<int64_t> Engine::GetWorst(ModelId model_id) const {
   if (latency_estimator_ == nullptr) {
-    return absl::InternalError("Latency estimator is not initialized");
+    return absl::nullopt;
   }
-  return latency_estimator_->GetWorst(model_id);
+  return latency_estimator_->GetWorst(model_id).value();
 }
 
 void Engine::Trigger() { planner_->Trigger(); }

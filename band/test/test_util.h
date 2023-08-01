@@ -4,9 +4,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "band/engine_interface.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "band/engine_interface.h"
 
 namespace band {
 namespace test {
@@ -37,23 +37,25 @@ struct MockEngineBase : public IEngine {
   using SubgraphWithShortestLatency =
       std::pair<std::vector<SubgraphKey>, int64_t>;
   MOCK_CONST_METHOD4(GetShortestLatency,
-                     std::pair<SubgraphKey, int64_t>(ModelId, BitMask, int64_t,
-                                                     WorkerWaiting));
+                     absl::StatusOr<std::pair<SubgraphKey, int64_t>>(
+                         ModelId, BitMask, int64_t, WorkerWaiting));
 
   MOCK_CONST_METHOD3(GetShortestLatencyWithUnitSubgraph,
-                     ShortestLatencyWithUnitSubgraph(ModelId, int,
-                                                     WorkerWaiting));
-  MOCK_CONST_METHOD2(GetSubgraphWithShortestLatency,
-                     SubgraphWithShortestLatency(const Job&, WorkerWaiting));
+                     absl::StatusOr<ShortestLatencyWithUnitSubgraph>(
+                         ModelId, int, WorkerWaiting));
+  MOCK_CONST_METHOD2(
+      GetSubgraphWithShortestLatency,
+      absl::StatusOr<SubgraphWithShortestLatency>(const Job&, WorkerWaiting));
   MOCK_CONST_METHOD3(GetSubgraphIdxSatisfyingSLO,
-                     SubgraphKey(const Job&, WorkerWaiting,
-                                 const std::set<WorkerId>&));
+                     absl::StatusOr<SubgraphKey>(const Job&, WorkerWaiting,
+                                                 const std::set<WorkerId>&));
 
   /* profiler */
-  MOCK_METHOD2(UpdateLatency, absl::Status(const SubgraphKey&, int64_t));
-  MOCK_CONST_METHOD1(GetLatency, absl::StatusOr<LatencyRecord>(const SubgraphKey&));
-  MOCK_CONST_METHOD1(GetProfiled, absl::StatusOr<int64_t>(const SubgraphKey&));
-  MOCK_CONST_METHOD1(GetExpected, absl::StatusOr<int64_t>(const SubgraphKey&));
+  MOCK_METHOD2(UpdateLatency, void(const SubgraphKey&, int64_t));
+  MOCK_CONST_METHOD1(GetLatency,
+                     absl::optional<LatencyRecord>(const SubgraphKey&));
+  MOCK_CONST_METHOD1(GetProfiled, absl::optional<int64_t>(const SubgraphKey&));
+  MOCK_CONST_METHOD1(GetExpected, absl::optional<int64_t>(const SubgraphKey&));
 
   /* planner */
   MOCK_METHOD0(Trigger, void());

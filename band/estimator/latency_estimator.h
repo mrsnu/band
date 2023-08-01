@@ -31,6 +31,8 @@ class LatencyEstimator {
 
  private:
   size_t GetProfileHash() const;
+  absl::Status ProfileModelOnline(ModelId model_id);
+  absl::Status ProfileModelOffline(ModelId model_id);
 
   // Convert entries in the json value to ModelDeviceToLatency format,
   // for the given model name and target model id.

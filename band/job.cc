@@ -1,4 +1,5 @@
 #include "band/job.h"
+
 #include "absl/strings/str_format.h"
 #include "band/logger.h"
 
@@ -54,7 +55,8 @@ absl::Status Job::InvokeFailure() {
   return absl::OkStatus();
 }
 
-Job Job::Next(const SubgraphKey& target_key, LatencyRecord record, bool last) {
+Job Job::Next(const SubgraphKey& target_key,
+              absl::optional<LatencyRecord> record, bool last) {
   Job job = *this;
   job.subgraph_key = target_key;
   job.latency_profile = record;

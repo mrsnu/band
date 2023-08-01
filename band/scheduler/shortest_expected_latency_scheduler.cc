@@ -52,7 +52,8 @@ bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       }
 
       std::pair<std::vector<SubgraphKey>, int64_t> best_subgraph =
-          engine_.GetSubgraphWithShortestLatency(next_job, worker_waiting);
+          engine_.GetSubgraphWithShortestLatency(next_job, worker_waiting)
+              .value();
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;

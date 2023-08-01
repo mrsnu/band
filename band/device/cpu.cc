@@ -241,7 +241,8 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
   }
   return absl::OkStatus();
 #else
-  return absl::UnavailableError("Device not supported");
+  return absl::UnavailableError(
+      "CPU affinity is not set as it is not supported in this platform.");
 #endif
 }
 
@@ -267,7 +268,8 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
   }
   return absl::OkStatus();
 #else
-  return absl::UnavailableError("Device not supported");
+  return absl::UnavailableError(
+      "Cannot get CPU affinity as it is not supported in this platform.");
 #endif
 }
 

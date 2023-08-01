@@ -136,7 +136,8 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(engine->RequestSync(model.GetId(), {0, true, -1, -1.f},
+  int target_worker = 0;
+  EXPECT_EQ(engine->RequestSync(model.GetId(), {target_worker, true, -1, -1.f},
                                 {input_tensor}, {output_tensor}),
             absl::OkStatus());
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);

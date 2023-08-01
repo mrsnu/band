@@ -203,13 +203,8 @@ void Worker::Work() {
         // end_time is never read/written by any other thread as long as
         // is_busy == true, so it's safe to update it w/o grabbing the lock
         current_job->end_time = time::NowMicros();
-        {
-          auto status = engine_->UpdateLatency(
-              subgraph_key, (current_job->end_time - current_job->invoke_time));
-          if (!status.ok()) {
-            BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
-          }
-        }
+        engine_->UpdateLatency(
+            subgraph_key, (current_job->end_time - current_job->invoke_time));
         if (current_job->following_jobs.size() != 0) {
           engine_->EnqueueBatch(current_job->following_jobs, true);
         }
