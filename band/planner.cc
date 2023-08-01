@@ -306,23 +306,37 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
     Job job = action.first;
     SubgraphKey target_key = action.second;
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
+    auto status = job.Schedule(engine_.GetLatency(target_key));
+    if (!status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Invalid job status. %s",
+                    status.message());
+    }
+
     if (worker == nullptr) {
+      auto status = job.EnqueueFailure();
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Invalid job status. %s",
+                      status.message());
+      }
       BAND_LOG_PROD(BAND_LOG_ERROR,
                     "EnqueueToWorker failed. Requests scheduled to null worker "
                     "id %d",
                     target_key.GetWorkerId());
-      auto status = job.EnqueueFailure();
-      if (!status.ok()) {
-        success = false;
-      }
+      success = false;
       EnqueueFinishedJob(job);
-    } else if (IsSLOViolated(job)) {
+      continue;
+    }
+
+    if (IsSLOViolated(job)) {
       // no point in running this job anymore
       auto status = job.SLOViolation();
       if (!status.ok()) {
-        // TODO(widiba03304): Handle failure to switch job's status.
-        success = false;
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Invalid job status. %s",
+                      status.message());
       }
+      BAND_LOG_PROD(BAND_LOG_INFO,
+                    "SLO violated. Dropping job %d from worker %d", job.id(),
+                    target_key.GetWorkerId());
       // mark this as -1 to differentiate it from the default value, 0
       job.invoke_time = -1;
       // mark the time of this decision (of early-dropping this job)
@@ -330,22 +344,20 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
       // Set reschedule flag.
       success = false;
       EnqueueFinishedJob(job);
-    } else {
-      std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+      continue;
+    }
 
-      if (worker->IsEnqueueReady()) {
-        auto maybe_latency_profile = engine_.GetLatency(target_key);
-        job = job.Next(target_key, maybe_latency_profile,
-                       engine_.IsEnd(target_key));
-        if (!worker->EnqueueJob(job)) {
-          BAND_LOG_PROD(BAND_LOG_ERROR,
-                        "EnqueueToWorker failed. Requests scheduled to "
-                        "unavailable worker id %d",
-                        target_key.GetWorkerId());
-        }
-      } else {
-        EnqueueRequest(job, true);
+    std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
+    if (worker->IsEnqueueReady()) {
+      job = job.Next(target_key, engine_.IsEnd(target_key));
+      if (!worker->EnqueueJob(job)) {
+        BAND_LOG_PROD(BAND_LOG_ERROR,
+                      "EnqueueToWorker failed. Requests scheduled to "
+                      "unavailable worker id %d",
+                      target_key.GetWorkerId());
       }
+    } else {
+      EnqueueRequest(job, true);
     }
   }
   return success;
@@ -355,12 +367,14 @@ bool Planner::IsSLOViolated(Job& job) {
   if (job.status() == Job::Status::kSLOViolation) {
     return true;
   }
-  // this job has an SLO; check if it's not too late already
+
   if (job.HasSLO()) {
     WorkerWaitingTime workers_waiting = engine_.GetWorkerWaitingTime();
     int64_t current_time = time::NowMicros();
+    // When a job is first invoked, latency record is not yet created.
+    // Thus, we optimistically assume that the job execution time is 0.
     int64_t expected_latency = workers_waiting[job.subgraph_key.GetWorkerId()] +
-                               job.expected_execution_time;
+                               job.latency_profile().expected;
     int64_t remaining_time = job.slo_us() - (current_time - job.enqueue_time);
     if (expected_latency > remaining_time) {
       return true;

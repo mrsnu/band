@@ -21,9 +21,12 @@ struct JobIdBitMaskHash {
 class Job {
  public:
   enum class Status : size_t {
+    // Normal states
     kNone,
     kQueued,
+    kScheduled,
     kSuccess,
+    // Failure states
     kFinished,
     kSLOViolation,
     kEnqueueFailure,
@@ -48,9 +51,11 @@ class Job {
   int64_t slo_us() const { return slo_us_; }
   bool require_callback() const { return require_callback_; }
   WorkerId target_worker_id() const { return target_worker_id_; }
+  LatencyRecord latency_profile() const { return latency_profile_.value(); }
 
   bool HasSLO() const { return slo_us_ > 0; };
   bool HasTargetWorker() const { return target_worker_id_ != -1; };
+  bool HasLatencyProfile() const { return latency_profile_.has_value(); };
 
   bool IsEnqueued() const;
 
@@ -72,8 +77,8 @@ class Job {
   }
 
   // Normal states
+  absl::Status Schedule(absl::optional<LatencyRecord> latency_profile);
   absl::Status Enqueue(JobId id);
-
   absl::Status Success();
 
   // Failure states
@@ -83,8 +88,7 @@ class Job {
   absl::Status OutputCopyFailure();
   absl::Status InvokeFailure();
 
-  Job Next(const SubgraphKey& target_key,
-           absl::optional<LatencyRecord> latency_profile, bool last);
+  Job Next(const SubgraphKey& target_key, bool last);
 
   std::string ToJson() const;
   std::string ToString() const;
@@ -95,10 +99,7 @@ class Job {
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
-  // Profiled invoke execution time
-  absl::optional<LatencyRecord> latency_profile;
-  int64_t profiled_execution_time = 0;
-  int64_t expected_execution_time = 0;
+
   // Expected total latency
   int64_t expected_latency = 0;
 
@@ -122,6 +123,9 @@ class Job {
 
   // Target worker id (only for fixed worker request)
   WorkerId target_worker_id_ = -1;
+
+  // Profiled invoke execution time
+  absl::optional<LatencyRecord> latency_profile_;
 };
 
 }  // namespace band

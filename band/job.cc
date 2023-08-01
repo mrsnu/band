@@ -16,9 +16,18 @@ bool Job::IsEnqueued() const {
          (output_handle_ != -1);
 }
 
+absl::Status Job::Schedule(absl::optional<LatencyRecord> latency_profile) {
+  if (status_ != Status::kQueued) {
+    return absl::InternalError("Job is already scheduled.");
+  }
+  status_ = Status::kScheduled;
+  latency_profile_ = latency_profile;
+  return absl::OkStatus();
+}
+
 absl::Status Job::Enqueue(JobId id) {
   if (status_ != Status::kNone) {
-    return absl::InternalError("Job is already enqueued");
+    return absl::InternalError("Job is not scheduled.");
   }
   status_ = Status::kQueued;
   id_ = id;
@@ -55,11 +64,9 @@ absl::Status Job::InvokeFailure() {
   return absl::OkStatus();
 }
 
-Job Job::Next(const SubgraphKey& target_key,
-              absl::optional<LatencyRecord> record, bool last) {
+Job Job::Next(const SubgraphKey& target_key, bool last) {
   Job job = *this;
   job.subgraph_key = target_key;
-  job.latency_profile = record;
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
   if (!last) {
@@ -88,10 +95,14 @@ std::string Job::ToJson() const {
   return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
          ",\"invoke_time\":" + std::to_string(invoke_time) +
          ",\"end_time\":" + std::to_string(end_time) +
-         ",\"profiled_execution_time\":" +
-         std::to_string(profiled_execution_time) +
-         ",\"expected_execution_time\":" +
-         std::to_string(expected_execution_time) +
+         (latency_profile_.has_value()
+              ? ",\"profiled_execution_time\":" +
+                    std::to_string(latency_profile_.value().profiled)
+              : "") +
+         (latency_profile_.has_value()
+              ? ",\"expected_execution_time\":" +
+                    std::to_string(latency_profile_.value().expected)
+              : "") +
          ",\"expected_latency\":" + std::to_string(expected_latency) +
          ",\"slo_us\":" + std::to_string(slo_us_) +
          ",\"model_id\":" + std::to_string(model_id_) +
