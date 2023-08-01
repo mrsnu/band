@@ -88,7 +88,9 @@ class Engine : public IEngine {
   absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 
   // Sets the callback function pointer to report the end of invoke.
-  void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
+  CallbackId SetOnEndRequest(
+      std::function<void(int, absl::Status)> on_end_request);
+  absl::Status UnsetOnEndRequest(CallbackId callback_id);
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;

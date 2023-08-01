@@ -330,11 +330,10 @@ BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
       handle, BandTensorArrayToVec(output_tensors, num_outputs)));
 }
 
-void BandEngineSetOnEndRequest(BandEngine* engine,
-                               void (*on_end_invoke)(void* user_data,
-                                                     int job_id,
-                                                     BandStatus status),
-                               void* user_data) {
+BandCallbackHandle BandEngineSetOnEndRequest(
+    BandEngine* engine,
+    void (*on_end_invoke)(void* user_data, int job_id, BandStatus status),
+    void* user_data) {
   auto user_data_invoke = std::bind(
       on_end_invoke, user_data, std::placeholders::_1, std::placeholders::_2);
   std::function<void(int, absl::Status)> new_on_end_invoke =
@@ -342,6 +341,11 @@ void BandEngineSetOnEndRequest(BandEngine* engine,
         user_data_invoke(job_id, ToBandStatus(status));
       };
   return engine->impl->SetOnEndRequest(new_on_end_invoke);
+}
+
+BandStatus BandEngineUnsetOnEndRequest(BandEngine* engine,
+                                       BandCallbackHandle handle) {
+  return ToBandStatus(engine->impl->UnsetOnEndRequest(handle));
 }
 
 #ifdef __cplusplus

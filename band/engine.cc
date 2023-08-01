@@ -484,9 +484,13 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   return absl::OkStatus();
 }
 
-void Engine::SetOnEndRequest(
+CallbackId Engine::SetOnEndRequest(
     std::function<void(int, absl::Status)> on_end_request) {
-  planner_->SetOnEndRequest(on_end_request);
+  return planner_->SetOnEndRequest(on_end_request);
+}
+
+absl::Status Engine::UnsetOnEndRequest(CallbackId callback_id) {
+  return planner_->UnsetOnEndRequest(callback_id);
 }
 
 absl::Status Engine::Init(const RuntimeConfig& config) {
@@ -755,7 +759,8 @@ Engine::GetShortestLatencyWithUnitSubgraph(
 
   // Initialize memo.
   for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>({}, std::numeric_limits<int>::max());
+    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>(
+        {}, std::numeric_limits<int>::max());
   }
 
   // `i` and `j` refer to an unit subgraph idx.

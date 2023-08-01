@@ -68,7 +68,10 @@ class Planner {
     return model_execution_count_;
   }
   // Sets the callback function pointer to report the end of invoke.
-  void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
+  CallbackId SetOnEndRequest(
+      std::function<void(int, absl::Status)> on_end_request);
+  absl::Status UnsetOnEndRequest(CallbackId callback_id);
+
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
@@ -102,7 +105,10 @@ class Planner {
   // Jobs Finished
   std::map<int, int> model_execution_count_;
 
-  std::function<void(int, absl::Status)> on_end_request_;
+  mutable std::mutex on_end_request_mtx_;
+  std::map<CallbackId, std::function<void(int, absl::Status)>>
+      on_end_request_callbacks_;
+  CallbackId next_callback_id_ = 0;
 
   // Request Queue
   ConcurrentJobQueue requests_;
