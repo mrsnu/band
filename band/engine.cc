@@ -9,7 +9,7 @@
 #include "band/engine_interface.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
-#include "band/latency_estimator.h"
+#include "band/estimator/latency_estimator.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/model_analyzer.h"
@@ -385,7 +385,12 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
               absl::StrFormat("Specified slo_scale is invalid (%f <= 0)",
                               options[i].slo_scale));
         }
-        target_slo_us = GetWorst(model_ids[i]) * options[i].slo_scale;
+        auto status_or_worst = GetWorst(model_ids[i]);
+        if (!status_or_worst.ok()) {
+          return status_or_worst.status();
+        }
+        auto worst = status_or_worst.value();
+        target_slo_us = worst * options[i].slo_scale;
       }
       // override, if `slo_us` is specified
       if (options[i].slo_us != -1) {
@@ -886,8 +891,13 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
 
   for (const auto& key : subgraph_keys) {
     // TODO: safety check to avoid contention with profiler?
+    auto status_or_expected_latency = GetExpected(key);
+    if (!status_or_expected_latency.ok()) {
+      return {key, std::numeric_limits<int64_t>::max()};
+    }
+    
     int64_t waiting_time = worker_waiting.at(key.GetWorkerId());
-    int64_t expected_latency = GetExpected(key);
+    int64_t expected_latency = status_or_expected_latency.value();
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 
     if (min_latency >= total) {
@@ -899,21 +909,40 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
   return {min_key, min_latency};
 }
 
-void Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
-  if (latency_estimator_) latency_estimator_->UpdateLatency(key, latency);
+absl::Status Engine::UpdateLatency(const SubgraphKey& key, int64_t latency) {
+  if (latency_estimator_ == nullptr) {
+    return absl::InternalError("Latency estimator is not initialized");
+  }
+  return latency_estimator_->UpdateLatency(key, latency);
 }
 
-int64_t Engine::GetProfiled(const SubgraphKey& key) const {
-  return latency_estimator_ ? latency_estimator_->GetProfiled(key) : 0;
+absl::StatusOr<LatencyRecord> Engine::GetLatency(
+    const SubgraphKey& key) const {
+  if (latency_estimator_ == nullptr) {
+    return absl::InternalError("Latency estimator is not initialized");
+  }
+  return latency_estimator_->GetLatency(key);
 }
 
-int64_t Engine::GetExpected(const SubgraphKey& key) const {
-  return latency_estimator_ ? latency_estimator_->GetExpected(key) : 0;
+absl::StatusOr<int64_t> Engine::GetProfiled(const SubgraphKey& key) const {
+  if (latency_estimator_ == nullptr) {
+    return absl::InternalError("Latency estimator is not initialized");
+  }
+  return latency_estimator_->GetProfiled(key);
 }
 
-int64_t Engine::GetWorst(ModelId model_id) const {
-  // requires nullity check for schedulers without profile
-  return latency_estimator_ ? latency_estimator_->GetWorst(model_id) : 0;
+absl::StatusOr<int64_t> Engine::GetExpected(const SubgraphKey& key) const {
+  if (latency_estimator_ == nullptr) {
+    return absl::InternalError("Latency estimator is not initialized");
+  }
+  return latency_estimator_->GetExpected(key);
+}
+
+absl::StatusOr<int64_t> Engine::GetWorst(ModelId model_id) const {
+  if (latency_estimator_ == nullptr) {
+    return absl::InternalError("Latency estimator is not initialized");
+  }
+  return latency_estimator_->GetWorst(model_id);
 }
 
 void Engine::Trigger() { planner_->Trigger(); }

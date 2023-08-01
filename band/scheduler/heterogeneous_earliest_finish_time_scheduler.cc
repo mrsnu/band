@@ -56,9 +56,16 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
           if (job_subgraph_key.first == job.id()) {
             continue;
           }
-
-          reserved_time[job_subgraph_key.second.GetWorkerId()] +=
+          auto status_or_expected_time =
               engine_.GetExpected(job_subgraph_key.second);
+          if (!status_or_expected_time.ok()) {
+            BAND_LOG_PROD(BAND_LOG_WARNING,
+                          "Failed to get expected latency for subgraph key %s",
+                          job_subgraph_key.second.ToString().c_str());
+            return false;
+          }
+          int64_t expected_time = status_or_expected_time.value();
+          reserved_time[job_subgraph_key.second.GetWorkerId()] += expected_time;
         }
 
         std::pair<std::vector<SubgraphKey>, int64_t> best_subgraph =
@@ -85,7 +92,15 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
       // even if this job is the "most urgent" one
       const int worker_id = target_subgraph_key.GetWorkerId();
       if (idle_workers.find(worker_id) == idle_workers.end()) {
-        waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
+        auto status_or_expected_time = engine_.GetExpected(target_subgraph_key);
+        if (!status_or_expected_time.ok()) {
+          BAND_LOG_PROD(BAND_LOG_WARNING,
+                        "Failed to get expected latency for subgraph key %s",
+                        target_subgraph_key.ToString().c_str());
+          return false;
+        }
+        int64_t expected_time = status_or_expected_time.value();
+        waiting_time[worker_id] += expected_time;
         auto requests_it = requests.begin() + target_job_index;
         Job job = *requests_it;
         jobs_to_yield.insert(job.id());

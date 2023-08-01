@@ -136,10 +136,9 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   std::array<float, 2> input = {1.f, 3.f};
   memcpy(input_tensor->GetData(), input.data(), input.size() * sizeof(float));
 
-  EXPECT_EQ(
-      engine->RequestSync(model.GetId(), {0, true, -1, -1.f},
-                          {input_tensor}, {output_tensor}),
-      absl::OkStatus());
+  EXPECT_EQ(engine->RequestSync(model.GetId(), {0, true, -1, -1.f},
+                                {input_tensor}, {output_tensor}),
+            absl::OkStatus());
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[0], 3.f);
   EXPECT_EQ(reinterpret_cast<float*>(output_tensor->GetData())[1], 9.f);
   EXPECT_EQ(execution_count, 1);
@@ -180,10 +179,12 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
             absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
-  EXPECT_GE(
-      engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
-  EXPECT_GE(
-      engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0)), 0);
+  EXPECT_GE(engine->GetProfiled(engine->GetLargestSubgraphKey(model.GetId(), 0))
+                .value(),
+            0);
+  EXPECT_GE(engine->GetExpected(engine->GetLargestSubgraphKey(model.GetId(), 0))
+                .value(),
+            0);
 }
 
 TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
@@ -425,8 +426,8 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
       preprocessor_builder.Build();
   EXPECT_EQ(preprocessor.status(), absl::OkStatus());
-  EXPECT_EQ(
-      preprocessor.value()->Process(*image_buffer, *tensor_buffer), absl::OkStatus());
+  EXPECT_EQ(preprocessor.value()->Process(*image_buffer, *tensor_buffer),
+            absl::OkStatus());
   // confirm that the image is resized to 224x224 and converted to RGB
   Tensor* output_tensor = engine->CreateTensor(
       model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
@@ -489,12 +490,10 @@ TEST(TFLiteBackend, ClassificationTest) {
   std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
 
   Model model;
-  EXPECT_EQ(
-      model
-          .FromPath(
-              BackendType::kTfLite,
-              "band/test/data/lite-model_mobilenet_v2_100_224_fp32_1.tflite")
-          , absl::OkStatus());
+  EXPECT_EQ(model.FromPath(
+                BackendType::kTfLite,
+                "band/test/data/lite-model_mobilenet_v2_100_224_fp32_1.tflite"),
+            absl::OkStatus());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -507,8 +506,8 @@ TEST(TFLiteBackend, ClassificationTest) {
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
       preprocessor_builder.Build();
   EXPECT_EQ(preprocessor.status(), absl::OkStatus());
-  EXPECT_EQ(
-      preprocessor.value()->Process(*image_buffer, *tensor_buffer), absl::OkStatus());
+  EXPECT_EQ(preprocessor.value()->Process(*image_buffer, *tensor_buffer),
+            absl::OkStatus());
 
   for (size_t i = 0; i < input_tensor->GetNumElements(); ++i) {
     EXPECT_GT(reinterpret_cast<float*>(input_tensor->GetData())[i], -1.0f);
@@ -518,10 +517,9 @@ TEST(TFLiteBackend, ClassificationTest) {
   // confirm that the image is resized to 224x224 and converted to RGB
   Tensor* output_tensor = engine->CreateTensor(
       model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
-  EXPECT_EQ(engine
-                  ->RequestSync(model.GetId(), {0, false, -1, -1},
-                                {input_tensor}, {output_tensor})
-                  , absl::OkStatus());
+  EXPECT_EQ(engine->RequestSync(model.GetId(), {0, false, -1, -1},
+                                {input_tensor}, {output_tensor}),
+            absl::OkStatus());
 
   // TODO: postprocessing library
   std::vector<float> output_data;

@@ -27,8 +27,15 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
 
   int64_t total = 0;
   for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
-    int64_t expected_latency = engine_->GetExpected(it->subgraph_key);
-
+    auto status_or_expected_latency = engine_->GetExpected(it->subgraph_key);
+    if (!status_or_expected_latency.ok()) {
+      BAND_LOG_PROD(BAND_LOG_WARNING,
+                    "Failed to get expected latency for subgraph key %s",
+                    it->subgraph_key.ToString().c_str());
+      return LARGE_WAITING_TIME;
+    }
+    
+    int64_t expected_latency = status_or_expected_latency.value();
     total += expected_latency;
     if (it == requests_.begin()) {
       int64_t current_time = time::NowMicros();

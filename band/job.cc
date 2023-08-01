@@ -54,12 +54,10 @@ absl::Status Job::InvokeFailure() {
   return absl::OkStatus();
 }
 
-Job Job::Next(const SubgraphKey& target_key, int profiled_execution_time,
-              int expected_execution_time, bool last) {
+Job Job::Next(const SubgraphKey& target_key, LatencyRecord record, bool last) {
   Job job = *this;
   job.subgraph_key = target_key;
-  job.profiled_execution_time = profiled_execution_time;
-  job.expected_execution_time = expected_execution_time;
+  job.latency_profile = record;
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
   if (!last) {

@@ -177,13 +177,6 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     if (root["profile_num_runs"].isInt()) {
       builder.AddNumRuns(root["profile_num_runs"].asInt());
     }
-    if (root["profile_copy_computation_ratio"].isNumeric()) {
-      std::vector<int> copy_computation_ratio;
-      for (auto ratio : root["profile_copy_computation_ratio"]) {
-        copy_computation_ratio.push_back(ratio.asInt());
-      }
-      builder.AddCopyComputationRatio(copy_computation_ratio);
-    }
     if (root["profile_smoothing_factor"].isNumeric()) {
       builder.AddSmoothingFactor(root["profile_smoothing_factor"].asFloat());
     }
@@ -344,9 +337,12 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       // calculate worst case latency
       for (int worker_id = 0; worker_id < engine_->GetNumWorkers();
            worker_id++) {
-        worst_us = std::max(engine_->GetProfiled(engine_->GetLargestSubgraphKey(
-                                model_id, worker_id)),
-                            worst_us);
+        auto status_or_profiled = engine_->GetProfiled(
+            engine_->GetLargestSubgraphKey(model_id, worker_id));
+        if (!status_or_profiled.ok()) {
+          return status_or_profiled.status();
+        }
+        worst_us = std::max(status_or_profiled.value(), worst_us);
       }
 
       if (worst_us == 0) {

@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 
 #include "band/engine_interface.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 
 namespace band {
 namespace test {
@@ -48,9 +50,10 @@ struct MockEngineBase : public IEngine {
                                  const std::set<WorkerId>&));
 
   /* profiler */
-  MOCK_METHOD2(UpdateLatency, void(const SubgraphKey&, int64_t));
-  MOCK_CONST_METHOD1(GetProfiled, int64_t(const SubgraphKey&));
-  MOCK_CONST_METHOD1(GetExpected, int64_t(const SubgraphKey&));
+  MOCK_METHOD2(UpdateLatency, absl::Status(const SubgraphKey&, int64_t));
+  MOCK_CONST_METHOD1(GetLatency, absl::StatusOr<LatencyRecord>(const SubgraphKey&));
+  MOCK_CONST_METHOD1(GetProfiled, absl::StatusOr<int64_t>(const SubgraphKey&));
+  MOCK_CONST_METHOD1(GetExpected, absl::StatusOr<int64_t>(const SubgraphKey&));
 
   /* planner */
   MOCK_METHOD0(Trigger, void());

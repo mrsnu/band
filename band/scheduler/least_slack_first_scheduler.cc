@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "band/time.h"
+#include "band/logger.h"
 
 namespace band {
 LeastSlackFirstScheduler::LeastSlackFirstScheduler(IEngine& engine,
@@ -53,7 +54,15 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     int worker_id = target_subgraph_key.GetWorkerId();
     if (idle_workers.find(worker_id) != idle_workers.end()) {
       // Update worker's waiting time as if it will execute the job
-      waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
+      auto status_or_expected_time = engine_.GetExpected(target_subgraph_key);
+      if (!status_or_expected_time.ok()) {
+        BAND_LOG_PROD(BAND_LOG_WARNING,
+                      "Failed to get expected latency for subgraph key %s",
+                      target_subgraph_key.ToString().c_str());
+        return false;
+      }
+      int64_t expected_time = status_or_expected_time.value();
+      waiting_time[worker_id] += expected_time;
       success &= engine_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;

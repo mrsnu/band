@@ -7,36 +7,34 @@
 #include <unordered_map>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
 #include "band/config.h"
+#include "band/estimator/record.h"
 
 namespace band {
+
 class IEngine;
 class LatencyEstimator {
  public:
   explicit LatencyEstimator(IEngine* engine);
   absl::Status Init(const ProfileConfig& config);
-  void UpdateLatency(const SubgraphKey& key, int64_t latency);
-
+  absl::Status UpdateLatency(const SubgraphKey& key, int64_t latency);
   absl::Status ProfileModel(ModelId model_id);
-  int64_t GetProfiled(const SubgraphKey& key) const;
-  int64_t GetExpected(const SubgraphKey& key) const;
-  int64_t GetWorst(ModelId model_id) const;
+
+  absl::StatusOr<LatencyRecord> GetLatency(const SubgraphKey& key) const;
+  absl::StatusOr<int64_t> GetProfiled(const SubgraphKey& key) const;
+  absl::StatusOr<int64_t> GetExpected(const SubgraphKey& key) const;
+  absl::StatusOr<int64_t> GetWorst(ModelId model_id) const;
 
   absl::Status DumpProfile();
-
-  // latency in microseconds
-  struct Latency {
-    int64_t profiled;
-    int64_t moving_averaged;
-  };
 
  private:
   size_t GetProfileHash() const;
 
   // Convert entries in the json value to ModelDeviceToLatency format,
   // for the given model name and target model id.
-  std::map<SubgraphKey, Latency> JsonToModelProfile(const int model_id);
+  std::map<SubgraphKey, LatencyRecord> JsonToModelProfile(const int model_id);
 
   // Convert model integer ids back to string-type names for model profiles,
   // and returns the json format identical to `profile_database_json_`.
@@ -53,16 +51,17 @@ class LatencyEstimator {
   // because the model name --> int mapping is not available at init time.
   Json::Value profile_database_json_;
 
-  std::unordered_map<SubgraphKey, Latency, SubgraphHash> profile_database_;
+  std::unordered_map<SubgraphKey, LatencyRecord, SubgraphHash>
+      profile_database_;
   float profile_smoothing_factor_ = 0.05f;
 
   bool profile_online_;
   int profile_num_warmups_;
   int profile_num_runs_;
-  std::vector<int> profile_copy_computation_ratio_;
 
   IEngine* const engine_;
 };
+
 }  // namespace band
 
 #endif  // BAND_LATENCY_ESTIMATOR_H_

@@ -88,8 +88,15 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // no need to hold on to the lock anymore
   lock.unlock();
 
-  int64_t profiled_latency = engine_->GetExpected(current_job_.subgraph_key);
+  auto status_or_profiled_latency = engine_->GetExpected(current_job_.subgraph_key);
+  if (!status_or_profiled_latency.ok()) {
+    BAND_LOG_PROD(BAND_LOG_WARNING,
+                  "Failed to get expected latency for subgraph key %s",
+                  current_job_.subgraph_key.ToString().c_str());
+    return LARGE_WAITING_TIME;
+  }
 
+  int64_t profiled_latency = status_or_profiled_latency.value();
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet
     return profiled_latency;

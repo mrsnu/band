@@ -86,11 +86,16 @@ class Engine : public IEngine {
 
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
-
-  int64_t GetProfiled(const SubgraphKey& key) const override;
-  int64_t GetExpected(const SubgraphKey& key) const override;
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
+
+  /* latency estimator */
+  absl::Status UpdateLatency(const SubgraphKey& key, int64_t latency) override;
+  absl::StatusOr<LatencyRecord> GetLatency(
+      const SubgraphKey& key) const override;
+  absl::StatusOr<int64_t> GetProfiled(const SubgraphKey& key) const override;
+  absl::StatusOr<int64_t> GetExpected(const SubgraphKey& key) const override;
+  absl::StatusOr<int64_t> GetWorst(ModelId model_id) const;
 
  private:
   /* engine */
@@ -132,10 +137,6 @@ class Engine : public IEngine {
   std::pair<SubgraphKey, int64_t> GetShortestSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting) const;
-
-  /* latency estimator */
-  void UpdateLatency(const SubgraphKey& key, int64_t latency) override;
-  int64_t GetWorst(ModelId model_id) const;
 
   /* planner */
   void Trigger() override;

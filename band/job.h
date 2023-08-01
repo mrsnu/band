@@ -3,6 +3,7 @@
 
 #include "absl/status/status.h"
 #include "band/common.h"
+#include "band/estimator/record.h"
 
 typedef int JobId;
 
@@ -81,8 +82,8 @@ class Job {
   absl::Status OutputCopyFailure();
   absl::Status InvokeFailure();
 
-  Job Next(const SubgraphKey& target_key, int profiled_execution_time,
-           int expected_execution_time, bool last);
+  Job Next(const SubgraphKey& target_key,
+           LatencyRecord latency_profile, bool last);
 
   std::string ToJson() const;
   std::string ToString() const;
@@ -94,8 +95,8 @@ class Job {
   int64_t invoke_time = 0;
   int64_t end_time = 0;
   // Profiled invoke execution time
+  LatencyRecord latency_profile;
   int64_t profiled_execution_time = 0;
-  // Expected invoke execution time
   int64_t expected_execution_time = 0;
   // Expected total latency
   int64_t expected_latency = 0;

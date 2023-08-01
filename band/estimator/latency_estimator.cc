@@ -1,4 +1,4 @@
-#include "band/latency_estimator.h"
+#include "band/estimator/latency_estimator.h"
 
 #include "absl/strings/str_format.h"
 #include "band/engine_interface.h"
@@ -9,12 +9,24 @@
 #include "band/worker.h"
 
 namespace band {
+namespace {
+int64_t ExpectWithMovingAverage(int64_t prev_latency, int64_t latency,
+                                float smoothing_factor) {
+  return smoothing_factor * latency + (1 - smoothing_factor) * prev_latency;
+}
+}  // anonymous namespace
+
 LatencyEstimator::LatencyEstimator(IEngine* engine) : engine_(engine) {}
 
 absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   profile_data_path_ = config.profile_data_path;
   if (!config.online) {
     profile_database_json_ = json::LoadFromFile(config.profile_data_path);
+    if (profile_database_json_.empty()) {
+      return absl::NotFoundError(absl::StrFormat(
+          "Cannot find profile data file at %s. Please check the path.",
+          config.profile_data_path.c_str()));
+    }
   }
   // we cannot convert the model name strings to integer ids yet,
   // (profile_database_json_ --> profile_database_)
@@ -24,25 +36,22 @@ absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   profile_online_ = config.online;
   profile_num_warmups_ = config.num_warmups;
   profile_num_runs_ = config.num_runs;
-  profile_copy_computation_ratio_ = config.copy_computation_ratio;
   profile_smoothing_factor_ = config.smoothing_factor;
 
   return absl::OkStatus();
 }
 
-void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
+absl::Status LatencyEstimator::UpdateLatency(const SubgraphKey& key,
+                                             int64_t latency) {
   auto it = profile_database_.find(key);
-  if (it != profile_database_.end()) {
-    int64_t prev_latency = it->second.moving_averaged;
-    profile_database_[key].moving_averaged =
-        profile_smoothing_factor_ * latency +
-        (1 - profile_smoothing_factor_) * prev_latency;
-  } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::UpdateLatency] The given SubgraphKey %s "
-                  "cannot be found.",
-                  key.ToString().c_str());
+  if (it == profile_database_.end()) {
+    return absl::InternalError(absl::StrFormat(
+        "The given SubgraphKey %s cannot be found.", key.ToString().c_str()));
   }
+  int64_t prev_latency = it->second.expected;
+  profile_database_[key].expected =
+      ExpectWithMovingAverage(prev_latency, latency, profile_smoothing_factor_);
+  return absl::OkStatus();
 }
 
 absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
@@ -135,36 +144,39 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
   return absl::OkStatus();
 }
 
-int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
+absl::StatusOr<LatencyRecord> LatencyEstimator::GetLatency(
+    const SubgraphKey& key) const {
   auto it = profile_database_.find(key);
-  if (it != profile_database_.end()) {
-    return it->second.profiled;
-  } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::GetProfiled] The given %s not found",
-                  key.ToString().c_str());
-    return -1;
+  if (it == profile_database_.end()) {
+    return absl::InternalError(absl::StrFormat(
+        "The given SubgraphKey %s cannot be found.", key.ToString().c_str()));
   }
+  return it->second;
 }
 
-int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
-  auto it = profile_database_.find(key);
-  if (it != profile_database_.end()) {
-    return it->second.moving_averaged;
-  } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "[LatencyEstimator::GetExpected] The given %s not found",
-                  key.ToString().c_str());
-    return std::numeric_limits<int32_t>::max();
+absl::StatusOr<int64_t> LatencyEstimator::GetProfiled(
+    const SubgraphKey& key) const {
+  auto status_or_latency = GetLatency(key);
+  if (!status_or_latency.ok()) {
+    return status_or_latency.status();
   }
+  return status_or_latency.value().profiled;
 }
 
-int64_t LatencyEstimator::GetWorst(ModelId model_id) const {
+absl::StatusOr<int64_t> LatencyEstimator::GetExpected(
+    const SubgraphKey& key) const {
+  auto status_or_latency = GetLatency(key);
+  if (!status_or_latency.ok()) {
+    return status_or_latency.status();
+  }
+  return status_or_latency.value().expected;
+}
+
+absl::StatusOr<int64_t> LatencyEstimator::GetWorst(ModelId model_id) const {
   int64_t worst_model_latency = 0;
   for (auto it : profile_database_) {
     if (it.first.GetModelId() == model_id) {
-      worst_model_latency =
-          std::max(worst_model_latency, it.second.moving_averaged);
+      worst_model_latency = std::max(worst_model_latency, it.second.expected);
     }
   }
   return worst_model_latency;
@@ -186,7 +198,7 @@ size_t LatencyEstimator::GetProfileHash() const {
   return hash;
 }
 
-std::map<SubgraphKey, LatencyEstimator::Latency>
+std::map<SubgraphKey, LatencyRecord>
 LatencyEstimator::JsonToModelProfile(const int model_id) {
   auto string_to_indices = [](std::string index_string) {
     std::set<int> node_indices;
@@ -202,7 +214,7 @@ LatencyEstimator::JsonToModelProfile(const int model_id) {
     return node_indices;
   };
 
-  std::map<SubgraphKey, LatencyEstimator::Latency> id_profile;
+  std::map<SubgraphKey, LatencyRecord> id_profile;
   if (profile_database_json_["hash"].asUInt64() != GetProfileHash()) {
     BAND_LOG_INTERNAL(
         BAND_LOG_WARNING,

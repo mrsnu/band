@@ -7,10 +7,12 @@
 #include <unordered_map>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
-#include "band/job.h"
 #include "band/config.h"
 #include "band/error_reporter.h"
+#include "band/job.h"
+#include "band/estimator/record.h"
 
 namespace band {
 namespace interface {
@@ -92,9 +94,12 @@ class IEngine {
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* profiler */
-  virtual void UpdateLatency(const SubgraphKey& key, int64_t latency) = 0;
-  virtual int64_t GetProfiled(const SubgraphKey& key) const = 0;
-  virtual int64_t GetExpected(const SubgraphKey& key) const = 0;
+  virtual absl::Status UpdateLatency(const SubgraphKey& key,
+                                     int64_t latency) = 0;
+  virtual absl::StatusOr<LatencyRecord> GetLatency(
+      const SubgraphKey& key) const = 0;
+  virtual absl::StatusOr<int64_t> GetProfiled(const SubgraphKey& key) const = 0;
+  virtual absl::StatusOr<int64_t> GetExpected(const SubgraphKey& key) const = 0;
 
   /* planner */
   virtual void Trigger() = 0;

@@ -29,14 +29,12 @@
         {
             "device": "CPU",
             "num_threads": 3,
-            "cpu_masks": "BIG",
-            "profile_copy_computation_ratio": 10
+            "cpu_masks": "BIG"
         },
         {
             "device": "CPU",
             "num_threads": 4,
-            "cpu_masks": "LITTLE",
-            "profile_copy_computation_ratio": 10
+            "cpu_masks": "LITTLE"
         }
     ],
     "running_time_ms": 500,
@@ -45,12 +43,6 @@
     "profile_online": true,
     "profile_warmup_runs": 1,
     "profile_num_runs": 1,
-    "profile_copy_computation_ratio": [
-        1000,
-        1000,
-        1000,
-        1000
-    ],
     "allow_work_steal": true,
     "availability_check_interval_ms": 30000,
     "schedule_window_size": 10

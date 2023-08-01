@@ -1,4 +1,4 @@
-#include "band/latency_estimator.h"
+#include "band/estimator/latency_estimator.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -133,9 +133,16 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   LatencyEstimator latency_estimator(&engine);
 
   EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
-  EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
+
+  auto status_or_profiled = latency_estimator.GetProfiled(key);
+  EXPECT_EQ(status_or_profiled.status(), absl::OkStatus());
+  EXPECT_EQ(status_or_profiled.value(), -1);
+
   EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
-  EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
+
+  auto status_or_profiled2 = latency_estimator.GetProfiled(key);
+  EXPECT_EQ(status_or_profiled2.status(), absl::OkStatus());
+  EXPECT_GT(status_or_profiled2.value(), 5000);
 
   worker.End();
 }
@@ -183,9 +190,16 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .value();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
-    EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
+
+    auto status_or_profiled = latency_estimator.GetProfiled(key);
+    EXPECT_EQ(status_or_profiled.status(), absl::OkStatus());
+    EXPECT_EQ(status_or_profiled.value(), -1);
+
     EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
-    EXPECT_GT(latency_estimator.GetProfiled(key), 5000);
+    
+    auto status_or_profiled2 = latency_estimator.GetProfiled(key);
+    EXPECT_EQ(status_or_profiled2.status(), absl::OkStatus());
+    EXPECT_GT(status_or_profiled2.value(), 5000);
   }
 
   std::remove(profile_path.c_str());
@@ -240,10 +254,15 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .value();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
-    EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
+
+    auto status_or_profiled = latency_estimator.GetProfiled(key);
+    EXPECT_EQ(status_or_profiled.status(), absl::OkStatus());
+    EXPECT_EQ(status_or_profiled.value(), -1);
+
     EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     // fails to load due to worker update
-    EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
+    auto status_or_profiled2 = latency_estimator.GetProfiled(key);
+    EXPECT_FALSE(status_or_profiled2.ok());
   }
 
   std::remove(profile_path.c_str());

@@ -135,6 +135,7 @@ band_cc_library(
         "logger.h",
         "model_spec.h",
         "job.h",
+        "estimator/record.h",
     ],
     linkopts = select({
         "//band:android": [
@@ -319,14 +320,6 @@ band_cc_library(
 )
 
 band_cc_library(
-    name = "record",
-    hdrs = [
-        "profiler/record.h",
-        "profiler/latency_record.h",
-    ],
-)
-
-band_cc_library(
     name = "profiler",
     srcs = [
         "profiler/profiler.cc",
@@ -336,17 +329,16 @@ band_cc_library(
     ],
     deps = [
         ":common",
-        ":record",
     ]
 )
 
 band_cc_library(
     name = "latency_estimator",
     srcs = [
-        "latency_estimator.cc",
+        "estimator/latency_estimator.cc",
     ],
     hdrs = [
-        "latency_estimator.h",
+        "estimator/latency_estimator.h",
     ],
     deps = [
         ":common",

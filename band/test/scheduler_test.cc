@@ -47,7 +47,9 @@ struct MockEngine : public MockEngineBase {
     return map;
   }
 
-  int64_t GetExpected(const SubgraphKey& key) const override { return 10; }
+  absl::StatusOr<int64_t> GetExpected(const SubgraphKey& key) const override {
+    return 10;
+  }
   bool EnqueueToWorker(const ScheduleAction& action) override {
     action_.push_back(action);
     return true;

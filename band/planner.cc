@@ -334,8 +334,14 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
       std::lock_guard<std::mutex> lock(worker->GetDeviceMtx());
 
       if (worker->IsEnqueueReady()) {
-        job = job.Next(target_key, engine_.GetProfiled(target_key),
-                       engine_.GetExpected(target_key),
+        auto status_or_latency_profile = engine_.GetLatency(target_key);
+        if (!status_or_latency_profile.ok()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR,
+                        "EnqueueToWorker failed. Requests scheduled to "
+                        "unavailable subgraph key %s",
+                        target_key.ToString().c_str());
+        }
+        job = job.Next(target_key, status_or_latency_profile.value(),
                        engine_.IsEnd(target_key));
         if (!worker->EnqueueJob(job)) {
           BAND_LOG_PROD(BAND_LOG_ERROR,

@@ -18,9 +18,7 @@ class ProfileConfigBuilder {
                                       // RuntimeConfigBuilder to access
                                       // variables
  public:
-  ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(EnumLength<DeviceFlag>(), 30000);
-  }
+  ProfileConfigBuilder() {}
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
     return *this;
@@ -31,11 +29,6 @@ class ProfileConfigBuilder {
   }
   ProfileConfigBuilder& AddNumRuns(int num_runs) {
     num_runs_ = num_runs;
-    return *this;
-  }
-  ProfileConfigBuilder& AddCopyComputationRatio(
-      std::vector<int> copy_computation_ratio) {
-    copy_computation_ratio_ = copy_computation_ratio;
     return *this;
   }
   ProfileConfigBuilder& AddProfileDataPath(std::string profile_data_path) {
@@ -54,7 +47,6 @@ class ProfileConfigBuilder {
   bool online_ = true;
   int num_warmups_ = 1;
   int num_runs_ = 1;
-  std::vector<int> copy_computation_ratio_;
   std::string profile_data_path_ = "";
   float smoothing_factor_ = 0.1;
 };
@@ -190,11 +182,6 @@ class RuntimeConfigBuilder {
   }
   RuntimeConfigBuilder& AddNumRuns(int num_runs) {
     profile_config_builder_.AddNumRuns(num_runs);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddCopyComputationRatio(
-      std::vector<int> copy_computation_ratio) {
-    profile_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
     return *this;
   }
 
