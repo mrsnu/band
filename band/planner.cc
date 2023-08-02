@@ -204,13 +204,6 @@ void Planner::PrepareReenqueue(Job& job) {
   job.following_jobs.clear();
 }
 
-bool Planner::NeedProfile() {
-  for (int i = 0; i < schedulers_.size(); ++i) {
-    if (schedulers_[i]->NeedProfile()) return true;
-  }
-  return false;
-}
-
 bool Planner::NeedFallbackSubgraphs() const {
   for (int i = 0; i < schedulers_.size(); ++i) {
     if (schedulers_[i]->NeedFallbackSubgraphs()) return true;

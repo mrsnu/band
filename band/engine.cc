@@ -242,7 +242,7 @@ absl::Status Engine::RegisterModel(Model* model) {
       }
     }
 
-    if (latency_estimator_) {
+    {
       auto status = latency_estimator_->ProfileModel(model_id);
       if (!status.ok()) {
         return status;
@@ -518,8 +518,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   {
     subgraph_config_ = config.subgraph_config;
 
-    if (planner_->NeedProfile()) {
-      latency_estimator_ = std::make_unique<LatencyEstimator>(this);
+    latency_estimator_ = std::make_unique<LatencyEstimator>(this);
+    {
       auto status = latency_estimator_->Init(config.profile_config);
       if (!status.ok()) {
         return status;

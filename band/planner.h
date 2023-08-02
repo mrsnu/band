@@ -52,8 +52,6 @@ class Planner {
   bool EnqueueToWorker(const std::vector<ScheduleAction>& action);
   void Trigger() { planner_safe_bool_.notify(); }
 
-  // Check whether profiling is required or not.
-  bool NeedProfile();
   // Checks if the schedulers can handle fallback subgraphs.
   // Returns true if any of the scheduler can handle fallback subgraphs.
   // But, note that having both types of scheduler (w/ fallback, w/o fallback),
