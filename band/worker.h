@@ -15,8 +15,6 @@ namespace band {
 
 class Planner;
 
-static const int64_t LARGE_WAITING_TIME = std::numeric_limits<int>::max() / 2;
-
 class Worker {
  public:
   explicit Worker(IEngine* engine, WorkerId worker_id,
@@ -79,6 +77,8 @@ class Worker {
   std::mutex cpu_mtx_;
 
   const DeviceFlag device_flag_;
+
+  static const int64_t LARGE_WAITING_TIME;
 };
 
 class DeviceQueueWorker : public Worker {

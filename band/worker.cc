@@ -7,6 +7,9 @@
 #include "band/time.h"
 
 namespace band {
+
+const int64_t Worker::LARGE_WAITING_TIME = std::numeric_limits<int>::max() / 2;
+
 Worker::Worker(IEngine* engine, WorkerId worker_id, DeviceFlag device_flag)
     : engine_(engine), worker_id_(worker_id), device_flag_(device_flag) {}
 
