@@ -34,3 +34,6 @@ band.aar
 
 # mac icloud
 *.icloud
+
+# Python execution cache
+__pycache__
