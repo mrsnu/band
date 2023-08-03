@@ -38,8 +38,13 @@ namespace grpc {
 class GrpcClient {
  public:
   GrpcClient() = default;
-  void Connect(std::string host, int port) {
+  absl::Status Connect(std::string host, int port) {
     client_ = std::make_unique<GrpcClientService>(GetChannel(host, port));
+    if (!client_) {
+      return absl::InternalError("Failed to connect to " + host + ":" +
+                                 std::to_string(port));
+    }
+    return absl::OkStatus();
   }
 
   absl::StatusOr<std::vector<band_proto::ModelDescriptor>> GetModelDesc() const;

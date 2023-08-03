@@ -1,10 +1,11 @@
 #ifndef BAND_BACKEND_GRPC_MODEL_EXECUTOR_H_
 #define BAND_BACKEND_GRPC_MODEL_EXECUTOR_H_
 
-#include "band/config.h"
-#include "band/backend/grpc/model.h"
 #include "band/backend/grpc/grpc_client.h"
+#include "band/backend/grpc/model.h"
+#include "band/config.h"
 #include "band/interface/model_executor.h"
+#include "band/logger.h"
 
 namespace band {
 namespace grpc {
@@ -22,7 +23,10 @@ class GrpcModelExecutor : public interface::IModelExecutor {
                        thread_affinity_mask, num_threads) {
     auto grpc_config =
         reinterpret_cast<GrpcBackendConfig*>(backend_config.get());
-    client_.Connect(grpc_config->host, grpc_config->port);
+    auto status = client_.Connect(grpc_config->host, grpc_config->port);
+    if (!status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
+    }
   }
   ~GrpcModelExecutor() override;
 
