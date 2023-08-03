@@ -39,7 +39,13 @@ Engine::~Engine() {
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
                                        ErrorReporter* error_reporter) {
   std::unique_ptr<Engine> engine_ptr(new Engine(error_reporter));
-  return engine_ptr->Init(config).ok() ? std::move(engine_ptr) : nullptr;
+  auto status = engine_ptr->Init(config);
+  if (!status.ok()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to initialize engine: %s",
+                  status.message());
+    return nullptr;
+  }
+  return std::move(engine_ptr);
 }
 
 absl::Status Engine::RegisterModel(Model* model) {
@@ -558,6 +564,28 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         ToString(device_flag));
+    }
+  }
+
+  {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Resource monitor initializing...");
+    resource_monitor_ = std::make_unique<ResourceMonitor>();
+    auto status = resource_monitor_->Init(config.resource_monitor_config);
+    if (!status.ok()) {
+      return status;
+    }
+  }
+
+  {
+    for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
+      const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);
+      if (flag == CPUMaskFlag::kAll) {
+        continue;
+      }
+      auto status = resource_monitor_->AddCpuFreqResource(flag, CpuFreqFlag::CUR_FREQ);
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
 

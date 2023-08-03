@@ -56,6 +56,8 @@ template <>
 size_t EnumLength<DevFreqFlag>();
 template <>
 size_t EnumLength<CpuFreqFlag>();
+template <>
+size_t EnumLength<PowerSupplyFlag>();
 
 template <>
 const char* ToString<ThermalFlag>(ThermalFlag flag);

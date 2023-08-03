@@ -13,6 +13,7 @@
 #include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
+#include "band/resource_monitor.h"
 #include "band/tensor_ring_buffer.h"
 
 namespace band {
@@ -179,6 +180,7 @@ class Engine : public IEngine {
   mutable WorkerWaitingTime workers_waiting_;
   std::unique_ptr<LatencyEstimator> latency_estimator_;
   std::unique_ptr<Planner> planner_;
+  std::unique_ptr<ResourceMonitor> resource_monitor_;
 
   // Models
 

@@ -63,5 +63,9 @@
     ],
     "allow_work_steal": true,
     "availability_check_interval_ms": 30000,
-    "schedule_window_size": 10
+    "schedule_window_size": 10,
+    "monitor_log_path": "/data/local/tmp/monitor_log_path.json",
+    "monitor_interval": 30,
+    "monitor_dev_freqs": {
+    }
 }

@@ -251,6 +251,29 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
   }
 
+  // Resource monitor config
+  {
+    if (root["monitor_log_path"].isString()) {
+      builder.AddResourceMonitorLogPath(root["monitor_log_path"].asCString());
+    }
+
+    if (root["monitor_interval"].isInt()) {
+      builder.AddResourceMonitorIntervalMs(root["monitor_interval"].asInt());
+    }
+
+    if (root["monitor_dev_freqs"].isObject()) {
+      if (root["monitor_dev_freqs"].isMember("GPU")) {
+        builder.AddResourceMonitorDeviceFreqPath(DeviceFlag::kGPU, root["monitor_dev_freqs"]["GPU"].asCString());
+      }
+      if (root["monitor_dev_freqs"].isMember("DSP")) {
+        builder.AddResourceMonitorDeviceFreqPath(DeviceFlag::kDSP, root["monitor_dev_freqs"]["DSP"].asCString());
+      }
+      if (root["monitor_dev_freqs"].isMember("NPU")) {
+        builder.AddResourceMonitorDeviceFreqPath(DeviceFlag::kNPU, root["monitor_dev_freqs"]["NPU"].asCString());
+      }
+    }
+  }
+
   // Runtime config
   {
     if (root["minimum_subgraph_size"].isInt()) {

@@ -160,9 +160,6 @@ const char* ToString<PowerSupplyFlag>(PowerSupplyFlag flag) {
 }
 
 ResourceMonitor::~ResourceMonitor() {
-  if (log_file_.is_open()) {
-    log_file_.close();
-  }
   is_monitoring_ = false;
   if (monitor_thread_.joinable()) {
     monitor_thread_.join();
@@ -177,6 +174,7 @@ ResourceMonitor::~ResourceMonitor() {
 absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
   if (config.log_path.size() > 0) {
     // remove existing log file if exists
+    BAND_LOG_PROD(BAND_LOG_ERROR, "%s", config.log_path.c_str());
     std::remove(config.log_path.c_str());
     // open log file and start from the beginning
     log_file_.open(config.log_path, std::ios::out);
@@ -702,8 +700,8 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
           thermal_status_[next_head][resource.first] =
               status.value() * resource.second.second;
         } else {
-          BAND_LOG_INTERNAL(
-              BAND_LOG_WARNING,
+          BAND_LOG_PROD(
+              BAND_LOG_ERROR,
               "Failed to read thermal resource %s (%s, %d): %s",
               ToString(resource.first.first), resource.second.first.c_str(),
               resource.first.second, status.status().ToString().c_str());
@@ -769,6 +767,12 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
       }
       log_file_ << "}, \"dev_freq\": {";
       for (auto& resource : dev_freq_status_[status_head_]) {
+        log_file_ << "\"" << ToString(resource.first.first) << "_"
+                  << ToString(resource.first.second)
+                  << "\": " << resource.second << ", ";
+      }
+      log_file_ << "}, \"power_supply\": {";
+      for (auto& resource : power_supply_status_[status_head_]) {
         log_file_ << "\"" << ToString(resource.first.first) << "_"
                   << ToString(resource.first.second)
                   << "\": " << resource.second << ", ";
