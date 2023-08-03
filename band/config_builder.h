@@ -4,9 +4,11 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
 #include "band/config.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 #include "band/error_reporter.h"
 
 namespace band {
@@ -17,7 +19,7 @@ class ProfileConfigBuilder {
                                       // variables
  public:
   ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(GetSize<DeviceFlags>(), 30000);
+    copy_computation_ratio_ = std::vector<int>(EnumLength<DeviceFlag>(), 30000);
   }
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
@@ -45,8 +47,8 @@ class ProfileConfigBuilder {
     return *this;
   }
 
-  ProfileConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<ProfileConfig> Build();
+  absl::Status IsValid();
 
  private:
   bool online_ = true;
@@ -67,10 +69,12 @@ class PlannerConfigBuilder {
     return *this;
   }
   PlannerConfigBuilder& AddSchedulers(std::vector<SchedulerType> schedulers) {
-    schedulers_ = schedulers;
+    if (schedulers.size() != 0) {
+      schedulers_ = schedulers;
+    }
     return *this;
   }
-  PlannerConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
+  PlannerConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
   }
@@ -79,13 +83,14 @@ class PlannerConfigBuilder {
     return *this;
   }
 
-  PlannerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<PlannerConfig> Build();
 
  private:
-  int schedule_window_size_ = INT_MAX;
+  absl::Status IsValid();
+
+  int schedule_window_size_ = std::numeric_limits<int>::max();
   std::vector<SchedulerType> schedulers_;
-  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";
 };
 
@@ -95,23 +100,29 @@ class WorkerConfigBuilder {
 
  public:
   WorkerConfigBuilder() {
-    for (size_t i = 0; i < GetSize<DeviceFlags>(); i++) {
-      workers_.push_back(static_cast<DeviceFlags>(i));
+    for (size_t i = 0; i < EnumLength<DeviceFlag>(); i++) {
+      workers_.push_back(static_cast<DeviceFlag>(i));
     }
     cpu_masks_ =
-        std::vector<CPUMaskFlags>(GetSize<DeviceFlags>(), CPUMaskFlags::All);
-    num_threads_ = std::vector<int>(GetSize<DeviceFlags>(), 1);
+        std::vector<CPUMaskFlag>(EnumLength<DeviceFlag>(), CPUMaskFlag::kAll);
+    num_threads_ = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
-  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
-    workers_ = workers;
+  WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
+    if (workers.size() != 0) {
+      workers_ = workers;
+    }
     return *this;
   }
-  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
-    cpu_masks_ = cpu_masks;
+  WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
+    if (cpu_masks.size() != 0) {
+      cpu_masks_ = cpu_masks;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddNumThreads(std::vector<int> num_threads) {
-    num_threads_ = num_threads;
+    if (num_threads.size() != 0) {
+      num_threads_ = num_threads;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddAllowWorkSteal(bool allow_worksteal) {
@@ -123,12 +134,13 @@ class WorkerConfigBuilder {
     availability_check_interval_ms_ = availability_check_interval_ms;
     return *this;
   }
-  WorkerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<WorkerConfig> Build();
 
  private:
-  std::vector<DeviceFlags> workers_;
-  std::vector<CPUMaskFlags> cpu_masks_;
+  absl::Status IsValid();
+
+  std::vector<DeviceFlag> workers_;
+  std::vector<CPUMaskFlag> cpu_masks_;
   std::vector<int> num_threads_;
   bool allow_worksteal_ = false;
   int availability_check_interval_ms_ = 30000;
@@ -137,10 +149,11 @@ class WorkerConfigBuilder {
 class BackendConfigBuilder {
   friend class RuntimeConfigBuilder;
 
- public:
-  virtual std::shared_ptr<BackendConfig> Build(
+  virtual absl::Status IsValid(
       ErrorReporter* error_reporter = DefaultErrorReporter()) = 0;
-  virtual bool IsValid(
+
+ public:
+  virtual absl::StatusOr<std::shared_ptr<BackendConfig>> Build(
       ErrorReporter* error_reporter = DefaultErrorReporter()) = 0;
 };
 
@@ -149,9 +162,12 @@ class TfLiteBackendConfigBuilder : public BackendConfigBuilder {
   friend class RuntimeConfigBuilder;
 
  public:
-  std::shared_ptr<BackendConfig> Build(
+  absl::StatusOr<std::shared_ptr<BackendConfig>> Build(
       ErrorReporter* error_reporter = DefaultErrorReporter()) override;
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter()) override;
+
+ private:
+  absl::Status IsValid(
+      ErrorReporter* error_reporter = DefaultErrorReporter()) override;
 };
 #endif  // BAND_TFLITE
 
@@ -168,15 +184,47 @@ class GrpcBackendConfigBuilder : public BackendConfigBuilder {
     port_ = port;
     return *this;
   }
-  std::shared_ptr<BackendConfig> Build(
+  absl::StatusOr<std::shared_ptr<BackendConfig>> Build(
       ErrorReporter* error_reporter = DefaultErrorReporter()) override;
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter()) override;
 
  private:
+  absl::Status IsValid(
+      ErrorReporter* error_reporter = DefaultErrorReporter()) override;
+
   std::string host_ = "localhost";
   int port_ = 50051;
 };
 #endif  // BAND_GRPC
+
+class ResourceMonitorConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public:
+  ResourceMonitorConfigBuilder& AddResourceMonitorLogPath(
+      std::string log_path) {
+    log_path_ = log_path;
+    return *this;
+  }
+  ResourceMonitorConfigBuilder& AddResourceMonitorDeviceFreqPath(
+      DeviceFlag device, std::string device_freq_path) {
+    device_freq_paths_.insert({device, device_freq_path});
+    return *this;
+  }
+  ResourceMonitorConfigBuilder& AddResourceMonitorIntervalMs(
+      int monitor_interval_ms) {
+    monitor_interval_ms_ = monitor_interval_ms;
+    return *this;
+  }
+
+  absl::StatusOr<ResourceMonitorConfig> Build();
+
+ private:
+  absl::Status IsValid();
+
+  std::string log_path_ = "";
+  std::map<DeviceFlag, std::string> device_freq_paths_;
+  int monitor_interval_ms_ = 10;
+};
 
 // Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
@@ -222,17 +270,17 @@ class RuntimeConfigBuilder {
     planner_config_builder_.AddSchedulers(schedulers);
     return *this;
   }
-  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlags cpu_masks) {
+  RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlag cpu_masks) {
     planner_config_builder_.AddCPUMask(cpu_masks);
     return *this;
   }
 
   // Add WorkerConfig
-  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlags> workers) {
+  RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
     worker_config_builder_.AddWorkers(workers);
     return *this;
   }
-  RuntimeConfigBuilder& AddWorkerCPUMasks(std::vector<CPUMaskFlags> cpu_masks) {
+  RuntimeConfigBuilder& AddWorkerCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
     worker_config_builder_.AddCPUMasks(cpu_masks);
     return *this;
   }
@@ -251,6 +299,36 @@ class RuntimeConfigBuilder {
     return *this;
   }
 
+  // Add RuntimeConfig
+  RuntimeConfigBuilder& AddResourceMonitorLogPath(std::string log_path) {
+    resource_monitor_config_builder_.AddResourceMonitorLogPath(log_path);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddResourceMonitorDeviceFreqPath(
+      DeviceFlag device, std::string device_freq_path) {
+    resource_monitor_config_builder_.AddResourceMonitorDeviceFreqPath(
+        device, device_freq_path);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddResourceMonitorIntervalMs(int monitor_interval_ms) {
+    resource_monitor_config_builder_.AddResourceMonitorIntervalMs(
+        monitor_interval_ms);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
+    minimum_subgraph_size_ = minimum_subgraph_size;
+    return *this;
+  }
+  RuntimeConfigBuilder& AddSubgraphPreparationType(
+      SubgraphPreparationType subgraph_preparation_type) {
+    subgraph_preparation_type_ = subgraph_preparation_type;
+    return *this;
+  }
+  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
+    cpu_mask_ = cpu_mask;
+    return *this;
+  }
+
   // Add BackendConfig
 #ifdef BAND_TFLITE
 #endif  // BAND_TFLITE
@@ -266,25 +344,11 @@ class RuntimeConfigBuilder {
   }
 #endif  // BAND_GRPC
 
-  // Add RuntimeConfig
-  RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
-    minimum_subgraph_size_ = minimum_subgraph_size;
-    return *this;
-  }
-  RuntimeConfigBuilder& AddSubgraphPreparationType(
-      SubgraphPreparationType subgraph_preparation_type) {
-    subgraph_preparation_type_ = subgraph_preparation_type;
-    return *this;
-  }
-  RuntimeConfigBuilder& AddCPUMask(CPUMaskFlags cpu_mask) {
-    cpu_mask_ = cpu_mask;
-    return *this;
-  }
-
-  RuntimeConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<RuntimeConfig> Build();
 
  private:
+  absl::Status IsValid();
+
   ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
@@ -294,10 +358,11 @@ class RuntimeConfigBuilder {
 #ifdef BAND_GRPC
   GrpcBackendConfigBuilder grpc_backend_config_builder_;
 #endif  // BAND_GRPC
+  ResourceMonitorConfigBuilder resource_monitor_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
-      SubgraphPreparationType::MergeUnitSubgraph;
-  CPUMaskFlags cpu_mask_ = CPUMaskFlags::All;
+      SubgraphPreparationType::kMergeUnitSubgraph;
+  CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
 };
 
 }  // namespace band

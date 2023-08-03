@@ -6,6 +6,7 @@
 #include <queue>
 #include <unordered_map>
 
+#include "absl/status/status.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/error_reporter.h"

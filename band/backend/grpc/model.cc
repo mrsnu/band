@@ -9,7 +9,7 @@ namespace grpc {
 
 GrpcModel::GrpcModel(ModelId id) : interface::IModel(id) {}
 
-BackendType GrpcModel::GetBackendType() const { return BackendType::Grpc; }
+BackendType GrpcModel::GetBackendType() const { return BackendType::kGrpc; }
 
 absl::Status GrpcModel::FromPath(const char* filename) {
   std::ifstream fin;

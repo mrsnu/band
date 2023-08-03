@@ -8,8 +8,8 @@ namespace grpc {
 
 class GrpcUtil : public interface::IBackendUtil {
  public:
-  std::set<DeviceFlags> GetAvailableDevices() const override {
-    return {DeviceFlags::NETWORK};
+  std::set<DeviceFlag> GetAvailableDevices() const override {
+    return {DeviceFlag::kNETWORK};
   }
 };
 

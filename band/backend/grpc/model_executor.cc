@@ -114,7 +114,7 @@ absl::StatusOr<ModelSpec> GrpcModelExecutor::InvestigateModelSpec(
       std::set<int>(local_model->output_tensor_indices.begin(),
                     local_model->output_tensor_indices.end()),
       local_model->op_input_tensors, local_model->op_output_tensors, {},
-      {DeviceFlags::CPU, DeviceFlags::GPU, DeviceFlags::DSP, DeviceFlags::NPU});
+      {DeviceFlag::kCPU, DeviceFlag::kGPU, DeviceFlag::kDSP, DeviceFlag::kNPU});
 }
 
 absl::Status GrpcModelExecutor::PrepareSubgraph(interface::IModel* model,
@@ -133,7 +133,7 @@ absl::Status GrpcModelExecutor::PrepareSubgraph(interface::IModel* model,
 }
 
 BackendType GrpcModelExecutor::GetBackendType() const {
-  return BackendType::Grpc;
+  return BackendType::kGrpc;
 }
 
 const std::vector<int>& GrpcModelExecutor::GetInputs(

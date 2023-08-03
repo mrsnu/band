@@ -4,8 +4,8 @@
 #include <gtest/gtest.h>
 
 #include "band/config_builder.h"
+#include "band/device/cpu.h"
 #include "band/engine_interface.h"
-#include "band/cpu.h"
 #include "band/model_spec.h"
 #include "band/test/test_util.h"
 #include "band/time.h"
@@ -13,8 +13,8 @@
 
 namespace band {
 namespace test {
-struct CustomWorkerMockContext : public MockContextBase {
-  CustomWorkerMockContext() { model_spec.path = "dummy"; }
+struct CustomWorkerMockEngine : public MockEngineBase {
+  CustomWorkerMockEngine() { model_spec.path = "dummy"; }
   Worker* GetWorker(WorkerId id) override { return worker; }
   size_t GetNumWorkers() const override { return 1; }
   const ModelSpec* GetModelSpec(ModelId model_id) const override {
@@ -30,8 +30,8 @@ struct CustomWorkerMockContext : public MockContextBase {
   ModelSpec model_spec;
 };
 
-struct CustomInvokeMockContext : public CustomWorkerMockContext {
-  CustomInvokeMockContext(
+struct CustomInvokeMockEngine : public CustomWorkerMockEngine {
+  CustomInvokeMockEngine(
       std::function<absl::Status(const SubgraphKey&)> invoke_lambda)
       : invoke_lambda(invoke_lambda) {}
 
@@ -47,14 +47,14 @@ struct WorkerTypesSuite : testing::Test {};
 TYPED_TEST_SUITE(WorkerTypesSuite, WorkerTypeList);
 
 TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
-  CustomWorkerMockContext engine;
+  CustomWorkerMockEngine engine;
   EXPECT_CALL(engine, Invoke).Times(testing::Exactly(53));
 
   ProfileConfigBuilder b;
   ProfileConfig config =
-      b.AddNumRuns(50).AddNumWarmups(3).AddOnline(true).Build();
+      b.AddNumRuns(50).AddNumWarmups(3).AddOnline(true).Build().value();
 
-  TypeParam worker(&engine, 0, DeviceFlags::CPU);
+  TypeParam worker(&engine, 0, DeviceFlag::kCPU);
   engine.worker = &worker;
 
   worker.Start();
@@ -67,10 +67,10 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   worker.End();
 }
 
-struct AffinityMasksFixture : public testing::TestWithParam<CPUMaskFlags> {};
+struct CPUMaskFixture : public testing::TestWithParam<CPUMaskFlag> {};
 
-TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+TEST_P(CPUMaskFixture, AffinityPropagateTest) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     CpuSet thread_cpu_set;
     if (!GetCPUThreadAffinity(thread_cpu_set).ok()) {
       return absl::InternalError("GetCPUThreadAffinity");
@@ -89,9 +89,9 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
 
   ProfileConfigBuilder b;
   ProfileConfig config =
-      b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
+      b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build().value();
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlags::CPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // Explicitly assign worker to mock engine
   engine.worker = &worker;
   // Update worker thread affinity
@@ -108,23 +108,23 @@ TEST_P(AffinityMasksFixture, AffinityPropagateTest) {
   worker.End();
 }
 
-INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, AffinityMasksFixture,
-                         testing::Values(CPUMaskFlags::All,
-                                         CPUMaskFlags::Little,
-                                         CPUMaskFlags::Big,
-                                         CPUMaskFlags::Primary));
+INSTANTIATE_TEST_SUITE_P(AffinityPropagateTests, CPUMaskFixture,
+                         testing::Values(CPUMaskFlag::kAll,
+                                         CPUMaskFlag::kLittle,
+                                         CPUMaskFlag::kBig,
+                                         CPUMaskFlag::kPrimary));
 
 TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return absl::OkStatus();
   });
 
   ProfileConfigBuilder b;
   ProfileConfig config =
-      b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
+      b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build().value();
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlags::CPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // Explicitly assign worker to mock engine
   engine.worker = &worker;
   worker.Start();
@@ -141,14 +141,14 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
 }
 
 TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return absl::OkStatus();
   });
 
   const std::string profile_path = testing::TempDir() + "log.json";
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlags::CPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // explicitly assign worker to mock engine
   engine.worker = &worker;
   worker.Start();
@@ -159,13 +159,13 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     LatencyEstimator latency_estimator(&engine);
 
     ProfileConfigBuilder b;
-    ProfileConfig config = b.AddNumRuns(3)
-                               .AddNumWarmups(3)
-                               .AddOnline(true)
-                               .AddProfileDataPath(profile_path)
-                               .Build();
-
-    EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
+    auto config = b.AddNumRuns(3)
+                      .AddNumWarmups(3)
+                      .AddOnline(true)
+                      .AddProfileDataPath(profile_path)
+                      .Build();
+    EXPECT_EQ(config.status(), absl::OkStatus());
+    EXPECT_EQ(latency_estimator.Init(config.value()), absl::OkStatus());
     EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
     EXPECT_EQ(latency_estimator.DumpProfile(), absl::OkStatus());
   }
@@ -179,7 +179,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
                                .AddNumWarmups(3)
                                .AddOnline(false)
                                .AddProfileDataPath(profile_path)
-                               .Build();
+                               .Build()
+                               .value();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
@@ -193,14 +194,14 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 }
 
 TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
-  CustomInvokeMockContext engine([](const band::SubgraphKey& subgraph_key) {
+  CustomInvokeMockEngine engine([](const band::SubgraphKey& subgraph_key) {
     std::this_thread::sleep_for(std::chrono::microseconds(5000));
     return absl::OkStatus();
   });
 
   const std::string profile_path = testing::TempDir() + "log.json";
 
-  DeviceQueueWorker worker(&engine, 0, DeviceFlags::CPU);
+  DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
   // explicitly assign worker to mock engine
   engine.worker = &worker;
   worker.Start();
@@ -215,7 +216,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddNumWarmups(3)
                                .AddOnline(true)
                                .AddProfileDataPath(profile_path)
-                               .Build();
+                               .Build()
+                               .value();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
     EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
@@ -234,7 +236,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                .AddNumWarmups(3)
                                .AddOnline(false)
                                .AddProfileDataPath(profile_path)
-                               .Build();
+                               .Build()
+                               .value();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
     EXPECT_EQ(latency_estimator.GetProfiled(key), -1);

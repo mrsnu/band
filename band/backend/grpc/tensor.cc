@@ -5,7 +5,7 @@ namespace grpc {
 
 GrpcTensorView::GrpcTensorView(band_proto::Tensor& tensor) : tensor_(tensor) {}
 
-BackendType GrpcTensorView::GetBackendType() const { return BackendType::Grpc; }
+BackendType GrpcTensorView::GetBackendType() const { return BackendType::kGrpc; }
 
 DataType GrpcTensorView::GetType() const {
   return static_cast<DataType>(tensor_.dtype());
@@ -45,9 +45,9 @@ Quantization GrpcTensorView::GetQuantization() const {
   Quantization quantization(
       static_cast<QuantizationType>(tensor_.quantization().type()), nullptr);
   switch (quantization.GetType()) {
-    case QuantizationType::NoQuantization: {
+    case QuantizationType::kNoQuantization: {
     } break;
-    case QuantizationType::AffineQuantization: {
+    case QuantizationType::kAffineQuantization: {
       auto param = new AffineQuantizationParams;
       param->scale = std::vector<float>(
           tensor_.quantization().affine_param().scale().begin(),
@@ -69,9 +69,9 @@ absl::Status GrpcTensorView::SetQuantization(Quantization quantization) {
   tensor_.mutable_quantization()->set_type(
       static_cast<band_proto::QuantizationType>(quantization.GetType()));
   switch (quantization.GetType()) {
-    case QuantizationType::NoQuantization: {
+    case QuantizationType::kNoQuantization: {
     } break;
-    case QuantizationType::AffineQuantization: {
+    case QuantizationType::kAffineQuantization: {
       auto param =
           static_cast<AffineQuantizationParams*>(quantization.GetParams());
       tensor_.mutable_quantization()

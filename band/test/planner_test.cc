@@ -11,7 +11,7 @@
 namespace band {
 namespace test {
 
-struct MockContext : public MockContextBase {
+struct MockEngine : public MockEngineBase {
   void PrepareReenqueue(Job&) override{};
   void UpdateLatency(const SubgraphKey&, int64_t) override{};
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
@@ -32,7 +32,7 @@ class MockScheduler : public IScheduler {
   MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
   // MOCK_METHOD0(GetWorkerType, WorkerType());
-  WorkerType GetWorkerType() { return WorkerType::DeviceQueue; }
+  WorkerType GetWorkerType() { return WorkerType::kDeviceQueue; }
 };
 
 /*
@@ -44,7 +44,7 @@ planner -> scheduler -> worker -> planner
 */
 
 TEST(PlannerSuite, SingleQueue) {
-  MockContext engine;
+  MockEngine engine;
   Planner planner(engine);
   auto status = planner.AddScheduler(std::make_unique<MockScheduler>(engine));
   EXPECT_EQ(status, absl::OkStatus());

@@ -6,34 +6,7 @@ import argparse
 from utils import *
 
 BASE_DIR = 'bin'
-TARGET = 'band/c:band_c'
-
-
-def copy_lib(debug, platform, android, docker):
-    if platform == 'windows':
-        copy('bazel-bin/band/c/band_c.dll',
-             get_dst_path(BASE_DIR, 'windows', debug))
-        if debug:
-            copy('bazel-bin/band/c/band_c.pdb',
-                 get_dst_path(BASE_DIR, 'windows', debug))
-        return
-
-    if android:
-        if docker:
-            copy_docker('bazel-bin/band/c/libband_c.so',
-                        get_dst_path(BASE_DIR, 'armv8-a', debug))
-        else:
-            copy('bazel-bin/band/c/libband_c.so',
-                 get_dst_path(BASE_DIR, 'armv8-a', debug))
-        return
-
-    if platform == "linux":
-        copy('bazel-bin/band/c/libband_c.so',
-             get_dst_path(BASE_DIR, 'linux', debug))
-        return
-
-    raise ValueError(f"Platform {platform} is not supported.")
-
+TARGET = 'band/c:band_c_pkg'
 
 if __name__ == '__main__':
     parser = get_argument_parser(
@@ -53,4 +26,6 @@ if __name__ == '__main__':
         run_cmd_docker(build_cmd)
     else:
         run_cmd(build_cmd)
-    copy_lib(args.debug, platform, args.android, args.docker)
+    
+    copy('bazel-bin/band/c/band_c_pkg.tar',
+            get_dst_path(BASE_DIR, platform, args.debug))

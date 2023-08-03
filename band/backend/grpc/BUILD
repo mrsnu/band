@@ -38,7 +38,7 @@ band_cc_library(
         "tensor.h",
         "util.h",
     ],
-    # force to link band::GrpcRegisterCreators (in backend.cc)
+    # force to link band::kGrpcRegisterCreators (in backend.cc)
     # to override the weak symbol in //band:backend_factory
     alwayslink = True,
     deps = [

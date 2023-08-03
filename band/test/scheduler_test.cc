@@ -13,14 +13,14 @@
 namespace band {
 namespace test {
 
-struct MockContext : public MockContextBase {
+struct MockEngine : public MockEngineBase {
   std::set<WorkerId> idle_workers_;
   std::vector<WorkerId> list_idle_workers_;
   std::map<ModelId, WorkerId> model_worker_map_;
   std::vector<ScheduleAction> action_;
   mutable int w;
 
-  MockContext(std::set<WorkerId> idle_workers) : idle_workers_(idle_workers) {
+  MockEngine(std::set<WorkerId> idle_workers) : idle_workers_(idle_workers) {
     w = 0;
     list_idle_workers_.assign(idle_workers.begin(), idle_workers.end());
   }
@@ -96,7 +96,7 @@ TEST_P(LSTTestsFixture, LSTTest) {
   }
   const int count_requests = requests.size();
 
-  MockContext engine(available_workers);
+  MockEngine engine(available_workers);
   LeastSlackFirstScheduler lst_scheduler(engine, 5);
   lst_scheduler.Schedule(requests);
 
@@ -127,7 +127,7 @@ TEST_P(ModelLevelTestsFixture, RoundRobinTest) {
   }
   const int count_requests = requests.size();
 
-  MockContext engine(available_workers);
+  MockEngine engine(available_workers);
   RoundRobinScheduler rr_scheduler(engine);
   rr_scheduler.Schedule(requests);
 
@@ -152,7 +152,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerTest) {
   }
   const int count_requests = requests.size();
 
-  MockContext engine(available_workers);
+  MockEngine engine(available_workers);
   FixedWorkerScheduler fd_scheduler(engine);
   fd_scheduler.Schedule(requests);
 
@@ -192,7 +192,7 @@ TEST_P(ConfigLevelTestsFixture, FixedDeviceFixedWorkerEngineRequestTest) {
   }
   const int count_requests = requests.size();
 
-  MockContext engine(available_workers);
+  MockEngine engine(available_workers);
   FixedWorkerScheduler fd_scheduler(engine);
   fd_scheduler.Schedule(requests);
 

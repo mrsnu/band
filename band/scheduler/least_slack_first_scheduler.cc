@@ -40,7 +40,7 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     // Change job status and schedule if the execution plan already exceeded SLO
     if (job.slo_us > 0 &&
         current_time + best_exec_plan.second > job.enqueue_time + job.slo_us) {
-      job.status = JobStatus::SLOViolation;
+      job.status = JobStatus::kSLOViolation;
       success &= engine_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;
@@ -72,7 +72,7 @@ int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
     int64_t remaining_execution_time = job.expected_latency;
     return deadline - current_time - remaining_execution_time;
   } else {
-    return INT_MAX;
+    return std::numeric_limits<int>::max();
   }
 }
 

@@ -10,20 +10,27 @@
 #include "band/backend/tfl/model_executor.h"
 #include "band/backend/tfl/tensor.h"
 #include "band/backend_factory.h"
+#include "band/buffer/buffer.h"
+#include "band/buffer/common_operator.h"
+#include "band/buffer/image_operator.h"
+#include "band/buffer/image_processor.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/model.h"
 #include "band/tensor.h"
+#include "band/test/image_util.h"
 
 namespace band {
+namespace test {
 using namespace interface;
 TEST(TFLiteBackend, BackendInvoke) {
   tfl::TfLiteModel bin_model(0);
   EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
-  std::shared_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
-  tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU, config);
+  std::shared_ptr<BackendConfig> config =
+      std::make_unique<TfLiteBackendConfig>();
+  tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlag::kCPU, config);
   EXPECT_EQ(model_executor.PrepareSubgraph(&bin_model), absl::OkStatus());
   EXPECT_TRUE(
       model_executor.ExecuteSubgraph(model_executor.GetLargestSubgraphKey())
@@ -33,8 +40,9 @@ TEST(TFLiteBackend, BackendInvoke) {
 TEST(TFLiteBackend, ModelSpec) {
   tfl::TfLiteModel bin_model(0);
   EXPECT_EQ(bin_model.FromPath("band/test/data/add.tflite"), absl::OkStatus());
-  std::shared_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
-  tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlags::CPU, config);
+  std::shared_ptr<BackendConfig> config =
+      std::make_unique<TfLiteBackendConfig>();
+  tfl::TfLiteModelExecutor model_executor(0, 0, DeviceFlag::kCPU, config);
   ModelSpec model_spec =
       model_executor.InvestigateModelSpec(&bin_model).value();
 
@@ -58,12 +66,13 @@ TEST(TFLiteBackend, Registration) {
 
 TEST(TFLiteBackend, InterfaceInvoke) {
   auto backends = BackendFactory::GetAvailableBackends();
-  IModel* bin_model = BackendFactory::CreateModel(BackendType::TfLite, 0);
+  IModel* bin_model = BackendFactory::CreateModel(BackendType::kTfLite, 0);
   EXPECT_EQ(bin_model->FromPath("band/test/data/add.tflite"), absl::OkStatus());
 
-  std::shared_ptr<BackendConfig> config = std::make_unique<TfLiteBackendConfig>();
+  std::shared_ptr<BackendConfig> config =
+      std::make_unique<TfLiteBackendConfig>();
   IModelExecutor* model_executor = BackendFactory::CreateModelExecutor(
-      BackendType::TfLite, 0, 0, DeviceFlags::CPU, config);
+      BackendType::kTfLite, 0, 0, DeviceFlag::kCPU, config);
   EXPECT_EQ(model_executor->PrepareSubgraph(bin_model), absl::OkStatus());
 
   SubgraphKey key = model_executor->GetLargestSubgraphKey();
@@ -89,17 +98,17 @@ TEST(TFLiteBackend, InterfaceInvoke) {
 
 TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config =
+  auto config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::RoundRobin})
+          .AddSchedulers({SchedulerType::kFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
           .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
           .AddOnline(true)
@@ -109,13 +118,13 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
-
-  auto engine = Engine::Create(config);
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  auto engine = Engine::Create(config.value());
   EXPECT_TRUE(engine);
 
   Model model;
   EXPECT_TRUE(
-      model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
+      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -149,15 +158,15 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::FixedWorkerGlobalQueue})
+          .AddSchedulers({SchedulerType::kFixedWorkerGlobalQueue})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
           .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
           .AddOnline(true)
@@ -166,14 +175,15 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
 
   Model model;
   EXPECT_TRUE(
-      model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
+      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   EXPECT_GE(
@@ -186,15 +196,15 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::ShortestExpectedLatency})
+          .AddSchedulers({SchedulerType::kShortestExpectedLatency})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
           .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
           .AddOnline(true)
@@ -203,14 +213,15 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
 
   Model model;
   EXPECT_TRUE(
-      model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
+      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -245,23 +256,23 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::FixedWorker})
+          .AddSchedulers({SchedulerType::kFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
 #ifdef __ANDROID__
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP,
-                       DeviceFlags::NPU, DeviceFlags::GPU})
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little,
-                              CPUMaskFlags::All, CPUMaskFlags::All,
-                              CPUMaskFlags::All})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
 #else
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
           .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
 #endif  // __ANDROID__
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
@@ -271,14 +282,15 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
 
   Model model;
   EXPECT_TRUE(
-      model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
+      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   Tensor* input_tensor = engine->CreateTensor(
@@ -294,7 +306,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   std::cout << "Num workers " << engine->GetNumWorkers() << std::endl;
   for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
     std::cout << "Run on worker (device: "
-              << GetName(engine->GetWorkerDevice(worker_id)) << ")"
+              << ToString(engine->GetWorkerDevice(worker_id)) << ")"
               << std::endl;
     EXPECT_TRUE(engine
                     ->RequestSync(model.GetId(),
@@ -315,23 +327,23 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::FixedWorker})
+          .AddSchedulers({SchedulerType::kFixedWorker})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::MergeUnitSubgraph)
-          .AddCPUMask(CPUMaskFlags::All)
-          .AddPlannerCPUMask(CPUMaskFlags::Primary)
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
 #ifdef __ANDROID__
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU, DeviceFlags::DSP,
-                       DeviceFlags::NPU, DeviceFlags::GPU})
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little,
-                              CPUMaskFlags::All, CPUMaskFlags::All,
-                              CPUMaskFlags::All})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
 #else
-          .AddWorkers({DeviceFlags::CPU, DeviceFlags::CPU})
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
           .AddWorkerNumThreads({3, 4})
-          .AddWorkerCPUMasks({CPUMaskFlags::Big, CPUMaskFlags::Little})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
 #endif  // __ANDROID__
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
@@ -341,14 +353,15 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
           .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
-          .Build();
+          .Build()
+          .value();
 
   auto engine = Engine::Create(config);
   EXPECT_TRUE(engine);
 
   Model model;
   EXPECT_TRUE(
-      model.FromPath(BackendType::TfLite, "band/test/data/add.tflite").ok());
+      model.FromPath(BackendType::kTfLite, "band/test/data/add.tflite").ok());
   EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
 
   int execution_count = 0;
@@ -369,6 +382,176 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
     EXPECT_EQ(execution_count, worker_id + 1);
   }
 }
+
+TEST(TFLiteBackend, ClassificationQuantTest) {
+  RuntimeConfigBuilder b;
+  RuntimeConfig config =
+      b.AddPlannerLogPath("band/test/data/log.json")
+          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddMinimumSubgraphSize(7)
+          .AddSubgraphPreparationType(
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+#ifdef __ANDROID__
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1, 1, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
+#else
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
+          .AddWorkerNumThreads({3, 4})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
+#endif  // __ANDROID__
+          .AddSmoothingFactor(0.1)
+          .AddProfileDataPath("band/test/data/profile.json")
+          .AddOnline(true)
+          .AddNumWarmups(1)
+          .AddNumRuns(1)
+          .AddAllowWorkSteal(true)
+          .AddAvailabilityCheckIntervalMs(30000)
+          .AddScheduleWindowSize(10)
+          .Build()
+          .value();
+
+  auto engine = Engine::Create(config);
+  std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
+
+  Model model;
+  EXPECT_EQ(model.FromPath(BackendType::kTfLite,
+                           "band/test/data/mobilenet_v2_1.0_224_quant.tflite"),
+            absl::OkStatus());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
+
+  Tensor* input_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
+  std::shared_ptr<Buffer> tensor_buffer(Buffer::CreateFromTensor(input_tensor));
+
+  ImageProcessorBuilder preprocessor_builder;
+  // by default, the image is resized to input size
+  absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
+      preprocessor_builder.Build();
+  EXPECT_TRUE(preprocessor.ok());
+  EXPECT_TRUE(
+      preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
+  // confirm that the image is resized to 224x224 and converted to RGB
+  Tensor* output_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
+  EXPECT_TRUE(engine
+                  ->RequestSync(model.GetId(), {0, false, -1, -1},
+                                {input_tensor}, {output_tensor})
+                  .ok());
+
+  // TODO: postprocessing library
+  std::vector<unsigned char> output_data;
+  output_data.resize(output_tensor->GetNumElements());
+  memcpy(output_data.data(), output_tensor->GetData(),
+         output_tensor->GetNumElements() * sizeof(unsigned char));
+
+  size_t max_index = 0;
+  unsigned char max_value = 0;
+  for (size_t i = 0; i < output_data.size(); ++i) {
+    if (output_data[i] > max_value) {
+      max_value = output_data[i];
+      max_index = i;
+    }
+  }
+  // tiger cat
+  EXPECT_EQ(max_index, 282);
+}
+
+TEST(TFLiteBackend, ClassificationTest) {
+  RuntimeConfigBuilder b;
+  RuntimeConfig config =
+      b.AddPlannerLogPath("band/test/data/log.json")
+          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddMinimumSubgraphSize(7)
+          .AddSubgraphPreparationType(
+              SubgraphPreparationType::kMergeUnitSubgraph)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+#ifdef __ANDROID__
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1, 1, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
+#else
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
+          .AddWorkerNumThreads({3, 4})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
+#endif  // __ANDROID__
+          .AddSmoothingFactor(0.1)
+          .AddProfileDataPath("band/test/data/profile.json")
+          .AddOnline(true)
+          .AddNumWarmups(1)
+          .AddNumRuns(1)
+          .AddAllowWorkSteal(true)
+          .AddAvailabilityCheckIntervalMs(30000)
+          .AddScheduleWindowSize(10)
+          .Build()
+          .value();
+
+  auto engine = Engine::Create(config);
+  std::shared_ptr<Buffer> image_buffer = LoadImage("band/test/data/cat.jpg");
+
+  Model model;
+  EXPECT_TRUE(
+      model
+          .FromPath(
+              BackendType::kTfLite,
+              "band/test/data/lite-model_mobilenet_v2_100_224_fp32_1.tflite")
+          .ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
+
+  Tensor* input_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetInputTensorIndices(model.GetId())[0]);
+  std::shared_ptr<Buffer> tensor_buffer(Buffer::CreateFromTensor(input_tensor));
+  // image -> rgb -> normalize
+  ImageProcessorBuilder preprocessor_builder;
+  preprocessor_builder.AddOperation(std::make_unique<buffer::Resize>(224, 224))
+      .AddOperation(std::make_unique<buffer::Normalize>(127.5f, 127.5f, false));
+  absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
+      preprocessor_builder.Build();
+  EXPECT_TRUE(preprocessor.ok());
+  EXPECT_TRUE(
+      preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
+
+  for (size_t i = 0; i < input_tensor->GetNumElements(); ++i) {
+    EXPECT_GT(reinterpret_cast<float*>(input_tensor->GetData())[i], -1.0f);
+    EXPECT_LT(reinterpret_cast<float*>(input_tensor->GetData())[i], 1.0f);
+  }
+
+  // confirm that the image is resized to 224x224 and converted to RGB
+  Tensor* output_tensor = engine->CreateTensor(
+      model.GetId(), engine->GetOutputTensorIndices(model.GetId())[0]);
+  EXPECT_TRUE(engine
+                  ->RequestSync(model.GetId(), {0, false, -1, -1},
+                                {input_tensor}, {output_tensor})
+                  .ok());
+
+  // TODO: postprocessing library
+  std::vector<float> output_data;
+  output_data.resize(output_tensor->GetNumElements());
+  memcpy(output_data.data(), output_tensor->GetData(),
+         output_tensor->GetNumElements() * sizeof(float));
+
+  size_t max_index = 0;
+  float max_value = 0;
+  for (size_t i = 0; i < output_data.size(); ++i) {
+    if (output_data[i] > max_value) {
+      max_value = output_data[i];
+      max_index = i;
+    }
+  }
+  // tiger cat
+  EXPECT_EQ(max_index, 282);
+}
+
+}  // namespace test
 }  // namespace band
 
 int main(int argc, char** argv) {

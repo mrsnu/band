@@ -9,7 +9,7 @@
 #include "absl/status/statusor.h"
 #include "band/common.h"
 #include "band/config.h"
-#include "band/cpu.h"
+#include "band/device/cpu.h"
 #include "band/interface/backend.h"
 #include "band/interface/model.h"
 #include "band/model_spec.h"
@@ -24,9 +24,9 @@ class ITensorView;
 class IModelExecutor : public IBackendSpecific {
  public:
   IModelExecutor(
-      ModelId model_id, WorkerId worker_id, DeviceFlags device_flag,
+      ModelId model_id, WorkerId worker_id, DeviceFlag device_flag,
       std::shared_ptr<BackendConfig> backend_config,
-      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlags::All),
+      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlag::kAll),
       int num_threads = -1)
       : model_id_(model_id),
         worker_id_(worker_id),
@@ -61,7 +61,7 @@ class IModelExecutor : public IBackendSpecific {
  protected:
   const ModelId model_id_;
   const WorkerId worker_id_;
-  const DeviceFlags device_flag_;
+  const DeviceFlag device_flag_;
   std::shared_ptr<BackendConfig> backend_config_;
   const CpuSet thread_affinity_mask_;
   const int num_threads_;

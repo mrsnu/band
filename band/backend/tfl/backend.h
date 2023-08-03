@@ -12,11 +12,11 @@ namespace band {
 using namespace interface;
 namespace tfl {
 class ModelExecutorCreator
-    : public Creator<IModelExecutor, ModelId, WorkerId, DeviceFlags,
+    : public Creator<IModelExecutor, ModelId, WorkerId, DeviceFlag,
                      std::shared_ptr<BackendConfig>, CpuSet, int> {
  public:
   IModelExecutor* Create(ModelId model_id, WorkerId worker_id,
-                         DeviceFlags device_flag,
+                         DeviceFlag device_flag,
                          std::shared_ptr<BackendConfig> config,
                          CpuSet thread_affinity_mask,
                          int num_threads) const override {

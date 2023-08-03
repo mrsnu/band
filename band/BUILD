@@ -56,7 +56,6 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-
 config_setting(
     name = "linux_x86_64_tflite",
     define_values = {
@@ -140,7 +139,6 @@ band_cc_library(
         "common.h",
         "config.h",
         "engine_interface.h",
-        "cpu.h",
         "error_reporter.h",
         "logger.h",
         "model_spec.h",
@@ -153,7 +151,7 @@ band_cc_library(
         ],
     }),
     deps = [
-        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
@@ -173,6 +171,7 @@ band_cc_library(
     ],
     deps = [
         ":common",
+        "//band/device",
     ],
 )
 
@@ -191,33 +190,22 @@ band_cc_library(
 )
 
 band_cc_library(
-    name = "cpu",
-    srcs = [
-        "cpu.cc",
-    ],
-    hdrs = [
-        "cpu.h",
-    ],
-    deps = [
-        ":common",
-    ],
-)
-
-band_cc_library(
     name = "config",
     hdrs = [
         "config.h",
     ],
-    linkopts = select({
-        "//band:windows": [],
-        "//conditions:default": [
-            "-lm",
-            "-ldl",
-        ],
-    }),
+    linkopts = select(
+        {
+            "//band:windows": [],
+            "//conditions:default": [
+                "-lm",
+                "-ldl",
+            ],
+        },
+    ),
     deps = [
         ":common",
-        ":cpu",
+        "//band/device",
     ],
 )
 
@@ -275,9 +263,9 @@ band_cc_library(
     deps = [
         ":common",
         ":config",
-        ":cpu",
-        ":time",
         ":job_tracer",
+        ":time",
+        "//band/device",
     ],
 )
 
@@ -317,12 +305,11 @@ band_cc_library(
     ],
     deps = [
         ":common",
+        ":job_tracer",
         ":scheduler",
         ":worker",
-        ":job_tracer"
     ],
 )
-
 
 band_cc_library(
     name = "job_tracer",
@@ -335,22 +322,6 @@ band_cc_library(
     deps = [
         ":common",
         "@chrome_tracer//chrome_tracer",
-    ],
-)
-
-
-
-band_cc_library(
-    name = "tensor",
-    srcs = [
-        "tensor.cc",
-    ],
-    hdrs = [
-        "tensor.h",
-    ],
-    deps = [
-        ":common",
-        ":interface",
     ],
 )
 
@@ -367,9 +338,38 @@ band_cc_library(
     deps = [
         ":common",
         ":config",
-        ":cpu",
         ":json_util",
         ":worker",
+        "//band/device",
+    ],
+)
+
+band_cc_library(
+    name = "tensor",
+    srcs = [
+        "tensor.cc",
+    ],
+    hdrs = [
+        "tensor.h",
+    ],
+    deps = [
+        ":common",
+        ":interface",
+    ],
+)
+
+band_cc_library(
+    name = "tensor_ring_buffer",
+    srcs = [
+        "tensor_ring_buffer.cc",
+    ],
+    hdrs = [
+        "tensor_ring_buffer.h",
+    ],
+    deps = [
+        ":common",
+        ":interface",
+        ":tensor",
     ],
 )
 
@@ -377,45 +377,47 @@ band_cc_library(
     name = "framework",
     srcs = [
         "engine.cc",
-        "tensor_ring_buffer.cc",
     ],
     hdrs = [
         "engine.h",
-        "tensor_ring_buffer.h",
     ],
-    deps =
-        [
-            ":backend_factory",
-            ":common",
-            ":config",
-            ":interface",
-            ":json_util",
-            ":latency_estimator",
-            ":model",
-            ":model_analyzer",
-            ":planner",
-            ":scheduler",
-            ":tensor",
-            ":time",
-            ":worker",
-            ":job_tracer",
-        ],
+    deps = [
+        ":backend_factory",
+        ":common",
+        ":config",
+        ":interface",
+        ":job_tracer",
+        ":json_util",
+        ":latency_estimator",
+        ":model",
+        ":model_analyzer",
+        ":planner",
+        ":resource_monitor",
+        ":scheduler",
+        ":tensor",
+        ":tensor_ring_buffer",
+        ":time",
+        ":worker",
+        "//band/buffer",
+    ],
 )
 
 band_cc_library(
     name = "json_util",
     srcs = ["json_util.cc"],
     hdrs = ["json_util.h"],
-    linkopts = select({
-        "//band:windows": [],
-        "//conditions:default": [
-            "-lm",
-            "-ldl",
-        ],
-    }),
+    linkopts = select(
+        {
+            "//band:windows": [],
+            "//conditions:default": [
+                "-lm",
+                "-ldl",
+            ],
+        },
+    ),
     deps = [
         ":common",
-        "@jsoncpp//:jsoncpp",
+        "@jsoncpp",
     ],
 )
 
@@ -426,6 +428,18 @@ band_cc_library(
     deps = [
         ":common",
         ":config",
-        ":cpu",
+        "//band/device",
+    ],
+)
+
+band_cc_library(
+    name = "resource_monitor",
+    srcs = ["resource_monitor.cc"],
+    hdrs = ["resource_monitor.h"],
+    deps = [
+        ":common",
+        "//band/device",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
     ],
 )

@@ -14,9 +14,9 @@ class GrpcModelExecutor : public interface::IModelExecutor {
   using interface::IModelExecutor::IModelExecutor;
 
   GrpcModelExecutor(
-      ModelId model_id, WorkerId worker_id, DeviceFlags device_flag,
+      ModelId model_id, WorkerId worker_id, DeviceFlag device_flag,
       std::shared_ptr<BackendConfig> backend_config,
-      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlags::All),
+      CpuSet thread_affinity_mask = BandCPUMaskGetSet(CPUMaskFlag::kAll),
       int num_threads = -1)
       : IModelExecutor(model_id, worker_id, device_flag, backend_config,
                        thread_affinity_mask, num_threads) {

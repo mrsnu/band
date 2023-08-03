@@ -24,7 +24,7 @@ TEST(GrpcBackend, WriteModel) {
   bin_model.id = "TestModel";
   bin_model.num_ops = 1;
   bin_model.num_tensors = 1;
-  bin_model.tensor_types = {DataType::Float32};
+  bin_model.tensor_types = {DataType::kFloat32};
   bin_model.input_tensor_indices = {0};
   bin_model.output_tensor_indices = {0};
   bin_model.op_input_tensors = {{0}};
@@ -41,7 +41,7 @@ TEST(GrpcBackend, ReadModel) {
   EXPECT_EQ(bin_model.num_ops, 1);
   EXPECT_EQ(bin_model.num_tensors, 1);
   for (int i = 0; i < bin_model.tensor_types.size(); i++) {
-    EXPECT_EQ(bin_model.tensor_types[i], DataType::Float32);
+    EXPECT_EQ(bin_model.tensor_types[i], DataType::kFloat32);
   }
   for (int i = 0; i < bin_model.input_tensor_indices.size(); i++) {
     EXPECT_EQ(bin_model.input_tensor_indices[i], i);

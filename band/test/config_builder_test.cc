@@ -7,79 +7,87 @@ namespace test {
 
 TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
   ProfileConfigBuilder b;
-  ProfileConfig config_ok = b.AddOnline(false)
-                                .AddNumRuns(3)
-                                .AddNumWarmups(3)
-                                .AddProfileDataPath("hello")
-                                .Build();
-
+  auto config = b.AddOnline(false)
+                    .AddNumRuns(3)
+                    .AddNumWarmups(3)
+                    .AddProfileDataPath("hello")
+                    .Build();
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  ProfileConfig config_ok = config.value();
   EXPECT_EQ(config_ok.online, false);
   EXPECT_EQ(config_ok.num_runs, 3);
   EXPECT_EQ(config_ok.num_warmups, 3);
 
   b.AddNumRuns(-1);
-  EXPECT_FALSE(b.IsValid());
+  EXPECT_FALSE(b.Build().ok());
   b.AddNumRuns(1);
   b.AddOnline(true);
-  EXPECT_TRUE(b.IsValid());
+  EXPECT_TRUE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
   PlannerConfigBuilder b;
-  PlannerConfig config_ok = b.AddLogPath("band/test/data/config.json")
-                                .AddScheduleWindowSize(5)
-                                .AddSchedulers({SchedulerType::FixedWorker})
-                                .Build();
+  auto config = b.AddLogPath("band/test/data/config.json")
+                    .AddScheduleWindowSize(5)
+                    .AddSchedulers({SchedulerType::kFixedWorker})
+                    .Build();
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  PlannerConfig config_ok = config.value();
   EXPECT_EQ(config_ok.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.schedule_window_size, 5);
-  EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlags::All);
+  EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlag::kAll);
 
   b.AddScheduleWindowSize(-1);
-  EXPECT_FALSE(b.IsValid());
+  EXPECT_FALSE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   WorkerConfigBuilder b;
-  WorkerConfig config_ok = b.AddAllowWorkSteal(false)
-                               .AddAvailabilityCheckIntervalMs(1000)
-                               .AddWorkers({DeviceFlags::CPU, DeviceFlags::DSP})
-                               .AddCPUMasks({CPUMaskFlags::All, CPUMaskFlags::All})
-                               .AddNumThreads({1, 1})
-                               .Build();
+  auto config = b.AddAllowWorkSteal(false)
+                    .AddAvailabilityCheckIntervalMs(1000)
+                    .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kDSP})
+                    .AddCPUMasks({CPUMaskFlag::kAll, CPUMaskFlag::kAll})
+                    .AddNumThreads({1, 1})
+                    .Build();
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  WorkerConfig config_ok = config.value();
   EXPECT_EQ(config_ok.allow_worksteal, false);
   EXPECT_EQ(config_ok.availability_check_interval_ms, 1000);
   EXPECT_EQ(config_ok.workers.size(), 2);
   EXPECT_EQ(config_ok.cpu_masks.size(), config_ok.workers.size());
   EXPECT_EQ(config_ok.num_threads.size(), config_ok.workers.size());
 
-  b.AddWorkers({DeviceFlags::CPU});
-  EXPECT_FALSE(b.IsValid());
-  b.AddWorkers({DeviceFlags::CPU, DeviceFlags::GPU});
-  EXPECT_TRUE(b.IsValid());
+  b.AddWorkers({DeviceFlag::kCPU});
+
+  EXPECT_FALSE(b.Build().ok());
+  b.AddWorkers({DeviceFlag::kCPU, DeviceFlag::kGPU});
+  EXPECT_TRUE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config_ok =
-      b.AddOnline(true)
-          .AddNumWarmups(1)
-          .AddNumRuns(1)
-          .AddCopyComputationRatio({1, 2, 3, 4, 5})
-          .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/config.json")
-          .AddMinimumSubgraphSize(5)
-          .AddSubgraphPreparationType(SubgraphPreparationType::MergeUnitSubgraph)
-          .AddPlannerLogPath("band/test/data/config.json")
-          .AddScheduleWindowSize(1)
-          .AddSchedulers({SchedulerType::FixedWorker})
-          .AddPlannerCPUMask(CPUMaskFlags::Big)
-          .AddWorkers({})
-          .AddWorkerCPUMasks({})
-          .AddWorkerNumThreads({})
-          .AddAllowWorkSteal(true)
-          .AddAvailabilityCheckIntervalMs(100)
-          .AddCPUMask(CPUMaskFlags::Primary)
-          .Build();
+  auto config = b.AddOnline(true)
+                    .AddNumWarmups(1)
+                    .AddNumRuns(1)
+                    .AddCopyComputationRatio({1, 2, 3, 4, 5})
+                    .AddSmoothingFactor(0.1)
+                    .AddProfileDataPath("band/test/data/config.json")
+                    .AddMinimumSubgraphSize(5)
+                    .AddSubgraphPreparationType(
+                        SubgraphPreparationType::kMergeUnitSubgraph)
+                    .AddPlannerLogPath("band/test/data/config.json")
+                    .AddScheduleWindowSize(1)
+                    .AddSchedulers({SchedulerType::kFixedWorker})
+                    .AddPlannerCPUMask(CPUMaskFlag::kBig)
+                    .AddWorkers({})
+                    .AddWorkerCPUMasks({})
+                    .AddWorkerNumThreads({})
+                    .AddAllowWorkSteal(true)
+                    .AddAvailabilityCheckIntervalMs(100)
+                    .AddCPUMask(CPUMaskFlag::kPrimary)
+                    .Build();
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  RuntimeConfig config_ok = config.value();
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
@@ -87,19 +95,21 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[1], 2);
   EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[2], 3);
   EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[3], 4);
+  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[4], 5);
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.profile_config.profile_data_path,
             "band/test/data/config.json");
   EXPECT_EQ(config_ok.subgraph_config.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_config.subgraph_preparation_type,
-            SubgraphPreparationType::MergeUnitSubgraph);
-  EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlags::Primary);
+            SubgraphPreparationType::kMergeUnitSubgraph);
+  EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlag::kPrimary);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);
-  EXPECT_EQ(config_ok.planner_config.schedulers[0], SchedulerType::FixedWorker);
-  EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlags::Big);
-  EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlags::CPU);
-  EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlags::All);
+  EXPECT_EQ(config_ok.planner_config.schedulers[0],
+            SchedulerType::kFixedWorker);
+  EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlag::kBig);
+  EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlag::kCPU);
+  EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlag::kAll);
   EXPECT_EQ(config_ok.worker_config.num_threads[0], 1);
   EXPECT_EQ(config_ok.worker_config.allow_worksteal, true);
   EXPECT_EQ(config_ok.worker_config.availability_check_interval_ms, 100);
@@ -107,7 +117,9 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
 
 TEST(ConfigBuilderTest, DefaultValueTest) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config_ok = b.AddSchedulers({SchedulerType::FixedWorker}).Build();
+  auto config = b.AddSchedulers({SchedulerType::kFixedWorker}).Build();
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  RuntimeConfig config_ok = config.value();
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
@@ -115,17 +127,18 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.profile_config.profile_data_path, "");
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");
-  EXPECT_EQ(config_ok.planner_config.schedulers[0], SchedulerType::FixedWorker);
-  EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);
-  EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlags::All);
-  EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlags::CPU);
-  EXPECT_EQ(config_ok.worker_config.workers[1], DeviceFlags::GPU);
-  EXPECT_EQ(config_ok.worker_config.workers[2], DeviceFlags::DSP);
-  EXPECT_EQ(config_ok.worker_config.workers[3], DeviceFlags::NPU);
-  EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlags::All);
-  EXPECT_EQ(config_ok.worker_config.cpu_masks[1], CPUMaskFlags::All);
-  EXPECT_EQ(config_ok.worker_config.cpu_masks[2], CPUMaskFlags::All);
-  EXPECT_EQ(config_ok.worker_config.cpu_masks[3], CPUMaskFlags::All);
+  EXPECT_EQ(config_ok.planner_config.schedulers[0],
+            SchedulerType::kFixedWorker);
+  EXPECT_EQ(config_ok.planner_config.schedule_window_size, std::numeric_limits<int>::max());
+  EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlag::kAll);
+  EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlag::kCPU);
+  EXPECT_EQ(config_ok.worker_config.workers[1], DeviceFlag::kGPU);
+  EXPECT_EQ(config_ok.worker_config.workers[2], DeviceFlag::kDSP);
+  EXPECT_EQ(config_ok.worker_config.workers[3], DeviceFlag::kNPU);
+  EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlag::kAll);
+  EXPECT_EQ(config_ok.worker_config.cpu_masks[1], CPUMaskFlag::kAll);
+  EXPECT_EQ(config_ok.worker_config.cpu_masks[2], CPUMaskFlag::kAll);
+  EXPECT_EQ(config_ok.worker_config.cpu_masks[3], CPUMaskFlag::kAll);
   EXPECT_EQ(config_ok.worker_config.num_threads[0], 1);
   EXPECT_EQ(config_ok.worker_config.num_threads[1], 1);
   EXPECT_EQ(config_ok.worker_config.num_threads[2], 1);
@@ -134,8 +147,8 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.worker_config.availability_check_interval_ms, 30000);
   EXPECT_EQ(config_ok.subgraph_config.minimum_subgraph_size, 7);
   EXPECT_EQ(config_ok.subgraph_config.subgraph_preparation_type,
-            SubgraphPreparationType::MergeUnitSubgraph);
-  EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlags::All);
+            SubgraphPreparationType::kMergeUnitSubgraph);
+  EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlag::kAll);
 }
 
 }  // namespace test

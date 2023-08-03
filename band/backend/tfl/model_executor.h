@@ -40,14 +40,14 @@ class TfLiteModelExecutor : public interface::IModelExecutor {
   const tflite::Interpreter* GetInterpreter(const SubgraphKey& key) const;
 
   absl::StatusOr<std::unique_ptr<tflite::Interpreter>> CreateTfLiteInterpreter(
-      interface::IModel* model, DeviceFlags device,
+      interface::IModel* model, DeviceFlag device,
       std::set<int> op_indices = {});
-  static absl::StatusOr<TfLiteDelegate*> GetDeviceDelegate(DeviceFlags device);
+  static absl::StatusOr<TfLiteDelegate*> GetDeviceDelegate(DeviceFlag device);
 
   std::unordered_map<SubgraphKey, std::unique_ptr<tflite::Interpreter>,
                      SubgraphHash>
       interpreters_;
-  static std::map<DeviceFlags, tflite::Interpreter::TfLiteDelegatePtr>
+  static std::map<DeviceFlag, tflite::Interpreter::TfLiteDelegatePtr>
       delegates_;
 };
 }  // namespace tfl

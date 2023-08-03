@@ -1,242 +1,235 @@
 #include "band/common.h"
 
 #include "band/logger.h"
+#include "common.h"
 
 namespace band {
 
 template <>
-size_t GetSize<CPUMaskFlags>() {
-  return 4;
+size_t EnumLength<BackendType>() {
+  return static_cast<size_t>(BackendType::kGrpc) + 1;
 }
 
 template <>
-size_t GetSize<SchedulerType>() {
-  return 7;
+size_t EnumLength<SchedulerType>() {
+  return static_cast<size_t>(
+             SchedulerType::kHeterogeneousEarliestFinishTimeReserved) +
+         1;
 }
 
 template <>
-size_t GetSize<SubgraphPreparationType>() {
-  return 4;
+size_t EnumLength<CPUMaskFlag>() {
+  return static_cast<size_t>(CPUMaskFlag::kPrimary) + 1;
 }
 
 template <>
-size_t GetSize<DataType>() {
-  return 12;
+size_t EnumLength<SubgraphPreparationType>() {
+  return static_cast<size_t>(SubgraphPreparationType::kMergeUnitSubgraph) + 1;
 }
 
 template <>
-size_t GetSize<DeviceFlags>() {
-  return 5;
+size_t EnumLength<DataType>() {
+  return static_cast<size_t>(DataType::kFloat64) + 1;
 }
 
-std::string GetName(BackendType backend_type) {
+template <>
+size_t EnumLength<BufferFormat>() {
+  return static_cast<size_t>(BufferFormat::kRaw) + 1;
+}
+
+template <>
+size_t EnumLength<BufferOrientation>() {
+  return static_cast<size_t>(BufferOrientation::kLeftBottom) + 1;
+}
+
+template <>
+size_t EnumLength<DeviceFlag>() {
+  return static_cast<size_t>(DeviceFlag::kNETWORK) + 1;
+}
+
+template <>
+size_t EnumLength<QuantizationType>() {
+  return static_cast<size_t>(QuantizationType::kAffineQuantization) + 1;
+}
+
+template <>
+const char* ToString(BackendType backend_type) {
   switch (backend_type) {
-    case BackendType::TfLite: {
+    case BackendType::kTfLite: {
       return "Tensorflow Lite";
     } break;
-    case BackendType::Grpc: {
+    case BackendType::kGrpc: {
       return "gRPC";
     } break;
+    default: {
+      return "Unknown backend type";
+    }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown backend type: %d", backend_type);
-  return "Unknown backend type";
 }
 
-std::string GetName(CPUMaskFlags cpu_mask_flags) {
-  switch (cpu_mask_flags) {
-    case CPUMaskFlags::All: {
+template <>
+const char* ToString(CPUMaskFlag cpu_mask_flag) {
+  switch (cpu_mask_flag) {
+    case CPUMaskFlag::kAll: {
       return "ALL";
     } break;
-    case CPUMaskFlags::Little: {
+    case CPUMaskFlag::kLittle: {
       return "LITTLE";
     } break;
-    case CPUMaskFlags::Big: {
+    case CPUMaskFlag::kBig: {
       return "BIG";
     } break;
-    case CPUMaskFlags::Primary: {
+    case CPUMaskFlag::kPrimary: {
       return "PRIMARY";
     } break;
+    default: {
+      return "Unknown CPU mask flag";
+    }
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown CPU mask flag: %d", cpu_mask_flags);
-  return "Unknown CPU mask flag";
 }
 
-std::string GetName(SchedulerType scheduler_type) {
+template <>
+const char* ToString(SchedulerType scheduler_type) {
   switch (scheduler_type) {
-    case SchedulerType::FixedWorker: {
+    case SchedulerType::kFixedWorker: {
       return "fixed_worker";
     } break;
-    case SchedulerType::RoundRobin: {
+    case SchedulerType::kRoundRobin: {
       return "round_robin";
     } break;
-    case SchedulerType::ShortestExpectedLatency: {
+    case SchedulerType::kShortestExpectedLatency: {
       return "shortest_expected_latency";
     } break;
-    case SchedulerType::FixedWorkerGlobalQueue: {
+    case SchedulerType::kFixedWorkerGlobalQueue: {
       return "fixed_worker_global_queue";
     } break;
-    case SchedulerType::HeterogeneousEarliestFinishTime: {
+    case SchedulerType::kHeterogeneousEarliestFinishTime: {
       return "heterogeneous_earliest_finish_time";
     } break;
-    case SchedulerType::LeastSlackTimeFirst: {
+    case SchedulerType::kLeastSlackTimeFirst: {
       return "least_slack_time_first";
     } break;
-    case SchedulerType::HeterogeneousEarliestFinishTimeReserved: {
+    case SchedulerType::kHeterogeneousEarliestFinishTimeReserved: {
       return "heterogeneous_earliest_finish_time_reserved";
     } break;
+    default: {
+      return "Unknown scheduler type";
+    } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown scheduler type: %d", scheduler_type);
-  return "Unknown scheduler type";
 }
 
 template <>
-SchedulerType FromString(std::string str) {
-  for (int i = 0; i < GetSize<SchedulerType>(); i++) {
-    SchedulerType type = static_cast<SchedulerType>(i);
-    if (GetName(type) == str) {
-      return type;
-    }
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR,
-                "Unknown scheduler type: %s. Fallback to fixed worker",
-                str.c_str());
-  return SchedulerType::FixedWorker;
-}
-
-std::string GetName(SubgraphPreparationType subgraph_preparation_type) {
+const char* ToString(SubgraphPreparationType subgraph_preparation_type) {
   switch (subgraph_preparation_type) {
-    case SubgraphPreparationType::NoFallbackSubgraph: {
+    case SubgraphPreparationType::kNoFallbackSubgraph: {
       return "no_fallback_subgraph";
     } break;
-    case SubgraphPreparationType::FallbackPerWorker: {
+    case SubgraphPreparationType::kFallbackPerWorker: {
       return "fallback_per_worker";
     } break;
-    case SubgraphPreparationType::UnitSubgraph: {
+    case SubgraphPreparationType::kUnitSubgraph: {
       return "unit_subgraph";
     } break;
-    case SubgraphPreparationType::MergeUnitSubgraph: {
+    case SubgraphPreparationType::kMergeUnitSubgraph: {
       return "merge_unit_subgraph";
     } break;
+    default: {
+      return "Unknown subgraph preparation type";
+    } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown subgraph preparation type: %d",
-                subgraph_preparation_type);
-  return "Unknown subgraph preparation type";
 }
 
 template <>
-SubgraphPreparationType FromString(std::string str) {
-  for (int i = 0; i < GetSize<SubgraphPreparationType>(); i++) {
-    SubgraphPreparationType type = static_cast<SubgraphPreparationType>(i);
-    if (GetName(type) == str) {
-      return type;
-    }
-  }
-  BAND_LOG_PROD(
-      BAND_LOG_ERROR,
-      "Unknown subgraph preparation type: %s. Fallback to no_fallback_subgraph",
-      str.c_str());
-  return SubgraphPreparationType::NoFallbackSubgraph;
-}
-
-std::string GetName(DataType data_type) {
+const char* ToString(DataType data_type) {
   switch (data_type) {
-    case DataType::NoType: {
-      return "NOTYPE";
+    case DataType::kNoType: {
+      return "NoType";
     } break;
-    case DataType::Float32: {
-      return "FLOAT32";
+    case DataType::kFloat32: {
+      return "Float32";
     } break;
-    case DataType::Int16: {
-      return "INT16";
+    case DataType::kInt16: {
+      return "Int16";
     } break;
-    case DataType::Int32: {
-      return "INT32";
+    case DataType::kInt32: {
+      return "Int32";
     } break;
-    case DataType::UInt8: {
-      return "UINT8";
+    case DataType::kUInt8: {
+      return "UInt8";
     } break;
-    case DataType::Int8: {
-      return "INT8";
+    case DataType::kInt8: {
+      return "Int8";
     } break;
-    case DataType::Int64: {
-      return "INT64";
+    case DataType::kInt64: {
+      return "Int64";
     } break;
-    case DataType::Bool: {
-      return "BOOL";
+    case DataType::kBool: {
+      return "Bool";
     } break;
-    case DataType::Complex64: {
-      return "COMPLEX64";
+    case DataType::kComplex64: {
+      return "Complex64";
     } break;
-    case DataType::String: {
-      return "STRING";
+    case DataType::kString: {
+      return "String";
     } break;
-    case DataType::Float16: {
-      return "FLOAT16";
+    case DataType::kFloat16: {
+      return "Float16";
     } break;
-    case DataType::Float64: {
-      return "FLOAT64";
+    case DataType::kFloat64: {
+      return "Float64";
+    } break;
+    default: {
+      return "Unknown data type";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown data type: %d", data_type);
-  return "Unknown data type";
 }
 
-std::string GetName(DeviceFlags device_flags) {
-  switch (device_flags) {
-    case DeviceFlags::CPU: {
+template <>
+const char* ToString(DeviceFlag device_flag) {
+  switch (device_flag) {
+    case DeviceFlag::kCPU: {
       return "CPU";
     } break;
-    case DeviceFlags::GPU: {
+    case DeviceFlag::kGPU: {
       return "GPU";
     } break;
-    case DeviceFlags::DSP: {
+    case DeviceFlag::kDSP: {
       return "DSP";
     } break;
-    case DeviceFlags::NPU: {
+    case DeviceFlag::kNPU: {
       return "NPU";
     } break;
-    case DeviceFlags::NETWORK: {
+    case DeviceFlag::kNETWORK: {
       return "NETWORK";
     } break;
+    default: {
+      return "Unknown device flag";
+    } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown device flag: %d", device_flags);
-  return "Unknown device flag";
 }
 
 template <>
-DeviceFlags FromString(std::string str) {
-  for (int i = 0; i < GetSize<DeviceFlags>(); i++) {
-    DeviceFlags flag = static_cast<DeviceFlags>(i);
-    if (GetName(flag) == str) {
-      return flag;
-    }
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown device flag: %s. Fallback to CPU",
-                str.c_str());
-  return DeviceFlags::CPU;
-}
-
-std::string GetName(JobStatus job_status) {
+const char* ToString(JobStatus job_status) {
   switch (job_status) {
-    case JobStatus::EnqueueFailed: {
+    case JobStatus::kEnqueueFailed: {
       return "EnqueueFailed";
     } break;
-    case JobStatus::Queued: {
+    case JobStatus::kQueued: {
       return "Queued";
     } break;
-    case JobStatus::Success: {
+    case JobStatus::kSuccess: {
       return "Success";
     } break;
-    case JobStatus::SLOViolation: {
+    case JobStatus::kSLOViolation: {
       return "SLOViolation";
     } break;
-    case JobStatus::InputCopyFailure: {
+    case JobStatus::kInputCopyFailure: {
       return "InputCopyFailure";
     } break;
-    case JobStatus::OutputCopyFailure: {
+    case JobStatus::kOutputCopyFailure: {
       return "OutputCopyFailure";
     } break;
-    case JobStatus::InvokeFailure: {
+    case JobStatus::kInvokeFailure: {
       return "InvokeFailure";
     } break;
   }
@@ -244,27 +237,127 @@ std::string GetName(JobStatus job_status) {
   return "Unknown job status";
 }
 
+template <>
+const char* ToString(BufferFormat format_type) {
+  switch (format_type) {
+    case BufferFormat::kGrayScale: {
+      return "GrayScale";
+    } break;
+    case BufferFormat::kRGB: {
+      return "RGB";
+    } break;
+    case BufferFormat::kRGBA: {
+      return "RGBA";
+    } break;
+    case BufferFormat::kYV12: {
+      return "YV12";
+    } break;
+    case BufferFormat::kYV21: {
+      return "YV21";
+    } break;
+    case BufferFormat::kNV21: {
+      return "NV21";
+    } break;
+    case BufferFormat::kNV12: {
+      return "NV12";
+    } break;
+    case BufferFormat::kRaw: {
+      return "Raw";
+    } break;
+    default: {
+      return "Unknown format type";
+    }
+  }
+}
+
+template <>
+const char* ToString(BufferOrientation format_type) {
+  switch (format_type) {
+    case BufferOrientation::kTopLeft: {
+      return "TopLeft";
+    } break;
+    case BufferOrientation::kTopRight: {
+      return "TopRight";
+    } break;
+    case BufferOrientation::kBottomRight: {
+      return "BottomRight";
+    } break;
+    case BufferOrientation::kBottomLeft: {
+      return "BottomLeft";
+    } break;
+    case BufferOrientation::kLeftTop: {
+      return "LeftTop";
+    } break;
+    case BufferOrientation::kRightTop: {
+      return "RightTop";
+    } break;
+    case BufferOrientation::kRightBottom: {
+      return "RightBottom";
+    } break;
+    case BufferOrientation::kLeftBottom: {
+      return "LeftBottom";
+    } break;
+    default: {
+      return "Unknown format type";
+    } break;
+  }
+}
+
+size_t GetDataTypeBytes(DataType type) {
+  switch (type) {
+    case DataType::kNoType:
+      return 0;
+    case DataType::kFloat32:
+      return sizeof(float);
+    case DataType::kInt32:
+      return sizeof(int32_t);
+    case DataType::kUInt8:
+      return sizeof(uint8_t);
+    case DataType::kInt8:
+      return sizeof(int8_t);
+    case DataType::kInt16:
+      return sizeof(int16_t);
+    case DataType::kInt64:
+      return sizeof(int64_t);
+    case DataType::kString:
+      return sizeof(char);
+    case DataType::kBool:
+      return sizeof(bool);
+    case DataType::kComplex64:
+      return sizeof(double);
+    case DataType::kFloat16:
+      return sizeof(float) / 2;
+    case DataType::kFloat64:
+      return sizeof(double);
+    default:
+      break;
+  }
+
+  BAND_LOG_PROD(BAND_LOG_WARNING, "Unsupported data type : %s", ToString(type));
+  return 0;
+}
+
 std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
   switch (status) {
-    case JobStatus::EnqueueFailed: {
+    case JobStatus::kEnqueueFailed: {
       return os << "EnqueueFailed";
     } break;
-    case JobStatus::Queued: {
+    case JobStatus::kQueued: {
       return os << "Queued";
     } break;
-    case JobStatus::Success: {
+    case JobStatus::kSuccess: {
       return os << "Success";
     } break;
-    case JobStatus::SLOViolation: {
+    case JobStatus::kSLOViolation: {
       return os << "SLOViolation";
     } break;
-    case JobStatus::InputCopyFailure: {
+    case JobStatus::kInputCopyFailure: {
       return os << "InputCopyFailure";
     } break;
-    case JobStatus::OutputCopyFailure: {
+    case JobStatus::kOutputCopyFailure: {
       return os << "OutputCopyFailure";
     } break;
-    case JobStatus::InvokeFailure: {
+    case JobStatus::kInvokeFailure: {
       return os << "InvokeFailure";
     } break;
   }

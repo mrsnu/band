@@ -4,12 +4,14 @@
 #include <list>
 #include <memory>
 
+#include "band/buffer/buffer.h"
+#include "band/buffer/image_processor.h"
+#include "band/c/c_api_type.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
 #include "band/model.h"
 #include "band/tensor.h"
-#include "band/c/c_api_types.h"
 
 struct BandConfigBuilder {
   band::RuntimeConfigBuilder impl;
@@ -23,6 +25,24 @@ struct BandConfig {
 struct BandModel {
   BandModel() : impl(std::make_shared<band::Model>()) {}
   std::shared_ptr<band::Model> impl;
+};
+
+struct BandBuffer {
+  BandBuffer() : impl(nullptr) {}
+  // lazily update the buffer data from c api functions
+  std::shared_ptr<band::Buffer> impl;
+};
+
+struct BandImageProcessorBuilder {
+  BandImageProcessorBuilder()
+      : impl(std::make_unique<band::ImageProcessorBuilder>()) {}
+  std::unique_ptr<band::ImageProcessorBuilder> impl;
+};
+
+struct BandImageProcessor {
+  BandImageProcessor(std::unique_ptr<band::BufferProcessor> processor)
+      : impl(std::move(processor)) {}
+  std::unique_ptr<band::BufferProcessor> impl;
 };
 
 struct BandTensor {
@@ -39,22 +59,22 @@ struct BandEngine {
   std::unique_ptr<band::Engine> impl;
 };
 
-const char* BandBackendGetName(BandBackendType flag);
+const char* BandBackendToString(BandBackendType flag);
 const BandBackendType BandBackendGetType(const char* name);
 
-const char* BandStatusGetName(BandStatus status);
+const char* BandStatusToString(BandStatus status);
 
-const char* BandSchedulerGetName(BandSchedulerType type);
+const char* BandSchedulerToString(BandSchedulerType type);
 BandSchedulerType BandSchedulerGetType(const char* name);
 
-const char* BandSubgraphPreparationGetName(BandSubgraphPreparationType type);
+const char* BandSubgraphPreparationToString(BandSubgraphPreparationType type);
 BandSubgraphPreparationType BandSubgraphPreparationGetType(const char* name);
 
-const char* BandTypeGetName(BandType type);
+const char* BandDataTypeToString(BandDataType type);
 
-const char* BandQuantizationTypeGetName(BandQuantizationType type);
+const char* BandQuantizationTypeToString(BandQuantizationType type);
 
-const char* BandDeviceGetName(BandDeviceFlags flag);
-BandDeviceFlags BandDeviceGetFlag(const char* name);
+const char* BandDeviceToString(BandDeviceFlag flag);
+BandDeviceFlag BandDeviceGetFlag(const char* name);
 
 #endif  // BAND_C_C_API_INTERNAL_H_

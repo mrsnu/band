@@ -210,7 +210,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     builder.AddSchedulers(schedulers);
 
     if (root["cpu_masks"].isString()) {
-      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
+      builder.AddCPUMask(
+          FromString<CPUMaskFlag>(root["cpu_masks"].asCString()));
     }
 
     if (root["log_path"].isString()) {
@@ -221,21 +222,21 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
   // Worker config
   {
     if (!root["workers"].isNull()) {
-      std::vector<DeviceFlags> workers;
-      std::vector<CPUMaskFlags> cpu_masks;
+      std::vector<DeviceFlag> workers;
+      std::vector<CPUMaskFlag> cpu_masks;
       std::vector<int> num_threads;
 
       for (auto worker : root["workers"]) {
         if (worker["device"].isString()) {
           workers.push_back(
-              FromString<DeviceFlags>(worker["device"].asCString()));
+              FromString<DeviceFlag>(worker["device"].asCString()));
         }
         if (worker["num_threads"].isInt()) {
           num_threads.push_back(worker["num_threads"].asInt());
         }
         if (worker["cpu_masks"].isString()) {
           cpu_masks.push_back(
-              BandCPUMaskGetFlag(worker["cpu_masks"].asCString()));
+              FromString<CPUMaskFlag>(worker["cpu_masks"].asCString()));
         }
       }
 
@@ -262,16 +263,19 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
 
     if (root["cpu_masks"].isString()) {
-      builder.AddCPUMask(BandCPUMaskGetFlag(root["cpu_masks"].asCString()));
+      builder.AddCPUMask(
+          FromString<CPUMaskFlag>(root["cpu_masks"].asCString()));
     }
   }
 
-  if (!builder.IsValid()) {
-    std::cout << "Please check if given runtime config is valid" << std::endl;
+  auto builder_status = builder.Build();
+  if (builder_status.status() != absl::OkStatus()) {
+    std::cout << "Please check if given runtime config is valid. "
+              << builder_status.status().message() << std::endl;
     return false;
   }
 
-  runtime_config_ = new RuntimeConfig(builder.Build());
+  runtime_config_ = new RuntimeConfig(builder_status.value());
 
   return true;
 }
@@ -302,8 +306,8 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
     ModelContext* engine = new ModelContext;
 
     {
-      auto status = engine->model.FromPath(target_backend_,
-                                            benchmark_model.path.c_str());
+      auto status =
+          engine->model.FromPath(target_backend_, benchmark_model.path.c_str());
       if (!status.ok()) {
         return status;
       }
@@ -367,37 +371,37 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
           engine_->CreateTensor(model_id, input_index);
       // random value ranges borrowed from tensorflow/lite/tools/benchmark
       switch (input_tensor->GetType()) {
-        case DataType::UInt8:
+        case DataType::kUInt8:
           CreateRandomTensorData<uint8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 254));
           break;
-        case DataType::Int8:
+        case DataType::kInt8:
           CreateRandomTensorData<int8_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(-127, 127));
           break;
-        case DataType::Int16:
+        case DataType::kInt16:
           CreateRandomTensorData<int16_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int16_t>(0, 99));
           break;
-        case DataType::Int32:
+        case DataType::kInt32:
           CreateRandomTensorData<int32_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int32_t>(0, 99));
           break;
-        case DataType::Int64:
+        case DataType::kInt64:
           CreateRandomTensorData<int64_t>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_int_distribution<int64_t>(0, 99));
           break;
-        case DataType::Float32:
+        case DataType::kFloat32:
           CreateRandomTensorData<float>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<float>(-0.5, 0.5));
           break;
-        case DataType::Float64:
+        case DataType::kFloat64:
           CreateRandomTensorData<double>(
               input_tensor->GetData(), input_tensor->GetNumElements(),
               std::uniform_real_distribution<double>(-0.5, 0.5));
@@ -516,7 +520,7 @@ absl::Status Benchmark::LogResults() {
   PrintLine("Execution mode", benchmark_config_.execution_mode, 1);
   PrintLine("Running time (ms)", benchmark_config_.running_time_ms, 1);
   for (auto& scheduler : runtime_config_->planner_config.schedulers) {
-    PrintLine("Scheduler", GetName(scheduler), 1);
+    PrintLine("Scheduler", ToString(scheduler), 1);
   }
 
   PrintHeader("Model");

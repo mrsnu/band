@@ -11,7 +11,7 @@
             "batch_size": 2
         }
     ],
-    "log_path": "/data/local/tmp/log.csv",
+    "log_path": "/data/local/tmp/log.json",
     "schedulers": [
         "heterogeneous_earliest_finish_time"
     ],
