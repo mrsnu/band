@@ -167,7 +167,7 @@ ResourceMonitor::~ResourceMonitor() {
   }
 
   if (log_file_.is_open()) {
-    log_file_ << "}";
+    log_file_ << "]";
     log_file_.close();
   }
 }
@@ -186,7 +186,7 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
     if (!log_file_.is_open()) {
       return absl::NotFoundError("Cannot open log file.");
     }
-    log_file_ << "{";
+    log_file_ << "[";
   }
 
   dev_freq_paths_ = config.device_freq_paths;
@@ -709,6 +709,7 @@ absl::StatusOr<std::string> ResourceMonitor::GetFirstAvailablePath(
   return absl::NotFoundError("No available path");
 }
 void ResourceMonitor::Monitor(size_t interval_ms) {
+  bool is_first_log = true;
   while (is_monitoring_) {
     // measure time to monitor and sleep for the rest of the interval
     auto start = std::chrono::high_resolution_clock::now();
@@ -791,32 +792,50 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
     // log to file
     if (log_file_.is_open()) {
       BAND_LOG_PROD(BAND_LOG_INFO, "Logging resource status.");
+      if (!is_first_log) {
+        log_file_ << ", ";
+      }
       log_file_ << "{\"thermal\": {";
-      for (auto& resource : thermal_status_[status_head_]) {
-        log_file_ << "\"" << ToString(resource.first.first) << "_"
-                  << resource.first.second << "\": " << resource.second << ", ";
+      for (auto it = thermal_status_[status_head_].begin();
+          it != thermal_status_[status_head_].end(); it++) {
+        if (it != thermal_status_[status_head_].begin()) {
+          log_file_ << ", ";
+        }
+        log_file_ << "\"" << ToString(it->first.first) << "_"
+                  << it->first.second << "\": " << it->second;
       }
       log_file_ << "}, \"cpu_freq\": {";
-      for (auto& resource : cpu_freq_status_[status_head_]) {
-        log_file_ << "\"" << ToString(resource.first.first) << "_"
-                  << ToString(resource.first.second)
-                  << "\": " << resource.second << ", ";
+      for (auto it = cpu_freq_status_[status_head_].begin();
+          it != cpu_freq_status_[status_head_].end(); it++) {
+        if (it != cpu_freq_status_[status_head_].begin()) {
+          log_file_ << ", ";
+        }
+        log_file_ << "\"" << ToString(it->first.first) << "_"
+                  << ToString(it->first.second) << "\": " << it->second;
       }
       log_file_ << "}, \"dev_freq\": {";
-      for (auto& resource : dev_freq_status_[status_head_]) {
-        log_file_ << "\"" << ToString(resource.first.first) << "_"
-                  << ToString(resource.first.second)
-                  << "\": " << resource.second << ", ";
+      for (auto it = dev_freq_status_[status_head_].begin();
+          it != dev_freq_status_[status_head_].end(); it++) {
+        if (it != dev_freq_status_[status_head_].begin()) {
+          log_file_ << ", ";
+        }
+        log_file_ << "\"" << ToString(it->first.first) << "_"
+                  << ToString(it->first.second) << "\": " << it->second;
       }
       log_file_ << "}, \"power_supply\": {";
-      for (auto& resource : power_supply_status_[status_head_]) {
-        log_file_ << "\"" << ToString(resource.first.first) << "_"
-                  << ToString(resource.first.second)
-                  << "\": " << resource.second << ", ";
+      for (auto it = power_supply_status_[status_head_].begin();
+          it != power_supply_status_[status_head_].end(); it++) {
+        if (it != power_supply_status_[status_head_].begin()) {
+          log_file_ << ", ";
+        }
+        log_file_ << "\"" << ToString(it->first.first) << "_"
+                  << ToString(it->first.second) << "\": " << it->second;
       }
-      log_file_ << "}},";
+      log_file_ << "}}";
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "Resource status logged.");
     }
+
+    is_first_log = false;
 
     std::this_thread::sleep_for(
         std::chrono::milliseconds(interval_ms) -
