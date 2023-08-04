@@ -99,18 +99,16 @@ def push_to_android(src, dst):
 
 
 def run_binary_android(basepath, path, option='', run_as_su=False):
-    chmod_command = f'chmod 777 {ANDROID_BASE}{basepath}{path}'
-    # cd & run -- to preserve the relative relation of the binary
-    run_command = f'cd {ANDROID_BASE}{basepath} && ./{path} {option}'
     if run_as_su:
-        chmod_command = make_su_command(chmod_command)
-        run_command = make_su_command(run_command)
+        chmod_command = f'su -c "chmod 777 {ANDROID_BASE}{basepath}{path}"'
+        # cd & run -- to preserve the relative relation of the binary
+        run_command = f'"cd {ANDROID_BASE}{basepath} && su -c ./{path} {option}"'
+    else:
+        chmod_command = f'chmod 777 {ANDROID_BASE}{basepath}{path}'
+        # cd & run -- to preserve the relative relation of the binary
+        run_command = f'cd {ANDROID_BASE}{basepath} && ./{path} {option}'
     run_cmd(f'adb -d shell {chmod_command}')
     run_cmd(f'adb -d shell {run_command}')
-
-
-def make_su_command(command):
-    return f'su -c "{command}"'
 
 
 def get_argument_parser(desc: str):
