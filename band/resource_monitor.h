@@ -41,6 +41,8 @@ enum class CpuFreqFlag {
   TRANSITION_COUNT = 6,
 };
 
+// Voltage values are in uV
+// Current values are in nA
 enum class PowerSupplyFlag {
   CURRENT_NOW = 0,
   CURRENT_AVG = 1,
@@ -65,6 +67,8 @@ template <>
 const char* ToString<DevFreqFlag>(DevFreqFlag flag);
 template <>
 const char* ToString<CpuFreqFlag>(CpuFreqFlag flag);
+template <>
+const char* ToString<PowerSupplyFlag>(PowerSupplyFlag flag);
 
 class ResourceMonitor {
  public:
@@ -94,7 +98,7 @@ class ResourceMonitor {
   absl::StatusOr<std::vector<size_t>> GetAvailableCpuFreqs(
       CPUMaskFlag cpu_flag) const;
   absl::StatusOr<int> GetPowerSupply(
-    PowerSupplyMaskFlag power_supply_device_flag,
+    PowerSupplyMaskFlag power_supply_mask_flag,
     PowerSupplyFlag power_supply_flag) const;
 
   // register target resource to monitor
@@ -103,7 +107,7 @@ class ResourceMonitor {
   absl::Status AddDevFreqResource(DeviceFlag device_flag, DevFreqFlag flag);
   absl::Status AddNetworkResource(NetworkFlag flag);
   absl::Status AddPowerSupplyResource(
-    PowerSupplyMaskFlag power_supply_device_flag,
+    PowerSupplyMaskFlag power_supply_mask_flag,
     PowerSupplyFlag power_supply_flag);
 
   // add listener to the resource update

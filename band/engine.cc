@@ -589,6 +589,23 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     }
   }
 
+  {
+    for (auto flag : {
+        PowerSupplyFlag::CURRENT_AVG, PowerSupplyFlag::CURRENT_NOW,
+        PowerSupplyFlag::VOLTAGE_AVG, PowerSupplyFlag::VOLTAGE_NOW}) {
+      auto status = resource_monitor_->AddPowerSupplyResource(PowerSupplyMaskFlag::kBattery, flag);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    for (auto flag : {PowerSupplyFlag::CURRENT_NOW, PowerSupplyFlag::VOLTAGE_NOW}) {
+      auto status = resource_monitor_->AddPowerSupplyResource(PowerSupplyMaskFlag::kCharger, flag);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+  }
+
   return absl::OkStatus();
 }
 

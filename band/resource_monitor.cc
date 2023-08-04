@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "absl/strings/str_format.h"
+#include "band/device/util.h"
 #include "band/logger.h"
 #include "resource_monitor.h"
 
@@ -90,7 +91,7 @@ size_t EnumLength<CpuFreqFlag>() {
 
 template <>
 size_t EnumLength<PowerSupplyFlag>() {
-  return static_cast<size_t>(PowerSupplyFlag::CURRENT_NOW) + 1;
+  return static_cast<size_t>(PowerSupplyFlag::VOLTAGE_AVG) + 1;
 }
 
 template <>
@@ -147,13 +148,13 @@ template <>
 const char* ToString<PowerSupplyFlag>(PowerSupplyFlag flag) {
   switch (flag) {
     case PowerSupplyFlag::CURRENT_NOW:
-      return "CUR_FREQ";
+      return "CURRENT_NOW";
     case PowerSupplyFlag::CURRENT_AVG:
-      return "TARGET_FREQ";
+      return "CURRENT_AVG";
     case PowerSupplyFlag::VOLTAGE_NOW:
-      return "MIN_FREQ";
+      return "VOLTAGE_NOW";
     case PowerSupplyFlag::VOLTAGE_AVG:
-      return "MAX_FREQ";
+      return "VOLTAGE_AVG";
     default:
       return "UNKNOWN";
   }
@@ -174,8 +175,12 @@ ResourceMonitor::~ResourceMonitor() {
 absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
   if (config.log_path.size() > 0) {
     // remove existing log file if exists
-    BAND_LOG_PROD(BAND_LOG_ERROR, "%s", config.log_path.c_str());
-    std::remove(config.log_path.c_str());
+    if (device::IsFileAvailable(config.log_path.c_str())) {
+      BAND_LOG_PROD(
+        BAND_LOG_ERROR, "Removing existing monitor log %s",
+        config.log_path.c_str());
+      std::remove(config.log_path.c_str());
+    }
     // open log file and start from the beginning
     log_file_.open(config.log_path, std::ios::out);
     if (!log_file_.is_open()) {
@@ -567,19 +572,34 @@ absl::Status ResourceMonitor::AddPowerSupplyResource(
         "Power supply device %s not supported",
         ToString(power_supply_mask_flag)));
   }
+
   std::string filename;
+  float multiplier;
+  bool require_continuous_monitoring;
   switch (power_supply_flag) {
     case PowerSupplyFlag::CURRENT_NOW:
       filename = "current_now";
+      // uA to mA
+      multiplier = 1e-3;
+      require_continuous_monitoring = true;
       break;
     case PowerSupplyFlag::CURRENT_AVG:
       filename = "current_avg";
+      // uA to mA
+      multiplier = 1e-3;
+      require_continuous_monitoring = true;
       break;
     case PowerSupplyFlag::VOLTAGE_NOW:
       filename = "voltage_now";
+      // uV to mV
+      multiplier = 1e-3;
+      require_continuous_monitoring = true;
       break;
     case PowerSupplyFlag::VOLTAGE_AVG:
       filename = "voltage_avg";
+      // uV to mV
+      multiplier = 1e-3;
+      require_continuous_monitoring = true;
       break;
     default:
       return absl::InternalError(absl::StrFormat(
@@ -588,15 +608,18 @@ absl::Status ResourceMonitor::AddPowerSupplyResource(
   }
 
   std::string path = base_path + device_dirname + "/" + filename;
-
   if (!device::IsFileAvailable(path)) {
     return absl::NotFoundError(absl::StrFormat("Path %s not found.", path));
   }
 
-  power_supply_resources_[key] = {path, 1.f};
-  int value = TryReadInt({path}).value();
-  power_supply_status_[0][key] = value;
-  power_supply_status_[1][key] = value;
+  if (require_continuous_monitoring) {
+    power_supply_resources_[key] = {path, multiplier};
+  }
+  auto value = TryReadInt({path});
+  RETURN_IF_ERROR(value.status());
+  // Add initial values
+  power_supply_status_[0][key] = value.value();
+  power_supply_status_[1][key] = value.value();
   return absl::OkStatus();
 }
 
@@ -731,6 +754,20 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
         } else {
           BAND_LOG_INTERNAL(BAND_LOG_WARNING,
                             "Failed to read dev freq resource %s: %s",
+                            resource.second.first.c_str(),
+                            status.status().ToString().c_str());
+        }
+      }
+
+      // power supply
+      for (auto& resource : power_supply_resources_) {
+        absl::StatusOr<int> status = TryReadInt({resource.second.first});
+        if (status.ok()) {
+          power_supply_status_[next_head][resource.first] =
+              status.value() * resource.second.second;
+        } else {
+          BAND_LOG_INTERNAL(BAND_LOG_WARNING,
+                            "Failed to read power supply resource %s: %s",
                             resource.second.first.c_str(),
                             status.status().ToString().c_str());
         }
