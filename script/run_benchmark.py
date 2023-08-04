@@ -34,7 +34,8 @@ def benchmark_local(debug, trace, platform, backend, build_only, config_path):
         )
 
 
-def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
+def benchmark_android(debug, trace, platform, backend, docker, config_path="",
+                      run_as_su=False):
     target_base_dir = BASE_DIR
     # build android targets only (specified in band_cc_android_test tags)
 
@@ -76,7 +77,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         name = os.path.basename(config_path)
         print(f'Run {name}')
         run_binary_android('', f'{target_base_dir}/band_benchmark',
-                           f'{target_base_dir}/{name}')
+                           f'{target_base_dir}/{name}', run_as_su=run_as_su)
 
 
 if __name__ == '__main__':
@@ -105,7 +106,7 @@ if __name__ == '__main__':
         # Need to set Android build option in ./configure
         print('Benchmark Android')
         benchmark_android(args.debug, args.trace, get_platform(), args.backend,
-                          args.docker, args.config)
+                          args.docker, args.config, run_as_su=True)
     else:
         print(f'Benchmark {get_platform()}')
         benchmark_local(args.debug, args.trace, get_platform(),
