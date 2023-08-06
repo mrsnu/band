@@ -1,0 +1,34 @@
+{
+  "name": "Band Server Dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {}
+  },
+
+  // Set *default* container specific settings.json values on container create.
+	"settings": { 
+		"terminal.integrated.shell.linux": "/bin/bash"
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-vscode.cpptools",
+		"bazelbuild.vscode-bazel"
+	],
+
+	"runArgs": [
+		"--gpus",
+		"all",
+		"-p",
+		"50051:50051"
+	]
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "uname -a",
+
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	// "remoteUser": "vscode"
+}

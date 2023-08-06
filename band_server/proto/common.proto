@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package band_proto;
+
+message Void {}
+
+enum DataType {
+  NO_TYPE = 0;
+  FLOAT32 = 1;
+  INT32 = 2;
+  UINT8 = 3;
+  INT64 = 4;
+  STRING = 5;
+  BOOL = 6;
+  INT16 = 7;
+  COMPLEX64 = 8;
+  INT8 = 9;
+  FLOAT16 = 10;
+  FLOAT64 = 11;
+}
+
+message Shape {
+  repeated int32 dims = 2;
+}
+
+enum QuantizationType {
+  NO_QUANTIZATION = 0;
+  AFFINE_QUANTIZATION = 1;
+}
+
+enum StatusCode {
+  OK = 0;
+  UNKNOWN_ERROR = 1;
+  INVALID_ARGUMENT = 2;
+}
+
+message Status {
+  StatusCode code = 1;
+  string error_message = 2;
+}
+
+message OpSet {
+  repeated int32 op = 1;
+}

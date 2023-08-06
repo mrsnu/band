@@ -1,0 +1,30 @@
+{
+  "port": 50051,
+  "models": [
+    {
+      "id": "image_classification",
+      "name": "MobileNetV2",
+      "path": "models/mobilenetv2.trt"
+    },
+    {
+      "id": "face_recognition",
+      "name": "ArcFace-MobileNetV2",
+      "path": "models/arcface-mbv2.trt"
+    },
+    {
+      "id": "object_detection",
+      "name": "EfficientDet-Lite0",
+      "path": "models/efficientdet-lite0.trt"
+    },
+    {
+      "id": "face_detection",
+      "name": "RetinaFace-MobileNetV2",
+      "path": "models/retinaface-mbv2.trt"
+    },
+    {
+      "id": "text_detection",
+      "name": "EAST",
+      "path": "models/east.trt"
+    }
+  ]
+}

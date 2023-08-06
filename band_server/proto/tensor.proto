@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package band_proto;
+
+import "proto/common.proto";
+
+message AffineQuantizationParam {
+    repeated float scale = 1;
+    repeated int32 zero_point = 2;
+    int32 quantized_dimension = 3;
+}
+
+message Quantization {
+    QuantizationType type = 1;
+    AffineQuantizationParam affine_param = 2;
+}
+
+message Tensor {
+    string name = 1;
+    Shape shape = 2;
+    DataType dtype = 3;
+    bytes data = 4;
+    Quantization quantization = 5;
+}

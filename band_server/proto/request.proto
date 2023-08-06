@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package band_proto;
+
+import "proto/tensor.proto";
+
+enum BackendType {
+  TENSORFLOW = 0;
+  PYTORCH = 1;
+  ONNXRUNTIME = 2;
+  TENSORRT = 3;
+  CUSTOM = 4;
+}
+
+message RequestOption {
+  BackendType backend_type = 1;
+}
+
+message Request {
+  RequestOption option = 1;
+  repeated Tensor tensors = 2;
+}

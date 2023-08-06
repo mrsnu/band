@@ -22,6 +22,8 @@ namespace grpc {
 TEST(GrpcClient, GetModelDesc) {
   auto client = GrpcClient();
   EXPECT_EQ(client.Connect("localhost", 50051), absl::OkStatus());
+  client.GetModelDesc();
+  
 }
 
 }  // namespace grpc

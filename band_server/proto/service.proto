@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package band_proto;
+
+import "proto/common.proto";
+import "proto/request.proto";
+import "proto/response.proto";
+import "proto/model.proto";
+
+service BandService {
+    rpc GetModelDesc(Void) returns (stream ModelDescriptor) {}
+    rpc CheckModelDesc(ModelDescriptor) returns (Status) {}
+    rpc RequestSync(Request) returns (Response) {}
+}

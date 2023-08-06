@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package band_proto;
+
+import "proto/common.proto";
+import "proto/tensor.proto";
+
+message Response {
+    Status status = 1;
+    repeated Tensor tensors = 2;
+}
+
+message Event {
+    int32 id = 1;
+}

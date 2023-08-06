@@ -2,8 +2,9 @@ import io
 import argparse
 import grpc
 from PIL import Image
-from proto.splash_pb2 import Request, Response
-from proto.splash_pb2_grpc import SplashStub
+from proto.request_pb2 import Request
+from proto.response_pb2 import Response
+from proto.service_pb2_grpc import BandServiceStub
 
 def preprocess_image(image_path):
     image = Image.open(image_path)
@@ -12,8 +13,9 @@ def preprocess_image(image_path):
     return b.getvalue()
 
 def run(model, height, width, data, port=50051):
+    
     with grpc.insecure_channel(f'localhost:{port}') as channel:
-        stub = SplashStub(channel)
+        stub = BandServiceStub(channel)
         response = stub.RequestInference(
             Request(
                 model=model,

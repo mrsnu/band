@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package band_proto;
+
+import "proto/common.proto";
+
+// Note: There must be no unsupported ops and unavailable
+// devices for remote execution.
+message ModelDescriptor {
+    string name = 1;
+    string id = 2;
+    int32 num_ops = 3;
+    int32 num_tensors = 4;
+    repeated DataType tensor_types = 5;
+    repeated int32 input_tensor_indices = 6;
+    repeated int32 output_tensor_indices = 7;
+    repeated OpSet op_input_tensors = 8;
+    repeated OpSet op_output_tensors = 9;
+}
