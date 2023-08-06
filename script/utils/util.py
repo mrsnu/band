@@ -49,7 +49,7 @@ def copy(src, dst):
     dst = canon_path(os.path.join(dst, os.path.basename(src)))
 
     if os.path.isdir(src):
-        shutil.copytree(src, dst)
+        shutil.copytree(src, dst, ignore_dangling_symlinks=True, symlinks=True)
     else:
         try:
             shutil.copy(src, dst)
