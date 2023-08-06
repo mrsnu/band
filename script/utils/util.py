@@ -121,11 +121,13 @@ def get_argument_parser(desc: str):
                         help='Re-build test target, only affects to android ')
     parser.add_argument('-b', '--build', action="store_true", default=False,
                         help='Build only, only affects to local (default = false)')
+    parser.add_argument('-H', '--hash', type=str, required=False, default=None,
+                        help='Build with specific docker container hash')
     return parser
 
 
-def clean_bazel(docker):
+def clean_bazel(docker, hash=None):
     if docker:
-        run_cmd_docker('bazel clean')
+        run_cmd_docker('bazel clean', hash=hash)
     else:
         run_cmd('bazel clean')

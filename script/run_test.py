@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     print(f"Test {get_platform()}")
     if args.rebuild: 
-        clean_bazel(args.docker)
+        clean_bazel(args.docker, args.hash)
     
     if args.android:
         build_cmd = make_cmd(
@@ -33,8 +33,8 @@ if __name__ == '__main__':
             )
         subprocess.call(['mkdir', '-p', get_target(args.debug)])
         if args.docker:
-            run_cmd_docker(build_cmd)
-            copy_docker(f'bazel-bin/band/test', get_target(args.debug))
+            run_cmd_docker(build_cmd, hash=args.hash)
+            copy_docker(f'bazel-bin/band/test', get_target(args.debug), hash=args.hash)
         else:
             run_cmd(build_cmd)
             copy(f'bazel-bin/band/test', get_target(args.debug))

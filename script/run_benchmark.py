@@ -34,7 +34,7 @@ def benchmark_local(debug, trace, platform, backend, build_only, config_path):
         )
 
 
-def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
+def benchmark_android(debug, trace, platform, backend, docker, config_path="", hash=None):
     target_base_dir = BASE_DIR
     # build android targets only (specified in band_cc_android_test tags)
 
@@ -47,12 +47,12 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         target=TARGET,
     )
     if docker:
-        run_cmd_docker(build_command)
+        run_cmd_docker(build_command, hash=args.hash)
         # create a local path
         subprocess.call(['mkdir', '-p', f'{target_base_dir}'])
         # run_cmd(
         #     f'sh script/docker_util.sh -d bazel-bin/band/tool/band_benchmark {target_base_dir}')
-        copy_docker('bazel-bin/band/tool/band_benchmark', target_base_dir)
+        copy_docker('bazel-bin/band/tool/band_benchmark', target_base_dir, hash=hash)
     elif platform.system() == 'Linux':
         run_cmd(build_command)
         copy('bazel-bin/band/tool/band_benchmark', target_base_dir)
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
 
     if args.rebuild:
-        clean_bazel(args.docker)
+        clean_bazel(args.docker, args.hash)
 
     if os.path.isdir(BASE_DIR):
         shutil.rmtree(BASE_DIR)
@@ -105,7 +105,7 @@ if __name__ == '__main__':
         # Need to set Android build option in ./configure
         print('Benchmark Android')
         benchmark_android(args.debug, args.trace, get_platform(), args.backend,
-                          args.docker, args.config)
+                          args.docker, args.config, args.hash)
     else:
         print(f'Benchmark {get_platform()}')
         benchmark_local(args.debug, args.trace, get_platform(),

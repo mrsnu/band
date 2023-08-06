@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 case "$1" in 
     -d)
@@ -6,7 +6,7 @@ case "$1" in
     FROM=$3
     TO=$4
     echo "Copy from ${HASH}:${FROM} to ${TO}"
-    docker cp ${HASH}://workspaces/band/${FROM} ${TO}
+    docker cp ${HASH}:/workspaces/band/${FROM} ${TO}
     ;;
 
     -r) 

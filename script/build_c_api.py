@@ -23,7 +23,7 @@ if __name__ == '__main__':
         target=TARGET
     )
     if args.docker:
-        run_cmd_docker(build_cmd)
+        run_cmd_docker(build_cmd, hash=args.hash)
     else:
         run_cmd(build_cmd)
     
