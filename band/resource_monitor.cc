@@ -648,7 +648,8 @@ const char* ResourceMonitor::GetPowerSupplyBasePath() {
 absl::StatusOr<std::string> ResourceMonitor::GetDevFreqPath(
     DeviceFlag flag) const {
   if (dev_freq_paths_.find(flag) == dev_freq_paths_.end()) {
-    return absl::InternalError("Dev frequency resource not registered.");
+    return absl::InternalError(
+      absl::StrFormat("Dev frequency resource for %s is not registered.", ToString(flag)));
   } else {
     return GetDevFreqBasePath() + dev_freq_paths_.at(flag);
   }

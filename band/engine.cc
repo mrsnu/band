@@ -577,6 +577,16 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   }
 
   {
+    size_t num_tz = resource_monitor_->NumThermalResources(ThermalFlag::TZ_TEMPERATURE);
+    for (size_t i = 0; i < num_tz; ++i) {
+      auto status = resource_monitor_->AddThermalResource(ThermalFlag::TZ_TEMPERATURE, i);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+  }
+
+  {
     for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
       const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);
       if (flag == CPUMaskFlag::kAll) {
@@ -586,6 +596,13 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       if (!status.ok()) {
         return status;
       }
+    }
+  }
+
+  {
+    auto status = resource_monitor_->AddDevFreqResource(DeviceFlag::kGPU, DevFreqFlag::CUR_FREQ);
+    if (!status.ok()) {
+      return status;
     }
   }
 
