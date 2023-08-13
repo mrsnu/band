@@ -10,38 +10,6 @@ from backend.util import (
     get_bytes_size
 )
 
-# num_bindings – int The number of binding indices.
-
-# num_io_tensors – int The number of IO tensors.
-
-# max_batch_size – int [DEPRECATED] The maximum batch size which can be used for inference for an engine built from an INetworkDefinition with implicit batch dimension. For an engine built from an INetworkDefinition with explicit batch dimension, this will always be 1 .
-
-# has_implicit_batch_dimension – bool Whether the engine was built with an implicit batch dimension. This is an engine-wide property. Either all tensors in the engine have an implicit batch dimension or none of them do. This is True if and only if the INetworkDefinition from which this engine was built was created without the NetworkDefinitionCreationFlag.EXPLICIT_BATCH flag.
-
-# num_layers – int The number of layers in the network. The number of layers in the network is not necessarily the number in the original INetworkDefinition, as layers may be combined or eliminated as the ICudaEngine is optimized. This value can be useful when building per-layer tables, such as when aggregating profiling data over a number of executions.
-
-# max_workspace_size – int The amount of workspace the ICudaEngine uses. The workspace size will be no greater than the value provided to the Builder when the ICudaEngine was built, and will typically be smaller. Workspace will be allocated for each IExecutionContext .
-
-# device_memory_size – int The amount of device memory required by an IExecutionContext .
-
-# refittable – bool Whether the engine can be refit.
-
-# name – str The name of the network associated with the engine. The name is set during network creation and is retrieved after building or deserialization.
-
-# num_optimization_profiles – int The number of optimization profiles defined for this engine. This is always at least 1.
-
-# error_recorder – IErrorRecorder Application-implemented error reporting interface for TensorRT objects.
-
-# engine_capability – EngineCapability The engine capability. See EngineCapability for details.
-
-# tactic_sources – int The tactic sources required by this engine.
-
-# profiling_verbosity – The profiling verbosity the builder config was set to when the engine was built.
-
-# hardware_compatibility_level – The hardware compatibility level of the engine.
-
-# num_aux_streams – Read-only. The number of auxiliary streams used by this engine, which will be less than or equal to the maximum allowed number of auxiliary streams by setting builder_config.max_aux_streams when the engine is built.
-
 class TensorRTBackend(object):
     def __init__(self, gpus=[0]):
         self._bindings = None

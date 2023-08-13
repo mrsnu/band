@@ -20,7 +20,7 @@
 		"--gpus",
 		"all",
 		"-p",
-		"50051:50051"
+		"50052:50052"
 	]
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

@@ -28,7 +28,11 @@ class InferenceServer(BandServiceServicer):
             models,
             backend="tensorrt",
             gpus=[]):
-        self.backend = TensorRTBackend(gpu)
+        if backend == "tensorrt":
+            self.backend = TensorRTBackend(gpus)
+        else:
+            raise Exception("Backend not supported")
+        
         self.model_descs = []
         for model in models:
             self.model_descs.append(self.backend.load_model(model))
@@ -39,6 +43,9 @@ class InferenceServer(BandServiceServicer):
 
     def CheckModelDesc(self, request, context):
         return Status(code=StatusCode.OK) if request in self.model_descs else Status(code=StatusCode.MODEL_NOT_FOUND)
+    
+    def RequestSync(self, request, context):
+        
 
 
 def main():
