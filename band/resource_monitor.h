@@ -91,9 +91,6 @@ class ResourceMonitor {
   absl::Status AddDevFreqResource(DeviceFlag device_flag, DevFreqFlag flag);
   absl::Status AddNetworkResource(NetworkFlag flag);
 
-  // add listener to the resource update
-  void AddOnUpdate(std::function<void(const ResourceMonitor&)> callback);
-
  private:
   static const char* GetThermalBasePath();
   static const char* GetCpuFreqBasePath();
@@ -108,10 +105,8 @@ class ResourceMonitor {
   absl::StatusOr<std::string> GetFirstAvailablePath(
       const std::vector<std::string>& paths) const;
 
-  std::thread monitor_thread_;
-  bool is_monitoring_ = false;
   // main monitoring loop
-  void Monitor(size_t interval_ms);
+  void Monitor();
 
   mutable std::ofstream log_file_;
 
@@ -119,21 +114,15 @@ class ResourceMonitor {
   using CpuFreqKey = std::pair<CpuFreqFlag, CPUMaskFlag>;
   using DevFreqKey = std::pair<DevFreqFlag, DeviceFlag>;
 
-  mutable std::mutex path_mtx_;
   // registered thermal resources
   // (flag, multiplier)
   std::map<ThermalKey, std::pair<std::string, float>> thermal_resources_;
   std::map<CpuFreqKey, std::pair<std::string, float>> cpu_freq_resources_;
   std::map<DevFreqKey, std::pair<std::string, float>> dev_freq_resources_;
 
-  mutable std::mutex head_mtx_;
-  size_t status_head_ = 0;
-  std::array<std::map<ThermalKey, size_t>, 2> thermal_status_;
-  std::array<std::map<CpuFreqKey, size_t>, 2> cpu_freq_status_;
-  std::array<std::map<DevFreqKey, size_t>, 2> dev_freq_status_;
-
-  std::mutex callback_mtx_;
-  std::vector<std::function<void(const ResourceMonitor&)>> on_update_callbacks_;
+  std::map<ThermalKey, size_t> thermal_status_;
+  std::map<CpuFreqKey, size_t> cpu_freq_status_;
+  std::map<DevFreqKey, size_t> dev_freq_status_;
 };
 
 }  // namespace band

@@ -139,14 +139,6 @@ const char* ToString<CpuFreqFlag>(CpuFreqFlag flag) {
 
 ResourceMonitor::~ResourceMonitor() {
   if (log_file_.is_open()) {
-    log_file_.close();
-  }
-  is_monitoring_ = false;
-  if (monitor_thread_.joinable()) {
-    monitor_thread_.join();
-  }
-
-  if (log_file_.is_open()) {
     log_file_ << "}";
     log_file_.close();
   }
@@ -198,10 +190,6 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
           absl::StrFormat("Device frequency path %s not found.", it->second));
     }
   }
-
-  is_monitoring_ = true;
-  monitor_thread_ =
-      std::thread(&ResourceMonitor::Monitor, this, config.monitor_interval_ms);
 
   return absl::OkStatus();
 }
@@ -264,15 +252,12 @@ bool ResourceMonitor::IsValidDevice(DeviceFlag flag) const {
 
 absl::StatusOr<size_t> ResourceMonitor::GetThermal(ThermalFlag flag,
                                                    size_t id) const {
-  std::lock_guard<std::mutex> lock(head_mtx_);
   ThermalKey key{flag, id};
-  if (thermal_status_[status_head_].find(key) ==
-      thermal_status_[status_head_].end()) {
+  if (thermal_status_.find(key) == thermal_status_.end()) {
     return absl::InternalError(
         absl::StrFormat("Thermal for id %d not registered.", id));
-  } else {
-    return thermal_status_[status_head_].at(key);
   }
+  return thermal_status_.at(key);
 }
 
 size_t ResourceMonitor::NumThermalResources(ThermalFlag flag) const {
@@ -301,15 +286,13 @@ size_t ResourceMonitor::NumThermalResources(ThermalFlag flag) const {
 
 absl::StatusOr<size_t> ResourceMonitor::GetDevFreq(DeviceFlag device_flag,
                                                    DevFreqFlag flag) const {
-  std::lock_guard<std::mutex> lock(head_mtx_);
   DevFreqKey key{flag, device_flag};
-  if (dev_freq_status_[status_head_].find(key) ==
-      dev_freq_status_[status_head_].end()) {
+  if (dev_freq_status_.find(key) == dev_freq_status_.end()) {
     return absl::InternalError(absl::StrFormat(
         "Device frequency for flag %s and device %s not registered.",
         ToString(flag), ToString(device_flag)));
   } else {
-    return dev_freq_status_[status_head_].at(key);
+    return dev_freq_status_.at(key);
   }
 }
 
@@ -324,15 +307,13 @@ absl::StatusOr<std::vector<size_t>> ResourceMonitor::GetAvailableDevFreqs(
 
 absl::StatusOr<size_t> ResourceMonitor::GetCpuFreq(CPUMaskFlag cpu_flag,
                                                    CpuFreqFlag flag) const {
-  std::lock_guard<std::mutex> lock(head_mtx_);
   CpuFreqKey key{flag, cpu_flag};
-  if (cpu_freq_status_[status_head_].find(key) ==
-      cpu_freq_status_[status_head_].end()) {
+  if (cpu_freq_status_.find(key) == cpu_freq_status_.end()) {
     return absl::InternalError(absl::StrFormat(
         "CPU frequency for flag %s and cpu set %s not registered.",
         ToString(flag), ToString(cpu_flag)));
   } else {
-    return cpu_freq_status_[status_head_].at(key);
+    return cpu_freq_status_.at(key);
   }
 }
 
@@ -345,7 +326,6 @@ absl::StatusOr<std::vector<size_t>> ResourceMonitor::GetAvailableCpuFreqs(
 }
 
 absl::Status ResourceMonitor::AddThermalResource(ThermalFlag flag, size_t id) {
-  std::lock_guard<std::mutex> lock(path_mtx_);
   ThermalKey key{flag, id};
   if (thermal_resources_.find(key) != thermal_resources_.end()) {
     return absl::InternalError(
@@ -371,14 +351,12 @@ absl::Status ResourceMonitor::AddThermalResource(ThermalFlag flag, size_t id) {
   thermal_resources_[key] = {path, 1.f};
   // add initial value
   size_t value = TryReadSizeT({path}).value();
-  thermal_status_[0][key] = value;
-  thermal_status_[1][key] = value;
+  thermal_status_[key] = value;
   return absl::OkStatus();
 }
 
 absl::Status ResourceMonitor::AddCpuFreqResource(CPUMaskFlag cpu_flag,
                                                  CpuFreqFlag flag) {
-  std::lock_guard<std::mutex> lock(path_mtx_);
   CpuFreqKey key{flag, cpu_flag};
   if (cpu_freq_resources_.find(key) != cpu_freq_resources_.end()) {
     return absl::InternalError(absl::StrFormat(
@@ -434,11 +412,9 @@ absl::Status ResourceMonitor::AddCpuFreqResource(CPUMaskFlag cpu_flag,
     // all cpu freqs are in kHz, requires no conversion
     cpu_freq_resources_[key] = {path.value(), 1.f};
   } else {
-    std::lock_guard<std::mutex> lock(head_mtx_);
     auto value = TryReadSizeT(path_candidates, multipliers);
     RETURN_IF_ERROR(value.status());
-    cpu_freq_status_[0][key] = value.value();
-    cpu_freq_status_[1][key] = value.value();
+    cpu_freq_status_[key] = value.value();
   }
 
   return absl::OkStatus();
@@ -446,7 +422,6 @@ absl::Status ResourceMonitor::AddCpuFreqResource(CPUMaskFlag cpu_flag,
 
 absl::Status ResourceMonitor::AddDevFreqResource(DeviceFlag device_flag,
                                                  DevFreqFlag flag) {
-  std::lock_guard<std::mutex> lock(path_mtx_);
   DevFreqKey key{flag, device_flag};
   if (dev_freq_resources_.find(key) != dev_freq_resources_.end()) {
     return absl::InternalError(absl::StrFormat(
@@ -493,23 +468,15 @@ absl::Status ResourceMonitor::AddDevFreqResource(DeviceFlag device_flag,
     // all dev freqs are in Hz should be converted to kHz
     dev_freq_resources_[key] = {path.value(), 0.001f};
   } else {
-    std::lock_guard<std::mutex> lock(head_mtx_);
     auto value = TryReadSizeT(path_candidates, multipliers);
     RETURN_IF_ERROR(value.status());
-    dev_freq_status_[0][key] = value.value();
-    dev_freq_status_[1][key] = value.value();
+    dev_freq_status_[key] = value.value();
   }
   return absl::OkStatus();
 }
 
 absl::Status ResourceMonitor::AddNetworkResource(NetworkFlag) {
   return absl::Status();
-}
-
-void ResourceMonitor::AddOnUpdate(
-    std::function<void(const ResourceMonitor&)> callback) {
-  std::lock_guard<std::mutex> lock(callback_mtx_);
-  on_update_callbacks_.push_back(callback);
 }
 
 const char* ResourceMonitor::GetThermalBasePath() {
@@ -587,99 +554,72 @@ absl::StatusOr<std::string> ResourceMonitor::GetFirstAvailablePath(
 
   return absl::NotFoundError("No available path");
 }
-void ResourceMonitor::Monitor(size_t interval_ms) {
-  while (is_monitoring_) {
-    // measure time to monitor and sleep for the rest of the interval
-    auto start = std::chrono::high_resolution_clock::now();
-    // update resource status
-    size_t next_head = (status_head_ + 1) % 2;
-    {
-      std::lock_guard<std::mutex> lock(path_mtx_);
-      // thermal
-      for (auto& resource : thermal_resources_) {
-        absl::StatusOr<size_t> status = TryReadSizeT({resource.second.first});
-        if (status.ok()) {
-          thermal_status_[next_head][resource.first] =
-              status.value() * resource.second.second;
-        } else {
-          BAND_LOG_INTERNAL(
-              BAND_LOG_WARNING,
-              "Failed to read thermal resource %s (%s, %d): %s",
-              ToString(resource.first.first), resource.second.first.c_str(),
-              resource.first.second, status.status().ToString().c_str());
-        }
+
+void ResourceMonitor::Monitor() {
+  {
+    // thermal
+    for (auto& resource : thermal_resources_) {
+      absl::StatusOr<size_t> status = TryReadSizeT({resource.second.first});
+      if (status.ok()) {
+        thermal_status_[resource.first] =
+            status.value() * resource.second.second;
       }
 
-      // cpu freq
-      for (auto& resource : cpu_freq_resources_) {
-        absl::StatusOr<size_t> status = TryReadSizeT({resource.second.first});
-        if (status.ok()) {
-          cpu_freq_status_[next_head][resource.first] =
-              status.value() * resource.second.second;
-        } else {
-          BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                            "Failed to read cpu freq resource %s: %s",
-                            resource.second.first.c_str(),
-                            status.status().ToString().c_str());
-        }
-      }
-
-      // dev freq
-      for (auto& resource : dev_freq_resources_) {
-        absl::StatusOr<size_t> status = TryReadSizeT({resource.second.first});
-        if (status.ok()) {
-          dev_freq_status_[next_head][resource.first] =
-              status.value() * resource.second.second;
-        } else {
-          BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                            "Failed to read dev freq resource %s: %s",
-                            resource.second.first.c_str(),
-                            status.status().ToString().c_str());
-        }
-      }
+      BAND_LOG_INTERNAL(
+          BAND_LOG_WARNING, "Failed to read thermal resource %s (%s, %d): %s",
+          ToString(resource.first.first), resource.second.first.c_str(),
+          resource.first.second, status.status().ToString().c_str());
+      return;
     }
 
-    // swap head
-    {
-      std::lock_guard<std::mutex> lock(head_mtx_);
-      status_head_ = next_head;
+    // cpu freq
+    for (auto& resource : cpu_freq_resources_) {
+      absl::StatusOr<size_t> status = TryReadSizeT({resource.second.first});
+      if (status.ok()) {
+        cpu_freq_status_[resource.first] =
+            status.value() * resource.second.second;
+      }
+      BAND_LOG_INTERNAL(
+          BAND_LOG_WARNING, "Failed to read cpu freq resource %s: %s",
+          resource.second.first.c_str(), status.status().ToString().c_str());
+      return;
     }
 
-    // report
-    {
-      std::lock_guard<std::mutex> lock(callback_mtx_);
-      for (auto& callback : on_update_callbacks_) {
-        callback(*this);
+    // dev freq
+    for (auto& resource : dev_freq_resources_) {
+      absl::StatusOr<size_t> status = TryReadSizeT({resource.second.first});
+      if (status.ok()) {
+        dev_freq_status_[resource.first] =
+            status.value() * resource.second.second;
       }
+      BAND_LOG_INTERNAL(
+          BAND_LOG_WARNING, "Failed to read dev freq resource %s: %s",
+          resource.second.first.c_str(), status.status().ToString().c_str());
+      return;
     }
+  }
 
-    // log to file
-    if (log_file_.is_open()) {
-      BAND_LOG_PROD(BAND_LOG_INFO, "Logging resource status.");
-      log_file_ << "{\"thermal\": {";
-      for (auto& resource : thermal_status_[status_head_]) {
-        log_file_ << "\"" << ToString(resource.first.first) << "_"
-                  << resource.first.second << "\": " << resource.second << ", ";
-      }
-      log_file_ << "}, \"cpu_freq\": {";
-      for (auto& resource : cpu_freq_status_[status_head_]) {
-        log_file_ << "\"" << ToString(resource.first.first) << "_"
-                  << ToString(resource.first.second)
-                  << "\": " << resource.second << ", ";
-      }
-      log_file_ << "}, \"dev_freq\": {";
-      for (auto& resource : dev_freq_status_[status_head_]) {
-        log_file_ << "\"" << ToString(resource.first.first) << "_"
-                  << ToString(resource.first.second)
-                  << "\": " << resource.second << ", ";
-      }
-      log_file_ << "}},";
-      BAND_LOG_INTERNAL(BAND_LOG_INFO, "Resource status logged.");
+  // log to file
+  if (log_file_.is_open()) {
+    log_file_ << "{\"thermal\": {";
+    for (auto& resource : thermal_status_) {
+      log_file_ << "\"" << ToString(resource.first.first) << "_"
+                << resource.first.second << "\": " << resource.second << ", ";
     }
-
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(interval_ms) -
-        (std::chrono::high_resolution_clock::now() - start));
+    log_file_ << "}, \"cpu_freq\": {";
+    for (auto& resource : cpu_freq_status_) {
+      log_file_ << "\"" << ToString(resource.first.first) << "_"
+                << ToString(resource.first.second) << "\": " << resource.second
+                << ", ";
+    }
+    log_file_ << "}, \"dev_freq\": {";
+    for (auto& resource : dev_freq_status_) {
+      log_file_ << "\"" << ToString(resource.first.first) << "_"
+                << ToString(resource.first.second) << "\": " << resource.second
+                << ", ";
+    }
+    log_file_ << "}},";
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Resource status logged.");
   }
 }
 
