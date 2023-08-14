@@ -79,7 +79,7 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     } break;
     case BAND_PROFILE_DATA_PATH: {
       char* arg = va_arg(vl, char*);
-      b->impl.AddProfileDataPath(arg);
+      b->impl.AddLatencyProfilePath(arg);
     } break;
     case BAND_PLANNER_SCHEDULE_WINDOW_SIZE: {
       int arg = va_arg(vl, int);

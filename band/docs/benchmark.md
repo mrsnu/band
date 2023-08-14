@@ -136,7 +136,7 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
     ],
     "running_time_ms": 10000,
     "profile_smoothing_factor": 0.1,
-    "profile_data_path": "/data/local/tmp/profile.json",
+    "latency_profile_path": "/data/local/tmp/profile.json",
     "profile_online": true,
     "profile_warmup_runs": 3,
     "profile_num_runs": 50,

@@ -18,7 +18,8 @@ struct ProfileConfig {
   int num_warmups = 1;
   int num_runs = 1;
   std::vector<int> copy_computation_ratio;
-  std::string profile_data_path = "";
+  std::string latency_profile_path = "";
+  std::string thermal_profile_path = "";
   float smoothing_factor = 0.1;
 };
 

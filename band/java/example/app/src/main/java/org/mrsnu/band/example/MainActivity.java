@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     b.addWorkerCPUMasks(
         new CpuMaskFlag[] {CpuMaskFlag.ALL, CpuMaskFlag.ALL, CpuMaskFlag.ALL, CpuMaskFlag.ALL});
     b.addSmoothingFactor(0.1f);
-    b.addProfileDataPath("/data/data/org.mrsnu.band.example/profile.json");
+    b.addLatencyProfilePath("/data/data/org.mrsnu.band.example/profile.json");
     b.addOnline(true);
     b.addNumWarmups(1);
     b.addNumRuns(1);

@@ -162,7 +162,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     ProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(true)
-                               .AddProfileDataPath(profile_path)
+                               .AddLatencyProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
@@ -178,7 +178,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     ProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(false)
-                               .AddProfileDataPath(profile_path)
+                               .AddLatencyProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
@@ -214,7 +214,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     ProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(true)
-                               .AddProfileDataPath(profile_path)
+                               .AddLatencyProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
@@ -233,7 +233,7 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     ProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(false)
-                               .AddProfileDataPath(profile_path)
+                               .AddLatencyProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());

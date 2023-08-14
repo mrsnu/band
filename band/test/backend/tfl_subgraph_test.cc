@@ -50,7 +50,7 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
 #endif  // __ANDROID__
           .AddSmoothingFactor(0.1)
-          .AddProfileDataPath("band/test/data/profile.json")
+          .AddLatencyProfilePath("band/test/data/profile.json")
           .AddOnline(true)
           .AddNumWarmups(1)
           .AddNumRuns(1)

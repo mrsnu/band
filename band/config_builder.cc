@@ -27,7 +27,7 @@ bool ProfileConfigBuilder::IsValid(
   REPORT_IF_FALSE(ProfileConfigBuilder,
                   smoothing_factor_ >= .0f && smoothing_factor_ <= 1.0f);
   if (online_ == false) {
-    REPORT_IF_FALSE(ProfileConfigBuilder, profile_data_path_ != "");
+    REPORT_IF_FALSE(ProfileConfigBuilder, latency_profile_path_ != "");
   }
   return result;
 }
@@ -111,7 +111,7 @@ ProfileConfig ProfileConfigBuilder::Build(
   profile_config.num_runs = num_runs_;
   profile_config.copy_computation_ratio = copy_computation_ratio_;
   profile_config.smoothing_factor = smoothing_factor_;
-  profile_config.profile_data_path = profile_data_path_;
+  profile_config.latency_profile_path = latency_profile_path_;
   return profile_config;
 }
 

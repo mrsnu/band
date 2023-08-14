@@ -23,8 +23,8 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addCopyComputationRatio(nativeHandle, copyComputationRatio);
   }
 
-  public void addProfileDataPath(String profileDataPath) {
-    addProfileDataPath(nativeHandle, profileDataPath);
+  public void addLatencyProfilePath(String profileDataPath) {
+    addLatencyProfilePath(nativeHandle, profileDataPath);
   }
 
   public void addSmoothingFactor(float smoothingFactor) {
@@ -136,7 +136,7 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
 
   private native void addCopyComputationRatio(long configBuilderHandle, int[] copyComputationRatio);
 
-  private native void addProfileDataPath(long configBuilderHandle, String profileDataPath);
+  private native void addLatencyProfilePath(long configBuilderHandle, String profileDataPath);
 
   private native void addSmoothingFactor(long configBuilderHandle, float smoothingFactor);
 

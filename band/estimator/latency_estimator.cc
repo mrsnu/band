@@ -11,9 +11,9 @@
 namespace band {
 
 absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
-  profile_data_path_ = config.profile_data_path;
+  latency_profile_path_ = config.latency_profile_path;
   if (!config.online) {
-    profile_database_json_ = json::LoadFromFile(config.profile_data_path);
+    profile_database_json_ = json::LoadFromFile(config.latency_profile_path);
   }
   // we cannot convert the model name strings to integer ids yet,
   // (profile_database_json_ --> profile_database_)
@@ -170,7 +170,7 @@ int64_t LatencyEstimator::GetWorst(ModelId model_id) const {
 }
 
 absl::Status LatencyEstimator::DumpProfile() {
-  return json::WriteToFile(ProfileToJson(), profile_data_path_);
+  return json::WriteToFile(ProfileToJson(), latency_profile_path_);
 }
 
 size_t LatencyEstimator::GetProfileHash() const {
@@ -207,7 +207,7 @@ LatencyEstimator::JsonToModelProfile(const std::string& model_fname,
     BAND_LOG_INTERNAL(
         BAND_LOG_WARNING,
         "Current profile hash does not matches with a file (%s). Will ignore.",
-        profile_data_path_.c_str());
+        latency_profile_path_.c_str());
     return id_profile;
   }
 

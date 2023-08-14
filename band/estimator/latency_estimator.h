@@ -48,11 +48,11 @@ class LatencyEstimator : public IEstimator<SubgraphKey> {
   // Path to the profile data.
   // The data in the path will be read during initial phase, and also
   // will be updated at the end of the run.
-  std::string profile_data_path_;
+  std::string latency_profile_path_;
 
-  // The contents of the file at `profile_data_path_`.
+  // The contents of the file at `latency_profile_path_`.
   // We keep this separately from `profile_database_`, since we cannot
-  // immediately put `profile_data_path_`'s contents into `profile_database_`
+  // immediately put `latency_profile_path_`'s contents into `profile_database_`
   // because the model name --> int mapping is not available at init time.
   Json::Value profile_database_json_;
 

@@ -36,8 +36,8 @@ class ProfileConfigBuilder {
     copy_computation_ratio_ = copy_computation_ratio;
     return *this;
   }
-  ProfileConfigBuilder& AddProfileDataPath(std::string profile_data_path) {
-    profile_data_path_ = profile_data_path;
+  ProfileConfigBuilder& AddLatencyProfilePath(std::string latency_profile_path) {
+    latency_profile_path_ = latency_profile_path;
     return *this;
   }
   ProfileConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
@@ -53,7 +53,7 @@ class ProfileConfigBuilder {
   int num_warmups_ = 1;
   int num_runs_ = 1;
   std::vector<int> copy_computation_ratio_;
-  std::string profile_data_path_ = "";
+  std::string latency_profile_path_ = "";
   float smoothing_factor_ = 0.1;
 };
 
@@ -190,8 +190,8 @@ class RuntimeConfigBuilder {
     profile_config_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;
   }
-  RuntimeConfigBuilder& AddProfileDataPath(std::string profile_log_path) {
-    profile_config_builder_.AddProfileDataPath(profile_log_path);
+  RuntimeConfigBuilder& AddLatencyProfilePath(std::string profile_log_path) {
+    profile_config_builder_.AddLatencyProfilePath(profile_log_path);
     return *this;
   }
 

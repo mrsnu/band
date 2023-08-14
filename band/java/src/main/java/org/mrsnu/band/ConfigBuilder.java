@@ -25,8 +25,8 @@ public class ConfigBuilder {
     wrapper.addCopyComputationRatio(copyComputationRatio);
   }
 
-  public void addProfileDataPath(String profileDataPath) {
-    wrapper.addProfileDataPath(profileDataPath);
+  public void addLatencyProfilePath(String profileDataPath) {
+    wrapper.addLatencyProfilePath(profileDataPath);
   }
 
   public void addSmoothingFactor(float smoothingFactor) {
