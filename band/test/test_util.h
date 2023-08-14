@@ -49,9 +49,9 @@ struct MockEngineBase : public IEngine {
                                  const std::set<WorkerId>&));
 
   /* profiler */
-  MOCK_METHOD3(Update, void(const SubgraphKey&, EstimatorType, int64_t));
-  MOCK_CONST_METHOD2(GetProfiled, int64_t(const SubgraphKey&, EstimatorType));
-  MOCK_CONST_METHOD2(GetExpected, int64_t(const SubgraphKey&, EstimatorType));
+  MOCK_METHOD2(Update, void(const SubgraphKey&, int64_t));
+  MOCK_CONST_METHOD1(GetProfiled, int64_t(const SubgraphKey&));
+  MOCK_CONST_METHOD1(GetExpected, int64_t(const SubgraphKey&));
 
   /* planner */
   MOCK_METHOD0(Trigger, void());

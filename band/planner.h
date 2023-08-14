@@ -55,8 +55,6 @@ class Planner {
 
   // Check whether profiling is required or not.
   bool NeedProfile();
-  // Return all estimators required by the schedulers.
-  std::set<EstimatorType> GetEstimatorTypes() const;
   // Checks if the schedulers can handle fallback subgraphs.
   // Returns true if any of the scheduler can handle fallback subgraphs.
   // But, note that having both types of scheduler (w/ fallback, w/o fallback),

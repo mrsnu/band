@@ -29,10 +29,6 @@ int64_t NetworkEstimator::GetExpected(const SubgraphKey& key) const {
   return 0;
 }
 
-int64_t NetworkEstimator::GetWorst(ModelId model_id) const {
-  return 0;
-}
-
 absl::Status NetworkEstimator::DumpProfile() {
   return absl::OkStatus();
 }

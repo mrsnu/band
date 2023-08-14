@@ -14,7 +14,7 @@
 namespace band {
 
 class IEngine;
-class NetworkEstimator : public IEstimator {
+class NetworkEstimator : public IEstimator<SubgraphKey> {
  public:
   explicit NetworkEstimator(IEngine* engine) : IEstimator(engine) {}
   absl::Status Init(const ProfileConfig& config) override;
@@ -23,7 +23,6 @@ class NetworkEstimator : public IEstimator {
   absl::Status Profile(ModelId model_id) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
-  int64_t GetWorst(ModelId model_id) const override;
 
   absl::Status DumpProfile() override;
 };

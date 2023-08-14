@@ -343,8 +343,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
       for (int worker_id = 0; worker_id < engine_->GetNumWorkers();
            worker_id++) {
         worst_us = std::max(engine_->GetProfiled(engine_->GetLargestSubgraphKey(
-                                                     model_id, worker_id),
-                                                 EstimatorType::kLatency),
+                                model_id, worker_id)),
                             worst_us);
       }
 

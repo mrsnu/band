@@ -21,7 +21,6 @@ class IScheduler {
   virtual bool NeedProfile() = 0;
   virtual bool NeedFallbackSubgraphs() = 0;
   virtual WorkerType GetWorkerType() = 0;
-  virtual std::set<EstimatorType> GetEstimatorTypes() { return {}; }
 
  protected:
   IEngine& engine_;

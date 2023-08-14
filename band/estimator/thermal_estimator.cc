@@ -14,22 +14,18 @@ absl::Status ThermalEstimator::Init(const ProfileConfig& config) {
   return absl::OkStatus();
 }
 
-void ThermalEstimator::Update(const SubgraphKey& key, int64_t latency) {
+void ThermalEstimator::Update(const ThermalSubgraphKey& key, int64_t latency) {
 }
 
 absl::Status ThermalEstimator::Profile(ModelId model_id) {
   return absl::OkStatus();
 }
 
-int64_t ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
+int64_t ThermalEstimator::GetProfiled(const ThermalSubgraphKey& key) const {
   return 0;
 }
 
-int64_t ThermalEstimator::GetExpected(const SubgraphKey& key) const {
-  return 0;
-}
-
-int64_t ThermalEstimator::GetWorst(ModelId model_id) const {
+int64_t ThermalEstimator::GetExpected(const ThermalSubgraphKey& key) const {
   return 0;
 }
 

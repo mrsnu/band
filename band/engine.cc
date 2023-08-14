@@ -8,7 +8,6 @@
 #include "band/common.h"
 #include "band/engine_interface.h"
 #include "band/estimator/latency_estimator.h"
-#include "band/estimator/network_estimator.h"
 #include "band/estimator/thermal_estimator.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
@@ -245,7 +244,7 @@ absl::Status Engine::RegisterModel(Model* model) {
     }
 
     if (planner_->NeedProfile()) {
-      auto status = estimators_.at(EstimatorType::kLatency)->Profile(model_id);
+      auto status = latency_estimator_->Profile(model_id);
       if (!status.ok()) {
         return status;
       }
@@ -384,8 +383,7 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
             "Specified slo_scale is invalid (%f <= 0)", options[i].slo_scale));
       }
 
-      target_slo_us = GetWorst(model_ids[i], EstimatorType::kLatency) *
-                      options[i].slo_scale;
+      target_slo_us = GetWorst(model_ids[i]) * options[i].slo_scale;
     }
 
     // override, if `slo_us` is specified
@@ -510,30 +508,16 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
 
   // Setup for estimators
   {
-    auto estimator_types = planner_->GetEstimatorTypes();
-    for (auto estimator_type : estimator_types) {
-      switch (estimator_type) {
-        case EstimatorType::kLatency: {
-          estimators_[EstimatorType::kLatency] =
-              std::make_unique<LatencyEstimator>(this);
-        } break;
-        case EstimatorType::kThermal: {
-          estimators_[EstimatorType::kThermal] =
-              std::make_unique<ThermalEstimator>(this);
-        } break;
-        case EstimatorType::kNetwork: {
-          estimators_[EstimatorType::kNetwork] =
-              std::make_unique<NetworkEstimator>(this);
-        };
-        default: {
-          return absl::InternalError(absl::StrFormat(
-              "Invalid estimator type : %s", ToString(estimator_type)));
-        } break;
+    {
+      latency_estimator_ = std::make_unique<LatencyEstimator>(this);
+      auto status = latency_estimator_->Init(config.profile_config);
+      if (!status.ok()) {
+        return status;
       }
     }
-    for (auto& pair : estimators_) {
-      auto& estimator = pair.second;
-      auto status = estimator->Init(config.profile_config);
+    {
+      thermal_estimator_ = std::make_unique<ThermalEstimator>(this);
+      auto status = thermal_estimator_->Init(config.profile_config);
       if (!status.ok()) {
         return status;
       }
@@ -908,7 +892,7 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
   for (const auto& key : subgraph_keys) {
     // TODO: safety check to avoid contention with profiler?
     int64_t waiting_time = worker_waiting.at(key.GetWorkerId());
-    int64_t expected_latency = GetExpected(key, EstimatorType::kLatency);
+    int64_t expected_latency = GetExpected(key);
     int64_t total = expected_latency + std::max(waiting_time, start_time);
 
     if (min_latency >= total) {
@@ -920,35 +904,20 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
   return {min_key, min_latency};
 }
 
-void Engine::Update(const SubgraphKey& key, EstimatorType est_type,
-                    int64_t new_value) {
-  if (estimators_.find(est_type) == estimators_.end()) {
-    return;
-  }
-  estimators_.at(est_type)->Update(key, new_value);
+void Engine::Update(const SubgraphKey& key, int64_t new_value) {
+  latency_estimator_->Update(key, new_value);
 }
 
-int64_t Engine::GetProfiled(const SubgraphKey& key,
-                            EstimatorType est_type) const {
-  if (estimators_.find(est_type) == estimators_.end()) {
-    return 0;
-  }
-  return estimators_.at(est_type)->GetProfiled(key);
+int64_t Engine::GetProfiled(const SubgraphKey& key) const {
+  return latency_estimator_->GetProfiled(key);
 }
 
-int64_t Engine::GetExpected(const SubgraphKey& key,
-                            EstimatorType est_type) const {
-  if (estimators_.find(est_type) == estimators_.end()) {
-    return 0;
-  }
-  return estimators_.at(est_type)->GetExpected(key);
+int64_t Engine::GetExpected(const SubgraphKey& key) const {
+  return latency_estimator_->GetExpected(key);
 }
 
-int64_t Engine::GetWorst(ModelId model_id, EstimatorType est_type) const {
-  if (estimators_.find(est_type) == estimators_.end()) {
-    return 0;
-  }
-  return estimators_.at(est_type)->GetWorst(model_id);
+int64_t Engine::GetWorst(ModelId model_id) const {
+  return latency_estimator_->GetWorst(model_id);
 }
 
 void Engine::Trigger() { planner_->Trigger(); }

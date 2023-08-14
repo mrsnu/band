@@ -18,11 +18,6 @@ size_t EnumLength<SchedulerType>() {
 }
 
 template <>
-size_t EnumLength<EstimatorType>() {
-  return static_cast<size_t>(EstimatorType::kNetwork) + 1;
-}
-
-template <>
 size_t EnumLength<CPUMaskFlag>() {
   return static_cast<size_t>(CPUMaskFlag::kPrimary) + 1;
 }
@@ -116,24 +111,6 @@ const char* ToString(SchedulerType scheduler_type) {
     } break;
     default: {
       return "Unknown scheduler type";
-    } break;
-  }
-}
-
-template <>
-const char* ToString(EstimatorType estimator_type) {
-  switch (estimator_type) {
-    case EstimatorType::kLatency: {
-      return "latency";
-    } break;
-    case EstimatorType::kThermal: {
-      return "thermal";
-    } break;
-    case EstimatorType::kNetwork: {
-      return "network";
-    } break;
-    default: {
-      return "Unknown estimator type";
     } break;
   }
 }

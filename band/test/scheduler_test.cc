@@ -54,7 +54,7 @@ struct MockEngine : public MockEngineBase {
     return map;
   }
 
-  int64_t GetExpected(const SubgraphKey& key, EstimatorType) const override {
+  int64_t GetExpected(const SubgraphKey& key) const override {
     return 10;
   }
   bool EnqueueToWorker(const ScheduleAction& action) override {

@@ -88,7 +88,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
   // no need to hold on to the lock anymore
   lock.unlock();
 
-  int64_t profiled_latency = engine_->GetExpected(current_job_.subgraph_key, EstimatorType::kLatency);
+  int64_t profiled_latency = engine_->GetExpected(current_job_.subgraph_key);
 
   if (invoke_time == 0) {
     // the worker has not started on processing the job yet

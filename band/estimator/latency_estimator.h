@@ -14,7 +14,7 @@
 namespace band {
 
 class IEngine;
-class LatencyEstimator : public IEstimator {
+class LatencyEstimator : public IEstimator<SubgraphKey> {
  public:
   explicit LatencyEstimator(IEngine* engine) : IEstimator(engine) {}
   absl::Status Init(const ProfileConfig& config) override;
@@ -23,7 +23,7 @@ class LatencyEstimator : public IEstimator {
   absl::Status Profile(ModelId model_id) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
-  int64_t GetWorst(ModelId model_id) const override;
+  int64_t GetWorst(ModelId model_id) const;
 
   absl::Status DumpProfile() override;
 

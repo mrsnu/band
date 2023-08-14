@@ -13,17 +13,17 @@
 
 namespace band {
 
-class IEngine;
-class ThermalEstimator : public IEstimator {
+typedef std::pair<SubgraphKey, int> ThermalSubgraphKey;
+
+class ThermalEstimator : public IEstimator<ThermalSubgraphKey> {
  public:
   explicit ThermalEstimator(IEngine* engine) : IEstimator(engine) {}
   absl::Status Init(const ProfileConfig& config) override;
-  void Update(const SubgraphKey& key, int64_t latency) override;
+  void Update(const ThermalSubgraphKey& key, int64_t latency) override;
 
   absl::Status Profile(ModelId model_id) override;
-  int64_t GetProfiled(const SubgraphKey& key) const override;
-  int64_t GetExpected(const SubgraphKey& key) const override;
-  int64_t GetWorst(ModelId model_id) const override;
+  int64_t GetProfiled(const ThermalSubgraphKey& key) const override;
+  int64_t GetExpected(const ThermalSubgraphKey& key) const override;
 
   absl::Status DumpProfile() override;
 };

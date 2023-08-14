@@ -11,7 +11,8 @@
 #include "band/config.h"
 #include "band/engine_interface.h"
 #include "band/error_reporter.h"
-#include "band/estimator/estimator_interface.h"
+#include "band/estimator/latency_estimator.h"
+#include "band/estimator/thermal_estimator.h"
 #include "band/graph/graph.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
@@ -98,10 +99,8 @@ class Engine : public IEngine {
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
 
-  int64_t GetProfiled(const SubgraphKey& key,
-                      EstimatorType est_type) const override;
-  int64_t GetExpected(const SubgraphKey& key,
-                      EstimatorType est_type) const override;
+  int64_t GetProfiled(const SubgraphKey& key) const override;
+  int64_t GetExpected(const SubgraphKey& key) const override;
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
 
@@ -148,9 +147,8 @@ class Engine : public IEngine {
       const std::map<WorkerId, int64_t>& worker_waiting) const;
 
   /* latency estimator */
-  void Update(const SubgraphKey& key, EstimatorType est_type,
-              int64_t new_value) override;
-  int64_t GetWorst(ModelId model_id, EstimatorType est_type) const;
+  void Update(const SubgraphKey& key, int64_t new_value) override;
+  int64_t GetWorst(ModelId model_id) const;
 
   /* planner */
   void Trigger() override;
@@ -211,8 +209,12 @@ class Engine : public IEngine {
 
   // Resource monitor
   std::unique_ptr<ResourceMonitor> resource_monitor_;
-  std::map<EstimatorType, std::unique_ptr<IEstimator>> estimators_;
-};  // namespace band
+
+  // Estimators
+  std::unique_ptr<LatencyEstimator> latency_estimator_;
+  std::unique_ptr<ThermalEstimator> thermal_estimator_;
+};
+
 }  // namespace band
 
 #endif  // BAND_ENGINE_H

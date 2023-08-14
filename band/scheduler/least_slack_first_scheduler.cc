@@ -50,7 +50,7 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     int worker_id = target_subgraph_key.GetWorkerId();
     if (idle_workers.find(worker_id) != idle_workers.end()) {
       // Update worker's waiting time as if it will execute the job
-      waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key, EstimatorType::kLatency);
+      waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
       success &= engine_.EnqueueToWorker({job, target_subgraph_key});
       job_indices_to_erase.insert(it - requests.begin());
       continue;

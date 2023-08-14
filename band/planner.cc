@@ -206,15 +206,6 @@ bool Planner::NeedProfile() {
   return false;
 }
 
-std::set<EstimatorType> Planner::GetEstimatorTypes() const {
-  std::set<EstimatorType> estimator_types;
-  for (int i = 0; i < schedulers_.size(); ++i) {
-    auto types = schedulers_[i]->GetEstimatorTypes();
-    estimator_types.insert(types.begin(), types.end());
-  }
-  return estimator_types;
-}
-
 bool Planner::NeedFallbackSubgraphs() const {
   for (int i = 0; i < schedulers_.size(); ++i) {
     if (schedulers_[i]->NeedFallbackSubgraphs()) return true;
@@ -370,8 +361,8 @@ bool Planner::IsSLOViolated(Job& job) {
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = engine_.GetProfiled(target_key, EstimatorType::kLatency);
-  job.expected_execution_time = engine_.GetExpected(target_key, EstimatorType::kLatency);
+  job.profiled_execution_time = engine_.GetProfiled(target_key);
+  job.expected_execution_time = engine_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
   if (!engine_.IsEnd(target_key)) {

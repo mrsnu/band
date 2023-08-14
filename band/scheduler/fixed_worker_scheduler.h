@@ -26,9 +26,6 @@ class FixedWorkerGlobalQueueScheduler : public IScheduler {
   bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return false; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
-  std::set<EstimatorType> GetEstimatorTypes() override {
-    return {EstimatorType::kLatency};
-  }
 };
 
 }  // namespace band
