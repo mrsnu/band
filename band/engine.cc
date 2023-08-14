@@ -497,27 +497,18 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     return status;
   }
 
-  // Initialize resource monitor
-  {
-    resource_monitor_ = std::make_unique<ResourceMonitor>();
-    auto status = resource_monitor_->Init(config.device_config);
-    if (!status.ok()) {
-      return status;
-    }
-  }
-
   // Setup for estimators
   {
     {
       latency_estimator_ = std::make_unique<LatencyEstimator>(this);
-      auto status = latency_estimator_->Init(config.profile_config);
+      auto status = latency_estimator_->Init(config.latency_profile_config);
       if (!status.ok()) {
         return status;
       }
     }
     {
       thermal_estimator_ = std::make_unique<ThermalEstimator>(this);
-      auto status = thermal_estimator_->Init(config.profile_config);
+      auto status = thermal_estimator_->Init(config.thermal_profile_config);
       if (!status.ok()) {
         return status;
       }

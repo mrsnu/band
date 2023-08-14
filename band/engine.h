@@ -207,9 +207,6 @@ class Engine : public IEngine {
   std::map<int, std::map<int, std::map<int, std::vector<SubgraphKey>>>>
       unit_subgraphs_to_subgraph_keys_;
 
-  // Resource monitor
-  std::unique_ptr<ResourceMonitor> resource_monitor_;
-
   // Estimators
   std::unique_ptr<LatencyEstimator> latency_estimator_;
   std::unique_ptr<ThermalEstimator> thermal_estimator_;

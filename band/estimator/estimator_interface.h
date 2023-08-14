@@ -17,7 +17,6 @@ template<typename EstimatorKey>
 class IEstimator {
  public:
   explicit IEstimator(IEngine* engine) : engine_(engine) {}
-  virtual absl::Status Init(const ProfileConfig& config) = 0;
   virtual void Update(const EstimatorKey& key, int64_t new_value) = 0;
   virtual absl::Status Profile(ModelId model_id) = 0;
   virtual int64_t GetProfiled(const EstimatorKey& key) const = 0;

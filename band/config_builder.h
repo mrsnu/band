@@ -11,41 +11,43 @@
 
 namespace band {
 
-class ProfileConfigBuilder {
+class LatencyProfileConfigBuilder {
   friend class RuntimeConfigBuilder;  // TODO: Find a safer way for
                                       // RuntimeConfigBuilder to access
                                       // variables
  public:
-  ProfileConfigBuilder() {
+  LatencyProfileConfigBuilder() {
     copy_computation_ratio_ = std::vector<int>(EnumLength<DeviceFlag>(), 30000);
   }
-  ProfileConfigBuilder& AddOnline(bool online) {
+  LatencyProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
     return *this;
   }
-  ProfileConfigBuilder& AddNumWarmups(int num_warmups) {
+  LatencyProfileConfigBuilder& AddNumWarmups(int num_warmups) {
     num_warmups_ = num_warmups;
     return *this;
   }
-  ProfileConfigBuilder& AddNumRuns(int num_runs) {
+  LatencyProfileConfigBuilder& AddNumRuns(int num_runs) {
     num_runs_ = num_runs;
     return *this;
   }
-  ProfileConfigBuilder& AddCopyComputationRatio(
+  LatencyProfileConfigBuilder& AddCopyComputationRatio(
       std::vector<int> copy_computation_ratio) {
     copy_computation_ratio_ = copy_computation_ratio;
     return *this;
   }
-  ProfileConfigBuilder& AddLatencyProfilePath(std::string latency_profile_path) {
-    latency_profile_path_ = latency_profile_path;
+  LatencyProfileConfigBuilder& AddProfilePath(
+      std::string profile_path) {
+    profile_path_ = profile_path;
     return *this;
   }
-  ProfileConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
+  LatencyProfileConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
     smoothing_factor_ = smoothing_factor;
     return *this;
   }
 
-  ProfileConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
+  LatencyProfileConfig Build(
+      ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
@@ -53,8 +55,28 @@ class ProfileConfigBuilder {
   int num_warmups_ = 1;
   int num_runs_ = 1;
   std::vector<int> copy_computation_ratio_;
-  std::string latency_profile_path_ = "";
+  std::string profile_path_ = "";
   float smoothing_factor_ = 0.1;
+};
+
+class ThermalProfileConfigBuilder {
+  friend class RuntimeConfigBuilder;  // TODO: Find a safer way for
+                                      // RuntimeConfigBuilder to access
+                                      // variables
+ public:
+  ThermalProfileConfigBuilder() {}
+  ThermalProfileConfigBuilder& AddThermalProfileConfig(
+      std::string profile_path) {
+    profile_path_ = profile_path;
+    return *this;
+  }
+
+  ThermalProfileConfig Build(
+      ErrorReporter* error_reporter = DefaultErrorReporter());
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+
+ private:
+  std::string profile_path_ = "";
 };
 
 // Builder for creating PlannerConfig
@@ -167,31 +189,31 @@ class ResourceMonitorConfigBuilder {
 // Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
-  // Add ProfileConfig
+  // Add LatencyProfileConfig
   RuntimeConfigBuilder& AddOnline(bool online) {
-    profile_config_builder_.AddOnline(online);
+    latency_profile_config_builder_.AddOnline(online);
     return *this;
   }
   RuntimeConfigBuilder& AddNumWarmups(int num_warmups) {
-    profile_config_builder_.AddNumWarmups(num_warmups);
+    latency_profile_config_builder_.AddNumWarmups(num_warmups);
     return *this;
   }
   RuntimeConfigBuilder& AddNumRuns(int num_runs) {
-    profile_config_builder_.AddNumRuns(num_runs);
+    latency_profile_config_builder_.AddNumRuns(num_runs);
     return *this;
   }
   RuntimeConfigBuilder& AddCopyComputationRatio(
       std::vector<int> copy_computation_ratio) {
-    profile_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
+    latency_profile_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
     return *this;
   }
 
   RuntimeConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
-    profile_config_builder_.AddSmoothingFactor(smoothing_factor);
+    latency_profile_config_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;
   }
-  RuntimeConfigBuilder& AddLatencyProfilePath(std::string profile_log_path) {
-    profile_config_builder_.AddLatencyProfilePath(profile_log_path);
+  RuntimeConfigBuilder& AddProfilePath(std::string profile_log_path) {
+    latency_profile_config_builder_.AddProfilePath(profile_log_path);
     return *this;
   }
 
@@ -269,7 +291,8 @@ class RuntimeConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  ProfileConfigBuilder profile_config_builder_;
+  LatencyProfileConfigBuilder latency_profile_config_builder_;
+  ThermalProfileConfigBuilder thermal_profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
   ResourceMonitorConfigBuilder device_config_builder_;

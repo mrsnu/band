@@ -10,17 +10,20 @@
 
 namespace band {
 
-struct ProfileConfig {
-  ProfileConfig() {
+struct LatencyProfileConfig {
+  LatencyProfileConfig() {
     copy_computation_ratio = std::vector<int>(EnumLength<DeviceFlag>(), 0);
   }
   bool online = true;
   int num_warmups = 1;
   int num_runs = 1;
   std::vector<int> copy_computation_ratio;
-  std::string latency_profile_path = "";
-  std::string thermal_profile_path = "";
+  std::string profile_path = "";
   float smoothing_factor = 0.1;
+};
+
+struct ThermalProfileConfig {
+  std::string profile_path = "";
 };
 
 struct PlannerConfig {
@@ -62,7 +65,8 @@ struct ResourceMonitorConfig {
 struct RuntimeConfig {
   CPUMaskFlag cpu_mask;
   SubgraphConfig subgraph_config;
-  ProfileConfig profile_config;
+  LatencyProfileConfig latency_profile_config;
+  ThermalProfileConfig thermal_profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
   ResourceMonitorConfig device_config;

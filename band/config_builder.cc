@@ -12,23 +12,30 @@ namespace band {
     }                                                            \
   } while (0);
 
-bool ProfileConfigBuilder::IsValid(
+bool LatencyProfileConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
-  REPORT_IF_FALSE(ProfileConfigBuilder,
+  REPORT_IF_FALSE(LatencyProfileConfigBuilder,
                   online_ == true || online_ == false);  // Always true
-  REPORT_IF_FALSE(ProfileConfigBuilder, num_warmups_ > 0);
-  REPORT_IF_FALSE(ProfileConfigBuilder, num_runs_ > 0);
-  REPORT_IF_FALSE(ProfileConfigBuilder,
+  REPORT_IF_FALSE(LatencyProfileConfigBuilder, num_warmups_ > 0);
+  REPORT_IF_FALSE(LatencyProfileConfigBuilder, num_runs_ > 0);
+  REPORT_IF_FALSE(LatencyProfileConfigBuilder,
                   copy_computation_ratio_.size() == EnumLength<DeviceFlag>());
   for (int i = 0; i < EnumLength<DeviceFlag>(); i++) {
-    REPORT_IF_FALSE(ProfileConfigBuilder, copy_computation_ratio_[i] >= 0);
+    REPORT_IF_FALSE(LatencyProfileConfigBuilder,
+                    copy_computation_ratio_[i] >= 0);
   }
-  REPORT_IF_FALSE(ProfileConfigBuilder,
+  REPORT_IF_FALSE(LatencyProfileConfigBuilder,
                   smoothing_factor_ >= .0f && smoothing_factor_ <= 1.0f);
   if (online_ == false) {
-    REPORT_IF_FALSE(ProfileConfigBuilder, latency_profile_path_ != "");
+    REPORT_IF_FALSE(LatencyProfileConfigBuilder, profile_path_ != "");
   }
+  return result;
+}
+
+bool ThermalProfileConfigBuilder::IsValid(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  bool result = true;
   return result;
 }
 
@@ -91,27 +98,40 @@ bool RuntimeConfigBuilder::IsValid(
                                             cpu_mask_ == CPUMaskFlag::kPrimary);
 
   // Independent validation
-  REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
+  REPORT_IF_FALSE(RuntimeConfigBuilder, latency_profile_config_builder_.IsValid());
+  REPORT_IF_FALSE(RuntimeConfigBuilder, thermal_profile_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, planner_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, worker_config_builder_.IsValid());
 
   return result;
 }
 
-ProfileConfig ProfileConfigBuilder::Build(
+LatencyProfileConfig LatencyProfileConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // TODO(widiba03304): This should not terminate the program. After employing
   // abseil, Build() should return error.
   if (!IsValid(error_reporter)) {
     abort();
   }
-  ProfileConfig profile_config;
+  LatencyProfileConfig profile_config;
   profile_config.online = online_;
   profile_config.num_warmups = num_warmups_;
   profile_config.num_runs = num_runs_;
   profile_config.copy_computation_ratio = copy_computation_ratio_;
   profile_config.smoothing_factor = smoothing_factor_;
-  profile_config.latency_profile_path = latency_profile_path_;
+  profile_config.profile_path = profile_path_;
+  return profile_config;
+}
+
+ThermalProfileConfig ThermalProfileConfigBuilder::Build(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  // TODO(widiba03304): This should not terminate the program. After employing
+  // abseil, Build() should return error.
+  if (!IsValid(error_reporter)) {
+    abort();
+  }
+  ThermalProfileConfig profile_config;
+  profile_config.profile_path = profile_path_;
   return profile_config;
 }
 
@@ -179,7 +199,11 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   }
 
   RuntimeConfig runtime_config;
-  ProfileConfig profile_config = profile_config_builder_.Build();
+  LatencyProfileConfig latency_profile_config =
+      latency_profile_config_builder_.Build();
+  ThermalProfileConfig thermal_profile_config =
+      thermal_profile_config_builder_.Build();
+
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
   ResourceMonitorConfig device_config = device_config_builder_.Build();
@@ -187,7 +211,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
                                     subgraph_preparation_type_};
 
   runtime_config.cpu_mask = cpu_mask_;
-  runtime_config.profile_config = profile_config;
+  runtime_config.latency_profile_config = latency_profile_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;
   runtime_config.device_config = device_config;

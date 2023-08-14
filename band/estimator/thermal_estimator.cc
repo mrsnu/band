@@ -10,7 +10,7 @@
 
 namespace band {
 
-absl::Status ThermalEstimator::Init(const ProfileConfig& config) {
+absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
   return absl::OkStatus();
 }
 

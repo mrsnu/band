@@ -188,7 +188,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
       builder.AddSmoothingFactor(root["profile_smoothing_factor"].asFloat());
     }
     if (root["latency_profile_path"].isString()) {
-      builder.AddLatencyProfilePath(root["latency_profile_path"].asCString());
+      builder.AddProfilePath(root["latency_profile_path"].asCString());
     }
   }
 

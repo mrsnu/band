@@ -18,7 +18,7 @@ typedef std::pair<SubgraphKey, int> ThermalSubgraphKey;
 class ThermalEstimator : public IEstimator<ThermalSubgraphKey> {
  public:
   explicit ThermalEstimator(IEngine* engine) : IEstimator(engine) {}
-  absl::Status Init(const ProfileConfig& config) override;
+  absl::Status Init(const ThermalProfileConfig& config);
   void Update(const ThermalSubgraphKey& key, int64_t latency) override;
 
   absl::Status Profile(ModelId model_id) override;

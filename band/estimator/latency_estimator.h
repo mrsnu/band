@@ -17,7 +17,7 @@ class IEngine;
 class LatencyEstimator : public IEstimator<SubgraphKey> {
  public:
   explicit LatencyEstimator(IEngine* engine) : IEstimator(engine) {}
-  absl::Status Init(const ProfileConfig& config) override;
+  absl::Status Init(const LatencyProfileConfig& config);
   void Update(const SubgraphKey& key, int64_t latency) override;
 
   absl::Status Profile(ModelId model_id) override;
@@ -48,7 +48,7 @@ class LatencyEstimator : public IEstimator<SubgraphKey> {
   // Path to the profile data.
   // The data in the path will be read during initial phase, and also
   // will be updated at the end of the run.
-  std::string latency_profile_path_;
+  std::string profile_path_;
 
   // The contents of the file at `latency_profile_path_`.
   // We keep this separately from `profile_database_`, since we cannot

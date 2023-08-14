@@ -53,27 +53,9 @@ band_cc_library(
 )
 
 band_cc_library(
-    name = "network_estimator",
-    srcs = [
-        "network_estimator.cc",
-    ],
-    hdrs = [
-        "network_estimator.h",
-    ],
-    deps = [
-        ":estimator_interface",
-        "//band:profiler",
-        "//band:json_util",
-        "//band:worker",
-        "//band/device",
-    ],
-)
-
-band_cc_library(
     name = "estimators",
     deps = [
         ":latency_estimator",
         ":thermal_estimator",
-        ":network_estimator",
     ],
 )

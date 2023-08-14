@@ -68,11 +68,11 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCopyComputationRatio(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencyProfilePath(
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencyProfileConfig(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     jstring profileDataPath) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddLatencyProfilePath(ConvertJstringToString(env, profileDataPath));
+      ->AddProfilePath(ConvertJstringToString(env, profileDataPath));
 }
 
 JNIEXPORT void JNICALL

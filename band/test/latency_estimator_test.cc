@@ -50,8 +50,8 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
   CustomWorkerMockEngine engine;
   EXPECT_CALL(engine, Invoke).Times(testing::Exactly(53));
 
-  ProfileConfigBuilder b;
-  ProfileConfig config =
+  LatencyProfileConfigBuilder b;
+  LatencyProfileConfig config =
       b.AddNumRuns(50).AddNumWarmups(3).AddOnline(true).Build();
 
   TypeParam worker(&engine, 0, DeviceFlag::kCPU);
@@ -87,8 +87,8 @@ TEST_P(CPUMaskFixture, AffinityPropagateTest) {
     }
   });
 
-  ProfileConfigBuilder b;
-  ProfileConfig config =
+  LatencyProfileConfigBuilder b;
+  LatencyProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
   DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
@@ -120,8 +120,8 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
     return absl::OkStatus();
   });
 
-  ProfileConfigBuilder b;
-  ProfileConfig config =
+  LatencyProfileConfigBuilder b;
+  LatencyProfileConfig config =
       b.AddNumRuns(3).AddNumWarmups(3).AddOnline(true).Build();
 
   DeviceQueueWorker worker(&engine, 0, DeviceFlag::kCPU);
@@ -158,11 +158,11 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     // profile on online estimator
     LatencyEstimator latency_estimator(&engine);
 
-    ProfileConfigBuilder b;
-    ProfileConfig config = b.AddNumRuns(3)
+    LatencyProfileConfigBuilder b;
+    LatencyProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(true)
-                               .AddLatencyProfilePath(profile_path)
+                               .AddProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
@@ -174,11 +174,11 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
     // load on offline estimator
     LatencyEstimator latency_estimator(&engine);
 
-    ProfileConfigBuilder b;
-    ProfileConfig config = b.AddNumRuns(3)
+    LatencyProfileConfigBuilder b;
+    LatencyProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(false)
-                               .AddLatencyProfilePath(profile_path)
+                               .AddProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
@@ -210,11 +210,11 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     // profile on online estimator
     LatencyEstimator latency_estimator(&engine);
 
-    ProfileConfigBuilder b;
-    ProfileConfig config = b.AddNumRuns(3)
+    LatencyProfileConfigBuilder b;
+    LatencyProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(true)
-                               .AddLatencyProfilePath(profile_path)
+                               .AddProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
@@ -229,11 +229,11 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
     // load on offline estimator
     LatencyEstimator latency_estimator(&engine);
 
-    ProfileConfigBuilder b;
-    ProfileConfig config = b.AddNumRuns(3)
+    LatencyProfileConfigBuilder b;
+    LatencyProfileConfig config = b.AddNumRuns(3)
                                .AddNumWarmups(3)
                                .AddOnline(false)
-                               .AddLatencyProfilePath(profile_path)
+                               .AddProfilePath(profile_path)
                                .Build();
 
     EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());

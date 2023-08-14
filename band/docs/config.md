@@ -32,7 +32,7 @@ Each configuration field is optional or required. If a field is optional, then i
   - `SubgraphPreparationType::kUnitSubgraph`
   - `SubgraphPreparationType::kMergeUnitSubgraph`
 
-## `ProfileConfig`
+## `LatencyProfileConfig`
 - `online` [type: `bool`, default: `true`]: Profile online if true, offline if false.
 - `num_warmups` [type: `int`, default: `1`]: The number of warmup runs before profile.
 - `num_runs` [type: `int`, default: `1`]: The number of runs for profile
@@ -54,7 +54,7 @@ Each configuration field is optional or required. If a field is optional, then i
 - `availability_check_interval_ms` [type: `int`, default: `30_000`]: The interval for checking availability of devices. Used for detecting thermal throttling.
 
 ## `RuntimeConfig`
-- `RuntimeConfig` contains `ProfileConfig`, `PlannerConfig` and `WorkerConfig`.
+- `RuntimeConfig` contains `LatencyProfileConfig`, `PlannerConfig` and `WorkerConfig`.
 - `minimum_subgraph_size` [type: `int`, default: `7`]: The minimum subgraph size. If candidate subgraph size is smaller than this, the subgraph will not be created.
 - `subgraph_preparation_type` [type: `SubgraphPreparationType`, default: `SubgraphPreparationType::kMergeUnitSubgraph`]: For fallback schedulers, determine how to generate candidate subgraphs.
 - `cpu_mask` [type: `CPUMaskFlag`, default: `CPUMaskFlag::kAll`]: The CPU mask for Band Engine.

@@ -5,12 +5,12 @@
 namespace band {
 namespace test {
 
-TEST(ConfigBuilderTest, ProfileConfigBuilderTest) {
-  ProfileConfigBuilder b;
-  ProfileConfig config_ok = b.AddOnline(false)
+TEST(ConfigBuilderTest, LatencyProfileConfigBuilderTest) {
+  LatencyProfileConfigBuilder b;
+  LatencyProfileConfig config_ok = b.AddOnline(false)
                                 .AddNumRuns(3)
                                 .AddNumWarmups(3)
-                                .AddLatencyProfilePath("hello")
+                                .AddProfilePath("hello")
                                 .Build();
 
   EXPECT_EQ(config_ok.online, false);
@@ -67,7 +67,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddNumRuns(1)
           .AddCopyComputationRatio({1, 2, 3, 4})
           .AddSmoothingFactor(0.1)
-          .AddLatencyProfilePath("band/test/data/config.json")
+          .AddProfilePath("band/test/data/config.json")
           .AddMinimumSubgraphSize(5)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -82,15 +82,15 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
           .AddAvailabilityCheckIntervalMs(100)
           .AddCPUMask(CPUMaskFlag::kPrimary)
           .Build();
-  EXPECT_EQ(config_ok.profile_config.online, true);
-  EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
-  EXPECT_EQ(config_ok.profile_config.num_runs, 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[0], 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[1], 2);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[2], 3);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[3], 4);
-  EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
-  EXPECT_EQ(config_ok.profile_config.latency_profile_path,
+  EXPECT_EQ(config_ok.latency_profile_config.online, true);
+  EXPECT_EQ(config_ok.latency_profile_config.num_warmups, 1);
+  EXPECT_EQ(config_ok.latency_profile_config.num_runs, 1);
+  EXPECT_EQ(config_ok.latency_profile_config.copy_computation_ratio[0], 1);
+  EXPECT_EQ(config_ok.latency_profile_config.copy_computation_ratio[1], 2);
+  EXPECT_EQ(config_ok.latency_profile_config.copy_computation_ratio[2], 3);
+  EXPECT_EQ(config_ok.latency_profile_config.copy_computation_ratio[3], 4);
+  EXPECT_EQ(config_ok.latency_profile_config.smoothing_factor, 0.1f);
+  EXPECT_EQ(config_ok.latency_profile_config.profile_path,
             "band/test/data/config.json");
   EXPECT_EQ(config_ok.subgraph_config.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_config.subgraph_preparation_type,
@@ -112,12 +112,12 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config_ok =
       b.AddSchedulers({SchedulerType::kFixedWorker}).Build();
-  EXPECT_EQ(config_ok.profile_config.online, true);
-  EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
-  EXPECT_EQ(config_ok.profile_config.num_runs, 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[0], 30000);
-  EXPECT_EQ(config_ok.profile_config.latency_profile_path, "");
-  EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
+  EXPECT_EQ(config_ok.latency_profile_config.online, true);
+  EXPECT_EQ(config_ok.latency_profile_config.num_warmups, 1);
+  EXPECT_EQ(config_ok.latency_profile_config.num_runs, 1);
+  EXPECT_EQ(config_ok.latency_profile_config.copy_computation_ratio[0], 30000);
+  EXPECT_EQ(config_ok.latency_profile_config.profile_path, "");
+  EXPECT_EQ(config_ok.latency_profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");
   EXPECT_EQ(config_ok.planner_config.schedulers[0],
             SchedulerType::kFixedWorker);
