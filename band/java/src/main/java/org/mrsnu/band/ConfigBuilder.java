@@ -8,10 +8,6 @@ public class ConfigBuilder {
     this.wrapper = new NativeConfigBuilderWrapper();
   }
 
-  public void addOnline(boolean online) {
-    wrapper.addOnline(online);
-  }
-
   public void addNumWarmups(int numWarmups) {
     wrapper.addNumWarmups(numWarmups);
     ;
@@ -21,16 +17,12 @@ public class ConfigBuilder {
     wrapper.addNumRuns(numRuns);
   }
 
-  public void addCopyComputationRatio(int[] copyComputationRatio) {
-    wrapper.addCopyComputationRatio(copyComputationRatio);
-  }
-
   public void addLatencyProfileConfig(String profileDataPath) {
     wrapper.addLatencyProfileConfig(profileDataPath);
   }
 
-  public void addSmoothingFactor(float smoothingFactor) {
-    wrapper.addSmoothingFactor(smoothingFactor);
+  public void addLatencySmoothingFactor(float smoothingFactor) {
+    wrapper.addLatencySmoothingFactor(smoothingFactor);
   }
 
   public void addPlannerLogPath(String plannerLogPath) {

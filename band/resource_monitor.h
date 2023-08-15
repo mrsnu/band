@@ -59,10 +59,9 @@ const char* ToString<CpuFreqFlag>(CpuFreqFlag flag);
 
 class ResourceMonitor {
  public:
-  ~ResourceMonitor();
   ResourceMonitor() = default;
 
-  absl::Status Init(const ResourceMonitorConfig& config);
+  absl::Status Init();
 
   // for debugging. print out all the paths found
   std::vector<std::string> GetThermalPaths() const;
@@ -105,10 +104,7 @@ class ResourceMonitor {
   absl::StatusOr<std::string> GetFirstAvailablePath(
       const std::vector<std::string>& paths) const;
 
-  // main monitoring loop
   void Monitor();
-
-  mutable std::ofstream log_file_;
 
   using ThermalKey = std::pair<ThermalFlag, size_t>;
   using CpuFreqKey = std::pair<CpuFreqFlag, CPUMaskFlag>;

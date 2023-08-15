@@ -10,7 +10,6 @@ class ShortestExpectedLatencyScheduler : public IScheduler {
   explicit ShortestExpectedLatencyScheduler(IEngine& engine, int window_size);
 
   bool Schedule(JobQueue& requests) override;
-  bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
 

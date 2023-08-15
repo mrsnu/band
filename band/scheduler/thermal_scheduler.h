@@ -10,7 +10,6 @@ class ThermalScheduler : public IScheduler {
   explicit ThermalScheduler(IEngine& engine) : IScheduler(engine) {};
 
   bool Schedule(JobQueue& requests) override;
-  bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
 

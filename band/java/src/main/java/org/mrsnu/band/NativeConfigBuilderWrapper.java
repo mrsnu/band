@@ -7,20 +7,12 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     nativeHandle = createConfigBuilder();
   }
 
-  public void addOnline(boolean online) {
-    addOnline(nativeHandle, online);
-  }
-
   public void addNumWarmups(int numWarmups) {
     addNumWarmups(nativeHandle, numWarmups);
   }
 
   public void addNumRuns(int numRuns) {
     addNumRuns(nativeHandle, numRuns);
-  }
-
-  public void addCopyComputationRatio(int[] copyComputationRatio) {
-    addCopyComputationRatio(nativeHandle, copyComputationRatio);
   }
 
   public void addLatencyProfileConfig(String profileDataPath) {
@@ -128,13 +120,9 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
 
   private native void deleteConfigBuilder(long configBuilderHandle);
 
-  private native void addOnline(long configBuilderHandle, boolean online);
-
   private native void addNumWarmups(long configBuilderHandle, int numWarmups);
 
   private native void addNumRuns(long configBuilderHandle, int numRuns);
-
-  private native void addCopyComputationRatio(long configBuilderHandle, int[] copyComputationRatio);
 
   private native void addLatencyProfileConfig(long configBuilderHandle, String profileDataPath);
 

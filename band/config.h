@@ -10,20 +10,24 @@
 
 namespace band {
 
+struct FrequencyLatencyProfileConfig {
+  float smoothing_factor = 0.1f;
+};
+
 struct LatencyProfileConfig {
-  LatencyProfileConfig() {
-    copy_computation_ratio = std::vector<int>(EnumLength<DeviceFlag>(), 0);
-  }
-  bool online = true;
-  int num_warmups = 1;
-  int num_runs = 1;
-  std::vector<int> copy_computation_ratio;
-  std::string profile_path = "";
-  float smoothing_factor = 0.1;
+  float smoothing_factor = 0.1f;
 };
 
 struct ThermalProfileConfig {
+};
+
+struct ProfileConfig {
+  LatencyProfileConfig latency_config;
+  ThermalProfileConfig thermal_config;
+  FrequencyLatencyProfileConfig frequency_latency_config;
   std::string profile_path = "";
+  size_t num_warmups = 1;
+  size_t num_runs = 1;
 };
 
 struct PlannerConfig {
@@ -56,20 +60,12 @@ struct SubgraphConfig {
       SubgraphPreparationType::kMergeUnitSubgraph;
 };
 
-struct ResourceMonitorConfig {
-  std::string resource_monitor_log_path = "";
-  std::map<DeviceFlag, std::string> device_freq_paths;
-  int monitor_interval_ms = 10;
-};
-
 struct RuntimeConfig {
   CPUMaskFlag cpu_mask;
   SubgraphConfig subgraph_config;
-  LatencyProfileConfig latency_profile_config;
-  ThermalProfileConfig thermal_profile_config;
+  ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
-  ResourceMonitorConfig device_config;
 
  private:
   friend class RuntimeConfigBuilder;

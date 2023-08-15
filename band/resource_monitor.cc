@@ -137,26 +137,7 @@ const char* ToString<CpuFreqFlag>(CpuFreqFlag flag) {
   }
 }
 
-ResourceMonitor::~ResourceMonitor() {
-  if (log_file_.is_open()) {
-    log_file_ << "}";
-    log_file_.close();
-  }
-}
-
-absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
-  if (config.resource_monitor_log_path.size() > 0) {
-    // remove existing log file if exists
-    std::remove(config.resource_monitor_log_path.c_str());
-    // open log file and start from the beginning
-    log_file_.open(config.resource_monitor_log_path, std::ios::out);
-    if (!log_file_.is_open()) {
-      return absl::NotFoundError("Cannot open log file.");
-    }
-    log_file_ << "{";
-  }
-
-  dev_freq_paths_ = config.device_freq_paths;
+absl::Status ResourceMonitor::Init() {
   auto dev_freq_path_candidates =
       device::ListDirectoriesInPath(GetDevFreqBasePath());
 
@@ -597,29 +578,6 @@ void ResourceMonitor::Monitor() {
           resource.second.first.c_str(), status.status().ToString().c_str());
       return;
     }
-  }
-
-  // log to file
-  if (log_file_.is_open()) {
-    log_file_ << "{\"thermal\": {";
-    for (auto& resource : thermal_status_) {
-      log_file_ << "\"" << ToString(resource.first.first) << "_"
-                << resource.first.second << "\": " << resource.second << ", ";
-    }
-    log_file_ << "}, \"cpu_freq\": {";
-    for (auto& resource : cpu_freq_status_) {
-      log_file_ << "\"" << ToString(resource.first.first) << "_"
-                << ToString(resource.first.second) << "\": " << resource.second
-                << ", ";
-    }
-    log_file_ << "}, \"dev_freq\": {";
-    for (auto& resource : dev_freq_status_) {
-      log_file_ << "\"" << ToString(resource.first.first) << "_"
-                << ToString(resource.first.second) << "\": " << resource.second
-                << ", ";
-    }
-    log_file_ << "}},";
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Resource status logged.");
   }
 }
 

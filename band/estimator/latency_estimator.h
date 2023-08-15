@@ -4,23 +4,24 @@
 #include <chrono>
 #include <unordered_map>
 
+#include "absl/status/status.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/estimator/estimator_interface.h"
-
 #include "json/json.h"
-#include "absl/status/status.h"
 
 namespace band {
 
 class IEngine;
-class LatencyEstimator : public IEstimator<SubgraphKey> {
+class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
  public:
   explicit LatencyEstimator(IEngine* engine) : IEstimator(engine) {}
   absl::Status Init(const LatencyProfileConfig& config);
-  void Update(const SubgraphKey& key, int64_t latency) override;
 
+  absl::Status Load(ModelId model_id, std::string profile_path) override;
   absl::Status Profile(ModelId model_id) override;
+
+  void Update(const SubgraphKey& key, int64_t latency) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
   int64_t GetWorst(ModelId model_id) const;
@@ -59,10 +60,8 @@ class LatencyEstimator : public IEstimator<SubgraphKey> {
   std::unordered_map<SubgraphKey, Latency, SubgraphHash> profile_database_;
   float profile_smoothing_factor_ = 0.05f;
 
-  bool profile_online_;
-  int profile_num_warmups_;
-  int profile_num_runs_;
-  std::vector<int> profile_copy_computation_ratio_;
+  int profile_num_warmups_ = 1;
+  int profile_num_runs_ = 1;
 };
 }  // namespace band
 

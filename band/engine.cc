@@ -243,11 +243,9 @@ absl::Status Engine::RegisterModel(Model* model) {
       }
     }
 
-    if (planner_->NeedProfile()) {
-      auto status = latency_estimator_->Profile(model_id);
-      if (!status.ok()) {
-        return status;
-      }
+    auto status = latency_estimator_->Profile(model_id);
+    if (!status.ok()) {
+      return status;
     }
   }
 
@@ -497,18 +495,30 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     return status;
   }
 
+  // Setup resource monitor
+  {
+    resource_monitor_ = std::make_unique<ResourceMonitor>();
+    auto status = resource_monitor_->Init();
+    if (!status.ok()) {
+      return status;
+    }
+  }
+
   // Setup for estimators
   {
     {
       latency_estimator_ = std::make_unique<LatencyEstimator>(this);
-      auto status = latency_estimator_->Init(config.latency_profile_config);
+      auto status =
+          latency_estimator_->Init(config.profile_config.latency_config);
       if (!status.ok()) {
         return status;
       }
     }
     {
-      thermal_estimator_ = std::make_unique<ThermalEstimator>(this);
-      auto status = thermal_estimator_->Init(config.thermal_profile_config);
+      thermal_estimator_ =
+          std::make_unique<ThermalEstimator>(this, resource_monitor_.get());
+      auto status =
+          thermal_estimator_->Init(config.profile_config.thermal_config);
       if (!status.ok()) {
         return status;
       }

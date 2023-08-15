@@ -49,6 +49,8 @@ band_cc_library(
         "//band:json_util",
         "//band:worker",
         "//band/device",
+        "//band:resource_monitor",
+        "//third_party/eigen3"
     ],
 )
 

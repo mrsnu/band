@@ -10,7 +10,6 @@ class HEFTScheduler : public IScheduler {
   explicit HEFTScheduler(IEngine& engine, int window_size, bool reserve);
 
   bool Schedule(JobQueue& requests) override;
-  bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
 

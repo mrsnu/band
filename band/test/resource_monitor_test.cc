@@ -9,9 +9,8 @@ namespace band {
 namespace test {
 
 TEST(ResourceMonitorTest, CreationTest) {
-  ResourceMonitorConfig config{"", {}, 10};
   ResourceMonitor monitor;
-  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+  EXPECT_EQ(monitor.Init(), absl::OkStatus());
 
 #if BAND_IS_MOBILE
   size_t num_tz = monitor.NumThermalResources(ThermalFlag::TZ_TEMPERATURE);
@@ -44,9 +43,8 @@ TEST(ResourceMonitorTest, CreationTest) {
 }
 
 TEST(ResourceMonitorTest, GetThermalTest) {
-  ResourceMonitorConfig config{"", {}, 10};
   ResourceMonitor monitor;
-  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+  EXPECT_EQ(monitor.Init(), absl::OkStatus());
 
 #if BAND_IS_MOBILE
   size_t num_tz = monitor.NumThermalResources(ThermalFlag::TZ_TEMPERATURE);
@@ -66,9 +64,8 @@ TEST(ResourceMonitorTest, GetThermalTest) {
 }
 
 TEST(ResourceMonitorTest, GetDevFreqTest) {
-  ResourceMonitorConfig config{"", {}, 10};
   ResourceMonitor monitor;
-  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+  EXPECT_EQ(monitor.Init(), absl::OkStatus());
 
 #if BAND_IS_MOBILE
   std::vector<DeviceFlag> valid_devices;
@@ -124,9 +121,8 @@ TEST(ResourceMonitorTest, GetDevFreqTest) {
 }
 
 TEST(ResourceMonitorTest, GetCpuFreqTest) {
-  ResourceMonitorConfig config{"", {}, 10};
   ResourceMonitor monitor;
-  EXPECT_EQ(monitor.Init(config), absl::OkStatus());
+  EXPECT_EQ(monitor.Init(), absl::OkStatus());
 
 #if BAND_IS_MOBILE
   std::vector<CPUMaskFlag> valid_cpus;
@@ -205,7 +201,6 @@ TEST(ResourceMonitorTest, LogTest) {
   std::string log_path = "/data/local/tmp/example_log.json";
 #if BAND_IS_MOBILE
   {
-    ResourceMonitorConfig config{log_path, {}, 10};
     ResourceMonitor monitor;
     EXPECT_EQ(monitor.Init(config), absl::OkStatus());
     // add some resources

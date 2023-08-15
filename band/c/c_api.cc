@@ -54,30 +54,23 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
   va_start(vl, count);
   BandConfigField new_field = static_cast<BandConfigField>(field);
   switch (field) {
-    case BAND_PROFILE_ONLINE: {
-      bool arg = va_arg(vl, int);
-      b->impl.AddOnline(arg);
-    } break;
     case BAND_PROFILE_NUM_WARMUPS: {
-      int arg = va_arg(vl, int);
+      int arg = va_arg(vl, size_t);
       b->impl.AddNumWarmups(arg);
     } break;
     case BAND_PROFILE_NUM_RUNS: {
-      int arg = va_arg(vl, int);
+      int arg = va_arg(vl, size_t);
       b->impl.AddNumRuns(arg);
     } break;
-    case BAND_PROFILE_COPY_COMPUTATION_RATIO: {
-      std::vector<int> copy_computation_ratio(count);
-      for (int i = 0; i < count; i++) {
-        copy_computation_ratio[i] = va_arg(vl, int);
-      }
-      b->impl.AddCopyComputationRatio(copy_computation_ratio);
-    } break;
-    case BAND_PROFILE_SMOOTHING_FACTOR: {
+    case BAND_PROFILE_LATENCY_SMOOTHING_FACTOR: {
       float arg = va_arg(vl, double);
-      b->impl.AddSmoothingFactor(arg);
+      b->impl.AddLatencySmoothingFactor(arg);
     } break;
-    case BAND_PROFILE_DATA_PATH: {
+    case BAND_PROFILE_FREQ_LATENCY_SMOOTHING_FACTOR: {
+      float arg = va_arg(vl, double);
+      b->impl.AddFrequencyLatencySmoothingFactor(arg);
+    } break;
+    case BAND_PROFILE_PATH: {
       char* arg = va_arg(vl, char*);
       b->impl.AddProfilePath(arg);
     } break;
@@ -142,20 +135,6 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
     case BAND_CPU_MASK: {
       int arg = va_arg(vl, int);
       b->impl.AddCPUMask(static_cast<band::CPUMaskFlag>(arg));
-    } break;
-    case BAND_RESOURCE_MONITOR_DEVICE_PATH: {
-      int flag = va_arg(vl, int);
-      char* path = va_arg(vl, char*);
-      b->impl.AddResourceMonitorDeviceFreqPath(
-          static_cast<band::DeviceFlag>(flag), path);
-    } break;
-    case BAND_RESOURCE_MONITOR_INTERVAL_MS: {
-      int arg = va_arg(vl, int);
-      b->impl.AddResourceMonitorIntervalMs(arg);
-    } break;
-    case BAND_RESOURCE_MONITOR_LOG_PATH: {
-      char* arg = va_arg(vl, char*);
-      b->impl.AddResourceMonitorLogPath(arg);
     } break;
   }
   va_end(vl);

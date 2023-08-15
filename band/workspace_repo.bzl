@@ -51,7 +51,15 @@ def workspace():
         build_file = Label("//third_party/libyuv:BUILD"),
     )
 
+    http_archive(
+        name = "eigen3",
+        urls = ["https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz"],
+        strip_prefix = "eigen-3.4.0",
+        build_file = Label("//third_party/eigen3:eigen_archive.BUILD"),
+    )
+
     ######## Android repositories ########
     android(name = "android_repo")
+    
 
 workspace_repo = workspace

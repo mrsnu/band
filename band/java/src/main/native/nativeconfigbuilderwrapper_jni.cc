@@ -40,11 +40,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_deleteConfigBuilder(
   delete reinterpret_cast<RuntimeConfigBuilder*>(configBuilderHandle);
 }
 
-JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_addOnline(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jboolean online) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)->AddOnline(online);
-}
-
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNumWarmups(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint numWarmups) {
@@ -59,15 +54,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNumRuns(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCopyComputationRatio(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jintArray copyComputationRatio) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddCopyComputationRatio(
-          ConvertIntArrayTo<int>(env, copyComputationRatio));
-}
-
-JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencyProfileConfig(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     jstring profileDataPath) {
@@ -76,11 +62,11 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencyProfileConfig(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addSmoothingFactor(
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_AddLatencySmoothingFactor(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     jfloat smoothingFactor) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddSmoothingFactor(static_cast<float>(smoothingFactor));
+      ->AddLatencySmoothingFactor(static_cast<float>(smoothingFactor));
 }
 
 JNIEXPORT void JNICALL

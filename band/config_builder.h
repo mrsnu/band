@@ -16,31 +16,6 @@ class LatencyProfileConfigBuilder {
                                       // RuntimeConfigBuilder to access
                                       // variables
  public:
-  LatencyProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(EnumLength<DeviceFlag>(), 30000);
-  }
-  LatencyProfileConfigBuilder& AddOnline(bool online) {
-    online_ = online;
-    return *this;
-  }
-  LatencyProfileConfigBuilder& AddNumWarmups(int num_warmups) {
-    num_warmups_ = num_warmups;
-    return *this;
-  }
-  LatencyProfileConfigBuilder& AddNumRuns(int num_runs) {
-    num_runs_ = num_runs;
-    return *this;
-  }
-  LatencyProfileConfigBuilder& AddCopyComputationRatio(
-      std::vector<int> copy_computation_ratio) {
-    copy_computation_ratio_ = copy_computation_ratio;
-    return *this;
-  }
-  LatencyProfileConfigBuilder& AddProfilePath(
-      std::string profile_path) {
-    profile_path_ = profile_path;
-    return *this;
-  }
   LatencyProfileConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
     smoothing_factor_ = smoothing_factor;
     return *this;
@@ -51,32 +26,72 @@ class LatencyProfileConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  bool online_ = true;
-  int num_warmups_ = 1;
-  int num_runs_ = 1;
-  std::vector<int> copy_computation_ratio_;
-  std::string profile_path_ = "";
-  float smoothing_factor_ = 0.1;
+  float smoothing_factor_ = 0.1f;
 };
 
-class ThermalProfileConfigBuilder {
-  friend class RuntimeConfigBuilder;  // TODO: Find a safer way for
-                                      // RuntimeConfigBuilder to access
-                                      // variables
+class FrequencyLatencyProfileConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
  public:
-  ThermalProfileConfigBuilder() {}
-  ThermalProfileConfigBuilder& AddThermalProfileConfig(
-      std::string profile_path) {
-    profile_path_ = profile_path;
+  FrequencyLatencyProfileConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
+    smoothing_factor_ = smoothing_factor;
     return *this;
   }
 
+  FrequencyLatencyProfileConfig Build(
+      ErrorReporter* error_reporter = DefaultErrorReporter());
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+
+ private:
+  float smoothing_factor_ = 0.1f;
+};
+
+class ThermalProfileConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public:
   ThermalProfileConfig Build(
       ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
+};
+
+class ProfileConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public:
+  ProfileConfigBuilder& AddLatencySmoothingFactor(float smoothing_factor) {
+    latency_profile_builder_.AddSmoothingFactor(smoothing_factor);
+    return *this;
+  }
+  ProfileConfigBuilder& AddFrequencySmoothingFactor(float smoothing_factor) {
+    freq_latency_profile_builder_.AddSmoothingFactor(smoothing_factor);
+    return *this;
+  }
+  ProfileConfigBuilder& AddNumWarmups(size_t num_warmups) {
+    num_warmups_ = num_warmups;
+    return *this;
+  }
+  ProfileConfigBuilder& AddNumRuns(size_t num_runs) {
+    num_runs_ = num_runs;
+    return *this;
+  }
+  ProfileConfigBuilder& AddProfilePath(std::string profile_path) {
+    profile_path_ = profile_path;
+    return *this;
+  }
+
+  ProfileConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+
+ private:
+  LatencyProfileConfigBuilder latency_profile_builder_;
+  FrequencyLatencyProfileConfigBuilder freq_latency_profile_builder_;
+  ThermalProfileConfigBuilder thermal_profile_builder_;
   std::string profile_path_ = "";
+  size_t num_warmups_ = 1;
+  size_t num_runs_ = 1;
 };
 
 // Builder for creating PlannerConfig
@@ -156,64 +171,28 @@ class WorkerConfigBuilder {
   int availability_check_interval_ms_ = 30000;
 };
 
-class ResourceMonitorConfigBuilder {
-  friend class RuntimeConfigBuilder;
-
- public:
-  ResourceMonitorConfigBuilder& AddResourceMonitorLogPath(
-      std::string log_path) {
-    resource_monitor_log_path_ = log_path;
-    return *this;
-  }
-  ResourceMonitorConfigBuilder& AddResourceMonitorDeviceFreqPath(
-      DeviceFlag device, std::string device_freq_path) {
-    device_freq_paths_.insert({device, device_freq_path});
-    return *this;
-  }
-  ResourceMonitorConfigBuilder& AddResourceMonitorIntervalMs(
-      int monitor_interval_ms) {
-    monitor_interval_ms_ = monitor_interval_ms;
-    return *this;
-  }
-
-  ResourceMonitorConfig Build(
-      ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
-
- private:
-  std::string resource_monitor_log_path_ = "";
-  std::map<DeviceFlag, std::string> device_freq_paths_;
-  int monitor_interval_ms_ = 10;
-};
-
 // Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
-  // Add LatencyProfileConfig
-  RuntimeConfigBuilder& AddOnline(bool online) {
-    latency_profile_config_builder_.AddOnline(online);
+  // Add ProfileConfig
+  RuntimeConfigBuilder& AddLatencySmoothingFactor(float smoothing_factor) {
+    profile_config_builder_.AddLatencySmoothingFactor(smoothing_factor);
     return *this;
   }
-  RuntimeConfigBuilder& AddNumWarmups(int num_warmups) {
-    latency_profile_config_builder_.AddNumWarmups(num_warmups);
+  RuntimeConfigBuilder& AddFrequencyLatencySmoothingFactor(float smoothing_factor) {
+    profile_config_builder_.AddFrequencySmoothingFactor(smoothing_factor);
     return *this;
   }
-  RuntimeConfigBuilder& AddNumRuns(int num_runs) {
-    latency_profile_config_builder_.AddNumRuns(num_runs);
+  RuntimeConfigBuilder& AddNumWarmups(size_t num_warmups) {
+    profile_config_builder_.AddNumWarmups(num_warmups);
     return *this;
   }
-  RuntimeConfigBuilder& AddCopyComputationRatio(
-      std::vector<int> copy_computation_ratio) {
-    latency_profile_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
+  RuntimeConfigBuilder& AddNumRuns(size_t num_runs) {
+    profile_config_builder_.AddNumRuns(num_runs);
     return *this;
   }
-
-  RuntimeConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
-    latency_profile_config_builder_.AddSmoothingFactor(smoothing_factor);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddProfilePath(std::string profile_log_path) {
-    latency_profile_config_builder_.AddProfilePath(profile_log_path);
+  RuntimeConfigBuilder& AddProfilePath(std::string profile_path) {
+    profile_config_builder_.AddProfilePath(profile_path);
     return *this;
   }
 
@@ -258,21 +237,6 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
-  RuntimeConfigBuilder& AddResourceMonitorLogPath(
-      std::string resource_monitor_log_path) {
-    device_config_builder_.AddResourceMonitorLogPath(resource_monitor_log_path);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddResourceMonitorDeviceFreqPath(
-      DeviceFlag device, std::string device_freq_path) {
-    device_config_builder_.AddResourceMonitorDeviceFreqPath(device,
-                                                            device_freq_path);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddResourceMonitorIntervalMs(int monitor_interval_ms) {
-    device_config_builder_.AddResourceMonitorIntervalMs(monitor_interval_ms);
-    return *this;
-  }
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
     minimum_subgraph_size_ = minimum_subgraph_size;
     return *this;
@@ -291,11 +255,9 @@ class RuntimeConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  LatencyProfileConfigBuilder latency_profile_config_builder_;
-  ThermalProfileConfigBuilder thermal_profile_config_builder_;
+  ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
-  ResourceMonitorConfigBuilder device_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
       SubgraphPreparationType::kMergeUnitSubgraph;

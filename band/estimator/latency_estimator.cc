@@ -11,19 +11,11 @@
 namespace band {
 
 absl::Status LatencyEstimator::Init(const LatencyProfileConfig& config) {
-  profile_path_ = config.profile_path;
-  if (!config.online) {
-    profile_database_json_ = json::LoadFromFile(config.profile_path);
-  }
   // we cannot convert the model name strings to integer ids yet,
   // (profile_database_json_ --> profile_database_)
   // since we don't have anything in model_configs_ at the moment
 
   // Set how many runs are required to get the profile results.
-  profile_online_ = config.online;
-  profile_num_warmups_ = config.num_warmups;
-  profile_num_runs_ = config.num_runs;
-  profile_copy_computation_ratio_ = config.copy_computation_ratio;
   profile_smoothing_factor_ = config.smoothing_factor;
 
   return absl::OkStatus();
@@ -44,92 +36,97 @@ void LatencyEstimator::Update(const SubgraphKey& key, int64_t latency) {
   }
 }
 
+absl::Status LatencyEstimator::Load(ModelId model_id,
+                                    std::string profile_path) {
+  if (!device::IsFileAvailable(profile_path)) {
+    return absl::InternalError(
+        absl::StrFormat("Profile file %s does not exist.", profile_path));
+  }
+
+  if (engine_ && engine_->GetModelSpec(model_id)) {
+    const std::string model_name = engine_->GetModelSpec(model_id)->path;
+    auto model_profile = JsonToModelProfile(model_name, model_id);
+    if (model_profile.size() <= 0) {
+      profile_database_.insert(model_profile.begin(), model_profile.end());
+      BAND_LOG_PROD(BAND_LOG_WARNING,
+                    "Failed to find profile entries for given model name %s.",
+                    model_name.c_str());
+    }
+    BAND_LOG_PROD(BAND_LOG_INFO,
+                  "Successfully found %d profile entries for model (%s, %d).",
+                  model_profile.size(), model_name.c_str(), model_id);
+  }
+  return absl::OkStatus();
+}
+
 absl::Status LatencyEstimator::Profile(ModelId model_id) {
-  if (profile_online_) {
-    for (WorkerId worker_id = 0; worker_id < engine_->GetNumWorkers();
-         worker_id++) {
-      Worker* worker = engine_->GetWorker(worker_id);
-      // pause worker for profiling, must resume before continue
-      worker->Pause();
-      // wait for workers to finish current job
-      worker->Wait();
-      // invoke target subgraph in an isolated thread
-      std::thread profile_thread([&]() {
+  for (WorkerId worker_id = 0; worker_id < engine_->GetNumWorkers();
+       worker_id++) {
+    Worker* worker = engine_->GetWorker(worker_id);
+    // pause worker for profiling, must resume before continue
+    worker->Pause();
+    // wait for workers to finish current job
+    worker->Wait();
+    // invoke target subgraph in an isolated thread
+    std::thread profile_thread([&]() {
 
 #if BAND_IS_MOBILE
-        if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
-            !SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()).ok()) {
-          return absl::InternalError(absl::StrFormat(
-              "Failed to propagate thread affinity of worker id "
-              "%d to profile thread",
-              worker_id));
-        }
+      if (worker->GetWorkerThreadAffinity().NumEnabled() > 0 &&
+          !SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()).ok()) {
+        return absl::InternalError(
+            absl::StrFormat("Failed to propagate thread affinity of worker id "
+                            "%d to profile thread",
+                            worker_id));
+      }
 #endif
 
-        engine_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
-          if (subgraph_key.GetWorkerId() == worker_id &&
-              subgraph_key.GetModelId() == model_id) {
-            Profiler average_profiler;
-            // TODO(#238): propagate affinity to CPU backend if necessary
-            // (L1143-,tensorflow_band/lite/model_executor.cc)
+      engine_->ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
+        if (subgraph_key.GetWorkerId() == worker_id &&
+            subgraph_key.GetModelId() == model_id) {
+          Profiler average_profiler;
+          // TODO(#238): propagate affinity to CPU backend if necessary
+          // (L1143-,tensorflow_band/lite/model_executor.cc)
 
-            for (int i = 0; i < profile_num_warmups_; i++) {
-              if (!engine_->Invoke(subgraph_key).ok()) {
-                BAND_LOG_PROD(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
-              }
+          for (int i = 0; i < profile_num_warmups_; i++) {
+            if (!engine_->Invoke(subgraph_key).ok()) {
+              BAND_LOG_PROD(BAND_LOG_ERROR,
+                            "Profiler failed to invoke largest subgraph of "
+                            "model %d in worker %d",
+                            model_id, worker_id);
             }
-
-            for (int i = 0; i < profile_num_runs_; i++) {
-              const size_t event_id = average_profiler.BeginEvent();
-
-              if (!engine_->Invoke(subgraph_key).ok()) {
-                BAND_LOG_PROD(BAND_LOG_ERROR,
-                              "Profiler failed to invoke largest subgraph of "
-                              "model %d in worker %d",
-                              model_id, worker_id);
-              }
-              average_profiler.EndEvent(event_id);
-            }
-
-            const int64_t latency =
-                average_profiler
-                    .GetAverageElapsedTime<std::chrono::microseconds>();
-
-            BAND_LOG_PROD(BAND_LOG_INFO,
-                          "Profiled latency of subgraph (%s) in worker "
-                          "%d: %ld us",
-                          subgraph_key.ToString().c_str(), worker_id, latency);
-
-            profile_database_[subgraph_key] = {latency, latency};
           }
-        });
-        return absl::OkStatus();
+
+          for (int i = 0; i < profile_num_runs_; i++) {
+            const size_t event_id = average_profiler.BeginEvent();
+
+            if (!engine_->Invoke(subgraph_key).ok()) {
+              BAND_LOG_PROD(BAND_LOG_ERROR,
+                            "Profiler failed to invoke largest subgraph of "
+                            "model %d in worker %d",
+                            model_id, worker_id);
+            }
+            average_profiler.EndEvent(event_id);
+          }
+
+          const int64_t latency =
+              average_profiler
+                  .GetAverageElapsedTime<std::chrono::microseconds>();
+
+          BAND_LOG_PROD(BAND_LOG_INFO,
+                        "Profiled latency of subgraph (%s) in worker "
+                        "%d: %ld us",
+                        subgraph_key.ToString().c_str(), worker_id, latency);
+
+          profile_database_[subgraph_key] = {latency, latency};
+        }
       });
+      return absl::OkStatus();
+    });
 
-      profile_thread.join();
+    profile_thread.join();
 
-      // resume worker
-      worker->Resume();
-    }
-  } else {
-    if (engine_ && engine_->GetModelSpec(model_id)) {
-      const std::string model_name = engine_->GetModelSpec(model_id)->path;
-      auto model_profile = JsonToModelProfile(model_name, model_id);
-      if (model_profile.size() > 0) {
-        profile_database_.insert(model_profile.begin(), model_profile.end());
-        BAND_LOG_PROD(
-            BAND_LOG_INFO,
-            "Successfully found %d profile entries for model (%s, %d).",
-            model_profile.size(), model_name.c_str(), model_id);
-      } else {
-        BAND_LOG_PROD(BAND_LOG_WARNING,
-                      "Failed to find profile entries for given model name %s.",
-                      model_name.c_str());
-      }
-    }
+    // resume worker
+    worker->Resume();
   }
   return absl::OkStatus();
 }

@@ -154,13 +154,11 @@ int main() {
   printf("BandAddConfig, BAND_WORKER_NUM_THREADS\n");
   pBandAddConfig(b, BAND_WORKER_CPU_MASKS, /*count=*/2, kBandBig, kBandLittle);
   printf("BandAddConfig, BAND_WORKER_CPU_MASKS\n");
-  pBandAddConfig(b, BAND_PROFILE_SMOOTHING_FACTOR, /*count=*/1, 0.1f);
-  printf("BandAddConfig, BAND_PROFILE_SMOOTHING_FACTOR\n");
-  pBandAddConfig(b, BAND_PROFILE_DATA_PATH, /*count=*/1,
+  pBandAddConfig(b, BAND_PROFILE_LATENCY_SMOOTHING_FACTOR, /*count=*/1, 0.1f);
+  printf("BandAddConfig, BAND_PROFILE_LATENCY_SMOOTHING_FACTOR\n");
+  pBandAddConfig(b, BAND_PROFILE_PATH, /*count=*/1,
                  "band/test/data/profile.json");
-  printf("BandAddConfig, BAND_PROFILE_DATA_PATH\n");
-  pBandAddConfig(b, BAND_PROFILE_ONLINE, /*count=*/1, true);
-  printf("BandAddConfig, BAND_PROFILE_ONLINE\n");
+  printf("BandAddConfig, BAND_PROFILE_PATH\n");
   pBandAddConfig(b, BAND_PROFILE_NUM_WARMUPS, /*count=*/1, 1);
   printf("BandAddConfig, BAND_PROFILE_NUM_WARMUPS\n");
   pBandAddConfig(b, BAND_PROFILE_NUM_RUNS, /*count=*/1, 1);
@@ -172,13 +170,6 @@ int main() {
   printf("BandAddConfig, BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS\n");
   pBandAddConfig(b, BAND_PLANNER_SCHEDULE_WINDOW_SIZE, /*count=*/1, 10);
   printf("BandAddConfig, BAND_PLANNER_SCHEDULE_WINDOW_SIZE\n");
-  pBandAddConfig(
-      b, BAND_RESOURCE_MONITOR_DEVICE_PATH, /*count=*/2, kBandDSP,
-      "/sys/class/devfreq/18590000.qcom,devfreq-l3:qcom,cdsp-cdsp-l3-lat/");
-  printf("BandAddConfig, BAND_RESOURCE_MONITOR_DEVICE_PATH\n");
-  pBandAddConfig(b, BAND_RESOURCE_MONITOR_INTERVAL_MS, /*count=*/1, 1000);
-  printf("BandAddConfig, BAND_RESOURCE_MONITOR_INTERVAL_MS\n");
-
   BandConfig* config = pBandConfigCreate(b);
   printf("BandConfigCreate\n");
 
