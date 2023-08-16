@@ -4,12 +4,12 @@
 #include <set>
 
 #include "absl/status/status.h"
-#include "band/profiler.h"
+#include "band/profiler/latency_profiler.h"
 
 namespace band {
 namespace tool {
 
-class BenchmarkProfiler : public band::Profiler {
+class BenchmarkProfiler : public band::LatencyProfiler {
  public:
   BenchmarkProfiler() = default;
   ~BenchmarkProfiler() = default;
@@ -19,7 +19,7 @@ class BenchmarkProfiler : public band::Profiler {
   size_t GetNumCanceledEvents() const;
 
  private:
-  using band::Profiler::EndEvent;
+  using band::LatencyProfiler::EndEvent;
   std::set<size_t> canceled_events_;
 };
 

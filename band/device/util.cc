@@ -56,6 +56,28 @@ std::vector<std::string> ListFilesInPath(const char* path) {
   return ret;
 }
 
+std::vector<std::string> ListFilesInPathPrefix(const char* path,
+                                               const char* prefix) {
+  std::vector<std::string> ret;
+  for (const auto& file : ListFilesInPath(path)) {
+    if (file.find(prefix) == 0) {
+      ret.push_back(file);
+    }
+  }
+  return ret;
+}
+
+std::vector<std::string> ListFilesInPathSuffix(const char* path,
+                                               const char* suffix) {
+  std::vector<std::string> ret;
+  for (const auto& file : ListFilesInPath(path)) {
+    if (file.find(suffix) == file.size() - strlen(suffix)) {
+      ret.push_back(file);
+    }
+  }
+  return ret;
+}
+
 std::vector<std::string> ListDirectoriesInPath(const char* path) {
   std::vector<std::string> ret;
 #if defined(_POSIX_VERSION)
@@ -87,6 +109,28 @@ std::vector<std::string> ListDirectoriesInPath(const char* path) {
   } while (FindNextFileA(find_handle, &find_data));
   FindClose(find_handle);
 #endif
+  return ret;
+}
+
+std::vector<std::string> ListDirectoriesInPathPrefix(const char* path,
+                                                     const char* prefix) {
+  std::vector<std::string> ret;
+  for (const auto& file : ListDirectoriesInPath(path)) {
+    if (file.find(prefix) == 0) {
+      ret.push_back(file);
+    }
+  }
+  return ret;
+}
+
+std::vector<std::string> ListDirectoriesInPathSuffix(const char* path,
+                                                     const char* suffix) {
+  std::vector<std::string> ret;
+  for (const auto& file : ListDirectoriesInPath(path)) {
+    if (file.find(suffix) == file.size() - strlen(suffix)) {
+      ret.push_back(file);
+    }
+  }
   return ret;
 }
 

@@ -19,7 +19,6 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
   absl::Status Init(const LatencyProfileConfig& config);
 
   absl::Status Load(ModelId model_id, std::string profile_path) override;
-  absl::Status Profile(ModelId model_id) override;
 
   void Update(const SubgraphKey& key, int64_t latency) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
@@ -58,8 +57,8 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
   Json::Value profile_database_json_;
 
   std::unordered_map<SubgraphKey, Latency, SubgraphHash> profile_database_;
-  float profile_smoothing_factor_ = 0.05f;
-
+  
+  float profile_smoothing_factor_ = 0.1f;
   int profile_num_warmups_ = 1;
   int profile_num_runs_ = 1;
 };

@@ -33,7 +33,8 @@ class FrequencyLatencyProfileConfigBuilder {
   friend class RuntimeConfigBuilder;
 
  public:
-  FrequencyLatencyProfileConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
+  FrequencyLatencyProfileConfigBuilder& AddSmoothingFactor(
+      float smoothing_factor) {
     smoothing_factor_ = smoothing_factor;
     return *this;
   }
@@ -50,11 +51,35 @@ class ThermalProfileConfigBuilder {
   friend class RuntimeConfigBuilder;
 
  public:
+  ThermalProfileConfigBuilder& AddCPUIndex(size_t cpu_index) {
+    cpu_index_ = cpu_index;
+    return *this;
+  }
+
+  ThermalProfileConfigBuilder& AddGPUIndex(size_t gpu_index) {
+    gpu_index_ = gpu_index;
+    return *this;
+  }
+
+  ThermalProfileConfigBuilder& AddDSPIndex(size_t dsp_index) {
+    dsp_index_ = dsp_index;
+    return *this;
+  }
+
+  ThermalProfileConfigBuilder& AddNPUIndex(size_t npu_index) {
+    npu_index_ = npu_index;
+    return *this;
+  }
+
   ThermalProfileConfig Build(
       ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
+  size_t cpu_index_ = -1;
+  size_t gpu_index_ = -1;
+  size_t dsp_index_ = -1;
+  size_t npu_index_ = -1;
 };
 
 class ProfileConfigBuilder {
@@ -92,6 +117,64 @@ class ProfileConfigBuilder {
   std::string profile_path_ = "";
   size_t num_warmups_ = 1;
   size_t num_runs_ = 1;
+};
+
+class DeviceConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public:
+  DeviceConfigBuilder& AddCPUThermalIndex(size_t cpu_therm_index) {
+    cpu_therm_index_ = cpu_therm_index;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddGPUThermalIndex(size_t gpu_therm_index) {
+    gpu_therm_index_ = gpu_therm_index;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddDSPThermalIndex(size_t dsp_therm_index) {
+    dsp_therm_index_ = dsp_therm_index;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddNPUThermalIndex(size_t npu_therm_index) {
+    npu_therm_index_ = npu_therm_index;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddCPUFreqPath(std::string cpu_freq_path) {
+    cpu_freq_path_ = cpu_freq_path;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddGPUFreqPath(std::string gpu_freq_path) {
+    gpu_freq_path_ = gpu_freq_path;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddDSPFreqPath(std::string dsp_freq_path) {
+    dsp_freq_path_ = dsp_freq_path;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddNPUFreqPath(std::string npu_freq_path) {
+    npu_freq_path_ = npu_freq_path;
+    return *this;
+  }
+
+  DeviceConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+
+ private:
+  size_t cpu_therm_index_ = -1;
+  size_t gpu_therm_index_ = -1;
+  size_t dsp_therm_index_ = -1;
+  size_t npu_therm_index_ = -1;
+  std::string cpu_freq_path_ = "";
+  std::string gpu_freq_path_ = "";
+  std::string dsp_freq_path_ = "";
+  std::string npu_freq_path_ = "";
 };
 
 // Builder for creating PlannerConfig
@@ -179,7 +262,8 @@ class RuntimeConfigBuilder {
     profile_config_builder_.AddLatencySmoothingFactor(smoothing_factor);
     return *this;
   }
-  RuntimeConfigBuilder& AddFrequencyLatencySmoothingFactor(float smoothing_factor) {
+  RuntimeConfigBuilder& AddFrequencyLatencySmoothingFactor(
+      float smoothing_factor) {
     profile_config_builder_.AddFrequencySmoothingFactor(smoothing_factor);
     return *this;
   }
@@ -256,6 +340,7 @@ class RuntimeConfigBuilder {
 
  private:
   ProfileConfigBuilder profile_config_builder_;
+  DeviceConfigBuilder device_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
   int minimum_subgraph_size_ = 7;

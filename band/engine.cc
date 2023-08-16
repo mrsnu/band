@@ -9,6 +9,9 @@
 #include "band/engine_interface.h"
 #include "band/estimator/latency_estimator.h"
 #include "band/estimator/thermal_estimator.h"
+#include "band/profiler/latency_profiler.h"
+#include "band/profiler/thermal_profiler.h"
+#include "band/profiler/frequency_profiler.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
@@ -243,9 +246,15 @@ absl::Status Engine::RegisterModel(Model* model) {
       }
     }
 
-    auto status = latency_estimator_->Profile(model_id);
-    if (!status.ok()) {
-      return status;
+    // Profile models
+    {
+      std::vector<std::unique_ptr<Profile>> profilers;
+      profiles.push_back(std::make_unique<>(model_id, model_spec));
+
+      auto status = ProfileModel(model_id);
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
 
@@ -523,6 +532,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
         return status;
       }
     }
+    profile_config_ = config.profile_config;
   }
 
 #if BAND_IS_MOBILE
@@ -1085,6 +1095,59 @@ const interface::IModelExecutor* Engine::GetModelExecutor(
     const SubgraphKey& key) const {
   auto it = model_executors_.find({key.GetModelId(), key.GetWorkerId()});
   return it != model_executors_.end() ? it->second.get() : nullptr;
+}
+
+absl::Status Engine::ProfileModel(
+    ModelId model_id, std::vector<std::unique_ptr<Profiler>> profilers) {
+  for (WorkerId worker_id = 0; worker_id < GetNumWOrkers(); worker_id++) {
+    Worker* worker = engine_->GetWorker(worker_id);
+    worker->Pause();
+    worker->Wait();
+    std::thread profile_thread([&]() {
+#if BAND_IS_MOBILE
+      if (worker->GetWorkerThreadAffinity().NumEnabled() > 0) {
+        return absl::InternalError("Failed to get worker thread affinity");
+      }
+      if (!SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()).ok()) {
+        return absl::InternalError(
+            absl::StrFormat("Failed to propagate thread affinity of worker id "
+                            "%d to profile thread",
+                            worker_id));
+      }
+#endif  // BAND_IS_MOBILE
+
+      ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
+        if (subgraph_key.GetWorkerId() != worker_id ||
+            subgraph_key.GetModelId() != model_id) {
+          return;
+        }
+
+        for (int i = 0; i < config.num_warmups; i++) {
+          if (!Invoke(subgraph_key).ok()) {
+            return absl::InternalError(
+                absl::StrFormat("Profiler failed to invoke largest subgraph of "
+                                "model %d in worker %d during warmup.",
+                                model_id, worker_id));
+          }
+        }
+
+        for (int i = 0; i < config.num_runs; i++) {
+          // TODO(splash): profile begin
+          if (!Invoke(subgraph_key).ok()) {
+            return absl::InternalError(
+                absl::StrFormat("Profiler failed to invoke largest subgraph of "
+                                "model %d in worker %d during profiling.",
+                                model_id, worker_id));
+          }
+          // TODO(splash): profile begin
+        }
+      });
+    });
+
+    profile_thread.join();
+    worker->Resume();
+  }
+  return absl::OkStatus();
 }
 
 }  // namespace band

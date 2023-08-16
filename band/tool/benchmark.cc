@@ -432,7 +432,7 @@ void Benchmark::RunPeriodic() {
 
             size_t elapsed_us =
                 model_context->profiler
-                    .GetElapsedTimeAt<std::chrono::microseconds>(id);
+                    .GetInterval<std::chrono::microseconds>(id);
 
             if (elapsed_us < period_us) {
               std::this_thread::sleep_for(

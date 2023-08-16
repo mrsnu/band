@@ -41,8 +41,6 @@ enum class CpuFreqFlag {
   TRANSITION_COUNT = 6,
 };
 
-enum class NetworkFlag {};
-
 template <>
 size_t EnumLength<ThermalFlag>();
 template <>
@@ -88,7 +86,6 @@ class ResourceMonitor {
   absl::Status AddThermalResource(ThermalFlag flag, size_t id);
   absl::Status AddCpuFreqResource(CPUMaskFlag cpu_flag, CpuFreqFlag flag);
   absl::Status AddDevFreqResource(DeviceFlag device_flag, DevFreqFlag flag);
-  absl::Status AddNetworkResource(NetworkFlag flag);
 
  private:
   static const char* GetThermalBasePath();

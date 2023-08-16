@@ -300,7 +300,7 @@ band_cc_library(
         ":common",
         ":job_tracer",
         ":scheduler",
-        ":worker",
+        ":worker", 
     ],
 )
 
@@ -316,19 +316,6 @@ band_cc_library(
         ":common",
         "@chrome_tracer//chrome_tracer",
     ],
-)
-
-band_cc_library(
-    name = "profiler",
-    srcs = [
-        "profiler.cc",
-    ],
-    hdrs = [
-        "profiler.h",
-    ],
-    deps = [
-        ":common",
-    ]
 )
 
 band_cc_library(

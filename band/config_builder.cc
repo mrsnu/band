@@ -42,6 +42,12 @@ bool ThermalProfileConfigBuilder::IsValid(
   return result;
 }
 
+bool DeviceConfigBuilder::IsValid(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  bool result = true;
+  return result;
+}
+
 bool PlannerConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
@@ -117,7 +123,8 @@ ProfileConfig ProfileConfigBuilder::Build(
   }
   ProfileConfig profile_config;
   profile_config.latency_config = latency_profile_builder_.Build();
-  profile_config.frequency_latency_config = freq_latency_profile_builder_.Build();
+  profile_config.frequency_latency_config =
+      freq_latency_profile_builder_.Build();
   profile_config.thermal_config = thermal_profile_builder_.Build();
   profile_config.num_warmups = num_warmups_;
   profile_config.num_runs = num_runs_;
@@ -155,6 +162,25 @@ ThermalProfileConfig ThermalProfileConfigBuilder::Build(
   }
   ThermalProfileConfig profile_config;
   return profile_config;
+}
+
+DeviceConfig DeviceConfigBuilder::Build(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  // TODO(widiba03304): This should not terminate the program. After employing
+  // abseil, Build() should return error.
+  if (!IsValid(error_reporter)) {
+    abort();
+  }
+  DeviceConfig device_config;
+  device_config.cpu_therm_index = cpu_therm_index_;
+  device_config.gpu_therm_index = gpu_therm_index_;
+  device_config.dsp_therm_index = dsp_therm_index_;
+  device_config.npu_therm_index = npu_therm_index_;
+  device_config.cpu_freq_index = cpu_freq_index_;
+  device_config.gpu_freq_index = gpu_freq_index_;
+  device_config.dsp_freq_index = dsp_freq_index_;
+  device_config.npu_freq_index = npu_freq_index_;
+  return device_config;
 }
 
 PlannerConfig PlannerConfigBuilder::Build(
@@ -199,6 +225,7 @@ RuntimeConfig RuntimeConfigBuilder::Build(
 
   RuntimeConfig runtime_config;
   ProfileConfig profile_config = profile_config_builder_.Build();
+  DeviceConfig device_config = device_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
   runtime_config.subgraph_config = {minimum_subgraph_size_,

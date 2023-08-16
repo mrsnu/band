@@ -28,7 +28,7 @@ band_cc_library(
     ],
     deps = [
         ":estimator_interface",
-        "//band:profiler",
+        "//band/profiler:latency_profiler",
         "//band:json_util",
         "//band:worker",
         "//band/device",
@@ -45,12 +45,29 @@ band_cc_library(
     ],
     deps = [
         ":estimator_interface",
-        "//band:profiler",
+        "//band/profiler:thermal_profiler",
         "//band:json_util",
         "//band:worker",
         "//band/device",
-        "//band:resource_monitor",
         "//third_party/eigen3"
+    ],
+)
+
+band_cc_library(
+    name = "frequency_latency_estimator",
+    srcs = [
+        "frequency_latency_estimator.cc",
+    ],
+    hdrs = [
+        "frequency_latency_estimator.h",
+    ],
+    deps = [
+        ":estimator_interface",
+        "//band/profiler:latency_profiler",
+        "//band/profiler:frequency_profiler",
+        "//band:json_util",
+        "//band:worker",
+        "//band/device",
     ],
 )
 

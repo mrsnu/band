@@ -21,6 +21,18 @@ struct LatencyProfileConfig {
 struct ThermalProfileConfig {
 };
 
+struct DeviceConfig {
+  size_t cpu_therm_index = -1;
+  size_t gpu_therm_index = -1;
+  size_t dsp_therm_index = -1;
+  size_t npu_therm_index = -1;
+
+  std::string cpu_freq_path = "";
+  std::string gpu_freq_path = "";
+  std::string dsp_freq_path = "";
+  std::string npu_freq_path = "";
+};
+
 struct ProfileConfig {
   LatencyProfileConfig latency_config;
   ThermalProfileConfig thermal_config;
@@ -66,6 +78,7 @@ struct RuntimeConfig {
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  DeviceConfig device_config;
 
  private:
   friend class RuntimeConfigBuilder;

@@ -172,6 +172,10 @@ class Engine : public IEngine {
   const interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;
 
+  /* Model Profile */
+  absl::Status ProfileModel(ModelId model_id,
+                            std::vector<std::unique_ptr<Profiler>> profilers);
+
   Engine() = delete;
   Engine(ErrorReporter* error_reporeter);
   Engine(const Engine&) = delete;
@@ -180,6 +184,7 @@ class Engine : public IEngine {
   Engine& operator=(const Engine&&) = delete;
 
   SubgraphConfig subgraph_config_;
+  ProfileConfig profile_config_;
 
   std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<interface::IModelExecutor>>
@@ -209,7 +214,7 @@ class Engine : public IEngine {
 
   // Resource monitor
   std::unique_ptr<ResourceMonitor> resource_monitor_;
-  
+
   // Estimators
   std::unique_ptr<LatencyEstimator> latency_estimator_;
   std::unique_ptr<ThermalEstimator> thermal_estimator_;

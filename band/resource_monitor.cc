@@ -456,10 +456,6 @@ absl::Status ResourceMonitor::AddDevFreqResource(DeviceFlag device_flag,
   return absl::OkStatus();
 }
 
-absl::Status ResourceMonitor::AddNetworkResource(NetworkFlag) {
-  return absl::Status();
-}
-
 const char* ResourceMonitor::GetThermalBasePath() {
   return "/sys/class/thermal/";
 }
