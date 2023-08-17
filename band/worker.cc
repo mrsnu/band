@@ -195,6 +195,7 @@ void Worker::Work() {
     if (engine_->TryCopyInputTensors(*current_job).ok()) {
       lock.lock();
       current_job->invoke_time = time::NowMicros();
+      current_job->event_id = engine_->BeginEvent();
       lock.unlock();
 
       BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
@@ -203,8 +204,10 @@ void Worker::Work() {
         // end_time is never read/written by any other thread as long as
         // is_busy == true, so it's safe to update it w/o grabbing the lock
         current_job->end_time = time::NowMicros();
-        engine_->Update(subgraph_key, 
-                        (current_job->end_time - current_job->invoke_time));
+        engine_->EndEvent(current_job->event_id);
+        engine_->UpdateWithEvent(subgraph_key, current_job->event_id);
+        // engine_->Update(subgraph_key, 
+        //                 (current_job->end_time - current_job->invoke_time));
         if (current_job->following_jobs.size() != 0) {
           engine_->EnqueueBatch(current_job->following_jobs);
         }

@@ -96,6 +96,10 @@ class IEngine {
   virtual int64_t GetProfiled(const SubgraphKey& key) const = 0;
   virtual int64_t GetExpected(const SubgraphKey& key) const = 0;
 
+  /* profilers */
+  virtual size_t BeginEvent() = 0;
+  virtual void EndEvent(size_t event_id) = 0;
+
   /* planner */
   virtual void Trigger() = 0;
   virtual JobId EnqueueRequest(Job job, bool push_front = false) = 0;

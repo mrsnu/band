@@ -51,7 +51,7 @@ TYPED_TEST(WorkerSuite, JobHelper) {
 
 TYPED_TEST(WorkerSuite, Wait) {
   MockEngine engine;
-  EXPECT_CALL(engine, Update).Times(testing::AtLeast(1));
+  EXPECT_CALL(engine, UpdateWithEvent).Times(testing::AtLeast(1));
   EXPECT_CALL(engine, Trigger).Times(testing::AtLeast(1));
   EXPECT_CALL(engine, TryCopyInputTensors).Times(testing::AtLeast(1));
   EXPECT_CALL(engine, TryCopyOutputTensors).Times(testing::AtLeast(1));
