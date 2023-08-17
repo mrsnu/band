@@ -50,6 +50,7 @@ struct MockEngineBase : public IEngine {
 
   /* profiler */
   MOCK_METHOD2(Update, void(const SubgraphKey&, int64_t));
+  MOCK_METHOD2(UpdateWithEvent, void(const SubgraphKey&, size_t));
   MOCK_CONST_METHOD1(GetProfiled, int64_t(const SubgraphKey&));
   MOCK_CONST_METHOD1(GetExpected, int64_t(const SubgraphKey&));
 

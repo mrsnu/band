@@ -148,8 +148,9 @@ class Engine : public IEngine {
       const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
       const std::map<WorkerId, int64_t>& worker_waiting) const;
 
-  /* latency estimator */
+  /* estimators */
   void Update(const SubgraphKey& key, int64_t new_value) override;
+  void UpdateWithEvent(const SubgraphKey&, size_t event_id) override;
   int64_t GetWorst(ModelId model_id) const;
 
   /* planner */
@@ -175,7 +176,9 @@ class Engine : public IEngine {
       const SubgraphKey& key) const;
 
   /* Model Profile */
-  absl::Status ProfileModel(ModelId model_id, std::vector<Profiler*> profilers);
+  size_t BeginEvent();
+  void EndEvent(size_t event_id);
+  absl::Status ProfileModel(ModelId model_id);
 
   Engine() = delete;
   Engine(ErrorReporter* error_reporeter);
@@ -217,6 +220,7 @@ class Engine : public IEngine {
   LatencyProfiler* latency_profiler_;
   ThermalProfiler* thermal_profiler_;
   FrequencyProfiler* frequency_profiler_;
+  std::vector<Profiler*> profilers_;
 
   // Estimators
   std::unique_ptr<LatencyEstimator> latency_estimator_;

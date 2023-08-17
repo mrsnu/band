@@ -29,6 +29,8 @@ using WorkerWaitingTime = std::map<WorkerId, int64_t>;
 // Decision from a scheduler. Run subgraph key for a specific job.
 using ScheduleAction = std::pair<Job, SubgraphKey>;
 
+using ThermalInfo = std::map<DeviceFlag, size_t>;
+
 // Minimal interfaces for Band framework
 class IEngine {
  public:
@@ -88,9 +90,9 @@ class IEngine {
       const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
       const std::set<WorkerId>& idle_workers) const = 0;
 
-  /* profiler */
-  virtual void Update(const SubgraphKey& key,
-                      int64_t new_value) = 0;
+  /* estimators */
+  virtual void Update(const SubgraphKey& key, int64_t new_value) = 0;
+  virtual void UpdateWithEvent(const SubgraphKey& key, size_t event_id) = 0;
   virtual int64_t GetProfiled(const SubgraphKey& key) const = 0;
   virtual int64_t GetExpected(const SubgraphKey& key) const = 0;
 

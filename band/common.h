@@ -289,6 +289,9 @@ struct Job {
   int64_t expected_latency = 0;
   int64_t slo_us;
 
+  // Profiler event_id
+  size_t event_id;
+
   // Target worker id (only for fixed worker request)
   WorkerId target_worker_id = -1;
 

@@ -252,9 +252,7 @@ absl::Status Engine::RegisterModel(Model* model) {
 
     // Profile models
     {
-      auto status = ProfileModel(
-          model_id,
-          {latency_profiler_, thermal_profiler_, frequency_profiler_});
+      auto status = ProfileModel(model_id);
       if (!status.ok()) {
         return status;
       }
@@ -512,6 +510,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     latency_profiler_ = new LatencyProfiler();
     thermal_profiler_ = new ThermalProfiler(config.device_config);
     frequency_profiler_ = new FrequencyProfiler(config.device_config);
+    profilers_ = {latency_profiler_, thermal_profiler_, frequency_profiler_};
   }
 
   // Setup for estimators
@@ -930,6 +929,12 @@ void Engine::Update(const SubgraphKey& key, int64_t new_value) {
   latency_estimator_->Update(key, new_value);
 }
 
+void Engine::UpdateWithEvent(const SubgraphKey& key, size_t event_id) {
+  latency_estimator_->UpdateWithEvent(key, event_id);
+  thermal_estimator_->UpdateWithEvent(key, event_id);
+  frequency_latency_estimator_->UpdateWithEvent(key, event_id);
+}
+
 int64_t Engine::GetProfiled(const SubgraphKey& key) const {
   return latency_estimator_->GetProfiled(key);
 }
@@ -1108,8 +1113,21 @@ const interface::IModelExecutor* Engine::GetModelExecutor(
   return it != model_executors_.end() ? it->second.get() : nullptr;
 }
 
-absl::Status Engine::ProfileModel(ModelId model_id,
-                                  std::vector<Profiler*> profilers) {
+size_t Engine::BeginEvent() {
+  size_t event_handle = -1;
+  for (auto profiler : profilers_) {
+    event_handle = profiler->BeginEvent();
+  }
+  return event_handle;
+}
+
+void Engine::EndEvent(size_t event_id) {
+  for (int i = 0; i < profilers_.size(); i++) {
+    profilers_[i]->EndEvent(event_id);
+  }
+}
+
+absl::Status Engine::ProfileModel(ModelId model_id) {
   for (WorkerId worker_id = 0; worker_id < GetNumWorkers(); worker_id++) {
     Worker* worker = GetWorker(worker_id);
     worker->Pause();
@@ -1144,24 +1162,15 @@ absl::Status Engine::ProfileModel(ModelId model_id,
 
         for (int i = 0; i < profile_config_.num_runs; i++) {
           // All event handles must be the same.
-          size_t event_handle = -1;
-          for (auto profiler : profilers) {
-            event_handle = profiler->BeginEvent();
-          }
+          size_t event_id = BeginEvent();
           if (!Invoke(subgraph_key).ok()) {
             BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                               "Profiler failed to invoke largest subgraph of "
                               "model %d in worker %d during profiling.",
                               model_id, worker_id);
           }
-
-          for (int i = 0; i < profilers.size(); i++) {
-            profilers[i]->EndEvent(event_handle);
-            latency_estimator_->UpdateWithEvent(subgraph_key, event_handle);
-            thermal_estimator_->UpdateWithEvent(subgraph_key, event_handle);
-            frequency_latency_estimator_->UpdateWithEvent(subgraph_key,
-                                                          event_handle);
-          }
+          EndEvent(event_id);
+          UpdateWithEvent(subgraph_key, event_id);
         }
       });
     });
@@ -1170,6 +1179,6 @@ absl::Status Engine::ProfileModel(ModelId model_id,
     worker->Resume();
   }
   return absl::OkStatus();
-}
+}  // namespace band
 
 }  // namespace band
