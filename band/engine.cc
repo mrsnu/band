@@ -1158,9 +1158,9 @@ absl::Status Engine::ProfileModel(ModelId model_id,
           for (int i = 0; i < profilers.size(); i++) {
             profilers[i]->EndEvent(event_handle);
             latency_estimator_->UpdateWithEvent(subgraph_key, event_handle);
-            // thermal_estimator_->UpdateWithEvent(subgraph_key, event_handle);
-            // frequency_latency_estimator_->UpdateWithEvent(subgraph_key,
-            //                                               event_handle);
+            thermal_estimator_->UpdateWithEvent(subgraph_key, event_handle);
+            frequency_latency_estimator_->UpdateWithEvent(subgraph_key,
+                                                          event_handle);
           }
         }
       });
