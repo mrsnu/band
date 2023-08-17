@@ -23,8 +23,8 @@ class IEstimator {
   virtual EstimatorOutput GetProfiled(const EstimatorKey& key) const = 0;
   virtual EstimatorOutput GetExpected(const EstimatorKey& key) const = 0;
 
-  virtual absl::Status LoadProfile(std::string profile_path) = 0;
-  virtual absl::Status DumpProfile(std::string path) = 0;
+  virtual absl::Status LoadModel(std::string profile_path) = 0;
+  virtual absl::Status DumpModel(std::string path) = 0;
 
  protected:
   IEngine* engine_;

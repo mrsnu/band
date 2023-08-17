@@ -47,7 +47,7 @@ void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
   Update(key, thermal_profiler_->GetInterval(event_handle));
 }
 
-absl::Status ThermalEstimator::LoadProfile(std::string profile_path) {
+absl::Status ThermalEstimator::LoadModel(std::string profile_path) {
   return absl::OkStatus();
 }
 
@@ -59,7 +59,7 @@ ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
   return {};
 }
 
-absl::Status ThermalEstimator::DumpProfile(std::string path) {
+absl::Status ThermalEstimator::DumpModel(std::string profile_path) {
   return absl::OkStatus();
 }
 

@@ -31,6 +31,10 @@ struct DeviceConfig {
   std::string gpu_freq_path = "";
   std::string dsp_freq_path = "";
   std::string npu_freq_path = "";
+
+  std::string latency_log_path = "";
+  std::string therm_log_path = "";
+  std::string freq_log_path = "";
 };
 
 struct ProfileConfig {

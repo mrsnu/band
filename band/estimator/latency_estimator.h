@@ -26,8 +26,8 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
   int64_t GetExpected(const SubgraphKey& key) const override;
   int64_t GetWorst(ModelId model_id) const;
 
-  absl::Status LoadProfile(std::string profile_path) override;
-  absl::Status DumpProfile(std::string path) override;
+  absl::Status LoadModel(std::string profile_path) override;
+  absl::Status DumpModel(std::string profile_path) override;
 
   // latency in microseconds
   struct Latency {

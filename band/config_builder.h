@@ -163,6 +163,21 @@ class DeviceConfigBuilder {
     return *this;
   }
 
+  DeviceConfigBuilder& AddLatencyDumpPath(std::string latency_log_path) {
+    latency_log_path_ = latency_log_path;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddThermalDumpPath(std::string therm_log_path) {
+    therm_log_path_ = therm_log_path;
+    return *this;
+  }
+
+  DeviceConfigBuilder& AddFrequencyDumpPath(std::string freq_log_path) {
+    freq_log_path_ = freq_log_path;
+    return *this;
+  }
+
   DeviceConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
@@ -175,6 +190,9 @@ class DeviceConfigBuilder {
   std::string gpu_freq_path_ = "";
   std::string dsp_freq_path_ = "";
   std::string npu_freq_path_ = "";
+  std::string latency_log_path_ = "";
+  std::string therm_log_path_ = "";
+  std::string freq_log_path_ = "";
 };
 
 // Builder for creating PlannerConfig

@@ -28,8 +28,8 @@ class ThermalEstimator
   ThermalMap GetProfiled(const SubgraphKey& key) const override;
   ThermalMap GetExpected(const SubgraphKey& key) const override;
 
-  absl::Status LoadProfile(std::string profile_path) override;
-  absl::Status DumpProfile(std::string path) override;
+  absl::Status LoadModel(std::string profile_path) override;
+  absl::Status DumpModel(std::string profile_path) override;
 
  private:
   Eigen::MatrixXd SolveLinear(Eigen::MatrixXd x, Eigen::VectorXd y) {

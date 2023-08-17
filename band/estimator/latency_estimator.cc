@@ -100,7 +100,7 @@ size_t LatencyEstimator::GetProfileHash() const {
   return hash;
 }
 
-absl::Status LatencyEstimator::LoadProfile(std::string profile_path) {
+absl::Status LatencyEstimator::LoadModel(std::string profile_path) {
   if (!device::IsFileAvailable(profile_path)) {
     return absl::InternalError(absl::StrFormat(
         "Profile file %s does not exist.", profile_path.c_str()));
@@ -138,8 +138,8 @@ absl::Status LatencyEstimator::LoadProfile(std::string profile_path) {
   return absl::OkStatus();
 }
 
-absl::Status LatencyEstimator::DumpProfile(std::string path) {
-  return json::WriteToFile(ProfileToJson(), path);
+absl::Status LatencyEstimator::DumpModel(std::string profile_path) {
+  return json::WriteToFile(ProfileToJson(), profile_path);
 }
 
 Json::Value LatencyEstimator::ProfileToJson() {

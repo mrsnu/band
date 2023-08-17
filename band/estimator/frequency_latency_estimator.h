@@ -26,10 +26,10 @@ class FrequencyLatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_
   int64_t GetProfiled(const SubgraphKey& key) const override { return {}; }
   int64_t GetExpected(const SubgraphKey& key) const override { return {}; }
 
-  absl::Status LoadProfile(std::string profile_path) override {
+  absl::Status LoadModel(std::string profile_path) override {
     return absl::OkStatus();
   }
-  absl::Status DumpProfile(std::string path) override {
+  absl::Status DumpModel(std::string profile_path) override {
     return absl::OkStatus();
   }
 

@@ -1,9 +1,11 @@
 #ifndef BAND_PROFILER_LATENCY_PROFILER_H_
 #define BAND_PROFILER_LATENCY_PROFILER_H_
 
+#include <fstream>
 #include <chrono>
 #include <vector>
 
+#include "band/config.h"
 #include "band/profiler/profiler.h"
 
 namespace band {

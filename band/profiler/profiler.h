@@ -5,6 +5,8 @@
 #include <map>
 #include <vector>
 
+#include "absl/status/status.h"
+
 namespace band {
 
 class Profiler {
