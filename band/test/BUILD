@@ -120,18 +120,7 @@ band_cc_android_test(
     srcs = ["cpu_test.cc"],
     data = [],
     deps = [
-        "//band/device",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-band_cc_android_test(
-    name = "resource_monitor_test",
-    size = "small",
-    srcs = ["resource_monitor_test.cc"],
-    data = [],
-    deps = [
-        "//band:resource_monitor",
+        "//band/device:cpu",
         "@com_google_googletest//:gtest",
     ],
 )

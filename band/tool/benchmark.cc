@@ -9,7 +9,7 @@
 #include "band/config_builder.h"
 #include "band/logger.h"
 #include "band/model.h"
-#include "band/profiler.h"
+#include "band/profiler/latency_profiler.h"
 #include "band/tensor.h"
 #include "band/time.h"
 #include "benchmark.h"
@@ -178,7 +178,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
       builder.AddNumRuns(root["profile_num_runs"].asInt());
     }
     if (root["profile_smoothing_factor"].isNumeric()) {
-      builder.AddLatencySmoothingFactor(root["profile_smoothing_factor"].asFloat());
+      builder.AddLatencySmoothingFactor(
+          root["profile_smoothing_factor"].asFloat());
     }
     if (root["latency_profile_path"].isString()) {
       builder.AddProfilePath(root["latency_profile_path"].asCString());
@@ -426,13 +427,11 @@ void Benchmark::RunPeriodic() {
                 model_context->model_ids, model_context->request_options,
                 model_context->model_request_inputs,
                 model_context->model_request_outputs);
-            model_context->profiler.EndEvent(id, status);
+            model_context->profiler.EndEventWithStatus(id, status);
 
             if (kill_app_) return;
 
-            size_t elapsed_us =
-                model_context->profiler
-                    .GetInterval<std::chrono::microseconds>(id);
+            size_t elapsed_us = model_context->profiler.GetInterval(id);
 
             if (elapsed_us < period_us) {
               std::this_thread::sleep_for(
@@ -482,7 +481,7 @@ void Benchmark::RunStream() {
     size_t id = global_profiler_.BeginEvent();
     auto status =
         engine_->RequestSync(model_ids, request_options, inputs, outputs);
-    global_profiler_.EndEvent(id, status);
+    global_profiler_.EndEventWithStatus(id, status);
     int64_t current = time::NowMicros();
     if (current - start >= run_duration_us) break;
   }
@@ -527,9 +526,7 @@ absl::Status Benchmark::LogResults() {
                            const BenchmarkProfiler& profiler,
                            const ModelConfig* model_config = nullptr) {
     const double batch_size = model_config ? model_config->batch_size : 1;
-    double average_ms =
-        (profiler.GetAverageElapsedTime<std::chrono::milliseconds>() /
-         batch_size);
+    double average_ms = (profiler.GetAverageInterval() / batch_size);
     double average_fps = 1000 / average_ms;
 
     PrintHeader("Result - " + prefix);
@@ -544,8 +541,7 @@ absl::Status Benchmark::LogResults() {
       double slo_satisfactory_count = 0;
       for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
         if (!profiler.IsEventCanceled(i) &&
-            profiler.GetElapsedTimeAt<std::chrono::microseconds>(i) <
-                model_config->slo_us) {
+            profiler.GetInterval(i) < model_config->slo_us) {
           slo_satisfactory_count++;
         }
       }

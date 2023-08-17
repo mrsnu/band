@@ -9,9 +9,6 @@
 #include "band/engine_interface.h"
 #include "band/estimator/latency_estimator.h"
 #include "band/estimator/thermal_estimator.h"
-#include "band/profiler/latency_profiler.h"
-#include "band/profiler/thermal_profiler.h"
-#include "band/profiler/frequency_profiler.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
@@ -19,6 +16,9 @@
 #include "band/model_analyzer.h"
 #include "band/model_spec.h"
 #include "band/planner.h"
+#include "band/profiler/frequency_profiler.h"
+#include "band/profiler/latency_profiler.h"
+#include "band/profiler/thermal_profiler.h"
 #include "band/tensor.h"
 #include "band/worker.h"
 
@@ -38,6 +38,10 @@ Engine::~Engine() {
   }
 
   planner_.reset();
+
+  delete latency_profiler_;
+  delete thermal_profiler_;
+  delete frequency_profiler_;
 }
 
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
@@ -248,10 +252,9 @@ absl::Status Engine::RegisterModel(Model* model) {
 
     // Profile models
     {
-      std::vector<std::unique_ptr<Profile>> profilers;
-      profiles.push_back(std::make_unique<>(model_id, model_spec));
-
-      auto status = ProfileModel(model_id);
+      auto status = ProfileModel(
+          model_id,
+          {latency_profiler_, thermal_profiler_, frequency_profiler_});
       if (!status.ok()) {
         return status;
       }
@@ -504,35 +507,44 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     return status;
   }
 
-  // Setup resource monitor
+  // Setup for profilers
   {
-    resource_monitor_ = std::make_unique<ResourceMonitor>();
-    auto status = resource_monitor_->Init();
-    if (!status.ok()) {
-      return status;
-    }
+    latency_profiler_ = new LatencyProfiler();
+    thermal_profiler_ = new ThermalProfiler(config.device_config);
+    frequency_profiler_ = new FrequencyProfiler(config.device_config);
   }
 
   // Setup for estimators
   {
     {
-      latency_estimator_ = std::make_unique<LatencyEstimator>(this);
+      latency_estimator_ =
+          std::make_unique<LatencyEstimator>(this, latency_profiler_);
       auto status =
           latency_estimator_->Init(config.profile_config.latency_config);
       if (!status.ok()) {
         return status;
       }
     }
-    {
-      thermal_estimator_ =
-          std::make_unique<ThermalEstimator>(this, resource_monitor_.get());
-      auto status =
-          thermal_estimator_->Init(config.profile_config.thermal_config);
-      if (!status.ok()) {
-        return status;
-      }
-    }
-    profile_config_ = config.profile_config;
+    // {
+    //   thermal_estimator_ =
+    //       std::make_unique<ThermalEstimator>(this, thermal_profiler_);
+    //   auto status =
+    //       thermal_estimator_->Init(config.profile_config.thermal_config);
+    //   if (!status.ok()) {
+    //     return status;
+    //   }
+    // }
+    // {
+    //   frequency_latency_estimator_ =
+    //       std::make_unique<FrequencyLatencyEstimator>(this,
+    //       frequency_profiler_,
+    //                                                   latency_profiler_);
+    //   auto status = frequency_latency_estimator_->Init(
+    //       config.profile_config.frequency_latency_config);
+    //   if (!status.ok()) {
+    //     return status;
+    //   }
+    // }
   }
 
 #if BAND_IS_MOBILE
@@ -1097,49 +1109,54 @@ const interface::IModelExecutor* Engine::GetModelExecutor(
   return it != model_executors_.end() ? it->second.get() : nullptr;
 }
 
-absl::Status Engine::ProfileModel(
-    ModelId model_id, std::vector<std::unique_ptr<Profiler>> profilers) {
-  for (WorkerId worker_id = 0; worker_id < GetNumWOrkers(); worker_id++) {
-    Worker* worker = engine_->GetWorker(worker_id);
+absl::Status Engine::ProfileModel(ModelId model_id,
+                                  std::vector<Profiler*> profilers) {
+  for (WorkerId worker_id = 0; worker_id < GetNumWorkers(); worker_id++) {
+    Worker* worker = GetWorker(worker_id);
     worker->Pause();
     worker->Wait();
     std::thread profile_thread([&]() {
 #if BAND_IS_MOBILE
       if (worker->GetWorkerThreadAffinity().NumEnabled() > 0) {
-        return absl::InternalError("Failed to get worker thread affinity");
+        BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                          "Failed to get worker thread affinity");
       }
       if (!SetCPUThreadAffinity(worker->GetWorkerThreadAffinity()).ok()) {
-        return absl::InternalError(
-            absl::StrFormat("Failed to propagate thread affinity of worker id "
-                            "%d to profile thread",
-                            worker_id));
+        BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                          "Failed to propagate thread affinity of worker id "
+                          "%d to profile thread",
+                          worker_id);
       }
 #endif  // BAND_IS_MOBILE
-
       ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
         if (subgraph_key.GetWorkerId() != worker_id ||
             subgraph_key.GetModelId() != model_id) {
           return;
         }
 
-        for (int i = 0; i < config.num_warmups; i++) {
+        for (int i = 0; i < profile_config_.num_warmups; i++) {
           if (!Invoke(subgraph_key).ok()) {
-            return absl::InternalError(
-                absl::StrFormat("Profiler failed to invoke largest subgraph of "
-                                "model %d in worker %d during warmup.",
-                                model_id, worker_id));
+            BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                              "Profiler failed to invoke largest subgraph of "
+                              "model %d in worker %d during warmup.",
+                              model_id, worker_id);
           }
         }
 
-        for (int i = 0; i < config.num_runs; i++) {
-          // TODO(splash): profile begin
-          if (!Invoke(subgraph_key).ok()) {
-            return absl::InternalError(
-                absl::StrFormat("Profiler failed to invoke largest subgraph of "
-                                "model %d in worker %d during profiling.",
-                                model_id, worker_id));
+        for (int i = 0; i < profile_config_.num_runs; i++) {
+          std::vector<size_t> event_handles;
+          for (auto profiler : profilers) {
+            event_handles.push_back(profiler->BeginEvent());
           }
-          // TODO(splash): profile begin
+          if (!Invoke(subgraph_key).ok()) {
+            BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+                              "Profiler failed to invoke largest subgraph of "
+                              "model %d in worker %d during profiling.",
+                              model_id, worker_id);
+          }
+          for (int i = 0; i < event_handles.size(); i++) {
+            profilers[i]->EndEvent(event_handles[i]);
+          }
         }
       });
     });

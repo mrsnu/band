@@ -162,7 +162,7 @@ band_cc_library(
     ],
     deps = [
         ":common",
-        "//band/device",
+        "//band/device:cpu",
     ],
 )
 
@@ -196,7 +196,7 @@ band_cc_library(
     ),
     deps = [
         ":common",
-        "//band/device",
+        "//band/device:cpu",
     ],
 )
 
@@ -256,7 +256,6 @@ band_cc_library(
         ":config",
         ":job_tracer",
         ":time",
-        "//band/device",
     ],
 )
 
@@ -365,7 +364,6 @@ band_cc_library(
         ":model",
         ":model_analyzer",
         ":planner",
-        ":resource_monitor",
         ":scheduler",
         ":tensor",
         ":tensor_ring_buffer",
@@ -403,18 +401,6 @@ band_cc_library(
     deps = [
         ":common",
         ":config",
-        "//band/device",
-    ],
-)
-
-band_cc_library(
-    name = "resource_monitor",
-    srcs = ["resource_monitor.cc"],
-    hdrs = ["resource_monitor.h"],
-    deps = [
-        ":common",
-        "//band/device",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
+        "//band/device:cpu",
     ],
 )

@@ -14,15 +14,15 @@ class LatencyProfiler : public Profiler {
   void EndEvent(size_t event_handle) override;
   size_t GetNumEvents() const override;
 
-  double GetInterval(size_t index) const override {
-    if (timeline_.size() > index) {
-      return std::max<double>(
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              timeline_[index].second - timeline_[index].first)
-              .count(),
-          0);
-    } else
+  double GetInterval(size_t index) const {
+    if (timeline_.size() <= index) {
       return 0;
+    }
+    return std::max<double>(
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            timeline_[index].second - timeline_[index].first)
+            .count(),
+        0);
   }
 
   double GetAverageInterval() const {

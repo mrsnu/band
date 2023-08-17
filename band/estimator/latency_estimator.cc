@@ -5,35 +5,29 @@
 #include "band/json_util.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
-#include "band/profiler.h"
+#include "band/profiler/latency_profiler.h"
 #include "band/worker.h"
 
 namespace band {
 
 absl::Status LatencyEstimator::Init(const LatencyProfileConfig& config) {
-  // we cannot convert the model name strings to integer ids yet,
-  // (profile_database_json_ --> profile_database_)
-  // since we don't have anything in model_configs_ at the moment
-
-  // Set how many runs are required to get the profile results.
   profile_smoothing_factor_ = config.smoothing_factor;
-
   return absl::OkStatus();
 }
 
 void LatencyEstimator::Update(const SubgraphKey& key, int64_t latency) {
   auto it = profile_database_.find(key);
-  if (it != profile_database_.end()) {
-    int64_t prev_latency = it->second.moving_averaged;
-    profile_database_[key].moving_averaged =
-        profile_smoothing_factor_ * latency +
-        (1 - profile_smoothing_factor_) * prev_latency;
-  } else {
+  if (it == profile_database_.end()) {
     BAND_LOG_PROD(BAND_LOG_INFO,
                   "[LatencyEstimator::Update] The given SubgraphKey %s "
                   "cannot be found.",
                   key.ToString().c_str());
+    return;
   }
+  int64_t prev_latency = it->second.moving_averaged;
+  profile_database_[key].moving_averaged =
+      profile_smoothing_factor_ * latency +
+      (1 - profile_smoothing_factor_) * prev_latency;
 }
 
 absl::Status LatencyEstimator::Load(ModelId model_id,

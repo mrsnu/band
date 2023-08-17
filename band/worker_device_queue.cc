@@ -1,8 +1,9 @@
 #include <algorithm>
 
+#include "band/worker.h"
+
 #include "band/logger.h"
 #include "band/time.h"
-#include "band/worker.h"
 
 namespace band {
 

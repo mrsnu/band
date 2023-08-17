@@ -5,7 +5,7 @@
 #include "band/engine.h"
 #include "band/json_util.h"
 #include "band/model.h"
-#include "band/profiler.h"
+#include "band/profiler/latency_profiler.h"
 #include "band/tool/benchmark_config.h"
 #include "band/tool/benchmark_profiler.h"
 

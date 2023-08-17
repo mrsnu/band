@@ -4,9 +4,9 @@
 
 namespace band {
 namespace tool {
-void BenchmarkProfiler::EndEvent(size_t event_handle, absl::Status status) {
+void BenchmarkProfiler::EndEventWithStatus(size_t event_handle, absl::Status status) {
   if (status.ok()) {
-    band::Profiler::EndEvent(event_handle);
+    EndEvent(event_handle);
   } else if (status.code() == absl::StatusCode::kDeadlineExceeded) {
     canceled_events_.insert(event_handle);
   } else {

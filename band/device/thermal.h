@@ -10,12 +10,14 @@ namespace band {
 class DeviceConfig;
 enum class DeviceFlag : size_t;
 
-static const char* GetThermalBasePath() { return "/sys/class/thermal"; }
+using ThermalInfo = std::map<DeviceFlag, size_t>;
 
 class Thermal {
  public:
   explicit Thermal(DeviceConfig config);
   size_t GetThermal(DeviceFlag device_flag);
+  ThermalInfo GetAllThermal();
+
  private:
   bool CheckThermalZone(size_t index);
   std::map<DeviceFlag, size_t> thermal_device_map_;

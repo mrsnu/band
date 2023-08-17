@@ -19,7 +19,6 @@
 #include <cstring>
 #include <mutex>  // call_once
 
-#include "band/device/util.h"
 #include "band/logger.h"
 
 #if BAND_IS_MOBILE
@@ -27,10 +26,7 @@
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-
-#include "cpu.h"
-
-#endif
+#endif  // BAND_IS_MOBILE
 
 namespace band {
 using namespace device;

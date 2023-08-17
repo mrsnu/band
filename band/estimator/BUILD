@@ -76,5 +76,6 @@ band_cc_library(
     deps = [
         ":latency_estimator",
         ":thermal_estimator",
+        ":frequency_latency_estimator",
     ],
 )

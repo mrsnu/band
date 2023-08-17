@@ -2,35 +2,33 @@
 #define BAND_ESTIMATOR_THERMAL_ESTIMATOR_H_
 
 #include <chrono>
-#include <unordered_map>
 #include <deque>
+#include <unordered_map>
 
 #include "absl/status/status.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/estimator/estimator_interface.h"
-#include "band/resource_monitor.h"
+#include "band/profiler/thermal_profiler.h"
 #include "json/json.h"
 #include "third_party/eigen3/Eigen/Cholesky"
 #include "third_party/eigen3/Eigen/Core"
 
 namespace band {
 
-using ThermalValue = std::map<DeviceFlag, int>;
-
-class ThermalEstimator : public IEstimator<SubgraphKey, ThermalValue> {
+class ThermalEstimator : public IEstimator<SubgraphKey, ThermalInfo> {
  public:
-  explicit ThermalEstimator(IEngine* engine, ResourceMonitor* monitor)
-      : IEstimator(engine), resource_monitor_(monitor) {}
+  explicit ThermalEstimator(IEngine* engine, ThermalProfiler* thermal_profiler)
+      : IEstimator(engine), thermal_profiler_(thermal_profiler) {}
   absl::Status Init(const ThermalProfileConfig& config);
-  void Update(const SubgraphKey& key, ThermalValue thermal) override;
-  void Update(const SubgraphKey& key, ThermalValue old_value,
-              ThermalValue new_value);
+  void Update(const SubgraphKey& key, ThermalInfo thermal) override;
+  void Update(const SubgraphKey& key, ThermalInfo old_value,
+              ThermalInfo new_value);
 
   absl::Status Load(ModelId model_id, std::string profile_path) override;
-  absl::Status Profile(ModelId model_id) override;
-  ThermalValue GetProfiled(const SubgraphKey& key) const override;
-  ThermalValue GetExpected(const SubgraphKey& key) const override;
+  absl::Status Profile(ModelId model_id) override { return absl::OkStatus(); }
+  ThermalInfo GetProfiled(const SubgraphKey& key) const override;
+  ThermalInfo GetExpected(const SubgraphKey& key) const override;
 
   absl::Status DumpProfile() override;
 
@@ -39,9 +37,10 @@ class ThermalEstimator : public IEstimator<SubgraphKey, ThermalValue> {
     return (x.transpose() * x).ldlt().solve(x.transpose() * y);
   }
 
+  ThermalProfiler* thermal_profiler_;
+
   size_t num_resources_ = 0;
   std::string profile_path_;
-  ResourceMonitor* resource_monitor_;
   Eigen::MatrixXd model_;
 
   std::deque<Eigen::VectorXd> history_queue_;

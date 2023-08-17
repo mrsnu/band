@@ -8,6 +8,7 @@
 #include "band/common.h"
 #include "band/config.h"
 #include "band/estimator/estimator_interface.h"
+#include "band/profiler/latency_profiler.h"
 #include "json/json.h"
 
 namespace band {
@@ -15,10 +16,12 @@ namespace band {
 class IEngine;
 class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
  public:
-  explicit LatencyEstimator(IEngine* engine) : IEstimator(engine) {}
+  explicit LatencyEstimator(IEngine* engine, LatencyProfiler* latency_profiler)
+      : IEstimator(engine), latency_profiler_(latency_profiler) {}
   absl::Status Init(const LatencyProfileConfig& config);
 
   absl::Status Load(ModelId model_id, std::string profile_path) override;
+  absl::Status Profile(ModelId model_id) override { return absl::OkStatus(); }
 
   void Update(const SubgraphKey& key, int64_t latency) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
@@ -45,6 +48,8 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
   // and returns the json format identical to `profile_database_json_`.
   Json::Value ProfileToJson();
 
+  LatencyProfiler* latency_profiler_;
+
   // Path to the profile data.
   // The data in the path will be read during initial phase, and also
   // will be updated at the end of the run.
@@ -57,7 +62,7 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
   Json::Value profile_database_json_;
 
   std::unordered_map<SubgraphKey, Latency, SubgraphHash> profile_database_;
-  
+
   float profile_smoothing_factor_ = 0.1f;
   int profile_num_warmups_ = 1;
   int profile_num_runs_ = 1;

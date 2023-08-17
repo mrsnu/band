@@ -11,12 +11,12 @@
 #include "band/config.h"
 #include "band/engine_interface.h"
 #include "band/error_reporter.h"
+#include "band/estimator/frequency_latency_estimator.h"
 #include "band/estimator/latency_estimator.h"
 #include "band/estimator/thermal_estimator.h"
 #include "band/graph/graph.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
-#include "band/resource_monitor.h"
 #include "band/tensor_ring_buffer.h"
 
 namespace band {
@@ -101,6 +101,7 @@ class Engine : public IEngine {
 
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
+
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
 
@@ -174,7 +175,7 @@ class Engine : public IEngine {
 
   /* Model Profile */
   absl::Status ProfileModel(ModelId model_id,
-                            std::vector<std::unique_ptr<Profiler>> profilers);
+                            std::vector<Profiler*> profilers);
 
   Engine() = delete;
   Engine(ErrorReporter* error_reporeter);
@@ -212,12 +213,15 @@ class Engine : public IEngine {
   std::map<int, std::map<int, std::map<int, std::vector<SubgraphKey>>>>
       unit_subgraphs_to_subgraph_keys_;
 
-  // Resource monitor
-  std::unique_ptr<ResourceMonitor> resource_monitor_;
+  // Profilers
+  LatencyProfiler* latency_profiler_;
+  ThermalProfiler* thermal_profiler_;
+  FrequencyProfiler* frequency_profiler_;
 
   // Estimators
   std::unique_ptr<LatencyEstimator> latency_estimator_;
   std::unique_ptr<ThermalEstimator> thermal_estimator_;
+  std::unique_ptr<FrequencyLatencyEstimator> frequency_latency_estimator_;
 };
 
 }  // namespace band

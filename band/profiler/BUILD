@@ -9,9 +9,6 @@ package(
 
 band_cc_library(
     name = "profiler",
-    srcs = [
-        "profiler.cc",
-    ],
     hdrs = [
         "profiler.h",
     ],
@@ -43,7 +40,7 @@ band_cc_library(
     ],
     deps = [
         ":profiler",
-        "//band:resource_monitor",
+        "//band/device:thermal",
     ],
 )
 
@@ -57,5 +54,6 @@ band_cc_library(
     ],
     deps = [
         ":profiler",
+        "//band/device:frequency",
     ],
 )

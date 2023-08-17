@@ -59,7 +59,8 @@ TYPED_TEST(WorkerTypesSuite, NumRunsTest) {
 
   worker.Start();
 
-  LatencyEstimator latency_estimator(&engine);
+  LatencyProfiler profiler;
+  LatencyEstimator latency_estimator(&engine, &profiler);
 
   EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
   EXPECT_EQ(latency_estimator.Profile(0), absl::OkStatus());
@@ -98,7 +99,8 @@ TEST_P(CPUMaskFixture, AffinityPropagateTest) {
   EXPECT_EQ(status, absl::OkStatus());
   worker.Start();
 
-  LatencyEstimator latency_estimator(&engine);
+  LatencyProfiler profiler;
+  LatencyEstimator latency_estimator(&engine, &profiler);
 
   EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
   // This will be kBandError if affinity propagation fails
@@ -129,7 +131,8 @@ TEST(LatencyEstimatorSuite, OnlineLatencyProfile) {
   worker.Start();
   SubgraphKey key(0, 0);
 
-  LatencyEstimator latency_estimator(&engine);
+  LatencyProfiler profiler;
+  LatencyEstimator latency_estimator(&engine, &profiler);
 
   EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
   EXPECT_EQ(latency_estimator.GetProfiled(key), -1);
@@ -155,7 +158,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 
   {
     // profile on online estimator
-    LatencyEstimator latency_estimator(&engine);
+    LatencyProfiler profiler;
+    LatencyEstimator latency_estimator(&engine, &profiler);
 
     ProfileConfigBuilder b;
     LatencyProfileConfig config =
@@ -168,7 +172,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadSuccess) {
 
   {
     // load on offline estimator
-    LatencyEstimator latency_estimator(&engine);
+    LatencyProfiler profiler;
+    LatencyEstimator latency_estimator(&engine, &profiler);
 
     ProfileConfigBuilder b;
     LatencyProfileConfig config =
@@ -201,7 +206,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
 
   {
     // profile on online estimator
-    LatencyEstimator latency_estimator(&engine);
+    LatencyProfiler profiler;
+    LatencyEstimator latency_estimator(&engine, &profiler);
 
     ProfileConfigBuilder b;
     LatencyProfileConfig config =
@@ -217,7 +223,8 @@ TEST(LatencyEstimatorSuite, OfflineSaveLoadFailure) {
                                             worker.GetNumThreads() + 1);
     EXPECT_EQ(status, absl::OkStatus());
     // load on offline estimator
-    LatencyEstimator latency_estimator(&engine);
+    LatencyProfiler profiler;
+    LatencyEstimator latency_estimator(&engine, &profiler);
 
     ProfileConfigBuilder b;
     LatencyProfileConfig config =

@@ -14,23 +14,21 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-#ifndef BAND_CPU_H_
-#define BAND_CPU_H_
+#ifndef BAND_DEVICE_CPU_H_
+#define BAND_DEVICE_CPU_H_
 
-#include <limits.h>
-#include <stddef.h>
-#include <stdio.h>
-
+#include <climits>
+#include <cstddef>
+#include <cstdio>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "band/common.h"
 #include "band/device/util.h"
 
 #if BAND_IS_MOBILE
 #include <sched.h>  // cpu_set_t
-#endif
+#endif  // BAND_IS_MOBILE
 
 namespace band {
 
@@ -54,7 +52,7 @@ class CpuSet {
 
  private:
   cpu_set_t cpu_set_;
-#endif
+#endif  // BAND_IS_MOBILE
 };
 
 // cpu info
@@ -68,6 +66,7 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
+
 }  // namespace band
 
-#endif  // BAND_CPU_H_
+#endif  // BAND_DEVICE_CPU_H_

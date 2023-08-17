@@ -9,12 +9,12 @@
 namespace band {
 namespace tool {
 
-class BenchmarkProfiler : public band::LatencyProfiler {
+class BenchmarkProfiler : public LatencyProfiler {
  public:
   BenchmarkProfiler() = default;
   ~BenchmarkProfiler() = default;
 
-  void EndEvent(size_t event_handle, absl::Status status);
+  void EndEventWithStatus(size_t event_handle, absl::Status status);
   bool IsEventCanceled(size_t event_handle) const;
   size_t GetNumCanceledEvents() const;
 

@@ -40,6 +40,14 @@ size_t Frequency::GetFrequency(DeviceFlag device_flag) {
   return device::TryReadSizeT({path}).value();
 }
 
+FreqInfo Frequency::GetAllFrequency() {
+  std::map<DeviceFlag, size_t> freq_map;
+  for (auto& pair : freq_device_map_) {
+    freq_map[pair.first] = GetFrequency(pair.first);
+  }
+  return freq_map;
+}
+
 bool Frequency::CheckFrequency(std::string path) {
   return device::IsFileAvailable(GetFreqPath(path));
 }

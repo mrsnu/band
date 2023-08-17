@@ -1,7 +1,9 @@
 load("//band:band.bzl", "band_cc_library")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = [
+        "//band:__subpackages__",
+    ],
     licenses = ["notice"],  # Apache 2.0
 )
 
