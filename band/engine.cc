@@ -525,26 +525,25 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
         return status;
       }
     }
-    // {
-    //   thermal_estimator_ =
-    //       std::make_unique<ThermalEstimator>(this, thermal_profiler_);
-    //   auto status =
-    //       thermal_estimator_->Init(config.profile_config.thermal_config);
-    //   if (!status.ok()) {
-    //     return status;
-    //   }
-    // }
-    // {
-    //   frequency_latency_estimator_ =
-    //       std::make_unique<FrequencyLatencyEstimator>(this,
-    //       frequency_profiler_,
-    //                                                   latency_profiler_);
-    //   auto status = frequency_latency_estimator_->Init(
-    //       config.profile_config.frequency_latency_config);
-    //   if (!status.ok()) {
-    //     return status;
-    //   }
-    // }
+    {
+      thermal_estimator_ =
+          std::make_unique<ThermalEstimator>(this, thermal_profiler_);
+      auto status =
+          thermal_estimator_->Init(config.profile_config.thermal_config);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    {
+      frequency_latency_estimator_ =
+          std::make_unique<FrequencyLatencyEstimator>(this, frequency_profiler_,
+                                                      latency_profiler_);
+      auto status = frequency_latency_estimator_->Init(
+          config.profile_config.frequency_latency_config);
+      if (!status.ok()) {
+        return status;
+      }
+    }
   }
 
 #if BAND_IS_MOBILE
@@ -1144,9 +1143,10 @@ absl::Status Engine::ProfileModel(ModelId model_id,
         }
 
         for (int i = 0; i < profile_config_.num_runs; i++) {
-          std::vector<size_t> event_handles;
+          // All event handles must be the same.
+          size_t event_handle = -1;
           for (auto profiler : profilers) {
-            event_handles.push_back(profiler->BeginEvent());
+            event_handle = profiler->BeginEvent();
           }
           if (!Invoke(subgraph_key).ok()) {
             BAND_LOG_INTERNAL(BAND_LOG_ERROR,
@@ -1154,8 +1154,13 @@ absl::Status Engine::ProfileModel(ModelId model_id,
                               "model %d in worker %d during profiling.",
                               model_id, worker_id);
           }
-          for (int i = 0; i < event_handles.size(); i++) {
-            profilers[i]->EndEvent(event_handles[i]);
+
+          for (int i = 0; i < profilers.size(); i++) {
+            profilers[i]->EndEvent(event_handle);
+            latency_estimator_->UpdateWithEvent(subgraph_key, event_handle);
+            // thermal_estimator_->UpdateWithEvent(subgraph_key, event_handle);
+            // frequency_latency_estimator_->UpdateWithEvent(subgraph_key,
+            //                                               event_handle);
           }
         }
       });

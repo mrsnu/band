@@ -2,6 +2,7 @@
 #define BAND_PROFILER_PROFILER_H_
 
 #include <chrono>
+#include <map>
 #include <vector>
 
 namespace band {

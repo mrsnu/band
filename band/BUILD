@@ -370,7 +370,7 @@ band_cc_library(
         ":time",
         ":worker",
         "//band/estimator:estimators",
-        "//band/graph:graph",
+        # "//band/graph:graph",
         "//band/buffer",
     ],
 )

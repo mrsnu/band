@@ -24,13 +24,14 @@ class ThermalEstimator : public IEstimator<SubgraphKey, ThermalInfo> {
   void Update(const SubgraphKey& key, ThermalInfo thermal) override;
   void Update(const SubgraphKey& key, ThermalInfo old_value,
               ThermalInfo new_value);
+  void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
 
-  absl::Status Load(ModelId model_id, std::string profile_path) override;
-  absl::Status Profile(ModelId model_id) override { return absl::OkStatus(); }
+  
   ThermalInfo GetProfiled(const SubgraphKey& key) const override;
   ThermalInfo GetExpected(const SubgraphKey& key) const override;
 
-  absl::Status DumpProfile() override;
+  absl::Status LoadProfile(std::string profile_path) override;
+  absl::Status DumpProfile(std::string path) override;
 
  private:
   Eigen::MatrixXd SolveLinear(Eigen::MatrixXd x, Eigen::VectorXd y) {

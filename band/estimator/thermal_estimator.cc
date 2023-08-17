@@ -46,8 +46,13 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalInfo old_value,
   ConvertEigenVectorToThermalInfo(new_vec);
 }
 
-absl::Status ThermalEstimator::Load(ModelId model_id,
-                                    std::string profile_path) {
+void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
+                                       size_t event_handle) {
+  Update(key, thermal_profiler_->GetThermalInfoStart(event_handle),
+         thermal_profiler_->GetThermalInfoEnd(event_handle));
+}
+
+absl::Status ThermalEstimator::LoadProfile(std::string profile_path) {
   return absl::OkStatus();
 }
 
@@ -59,6 +64,8 @@ ThermalInfo ThermalEstimator::GetExpected(const SubgraphKey& key) const {
   return {};
 }
 
-absl::Status ThermalEstimator::DumpProfile() { return absl::OkStatus(); }
+absl::Status ThermalEstimator::DumpProfile(std::string path) {
+  return absl::OkStatus();
+}
 
 }  // namespace band

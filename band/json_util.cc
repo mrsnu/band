@@ -43,7 +43,7 @@ absl::Status WriteToFile(const Json::Value& json_object,
   std::ofstream out_file(file_path, std::ios::out);
   if (!out_file.is_open()) {
     return absl::InternalError(absl::StrFormat(
-        "Cannot save profiled results to  %s", file_path.c_str()));
+        "Cannot save profiled results to %s", file_path.c_str()));
   }
 
   out_file << json_object;

@@ -126,6 +126,7 @@ ProfileConfig ProfileConfigBuilder::Build(
   profile_config.frequency_latency_config =
       freq_latency_profile_builder_.Build();
   profile_config.thermal_config = thermal_profile_builder_.Build();
+  profile_config.profile_path = profile_path_;
   profile_config.num_warmups = num_warmups_;
   profile_config.num_runs = num_runs_;
   return profile_config;
@@ -232,6 +233,8 @@ RuntimeConfig RuntimeConfigBuilder::Build(
                                     subgraph_preparation_type_};
 
   runtime_config.cpu_mask = cpu_mask_;
+  runtime_config.profile_config = profile_config;
+  runtime_config.device_config = device_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;
   return runtime_config;

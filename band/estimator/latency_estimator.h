@@ -20,15 +20,14 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
       : IEstimator(engine), latency_profiler_(latency_profiler) {}
   absl::Status Init(const LatencyProfileConfig& config);
 
-  absl::Status Load(ModelId model_id, std::string profile_path) override;
-  absl::Status Profile(ModelId model_id) override { return absl::OkStatus(); }
-
   void Update(const SubgraphKey& key, int64_t latency) override;
+  void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
   int64_t GetWorst(ModelId model_id) const;
 
-  absl::Status DumpProfile() override;
+  absl::Status LoadProfile(std::string profile_path) override;
+  absl::Status DumpProfile(std::string path) override;
 
   // latency in microseconds
   struct Latency {
@@ -38,6 +37,9 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
 
  private:
   size_t GetProfileHash() const;
+
+  absl::Status LoadFromProfiler();
+  absl::Status LoadFromFile(std::string profile_path);
 
   // Convert entries in the json value to ModelDeviceToLatency format,
   // for the given model name and target model id.

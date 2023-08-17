@@ -11,10 +11,11 @@
 #include "band/config.h"
 #include "band/engine_interface.h"
 #include "band/error_reporter.h"
+#include "band/estimator/estimator_interface.h"
 #include "band/estimator/frequency_latency_estimator.h"
 #include "band/estimator/latency_estimator.h"
 #include "band/estimator/thermal_estimator.h"
-#include "band/graph/graph.h"
+// #include "band/graph/graph.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
@@ -174,8 +175,7 @@ class Engine : public IEngine {
       const SubgraphKey& key) const;
 
   /* Model Profile */
-  absl::Status ProfileModel(ModelId model_id,
-                            std::vector<Profiler*> profilers);
+  absl::Status ProfileModel(ModelId model_id, std::vector<Profiler*> profilers);
 
   Engine() = delete;
   Engine(ErrorReporter* error_reporeter);
