@@ -431,7 +431,7 @@ void Benchmark::RunPeriodic() {
 
             if (kill_app_) return;
 
-            size_t elapsed_us = model_context->profiler.GetInterval(id);
+            size_t elapsed_us = model_context->profiler.GetDuration(id);
 
             if (elapsed_us < period_us) {
               std::this_thread::sleep_for(
@@ -526,7 +526,7 @@ absl::Status Benchmark::LogResults() {
                            const BenchmarkProfiler& profiler,
                            const ModelConfig* model_config = nullptr) {
     const double batch_size = model_config ? model_config->batch_size : 1;
-    double average_ms = (profiler.GetAverageInterval() / batch_size);
+    double average_ms = (profiler.GetAverageDuration() / batch_size);
     double average_fps = 1000 / average_ms;
 
     PrintHeader("Result - " + prefix);
@@ -541,7 +541,7 @@ absl::Status Benchmark::LogResults() {
       double slo_satisfactory_count = 0;
       for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
         if (!profiler.IsEventCanceled(i) &&
-            profiler.GetInterval(i) < model_config->slo_us) {
+            profiler.GetDuration(i) < model_config->slo_us) {
           slo_satisfactory_count++;
         }
       }

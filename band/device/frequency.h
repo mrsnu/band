@@ -11,13 +11,13 @@ namespace band {
 class DeviceConfig;
 enum class DeviceFlag : size_t;
 
-using FreqInfo = std::map<DeviceFlag, size_t>;
+using FreqMap = std::map<DeviceFlag, size_t>;
 
 class Frequency {
  public:
   explicit Frequency(DeviceConfig config);
   size_t GetFrequency(DeviceFlag device_flag);
-  FreqInfo GetAllFrequency();
+  FreqMap GetAllFrequency();
 
  private:
   bool CheckFrequency(std::string path);

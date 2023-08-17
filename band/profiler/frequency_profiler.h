@@ -10,6 +10,8 @@
 
 namespace band {
 
+using FreqInfo = std::pair<std::chrono::system_clock::time_point, FreqMap>;
+
 class FrequencyProfiler : public Profiler {
  public:
   explicit FrequencyProfiler(DeviceConfig config)
@@ -20,25 +22,22 @@ class FrequencyProfiler : public Profiler {
   size_t GetNumEvents() const override;
 
   FreqInfo GetFreqInfoStart(size_t index) const {
-    if (frequency_timeline_.size() <= index) {
+    if (timeline_.size() <= index) {
       return {};
     }
-    return frequency_timeline_[index].first;
+    return timeline_[index].first;
   }
 
   FreqInfo GetFreqInfoEnd(size_t index) const {
-    if (frequency_timeline_.size() <= index) {
+    if (timeline_.size() <= index) {
       return {};
     }
-    return frequency_timeline_[index].second;
+    return timeline_[index].second;
   }
 
  private:
   std::unique_ptr<Frequency> frequency_;
-  std::vector<std::pair<std::chrono::system_clock::time_point,
-                        std::chrono::system_clock::time_point>>
-      timeline_;
-  std::vector<std::pair<FreqInfo, FreqInfo>> frequency_timeline_;
+  std::vector<std::pair<FreqInfo, FreqInfo>> timeline_;
 };
 
 }  // namespace band

@@ -5,16 +5,15 @@
 namespace band {
 
 size_t ThermalProfiler::BeginEvent() {
-  timeline_.push_back({std::chrono::system_clock::now(), {}});
-  thermal_timeline_.push_back({thermal_->GetAllThermal(), {}});
+  timeline_.push_back(
+      {{std::chrono::system_clock::now(), thermal_->GetAllThermal()}, {}});
   return timeline_.size();
 }
 
 void ThermalProfiler::EndEvent(size_t event_handle) {
   if (event_handle && (event_handle - 1 < timeline_.size())) {
-    timeline_[event_handle - 1].second =
-        std::chrono::system_clock::now();
-    thermal_timeline_[event_handle - 1].second = thermal_->GetAllThermal();
+    timeline_[event_handle - 1].second = {std::chrono::system_clock::now(),
+                                          thermal_->GetAllThermal()};
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                       "ThermalProfiler end event with an invalid handle %d",

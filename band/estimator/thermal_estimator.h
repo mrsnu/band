@@ -16,19 +16,17 @@
 
 namespace band {
 
-class ThermalEstimator : public IEstimator<SubgraphKey, ThermalInfo> {
+class ThermalEstimator
+    : public IEstimator<SubgraphKey, ThermalInterval, ThermalMap> {
  public:
   explicit ThermalEstimator(IEngine* engine, ThermalProfiler* thermal_profiler)
       : IEstimator(engine), thermal_profiler_(thermal_profiler) {}
   absl::Status Init(const ThermalProfileConfig& config);
-  void Update(const SubgraphKey& key, ThermalInfo thermal) override;
-  void Update(const SubgraphKey& key, ThermalInfo old_value,
-              ThermalInfo new_value);
+  void Update(const SubgraphKey& key, ThermalInterval thermal) override;
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
 
-  
-  ThermalInfo GetProfiled(const SubgraphKey& key) const override;
-  ThermalInfo GetExpected(const SubgraphKey& key) const override;
+  ThermalMap GetProfiled(const SubgraphKey& key) const override;
+  ThermalMap GetExpected(const SubgraphKey& key) const override;
 
   absl::Status LoadProfile(std::string profile_path) override;
   absl::Status DumpProfile(std::string path) override;

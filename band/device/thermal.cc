@@ -44,7 +44,7 @@ size_t Thermal::GetThermal(DeviceFlag device_flag) {
   return device::TryReadSizeT({path}).value();
 }
 
-ThermalInfo Thermal::GetAllThermal() {
+ThermalMap Thermal::GetAllThermal() {
   std::map<DeviceFlag, size_t> thermal_map;
   for (auto& pair : thermal_device_map_) {
     thermal_map[pair.first] = GetThermal(pair.first);

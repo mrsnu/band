@@ -12,14 +12,16 @@ namespace band {
 
 class IEngine;
 
-template <typename EstimatorKey, typename EstimatorValue>
+template <typename EstimatorKey, typename EstimatorInput,
+          typename EstimatorOutput>
 class IEstimator {
  public:
   explicit IEstimator(IEngine* engine) : engine_(engine) {}
-  virtual void Update(const EstimatorKey& key, EstimatorValue new_value) = 0;
-  virtual void UpdateWithEvent(const EstimatorKey& key, size_t event_handle) = 0;
-  virtual EstimatorValue GetProfiled(const EstimatorKey& key) const = 0;
-  virtual EstimatorValue GetExpected(const EstimatorKey& key) const = 0;
+  virtual void Update(const EstimatorKey& key, EstimatorInput new_value) = 0;
+  virtual void UpdateWithEvent(const EstimatorKey& key,
+                               size_t event_handle) = 0;
+  virtual EstimatorOutput GetProfiled(const EstimatorKey& key) const = 0;
+  virtual EstimatorOutput GetExpected(const EstimatorKey& key) const = 0;
 
   virtual absl::Status LoadProfile(std::string profile_path) = 0;
   virtual absl::Status DumpProfile(std::string path) = 0;

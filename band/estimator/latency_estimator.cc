@@ -50,7 +50,7 @@ void LatencyEstimator::Update(const SubgraphKey& key, int64_t latency) {
 
 void LatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
                                        size_t event_handle) {
-  Update(key, latency_profiler_->GetInterval(event_handle));
+  Update(key, latency_profiler_->GetDuration(event_handle));
 }
 
 int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {

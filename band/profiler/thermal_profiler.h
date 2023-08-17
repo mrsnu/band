@@ -10,6 +10,10 @@
 
 namespace band {
 
+using ThermalInfo =
+    std::pair<std::chrono::system_clock::time_point, ThermalMap>;
+using ThermalInterval = std::pair<ThermalInfo, ThermalInfo>;
+
 class ThermalProfiler : public Profiler {
  public:
   explicit ThermalProfiler(DeviceConfig config)
@@ -19,26 +23,24 @@ class ThermalProfiler : public Profiler {
   void EndEvent(size_t event_handle) override;
   size_t GetNumEvents() const override;
 
-  ThermalInfo GetThermalInfoStart(size_t index) const {
-    if (thermal_timeline_.size() <= index) {
+  ThermalInterval GetInterval(size_t index) const {
+    if (timeline_.size() <= index) {
       return {};
     }
-    return thermal_timeline_[index].first;
+    return timeline_[index];
+  }
+
+  ThermalInfo GetThermalInfoStart(size_t index) const {
+    return GetInterval(index).first;
   }
 
   ThermalInfo GetThermalInfoEnd(size_t index) const {
-    if (thermal_timeline_.size() <= index) {
-      return {};
-    }
-    return thermal_timeline_[index].second;
+    return GetInterval(index).second;
   }
 
  private:
   std::unique_ptr<Thermal> thermal_;
-  std::vector<std::pair<std::chrono::system_clock::time_point,
-                        std::chrono::system_clock::time_point>>
-      timeline_;
-  std::vector<std::pair<ThermalInfo, ThermalInfo>> thermal_timeline_;
+  std::vector<std::pair<ThermalInfo, ThermalInfo>> timeline_;
 };
 
 }  // namespace band

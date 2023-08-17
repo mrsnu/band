@@ -5,16 +5,15 @@
 namespace band {
 
 size_t FrequencyProfiler::BeginEvent() {
-  timeline_.push_back({std::chrono::system_clock::now(), {}});
-  frequency_timeline_.push_back({frequency_->GetAllFrequency(), {}});
+  timeline_.push_back(
+      {{std::chrono::system_clock::now(), frequency_->GetAllFrequency()}, {}});
   return timeline_.size();
 }
 
 void FrequencyProfiler::EndEvent(size_t event_handle) {
   if (event_handle && (event_handle - 1 < timeline_.size())) {
-    timeline_[event_handle - 1].second = std::chrono::system_clock::now();
-    frequency_timeline_[event_handle - 1].second =
-        frequency_->GetAllFrequency();
+    timeline_[event_handle - 1].second = {std::chrono::system_clock::now(),
+                                          frequency_->GetAllFrequency()};
   } else {
     BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                       "FrequencyProfiler end event with an invalid handle %d",

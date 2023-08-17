@@ -14,7 +14,7 @@
 namespace band {
 
 class IEngine;
-class LatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
+class LatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
  public:
   explicit LatencyEstimator(IEngine* engine, LatencyProfiler* latency_profiler)
       : IEstimator(engine), latency_profiler_(latency_profiler) {}

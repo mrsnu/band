@@ -12,8 +12,7 @@ namespace band {
 
 namespace {
 
-Eigen::VectorXd ConvertThermalInfoToEigenVector(
-    const band::ThermalInfo& value) {
+Eigen::VectorXd ConvertThermalMapToEigenVector(const ThermalMap& value) {
   Eigen::VectorXd vec(value.size());
   int i = 0;
   for (const auto& pair : value) {
@@ -23,8 +22,8 @@ Eigen::VectorXd ConvertThermalInfoToEigenVector(
   return vec;
 }
 
-ThermalInfo ConvertEigenVectorToThermalInfo(const Eigen::VectorXd& vec) {
-  ThermalInfo value;
+ThermalMap ConvertEigenVectorToThermalMap(const Eigen::VectorXd& vec) {
+  ThermalMap value;
   for (int i = 0; i < vec.size(); i++) {
     value[static_cast<DeviceFlag>(i)] = vec(i);
   }
@@ -37,30 +36,26 @@ absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
   return absl::OkStatus();
 }
 
-void ThermalEstimator::Update(const SubgraphKey& key, ThermalInfo thermal) {}
-
-void ThermalEstimator::Update(const SubgraphKey& key, ThermalInfo old_value,
-                              ThermalInfo new_value) {
-  Eigen::VectorXd old_vec = ConvertThermalInfoToEigenVector(old_value);
-  Eigen::VectorXd new_vec = ConvertThermalInfoToEigenVector(new_value);
-  ConvertEigenVectorToThermalInfo(new_vec);
+void ThermalEstimator::Update(const SubgraphKey& key, ThermalInterval thermal) {
+  Eigen::VectorXd old_vec = ConvertThermalMapToEigenVector(thermal.first.second);
+  Eigen::VectorXd new_vec = ConvertThermalMapToEigenVector(thermal.second.second);
+  ConvertEigenVectorToThermalMap(new_vec);
 }
 
 void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
                                        size_t event_handle) {
-  Update(key, thermal_profiler_->GetThermalInfoStart(event_handle),
-         thermal_profiler_->GetThermalInfoEnd(event_handle));
+  Update(key, thermal_profiler_->GetInterval(event_handle));
 }
 
 absl::Status ThermalEstimator::LoadProfile(std::string profile_path) {
   return absl::OkStatus();
 }
 
-ThermalInfo ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
+ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
   return {};
 }
 
-ThermalInfo ThermalEstimator::GetExpected(const SubgraphKey& key) const {
+ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
   return {};
 }
 

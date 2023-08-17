@@ -9,7 +9,7 @@
 
 namespace band {
 
-class FrequencyLatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
+class FrequencyLatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
  public:
   explicit FrequencyLatencyEstimator(IEngine* engine,
                                      FrequencyProfiler* frequency_profiler,
@@ -22,7 +22,7 @@ class FrequencyLatencyEstimator : public IEstimator<SubgraphKey, int64_t> {
   }
   void Update(const SubgraphKey& key, int64_t latency) override {}
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
-  
+
   int64_t GetProfiled(const SubgraphKey& key) const override { return {}; }
   int64_t GetExpected(const SubgraphKey& key) const override { return {}; }
 
