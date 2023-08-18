@@ -51,23 +51,8 @@ class ThermalProfileConfigBuilder {
   friend class RuntimeConfigBuilder;
 
  public:
-  ThermalProfileConfigBuilder& AddCPUIndex(size_t cpu_index) {
-    cpu_index_ = cpu_index;
-    return *this;
-  }
-
-  ThermalProfileConfigBuilder& AddGPUIndex(size_t gpu_index) {
-    gpu_index_ = gpu_index;
-    return *this;
-  }
-
-  ThermalProfileConfigBuilder& AddDSPIndex(size_t dsp_index) {
-    dsp_index_ = dsp_index;
-    return *this;
-  }
-
-  ThermalProfileConfigBuilder& AddNPUIndex(size_t npu_index) {
-    npu_index_ = npu_index;
+  ThermalProfileConfigBuilder& AddWindowSize(size_t window_size) {
+    window_size_ = window_size;
     return *this;
   }
 
@@ -76,10 +61,7 @@ class ThermalProfileConfigBuilder {
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
 
  private:
-  size_t cpu_index_ = -1;
-  size_t gpu_index_ = -1;
-  size_t dsp_index_ = -1;
-  size_t npu_index_ = -1;
+  size_t window_size_ = 10;
 };
 
 class ProfileConfigBuilder {

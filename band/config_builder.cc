@@ -39,6 +39,7 @@ bool LatencyProfileConfigBuilder::IsValid(
 bool ThermalProfileConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
+  REPORT_IF_FALSE(ThermalProfileConfigBuilder, window_size_ > 0);
   return result;
 }
 
@@ -169,6 +170,7 @@ ThermalProfileConfig ThermalProfileConfigBuilder::Build(
     abort();
   }
   ThermalProfileConfig profile_config;
+  profile_config.window_size = window_size_;
   return profile_config;
 }
 

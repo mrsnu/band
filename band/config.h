@@ -19,6 +19,7 @@ struct LatencyProfileConfig {
 };
 
 struct ThermalProfileConfig {
+  size_t window_size = 10;
 };
 
 struct DeviceConfig {
