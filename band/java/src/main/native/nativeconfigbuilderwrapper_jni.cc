@@ -54,19 +54,105 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNumRuns(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencyProfileConfig(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jstring profileDataPath) {
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addProfilePath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jstring profilePath) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddProfilePath(ConvertJstringToString(env, profileDataPath));
+      ->AddProfilePath(ConvertJstringToString(env, profilePath));
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_AddLatencySmoothingFactor(
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addFrequencyLatencySmoothingFactor(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jfloat smoothingFactor) {
+    float smoothingFactor) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddLatencySmoothingFactor(static_cast<float>(smoothingFactor));
+      ->AddFrequencyLatencySmoothingFactor(smoothingFactor);
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencySmoothingFactor(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
+    float smoothingFactor) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddLatencySmoothingFactor(smoothingFactor);
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCPUThermIndex(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, int cpuThermIndex) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddCPUThermIndex(cpuThermIndex);
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addGPUThermIndex(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, int gpuThermIndex) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddGPUThermIndex(gpuThermIndex);
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addDSPThermIndex(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, int dspThermIndex) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddDSPThermIndex(dspThermIndex);
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNPUThermIndex(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, int npuThermIndex) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddNPUThermIndex(npuThermIndex);
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCPUFreqPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jstring cpuFreqPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddCPUFreqPath(ConvertJstringToString(env, cpuFreqPath));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addGPUFreqPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jstring gpuFreqPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddGPUFreqPath(ConvertJstringToString(env, gpuFreqPath));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addDSPFreqPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jstring dspFreqPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddDSPFreqPath(ConvertJstringToString(env, dspFreqPath));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNPUFreqPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jstring npuFreqPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddNPUFreqPath(ConvertJstringToString(env, npuFreqPath));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencyLogPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
+    jstring latencyLogPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddLatencyLogPath(ConvertJstringToString(env, latencyLogPath));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addThermLogPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
+    jstring thermLogPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddThermLogPath(ConvertJstringToString(env, thermLogPath));
+}
+
+JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addFreqLogPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jstring freqLogPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddFreqLogPath(ConvertJstringToString(env, freqLogPath));
 }
 
 JNIEXPORT void JNICALL

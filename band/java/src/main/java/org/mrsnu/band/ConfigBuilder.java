@@ -10,19 +10,66 @@ public class ConfigBuilder {
 
   public void addNumWarmups(int numWarmups) {
     wrapper.addNumWarmups(numWarmups);
-    ;
   }
 
   public void addNumRuns(int numRuns) {
     wrapper.addNumRuns(numRuns);
   }
 
-  public void addLatencyProfileConfig(String profileDataPath) {
-    wrapper.addLatencyProfileConfig(profileDataPath);
+  public void addProfilePath(String profilePath) {
+    wrapper.addProfilePath(profilePath);
+  }
+
+  public void addFrequencyLatencySmoothingFactor(float smoothingFactor) {
+    wrapper.addFrequencyLatencySmoothingFactor(smoothingFactor);
   }
 
   public void addLatencySmoothingFactor(float smoothingFactor) {
     wrapper.addLatencySmoothingFactor(smoothingFactor);
+  }
+
+  public void addCPUThermIndex(int cpuThermIndex) {
+    wrapper.addCPUThermIndex(cpuThermIndex);
+  }
+
+  public void addGPUThermIndex(int gpuThermIndex) {
+    wrapper.addGPUThermIndex(gpuThermIndex);
+  }
+
+  public void addDSPThermIndex(int dspThermIndex) {
+    wrapper.addDSPThermIndex(dspThermIndex);
+  }
+
+  public void addNPUThermIndex(int npuThermIndex) {
+    wrapper.addNPUThermIndex(npuThermIndex);
+  }
+
+  public void addCPUFreqPath(String cpuFreqPath) {
+    wrapper.addCPUFreqPath(cpuFreqPath);
+  }
+
+  public void addGPUFreqPath(String gpuFreqPath) {
+    wrapper.addGPUFreqPath(gpuFreqPath);
+  }
+
+  public void addDSPFreqPath(String dspFreqPath) {
+    wrapper.addDSPFreqPath(dspFreqPath);
+  }
+
+  public void addNPUFreqPath(String npuFreqPath) {
+    wrapper.addNPUFreqPath(npuFreqPath);
+  }
+
+  public void addLatencyLogPath(String latencyLogPath) {
+    wrapper.addLatencyLogPath(latencyLogPath);
+  }
+
+  public void addThermLogPath(String thermLogPath) {
+    wrapper.addThermLogPath(thermLogPath);
+  }
+
+  public void addFreqLogPath(String freqLogPath) {
+    wrapper.addFreqLogPath(freqLogPath);
   }
 
   public void addPlannerLogPath(String plannerLogPath) {

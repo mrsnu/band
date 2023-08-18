@@ -176,8 +176,8 @@ class Engine : public IEngine {
       const SubgraphKey& key) const;
 
   /* Model Profile */
-  size_t BeginEvent();
-  void EndEvent(size_t event_id);
+  size_t BeginEvent() override;
+  void EndEvent(size_t event_id) override;
   absl::Status ProfileModel(ModelId model_id);
 
   Engine() = delete;

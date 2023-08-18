@@ -15,12 +15,60 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addNumRuns(nativeHandle, numRuns);
   }
 
-  public void addLatencyProfileConfig(String profileDataPath) {
-    addLatencyProfileConfig(nativeHandle, profileDataPath);
+  public void addProfilePath(String profilePath) {
+    addProfilePath(nativeHandle, profilePath);
   }
 
-  public void addSmoothingFactor(float smoothingFactor) {
-    addSmoothingFactor(nativeHandle, smoothingFactor);
+  public void addFrequencyLatencySmoothingFactor(float smoothingFactor) {
+    addFrequencyLatencySmoothingFactor(nativeHandle, smoothingFactor);
+  }
+
+  public void addLatencySmoothingFactor(float smoothingFactor) {
+    addLatencySmoothingFactor(nativeHandle, smoothingFactor);
+  }
+
+  public void addCPUThermIndex(int cpuThermIndex) {
+    addCPUThermIndex(nativeHandle, cpuThermIndex);
+  }
+  
+  public void addGPUThermIndex(int gpuThermIndex) {
+    addGPUThermIndex(nativeHandle, gpuThermIndex);
+  }
+
+  public void addDSPThermIndex(int dspThermIndex) {
+    addDSPThermIndex(nativeHandle, dspThermIndex);
+  }
+
+  public void addNPUThermIndex(int npuThermIndex) {
+    addNPUThermIndex(nativeHandle, npuThermIndex);
+  }
+
+  public void addCPUFreqPath(String cpuFreqPath) {
+    addCPUFreqPath(nativeHandle, cpuFreqPath);
+  }
+
+  public void addGPUFreqPath(String gpuFreqPath) {
+    addGPUFreqPath(nativeHandle, gpuFreqPath);
+  }
+
+  public void addDSPFreqPath(String dspFreqPath) {
+    addDSPFreqPath(nativeHandle, dspFreqPath);
+  }
+
+  public void addNPUFreqPath(String npuFreqPath) {
+    addNPUFreqPath(nativeHandle, npuFreqPath);
+  }
+
+  public void addLatencyLogPath(String latencyLogPath) {
+    addLatencyLogPath(nativeHandle, latencyLogPath);
+  }
+
+  public void addThermLogPath(String thermLogPath) {
+    addThermLogPath(nativeHandle, thermLogPath);
+  }
+  
+  public void addFreqLogPath(String freqLogPath) {
+    addFreqLogPath(nativeHandle, freqLogPath);
   }
 
   public void addPlannerLogPath(String plannerLogPath) {
@@ -112,9 +160,33 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
 
   private native void addNumRuns(long configBuilderHandle, int numRuns);
 
-  private native void addLatencyProfileConfig(long configBuilderHandle, String profileDataPath);
+  private native void addProfilePath(long configBuilderHandle, String profilePath);
 
-  private native void addSmoothingFactor(long configBuilderHandle, float smoothingFactor);
+  private native void addFrequencyLatencySmoothingFactor(long configBuilderHandle, float smoothingFactor);
+
+  private native void addLatencySmoothingFactor(long configBuilderHandle, float smoothingFactor);
+
+  private native void addCPUThermIndex(long configBuilderHandle, int cpuThermIndex);
+
+  private native void addGPUThermIndex(long configBuilderHandle, int gpuThermIndex);
+
+  private native void addDSPThermIndex(long configBuilderHandle, int dspThermIndex);
+
+  private native void addNPUThermIndex(long configBuilderHandle, int npuThermIndex);
+
+  private native void addCPUFreqPath(long configBuilderHandle, String cpuFreqPath);
+
+  private native void addGPUFreqPath(long configBuilderHandle, String gpuFreqPath);
+
+  private native void addDSPFreqPath(long configBuilderHandle, String dspFreqPath);
+
+  private native void addNPUFreqPath(long configBuilderHandle, String npuFreqPath);
+
+  private native void addLatencyLogPath(long configBuilderHandle, String latencyLogPath);
+
+  private native void addThermLogPath(long configBuilderHandle, String thermLogPath);
+
+  private native void addFreqLogPath(long configBuilderHandle, String freqLogPath);
 
   private native void addPlannerLogPath(long configBuilderHandle, String plannerLogPath);
 

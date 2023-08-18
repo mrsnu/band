@@ -123,22 +123,22 @@ class DeviceConfigBuilder {
   friend class RuntimeConfigBuilder;
 
  public:
-  DeviceConfigBuilder& AddCPUThermalIndex(size_t cpu_therm_index) {
+  DeviceConfigBuilder& AddCPUThermIndex(size_t cpu_therm_index) {
     cpu_therm_index_ = cpu_therm_index;
     return *this;
   }
 
-  DeviceConfigBuilder& AddGPUThermalIndex(size_t gpu_therm_index) {
+  DeviceConfigBuilder& AddGPUThermIndex(size_t gpu_therm_index) {
     gpu_therm_index_ = gpu_therm_index;
     return *this;
   }
 
-  DeviceConfigBuilder& AddDSPThermalIndex(size_t dsp_therm_index) {
+  DeviceConfigBuilder& AddDSPThermIndex(size_t dsp_therm_index) {
     dsp_therm_index_ = dsp_therm_index;
     return *this;
   }
 
-  DeviceConfigBuilder& AddNPUThermalIndex(size_t npu_therm_index) {
+  DeviceConfigBuilder& AddNPUThermIndex(size_t npu_therm_index) {
     npu_therm_index_ = npu_therm_index;
     return *this;
   }
@@ -163,17 +163,17 @@ class DeviceConfigBuilder {
     return *this;
   }
 
-  DeviceConfigBuilder& AddLatencyDumpPath(std::string latency_log_path) {
+  DeviceConfigBuilder& AddLatencyLogPath(std::string latency_log_path) {
     latency_log_path_ = latency_log_path;
     return *this;
   }
 
-  DeviceConfigBuilder& AddThermalDumpPath(std::string therm_log_path) {
+  DeviceConfigBuilder& AddThermLogPath(std::string therm_log_path) {
     therm_log_path_ = therm_log_path;
     return *this;
   }
 
-  DeviceConfigBuilder& AddFrequencyDumpPath(std::string freq_log_path) {
+  DeviceConfigBuilder& AddFreqLogPath(std::string freq_log_path) {
     freq_log_path_ = freq_log_path;
     return *this;
   }
@@ -295,6 +295,62 @@ class RuntimeConfigBuilder {
   }
   RuntimeConfigBuilder& AddProfilePath(std::string profile_path) {
     profile_config_builder_.AddProfilePath(profile_path);
+    return *this;
+  }
+
+  // Add DeviceConfig
+  RuntimeConfigBuilder& AddCPUThermIndex(size_t cpu_therm_index) {
+    device_config_builder_.AddCPUThermIndex(cpu_therm_index);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddGPUThermIndex(size_t gpu_therm_index) {
+    device_config_builder_.AddGPUThermIndex(gpu_therm_index);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddDSPThermIndex(size_t dsp_therm_index) {
+    device_config_builder_.AddDSPThermIndex(dsp_therm_index);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddNPUThermIndex(size_t npu_therm_index) {
+    device_config_builder_.AddNPUThermIndex(npu_therm_index);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddCPUFreqPath(std::string cpu_freq_path) {
+    device_config_builder_.AddCPUFreqPath(cpu_freq_path);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddGPUFreqPath(std::string gpu_freq_path) {
+    device_config_builder_.AddGPUFreqPath(gpu_freq_path);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddDSPFreqPath(std::string dsp_freq_path) {
+    device_config_builder_.AddDSPFreqPath(dsp_freq_path);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddNPUFreqPath(std::string npu_freq_path) {
+    device_config_builder_.AddNPUFreqPath(npu_freq_path);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddLatencyLogPath(std::string latency_log_path) {
+    device_config_builder_.AddLatencyLogPath(latency_log_path);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddThermLogPath(std::string therm_log_path) {
+    device_config_builder_.AddThermLogPath(therm_log_path);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddFreqLogPath(std::string freq_log_path) {
+    device_config_builder_.AddFreqLogPath(freq_log_path);
     return *this;
   }
 
