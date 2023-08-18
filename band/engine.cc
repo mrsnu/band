@@ -809,6 +809,20 @@ Engine::GetShortestLatencyWithUnitSubgraph(
     std::pair<std::vector<SubgraphKey>, int64_t> local_min =
         std::make_pair<std::vector<SubgraphKey>, int64_t>({}, -1);
     for (int i = j; i >= start_unit_idx; --i) {
+      // Check if the subgraph(i, j) is valid.
+      if (unit_subgraphs_to_subgraph_keys_.find(model_id) ==
+          unit_subgraphs_to_subgraph_keys_.end()) {
+        continue;
+      }
+      if (unit_subgraphs_to_subgraph_keys_.at(model_id).find(i) ==
+          unit_subgraphs_to_subgraph_keys_.at(model_id).end()) {
+        continue;
+      }
+      if (unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).find(j) ==
+          unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).end()) {
+        continue;
+      }
+
       // Search from the profile result of the unit subgraph.
       const auto& subgraph_keys =
           unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).at(j);
