@@ -88,11 +88,11 @@ bool WorkerConfigBuilder::IsValid(
   return result;
 }
 
-bool RuntimeConfigBuilder::IsValid(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+bool SubgraphConfigBuilder::IsValid(
+  ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
-  REPORT_IF_FALSE(RuntimeConfigBuilder, minimum_subgraph_size_ > 0);
-  REPORT_IF_FALSE(RuntimeConfigBuilder,
+  REPORT_IF_FALSE(SubgraphConfigBuilder, minimum_subgraph_size_ > 0);
+  REPORT_IF_FALSE(SubgraphConfigBuilder,
                   subgraph_preparation_type_ ==
                           SubgraphPreparationType::kNoFallbackSubgraph ||
                       subgraph_preparation_type_ ==
@@ -101,6 +101,12 @@ bool RuntimeConfigBuilder::IsValid(
                           SubgraphPreparationType::kUnitSubgraph ||
                       subgraph_preparation_type_ ==
                           SubgraphPreparationType::kMergeUnitSubgraph);
+  return result;
+}
+
+bool RuntimeConfigBuilder::IsValid(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  bool result = true;
   REPORT_IF_FALSE(RuntimeConfigBuilder, cpu_mask_ == CPUMaskFlag::kAll ||
                                             cpu_mask_ == CPUMaskFlag::kLittle ||
                                             cpu_mask_ == CPUMaskFlag::kBig ||
@@ -110,6 +116,7 @@ bool RuntimeConfigBuilder::IsValid(
   REPORT_IF_FALSE(RuntimeConfigBuilder, profile_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, planner_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, worker_config_builder_.IsValid());
+  REPORT_IF_FALSE(RuntimeConfigBuilder, subgraph_config_builder_.IsValid());
 
   return result;
 }
@@ -219,6 +226,19 @@ WorkerConfig WorkerConfigBuilder::Build(
   return worker_config;
 }
 
+SubgraphConfig SubgraphConfigBuilder::Build(
+    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
+  // TODO(widiba03304): This should not terminate the program. After employing
+  // abseil, Build() should return error.
+  if (!IsValid(error_reporter)) {
+    abort();
+  }
+  SubgraphConfig subgraph_config;
+  subgraph_config.minimum_subgraph_size = minimum_subgraph_size_;
+  subgraph_config.subgraph_preparation_type = subgraph_preparation_type_;
+  return subgraph_config;
+}
+
 RuntimeConfig RuntimeConfigBuilder::Build(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   // TODO(widiba03304): This should not terminate the program. After employing
@@ -232,14 +252,14 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   DeviceConfig device_config = device_config_builder_.Build();
   PlannerConfig planner_config = planner_config_builder_.Build();
   WorkerConfig worker_config = worker_config_builder_.Build();
-  runtime_config.subgraph_config = {minimum_subgraph_size_,
-                                    subgraph_preparation_type_};
+  SubgraphConfig subgraph_config = subgraph_config_builder_.Build();
 
   runtime_config.cpu_mask = cpu_mask_;
   runtime_config.profile_config = profile_config;
   runtime_config.device_config = device_config;
   runtime_config.planner_config = planner_config;
   runtime_config.worker_config = worker_config;
+  runtime_config.subgraph_config = subgraph_config;
   return runtime_config;
 }
 

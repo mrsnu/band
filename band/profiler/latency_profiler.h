@@ -7,6 +7,7 @@
 
 #include "band/config.h"
 #include "band/profiler/profiler.h"
+#include "band/logger.h"
 
 namespace band {
 
@@ -28,7 +29,7 @@ class LatencyProfiler : public Profiler {
 
   double GetDuration(size_t index) const {
     if (timeline_.size() <= index) {
-      return 0;
+      return -1;
     }
     auto interv = GetInterval(index);
     auto start = interv.first;

@@ -1,6 +1,7 @@
 #include "band/profiler/thermal_profiler.h"
 
 #include <fstream>
+#include <cerrno>
 
 #include "band/logger.h"
 
@@ -35,7 +36,14 @@ std::string ThermalInfoToString(const ThermalInfo& info) {
 
 ThermalProfiler::ThermalProfiler(DeviceConfig config)
     : thermal_(new Thermal(config)) {
+  BAND_LOG_PROD(BAND_LOG_INFO, "ThermalProfiler is created.");
   log_file_.open(config.therm_log_path, std::ios::out);
+  if (!log_file_.is_open()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR,
+                  "ThermalProfiler failed to open the log file %s: %s",
+                  config.therm_log_path.c_str(), strerror(errno));
+    return;
+  }
   log_file_ << "[";
 }
 
@@ -52,11 +60,11 @@ size_t ThermalProfiler::BeginEvent() {
                       thermal_->GetAllThermal()};
   log_file_ << ThermalInfoToString(info) << ",";
   timeline_.push_back({info, {}});
-  return timeline_.size();
+  return timeline_.size() - 1;
 }
 
 void ThermalProfiler::EndEvent(size_t event_handle) {
-  if (!event_handle || event_handle > timeline_.size()) {
+  if (!event_handle || event_handle >= timeline_.size()) {
     BAND_LOG_PROD(BAND_LOG_ERROR,
                   "ThermalProfiler end event with an invalid handle %d",
                   event_handle);

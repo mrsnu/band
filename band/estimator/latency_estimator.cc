@@ -34,11 +34,8 @@ absl::Status LatencyEstimator::Init(const LatencyProfileConfig& config) {
 void LatencyEstimator::Update(const SubgraphKey& key, int64_t latency) {
   auto it = profile_database_.find(key);
   if (it == profile_database_.end()) {
-    BAND_LOG_INTERNAL(
-        BAND_LOG_INFO,
-        "[LatencyEstimator::Update] The given SubgraphKey %s "
-        "cannot be found. Initialize the entry with the given latency.",
-        key.ToString().c_str());
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %d.",
+                      key.ToString().c_str(), latency);
     profile_database_[key] = {latency, latency};
     return;
   }

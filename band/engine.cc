@@ -505,6 +505,13 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     return status;
   }
 
+  BAND_LOG_PROD(BAND_LOG_INFO, "MinimumSubgraphSize: %d",
+                config.subgraph_config.minimum_subgraph_size);
+  BAND_LOG_PROD(BAND_LOG_INFO, "PreparationType: %s",
+                ToString(config.subgraph_config.subgraph_preparation_type));
+
+  subgraph_config_ = config.subgraph_config;
+
   // Setup for profilers
   {
     latency_profiler_ = new LatencyProfiler();

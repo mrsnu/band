@@ -58,7 +58,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
                                 .AddProfilePath("band/test/data/config.json")
                                 .AddMinimumSubgraphSize(5)
                                 .AddSubgraphPreparationType(
-                                    SubgraphPreparationType::kMergeUnitSubgraph)
+                                    SubgraphPreparationType::kNoFallbackSubgraph)
                                 .AddPlannerLogPath("band/test/data/config.json")
                                 .AddScheduleWindowSize(1)
                                 .AddSchedulers({SchedulerType::kFixedWorker})
@@ -77,7 +77,7 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
             "band/test/data/config.json");
   EXPECT_EQ(config_ok.subgraph_config.minimum_subgraph_size, 5);
   EXPECT_EQ(config_ok.subgraph_config.subgraph_preparation_type,
-            SubgraphPreparationType::kMergeUnitSubgraph);
+            SubgraphPreparationType::kNoFallbackSubgraph);
   EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlag::kPrimary);
   EXPECT_EQ(config_ok.planner_config.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.planner_config.schedule_window_size, 1);

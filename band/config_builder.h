@@ -272,6 +272,28 @@ class WorkerConfigBuilder {
   int availability_check_interval_ms_ = 30000;
 };
 
+class SubgraphConfigBuilder {
+ public:
+  SubgraphConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
+    minimum_subgraph_size_ = minimum_subgraph_size;
+    return *this;
+  }
+
+  SubgraphConfigBuilder& AddSubgraphPreparationType(
+      SubgraphPreparationType subgraph_preparation_type) {
+    subgraph_preparation_type_ = subgraph_preparation_type;
+    return *this;
+  }
+
+  SubgraphConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
+  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+
+ private:
+  int minimum_subgraph_size_ = 7;
+  SubgraphPreparationType subgraph_preparation_type_ =
+      SubgraphPreparationType::kMergeUnitSubgraph;
+};
+
 // Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
@@ -395,15 +417,20 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
+
+  // Add SubgraphConfig
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
-    minimum_subgraph_size_ = minimum_subgraph_size;
+    subgraph_config_builder_.AddMinimumSubgraphSize(minimum_subgraph_size);
     return *this;
   }
   RuntimeConfigBuilder& AddSubgraphPreparationType(
       SubgraphPreparationType subgraph_preparation_type) {
-    subgraph_preparation_type_ = subgraph_preparation_type;
+    subgraph_config_builder_.AddSubgraphPreparationType(
+        subgraph_preparation_type);
     return *this;
   }
+
+  // Add RuntimeConfig
   RuntimeConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
     cpu_mask_ = cpu_mask;
     return *this;
@@ -417,9 +444,7 @@ class RuntimeConfigBuilder {
   DeviceConfigBuilder device_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
-  int minimum_subgraph_size_ = 7;
-  SubgraphPreparationType subgraph_preparation_type_ =
-      SubgraphPreparationType::kMergeUnitSubgraph;
+  SubgraphConfigBuilder subgraph_config_builder_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
 };
 

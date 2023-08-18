@@ -236,10 +236,10 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addMinimumSubgraphSize(
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addSubgraphPreparationType(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jint subgaphPreparationType) {
+    jint subgraphPreparationType) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
       ->AddSubgraphPreparationType(
-          static_cast<band::SubgraphPreparationType>(subgaphPreparationType));
+          static_cast<band::SubgraphPreparationType>(subgraphPreparationType));
 }
 
 JNIEXPORT void JNICALL
