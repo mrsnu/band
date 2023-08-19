@@ -39,11 +39,11 @@ class ThermalEstimator
   absl::Status LoadModel(std::string profile_path) override;
   absl::Status DumpModel(std::string profile_path) override;
 
- private:
-  Eigen::MatrixXd SolveLinear(Eigen::MatrixXd x, Eigen::VectorXd y) {
+  Eigen::MatrixXd SolveLinear(Eigen::MatrixXd x, Eigen::MatrixXd y) {
     return (x.transpose() * x).ldlt().solve(x.transpose() * y);
   }
 
+ private:
   ThermalProfiler* thermal_profiler_;
   FrequencyProfiler* frequency_profiler_;
   LatencyProfiler* latency_profiler_;
@@ -52,9 +52,9 @@ class ThermalEstimator
   size_t window_size_;
 
   std::string profile_path_;
-  Eigen::MatrixXd model_;
 
-  std::deque<Eigen::VectorXd> history_queue_;
+  Eigen::MatrixXd model_;
+  std::deque<std::pair<Eigen::VectorXd, Eigen::VectorXd>> features_;
 };
 
 }  // namespace band

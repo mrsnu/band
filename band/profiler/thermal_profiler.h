@@ -39,6 +39,10 @@ class ThermalProfiler : public Profiler {
     return GetInterval(index).second;
   }
 
+  ThermalMap GetAllThermal() const {
+    return thermal_->GetAllThermal();
+  }
+
  private:
   std::unique_ptr<Thermal> thermal_;
   std::vector<std::pair<ThermalInfo, ThermalInfo>> timeline_;
