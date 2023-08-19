@@ -43,6 +43,10 @@ class ThermalEstimator
     return (x.transpose() * x).ldlt().solve(x.transpose() * y);
   }
 
+  Json::Value EigenMatrixToJson(Eigen::MatrixXd matrix);
+
+  Eigen::MatrixXd JsonToEigenMatrix(Json::Value json);
+
  private:
   ThermalProfiler* thermal_profiler_;
   FrequencyProfiler* frequency_profiler_;

@@ -112,11 +112,43 @@ ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
 }
 
 absl::Status ThermalEstimator::LoadModel(std::string profile_path) {
+  Json::Value root;
+  std::ifstream file(profile_path);
+  file >> root;
+  window_size_ = root["window_size"].asInt();
+  model_ = JsonToEigenMatrix(root["model"]);
   return absl::OkStatus();
 }
 
 absl::Status ThermalEstimator::DumpModel(std::string profile_path) {
+  Json::Value root;
+  root["window_size"] = window_size_;
+  root["model"] = EigenMatrixToJson(model_);
+  std::ofstream file(profile_path);
+  file << root;
   return absl::OkStatus();
+}
+
+Json::Value ThermalEstimator::EigenMatrixToJson(Eigen::MatrixXd matrix) {
+  Json::Value result;
+  for (int i = 0; i < matrix.rows(); i++) {
+    Json::Value row;
+    for (int j = 0; j < matrix.cols(); j++) {
+      row.append(matrix(i, j));
+    }
+    result.append(row);
+  }
+  return result;
+}
+
+Eigen::MatrixXd ThermalEstimator::JsonToEigenMatrix(Json::Value json) {
+  Eigen::MatrixXd result(json.size(), json[0].size());
+  for (int i = 0; i < json.size(); i++) {
+    for (int j = 0; j < json[i].size(); j++) {
+      result(i, j) = json[i][j].asDouble();
+    }
+  }
+  return result;
 }
 
 }  // namespace band
