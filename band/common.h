@@ -57,6 +57,8 @@ enum class SchedulerType : size_t {
   kHeterogeneousEarliestFinishTime = 4,
   kLeastSlackTimeFirst = 5,
   kHeterogeneousEarliestFinishTimeReserved = 6,
+  kGreedyThermal = 7,
+  kFrameThermal = 8,
 };
 
 enum class CPUMaskFlag : size_t {

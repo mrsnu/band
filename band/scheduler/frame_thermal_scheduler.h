@@ -1,13 +1,13 @@
-#ifndef BAND_SCHEDULER_THERMAL_SCHEDULER_H_
-#define BAND_SCHEDULER_THERMAL_SCHEDULER_H_
+#ifndef BAND_SCHEDULER_FRAME_THERMAL_SCHEDULER_H_
+#define BAND_SCHEDULER_FRAME_THERMAL_SCHEDULER_H_
 
 #include "band/scheduler/scheduler.h"
 
 namespace band {
 
-class ThermalScheduler : public IScheduler {
+class FrameThremalScheduler : public IScheduler {
  public:
-  explicit ThermalScheduler(IEngine& engine) : IScheduler(engine) {};
+  explicit FrameThremalScheduler(IEngine& engine) : IScheduler(engine) {};
 
   bool Schedule(JobQueue& requests) override;
   bool NeedFallbackSubgraphs() override { return true; }
@@ -18,4 +18,4 @@ class ThermalScheduler : public IScheduler {
 
 }  // namespace band
 
-#endif  // BAND_SCHEDULER_THERMAL_SCHEDULER_H_
+#endif  // BAND_SCHEDULER_FRAME_THERMAL_SCHEDULER_H_

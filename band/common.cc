@@ -12,9 +12,7 @@ size_t EnumLength<BackendType>() {
 
 template <>
 size_t EnumLength<SchedulerType>() {
-  return static_cast<size_t>(
-             SchedulerType::kHeterogeneousEarliestFinishTimeReserved) +
-         1;
+  return static_cast<size_t>(SchedulerType::kFrameThermal) + 1;
 }
 
 template <>
