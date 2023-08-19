@@ -35,7 +35,7 @@ std::vector<std::string> ListDirectoriesInPathSuffix(const char* path,
                                                      const char* suffix);
 
 bool IsFileAvailable(std::string path);
-bool IsRooted();
+void Root();
 std::string RunCommand(const std::string& command);
 absl::StatusOr<std::string> GetDeviceProperty(const std::string& property);
 

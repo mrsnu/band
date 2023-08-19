@@ -26,9 +26,7 @@
 #include "absl/status/statusor.h"
 #include "band/device/util.h"
 
-#if BAND_IS_MOBILE
 #include <sched.h>  // cpu_set_t
-#endif  // BAND_IS_MOBILE
 
 namespace band {
 
@@ -46,13 +44,11 @@ class CpuSet {
   std::string ToString() const;
   bool operator==(const CpuSet& rhs) const;
 
-#if BAND_IS_MOBILE
   const cpu_set_t& GetCpuSet() const { return cpu_set_; }
   cpu_set_t& GetCpuSet() { return cpu_set_; }
 
  private:
   cpu_set_t cpu_set_;
-#endif  // BAND_IS_MOBILE
 };
 
 // cpu info

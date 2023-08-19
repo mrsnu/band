@@ -79,7 +79,10 @@ bool Worker::IsAvailable() const { return !is_throttling_ && !is_paused_; }
 
 void Worker::Start() {
   std::call_once(device_cpu_start_flag_, [&]() {
-    device_cpu_thread_ = std::thread([this] { this->Work(); });
+    device_cpu_thread_ = std::thread([this] {
+      device::Root();
+      this->Work();
+    });
   });
 }
 
@@ -138,7 +141,6 @@ absl::Status Worker::TryUpdateWorkerThread() {
     // internal_backend->SetCpuSet(std::this_thread::get_id(), cpu_set_);
     // internal_backend->SetMaxNumThreads(num_threads_);
 
-#if BAND_IS_MOBILE
     if (cpu_set_.NumEnabled() == 0) {
       return absl::OkStatus();
     }
@@ -148,7 +150,6 @@ absl::Status Worker::TryUpdateWorkerThread() {
           absl::StrFormat("Worker (%d, %s) failed to set cpu thread affinity",
                           worker_id_, ToString(device_flag_)));
     }
-#endif
   }
   return absl::OkStatus();
 }

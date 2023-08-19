@@ -18,6 +18,7 @@ namespace band {
 
 Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
   planner_thread_ = std::thread([this] {
+    device::Root();
     auto status = this->Plan();
     if (!status.ok()) {
       BAND_LOG_PROD(BAND_LOG_ERROR, "Planner thread failed: %s",

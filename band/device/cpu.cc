@@ -21,17 +21,14 @@
 
 #include "band/logger.h"
 
-#if BAND_IS_MOBILE
 #include <errno.h>
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-#endif  // BAND_IS_MOBILE
 
 namespace band {
 using namespace device;
 
-#if BAND_IS_MOBILE
 CpuSet::CpuSet() { DisableAll(); }
 
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
@@ -63,26 +60,6 @@ size_t CpuSet::NumEnabled() const {
   return num_enabled;
 }
 
-#else   // defined BAND_IS_MOBILE
-CpuSet::CpuSet() {}
-
-void CpuSet::Enable(int /* cpu */) {}
-
-void CpuSet::Disable(int /* cpu */) {}
-
-void CpuSet::DisableAll() {}
-
-const unsigned long* CpuSet::GetMaskBits() const { return nullptr; }
-
-std::vector<unsigned long> CpuSet::GetMaskBitsVector() const { return {}; }
-
-bool CpuSet::operator==(const CpuSet& rhs) const { return true; }
-
-bool CpuSet::IsEnabled(int /* cpu */) const { return true; }
-
-size_t CpuSet::NumEnabled() const { return GetCPUCount(); }
-#endif  // defined BAND_IS_MOBILE
-
 std::string CpuSet::ToString() const {
   std::string str;
   for (size_t i = 0; i < GetCPUCount(); i++) {
@@ -109,12 +86,6 @@ static size_t g_cpucount = GetCPUCount();
 
 size_t GetCPUCount() {
   size_t count = 0;
-#ifdef __EMSCRIPTEN__
-  if (emscripten_has_threading_support())
-    count = emscripten_num_logical_cores();
-  else
-    count = 1;
-#elif BAND_IS_MOBILE
   // get cpu count from /proc/cpuinfo
   FILE* fp = fopen("/proc/cpuinfo", "rb");
   if (!fp) return 1;
@@ -130,13 +101,6 @@ size_t GetCPUCount() {
   }
 
   fclose(fp);
-#elif __IOS__
-  size_t len = sizeof(count);
-  sysctlbyname("hw.ncpu", &count, &len, NULL, 0);
-#else
-  count = 1;
-#endif
-
   if (count < 1) count = 1;
 
   return count;
@@ -150,7 +114,6 @@ size_t GetBigCPUCount() {
   return BandCPUMaskGetSet(CPUMaskFlag::kBig).NumEnabled();
 }
 
-#if BAND_IS_MOBILE
 int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
   char path[256];
@@ -212,11 +175,7 @@ int get_max_freq_khz(int cpuid) {
   return max_freq_khz;
 }
 
-#endif  // defined BAND_IS_MOBILE
-
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
-#if BAND_IS_MOBILE
-
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
@@ -236,14 +195,9 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
         " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
   }
   return absl::OkStatus();
-#else
-  return absl::UnavailableError("Device not supported");
-#endif
 }
 
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
-#if BAND_IS_MOBILE
-
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
 #else
@@ -262,15 +216,11 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
         " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
   }
   return absl::OkStatus();
-#else
-  return absl::UnavailableError("Device not supported");
-#endif
 }
 
 int SetupThreadAffinityMasks() {
   g_thread_affinity_mask_all.DisableAll();
 
-#if BAND_IS_MOBILE
   int max_freq_khz_min = INT_MAX;
   int max_freq_khz_max = 0;
   std::vector<int> cpu_max_freq_khz(g_cpucount);
@@ -314,12 +264,6 @@ int SetupThreadAffinityMasks() {
       g_thread_affinity_mask_little.ToString().c_str(),
       g_thread_affinity_mask_big.ToString().c_str(),
       g_thread_affinity_mask_primary.ToString().c_str());
-
-#else
-  // TODO implement me for other platforms
-  g_thread_affinity_mask_little.DisableAll();
-  g_thread_affinity_mask_big = g_thread_affinity_mask_all;
-#endif
 
   return 0;
 }

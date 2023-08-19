@@ -186,6 +186,7 @@ DeviceConfig DeviceConfigBuilder::Build(
   device_config.gpu_therm_index = gpu_therm_index_;
   device_config.dsp_therm_index = dsp_therm_index_;
   device_config.npu_therm_index = npu_therm_index_;
+  device_config.target_therm_index = target_therm_index_;
   device_config.cpu_freq_path = cpu_freq_path_;
   device_config.gpu_freq_path = gpu_freq_path_;
   device_config.dsp_freq_path = dsp_freq_path_;

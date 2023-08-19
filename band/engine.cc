@@ -489,6 +489,8 @@ void Engine::SetOnEndRequest(
 }
 
 absl::Status Engine::Init(const RuntimeConfig& config) {
+  device::Root();
+  
   planner_ = std::make_unique<Planner>(*this);
   auto status = planner_->Init(config.planner_config);
   if (!status.ok()) {
@@ -542,7 +544,6 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     }
   }
 
-#if BAND_IS_MOBILE
   {
     const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
     auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
@@ -555,7 +556,6 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       return status;
     }
   }
-#endif
 
   // Search for all available backends, devices
   std::set<DeviceFlag> valid_devices;
@@ -1145,7 +1145,7 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
     worker->Pause();
     worker->Wait();
     std::thread profile_thread([&]() {
-#if BAND_IS_MOBILE
+      device::Root();
       if (worker->GetWorkerThreadAffinity().NumEnabled() > 0) {
         BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                           "Failed to get worker thread affinity");
@@ -1156,7 +1156,6 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
                           "%d to profile thread",
                           worker_id);
       }
-#endif  // BAND_IS_MOBILE
       ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
         if (subgraph_key.GetWorkerId() != worker_id ||
             subgraph_key.GetModelId() != model_id) {

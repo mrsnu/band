@@ -10,6 +10,10 @@ public class Engine {
     wrapper = new NativeEngineWrapper(config);
   }
 
+  public void close() {
+    wrapper.close();
+  }
+
   public void registerModel(Model model) {
     wrapper.registerModel(model);
   }

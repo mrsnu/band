@@ -4,6 +4,7 @@
 #include "band/common.h"
 #include "band/config.h"
 #include "band/device/util.h"
+#include "band/logger.h"
 
 namespace band {
 
@@ -18,28 +19,46 @@ std::string GetThermalPath(size_t index) {
 }  // anonymous namespace
 
 Thermal::Thermal(DeviceConfig config) {
+  device::Root();
+  
   if (config.cpu_therm_index != -1 &&
-      !CheckThermalZone(config.cpu_therm_index)) {
+      CheckThermalZone(config.cpu_therm_index)) {
     thermal_device_map_[SensorFlag::kCPU] = config.cpu_therm_index;
+  } else {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "CPU thermal zone %d is not available.",
+                  config.cpu_therm_index);
   }
 
   if (config.gpu_therm_index != -1 &&
-      !CheckThermalZone(config.gpu_therm_index)) {
+      CheckThermalZone(config.gpu_therm_index)) {
     thermal_device_map_[SensorFlag::kGPU] = config.gpu_therm_index;
+  } else {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "GPU thermal zone %d is not available.",
+                  config.gpu_therm_index);
   }
 
   if (config.dsp_therm_index != -1 &&
-      !CheckThermalZone(config.dsp_therm_index)) {
+      CheckThermalZone(config.dsp_therm_index)) {
     thermal_device_map_[SensorFlag::kDSP] = config.dsp_therm_index;
+  } else {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "DSP thermal zone %d is not available.",
+                  config.dsp_therm_index);
   }
 
   if (config.npu_therm_index != -1 &&
-      !CheckThermalZone(config.npu_therm_index)) {
+      CheckThermalZone(config.npu_therm_index)) {
     thermal_device_map_[SensorFlag::kNPU] = config.npu_therm_index;
+  } else {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "NPU thermal zone %d is not available.",
+                  config.npu_therm_index);
   }
+
   if (config.target_therm_index != -1 &&
-      !CheckThermalZone(config.target_therm_index)) {
+      CheckThermalZone(config.target_therm_index)) {
     thermal_device_map_[SensorFlag::kTarget] = config.target_therm_index;
+  } else {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Target thermal zone %d is not available.",
+                  config.target_therm_index);
   }
 }
 

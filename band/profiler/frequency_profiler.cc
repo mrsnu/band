@@ -1,5 +1,8 @@
 #include "band/profiler/frequency_profiler.h"
 
+#include <fstream>
+#include <cerrno>
+
 #include "band/logger.h"
 
 namespace band {
@@ -37,8 +40,8 @@ FrequencyProfiler::FrequencyProfiler(DeviceConfig config)
   log_file_.open(config.freq_log_path, std::ios::out);
   if (!log_file_.is_open()) {
     BAND_LOG_PROD(BAND_LOG_ERROR,
-                  "FrequencyProfiler failed to open the log file %s",
-                  config.freq_log_path.c_str());
+                  "ThermalProfiler failed to open the log file %s: %s",
+                  config.freq_log_path.c_str(), strerror(errno));
     return;
   }
   log_file_ << "{";

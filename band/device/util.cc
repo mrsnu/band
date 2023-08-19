@@ -14,8 +14,8 @@
 #include <mutex>
 #include <sstream>
 
+#include "absl/strings/str_format.h"
 #include "band/logger.h"
-#include "util.h"
 
 namespace band {
 namespace device {
@@ -42,7 +42,8 @@ absl::StatusOr<T> TryRead(std::vector<std::string> paths,
       return output * multipliers[i];
     }
   }
-  return absl::NotFoundError("No available path");
+  return absl::NotFoundError(
+      absl::StrFormat("No available path: %s !", paths[0].c_str()));
 }
 
 absl::StatusOr<size_t> TryReadSizeT(std::vector<std::string> paths,
@@ -69,7 +70,8 @@ absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
       return outputs;
     }
   }
-  return absl::NotFoundError("No available path");
+  return absl::NotFoundError(
+      absl::StrFormat("No available path: %s !", paths[0].c_str()));
 }
 
 std::vector<std::string> ListFilesInPath(const char* path) {
@@ -197,41 +199,22 @@ bool IsFileAvailable(std::string path) {
 std::string RunCommand(const std::string& command) {
   std::string result = "";
   // suppress stderr
-#ifdef _WIN32
-  FILE* pipe = _popen((command + "2>&1").c_str(), "r");
-#else
   FILE* pipe = popen((command + "2>&1").c_str(), "r");
-#endif
   if (pipe != nullptr) {
     char buffer[128];
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
       result += buffer;
     }
-#ifdef _WIN32
-    _pclose(pipe);
-#else
     pclose(pipe);
-#endif
   }
   return result;
 }
 
-bool IsRooted() {
-  static std::once_flag flag;
-  static bool is_rooted = false;
-
-#if BAND_IS_MOBILE
-  std::call_once(
-      flag,
-      [](bool& is_rooted) {
-        is_rooted = RunCommand("su -c 'echo rooted'").find("rooted") !=
-                    std::string::npos;
-        BAND_LOG_INTERNAL(BAND_LOG_INFO, "Is rooted: %d", is_rooted);
-      },
-      is_rooted);
-#endif
-
-  return is_rooted;
+void Root() {
+  bool is_rooted = true;
+  is_rooted =
+      RunCommand("su -c 'echo rooted'").find("rooted") != std::string::npos;
+  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Is rooted: %d", is_rooted);
 }
 
 absl::StatusOr<std::string> GetDeviceProperty(const std::string& property) {
