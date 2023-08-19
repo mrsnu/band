@@ -24,7 +24,6 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
-  int64_t GetWorst(ModelId model_id) const;
 
   absl::Status LoadModel(std::string profile_path) override;
   absl::Status DumpModel(std::string profile_path) override;

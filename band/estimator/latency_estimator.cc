@@ -74,17 +74,6 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
   }
 }
 
-int64_t LatencyEstimator::GetWorst(ModelId model_id) const {
-  double worst_model_latency = -1;
-  for (auto it : profile_database_) {
-    if (it.first.GetModelId() == model_id) {
-      worst_model_latency =
-          std::max(worst_model_latency, it.second.moving_averaged);
-    }
-  }
-  return worst_model_latency;
-}
-
 size_t LatencyEstimator::GetProfileHash() const {
   auto hash_func = std::hash<int>();
   size_t hash = hash_func(engine_->GetNumWorkers());

@@ -384,16 +384,6 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
     job.require_callback = options[i].require_callback;
 
     int target_slo_us = options[i].slo_us;
-    // TODO(widiba03304): absl::optional for implicit slo_scale default.
-    if (options[i].slo_scale != -1) {
-      if (options[i].slo_scale <= 0) {
-        return absl::InternalError(absl::StrFormat(
-            "Specified slo_scale is invalid (%f <= 0)", options[i].slo_scale));
-      }
-
-      target_slo_us = GetWorst(model_ids[i]) * options[i].slo_scale;
-    }
-
     // override, if `slo_us` is specified
     if (options[i].slo_us != -1) {
       target_slo_us = options[i].slo_us;
@@ -704,7 +694,7 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
 
 std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
     ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
-    const std::map<WorkerId, int64_t>& worker_waiting) const {
+    const WorkerWaitingTime& worker_waiting) const {
   // lookup key for cache
   std::pair<ModelId, BitMask> cache_key = {model_id, resolved_unit_subgraphs};
 
@@ -789,7 +779,7 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
 std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetShortestLatencyWithUnitSubgraph(
     ModelId model_id, int start_unit_idx,
-    const std::map<WorkerId, int64_t>& worker_waiting) const {
+    const WorkerWaitingTime& worker_waiting) const {
   const ModelSpec* model_spec = GetModelSpec(model_id);
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
@@ -857,15 +847,14 @@ Engine::GetShortestLatencyWithUnitSubgraph(
 
 std::pair<std::vector<SubgraphKey>, int64_t>
 Engine::GetSubgraphWithShortestLatency(
-    const Job& job, const std::map<WorkerId, int64_t>& worker_waiting) const {
+    const Job& job, const WorkerWaitingTime& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
   if (subgraph_config_.subgraph_preparation_type ==
       SubgraphPreparationType::kFallbackPerWorker) {
     auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
                                    worker_waiting);
     std::pair<std::vector<SubgraphKey>, int64_t> ret =
-        std::pair<std::vector<SubgraphKey>, int64_t>({}, pair.second);
-    ret.first.push_back(pair.first);
+        std::pair<std::vector<SubgraphKey>, int64_t>({pair.first}, pair.second);
     return ret;
   } else {
     int start_unit_idx = 0;
@@ -881,7 +870,7 @@ Engine::GetSubgraphWithShortestLatency(
 }
 
 SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
-    const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+    const Job& job, const WorkerWaitingTime& worker_waiting,
     const std::set<WorkerId>& idle_workers) const {
   // TODO: implement this with SLO-based scheduler e.g., LSF
   BAND_NOT_IMPLEMENTED;
@@ -927,27 +916,33 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
 
 std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
     const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
-    const std::map<WorkerId, int64_t>& worker_waiting) const {
-  int64_t min_latency = std::numeric_limits<int64_t>::max();
+    const WorkerWaitingTime& worker_waiting) const {
+  return GetMinCostSubgraphKey(
+      subgraph_keys, start_time, worker_waiting,
+      [this](double latency, ThermalMap thermal) { return latency; });
+}
+
+std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
+    const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
+    const WorkerWaitingTime& worker_waiting,
+    const std::function<double(double, ThermalMap)> cost) const {
+  double min_cost = std::numeric_limits<double>::max();
   SubgraphKey min_key = {};
 
   for (const auto& key : subgraph_keys) {
-    // TODO: safety check to avoid contention with profiler?
-    int64_t waiting_time = worker_waiting.at(key.GetWorkerId());
-    int64_t expected_latency = GetExpected(key);
-    int64_t total = expected_latency + std::max(waiting_time, start_time);
+    double waiting_time = worker_waiting.at(key.GetWorkerId());
+    double latency = frequency_latency_estimator_->GetExpected(key);
+    double expected_latency =
+        latency + std::max(waiting_time, static_cast<double>(start_time));
+    ThermalMap expected_thermal = thermal_estimator_->GetExpected(key);
+    double total = cost(expected_latency, expected_thermal);
 
-    if (min_latency >= total) {
-      min_latency = total;
+    if (min_cost >= total) {
+      min_cost = total;
       min_key = key;
     }
   }
-
-  return {min_key, min_latency};
-}
-
-void Engine::Update(const SubgraphKey& key, int64_t new_value) {
-  latency_estimator_->Update(key, new_value);
+  return {min_key, min_cost};
 }
 
 void Engine::UpdateWithEvent(const SubgraphKey& key, size_t event_id) {
@@ -962,10 +957,6 @@ int64_t Engine::GetProfiled(const SubgraphKey& key) const {
 
 int64_t Engine::GetExpected(const SubgraphKey& key) const {
   return latency_estimator_->GetExpected(key);
-}
-
-int64_t Engine::GetWorst(ModelId model_id) const {
-  return latency_estimator_->GetWorst(model_id);
 }
 
 void Engine::Trigger() { planner_->Trigger(); }

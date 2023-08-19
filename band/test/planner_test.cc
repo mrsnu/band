@@ -13,7 +13,6 @@ namespace test {
 
 struct MockEngine : public MockEngineBase {
   void PrepareReenqueue(Job&) override{};
-  void Update(const SubgraphKey&, int64_t) override{};
   void EnqueueFinishedJob(Job& job) override { finished.insert(job.job_id); }
   void Trigger() override {}
 

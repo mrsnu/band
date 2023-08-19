@@ -126,19 +126,18 @@ class Engine : public IEngine {
   /* utility funtions for unit-level scheduling */
   std::pair<SubgraphKey, int64_t> GetShortestLatency(
       ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting) const override;
+      const WorkerWaitingTime& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t>
   GetShortestLatencyWithUnitSubgraph(
       ModelId model_id, int start_unit_idx,
-      const std::map<WorkerId, int64_t>& worker_waiting) const override;
+      const WorkerWaitingTime& worker_waiting) const override;
 
   std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
-      const Job& job,
-      const std::map<WorkerId, int64_t>& worker_waiting) const override;
+      const Job& job, const WorkerWaitingTime& worker_waiting) const override;
 
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
-      const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+      const Job& job, const WorkerWaitingTime& worker_waiting,
       const std::set<WorkerId>& idle_workers) const override;
 
   std::vector<SubgraphKey> GetSubgraphCandidates(
@@ -146,12 +145,15 @@ class Engine : public IEngine {
 
   std::pair<SubgraphKey, int64_t> GetShortestSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting) const;
+      const WorkerWaitingTime& worker_waiting) const;
+
+  std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
+      const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
+      const WorkerWaitingTime& worker_waiting,
+      const std::function<double(double, ThermalMap)> cost) const;
 
   /* estimators */
-  void Update(const SubgraphKey& key, int64_t new_value) override;
   void UpdateWithEvent(const SubgraphKey&, size_t event_id) override;
-  int64_t GetWorst(ModelId model_id) const;
 
   /* planner */
   void Trigger() override;

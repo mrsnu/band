@@ -206,8 +206,6 @@ void Worker::Work() {
         current_job->end_time = time::NowMicros();
         engine_->EndEvent(current_job->event_id);
         engine_->UpdateWithEvent(subgraph_key, current_job->event_id);
-        // engine_->Update(subgraph_key, 
-        //                 (current_job->end_time - current_job->invoke_time));
         if (current_job->following_jobs.size() != 0) {
           engine_->EnqueueBatch(current_job->following_jobs);
         }
