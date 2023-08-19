@@ -31,11 +31,11 @@ class ThermalProfiler : public Profiler {
     return timeline_[index];
   }
 
-  ThermalInfo GetThermalInfoStart(size_t index) const {
+  ThermalInfo GetStart(size_t index) const {
     return GetInterval(index).first;
   }
 
-  ThermalInfo GetThermalInfoEnd(size_t index) const {
+  ThermalInfo GetEnd(size_t index) const {
     return GetInterval(index).second;
   }
 

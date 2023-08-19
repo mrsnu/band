@@ -20,7 +20,7 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
       : IEstimator(engine), latency_profiler_(latency_profiler) {}
   absl::Status Init(const LatencyProfileConfig& config);
 
-  void Update(const SubgraphKey& key, int64_t latency) override;
+  void Update(const SubgraphKey& key, double latency);
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
   int64_t GetProfiled(const SubgraphKey& key) const override;
   int64_t GetExpected(const SubgraphKey& key) const override;
@@ -31,8 +31,8 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
 
   // latency in microseconds
   struct Latency {
-    int64_t profiled;
-    int64_t moving_averaged;
+    double profiled;
+    double moving_averaged;
   };
 
  private:

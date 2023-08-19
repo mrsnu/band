@@ -17,7 +17,6 @@ template <typename EstimatorKey, typename EstimatorInput,
 class IEstimator {
  public:
   explicit IEstimator(IEngine* engine) : engine_(engine) {}
-  virtual void Update(const EstimatorKey& key, EstimatorInput new_value) = 0;
   virtual void UpdateWithEvent(const EstimatorKey& key,
                                size_t event_handle) = 0;
   virtual EstimatorOutput GetProfiled(const EstimatorKey& key) const = 0;

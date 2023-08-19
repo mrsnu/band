@@ -61,7 +61,7 @@ size_t FrequencyProfiler::BeginEvent() {
 }
 
 void FrequencyProfiler::EndEvent(size_t event_handle) {
-  if (!event_handle || event_handle >= timeline_.size()) {
+  if (event_handle >= timeline_.size()) {
     BAND_LOG_PROD(BAND_LOG_ERROR,
                   "Invalid event handle: %lu (timeline size: %lu)",
                   event_handle, timeline_.size());
@@ -70,7 +70,7 @@ void FrequencyProfiler::EndEvent(size_t event_handle) {
   FreqInfo info = {std::chrono::system_clock::now(),
                    frequency_->GetAllFrequency()};
   log_file_ << FreqInfoToString(info) << ",";
-  timeline_[event_handle - 1].second = info;
+  timeline_[event_handle].second = info;
 }
 
 size_t FrequencyProfiler::GetNumEvents() const { return timeline_.size(); }

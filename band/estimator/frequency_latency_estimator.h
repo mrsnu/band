@@ -20,7 +20,7 @@ class FrequencyLatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_
   absl::Status Init(const FrequencyLatencyProfileConfig& config) {
     return absl::OkStatus();
   }
-  void Update(const SubgraphKey& key, int64_t latency) override {}
+  void Update(const SubgraphKey& key, FreqInfo freq, double latency) {}
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
 
   int64_t GetProfiled(const SubgraphKey& key) const override { return {}; }

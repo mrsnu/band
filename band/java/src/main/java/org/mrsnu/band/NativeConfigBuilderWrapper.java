@@ -27,6 +27,10 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addLatencySmoothingFactor(nativeHandle, smoothingFactor);
   }
 
+  public void addThermWindowSize(int thermWindowSize) {
+    addThermWindowSize(nativeHandle, thermWindowSize);
+  }
+
   public void addCPUThermIndex(int cpuThermIndex) {
     addCPUThermIndex(nativeHandle, cpuThermIndex);
   }
@@ -165,6 +169,8 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addFrequencyLatencySmoothingFactor(long configBuilderHandle, float smoothingFactor);
 
   private native void addLatencySmoothingFactor(long configBuilderHandle, float smoothingFactor);
+
+  private native void addThermWindowSize(long configBuilderHandle, int thermWindowSize);
 
   private native void addCPUThermIndex(long configBuilderHandle, int cpuThermIndex);
 

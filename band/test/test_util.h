@@ -72,6 +72,7 @@ struct MockEngineBase : public IEngine {
   MOCK_METHOD1(GetWorker, Worker*(WorkerId));
   MOCK_CONST_METHOD1(GetWorker, const Worker*(WorkerId));
   MOCK_CONST_METHOD0(GetNumWorkers, size_t());
+  MOCK_CONST_METHOD1(GetWorkerDevice, DeviceFlag(WorkerId));
 
   /* tensor communication */
   MOCK_METHOD1(TryCopyInputTensors, absl::Status(const Job&));

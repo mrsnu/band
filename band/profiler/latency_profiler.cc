@@ -10,7 +10,7 @@ size_t LatencyProfiler::BeginEvent() {
 }
 
 void LatencyProfiler::EndEvent(size_t event_handle) {
-  if (!event_handle || event_handle >= timeline_.size()) {
+  if (event_handle >= timeline_.size()) {
     BAND_LOG_PROD(BAND_LOG_ERROR,
                   "Invalid event handle: %lu (timeline size: %lu)",
                   event_handle, timeline_.size());

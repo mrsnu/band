@@ -68,7 +68,7 @@ class Engine : public IEngine {
   std::vector<int> GetInputTensorIndices(ModelId model_id) const;
 
   size_t GetNumWorkers() const override;
-  DeviceFlag GetWorkerDevice(WorkerId id) const;
+  DeviceFlag GetWorkerDevice(WorkerId id) const override;
 
   absl::Status RequestSync(
       ModelId model_id,

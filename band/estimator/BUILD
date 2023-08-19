@@ -46,6 +46,8 @@ band_cc_library(
     deps = [
         ":estimator_interface",
         "//band/profiler:thermal_profiler",
+        "//band/profiler:frequency_profiler",
+        "//band/profiler:latency_profiler",
         "//band:json_util",
         "//band:worker",
         "//band/device",

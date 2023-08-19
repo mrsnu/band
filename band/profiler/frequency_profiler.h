@@ -12,6 +12,7 @@
 namespace band {
 
 using FreqInfo = std::pair<std::chrono::system_clock::time_point, FreqMap>;
+using FreqInterval = std::pair<FreqInfo, FreqInfo>;
 
 class FrequencyProfiler : public Profiler {
  public:
@@ -22,18 +23,19 @@ class FrequencyProfiler : public Profiler {
   void EndEvent(size_t event_handle) override;
   size_t GetNumEvents() const override;
 
-  FreqInfo GetFreqInfoStart(size_t index) const {
+  FreqInterval GetInterval(size_t index) const {
     if (timeline_.size() <= index) {
       return {};
     }
-    return timeline_[index].first;
+    return timeline_[index];
   }
 
-  FreqInfo GetFreqInfoEnd(size_t index) const {
-    if (timeline_.size() <= index) {
-      return {};
-    }
-    return timeline_[index].second;
+  FreqInfo GetStart(size_t index) const {
+    return GetInterval(index).first;
+  }
+
+  FreqInfo GetEnd(size_t index) const {
+    return GetInterval(index).second;
   }
 
  private:

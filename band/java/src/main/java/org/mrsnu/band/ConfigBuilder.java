@@ -28,6 +28,10 @@ public class ConfigBuilder {
     wrapper.addLatencySmoothingFactor(smoothingFactor);
   }
 
+  public void addThermWindowSize(int thermWindowSize) {
+    wrapper.addThermWindowSize(thermWindowSize);
+  }
+
   public void addCPUThermIndex(int cpuThermIndex) {
     wrapper.addCPUThermIndex(cpuThermIndex);
   }

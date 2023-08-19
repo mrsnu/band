@@ -532,8 +532,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       }
     }
     {
-      thermal_estimator_ =
-          std::make_unique<ThermalEstimator>(this, thermal_profiler_);
+      thermal_estimator_ = std::make_unique<ThermalEstimator>(
+          this, thermal_profiler_, frequency_profiler_, latency_profiler_);
       auto status =
           thermal_estimator_->Init(config.profile_config.thermal_config);
       if (!status.ok()) {
@@ -1200,6 +1200,6 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
     worker->Resume();
   }
   return absl::OkStatus();
-}  // namespace band
+}
 
 }  // namespace band

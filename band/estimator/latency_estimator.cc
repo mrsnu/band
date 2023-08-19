@@ -31,7 +31,7 @@ absl::Status LatencyEstimator::Init(const LatencyProfileConfig& config) {
   return absl::OkStatus();
 }
 
-void LatencyEstimator::Update(const SubgraphKey& key, int64_t latency) {
+void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
   auto it = profile_database_.find(key);
   if (it == profile_database_.end()) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %d.",
@@ -75,7 +75,7 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
 }
 
 int64_t LatencyEstimator::GetWorst(ModelId model_id) const {
-  int64_t worst_model_latency = -1;
+  double worst_model_latency = -1;
   for (auto it : profile_database_) {
     if (it.first.GetModelId() == model_id) {
       worst_model_latency =
@@ -126,8 +126,8 @@ absl::Status LatencyEstimator::LoadModel(std::string profile_path) {
         const Json::Value worker_json = *worker_it;
         SubgraphKey key(model_id, worker_id, unit_indices);
         profile_database_[key] = {
-            worker_json[worker_id]["profiled"].asInt64(),
-            worker_json[worker_id]["moving_averaged"].asInt64()};
+            worker_json[worker_id]["profiled"].asDouble(),
+            worker_json[worker_id]["moving_averaged"].asDouble()};
       }
     }
   }
