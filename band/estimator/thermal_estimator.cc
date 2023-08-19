@@ -28,7 +28,7 @@ T ConvertEigenVectorToTMap(const Eigen::VectorXd& vec) {
   T value;
   for (int i = 0; i < vec.size(); i++) {
     if (vec(i) == 0) {
-      value[static_cast<DeviceFlag>(i)] = vec(i);
+      value[static_cast<SensorFlag>(i)] = vec(i);
     }
   }
   return value;
@@ -50,18 +50,19 @@ absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
 void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
                               ThermalMap therm_end, FreqMap freq,
                               double latency) {
+  const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
   Eigen::VectorXd old_therm =
-      ConvertTMapToEigenVector<ThermalMap>(therm_start, num_devices);
+      ConvertTMapToEigenVector<ThermalMap>(therm_start, num_sensors);
   Eigen::VectorXd new_therm =
-      ConvertTMapToEigenVector<ThermalMap>(therm_end, num_devices);
+      ConvertTMapToEigenVector<ThermalMap>(therm_end, num_sensors);
   Eigen::VectorXd freq_info =
       ConvertTMapToEigenVector<FreqMap>(freq, num_devices);
   Eigen::VectorXd latency_vector = GetOneHotVector(
       latency, num_devices,
       static_cast<size_t>(engine_->GetWorkerDevice(key.GetWorkerId())));
 
-  // num_devices + num_devices + num_devices
+  // num_sensors + num_devices + num_devices
   size_t feature_size = old_therm.size() + freq_info.size() +
                         latency_vector.size() + latency_vector.size();
   size_t target_size = new_therm.size();
@@ -105,9 +106,9 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 }
 
 ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
-  const size_t num_devices = EnumLength<DeviceFlag>();
+  const size_t num_sensors = EnumLength<SensorFlag>();
   auto cur_therm = ConvertTMapToEigenVector<ThermalMap>(
-      thermal_profiler_->GetAllThermal(), num_devices);
+      thermal_profiler_->GetAllThermal(), num_sensors);
   return ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * cur_therm);
 }
 

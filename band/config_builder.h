@@ -76,6 +76,10 @@ class ProfileConfigBuilder {
     freq_latency_profile_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;
   }
+  ProfileConfigBuilder& AddThermalWindowSize(size_t window_size) {
+    thermal_profile_builder_.AddWindowSize(window_size);
+    return *this;
+  }
   ProfileConfigBuilder& AddNumWarmups(size_t num_warmups) {
     num_warmups_ = num_warmups;
     return *this;
@@ -125,6 +129,11 @@ class DeviceConfigBuilder {
     return *this;
   }
 
+  DeviceConfigBuilder& AddTargetThermIndex(size_t target_therm_index) {
+    target_therm_index_ = target_therm_index;
+    return *this;
+  }
+
   DeviceConfigBuilder& AddCPUFreqPath(std::string cpu_freq_path) {
     cpu_freq_path_ = cpu_freq_path;
     return *this;
@@ -168,6 +177,7 @@ class DeviceConfigBuilder {
   size_t gpu_therm_index_ = -1;
   size_t dsp_therm_index_ = -1;
   size_t npu_therm_index_ = -1;
+  size_t target_therm_index_ = -1;
   std::string cpu_freq_path_ = "";
   std::string gpu_freq_path_ = "";
   std::string dsp_freq_path_ = "";
@@ -289,6 +299,10 @@ class RuntimeConfigBuilder {
     profile_config_builder_.AddFrequencySmoothingFactor(smoothing_factor);
     return *this;
   }
+  RuntimeConfigBuilder& AddThermalWindowSize(size_t window_size) {
+    profile_config_builder_.AddThermalWindowSize(window_size);
+    return *this;
+  }
   RuntimeConfigBuilder& AddNumWarmups(size_t num_warmups) {
     profile_config_builder_.AddNumWarmups(num_warmups);
     return *this;
@@ -320,6 +334,11 @@ class RuntimeConfigBuilder {
 
   RuntimeConfigBuilder& AddNPUThermIndex(size_t npu_therm_index) {
     device_config_builder_.AddNPUThermIndex(npu_therm_index);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddTargetThermIndex(size_t target_therm_index) {
+    device_config_builder_.AddTargetThermIndex(target_therm_index);
     return *this;
   }
 

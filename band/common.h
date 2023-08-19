@@ -126,6 +126,14 @@ enum class DeviceFlag : size_t {
   kNPU = 3,
 };
 
+enum class SensorFlag : size_t {
+  kCPU = 0,
+  kGPU = 1,
+  kDSP = 2,
+  kNPU = 3,
+  kTarget = 4,
+};
+
 enum class QuantizationType : size_t {
   kNoQuantization = 0,
   kAffineQuantization = 1,
@@ -181,6 +189,8 @@ template <>
 const char* ToString(BufferOrientation buffer_orientation);
 template <>
 const char* ToString(DeviceFlag device_flag);
+template <>
+const char* ToString(SensorFlag sensor_flag);
 template <>
 const char* ToString(QuantizationType);
 template <>

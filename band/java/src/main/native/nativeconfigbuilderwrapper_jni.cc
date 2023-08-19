@@ -112,6 +112,14 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNPUThermIndex(
 }
 
 JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addTargetThermIndex(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
+    int targetThermIndex) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddTargetThermIndex(targetThermIndex);
+}
+
+JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCPUFreqPath(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jstring cpuFreqPath) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)

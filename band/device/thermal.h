@@ -8,19 +8,19 @@
 namespace band {
 
 class DeviceConfig;
-enum class DeviceFlag : size_t;
+enum class SensorFlag : size_t;
 
-using ThermalMap = std::map<DeviceFlag, size_t>;
+using ThermalMap = std::map<SensorFlag, size_t>;
 
 class Thermal {
  public:
   explicit Thermal(DeviceConfig config);
-  size_t GetThermal(DeviceFlag device_flag);
+  size_t GetThermal(SensorFlag device_flag);
   ThermalMap GetAllThermal();
 
  private:
   bool CheckThermalZone(size_t index);
-  std::map<DeviceFlag, size_t> thermal_device_map_;
+  std::map<SensorFlag, size_t> thermal_device_map_;
 };
 
 }  // namespace band

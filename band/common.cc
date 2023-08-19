@@ -48,6 +48,11 @@ size_t EnumLength<DeviceFlag>() {
 }
 
 template <>
+size_t EnumLength<SensorFlag>() {
+  return static_cast<size_t>(SensorFlag::kTarget) + 1;
+}
+
+template <>
 size_t EnumLength<QuantizationType>() {
   return static_cast<size_t>(QuantizationType::kAffineQuantization) + 1;
 }
@@ -198,6 +203,30 @@ const char* ToString(DeviceFlag device_flag) {
     } break;
     default: {
       return "Unknown device flag";
+    } break;
+  }
+}
+
+template <>
+const char* ToString(SensorFlag sensor_flag) {
+  switch (sensor_flag) {
+    case SensorFlag::kCPU: {
+      return "CPU";
+    } break;
+    case SensorFlag::kGPU: {
+      return "GPU";
+    } break;
+    case SensorFlag::kDSP: {
+      return "DSP";
+    } break;
+    case SensorFlag::kNPU: {
+      return "NPU";
+    } break;
+    case SensorFlag::kTarget: {
+      return "Target";
+    } break;
+    default: {
+      return "Unknown sensor flag";
     } break;
   }
 }

@@ -47,6 +47,10 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addNPUThermIndex(nativeHandle, npuThermIndex);
   }
 
+  public void addTargetThermIndex(int targetThermIndex) {
+    addTargetThermIndex(nativeHandle, targetThermIndex);
+  }
+
   public void addCPUFreqPath(String cpuFreqPath) {
     addCPUFreqPath(nativeHandle, cpuFreqPath);
   }
@@ -179,6 +183,8 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addDSPThermIndex(long configBuilderHandle, int dspThermIndex);
 
   private native void addNPUThermIndex(long configBuilderHandle, int npuThermIndex);
+
+  private native void addTargetThermIndex(long configBuilderHandle, int targetThermIndex);
 
   private native void addCPUFreqPath(long configBuilderHandle, String cpuFreqPath);
 

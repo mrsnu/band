@@ -27,6 +27,7 @@ struct DeviceConfig {
   size_t gpu_therm_index = -1;
   size_t dsp_therm_index = -1;
   size_t npu_therm_index = -1;
+  size_t target_therm_index = -1;
 
   std::string cpu_freq_path = "";
   std::string gpu_freq_path = "";

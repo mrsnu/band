@@ -56,7 +56,6 @@ double FrequencyLatencyEstimator::GetExpected(const SubgraphKey& key) const {
       return it2->second;
     }
   }
-
   return -1;
 }
 

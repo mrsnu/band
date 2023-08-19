@@ -48,6 +48,10 @@ public class ConfigBuilder {
     wrapper.addNPUThermIndex(npuThermIndex);
   }
 
+  public void addTargetThermIndex(int targetThermIndex) {
+    wrapper.addTargetThermIndex(targetThermIndex);
+  }
+
   public void addCPUFreqPath(String cpuFreqPath) {
     wrapper.addCPUFreqPath(cpuFreqPath);
   }
