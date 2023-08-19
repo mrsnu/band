@@ -9,7 +9,8 @@
 
 namespace band {
 
-class FrequencyLatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
+class FrequencyLatencyEstimator
+    : public IEstimator<SubgraphKey, double, double> {
  public:
   explicit FrequencyLatencyEstimator(IEngine* engine,
                                      FrequencyProfiler* frequency_profiler,
@@ -17,25 +18,22 @@ class FrequencyLatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_
       : IEstimator(engine),
         frequency_profiler_(frequency_profiler),
         latency_profiler_(latency_profiler) {}
-  absl::Status Init(const FrequencyLatencyProfileConfig& config) {
-    return absl::OkStatus();
-  }
-  void Update(const SubgraphKey& key, FreqInfo freq, double latency) {}
+  absl::Status Init(const FrequencyLatencyProfileConfig& config);
+  void Update(const SubgraphKey& key, FreqInfo freq_info, double latency);
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
 
-  int64_t GetProfiled(const SubgraphKey& key) const override { return {}; }
-  int64_t GetExpected(const SubgraphKey& key) const override { return {}; }
+  double GetProfiled(const SubgraphKey& key) const override;
+  double GetExpected(const SubgraphKey& key) const override;
 
-  absl::Status LoadModel(std::string profile_path) override {
-    return absl::OkStatus();
-  }
-  absl::Status DumpModel(std::string profile_path) override {
-    return absl::OkStatus();
-  }
+  absl::Status LoadModel(std::string profile_path) override;
+  absl::Status DumpModel(std::string profile_path) override;
 
  private:
+  float profile_smoothing_factor_ = 0.1f;
   FrequencyProfiler* frequency_profiler_;
   LatencyProfiler* latency_profiler_;
+  // SubgraphKey -> (frequency -> latency)
+  std::map<SubgraphKey, std::map<size_t, double>> profile_database_;
   std::string profile_path_;
 };
 

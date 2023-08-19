@@ -38,6 +38,10 @@ class FrequencyProfiler : public Profiler {
     return GetInterval(index).second;
   }
 
+  FreqMap GetAllFrequency() const {
+    return frequency_->GetAllFrequency();
+  }
+
  private:
   std::unique_ptr<Frequency> frequency_;
   std::vector<std::pair<FreqInfo, FreqInfo>> timeline_;
