@@ -30,13 +30,13 @@ struct MockEngineBase : public IEngine {
   MOCK_CONST_METHOD1(GetModelWorker, WorkerId(ModelId));
 
   /* scheduling */
-  using WorkerWaiting = const std::map<WorkerId, int64_t>&;
+  using WorkerWaiting = const std::map<WorkerId, double>&;
   using ShortestLatencyWithUnitSubgraph =
-      std::pair<std::vector<SubgraphKey>, int64_t>;
+      std::pair<std::vector<SubgraphKey>, double>;
   using SubgraphWithShortestLatency =
-      std::pair<std::vector<SubgraphKey>, int64_t>;
+      std::pair<std::vector<SubgraphKey>, double>;
   MOCK_CONST_METHOD4(GetShortestLatency,
-                     std::pair<SubgraphKey, int64_t>(ModelId, BitMask, int64_t,
+                     std::pair<SubgraphKey, double>(ModelId, BitMask, double,
                                                      WorkerWaiting));
 
   MOCK_CONST_METHOD3(GetShortestLatencyWithUnitSubgraph,

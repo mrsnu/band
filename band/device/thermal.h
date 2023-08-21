@@ -10,12 +10,12 @@ namespace band {
 class DeviceConfig;
 enum class SensorFlag : size_t;
 
-using ThermalMap = std::map<SensorFlag, size_t>;
+using ThermalMap = std::map<SensorFlag, double>;
 
 class Thermal {
  public:
   explicit Thermal(DeviceConfig config);
-  size_t GetThermal(SensorFlag device_flag);
+  double GetThermal(SensorFlag device_flag);
   ThermalMap GetAllThermal();
 
  private:

@@ -51,7 +51,7 @@ bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
         searched_jobs.insert(job_to_search);
       }
 
-      std::pair<std::vector<SubgraphKey>, int64_t> best_subgraph =
+      std::pair<std::vector<SubgraphKey>, double> best_subgraph =
           engine_.GetSubgraphWithShortestLatency(next_job, worker_waiting);
 
       if (largest_shortest_latency < best_subgraph.second) {

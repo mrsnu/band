@@ -62,6 +62,8 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_deleteEngine(
 // modelHandle);
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model) {
+  BAND_LOG_PROD(band::BAND_LOG_INFO, "Registering model: %p, %p", engineHandle,
+                model);
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
   auto status = engine->RegisterModel(native_model);

@@ -1,13 +1,13 @@
 #ifndef BAND_PROFILER_LATENCY_PROFILER_H_
 #define BAND_PROFILER_LATENCY_PROFILER_H_
 
-#include <fstream>
 #include <chrono>
+#include <fstream>
 #include <vector>
 
 #include "band/config.h"
-#include "band/profiler/profiler.h"
 #include "band/logger.h"
+#include "band/profiler/profiler.h"
 
 namespace band {
 
@@ -27,23 +27,23 @@ class LatencyProfiler : public Profiler {
     return timeline_[index];
   }
 
+  template <typename T>
   double GetDuration(size_t index) const {
     if (timeline_.size() <= index) {
-      return -1;
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Index out of bound: %d", index);
+      return 0;
     }
     auto interv = GetInterval(index);
-    auto start = interv.first;
-    auto end = interv.second;
-    return std::max<double>(
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-            .count(),
-        0);
+    double duration =
+        std::chrono::duration_cast<T>(interv.second - interv.first).count();
+    return std::max<double>(duration, 0);
   }
 
+  template <typename T>
   double GetAverageDuration() const {
     double accumulated_time = 0;
     for (size_t i = 0; i < timeline_.size(); i++) {
-      accumulated_time += GetDuration(i);
+      accumulated_time += GetDuration<T>(i);
     }
 
     if (timeline_.size() == 0) {

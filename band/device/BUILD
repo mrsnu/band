@@ -8,13 +8,6 @@ package(
 )
 
 band_cc_library(
-    name = "macros",
-    hdrs = [
-        "macros.h",
-    ],
-)
-
-band_cc_library(
     name = "util",
     srcs = [
         "util.cc",
@@ -23,7 +16,6 @@ band_cc_library(
         "util.h",
     ],
     deps = [
-        ":macros",
         "//band:common",
         "@com_google_absl//absl/status",
     ],

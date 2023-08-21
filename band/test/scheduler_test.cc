@@ -32,9 +32,9 @@ struct MockEngine : public MockEngineBase {
     return SubgraphKey(model_id, worker_id, {0});
   }
 
-  std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
+  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithShortestLatency(
       const Job& job, const WorkerWaitingTime& worker_waiting) const override {
-    return std::pair<std::vector<SubgraphKey>, int64_t>(
+    return std::pair<std::vector<SubgraphKey>, double>(
         {SubgraphKey(job.model_id, *idle_workers_.begin(), {0})},
         0 /*shortest expected latency*/);
   }

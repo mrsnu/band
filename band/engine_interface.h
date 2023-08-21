@@ -24,7 +24,7 @@ class ModelSpec;
 
 // Type definition for the device waiting time.
 // The unit of time is ms.
-using WorkerWaitingTime = std::map<WorkerId, int64_t>;
+using WorkerWaitingTime = std::map<WorkerId, double>;
 
 // Decision from a scheduler. Run subgraph key for a specific job.
 using ScheduleAction = std::pair<Job, SubgraphKey>;
@@ -70,22 +70,22 @@ class IEngine {
   // the final op (of the model) in mind.
 
   // TODO: replace subgraph idx to subgraph key in below functions
-  virtual std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      int model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
-      const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
+  virtual std::pair<SubgraphKey, double> GetShortestLatency(
+      int model_id, BitMask resolved_unit_subgraphs, double start_time,
+      const WorkerWaitingTime& worker_waiting) const = 0;
 
-  virtual std::pair<std::vector<SubgraphKey>, int64_t>
+  virtual std::pair<std::vector<SubgraphKey>, double>
   GetShortestLatencyWithUnitSubgraph(
       int model_id, int start_unit_idx,
-      const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
+      const WorkerWaitingTime& worker_waiting) const = 0;
 
-  virtual std::pair<std::vector<SubgraphKey>, int64_t>
+  virtual std::pair<std::vector<SubgraphKey>, double>
   GetSubgraphWithShortestLatency(
       const Job& job,
-      const std::map<WorkerId, int64_t>& worker_waiting) const = 0;
+      const WorkerWaitingTime& worker_waiting) const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
-      const Job& job, const std::map<WorkerId, int64_t>& worker_waiting,
+      const Job& job, const WorkerWaitingTime& worker_waiting,
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* estimators */

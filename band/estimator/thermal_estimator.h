@@ -9,6 +9,7 @@
 #include "band/common.h"
 #include "band/config.h"
 #include "band/estimator/estimator_interface.h"
+#include "band/estimator/frequency_latency_estimator.h"
 #include "band/profiler/frequency_profiler.h"
 #include "band/profiler/latency_profiler.h"
 #include "band/profiler/thermal_profiler.h"
@@ -21,13 +22,15 @@ namespace band {
 class ThermalEstimator
     : public IEstimator<SubgraphKey, ThermalInterval, ThermalMap> {
  public:
-  explicit ThermalEstimator(IEngine* engine, ThermalProfiler* thermal_profiler,
-                            FrequencyProfiler* frequency_profiler,
-                            LatencyProfiler* latency_profiler)
+  explicit ThermalEstimator(
+      IEngine* engine, ThermalProfiler* thermal_profiler,
+      FrequencyProfiler* frequency_profiler, LatencyProfiler* latency_profiler,
+      FrequencyLatencyEstimator* frequency_latency_estimator)
       : IEstimator(engine),
         thermal_profiler_(thermal_profiler),
         frequency_profiler_(frequency_profiler),
-        latency_profiler_(latency_profiler) {}
+        latency_profiler_(latency_profiler),
+        frequency_latency_estimator_(frequency_latency_estimator) {}
   absl::Status Init(const ThermalProfileConfig& config);
   void Update(const SubgraphKey& key, ThermalMap therm_start,
               ThermalMap therm_end, FreqMap freq, double latency);
@@ -51,6 +54,7 @@ class ThermalEstimator
   ThermalProfiler* thermal_profiler_;
   FrequencyProfiler* frequency_profiler_;
   LatencyProfiler* latency_profiler_;
+  FrequencyLatencyEstimator* frequency_latency_estimator_;
 
   size_t num_resources_ = 0;
   size_t window_size_;

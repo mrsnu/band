@@ -14,19 +14,23 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-#ifndef BAND_DEVICE_CPU_H_
-#define BAND_DEVICE_CPU_H_
+#ifndef BAND_CPU_H_
+#define BAND_CPU_H_
 
-#include <climits>
-#include <cstddef>
-#include <cstdio>
+#include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "band/common.h"
 #include "band/device/util.h"
 
+#if BAND_IS_MOBILE
 #include <sched.h>  // cpu_set_t
+#endif
 
 namespace band {
 
@@ -44,11 +48,13 @@ class CpuSet {
   std::string ToString() const;
   bool operator==(const CpuSet& rhs) const;
 
+#if BAND_IS_MOBILE
   const cpu_set_t& GetCpuSet() const { return cpu_set_; }
   cpu_set_t& GetCpuSet() { return cpu_set_; }
 
  private:
   cpu_set_t cpu_set_;
+#endif
 };
 
 // cpu info
@@ -62,7 +68,6 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask);
 
 // convenient wrapper
 const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag);
-
 }  // namespace band
 
-#endif  // BAND_DEVICE_CPU_H_
+#endif  // BAND_CPU_H_

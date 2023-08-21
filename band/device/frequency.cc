@@ -13,7 +13,7 @@ namespace band {
 namespace {
 
 std::string GetCpuFreqPath(std::string path) {
-  return absl::StrFormat("%s/cpuinfo_cur_freq", path.c_str());
+  return absl::StrFormat("%s/scaling_cur_freq", path.c_str());
 }
 
 std::string GetFreqPath(std::string path) {
@@ -24,7 +24,7 @@ std::string GetFreqPath(std::string path) {
 
 Frequency::Frequency(DeviceConfig config) {
   device::Root();
-  
+
   if (config.cpu_freq_path != "" && CheckFrequency(config.cpu_freq_path)) {
     freq_device_map_[DeviceFlag::kCPU] = config.cpu_freq_path;
   } else {
@@ -54,16 +54,16 @@ Frequency::Frequency(DeviceConfig config) {
   }
 }
 
-size_t Frequency::GetFrequency(DeviceFlag device_flag) {
+double Frequency::GetFrequency(DeviceFlag device_flag) {
   auto path = freq_device_map_[device_flag];
   if (device_flag == DeviceFlag::kCPU) {
-    return device::TryReadSizeT({GetCpuFreqPath(path)}).value();
+    return device::TryReadDouble({GetCpuFreqPath(path)}, {1.0E-6f}).value();
   }
-  return device::TryReadSizeT({GetFreqPath(path)}).value();
+  return device::TryReadDouble({GetFreqPath(path)}, {1.0E-9f}).value();
 }
 
 FreqMap Frequency::GetAllFrequency() {
-  std::map<DeviceFlag, size_t> freq_map;
+  std::map<DeviceFlag, double> freq_map;
   for (auto& pair : freq_device_map_) {
     freq_map[pair.first] = GetFrequency(pair.first);
   }

@@ -62,13 +62,13 @@ Thermal::Thermal(DeviceConfig config) {
   }
 }
 
-size_t Thermal::GetThermal(SensorFlag device_flag) {
+double Thermal::GetThermal(SensorFlag device_flag) {
   auto path = GetThermalPath(thermal_device_map_[device_flag]);
-  return device::TryReadSizeT({path}).value();
+  return device::TryReadDouble({path}, {0.001}).value();
 }
 
 ThermalMap Thermal::GetAllThermal() {
-  std::map<SensorFlag, size_t> thermal_map;
+  ThermalMap thermal_map;
   for (auto& pair : thermal_device_map_) {
     thermal_map[pair.first] = GetThermal(pair.first);
   }

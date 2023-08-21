@@ -10,6 +10,12 @@
 #include "absl/status/statusor.h"
 #include "band/common.h"
 
+#if defined(__ANDROID__) || defined(__IOS__)
+#define BAND_IS_MOBILE 1
+#else
+#define BAND_IS_MOBILE 0
+#endif
+
 namespace band {
 namespace device {
 
@@ -19,6 +25,8 @@ absl::StatusOr<T> TryRead(std::vector<std::string> paths,
 
 absl::StatusOr<size_t> TryReadSizeT(std::vector<std::string> paths,
                                     std::vector<float> multipliers = {1.f});
+absl::StatusOr<double> TryReadDouble(std::vector<std::string> paths,
+                                     std::vector<float> multipliers = {1.f});
 
 absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
     std::vector<std::string> paths, std::vector<float> multipliers = {1.f});

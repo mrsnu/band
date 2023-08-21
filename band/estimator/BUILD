@@ -48,6 +48,7 @@ band_cc_library(
         "//band/profiler:thermal_profiler",
         "//band/profiler:frequency_profiler",
         "//band/profiler:latency_profiler",
+        "//band/estimator:frequency_latency_estimator",
         "//band:json_util",
         "//band:worker",
         "//band/device",

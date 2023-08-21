@@ -17,13 +17,13 @@ void FrequencyLatencyEstimator::Update(const SubgraphKey& key,
           ->GetAllFrequency()[engine_->GetWorkerDevice(key.GetWorkerId())];
   auto it = profile_database_.find(key);
   if (it == profile_database_.end()) {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %d.",
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %f.",
                       key.ToString().c_str(), latency);
     profile_database_[key] = {{freq, latency}};
     return;
   }
   if (it->second.find(freq) == it->second.end()) {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %d.",
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %f.",
                       key.ToString().c_str(), latency);
     profile_database_[key][freq] = latency;
     return;
@@ -37,12 +37,13 @@ void FrequencyLatencyEstimator::Update(const SubgraphKey& key,
 void FrequencyLatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
                                                 size_t event_handle) {
   auto freq_interval = frequency_profiler_->GetInterval(event_handle);
-  auto latency = latency_profiler_->GetDuration(event_handle);
+  auto latency =
+      latency_profiler_->GetDuration<std::chrono::milliseconds>(event_handle);
   Update(key, freq_interval.second, latency);
 }
 
 double FrequencyLatencyEstimator::GetProfiled(const SubgraphKey& key) const {
-  return -1;
+  return 0;
 }
 
 double FrequencyLatencyEstimator::GetExpected(const SubgraphKey& key) const {
@@ -56,7 +57,7 @@ double FrequencyLatencyEstimator::GetExpected(const SubgraphKey& key) const {
       return it2->second;
     }
   }
-  return -1;
+  return 0;
 }
 
 absl::Status FrequencyLatencyEstimator::LoadModel(std::string profile_path) {

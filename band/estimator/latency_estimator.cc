@@ -34,7 +34,7 @@ absl::Status LatencyEstimator::Init(const LatencyProfileConfig& config) {
 void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
   auto it = profile_database_.find(key);
   if (it == profile_database_.end()) {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %d.",
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %f.",
                       key.ToString().c_str(), latency);
     profile_database_[key] = {latency, latency};
     return;
@@ -47,7 +47,8 @@ void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
 
 void LatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
                                        size_t event_handle) {
-  Update(key, latency_profiler_->GetDuration(event_handle));
+  Update(key, latency_profiler_->GetDuration<std::chrono::milliseconds>(
+                  event_handle));
 }
 
 int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
@@ -58,7 +59,7 @@ int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
     BAND_LOG_PROD(BAND_LOG_INFO,
                   "[LatencyEstimator::GetProfiled] The given %s not found",
                   key.ToString().c_str());
-    return -1;
+    return 0;
   }
 }
 
@@ -70,7 +71,7 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
     BAND_LOG_PROD(BAND_LOG_INFO,
                   "[LatencyEstimator::GetExpected] The given %s not found",
                   key.ToString().c_str());
-    return -1;
+    return 0;
   }
 }
 

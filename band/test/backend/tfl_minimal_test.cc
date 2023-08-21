@@ -95,10 +95,10 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kRoundRobin})
-          .AddMinimumSubgraphSize(7)
+          .AddSchedulers({SchedulerType::kHeterogeneousEarliestFinishTime})
+          .AddMinimumSubgraphSize(1)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::kMergeUnitSubgraph)
+              SubgraphPreparationType::kNoFallbackSubgraph)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
@@ -114,7 +114,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
           .Build();
 
   auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  EXPECT_NE(engine, nullptr);
 
   Model model;
   EXPECT_TRUE(

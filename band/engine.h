@@ -124,16 +124,16 @@ class Engine : public IEngine {
   WorkerId GetModelWorker(ModelId model_id) const override;
 
   /* utility funtions for unit-level scheduling */
-  std::pair<SubgraphKey, int64_t> GetShortestLatency(
-      ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
+  std::pair<SubgraphKey, double> GetShortestLatency(
+      ModelId model_id, BitMask resolved_unit_subgraphs, double start_time,
       const WorkerWaitingTime& worker_waiting) const override;
 
-  std::pair<std::vector<SubgraphKey>, int64_t>
+  std::pair<std::vector<SubgraphKey>, double>
   GetShortestLatencyWithUnitSubgraph(
       ModelId model_id, int start_unit_idx,
       const WorkerWaitingTime& worker_waiting) const override;
 
-  std::pair<std::vector<SubgraphKey>, int64_t> GetSubgraphWithShortestLatency(
+  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithShortestLatency(
       const Job& job, const WorkerWaitingTime& worker_waiting) const override;
 
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
@@ -143,12 +143,12 @@ class Engine : public IEngine {
   std::vector<SubgraphKey> GetSubgraphCandidates(
       ModelId model_id, BitMask resolved_unit_subgraphs) const;
 
-  std::pair<SubgraphKey, int64_t> GetShortestSubgraphKey(
-      const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
+  std::pair<SubgraphKey, double> GetShortestSubgraphKey(
+      const std::vector<SubgraphKey>& subgraph_keys, double start_time,
       const WorkerWaitingTime& worker_waiting) const;
 
   std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
-      const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
+      const std::vector<SubgraphKey>& subgraph_keys, double start_time,
       const WorkerWaitingTime& worker_waiting,
       const std::function<double(double, ThermalMap)> cost) const;
 
@@ -209,7 +209,7 @@ class Engine : public IEngine {
   // Scheduling
   // cache for GetShortestLatency()
   mutable std::unordered_map<std::pair<ModelId, BitMask>,
-                             std::pair<SubgraphKey, int64_t>, JobIdBitMaskHash>
+                             std::pair<SubgraphKey, double>, JobIdBitMaskHash>
       cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).

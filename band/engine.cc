@@ -39,6 +39,23 @@ Engine::~Engine() {
 
   planner_.reset();
 
+  {
+    auto status = frequency_latency_estimator_->DumpModel(
+        "/data/local/tmp/splash/latency_model.json");
+    if (!status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to dump latency model: %s",
+                    status.message());
+    }
+  }
+  {
+    auto status = thermal_estimator_->DumpModel(
+        "/data/local/tmp/splash/thermal_model.json");
+    if (!status.ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to dump thermal model: %s",
+                    status.message());
+    }
+  }
+
   delete latency_profiler_;
   delete thermal_profiler_;
   delete frequency_profiler_;
@@ -47,7 +64,13 @@ Engine::~Engine() {
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
                                        ErrorReporter* error_reporter) {
   std::unique_ptr<Engine> engine_ptr(new Engine(error_reporter));
-  return engine_ptr->Init(config).ok() ? std::move(engine_ptr) : nullptr;
+  auto status = engine_ptr->Init(config);
+  if (!status.ok()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Engine creation failed: %s",
+                  status.message());
+    return nullptr;
+  }
+  return engine_ptr;
 }
 
 absl::Status Engine::RegisterModel(Model* model) {
@@ -490,7 +513,7 @@ void Engine::SetOnEndRequest(
 
 absl::Status Engine::Init(const RuntimeConfig& config) {
   device::Root();
-  
+
   planner_ = std::make_unique<Planner>(*this);
   auto status = planner_->Init(config.planner_config);
   if (!status.ok()) {
@@ -513,92 +536,89 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   }
 
   // Setup for estimators
-  {
-    {
-      latency_estimator_ =
-          std::make_unique<LatencyEstimator>(this, latency_profiler_);
-      auto status =
-          latency_estimator_->Init(config.profile_config.latency_config);
-      if (!status.ok()) {
-        return status;
-      }
-    }
-    {
-      thermal_estimator_ = std::make_unique<ThermalEstimator>(
-          this, thermal_profiler_, frequency_profiler_, latency_profiler_);
-      auto status =
-          thermal_estimator_->Init(config.profile_config.thermal_config);
-      if (!status.ok()) {
-        return status;
-      }
-    }
-    {
-      frequency_latency_estimator_ =
-          std::make_unique<FrequencyLatencyEstimator>(this, frequency_profiler_,
-                                                      latency_profiler_);
-      auto status = frequency_latency_estimator_->Init(
-          config.profile_config.frequency_latency_config);
-      if (!status.ok()) {
-        return status;
-      }
-    }
+  {{latency_estimator_ =
+        std::make_unique<LatencyEstimator>(this, latency_profiler_);
+  auto status = latency_estimator_->Init(config.profile_config.latency_config);
+  if (!status.ok()) {
+    return status;
   }
-
-  {
-    const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
-    auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
-
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
-                      ToString(cpu_mask));
-
-    auto status = SetCPUThreadAffinity(cpu_mask_set);
-    if (!status.ok()) {
-      return status;
-    }
-  }
-
-  // Search for all available backends, devices
-  std::set<DeviceFlag> valid_devices;
-  auto valid_backends = BackendFactory::GetAvailableBackends();
-  for (auto backend : valid_backends) {
-    auto backend_devices =
-        BackendFactory::GetBackendUtil(backend)->GetAvailableDevices();
-    valid_devices.insert(backend_devices.begin(), backend_devices.end());
-  }
-
-  auto& potential_workers = config.worker_config.workers;
-  for (int i = 0; i < potential_workers.size(); i++) {
-    DeviceFlag device_flag = potential_workers[i];
-    if (valid_devices.find(device_flag) != valid_devices.end()) {
-      std::unique_ptr<Worker> worker;
-      if (planner_->GetWorkerType() ==
-          static_cast<int>(WorkerType::kGlobalQueue)) {
-        worker = std::make_unique<GlobalQueueWorker>(this, workers_.size(),
-                                                     device_flag);
-      } else {
-        worker = std::make_unique<DeviceQueueWorker>(this, workers_.size(),
-                                                     device_flag);
-      }
-
-      if (!worker->Init(config.worker_config).ok()) {
-        return absl::InternalError(absl::StrFormat(
-            "Worker::Init() failed for worker : %s.", ToString(device_flag)));
-      }
-
-      BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
-                        ToString(device_flag));
-      worker->Start();
-      workers_.push_back(std::move(worker));
-      workers_waiting_[i] = 0;
-      BAND_TRACER_ADD_WORKER(device_flag, workers_.back()->GetId());
-    } else {
-      BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
-                        ToString(device_flag));
-    }
-  }
-
-  return absl::OkStatus();
 }
+{
+  frequency_latency_estimator_ = std::make_unique<FrequencyLatencyEstimator>(
+      this, frequency_profiler_, latency_profiler_);
+  auto status = frequency_latency_estimator_->Init(
+      config.profile_config.frequency_latency_config);
+  if (!status.ok()) {
+    return status;
+  }
+}
+{
+  thermal_estimator_ = std::make_unique<ThermalEstimator>(
+      this, thermal_profiler_, frequency_profiler_, latency_profiler_, frequency_latency_estimator_.get());
+  auto status = thermal_estimator_->Init(config.profile_config.thermal_config);
+  if (!status.ok()) {
+    return status;
+  }
+}
+
+}  // namespace band
+
+{
+  const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
+  auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
+
+  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
+                    ToString(cpu_mask));
+
+  auto status = SetCPUThreadAffinity(cpu_mask_set);
+  if (!status.ok()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set CPU thread affinity: %s",
+                  status.message());
+  }
+}
+
+// Search for all available backends, devices
+std::set<DeviceFlag> valid_devices;
+auto valid_backends = BackendFactory::GetAvailableBackends();
+for (auto backend : valid_backends) {
+  auto backend_devices =
+      BackendFactory::GetBackendUtil(backend)->GetAvailableDevices();
+  valid_devices.insert(backend_devices.begin(), backend_devices.end());
+}
+
+auto& potential_workers = config.worker_config.workers;
+for (int i = 0; i < potential_workers.size(); i++) {
+  DeviceFlag device_flag = potential_workers[i];
+  if (valid_devices.find(device_flag) != valid_devices.end()) {
+    std::unique_ptr<Worker> worker;
+    if (planner_->GetWorkerType() ==
+        static_cast<int>(WorkerType::kGlobalQueue)) {
+      worker = std::make_unique<GlobalQueueWorker>(this, workers_.size(),
+                                                   device_flag);
+    } else {
+      worker = std::make_unique<DeviceQueueWorker>(this, workers_.size(),
+                                                   device_flag);
+    }
+
+    if (!worker->Init(config.worker_config).ok()) {
+      return absl::InternalError(absl::StrFormat(
+          "Worker::Init() failed for worker : %s.", ToString(device_flag)));
+    }
+
+    BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
+                      ToString(device_flag));
+    worker->Start();
+    workers_.push_back(std::move(worker));
+    workers_waiting_[i] = 0;
+    BAND_TRACER_ADD_WORKER(device_flag, workers_.back()->GetId());
+  } else {
+    BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
+                      ToString(device_flag));
+  }
+}
+
+return absl::OkStatus();
+}  // namespace band
 
 Engine::Engine(ErrorReporter* error_reporeter) : IEngine(error_reporeter) {}
 
@@ -692,8 +712,8 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
   return model_executor_it->second->ExecuteSubgraph(key);
 }
 
-std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
-    ModelId model_id, BitMask resolved_unit_subgraphs, int64_t start_time,
+std::pair<SubgraphKey, double> Engine::GetShortestLatency(
+    ModelId model_id, BitMask resolved_unit_subgraphs, double start_time,
     const WorkerWaitingTime& worker_waiting) const {
   // lookup key for cache
   std::pair<ModelId, BitMask> cache_key = {model_id, resolved_unit_subgraphs};
@@ -733,15 +753,15 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
     unit_indicies_subgraphs[key.GetUnitIndices()].push_back(key);
   }
 
-  std::pair<SubgraphKey, int64_t> subgraph_min_latency{
-      {}, std::numeric_limits<int64_t>::max()};
+  std::pair<SubgraphKey, double> subgraph_min_latency{
+      {}, std::numeric_limits<double>::max()};
   for (const auto& it : unit_indicies_subgraphs) {
     // first, filter out the subgraphs that take longer than others with the
     // same start/end indices, since there's no reason to pick them
-    std::pair<SubgraphKey, int64_t> target_subgraph =
+    std::pair<SubgraphKey, double> target_subgraph =
         GetShortestSubgraphKey(it.second, start_time, worker_waiting);
 
-    std::pair<SubgraphKey, int64_t> local_min;
+    std::pair<SubgraphKey, double> local_min;
     if (IsEnd(target_subgraph.first)) {
       local_min = target_subgraph;
     } else {
@@ -776,14 +796,14 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestLatency(
   return subgraph_min_latency;
 }
 
-std::pair<std::vector<SubgraphKey>, int64_t>
+std::pair<std::vector<SubgraphKey>, double>
 Engine::GetShortestLatencyWithUnitSubgraph(
     ModelId model_id, int start_unit_idx,
     const WorkerWaitingTime& worker_waiting) const {
   const ModelSpec* model_spec = GetModelSpec(model_id);
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
-  std::vector<std::pair<std::vector<SubgraphKey>, int64_t>> memo;
+  std::vector<std::pair<std::vector<SubgraphKey>, double>> memo;
   const size_t num_unit_subgraphs = model_spec->GetNumUnitSubgraphs();
   memo.resize(num_unit_subgraphs);
 
@@ -791,7 +811,8 @@ Engine::GetShortestLatencyWithUnitSubgraph(
 
   // Initialize memo.
   for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair<std::vector<SubgraphKey>, int64_t>({}, INT_MAX);
+    memo[i] = std::make_pair<std::vector<SubgraphKey>, double>(
+        {}, std::numeric_limits<double>::max());
   }
 
   // `i` and `j` refer to an unit subgraph idx.
@@ -803,7 +824,7 @@ Engine::GetShortestLatencyWithUnitSubgraph(
   // subgraph(start_unit_idx, num_unit_subgraphs - 1) is
   // `memo[num_unit_subgraphs - 1].second`.
   for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
-    std::pair<std::vector<SubgraphKey>, int64_t> local_min =
+    std::pair<std::vector<SubgraphKey>, double> local_min =
         std::make_pair<std::vector<SubgraphKey>, int64_t>({}, -1);
     for (int i = j; i >= start_unit_idx; --i) {
       // Check if the subgraph(i, j) is valid.
@@ -820,22 +841,27 @@ Engine::GetShortestLatencyWithUnitSubgraph(
         continue;
       }
 
+      BAND_LOG_PROD(BAND_LOG_INFO, "GetShortestLatencyWithUnitSubgraph: %d %d",
+                    i, j);
+
       // Search from the profile result of the unit subgraph.
       const auto& subgraph_keys =
           unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).at(j);
       int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
-      std::pair<SubgraphKey, int64_t> target_subgraph =
+      std::pair<SubgraphKey, double> target_pair =
           GetShortestSubgraphKey(subgraph_keys, start, worker_waiting);
+      SubgraphKey& target_key = target_pair.first;
+      double& target_latency = target_pair.second;
 
-      if (local_min.second == -1 || target_subgraph.second < local_min.second) {
+      if (local_min.second == -1 || target_latency < local_min.second) {
         if (i > start_unit_idx) {
           local_min.first = memo[i - 1].first;
-          local_min.first.push_back(target_subgraph.first);
-          local_min.second = target_subgraph.second;
+          local_min.first.push_back(target_key);
+          local_min.second = target_latency;
         } else {
           local_min.first.clear();
-          local_min.first.push_back(target_subgraph.first);
-          local_min.second = target_subgraph.second;
+          local_min.first.push_back(target_key);
+          local_min.second = target_latency;
         }
       }
     }
@@ -845,7 +871,7 @@ Engine::GetShortestLatencyWithUnitSubgraph(
   return memo[num_unit_subgraphs - 1];
 }
 
-std::pair<std::vector<SubgraphKey>, int64_t>
+std::pair<std::vector<SubgraphKey>, double>
 Engine::GetSubgraphWithShortestLatency(
     const Job& job, const WorkerWaitingTime& worker_waiting) const {
   // TODO(dostos): figure out why we return a vector of keys?
@@ -853,8 +879,8 @@ Engine::GetSubgraphWithShortestLatency(
       SubgraphPreparationType::kFallbackPerWorker) {
     auto pair = GetShortestLatency(job.model_id, job.resolved_unit_subgraphs, 0,
                                    worker_waiting);
-    std::pair<std::vector<SubgraphKey>, int64_t> ret =
-        std::pair<std::vector<SubgraphKey>, int64_t>({pair.first}, pair.second);
+    std::pair<std::vector<SubgraphKey>, double> ret =
+        std::pair<std::vector<SubgraphKey>, double>({pair.first}, pair.second);
     return ret;
   } else {
     int start_unit_idx = 0;
@@ -914,8 +940,8 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
   return candidates;
 }
 
-std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
-    const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
+std::pair<SubgraphKey, double> Engine::GetShortestSubgraphKey(
+    const std::vector<SubgraphKey>& subgraph_keys, double start_time,
     const WorkerWaitingTime& worker_waiting) const {
   return GetMinCostSubgraphKey(
       subgraph_keys, start_time, worker_waiting,
@@ -923,9 +949,9 @@ std::pair<SubgraphKey, int64_t> Engine::GetShortestSubgraphKey(
 }
 
 std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
-    const std::vector<SubgraphKey>& subgraph_keys, int64_t start_time,
+    const std::vector<SubgraphKey>& subgraph_keys, double start_time,
     const WorkerWaitingTime& worker_waiting,
-    const std::function<double(double, ThermalMap)> cost) const {
+    const std::function<double(double, ThermalMap)> cost_func) const {
   double min_cost = std::numeric_limits<double>::max();
   SubgraphKey min_key = {};
 
@@ -935,10 +961,11 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     double expected_latency =
         latency + std::max(waiting_time, static_cast<double>(start_time));
     ThermalMap expected_thermal = thermal_estimator_->GetExpected(key);
-    double total = cost(expected_latency, expected_thermal);
-
-    if (min_cost >= total) {
-      min_cost = total;
+    double cost = cost_func(expected_latency, expected_thermal);
+    BAND_LOG_PROD(BAND_LOG_INFO, "Expected: %f", latency);
+    BAND_LOG_PROD(BAND_LOG_INFO, "Waiting: %f", waiting_time);
+    if (min_cost >= cost) {
+      min_cost = cost;
       min_key = key;
     }
   }
@@ -956,7 +983,7 @@ int64_t Engine::GetProfiled(const SubgraphKey& key) const {
 }
 
 int64_t Engine::GetExpected(const SubgraphKey& key) const {
-  return latency_estimator_->GetExpected(key);
+  return frequency_latency_estimator_->GetExpected(key);
 }
 
 void Engine::Trigger() { planner_->Trigger(); }

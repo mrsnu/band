@@ -15,10 +15,9 @@ namespace {
 template <typename T>
 Eigen::VectorXd ConvertTMapToEigenVector(const T& value, size_t size) {
   Eigen::VectorXd vec(size);
-  int i = 0;
+  vec.setZero();
   for (const auto& pair : value) {
-    vec(i) = pair.second;
-    i++;
+    vec(static_cast<size_t>(pair.first)) = pair.second;
   }
   return vec;
 }
@@ -27,7 +26,7 @@ template <typename T>
 T ConvertEigenVectorToTMap(const Eigen::VectorXd& vec) {
   T value;
   for (int i = 0; i < vec.size(); i++) {
-    if (vec(i) == 0) {
+    if (vec(i) != 0) {
       value[static_cast<SensorFlag>(i)] = vec(i);
     }
   }
@@ -36,6 +35,7 @@ T ConvertEigenVectorToTMap(const Eigen::VectorXd& vec) {
 
 Eigen::VectorXd GetOneHotVector(double value, size_t size, size_t index) {
   Eigen::VectorXd vec(size);
+  vec.setZero();
   vec(index) = value;
   return vec;
 }
@@ -65,6 +65,8 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   BAND_LOG_PROD(BAND_LOG_INFO, "New therm shape: %d", new_therm.size());
   BAND_LOG_PROD(BAND_LOG_INFO, "Freq shape: %d", freq_info.size());
   BAND_LOG_PROD(BAND_LOG_INFO, "Latency shape: %d", latency_vector.size());
+  BAND_LOG_PROD(BAND_LOG_INFO, "Worker: %d, Device: %s", key.GetWorkerId(),
+                ToString(engine_->GetWorkerDevice(key.GetWorkerId())));
 
   // num_sensors + num_devices + num_devices
   size_t feature_size = old_therm.size() + freq_info.size() +
@@ -107,15 +109,42 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   BAND_LOG_PROD(BAND_LOG_INFO, "Model shape: %d, %d", model_.rows(),
                 model_.cols());
   model_ = SolveLinear(data, target);
-  BAND_LOG_PROD(BAND_LOG_INFO, "Model shape: %d, %d", model_.rows(),
-                model_.cols());
+  // Print data
+  BAND_LOG_PROD(BAND_LOG_INFO, "Data: ");
+  for (int i = 0; i < data.rows(); i++) {
+    std::string line = "";
+    for (int j = 0; j < data.cols(); j++) {
+      line += absl::StrFormat("%f, ", data(i, j));
+    }
+    BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
+  }
+  // Print target
+  BAND_LOG_PROD(BAND_LOG_INFO, "Target: ");
+  for (int i = 0; i < target.rows(); i++) {
+    std::string line = "";
+    for (int j = 0; j < target.cols(); j++) {
+      line += absl::StrFormat("%f, ", target(i, j));
+    }
+    BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
+  }
+  // Print model
+  BAND_LOG_PROD(BAND_LOG_INFO, "Model: ");
+  for (int i = 0; i < model_.rows(); i++) {
+    std::string line = "";
+    for (int j = 0; j < model_.cols(); j++) {
+      line += absl::StrFormat("%f, ", model_(i, j));
+    }
+    BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
+  }
 }
 
 void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
                                        size_t event_handle) {
   auto therm_interval = thermal_profiler_->GetInterval(event_handle);
   auto freq_interval = frequency_profiler_->GetInterval(event_handle);
-  auto latency = latency_profiler_->GetDuration(event_handle);
+  auto latency =
+      latency_profiler_->GetDuration<std::chrono::milliseconds>(event_handle);
+  BAND_LOG_PROD(BAND_LOG_INFO, "Duration: %f", latency);
   Update(key, therm_interval.first.second, therm_interval.second.second,
          freq_interval.second.second, latency);
 }
@@ -127,9 +156,42 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 
 ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
   const size_t num_sensors = EnumLength<SensorFlag>();
+  const size_t num_devices = EnumLength<DeviceFlag>();
+
   auto cur_therm = ConvertTMapToEigenVector<ThermalMap>(
       thermal_profiler_->GetAllThermal(), num_sensors);
-  return ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * cur_therm);
+  auto cur_freq = ConvertTMapToEigenVector<FreqMap>(
+      frequency_profiler_->GetAllFrequency(), EnumLength<DeviceFlag>());
+  auto expected_latency = GetOneHotVector(
+      frequency_latency_estimator_->GetExpected(key), num_devices,
+      static_cast<size_t>(engine_->GetWorkerDevice(key.GetWorkerId())));
+
+  size_t feature_size = cur_therm.size() + cur_freq.size() +
+                        expected_latency.size() + expected_latency.size();
+  Eigen::VectorXd feature(feature_size);
+  feature << cur_therm, cur_freq, (cur_freq.cwiseProduct(expected_latency)),
+      expected_latency;
+
+  if (features_.size() < window_size_) {
+    BAND_LOG_PROD(BAND_LOG_INFO,
+                  "ThermalEstimator, Not enough data collected. Current number "
+                  "of data: %d",
+                  features_.size());
+    return {};
+  }
+  BAND_LOG_PROD(BAND_LOG_INFO, "Model shape: %d, %d", model_.rows(),
+                model_.cols());
+  BAND_LOG_PROD(BAND_LOG_INFO, "Current thermal shape: %d", feature.size());
+
+  auto expected_therm =
+      ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
+  BAND_LOG_PROD(BAND_LOG_INFO, "Expected thermal shape: %d",
+                expected_therm.size());
+  BAND_LOG_PROD(BAND_LOG_INFO, "Expected thermal: ");
+  for (const auto& pair : expected_therm) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "%s: %f", ToString(pair.first), pair.second);
+  }
+  return expected_therm;
 }
 
 absl::Status ThermalEstimator::LoadModel(std::string profile_path) {

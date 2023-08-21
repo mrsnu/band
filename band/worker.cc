@@ -42,10 +42,11 @@ absl::Status Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
   }
 
   CpuSet current_cpu_set;
-  if (!GetCPUThreadAffinity(current_cpu_set).ok()) {
+  auto status = GetCPUThreadAffinity(current_cpu_set);
+  if (!status.ok()) {
     // skip if not supports
     BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                      "Set affinity failed - not supported by the platform");
+                      "Set affinity failed - not supported by the platform: %s", status.message());
     return absl::OkStatus();
   }
 

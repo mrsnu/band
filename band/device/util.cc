@@ -35,20 +35,25 @@ absl::StatusOr<T> TryRead(std::vector<std::string> paths,
 
   for (size_t i = 0; i < paths.size(); i++) {
     auto path = paths[i];
-    std::fstream fs(path, std::fstream::in);
+    std::ifstream fs(path, std::ifstream::binary);
     if (fs.is_open()) {
       T output;
       fs >> output;
       return output * multipliers[i];
     }
   }
-  return absl::NotFoundError(
-      absl::StrFormat("No available path: %s !", paths[0].c_str()));
+  return absl::NotFoundError(absl::StrFormat(
+      "No available path: %s, %s", paths[0].c_str(), strerror(errno)));
 }
 
 absl::StatusOr<size_t> TryReadSizeT(std::vector<std::string> paths,
                                     std::vector<float> multipliers) {
   return TryRead<size_t>(paths, multipliers);
+}
+
+absl::StatusOr<double> TryReadDouble(std::vector<std::string> paths,
+                                     std::vector<float> multipliers) {
+  return TryRead<double>(paths, multipliers);
 }
 
 absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
@@ -60,7 +65,7 @@ absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
 
   for (size_t i = 0; i < paths.size(); i++) {
     auto path = paths[i];
-    std::fstream fs(path, std::fstream::in);
+    std::ifstream fs(path, std::ifstream::binary);
     if (fs.is_open()) {
       std::vector<size_t> outputs;
       size_t output;
@@ -70,8 +75,8 @@ absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
       return outputs;
     }
   }
-  return absl::NotFoundError(
-      absl::StrFormat("No available path: %s !", paths[0].c_str()));
+  return absl::NotFoundError(absl::StrFormat(
+      "No available path: %s, %s", paths[0].c_str(), strerror(errno)));
 }
 
 std::vector<std::string> ListFilesInPath(const char* path) {
