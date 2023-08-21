@@ -27,13 +27,14 @@ typedef enum BandWorkerType {
 
 typedef enum BandSchedulerType {
   kBandFixedWorker = 0,
-  kBandRoundRobin = 1,
-  kBandShortestExpectedLatency = 2,
-  kBandFixedWorkerGlobalQueue = 3,
-  kBandHeterogeneousEarliestFinishTime = 4,
-  kBandLeastSlackTimeFirst = 5,
-  kBandHeterogeneousEarliestFinishTimeReserved = 6,
-  kBandNumSchedulerType = 7
+  kBandRoundRobin,
+  kBandRoundRobinIdle,
+  kBandShortestExpectedLatency,
+  kBandFixedWorkerGlobalQueue,
+  kBandHeterogeneousEarliestFinishTime,
+  kBandLeastSlackTimeFirst,
+  kBandHeterogeneousEarliestFinishTimeReserved,
+  kBandNumSchedulerType
 } BandSchedulerType;
 
 typedef enum BandCPUMaskFlag {

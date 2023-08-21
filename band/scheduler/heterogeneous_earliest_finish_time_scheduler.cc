@@ -9,12 +9,9 @@ HEFTScheduler::HEFTScheduler(IEngine& engine, int window_size, bool reserve)
     : IScheduler(engine), window_size_(window_size), reserve_(reserve) {}
 
 bool HEFTScheduler::Schedule(JobQueue& requests) {
-  BAND_LOG_PROD(BAND_LOG_INFO, "HEFTScheduler::Schedule");
   bool success = true;
   int num_jobs = std::min(window_size_, (int)requests.size());
   while (num_jobs > 0) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "HEFTScheduler::Schedule: num_jobs = %d",
-                  num_jobs);
     engine_.UpdateWorkersWaiting();
 
     // stop if there are no idle devices.
@@ -69,12 +66,6 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
 
         std::pair<std::vector<SubgraphKey>, double> best_subgraph =
             engine_.GetSubgraphWithShortestLatency(job, reserved_time);
-        BAND_LOG_PROD(BAND_LOG_INFO,
-                      "HEFTScheduler::Schedule: best_subgraph.first = %s",
-                      best_subgraph.first[0].ToString().c_str());
-        BAND_LOG_PROD(BAND_LOG_INFO,
-                      "HEFTScheduler::Schedule: best_subgraph.second = %f",
-                      best_subgraph.second);
 
         if (largest_shortest_latency < best_subgraph.second) {
           largest_shortest_latency = best_subgraph.second;
@@ -88,12 +79,6 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
         }
       }
 
-      BAND_LOG_PROD(BAND_LOG_INFO,
-                    "HEFTScheduler::Schedule: largest_shortest_latency = %f",
-                    largest_shortest_latency);
-      BAND_LOG_PROD(BAND_LOG_INFO, "HEFTScheduler::Schedule: target_job_index = %d",
-                    target_job_index);
-
       // no one wants to be scheduled.
       if (target_job_index < 0) {
         return success;
@@ -103,15 +88,9 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
       // even if this job is the "most urgent" one
       const int worker_id = target_subgraph_key.GetWorkerId();
       if (idle_workers.find(worker_id) != idle_workers.end()) {
-        BAND_LOG_PROD(BAND_LOG_INFO,
-                      "HEFTScheduler::Schedule: idle_workers.find(worker_id) "
-                      "!= idle_workers.end()");
         break;
       }
       waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
-      BAND_LOG_PROD(BAND_LOG_INFO,
-                    "HEFTScheduler::Schedule: waiting_time[worker_id] = %f",
-                    waiting_time[worker_id]);
       auto requests_it = requests.begin() + target_job_index;
       Job job = *requests_it;
       jobs_to_yield.insert(job.job_id);

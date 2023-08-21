@@ -61,12 +61,6 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   Eigen::VectorXd latency_vector = GetOneHotVector(
       latency, num_devices,
       static_cast<size_t>(engine_->GetWorkerDevice(key.GetWorkerId())));
-  BAND_LOG_PROD(BAND_LOG_INFO, "Old therm shape: %d", old_therm.size());
-  BAND_LOG_PROD(BAND_LOG_INFO, "New therm shape: %d", new_therm.size());
-  BAND_LOG_PROD(BAND_LOG_INFO, "Freq shape: %d", freq_info.size());
-  BAND_LOG_PROD(BAND_LOG_INFO, "Latency shape: %d", latency_vector.size());
-  BAND_LOG_PROD(BAND_LOG_INFO, "Worker: %d, Device: %s", key.GetWorkerId(),
-                ToString(engine_->GetWorkerDevice(key.GetWorkerId())));
 
   // num_sensors + num_devices + num_devices
   size_t feature_size = old_therm.size() + freq_info.size() +
@@ -76,7 +70,6 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   Eigen::VectorXd feature(feature_size);
   feature << old_therm, freq_info, (freq_info.cwiseProduct(latency_vector)),
       latency_vector;
-  BAND_LOG_PROD(BAND_LOG_INFO, "Feature shape: %d", feature.size());
 
   features_.push_back({feature, new_therm});
   if (features_.size() > window_size_) {
@@ -92,11 +85,6 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
 
   Eigen::MatrixXd data(window_size_, feature_size);
   Eigen::MatrixXd target(window_size_, target_size);
-  BAND_LOG_PROD(BAND_LOG_INFO, "Data shape: %d, %d", data.rows(), data.cols());
-  BAND_LOG_PROD(BAND_LOG_INFO, "Target shape: %d, %d", target.rows(),
-                target.cols());
-  BAND_LOG_PROD(BAND_LOG_INFO, "Feature shape: %d, %d", feature.rows(),
-                feature.cols());
   for (int i = 0; i < window_size_; i++) {
     for (int j = 0; j < feature_size; j++) {
       data(i, j) = features_[i].first(j);
@@ -106,36 +94,34 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
     }
   }
 
-  BAND_LOG_PROD(BAND_LOG_INFO, "Model shape: %d, %d", model_.rows(),
-                model_.cols());
   model_ = SolveLinear(data, target);
-  // Print data
-  BAND_LOG_PROD(BAND_LOG_INFO, "Data: ");
-  for (int i = 0; i < data.rows(); i++) {
-    std::string line = "";
-    for (int j = 0; j < data.cols(); j++) {
-      line += absl::StrFormat("%f, ", data(i, j));
-    }
-    BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
-  }
-  // Print target
-  BAND_LOG_PROD(BAND_LOG_INFO, "Target: ");
-  for (int i = 0; i < target.rows(); i++) {
-    std::string line = "";
-    for (int j = 0; j < target.cols(); j++) {
-      line += absl::StrFormat("%f, ", target(i, j));
-    }
-    BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
-  }
-  // Print model
-  BAND_LOG_PROD(BAND_LOG_INFO, "Model: ");
-  for (int i = 0; i < model_.rows(); i++) {
-    std::string line = "";
-    for (int j = 0; j < model_.cols(); j++) {
-      line += absl::StrFormat("%f, ", model_(i, j));
-    }
-    BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
-  }
+  // // Print data
+  // BAND_LOG_PROD(BAND_LOG_INFO, "Data: ");
+  // for (int i = 0; i < data.rows(); i++) {
+  //   std::string line = "";
+  //   for (int j = 0; j < data.cols(); j++) {
+  //     line += absl::StrFormat("%f, ", data(i, j));
+  //   }
+  //   BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
+  // }
+  // // Print target
+  // BAND_LOG_PROD(BAND_LOG_INFO, "Target: ");
+  // for (int i = 0; i < target.rows(); i++) {
+  //   std::string line = "";
+  //   for (int j = 0; j < target.cols(); j++) {
+  //     line += absl::StrFormat("%f, ", target(i, j));
+  //   }
+  //   BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
+  // }
+  // // Print model
+  // BAND_LOG_PROD(BAND_LOG_INFO, "Model: ");
+  // for (int i = 0; i < model_.rows(); i++) {
+  //   std::string line = "";
+  //   for (int j = 0; j < model_.cols(); j++) {
+  //     line += absl::StrFormat("%f, ", model_(i, j));
+  //   }
+  //   BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
+  // }
 }
 
 void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,

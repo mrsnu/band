@@ -51,14 +51,15 @@ enum class BackendType : size_t {
 
 enum class SchedulerType : size_t {
   kFixedWorker = 0,
-  kRoundRobin = 1,
-  kShortestExpectedLatency = 2,
-  kFixedWorkerGlobalQueue = 3,
-  kHeterogeneousEarliestFinishTime = 4,
-  kLeastSlackTimeFirst = 5,
-  kHeterogeneousEarliestFinishTimeReserved = 6,
-  kGreedyThermal = 7,
-  kFrameThermal = 8,
+  kRoundRobin,
+  kRoundRobinIdle,
+  kShortestExpectedLatency,
+  kFixedWorkerGlobalQueue,
+  kHeterogeneousEarliestFinishTime,
+  kLeastSlackTimeFirst,
+  kHeterogeneousEarliestFinishTimeReserved,
+  kGreedyThermal,
+  kFrameThermal,
 };
 
 enum class CPUMaskFlag : size_t {
@@ -277,6 +278,16 @@ struct Job {
   explicit Job(ModelId model_id, int64_t slo)
       : model_id(model_id), slo_us(slo) {}
 
+  static Job CreateIdleJob(int idle_us, SubgraphKey key) {
+    static int count = -1;
+    Job idle_job;
+    idle_job.job_id = count--;
+    idle_job.is_idle_job = true;
+    idle_job.idle_us = idle_us;
+    idle_job.subgraph_key = key;
+    return idle_job;
+  }
+
   std::string ToJson() const;
 
   // Constant variables (Valid after invoke)
@@ -315,6 +326,10 @@ struct Job {
   // Resolved unit subgraphs and executed subgraph keys
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
+
+  // Idle job
+  bool is_idle_job = false;
+  int idle_us = 0;
 };
 
 // Type definition of job queue.

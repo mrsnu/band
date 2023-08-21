@@ -554,7 +554,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
 }
 {
   thermal_estimator_ = std::make_unique<ThermalEstimator>(
-      this, thermal_profiler_, frequency_profiler_, latency_profiler_, frequency_latency_estimator_.get());
+      this, thermal_profiler_, frequency_profiler_, latency_profiler_,
+      frequency_latency_estimator_.get());
   auto status = thermal_estimator_->Init(config.profile_config.thermal_config);
   if (!status.ok()) {
     return status;
@@ -1000,13 +1001,16 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
-bool Engine::EnqueueToWorker(const ScheduleAction& action) {
-  return EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
+bool Engine::EnqueueToWorker(const ScheduleAction& action, const int idle_us) {
+  return EnqueueToWorkerBatch(
+      std::vector<ScheduleAction>{action},
+      idle_us > 0 ? std::vector<int>{idle_us} : std::vector<int>());
 }
 
 bool Engine::EnqueueToWorkerBatch(
-    const std::vector<ScheduleAction>& schedule_action) {
-  return planner_->EnqueueToWorker(schedule_action);
+    const std::vector<ScheduleAction>& schedule_action,
+    const std::vector<int> idle_uses) {
+  return planner_->EnqueueToWorker(schedule_action, idle_uses);
 }
 
 const Worker* Engine::GetWorker(WorkerId id) const {

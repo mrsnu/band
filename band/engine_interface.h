@@ -81,8 +81,7 @@ class IEngine {
 
   virtual std::pair<std::vector<SubgraphKey>, double>
   GetSubgraphWithShortestLatency(
-      const Job& job,
-      const WorkerWaitingTime& worker_waiting) const = 0;
+      const Job& job, const WorkerWaitingTime& worker_waiting) const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,
@@ -104,9 +103,11 @@ class IEngine {
                                           bool push_front = false) = 0;
   virtual void PrepareReenqueue(Job& job) = 0;
   virtual void EnqueueFinishedJob(Job& job) = 0;
-  virtual bool EnqueueToWorker(const ScheduleAction& schedule_action) = 0;
+  virtual bool EnqueueToWorker(const ScheduleAction& schedule_action,
+                               const int idle_us = -1) = 0;
   virtual bool EnqueueToWorkerBatch(
-      const std::vector<ScheduleAction>& schedule_action) = 0;
+      const std::vector<ScheduleAction>& schedule_action,
+      const std::vector<int> idle_uses = {}) = 0;
 
   /* getters */
   virtual const ErrorReporter* GetErrorReporter() const {

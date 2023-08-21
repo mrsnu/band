@@ -46,7 +46,8 @@ absl::Status Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
   if (!status.ok()) {
     // skip if not supports
     BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                      "Set affinity failed - not supported by the platform: %s", status.message());
+                      "Set affinity failed - not supported by the platform: %s",
+                      status.message());
     return absl::OkStatus();
   }
 
@@ -172,7 +173,7 @@ void Worker::Work() {
     Job* current_job = GetCurrentJob();
     lock.unlock();
 
-    if (!current_job || !IsValid(*current_job)) {
+    if (!current_job || (!current_job->is_idle_job && !IsValid(*current_job))) {
       BAND_REPORT_ERROR(GetErrorReporter(),
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
@@ -194,13 +195,17 @@ void Worker::Work() {
                     worker_id_);
     }
 
-    if (engine_->TryCopyInputTensors(*current_job).ok()) {
+    BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
+    if (current_job->is_idle_job) {
+      time::SleepForMicros(current_job->idle_us);
+      current_job->end_time = time::NowMicros();
+      current_job->status = JobStatus::kSuccess;
+    } else if (engine_->TryCopyInputTensors(*current_job).ok()) {
       lock.lock();
       current_job->invoke_time = time::NowMicros();
       current_job->event_id = engine_->BeginEvent();
       lock.unlock();
 
-      BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
       absl::Status status = engine_->Invoke(subgraph_key);
       if (status.ok()) {
         // end_time is never read/written by any other thread as long as

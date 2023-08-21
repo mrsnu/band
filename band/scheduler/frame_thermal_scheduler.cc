@@ -2,7 +2,7 @@
 
 namespace band {
 
-bool FrameThremalScheduler::Schedule(JobQueue& requests) {
+bool FrameThermalScheduler::Schedule(JobQueue& requests) {
   bool success = true;
   int num_requests = requests.size();
 

@@ -2,7 +2,7 @@
 
 namespace band {
 
-bool GreedyThremalScheduler::Schedule(JobQueue& requests) {
+bool GreedyThermalScheduler::Schedule(JobQueue& requests) {
   bool success = true;
 
   while (!requests.empty()) {

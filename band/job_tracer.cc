@@ -15,9 +15,14 @@ std::string JobTracer::GetStreamName(size_t id) const {
 }
 
 std::string JobTracer::GetJobName(const Job& job) const {
-  std::string model_name =
-      "(Model " +
-      (job.model_fname == "" ? std::to_string(job.model_id) : job.model_fname);
+  std::string model_name;
+  if (job.model_id == -1) {
+    model_name = "(Idle";
+  } else if (job.model_fname.empty()) {
+    model_name = "(Model " + std::to_string(job.model_id);
+  } else {
+    model_name = job.model_fname;
+  }
   return model_name + ", JobId " + std::to_string(job.job_id) + ")";
 }
 

@@ -5,9 +5,9 @@
 
 namespace band {
 
-class GreedyThremalScheduler : public IScheduler {
+class GreedyThermalScheduler : public IScheduler {
  public:
-  explicit GreedyThremalScheduler(IEngine& engine) : IScheduler(engine){};
+  explicit GreedyThermalScheduler(IEngine& engine) : IScheduler(engine){};
 
   bool Schedule(JobQueue& requests) override;
   bool NeedFallbackSubgraphs() override { return true; }

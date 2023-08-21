@@ -5,9 +5,9 @@
 
 namespace band {
 
-class FrameThremalScheduler : public IScheduler {
+class FrameThermalScheduler : public IScheduler {
  public:
-  explicit FrameThremalScheduler(IEngine& engine) : IScheduler(engine) {};
+  explicit FrameThermalScheduler(IEngine& engine) : IScheduler(engine) {};
 
   bool Schedule(JobQueue& requests) override;
   bool NeedFallbackSubgraphs() override { return true; }

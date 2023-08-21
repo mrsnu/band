@@ -97,6 +97,9 @@ const char* ToString(SchedulerType scheduler_type) {
     case SchedulerType::kRoundRobin: {
       return "round_robin";
     } break;
+    case SchedulerType::kRoundRobinIdle: {
+      return "round_robin_idle";
+    } break;
     case SchedulerType::kShortestExpectedLatency: {
       return "shortest_expected_latency";
     } break;
@@ -111,6 +114,12 @@ const char* ToString(SchedulerType scheduler_type) {
     } break;
     case SchedulerType::kHeterogeneousEarliestFinishTimeReserved: {
       return "heterogeneous_earliest_finish_time_reserved";
+    } break;
+    case SchedulerType::kGreedyThermal: {
+      return "greedy_thermal";
+    } break;
+    case SchedulerType::kFrameThermal: {
+      return "frame_thermal";
     } break;
     default: {
       return "Unknown scheduler type";
@@ -479,7 +488,7 @@ std::string Job::ToJson() const {
          ",\"slo_us\":" + std::to_string(slo_us) +
          ",\"model_id\":" + std::to_string(model_id) +
          (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
-         ",\"unit_indices\":" + subgraph_key.GetUnitIndicesString() +
+         ",\"unit_indices\": \"" + subgraph_key.GetUnitIndicesString() + "\"" +
          ",\"job_id\":" + std::to_string(job_id) + "}";
 }
 

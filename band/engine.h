@@ -162,9 +162,10 @@ class Engine : public IEngine {
                                   bool push_front = false) override;
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
-  bool EnqueueToWorker(const ScheduleAction& schedule_action) override;
-  bool EnqueueToWorkerBatch(
-      const std::vector<ScheduleAction>& schedule_action) override;
+  bool EnqueueToWorker(const ScheduleAction& schedule_action,
+                       const int idle_us = -1) override;
+  bool EnqueueToWorkerBatch(const std::vector<ScheduleAction>& schedule_action,
+                            const std::vector<int> idle_uses = {}) override;
   const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
   /* tensor communication */

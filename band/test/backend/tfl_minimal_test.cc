@@ -152,7 +152,7 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kFixedWorkerGlobalQueue})
+          .AddSchedulers({SchedulerType::kRoundRobinIdle})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -171,7 +171,7 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
           .Build();
 
   auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  EXPECT_NE(engine, nullptr);
 
   Model model;
   EXPECT_TRUE(
@@ -207,7 +207,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
           .Build();
 
   auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  EXPECT_NE(engine, nullptr);
 
   Model model;
   EXPECT_TRUE(
@@ -246,7 +246,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddSchedulers({SchedulerType::kRoundRobinIdle})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -274,7 +274,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
           .Build();
 
   auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  EXPECT_NE(engine, nullptr);
 
   Model model;
   EXPECT_TRUE(
@@ -315,7 +315,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddSchedulers({SchedulerType::kRoundRobinIdle})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -343,7 +343,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
           .Build();
 
   auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  EXPECT_NE(engine, nullptr);
 
   Model model;
   EXPECT_TRUE(
@@ -373,7 +373,7 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddSchedulers({SchedulerType::kRoundRobinIdle})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -451,7 +451,7 @@ TEST(TFLiteBackend, ClassificationTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddSchedulers({SchedulerType::kRoundRobinIdle})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)

@@ -49,7 +49,8 @@ class Planner {
   void PrepareReenqueue(Job& job);
   // Enqueue the request to the worker.
   // Returns true if the request is successfully enqueued.
-  bool EnqueueToWorker(const std::vector<ScheduleAction>& action);
+  bool EnqueueToWorker(const std::vector<ScheduleAction>& action,
+                       const std::vector<int> idle_uses = {});
   void Trigger() { planner_safe_bool_.notify(); }
   int IssueSchedId() { return sched_id_++; }
 
@@ -107,7 +108,7 @@ class Planner {
   std::function<void(int, absl::Status)> on_end_request_;
 
   // Request Queue
-  ConcurrentJobQueue requests_;  
+  ConcurrentJobQueue requests_;
 
   // Multi-level Local Queue.
   // The closer the index is to 0, the higher the priority.

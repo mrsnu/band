@@ -8,8 +8,11 @@
 #include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
+#include "band/scheduler/frame_thermal_scheduler.h"
+#include "band/scheduler/greedy_thermal_scheduler.h"
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
+#include "band/scheduler/round_robin_idle_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/time.h"
@@ -29,6 +32,7 @@ Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
 
 Planner::~Planner() {
   if (log_path_.size()) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Dumping job tracer to %s", log_path_.c_str());
     BAND_TRACER_DUMP(log_path_);
   }
   planner_safe_bool_.terminate();
@@ -38,6 +42,7 @@ Planner::~Planner() {
 absl::Status Planner::Init(const PlannerConfig& config) {
   schedule_window_size_ = config.schedule_window_size;
   log_path_ = config.log_path;
+  BAND_LOG_PROD(BAND_LOG_INFO, "Planner log path: %s", log_path_.c_str());
 
   auto& schedulers = config.schedulers;
   if (schedulers.size() == 0 || schedulers.size() > 2) {
@@ -56,6 +61,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kRoundRobinIdle) {
+      schedulers_.emplace_back(new RoundRobinIdleScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kShortestExpectedLatency) {
       schedulers_.emplace_back(
           new ShortestExpectedLatencyScheduler(engine_, schedule_window_size_));
@@ -70,6 +77,10 @@ absl::Status Planner::Init(const PlannerConfig& config) {
                SchedulerType::kHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(engine_, schedule_window_size_, true));
+    } else if (schedulers[i] == SchedulerType::kGreedyThermal) {
+      schedulers_.emplace_back(new GreedyThermalScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kFrameThermal) {
+      schedulers_.emplace_back(new FrameThermalScheduler(engine_));
     } else {
       return absl::InternalError("[Planner] Unsupported scheduler type.");
     }
@@ -177,8 +188,10 @@ void Planner::EnqueueFinishedJob(Job& job) {
       engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
   // record finished / failed job
   if (is_finished) {
-    jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
-    num_finished_jobs_++;
+    if (!job.is_idle_job) {
+      jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
+      num_finished_jobs_++;
+    }
     end_invoke_.notify_all();
   }
   // make sure to unlock before calling callback to avoid
@@ -186,10 +199,12 @@ void Planner::EnqueueFinishedJob(Job& job) {
   finished_lock.unlock();
 
   // report end invoke using callback
-  if (on_end_request_ && job.require_callback && is_finished) {
-    on_end_request_(job.job_id, job.status == JobStatus::kSuccess
-                                    ? absl::OkStatus()
-                                    : absl::InternalError("Job failed."));
+  if (!job.is_idle_job) {
+    if (on_end_request_ && job.require_callback && is_finished) {
+      on_end_request_(job.job_id, job.status == JobStatus::kSuccess
+                                      ? absl::OkStatus()
+                                      : absl::InternalError("Job failed."));
+    }
   }
 }
 
@@ -289,13 +304,13 @@ void Planner::CopyToLocalQueues() {
   request_lock.unlock();
 }
 
-bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
+bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions,
+                              const std::vector<int> idle_uses) {
   bool success = true;
-  for (auto& action : actions) {
+  for (int i = 0; i < actions.size(); i++) {
     Job job;
     SubgraphKey target_key;
-
-    std::tie(job, target_key) = action;
+    std::tie(job, target_key) = actions[i];
 
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
@@ -325,6 +340,15 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
                         "EnqueueToWorker failed. Requests scheduled to "
                         "unavailable worker id %d",
                         target_key.GetWorkerId());
+        }
+        if (idle_uses.size() > 0) {
+          Job idle_job = Job::CreateIdleJob(idle_uses[i], target_key);
+          if (!worker->EnqueueJob(idle_job)) {
+            BAND_LOG_PROD(BAND_LOG_ERROR,
+                          "EnqueueToWorker failed. Requests scheduled to "
+                          "unavailable worker id %d",
+                          target_key.GetWorkerId());
+          }
         }
       } else {
         EnqueueRequest(job, true);

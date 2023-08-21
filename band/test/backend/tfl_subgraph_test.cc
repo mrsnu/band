@@ -59,7 +59,7 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .Build();
 
   auto engine = Engine::Create(config);
-  EXPECT_TRUE(engine);
+  EXPECT_NE(engine, nullptr);
 
   Model model;
   EXPECT_EQ(model.FromPath(BackendType::kTfLite, model_name.c_str()),
