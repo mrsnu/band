@@ -26,16 +26,18 @@ public class Engine {
     return wrapper.getNumOutputTensors(model);
   }
 
-  public void requestSync(Model model, List<Tensor> inputTensors, List<Tensor> outputTensors) {
-    wrapper.requestSync(model, inputTensors, outputTensors);
+  public void requestSync(
+      Model model, List<Tensor> inputTensors, List<Tensor> outputTensors, RequestOption option) {
+    wrapper.requestSync(model, inputTensors, outputTensors, option);
   }
 
-  public Request requestAsync(Model model, List<Tensor> inputTensors) {
-    return wrapper.requestAsync(model, inputTensors);
+  public Request requestAsync(Model model, List<Tensor> inputTensors, RequestOption option) {
+    return wrapper.requestAsync(model, inputTensors, option);
   }
 
-  public List<Request> requestAsyncBatch(List<Model> models, List<List<Tensor>> inputTensorLists) {
-    return wrapper.requestAsyncBatch(models, inputTensorLists);
+  public List<Request> requestAsyncBatch(
+      List<Model> models, List<List<Tensor>> inputTensorLists, List<RequestOption> options) {
+    return wrapper.requestAsyncBatch(models, inputTensorLists, options);
   }
 
   public void wait(Request request, List<Tensor> outputTensors) {

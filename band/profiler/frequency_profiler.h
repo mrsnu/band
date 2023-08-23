@@ -17,7 +17,7 @@ using FreqInterval = std::pair<FreqInfo, FreqInfo>;
 class FrequencyProfiler : public Profiler {
  public:
   explicit FrequencyProfiler(DeviceConfig config);
-  ~FrequencyProfiler();
+  ~FrequencyProfiler() {}
 
   size_t BeginEvent() override;
   void EndEvent(size_t event_handle) override;
@@ -45,7 +45,6 @@ class FrequencyProfiler : public Profiler {
  private:
   std::unique_ptr<Frequency> frequency_;
   std::vector<std::pair<FreqInfo, FreqInfo>> timeline_;
-  std::ofstream log_file_;
 };
 
 }  // namespace band

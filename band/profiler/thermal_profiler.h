@@ -18,7 +18,7 @@ using ThermalInterval = std::pair<ThermalInfo, ThermalInfo>;
 class ThermalProfiler : public Profiler {
  public:
   explicit ThermalProfiler(DeviceConfig config);
-  ~ThermalProfiler();
+  ~ThermalProfiler() {}
 
   size_t BeginEvent() override;
   void EndEvent(size_t event_handle) override;
@@ -46,7 +46,6 @@ class ThermalProfiler : public Profiler {
  private:
   std::unique_ptr<Thermal> thermal_;
   std::vector<std::pair<ThermalInfo, ThermalInfo>> timeline_;
-  std::ofstream log_file_;
 };
 
 }  // namespace band

@@ -198,8 +198,8 @@ ModelAnalyzer::CreateSubgraphs() {
            worker_id++) {
         std::vector<SubgraphDef> worker_subgraphs =
             GetSubgraphsForFallbackOps(worker_id);
-
         for (SubgraphDef& worker_subgraph : worker_subgraphs) {
+          bool is_set = false;
           // set unit subgraph indices
           for (int unit_subgraph_id = 0;
                unit_subgraph_id < unit_subgraph_defs.size();
@@ -215,7 +215,18 @@ ModelAnalyzer::CreateSubgraphs() {
                       .unit_subgraph_indices.begin(),
                   unit_subgraph_defs[unit_subgraph_id]
                       .unit_subgraph_indices.end());
+              is_set = true;
             }
+          }
+
+          if (!is_set) {
+            BAND_LOG_PROD(BAND_LOG_INFO,
+                          "Failed to create subgraph. Worker subgraph %s "
+                          "does not have any unit subgraph for model %s and "
+                          "mode %s",
+                          worker_subgraph.ToString().c_str(),
+                          model_spec_->path.c_str(),
+                          ToString(subgraph_config_.subgraph_preparation_type));
           }
         }
 
@@ -244,6 +255,7 @@ ModelAnalyzer::CreateSubgraphs() {
           ToString(subgraph_config_.subgraph_preparation_type)));
     }
   }
+  BAND_LOG_PROD(BAND_LOG_INFO, "Verify subgraphs");
 
   // Verify subgraphs
   {
@@ -261,12 +273,16 @@ ModelAnalyzer::CreateSubgraphs() {
     }
   }
 
+  BAND_LOG_PROD(BAND_LOG_INFO, "Verified subgraphs");
+
   const std::string subgraph_summary =
       subgraph_config_.subgraph_preparation_type !=
               SubgraphPreparationType::kFallbackPerWorker
           ? SummarizeSubgraphs(subgraph_defs)
           : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
                                                 subgraph_defs);
+
+  BAND_LOG_PROD(BAND_LOG_INFO, "Summarized subgraph");
 
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d subgraphs for model %s with mode %s %s",
@@ -603,9 +619,8 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
       }
     }
 
-    if (operator_set.size()) {
-      if (current_device == DeviceFlag::kCPU &&
-          device_flag != DeviceFlag::kCPU) {
+    if (operator_set.size() > subgraph_config_.minimum_subgraph_size) {
+      if (is_fallback && device_flag != DeviceFlag::kCPU) {
         for (auto cpu_worker_id : cpu_worker_ids) {
           subgraph_defs.push_back({cpu_worker_id, operator_set, {}});
         }

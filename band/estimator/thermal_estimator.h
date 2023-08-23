@@ -31,7 +31,8 @@ class ThermalEstimator
         frequency_profiler_(frequency_profiler),
         latency_profiler_(latency_profiler),
         frequency_latency_estimator_(frequency_latency_estimator) {}
-  absl::Status Init(const ThermalProfileConfig& config);
+  ~ThermalEstimator();
+  absl::Status Init(const ThermalProfileConfig& config, std::string log_path);
   void Update(const SubgraphKey& key, ThermalMap therm_start,
               ThermalMap therm_end, FreqMap freq, double latency);
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
@@ -59,7 +60,7 @@ class ThermalEstimator
   size_t num_resources_ = 0;
   size_t window_size_;
 
-  std::string profile_path_;
+  mutable std::ofstream log_file_;
 
   Eigen::MatrixXd model_;
   std::deque<std::pair<Eigen::VectorXd, Eigen::VectorXd>> features_;

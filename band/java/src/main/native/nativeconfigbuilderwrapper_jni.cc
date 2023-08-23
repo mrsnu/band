@@ -77,7 +77,7 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencySmoothingFactor(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addThermalWindowSize(
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addThermWindowSize(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint windowSize) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)
       ->AddThermalWindowSize(windowSize);

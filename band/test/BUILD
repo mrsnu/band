@@ -114,6 +114,27 @@ band_cc_android_test(
     ],
 )
 
+# band_cc_android_test(
+#     name = "model_analyzer_test",
+#     size = "small",
+#     srcs = ["model_analyzer_test.cc"],
+#     data = [
+#         "//band/test:data/add.tflite",
+#         "//band/test:data/cat.jpg",
+#         "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
+#         "//band/test:data/lite-model_efficientdet_lite0_int8_1.tflite",
+#         "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
+#         "//band/test:data/retinaface-mbv2-int8.tflite",
+#         "//band/test:data/retinaface_mbv2_quant_160.tflite",
+#     ],
+#     deps = [
+#         "//band:config_builder",
+#         "//band/backend/tfl:tfl_backend",
+#         "//band/test:test_util",
+#         "@com_google_googletest//:gtest",
+#     ],
+# )
+
 band_cc_android_test(
     name = "cpu_test",
     size = "small",

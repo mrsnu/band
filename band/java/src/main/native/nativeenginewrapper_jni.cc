@@ -59,13 +59,14 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_deleteEngine(
   delete reinterpret_cast<Engine*>(engineHandle);
 }
 
-// modelHandle);
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_registerModel(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model) {
   BAND_LOG_PROD(band::BAND_LOG_INFO, "Registering model: %p, %p", engineHandle,
                 model);
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
+  BAND_LOG_PROD(band::BAND_LOG_INFO, "Registering model: %p, %p", engine,
+                native_model);
   auto status = engine->RegisterModel(native_model);
   if (!status.ok()) {
     // TODO(widiba03304): refactor absl
@@ -119,7 +120,9 @@ Java_org_mrsnu_band_NativeEngineWrapper_createOutputTensor(
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model,
-    jobject input_tensor_handles, jobject output_tensor_handles) {
+    jobject input_tensor_handles, jobject output_tensor_handles,
+    jint target_worker, jboolean require_callback, jint slo_us,
+    jfloat slo_scale) {
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   Model* native_model = ConvertJobjectToModel(env, model);
 
@@ -134,9 +137,10 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
 
   float* input_raw = reinterpret_cast<float*>(input_tensors[0]->GetData());
   float* output_raw = reinterpret_cast<float*>(output_tensors[0]->GetData());
-  auto status = engine->RequestSync(native_model->GetId(),
-                                    band::RequestOption::GetDefaultOption(),
-                                    input_tensors, output_tensors);
+  auto status = engine->RequestSync(
+      native_model->GetId(),
+      {target_worker, static_cast<bool>(require_callback), slo_us, slo_scale},
+      input_tensors, output_tensors);
   if (!status.ok()) {
     // TODO(widiba03304): refactor absl
     return;
@@ -145,7 +149,8 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestSync(
 
 JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject model,
-    jobject input_tensor_handles) {
+    jobject input_tensor_handles, jint target_worker, jboolean require_callback,
+    jint slo_us, jfloat slo_scale) {
   JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
                          "()J");
   Engine* engine = ConvertLongToEngine(env, engineHandle);
@@ -163,7 +168,8 @@ JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
 JNIEXPORT jintArray JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_requestAsyncBatch(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject models,
-    jobject inputTensorsList) {
+    jobject inputTensorsList, jobject targetWorkersList,
+    jobject requireCallbacksList, jobject sloUsList, jobject sloScaleList) {
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   JNI_DEFINE_CLS_AND_MTD(mdl, "org/mrsnu/band/Model", "getNativeHandle", "()J");
   JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",

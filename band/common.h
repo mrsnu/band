@@ -174,6 +174,8 @@ size_t EnumLength<BufferOrientation>();
 template <>
 size_t EnumLength<DeviceFlag>();
 template <>
+size_t EnumLength<SensorFlag>();
+template <>
 size_t EnumLength<QuantizationType>();
 
 template <>

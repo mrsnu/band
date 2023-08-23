@@ -556,7 +556,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   thermal_estimator_ = std::make_unique<ThermalEstimator>(
       this, thermal_profiler_, frequency_profiler_, latency_profiler_,
       frequency_latency_estimator_.get());
-  auto status = thermal_estimator_->Init(config.profile_config.thermal_config);
+  auto status = thermal_estimator_->Init(config.profile_config.thermal_config,
+                                         config.device_config.therm_log_path);
   if (!status.ok()) {
     return status;
   }

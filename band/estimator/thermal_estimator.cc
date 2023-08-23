@@ -1,6 +1,9 @@
 #include "band/estimator/thermal_estimator.h"
 
+#include <fstream>
+
 #include "absl/strings/str_format.h"
+#include "band/common.h"
 #include "band/engine_interface.h"
 #include "band/json_util.h"
 #include "band/logger.h"
@@ -40,38 +43,104 @@ Eigen::VectorXd GetOneHotVector(double value, size_t size, size_t index) {
   return vec;
 }
 
+Eigen::VectorXd GetFillVector(double value, size_t size) {
+  Eigen::VectorXd vec(size);
+  for (int i = 0; i < size; i++) {
+    vec(i) = value;
+  }
+  return vec;
+}
+
+std::string ThermalMapToJson(ThermalMap thermal_map) {
+  std::string result = "{";
+  for (auto& pair : thermal_map) {
+    result += "\"" + std::string(ToString(pair.first)) + "\":";
+    result += std::to_string(pair.second);
+    result += ",";
+  }
+  result.pop_back();
+  result += "}";
+  return result;
+}
+
+void PrintVector(std::string name, const Eigen::VectorXd& vec) {
+  BAND_LOG_PROD(BAND_LOG_INFO, "%s: ", name.c_str());
+  for (int i = 0; i < vec.size(); i++) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "%f ", vec(i));
+  }
+}
+
 }  // anonymous namespace
 
-absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
+absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config,
+                                    std::string log_path) {
   window_size_ = config.window_size;
+  log_file_.open(log_path, std::ios::out);
+  if (!log_file_.is_open()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR,
+                  "ThermalEstimator failed to open the log file %s: %s",
+                  log_path.c_str(), strerror(errno));
+  } else {
+    log_file_ << "[";
+  }
   return absl::OkStatus();
+}
+
+ThermalEstimator::~ThermalEstimator() {
+  if (log_file_.is_open()) {
+    log_file_.seekp(-1, std::ios_base::end);
+    log_file_ << "]";
+    log_file_.close();
+  }
 }
 
 void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
                               ThermalMap therm_end, FreqMap freq,
                               double latency) {
+  if (log_file_.is_open()) {
+    log_file_ << "{";
+    log_file_ << "\"key\":"
+              << "\"" << key.ToString() << "\",";
+    log_file_ << "\"therm_start\":" << ThermalMapToJson(therm_start) << ",";
+    log_file_ << "\"therm_end\":" << ThermalMapToJson(therm_end) << ",";
+    log_file_ << "\"expected\":false";
+    log_file_ << "},";
+  }
+
   const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
-  Eigen::VectorXd old_therm =
+  Eigen::VectorXd old_therm_vec =
       ConvertTMapToEigenVector<ThermalMap>(therm_start, num_sensors);
-  Eigen::VectorXd new_therm =
+  PrintVector("old_therm_vec", old_therm_vec);
+  Eigen::VectorXd new_therm_vec =
       ConvertTMapToEigenVector<ThermalMap>(therm_end, num_sensors);
-  Eigen::VectorXd freq_info =
+  PrintVector("new_therm_vec", new_therm_vec);
+  Eigen::VectorXd freq_vec =
       ConvertTMapToEigenVector<FreqMap>(freq, num_devices);
-  Eigen::VectorXd latency_vector = GetOneHotVector(
+  PrintVector("freq_vec", freq_vec);
+  Eigen::VectorXd lat_vec = GetOneHotVector(
       latency, num_devices,
       static_cast<size_t>(engine_->GetWorkerDevice(key.GetWorkerId())));
+  PrintVector("lat_vec", lat_vec);
+  Eigen::VectorXd therm_lat_vec = old_therm_vec * latency;
+  PrintVector("therm_lat_vec", therm_lat_vec);
+  Eigen::VectorXd freq_3_vec =
+      freq_vec.cwiseProduct(freq_vec.cwiseProduct(freq_vec));
+  PrintVector("freq_3_vec", freq_3_vec);
+  Eigen::VectorXd freq_3_lat_vec = freq_3_vec * latency;
+  PrintVector("freq_3_lat_vec", freq_3_lat_vec);
+  Eigen::VectorXd lat_fill_vec = GetFillVector(latency, num_devices);
+  PrintVector("lat_fill_vec", lat_fill_vec);
 
-  // num_sensors + num_devices + num_devices
-  size_t feature_size = old_therm.size() + freq_info.size() +
-                        latency_vector.size() + latency_vector.size();
-  size_t target_size = new_therm.size();
+  // num_sensors + num_devices + num_devices + num_devices
+  size_t feature_size = old_therm_vec.size() + therm_lat_vec.size() +
+                        freq_3_lat_vec.size() + lat_fill_vec.size();
+  size_t target_size = new_therm_vec.size();
 
   Eigen::VectorXd feature(feature_size);
-  feature << old_therm, freq_info, (freq_info.cwiseProduct(latency_vector)),
-      latency_vector;
+  feature << old_therm_vec, therm_lat_vec, freq_3_lat_vec, lat_fill_vec;
 
-  features_.push_back({feature, new_therm});
+  features_.push_back({feature, new_therm_vec});
   if (features_.size() > window_size_) {
     features_.pop_front();
   }
@@ -95,33 +164,6 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   }
 
   model_ = SolveLinear(data, target);
-  // // Print data
-  // BAND_LOG_PROD(BAND_LOG_INFO, "Data: ");
-  // for (int i = 0; i < data.rows(); i++) {
-  //   std::string line = "";
-  //   for (int j = 0; j < data.cols(); j++) {
-  //     line += absl::StrFormat("%f, ", data(i, j));
-  //   }
-  //   BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
-  // }
-  // // Print target
-  // BAND_LOG_PROD(BAND_LOG_INFO, "Target: ");
-  // for (int i = 0; i < target.rows(); i++) {
-  //   std::string line = "";
-  //   for (int j = 0; j < target.cols(); j++) {
-  //     line += absl::StrFormat("%f, ", target(i, j));
-  //   }
-  //   BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
-  // }
-  // // Print model
-  // BAND_LOG_PROD(BAND_LOG_INFO, "Model: ");
-  // for (int i = 0; i < model_.rows(); i++) {
-  //   std::string line = "";
-  //   for (int j = 0; j < model_.cols(); j++) {
-  //     line += absl::StrFormat("%f, ", model_(i, j));
-  //   }
-  //   BAND_LOG_PROD(BAND_LOG_INFO, "%s", line.c_str());
-  // }
 }
 
 void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
@@ -144,8 +186,9 @@ ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
   const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
 
-  auto cur_therm = ConvertTMapToEigenVector<ThermalMap>(
-      thermal_profiler_->GetAllThermal(), num_sensors);
+  auto cur_therm_map = thermal_profiler_->GetAllThermal();
+  auto cur_therm =
+      ConvertTMapToEigenVector<ThermalMap>(cur_therm_map, num_sensors);
   auto cur_freq = ConvertTMapToEigenVector<FreqMap>(
       frequency_profiler_->GetAllFrequency(), EnumLength<DeviceFlag>());
   auto expected_latency = GetOneHotVector(
@@ -165,17 +208,16 @@ ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
                   features_.size());
     return {};
   }
-  BAND_LOG_PROD(BAND_LOG_INFO, "Model shape: %d, %d", model_.rows(),
-                model_.cols());
-  BAND_LOG_PROD(BAND_LOG_INFO, "Current thermal shape: %d", feature.size());
 
   auto expected_therm =
       ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
-  BAND_LOG_PROD(BAND_LOG_INFO, "Expected thermal shape: %d",
-                expected_therm.size());
-  BAND_LOG_PROD(BAND_LOG_INFO, "Expected thermal: ");
-  for (const auto& pair : expected_therm) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "%s: %f", ToString(pair.first), pair.second);
+  if (log_file_.is_open()) {
+    log_file_ << "{";
+    log_file_ << "\"key\":\"" << key.ToString() << "\",";
+    log_file_ << "\"therm_start\":" << ThermalMapToJson(cur_therm_map) << ",";
+    log_file_ << "\"therm_end\":" << ThermalMapToJson(expected_therm) << ",";
+    log_file_ << "\"expected\":true";
+    log_file_ << "},";
   }
   return expected_therm;
 }

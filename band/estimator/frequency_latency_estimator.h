@@ -33,7 +33,7 @@ class FrequencyLatencyEstimator
   FrequencyProfiler* frequency_profiler_;
   LatencyProfiler* latency_profiler_;
   // SubgraphKey -> (frequency -> latency)
-  std::map<SubgraphKey, std::map<size_t, double>> profile_database_;
+  std::map<SubgraphKey, std::map<double, double>> profile_database_;
   std::string profile_path_;
 };
 

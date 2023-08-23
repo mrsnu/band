@@ -38,17 +38,32 @@ public class NativeEngineWrapper implements AutoCloseable {
     return new Tensor(createOutputTensor(nativeHandle, model, index));
   }
 
-  public void requestSync(Model model, List<Tensor> inputTensors, List<Tensor> outputTensors) {
-    requestSync(nativeHandle, model, inputTensors, outputTensors);
+  public void requestSync(
+      Model model, List<Tensor> inputTensors, List<Tensor> outputTensors, RequestOption option) {
+    requestSync(nativeHandle, model, inputTensors, outputTensors, option.getTargetWorker(),
+        option.getRequireCallback(), option.getSloUs(), option.getSloScale());
   }
 
-  public Request requestAsync(Model model, List<Tensor> inputTensors) {
-    return new Request(requestAsync(nativeHandle, model, inputTensors));
+  public Request requestAsync(Model model, List<Tensor> inputTensors, RequestOption option) {
+    return new Request(requestAsync(nativeHandle, model, inputTensors, option.getTargetWorker(),
+        option.getRequireCallback(), option.getSloUs(), option.getSloScale()));
   }
 
-  public List<Request> requestAsyncBatch(List<Model> models, List<List<Tensor>> inputTensors) {
+  public List<Request> requestAsyncBatch(
+      List<Model> models, List<List<Tensor>> inputTensors, List<RequestOption> options) {
     List<Request> ret = new ArrayList<>();
-    int[] results = requestAsyncBatch(nativeHandle, models, inputTensors);
+    List<Integer> targetWorkerList = new ArrayList<>();
+    List<Boolean> requireCallbackList = new ArrayList<>();
+    List<Integer> sloUsList = new ArrayList<>();
+    List<Float> sloScaleList = new ArrayList<>();
+    for (RequestOption option : options) {
+      targetWorkerList.add(option.getTargetWorker());
+      requireCallbackList.add(option.getRequireCallback());
+      sloUsList.add(option.getSloUs());
+      sloScaleList.add(option.getSloScale());
+    }
+    int[] results = requestAsyncBatch(nativeHandle, models, inputTensors, targetWorkerList,
+        requireCallbackList, sloUsList, sloScaleList);
     for (int jobId : results) {
       ret.add(new Request(jobId));
     }
@@ -74,11 +89,15 @@ public class NativeEngineWrapper implements AutoCloseable {
   private static native long createOutputTensor(long engineHandle, Model model, int index);
 
   private static native void requestSync(long engineHandle, Model model, List<Tensor> inputTensors,
-      List<Tensor> outputTensors);
+      List<Tensor> outputTensors, int target_worker, boolean require_callback, int slo_us,
+      float slo_scale);
 
-  private static native int requestAsync(long engineHandle, Model model, List<Tensor> inputTensors);
+  private static native int requestAsync(long engineHandle, Model model, List<Tensor> inputTensors,
+      int target_worker, boolean require_callback, int slo_us, float slo_scale);
 
-  private static native int[] requestAsyncBatch(long engineHandle, List<Model> models, List<List<Tensor>> inputTensorsList);
+  private static native int[] requestAsyncBatch(long engineHandle, List<Model> models,
+      List<List<Tensor>> inputTensorsList, List<Integer> targetWorkerList,
+      List<Boolean> requireCallbackList, List<Integer> sloUsList, List<Float> sloScaleList);
 
   private static native void wait(long engineHandle, int jobId, List<Tensor> outputTensors);
 }

@@ -98,7 +98,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
           .AddSchedulers({SchedulerType::kHeterogeneousEarliestFinishTime})
           .AddMinimumSubgraphSize(1)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::kNoFallbackSubgraph)
+              SubgraphPreparationType::kFallbackPerWorker)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
@@ -454,7 +454,7 @@ TEST(TFLiteBackend, ClassificationTest) {
           .AddSchedulers({SchedulerType::kRoundRobinIdle})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::kMergeUnitSubgraph)
+              SubgraphPreparationType::kFallbackPerWorker)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
 #ifdef __ANDROID__
@@ -532,6 +532,64 @@ TEST(TFLiteBackend, ClassificationTest) {
   }
   // tiger cat
   EXPECT_EQ(max_index, 282);
+}
+
+TEST(TFLiteBackend, RetinaFaceTest) {
+  RuntimeConfigBuilder b;
+  RuntimeConfig config =
+      b.AddPlannerLogPath("band/test/data/log.json")
+          .AddSchedulers({SchedulerType::kRoundRobinIdle})
+          .AddMinimumSubgraphSize(7)
+          .AddSubgraphPreparationType(
+              SubgraphPreparationType::kFallbackPerWorker)
+          .AddCPUMask(CPUMaskFlag::kAll)
+          .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
+#ifdef __ANDROID__
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
+                       DeviceFlag::kNPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1, 1, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll, CPUMaskFlag::kAll,
+                              CPUMaskFlag::kAll})
+#else
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
+          .AddWorkerNumThreads({3, 4})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
+#endif  // __ANDROID__
+          .AddLatencySmoothingFactor(0.1)
+          .AddProfilePath("band/test/data/profile.json")
+          .AddNumWarmups(1)
+          .AddNumRuns(1)
+          .AddAllowWorkSteal(true)
+          .AddAvailabilityCheckIntervalMs(30000)
+          .AddScheduleWindowSize(10)
+          .Build();
+
+  auto engine = Engine::Create(config);
+  EXPECT_NE(engine, nullptr);
+
+  Model model;
+  EXPECT_TRUE(
+      model.FromPath(BackendType::kTfLite, "band/test/data/retinaface-mbv2-int8.tflite").ok());
+  EXPECT_EQ(engine->RegisterModel(&model), absl::OkStatus());
+
+  int execution_count = 0;
+  engine->SetOnEndRequest([&execution_count](int job_id, absl::Status status) {
+    execution_count++;
+  });
+
+  for (size_t worker_id = 0; worker_id < engine->GetNumWorkers(); worker_id++) {
+    EXPECT_TRUE(engine
+                    ->RequestSync(model.GetId(),
+                                  {static_cast<int>(worker_id), true, -1, -1})
+                    .ok());
+    EXPECT_EQ(execution_count, worker_id + 1);
+    EXPECT_TRUE(engine
+                    ->RequestSync(model.GetId(),
+                                  {static_cast<int>(worker_id), false, -1, -1})
+                    .ok());
+    EXPECT_EQ(execution_count, worker_id + 1);
+  }
 }
 
 }  // namespace test
