@@ -100,8 +100,8 @@ class Engine : public IEngine {
   // Sets the callback function pointer to report the end of invoke.
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
 
-  int64_t GetProfiled(const SubgraphKey& key) const override;
-  int64_t GetExpected(const SubgraphKey& key) const override;
+  double GetProfiled(const SubgraphKey& key) const override;
+  double GetExpected(const SubgraphKey& key) const override;
 
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
@@ -124,17 +124,19 @@ class Engine : public IEngine {
   WorkerId GetModelWorker(ModelId model_id) const override;
 
   /* utility funtions for unit-level scheduling */
-  std::pair<SubgraphKey, double> GetShortestLatency(
+  std::pair<SubgraphKey, double> GetMinCost(
       ModelId model_id, BitMask resolved_unit_subgraphs, double start_time,
-      const WorkerWaitingTime& worker_waiting) const override;
+      const WorkerWaitingTime& worker_waiting,
+      const std::function<double(double, ThermalMap)> cost) const override;
 
-  std::pair<std::vector<SubgraphKey>, double>
-  GetShortestLatencyWithUnitSubgraph(
+  std::pair<std::vector<SubgraphKey>, double> GetMinCostWithUnitSubgraph(
       ModelId model_id, int start_unit_idx,
-      const WorkerWaitingTime& worker_waiting) const override;
+      const WorkerWaitingTime& worker_waiting,
+      const std::function<double(double, ThermalMap)> cost) const override;
 
-  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithShortestLatency(
-      const Job& job, const WorkerWaitingTime& worker_waiting) const override;
+  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
+      const Job& job, const WorkerWaitingTime& worker_waiting,
+      const std::function<double(double, ThermalMap)> cost) const override;
 
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,
@@ -142,10 +144,6 @@ class Engine : public IEngine {
 
   std::vector<SubgraphKey> GetSubgraphCandidates(
       ModelId model_id, BitMask resolved_unit_subgraphs) const;
-
-  std::pair<SubgraphKey, double> GetShortestSubgraphKey(
-      const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-      const WorkerWaitingTime& worker_waiting) const;
 
   std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, double start_time,
@@ -208,7 +206,7 @@ class Engine : public IEngine {
   std::map<ModelId, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
 
   // Scheduling
-  // cache for GetShortestLatency()
+  // cache for GetMinCost()
   mutable std::unordered_map<std::pair<ModelId, BitMask>,
                              std::pair<SubgraphKey, double>, JobIdBitMaskHash>
       cache_;

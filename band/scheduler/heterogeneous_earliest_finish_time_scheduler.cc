@@ -25,13 +25,15 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     std::set<JobId> jobs_to_yield;
 
     // basically the same as ShortestExpectedLatencyScheduler
-    double largest_shortest_latency;
+    double largest_min_cost;
+    double largest_expected_latency;
+    std::map<SensorFlag, double> largest_expected_thermal;
     int target_job_index;
     SubgraphKey target_subgraph_key;
     SubgraphKey target_subgraph_key_next;
 
     do {
-      largest_shortest_latency = -1;
+      largest_min_cost = -1;
       target_job_index = -1;
 
       // only check up to `num_jobs` requests
@@ -50,7 +52,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
         if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
           continue;
         }
-        
+
         searched_jobs.insert(job_to_search);
 
         // update waiting_time for all future jobs in reserved_
@@ -64,11 +66,22 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
               engine_.GetExpected(job_subgraph_key.second);
         }
 
+        double expected_lat;
+        std::map<SensorFlag, double> expected_therm;
         std::pair<std::vector<SubgraphKey>, double> best_subgraph =
-            engine_.GetSubgraphWithShortestLatency(job, reserved_time);
+            engine_.GetSubgraphWithMinCost(
+                job, reserved_time,
+                [&expected_lat, &expected_therm](
+                    double lat, std::map<SensorFlag, double> therm) -> double {
+                  expected_lat = lat;
+                  expected_therm = therm;
+                  return lat;
+                });
 
-        if (largest_shortest_latency < best_subgraph.second) {
-          largest_shortest_latency = best_subgraph.second;
+        if (largest_min_cost < best_subgraph.second) {
+          largest_min_cost = best_subgraph.second;
+          largest_expected_latency = expected_lat;
+          largest_expected_thermal = expected_therm;
           target_subgraph_key = best_subgraph.first.front();
           target_job_index = it - requests.begin();
           if (best_subgraph.first.size() > 1) {
@@ -92,7 +105,8 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
       }
       waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
       auto requests_it = requests.begin() + target_job_index;
-      Job job = *requests_it;
+      Job& job = *requests_it;
+
       jobs_to_yield.insert(job.job_id);
     } while (true);
 
@@ -105,10 +119,11 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
 
     // Update Job status specific to this planner.
     // Common status will be updated by `EnqueueAction`.
-    if (engine_.IsBegin(target_subgraph_key)) {
-      // only set these fields if this is the first subgraph of this model
-      job.expected_latency = largest_shortest_latency;
-    }
+    // if (engine_.IsBegin(target_subgraph_key)) {
+    // only set these fields if this is the first subgraph of this model
+    job.expected_latency = largest_expected_latency;
+    job.expected_thermal = largest_expected_thermal;
+    // }
 
     success &= engine_.EnqueueToWorker({job, target_subgraph_key});
 

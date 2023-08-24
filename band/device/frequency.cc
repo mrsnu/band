@@ -20,6 +20,14 @@ std::string GetFreqPath(std::string path) {
   return absl::StrFormat("%s/cur_freq", path.c_str());
 }
 
+std::string GetCpuAvailableFreqPath(std::string path) {
+  return absl::StrFormat("%s/scaling_available_frequencies", path.c_str());
+}
+
+std::string GetAvailableFreqPath(std::string path) {
+  return absl::StrFormat("%s/available_frequencies", path.c_str());
+}
+
 }  // anonymous namespace
 
 Frequency::Frequency(DeviceConfig config) {
@@ -68,6 +76,31 @@ FreqMap Frequency::GetAllFrequency() {
     freq_map[pair.first] = GetFrequency(pair.first);
   }
   return freq_map;
+}
+
+std::map<DeviceFlag, std::vector<double>>
+Frequency::GetAllAvailableFrequency() {
+  if (freq_available_map_.size() > 0) {
+    return freq_available_map_;
+  }
+
+  std::map<DeviceFlag, std::vector<double>> freq_map;
+  for (auto& pair : freq_device_map_) {
+    auto path = pair.second;
+    if (pair.first == DeviceFlag::kCPU) {
+      auto freqs =
+          device::TryReadDoubles({GetCpuAvailableFreqPath(path)}, {1.0E-6f})
+              .value();
+      freq_map[pair.first] = freqs;
+    } else {
+      auto freqs =
+          device::TryReadDoubles({GetAvailableFreqPath(path)}, {1.0E-9f})
+              .value();
+      freq_map[pair.first] = freqs;
+    }
+  }
+  freq_available_map_ = freq_map;
+  return freq_available_map_;
 }
 
 bool Frequency::CheckFrequency(std::string path) {

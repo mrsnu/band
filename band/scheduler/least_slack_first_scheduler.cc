@@ -33,7 +33,11 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
     // Get current job's fastest subgraph execution plan + latency
     std::pair<std::vector<SubgraphKey>, int> best_exec_plan =
-        engine_.GetSubgraphWithShortestLatency(job, waiting_time);
+        engine_.GetSubgraphWithMinCost(
+            job, waiting_time,
+            [](double lat, std::map<SensorFlag, double> therm) -> double {
+              return lat;
+            });
     // Get first executable subgraph plan
     SubgraphKey target_subgraph_key = best_exec_plan.first.front();
 
@@ -90,10 +94,14 @@ void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests,
 void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests,
                                                      int window_size) {
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
-    it->expected_latency = engine_
-                               .GetSubgraphWithShortestLatency(
-                                   *it, engine_.GetWorkerWaitingTime())
-                               .second;
+    it->expected_latency =
+        engine_
+            .GetSubgraphWithMinCost(
+                *it, engine_.GetWorkerWaitingTime(),
+                [](double lat, std::map<SensorFlag, double> therm) -> double {
+                  return lat;
+                })
+            .second;
   }
 }
 

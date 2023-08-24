@@ -26,7 +26,7 @@ bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // There should be a more quicker way do this, but I'm leaving this as-is
     // to make it simple.
     // E.g., we add interpreter.GetProfiledLatency() to the expected_latency map
-    // of all Jobs instead of calling GetShortestLatency() a gazillion times
+    // of all Jobs instead of calling GetMinCost() a gazillion times
     // again.
 
     // Note that we are NOT considering enqueue_time at the moment;
@@ -52,7 +52,11 @@ bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       }
 
       std::pair<std::vector<SubgraphKey>, double> best_subgraph =
-          engine_.GetSubgraphWithShortestLatency(next_job, worker_waiting);
+          engine_.GetSubgraphWithMinCost(
+              next_job, worker_waiting,
+              [](double lat, std::map<SensorFlag, double> therm) -> double {
+                return lat;
+              });
 
       if (largest_shortest_latency < best_subgraph.second) {
         largest_shortest_latency = best_subgraph.second;

@@ -477,6 +477,20 @@ std::size_t SubgraphHash::operator()(const SubgraphKey& p) const {
 }
 
 std::string Job::ToJson() const {
+  std::string expected_therm_string = "";
+  for (auto& pair : expected_thermal) {
+    expected_therm_string += "\"" + std::string(ToString(pair.first)) +
+                             "\":" + std::to_string(pair.second) + ",";
+  }
+  expected_therm_string.pop_back();
+
+  std::string profiled_therm_string = "";
+  for (auto& pair : profiled_thermal) {
+    profiled_therm_string += "\"" + std::string(ToString(pair.first)) +
+                             "\":" + std::to_string(pair.second) + ",";
+  }
+  profiled_therm_string.pop_back();
+
   return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
          ",\"invoke_time\":" + std::to_string(invoke_time) +
          ",\"end_time\":" + std::to_string(end_time) +
@@ -489,7 +503,10 @@ std::string Job::ToJson() const {
          ",\"model_id\":" + std::to_string(model_id) +
          (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
          ",\"unit_indices\": \"" + subgraph_key.GetUnitIndicesString() + "\"" +
-         ",\"job_id\":" + std::to_string(job_id) + "}";
+         ",\"job_id\":" + std::to_string(job_id) +
+         ",\"expected_therm\": " + "{" + expected_therm_string + "}" + 
+         ",\"profiled_therm\": " + "{" + profiled_therm_string + "}" + 
+         "}";
 }
 
 std::size_t JobIdBitMaskHash::operator()(

@@ -32,8 +32,10 @@ struct MockEngine : public MockEngineBase {
     return SubgraphKey(model_id, worker_id, {0});
   }
 
-  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithShortestLatency(
-      const Job& job, const WorkerWaitingTime& worker_waiting) const override {
+  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
+      const Job& job, const WorkerWaitingTime& worker_waiting,
+      std::function<double(double, std::map<SensorFlag, double>)>)
+      const override {
     return std::pair<std::vector<SubgraphKey>, double>(
         {SubgraphKey(job.model_id, *idle_workers_.begin(), {0})},
         0 /*shortest expected latency*/);
@@ -54,9 +56,7 @@ struct MockEngine : public MockEngineBase {
     return map;
   }
 
-  int64_t GetExpected(const SubgraphKey& key) const override {
-    return 10;
-  }
+  int64_t GetExpected(const SubgraphKey& key) const override { return 10; }
   bool EnqueueToWorker(const ScheduleAction& action) override {
     action_.push_back(action);
     return true;

@@ -79,6 +79,29 @@ absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
       "No available path: %s, %s", paths[0].c_str(), strerror(errno)));
 }
 
+absl::StatusOr<std::vector<double>> TryReadDoubles(
+    std::vector<std::string> paths, std::vector<float> multipliers) {
+  if (paths.size() != multipliers.size()) {
+    return absl::InternalError(
+        "Number of paths and multipliers must be the same.");
+  }
+
+  for (size_t i = 0; i < paths.size(); i++) {
+    auto path = paths[i];
+    std::ifstream fs(path, std::ifstream::binary);
+    if (fs.is_open()) {
+      std::vector<double> outputs;
+      double output;
+      while (fs >> output) {
+        outputs.push_back(output * multipliers[i]);
+      }
+      return outputs;
+    }
+  }
+  return absl::NotFoundError(absl::StrFormat(
+      "No available path: %s, %s", paths[0].c_str(), strerror(errno)));
+}
+
 std::vector<std::string> ListFilesInPath(const char* path) {
   std::vector<std::string> ret;
 

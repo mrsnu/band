@@ -31,22 +31,27 @@ struct MockEngineBase : public IEngine {
 
   /* scheduling */
   using WorkerWaiting = const std::map<WorkerId, double>&;
-  using ShortestLatencyWithUnitSubgraph =
+  using MinCostWithUnitSubgraph =
       std::pair<std::vector<SubgraphKey>, double>;
-  using SubgraphWithShortestLatency =
+  using SubgraphWithMinCost =
       std::pair<std::vector<SubgraphKey>, double>;
-  MOCK_CONST_METHOD4(GetShortestLatency,
-                     std::pair<SubgraphKey, double>(ModelId, BitMask, double,
-                                                     WorkerWaiting));
+  MOCK_CONST_METHOD5(GetMinCost,
+                     std::pair<SubgraphKey, double>(
+                         ModelId, BitMask, double, WorkerWaiting,
+                         std::function<double(double, std::map<SensorFlag, double>)>));
 
-  MOCK_CONST_METHOD3(GetShortestLatencyWithUnitSubgraph,
-                     ShortestLatencyWithUnitSubgraph(ModelId, int,
-                                                     WorkerWaiting));
-  MOCK_CONST_METHOD2(GetSubgraphWithShortestLatency,
-                     SubgraphWithShortestLatency(const Job&, WorkerWaiting));
-  MOCK_CONST_METHOD3(GetSubgraphIdxSatisfyingSLO,
+  MOCK_CONST_METHOD4(GetMinCostWithUnitSubgraph,
+                     MinCostWithUnitSubgraph(
+                         ModelId, int, WorkerWaiting,
+                         std::function<double(double, std::map<SensorFlag, double>)>));
+  MOCK_CONST_METHOD3(
+      GetSubgraphWithMinCost,
+      SubgraphWithMinCost(const Job&, WorkerWaiting,
+                                  std::function<double(double, std::map<SensorFlag, double>)>));
+  MOCK_CONST_METHOD4(GetSubgraphIdxSatisfyingSLO,
                      SubgraphKey(const Job&, WorkerWaiting,
-                                 const std::set<WorkerId>&));
+                                 const std::set<WorkerId>&,
+                                 std::function<double(double, std::map<SensorFlag, double>)>));
 
   /* estimators */
   MOCK_METHOD2(Update, void(const SubgraphKey&, int64_t));

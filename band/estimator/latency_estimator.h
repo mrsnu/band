@@ -14,7 +14,7 @@
 namespace band {
 
 class IEngine;
-class LatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
+class LatencyEstimator : public IEstimator<SubgraphKey, double, double> {
  public:
   explicit LatencyEstimator(IEngine* engine, LatencyProfiler* latency_profiler)
       : IEstimator(engine), latency_profiler_(latency_profiler) {}
@@ -22,8 +22,8 @@ class LatencyEstimator : public IEstimator<SubgraphKey, int64_t, int64_t> {
 
   void Update(const SubgraphKey& key, double latency);
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
-  int64_t GetProfiled(const SubgraphKey& key) const override;
-  int64_t GetExpected(const SubgraphKey& key) const override;
+  double GetProfiled(const SubgraphKey& key) const override;
+  double GetExpected(const SubgraphKey& key) const override;
 
   absl::Status LoadModel(std::string profile_path) override;
   absl::Status DumpModel(std::string profile_path) override;

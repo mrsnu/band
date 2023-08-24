@@ -1,13 +1,14 @@
 #ifndef BAND_PROFILER_FREQUECY_PROFILER_H_
 #define BAND_PROFILER_FREQUECY_PROFILER_H_
 
-#include <fstream>
 #include <chrono>
+#include <fstream>
 #include <vector>
 
 #include "band/config.h"
 #include "band/device/frequency.h"
 #include "band/profiler/profiler.h"
+#include "band/logger.h"
 
 namespace band {
 
@@ -30,16 +31,14 @@ class FrequencyProfiler : public Profiler {
     return timeline_[index];
   }
 
-  FreqInfo GetStart(size_t index) const {
-    return GetInterval(index).first;
-  }
+  FreqInfo GetStart(size_t index) const { return GetInterval(index).first; }
 
-  FreqInfo GetEnd(size_t index) const {
-    return GetInterval(index).second;
-  }
+  FreqInfo GetEnd(size_t index) const { return GetInterval(index).second; }
 
-  FreqMap GetAllFrequency() const {
-    return frequency_->GetAllFrequency();
+  FreqMap GetAllFrequency() const { return frequency_->GetAllFrequency(); }
+
+  std::map<DeviceFlag, std::vector<double>> GetAllAvailableFrequency() const {
+    return frequency_->GetAllAvailableFrequency();
   }
 
  private:

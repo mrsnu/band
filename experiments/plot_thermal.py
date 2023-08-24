@@ -1,78 +1,49 @@
 import json
 import matplotlib.pyplot as plt
 
-def plot_thermal(log_path, expected=True):
+def plot_thermal(log_path):
   with open(log_path, 'r') as f:
-    data = json.load(f)
+    data = json.load(f)['traceEvents']
+  expected_cpu = [d["args"]["expected_therm"]["CPU"] for d in data if d["ph"] == "E"]
+  profiled_cpu = [d["args"]["profiled_therm"]["CPU"] for d in data if d["ph"] == "E"]
+  expected_gpu = [d["args"]["expected_therm"]["GPU"] for d in data if d["ph"] == "E"]
+  profiled_gpu = [d["args"]["profiled_therm"]["GPU"] for d in data if d["ph"] == "E"]
+  expected_dsp = [d["args"]["expected_therm"]["DSP"] for d in data if d["ph"] == "E"]
+  profiled_dsp = [d["args"]["profiled_therm"]["DSP"] for d in data if d["ph"] == "E"]
+  expected_npu = [d["args"]["expected_therm"]["NPU"] for d in data if d["ph"] == "E"]
+  profiled_npu = [d["args"]["profiled_therm"]["NPU"] for d in data if d["ph"] == "E"]
+  expected_target = [d["args"]["expected_therm"]["Target"] for d in data if d["ph"] == "E"]
+  profiled_target = [d["args"]["profiled_therm"]["Target"] for d in data if d["ph"] == "E"]
   
-  cpu = {
-    "total": [],
-  }
-  gpu = {
-    "total": [],
-  }
-  dsp = {
-    "total": [],
-  }
-  npu = {
-    "total": [],
-  }
-  target = {
-    "total": [],
-  }
-  for d in data:
-    if d["expected"] != expected:
-      continue
-    if d["key"] not in cpu or d["key"] not in gpu or d["key"] not in dsp or d["key"] not in npu or d["key"] not in target:
-      cpu[d["key"]] = []
-      gpu[d["key"]] = []
-      dsp[d["key"]] = []
-      npu[d["key"]] = []
-      target[d["key"]] = []
-    cpu[d["key"]].append(d["therm_end"]["CPU"])
-    gpu[d["key"]].append(d["therm_end"]["GPU"])
-    dsp[d["key"]].append(d["therm_end"]["DSP"])
-    npu[d["key"]].append(d["therm_end"]["NPU"])
-    target[d["key"]].append(d["therm_end"]["Target"])
-    
-    # total
-    cpu["total"].append(d["therm_end"]["CPU"])
-    gpu["total"].append(d["therm_end"]["GPU"])
-    dsp["total"].append(d["therm_end"]["DSP"])
-    npu["total"].append(d["therm_end"]["NPU"])
-    target["total"].append(d["therm_end"]["Target"])
-    
-  for key in cpu:
-    plt.plot(cpu[key], label="CPU")
-    plt.plot(gpu[key], label="GPU")
-    plt.plot(dsp[key], label="DSP")
-    plt.plot(npu[key], label="NPU")
-    plt.plot(target[key], label="Target")
-    plt.xlabel("Time (us)")
-    plt.ylabel("Temperature (C)")
-    # Bound 20-80
-    plt.ylim(20, 80)
-    plt.legend()
-    plt.savefig(f"thermal_{key}_{expected}.png")
-    plt.clf()
-    
-  plt.plot(cpu["total"], label="CPU")
-  plt.plot(gpu["total"], label="GPU")
-  plt.plot(dsp["total"], label="DSP")
-  plt.plot(npu["total"], label="NPU")
-  plt.plot(target["total"], label="Target")
-  plt.xlabel("Time (us)")
-  plt.ylabel("Temperature (C)")
-  # Bound 20-80
-  plt.ylim(20, 80)
-  plt.legend()
-  plt.savefig(f"thermal_total_{expected}.png")
-  plt.clf()
+  # Plot All in subplots
+  fig, axs = plt.subplots(5, 1, figsize=(10, 10))
+  axs[0].plot(expected_cpu, label="expected")
+  axs[0].plot(profiled_cpu, label="profiled")
+  axs[0].set_title("CPU")
+  axs[0].legend()
+  axs[1].plot(expected_gpu, label="expected")
+  axs[1].plot(profiled_gpu, label="profiled")
+  axs[1].set_title("GPU")
+  axs[1].legend()
+  axs[2].plot(expected_dsp, label="expected")
+  axs[2].plot(profiled_dsp, label="profiled")
+  axs[2].set_title("DSP")
+  axs[2].legend()
+  axs[3].plot(expected_npu, label="expected")
+  axs[3].plot(profiled_npu, label="profiled")
+  axs[3].set_title("NPU")
+  axs[3].legend()
+  axs[4].plot(expected_target, label="expected")
+  axs[4].plot(profiled_target, label="profiled")
+  axs[4].set_title("Target")
+  axs[4].legend()
+  plt.tight_layout()
   
+  plt.savefig("thermal.png")
+
 if __name__  == "__main__":
   import argparse
   parser = argparse.ArgumentParser()
-  parser.add_argument("--log", type=str, default="thermal.json")
-  parser.add_argument("--expected", action="store_true")
+  parser.add_argument("--log", type=str, default="log.json")
   args = parser.parse_args()
-  plot_thermal(args.log, args.expected)
+  plot_thermal(args.log)

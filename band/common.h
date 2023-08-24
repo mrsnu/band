@@ -306,12 +306,17 @@ struct Job {
   int64_t enqueue_time = 0;
   int64_t invoke_time = 0;
   int64_t end_time = 0;
+
   // Profiled invoke execution time
-  int64_t profiled_execution_time = 0;
-  // Expected invoke execution time
-  int64_t expected_execution_time = 0;
-  // Expected total latency
-  int64_t expected_latency = 0;
+  double profiled_execution_time = 0;
+  std::map<SensorFlag, double> profiled_thermal;
+
+  // Expected
+  double expected_execution_time = 0;
+  double expected_latency = 0;
+  std::map<SensorFlag, double> expected_thermal;
+
+  // SLO for the job
   int64_t slo_us;
 
   // Profiler event_id

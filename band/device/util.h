@@ -30,6 +30,8 @@ absl::StatusOr<double> TryReadDouble(std::vector<std::string> paths,
 
 absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
     std::vector<std::string> paths, std::vector<float> multipliers = {1.f});
+absl::StatusOr<std::vector<double>> TryReadDoubles(
+    std::vector<std::string> paths, std::vector<float> multipliers = {1.f});
 
 std::vector<std::string> ListFilesInPath(const char* path);
 std::vector<std::string> ListFilesInPathPrefix(const char* path,

@@ -70,27 +70,31 @@ class IEngine {
   // the final op (of the model) in mind.
 
   // TODO: replace subgraph idx to subgraph key in below functions
-  virtual std::pair<SubgraphKey, double> GetShortestLatency(
+  virtual std::pair<SubgraphKey, double> GetMinCost(
       int model_id, BitMask resolved_unit_subgraphs, double start_time,
-      const WorkerWaitingTime& worker_waiting) const = 0;
+      const WorkerWaitingTime& worker_waiting,
+      const std::function<double(double, std::map<SensorFlag, double>)> cost)
+      const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, double>
-  GetShortestLatencyWithUnitSubgraph(
-      int model_id, int start_unit_idx,
-      const WorkerWaitingTime& worker_waiting) const = 0;
+  GetMinCostWithUnitSubgraph(
+      int model_id, int start_unit_idx, const WorkerWaitingTime& worker_waiting,
+      const std::function<double(double, std::map<SensorFlag, double>)> cost)
+      const = 0;
 
-  virtual std::pair<std::vector<SubgraphKey>, double>
-  GetSubgraphWithShortestLatency(
-      const Job& job, const WorkerWaitingTime& worker_waiting) const = 0;
+  virtual std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
+      const Job& job, const WorkerWaitingTime& worker_waiting,
+      const std::function<double(double, std::map<SensorFlag, double>)> cost)
+      const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* estimators */
-  virtual void UpdateWithEvent(const SubgraphKey& key, size_t event_id) = 0;
-  virtual int64_t GetProfiled(const SubgraphKey& key) const = 0;
-  virtual int64_t GetExpected(const SubgraphKey& key) const = 0;
+  virtual void UpdateWithEvent(const SubgraphKey&, size_t event_id) = 0;
+  virtual double GetProfiled(const SubgraphKey&) const = 0;
+  virtual double GetExpected(const SubgraphKey&) const = 0;
 
   /* profilers */
   virtual size_t BeginEvent() = 0;

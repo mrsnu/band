@@ -39,7 +39,7 @@ void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
     profile_database_[key] = {latency, latency};
     return;
   }
-  int64_t prev_latency = it->second.moving_averaged;
+  double prev_latency = it->second.moving_averaged;
   profile_database_[key].moving_averaged =
       profile_smoothing_factor_ * latency +
       (1 - profile_smoothing_factor_) * prev_latency;
@@ -51,7 +51,7 @@ void LatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
                   event_handle));
 }
 
-int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
+double LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
     return it->second.profiled;
@@ -63,7 +63,7 @@ int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
   }
 }
 
-int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
+double LatencyEstimator::GetExpected(const SubgraphKey& key) const {
   auto it = profile_database_.find(key);
   if (it != profile_database_.end()) {
     return it->second.moving_averaged;

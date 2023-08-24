@@ -1,7 +1,7 @@
 #include "band/estimator/frequency_latency_estimator.h"
 
-#include "band/json_util.h"
 #include "band/engine_interface.h"
+#include "band/json_util.h"
 
 namespace band {
 
@@ -13,26 +13,23 @@ absl::Status FrequencyLatencyEstimator::Init(
 
 void FrequencyLatencyEstimator::Update(const SubgraphKey& key,
                                        FreqInfo freq_info, double latency) {
-  auto freq =
-      frequency_profiler_
-          ->GetAllFrequency()[engine_->GetWorkerDevice(key.GetWorkerId())];
-  auto it = profile_database_.find(key);
-  if (it == profile_database_.end()) {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %f.",
-                      key.ToString().c_str(), latency);
-    profile_database_[key] = {{freq, latency}};
-    return;
-  }
-  if (it->second.find(freq) == it->second.end()) {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %f.",
-                      key.ToString().c_str(), latency);
-    profile_database_[key][freq] = latency;
+  profile_database_[key] = latency;
+  auto device = engine_->GetWorkerDevice(key.GetWorkerId());
+  auto freq = freq_info.second[device];
+  auto it = freq_lat_map_.find(key);
+  if (it == freq_lat_map_.end()) {
+    auto avail_freqs_device =
+        frequency_profiler_->GetAllAvailableFrequency()[device];
+    freq_lat_map_[key] = std::map<double, double>();
+    freq_lat_map_[key][0] = latency;
+    for (auto& available_freq : avail_freqs_device) {
+      freq_lat_map_[key][available_freq] = latency;
+    }
     return;
   }
   double prev_latency = it->second[freq];
-
-  profile_database_[key][freq] = profile_smoothing_factor_ * latency +
-                                 (1 - profile_smoothing_factor_) * prev_latency;
+  freq_lat_map_[key][freq] = profile_smoothing_factor_ * latency +
+                             (1 - profile_smoothing_factor_) * prev_latency;
 }
 
 void FrequencyLatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
@@ -40,25 +37,34 @@ void FrequencyLatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
   auto freq_interval = frequency_profiler_->GetInterval(event_handle);
   auto latency =
       latency_profiler_->GetDuration<std::chrono::milliseconds>(event_handle);
-  Update(key, freq_interval.second, latency);
+  Update(key, freq_interval.first, latency);
 }
 
 double FrequencyLatencyEstimator::GetProfiled(const SubgraphKey& key) const {
-  return 0;
+  if (profile_database_.find(key) == profile_database_.end()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "[GetProfiled] No profiled latency for %s.",
+                  key.ToString().c_str());
+    return 0;
+  }
+  return profile_database_.at(key);
 }
 
 double FrequencyLatencyEstimator::GetExpected(const SubgraphKey& key) const {
   auto freq =
       frequency_profiler_
           ->GetAllFrequency()[engine_->GetWorkerDevice(key.GetWorkerId())];
-  auto it = profile_database_.find(key);
-  if (it != profile_database_.end()) {
+  auto it = freq_lat_map_.find(key);
+  if (it != freq_lat_map_.end()) {
     auto it2 = it->second.find(freq);
     if (it2 != it->second.end()) {
       return it2->second;
     }
   }
-  return 0;
+  BAND_LOG_PROD(BAND_LOG_ERROR,
+                "[GetExpected] No expected latency for %s with "
+                "frequency %f.",
+                key.ToString().c_str(), freq);
+  return GetProfiled(key);
 }
 
 absl::Status FrequencyLatencyEstimator::LoadModel(std::string profile_path) {
@@ -67,8 +73,7 @@ absl::Status FrequencyLatencyEstimator::LoadModel(std::string profile_path) {
 
 absl::Status FrequencyLatencyEstimator::DumpModel(std::string profile_path) {
   Json::Value root;
-  for (auto it = profile_database_.begin(); it != profile_database_.end();
-       ++it) {
+  for (auto it = freq_lat_map_.begin(); it != freq_lat_map_.end(); ++it) {
     Json::Value key;
     key["model_id"] = it->first.GetModelId();
     key["worker_id"] = it->first.GetWorkerId();
