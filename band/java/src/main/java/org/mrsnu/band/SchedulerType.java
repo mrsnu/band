@@ -9,8 +9,7 @@ public enum SchedulerType {
   HETEROGENEOUS_EARLIEST_FINISH_TIME(5),
   LEAST_SLACK_TIME_FRIST(6),
   HETEROGENEOUS_EARLIEST_FINISH_TIME_RESERVED(7),
-  GREEDY_THERMAL(8),
-  FRAME_THERMAL(9);
+  THERMAL(8);
   
   private final int value;
   SchedulerType(int value) {

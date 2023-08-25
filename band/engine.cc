@@ -100,7 +100,7 @@ absl::Status Engine::RegisterModel(Model* model) {
       return status_or_result.status();
     }
 
-    const auto result = analyzer.CreateSubgraphs().value();
+    const auto result = status_or_result.value();
     const ModelSpec model_spec = std::get<0>(result);
     const std::vector<SubgraphDef> subgraph_defs = std::get<1>(result);
 
@@ -865,25 +865,16 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
 std::pair<std::vector<SubgraphKey>, double> Engine::GetSubgraphWithMinCost(
     const Job& job, const WorkerWaitingTime& worker_waiting,
     const std::function<double(double, ThermalMap)> cost) const {
-  // TODO(dostos): figure out why we return a vector of keys?
-  if (subgraph_config_.subgraph_preparation_type ==
-      SubgraphPreparationType::kFallbackPerWorker) {
-    auto pair = GetMinCost(job.model_id, job.resolved_unit_subgraphs, 0,
-                           worker_waiting, cost);
-    std::pair<std::vector<SubgraphKey>, double> ret =
-        std::pair<std::vector<SubgraphKey>, double>({pair.first}, pair.second);
-    return ret;
-  } else {
-    int start_unit_idx = 0;
-    for (int i = 0; i < model_specs_.at(job.model_id).GetNumUnitSubgraphs();
-         i++) {
-      if (job.resolved_unit_subgraphs.test(i)) {
-        start_unit_idx = i + 1;
-      }
+  int start_unit_idx = 0;
+  for (int i = 0; i < model_specs_.at(job.model_id).GetNumUnitSubgraphs();
+       i++) {
+    if (job.resolved_unit_subgraphs.test(i)) {
+      start_unit_idx = i + 1;
     }
-    return GetMinCostWithUnitSubgraph(job.model_id, start_unit_idx,
-                                      worker_waiting, cost);
   }
+  return GetMinCostWithUnitSubgraph(job.model_id, start_unit_idx,
+                                    worker_waiting, cost);
+  // }
 }
 
 SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(
@@ -980,7 +971,9 @@ std::vector<int> Engine::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
 void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) {
-  job.profiled_thermal = thermal_estimator_->GetProfiled(job.subgraph_key);
+  if (!job.is_idle_job) {
+    job.profiled_thermal = thermal_estimator_->GetProfiled(job.subgraph_key);
+  }
   planner_->EnqueueFinishedJob(job);
 }
 

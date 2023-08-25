@@ -36,3 +36,6 @@ band.aar
 
 # benchmark config
 benchmark_config.json
+
+# experiment
+experiments/*.png

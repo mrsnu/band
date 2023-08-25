@@ -4,10 +4,9 @@
 #include <map>
 #include <memory>
 
+#include "absl/status/statusor.h"
 #include "band/engine_interface.h"
 #include "band/model_spec.h"
-
-#include "absl/status/statusor.h"
 
 namespace band {
 class Model;
@@ -22,7 +21,6 @@ struct SubgraphDef {
 std::string SetToString(const std::set<int>& set);
 std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs);
 std::string SummarizeFallbackPerWorkerSubgraphs(
-    const std::vector<SubgraphDef>& unit_subgraph_defs,
     const std::vector<SubgraphDef>& subgraph_defs);
 
 class ModelAnalyzer {
@@ -31,7 +29,8 @@ class ModelAnalyzer {
                 SubgraphConfig subgraph_config, Model* model,
                 BackendType backend_type);
 
-  absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>> CreateSubgraphs();
+  absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>>
+  CreateSubgraphs();
 
  private:
   // A model is partitioned into unit subgraphs.
@@ -45,7 +44,7 @@ class ModelAnalyzer {
   std::vector<SubgraphDef> GetSubgraphsForFallbackOps(WorkerId worker_id);
   std::vector<SubgraphDef> MergeUnitSubgraphs(
       const std::vector<SubgraphDef>& unit_subgraphs);
-
+  std::vector<SubgraphDef> FallbackPerWorker();
   bool NeedFallbackSubgraph() const;
   bool IsWorkerValid(WorkerId worker_id) const;
   bool IsResolved(const std::set<int> resolved_tensors, int op_index) const;

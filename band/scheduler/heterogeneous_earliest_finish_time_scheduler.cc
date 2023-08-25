@@ -117,13 +117,8 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     requests.erase(requests_it);
     num_jobs--;
 
-    // Update Job status specific to this planner.
-    // Common status will be updated by `EnqueueAction`.
-    // if (engine_.IsBegin(target_subgraph_key)) {
-    // only set these fields if this is the first subgraph of this model
     job.expected_latency = largest_expected_latency;
     job.expected_thermal = largest_expected_thermal;
-    // }
 
     success &= engine_.EnqueueToWorker({job, target_subgraph_key});
 
@@ -137,9 +132,6 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     }
   }
 
-  if (!success) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "HEFTScheduler failed to schedule");
-  }
   return success;
 }
 }  // namespace band

@@ -29,9 +29,7 @@ template <typename T>
 T ConvertEigenVectorToTMap(const Eigen::VectorXd& vec) {
   T value;
   for (int i = 0; i < vec.size(); i++) {
-    if (vec(i) != 0) {
-      value[static_cast<SensorFlag>(i)] = vec(i);
-    }
+    value[static_cast<SensorFlag>(i)] = vec(i);
   }
   return value;
 }
@@ -80,6 +78,8 @@ absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
 void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
                               ThermalMap therm_end, FreqMap freq,
                               double latency) {
+  profile_database_[key] = therm_end;
+
   const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
   Eigen::VectorXd old_therm_vec =
@@ -109,17 +109,11 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   if (features_.size() > window_size_) {
     features_.pop_front();
   }
-  if (features_.size() < window_size_) {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "ThermalEstimator, Not enough data collected. Current number "
-                  "of data: %d",
-                  features_.size());
-    return;
-  }
 
-  Eigen::MatrixXd data(window_size_, feature_size);
-  Eigen::MatrixXd target(window_size_, target_size);
-  for (int i = 0; i < window_size_; i++) {
+  size_t window_size = std::min(window_size_, features_.size());
+  Eigen::MatrixXd data(window_size, feature_size);
+  Eigen::MatrixXd target(window_size, target_size);
+  for (int i = 0; i < window_size; i++) {
     for (int j = 0; j < feature_size; j++) {
       data(i, j) = features_[i].first(j);
     }
@@ -129,7 +123,6 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   }
 
   model_ = SolveLinear(data, target);
-  profile_database_[key] = therm_end;
 }
 
 void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
@@ -170,14 +163,6 @@ ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
                         freq_3_lat_vec.size() + lat_fill_vec.size();
   Eigen::VectorXd feature(feature_size);
   feature << old_therm_vec, therm_lat_vec, freq_3_lat_vec, lat_fill_vec;
-
-  if (features_.size() < window_size_) {
-    BAND_LOG_PROD(BAND_LOG_INFO,
-                  "ThermalEstimator, Not enough data collected. Current number "
-                  "of data: %d",
-                  features_.size());
-    return {};
-  }
 
   auto expected_therm =
       ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);

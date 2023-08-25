@@ -43,8 +43,8 @@ std::string SetToString(const std::set<int>& set) {
 }
 
 std::string SubgraphDef::ToString() const {
-  return "Index " + SetToString(unit_subgraph_indices) + " Ops " +
-         SetToString(op_indices);
+  return "Worker " + std::to_string(worker_id) + " Index " +
+         SetToString(unit_subgraph_indices) + " Ops " + SetToString(op_indices);
 }
 
 std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
@@ -120,36 +120,16 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
 }
 
 std::string SummarizeFallbackPerWorkerSubgraphs(
-    const std::vector<SubgraphDef>& unit_subgraph_defs,
     const std::vector<SubgraphDef>& subgraph_defs) {
-  std::string summary = SummarizeSubgraphs(unit_subgraph_defs);
-
-  std::set<int> unique_unit_subgraph_indices;
+  std::string summary = "\n";
   int num_workers = 0;
-  for (const auto& subgraph_def : unit_subgraph_defs) {
-    if (subgraph_def.unit_subgraph_indices.size() == 1) {
-      unique_unit_subgraph_indices.insert(
-          *subgraph_def.unit_subgraph_indices.begin());
-    }
+  for (const auto& subgraph_def : subgraph_defs) {
     num_workers = std::max(num_workers, subgraph_def.worker_id + 1);
   }
 
-  summary += "FallbackPerWorkerSubgraphs\n";
-
-  for (WorkerId target_worker_id = 0; target_worker_id < num_workers;
-       target_worker_id++) {
-    for (const auto& merged_subgraph : subgraph_defs) {
-      if (merged_subgraph.worker_id == target_worker_id) {
-        summary += "\t Worker " + std::to_string(target_worker_id) + "\t";
-        for (const auto& unit_index : unique_unit_subgraph_indices) {
-          summary += (merged_subgraph.unit_subgraph_indices.find(unit_index) !=
-                              merged_subgraph.unit_subgraph_indices.end()
-                          ? "-\t"
-                          : " \t");
-        }
-        summary += "\n";
-      }
-    }
+  summary += "Subgraph Definitions\n";
+  for (const auto& subgraph_def : subgraph_defs) {
+    summary += "\t" + subgraph_def.ToString() + "\n";
   }
 
   return summary;
@@ -193,39 +173,12 @@ ModelAnalyzer::CreateSubgraphs() {
   }
 
   switch (subgraph_config_.subgraph_preparation_type) {
-    case SubgraphPreparationType::kFallbackPerWorker: {
-      for (WorkerId worker_id = 0; worker_id < engine_.GetNumWorkers();
-           worker_id++) {
-        std::vector<SubgraphDef> worker_subgraphs =
-            GetSubgraphsForFallbackOps(worker_id);
-
-        for (SubgraphDef& worker_subgraph : worker_subgraphs) {
-          // set unit subgraph indices
-          for (int unit_subgraph_id = 0;
-               unit_subgraph_id < unit_subgraph_defs.size();
-               unit_subgraph_id++) {
-            // add all unit subgraphs that are part of the worker subgraph
-            if (std::includes(
-                    worker_subgraph.op_indices.begin(),
-                    worker_subgraph.op_indices.end(),
-                    unit_subgraph_defs[unit_subgraph_id].op_indices.begin(),
-                    unit_subgraph_defs[unit_subgraph_id].op_indices.end())) {
-              worker_subgraph.unit_subgraph_indices.insert(
-                  unit_subgraph_defs[unit_subgraph_id]
-                      .unit_subgraph_indices.begin(),
-                  unit_subgraph_defs[unit_subgraph_id]
-                      .unit_subgraph_indices.end());
-            }
-          }
-        }
-
-        subgraph_defs.insert(subgraph_defs.end(), worker_subgraphs.begin(),
-                             worker_subgraphs.end());
-      }
-    } break;
     case SubgraphPreparationType::kNoFallbackSubgraph:
     case SubgraphPreparationType::kUnitSubgraph: {
       subgraph_defs = unit_subgraph_defs;
+    } break;
+    case SubgraphPreparationType::kFallbackPerWorker: {
+      subgraph_defs = FallbackPerWorker();
     } break;
     case SubgraphPreparationType::kMergeUnitSubgraph: {
       // Add merged atomic subgraphs
@@ -246,27 +199,26 @@ ModelAnalyzer::CreateSubgraphs() {
   }
 
   // Verify subgraphs
-  {
-    // unit subgraph indices in merged subgraph are continous
-    for (const auto& subgraph_def : subgraph_defs) {
-      const int begin = *subgraph_def.unit_subgraph_indices.begin();
-      const int end = *subgraph_def.unit_subgraph_indices.rbegin();
-      if (end - begin != subgraph_def.unit_subgraph_indices.size() - 1) {
-        return absl::InternalError(absl::StrFormat(
-            "Failed to create subgraph. Unit subgraph indices in "
-            "subgraph %s are not continous for model %s and mode %s",
-            subgraph_def.ToString().c_str(), model_spec_->path.c_str(),
-            ToString(subgraph_config_.subgraph_preparation_type)));
-      }
-    }
-  }
+  // {
+  //   // unit subgraph indices in merged subgraph are continous
+  //   for (const auto& subgraph_def : subgraph_defs) {
+  //     const int begin = *subgraph_def.unit_subgraph_indices.begin();
+  //     const int end = *subgraph_def.unit_subgraph_indices.rbegin();
+  //     if (end - begin != subgraph_def.unit_subgraph_indices.size() - 1) {
+  //       return absl::InternalError(absl::StrFormat(
+  //           "Failed to create subgraph. Unit subgraph indices in "
+  //           "subgraph %s are not continous for model %s and mode %s",
+  //           subgraph_def.ToString().c_str(), model_spec_->path.c_str(),
+  //           ToString(subgraph_config_.subgraph_preparation_type)));
+  //     }
+  //   }
+  // }
 
   const std::string subgraph_summary =
       subgraph_config_.subgraph_preparation_type !=
               SubgraphPreparationType::kFallbackPerWorker
           ? SummarizeSubgraphs(subgraph_defs)
-          : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
-                                                subgraph_defs);
+          : SummarizeFallbackPerWorkerSubgraphs(subgraph_defs);
 
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d subgraphs for model %s with mode %s %s",
@@ -521,34 +473,6 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
 
   std::set<int> resolved_tensors;
   std::set<int> remaining_ops;
-  // The basic idea is to partition this model into several disjoint
-  // subgraphs. Each subgraph is not necessarily a connected graph, and no two
-  // graphs have any common ops. A subgraph is either a fallback subgraph or a
-  // non-fallback one, but (obviously) never both.
-  //
-  //   Subgraph1  Sbg2     Sbg3
-  // |--Non-fb--|--fb--|--Non-fb-|
-  //
-  //       Op2 --- Op3 -- Op4
-  //     /                   \
-  // Op1 - Op5 --- Op6 -- Op7 - Op8
-  //
-  // We start from the foremost op(s) and gradually "expand" our territory of
-  // ops until we have the largest subgraph possible, without going over the
-  // boundary of fallback/non-fallback. After that, we remove the ops of that
-  // largest subgraph and start over with the remaining ops. This process is
-  // repeated until all ops have been removed.
-
-  // To make this work, we first need to keep track of the "front line" of
-  // ops. This front line, together with the fallback/non-fb status of the op,
-  // is used to determine whether or not we include an op in the current
-  // subgraph.
-  // The front line is denoted with the set of "resolved" tensors -- a tensor
-  // is considered resolved if that tensor can be computed using external
-  // inputs + previously resolved tensors. In case all input tensors of an
-  // op are resolved ones, that op is regarded to be at the front line of ops
-  // and thus can be put into the current subgraph (+ the fb/non-fb status
-  // must match too).
   for (int input_index : model_spec_->input_tensors) {
     resolved_tensors.insert(input_index);
   }
@@ -694,6 +618,23 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
                 result_subgraphs.size() - num_subgraphs_before_merge);
 
   return result_subgraphs;
+}
+
+std::vector<SubgraphDef> ModelAnalyzer::FallbackPerWorker() {
+  std::vector<SubgraphDef> subgraph_defs;
+
+  size_t num_units = 0;
+  for (WorkerId worker_id = 0; worker_id < engine_.GetNumWorkers();
+       worker_id++) {
+    std::vector<SubgraphDef> worker_subgraphs =
+        GetSubgraphsForFallbackOps(worker_id);
+    for (auto& subgraph : worker_subgraphs) {
+      subgraph.unit_subgraph_indices.insert(num_units++);
+    }
+    subgraph_defs.insert(subgraph_defs.end(), worker_subgraphs.begin(),
+                         worker_subgraphs.end());
+  }
+  return subgraph_defs;
 }
 
 bool ModelAnalyzer::NeedFallbackSubgraph() const {

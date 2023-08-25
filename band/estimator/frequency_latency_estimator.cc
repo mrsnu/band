@@ -41,11 +41,6 @@ void FrequencyLatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
 }
 
 double FrequencyLatencyEstimator::GetProfiled(const SubgraphKey& key) const {
-  if (profile_database_.find(key) == profile_database_.end()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "[GetProfiled] No profiled latency for %s.",
-                  key.ToString().c_str());
-    return 0;
-  }
   return profile_database_.at(key);
 }
 
@@ -53,18 +48,7 @@ double FrequencyLatencyEstimator::GetExpected(const SubgraphKey& key) const {
   auto freq =
       frequency_profiler_
           ->GetAllFrequency()[engine_->GetWorkerDevice(key.GetWorkerId())];
-  auto it = freq_lat_map_.find(key);
-  if (it != freq_lat_map_.end()) {
-    auto it2 = it->second.find(freq);
-    if (it2 != it->second.end()) {
-      return it2->second;
-    }
-  }
-  BAND_LOG_PROD(BAND_LOG_ERROR,
-                "[GetExpected] No expected latency for %s with "
-                "frequency %f.",
-                key.ToString().c_str(), freq);
-  return GetProfiled(key);
+  return freq_lat_map_.at(key).at(freq);
 }
 
 absl::Status FrequencyLatencyEstimator::LoadModel(std::string profile_path) {

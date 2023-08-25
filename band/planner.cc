@@ -77,10 +77,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
                SchedulerType::kHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(engine_, schedule_window_size_, true));
-    } else if (schedulers[i] == SchedulerType::kGreedyThermal) {
-      schedulers_.emplace_back(new GreedyThermalScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kFrameThermal) {
-      schedulers_.emplace_back(new FrameThermalScheduler(engine_));
+      schedulers_.emplace_back(new ThermalScheduler(engine_));
     } else {
       return absl::InternalError("[Planner] Unsupported scheduler type.");
     }

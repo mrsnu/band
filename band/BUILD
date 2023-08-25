@@ -269,8 +269,7 @@ band_cc_library(
         "scheduler/round_robin_scheduler.cc",
         "scheduler/round_robin_idle_scheduler.cc",
         "scheduler/shortest_expected_latency_scheduler.cc",
-        "scheduler/greedy_thermal_scheduler.cc",
-        "scheduler/frame_thermal_scheduler.cc",
+        "scheduler/thermal_scheduler.cc",
     ],
     hdrs = [
         "scheduler/fixed_worker_scheduler.h",
@@ -280,8 +279,7 @@ band_cc_library(
         "scheduler/round_robin_idle_scheduler.h",
         "scheduler/scheduler.h",
         "scheduler/shortest_expected_latency_scheduler.h",
-        "scheduler/greedy_thermal_scheduler.h",
-        "scheduler/frame_thermal_scheduler.h",
+        "scheduler/thermal_scheduler.h",
     ],
     deps = [
         ":common",

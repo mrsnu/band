@@ -15,6 +15,24 @@ def plot_thermal(log_path):
   expected_target = [d["args"]["expected_therm"]["Target"] for d in data if d["ph"] == "E"]
   profiled_target = [d["args"]["profiled_therm"]["Target"] for d in data if d["ph"] == "E"]
   
+  cpu_diff = [abs(e - p) for e, p in zip(expected_cpu, profiled_cpu)]
+  gpu_diff = [abs(e - p) for e, p in zip(expected_gpu, profiled_gpu)]
+  dsp_diff = [abs(e - p) for e, p in zip(expected_dsp, profiled_dsp)]
+  npu_diff = [abs(e - p) for e, p in zip(expected_npu, profiled_npu)]
+  target_diff = [abs(e - p) for e, p in zip(expected_target, profiled_target)]
+  
+  cpu_rmse = (sum([d**2 for d in cpu_diff]) / len(cpu_diff))**0.5
+  gpu_rmse = (sum([d**2 for d in gpu_diff]) / len(gpu_diff))**0.5
+  dsp_rmse = (sum([d**2 for d in dsp_diff]) / len(dsp_diff))**0.5
+  npu_rmse = (sum([d**2 for d in npu_diff]) / len(npu_diff))**0.5
+  target_rmse = (sum([d**2 for d in target_diff]) / len(target_diff))**0.5
+  
+  print("CPU RMSE: ", cpu_rmse)
+  print("GPU RMSE: ", gpu_rmse)
+  print("DSP RMSE: ", dsp_rmse)
+  print("NPU RMSE: ", npu_rmse)
+  print("Target RMSE: ", target_rmse)
+  
   # Plot All in subplots
   fig, axs = plt.subplots(5, 1, figsize=(10, 10))
   axs[0].plot(expected_cpu, label="expected")
