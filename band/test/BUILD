@@ -6,6 +6,27 @@ exports_files(glob([
     "data/*.jpg",
 ]))
 
+filegroup(
+    name = "tfl_models",
+    srcs = glob([
+        "data/*.tflite",
+    ]),
+)
+
+filegroup(
+    name = "benchmark_jsons",
+    srcs = glob([
+        "data/*.json",
+    ]),
+)
+
+filegroup(
+    name = "test_images",
+    srcs = glob([
+        "data/*.jpg",
+    ]),
+)
+
 band_cc_library(
     name = "test_util",
     srcs = [
@@ -79,9 +100,8 @@ band_cc_android_test(
     size = "medium",
     srcs = ["tool/benchmark_test.cc"],
     data = [
-        "//band/test:data/add.tflite",
-        "//band/test:data/benchmark_config.json",
-        "//band/test:data/retinaface_mbv2_quant_160.tflite",
+        "//band/test:tfl_models",
+        "//band/test:benchmark_jsons",
     ],
     deps = [
         ":test_util",
@@ -144,10 +164,8 @@ band_cc_android_test(
         "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
     data = [
-        "//band/test:data/add.tflite",
-        "//band/test:data/cat.jpg",
-        "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
-        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
+        "//band/test:tfl_models",
+        "//band/test:test_images",
     ],
     deps = [
         "//band:config_builder",
@@ -180,10 +198,7 @@ band_cc_android_test(
         "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
     data = [
-        "//band/test:data/ICN_quant.tflite",
-        "//band/test:data/lite-model_efficientdet_lite0_int8_1.tflite",
-        "//band/test:data/magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
-        "//band/test:data/retinaface_mbv2_quant_160.tflite",
+        "//band/test:tfl_models",
     ],
     deps = [
         "//band:config_builder",
@@ -197,10 +212,8 @@ band_cc_android_test(
     size = "small",
     srcs = ["c/c_api_test.cc"],
     data = [
-        "//band/test:data/add.tflite",
-        "//band/test:data/cat.jpg",
-        "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
-        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
+        "//band/test:tfl_models",
+        "//band/test:test_images",
     ],
     deps = [
         "//band:framework",
