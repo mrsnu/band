@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "band/logger.h"
 #include "band/time.h"
 
 namespace band {
@@ -10,9 +11,10 @@ LeastSlackFirstScheduler::LeastSlackFirstScheduler(IEngine& engine,
     : IScheduler(engine), window_size_(window_size) {}
 
 bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
+  BAND_LOG_PROD(BAND_LOG_INFO, "LeastSlackFirstScheduler::Schedule()");
   bool success = true;
   engine_.UpdateWorkersWaiting();
-  int window_size = std::min(window_size_, (int)requests.size());
+  int window_size = std::min(window_size_, static_cast<int>(requests.size()));
   if (window_size <= 0) {
     return success;
   }
@@ -24,7 +26,8 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
 
   WorkerWaitingTime waiting_time = engine_.GetWorkerWaitingTime();
 
-  int64_t current_time = time::NowMicros();
+  double current_time = time::NowMicros();
+  BAND_LOG_PROD(BAND_LOG_INFO, "Current time: %f", current_time);
   SortBySlackTime(requests, window_size, current_time);
 
   std::set<int> job_indices_to_erase;
@@ -35,7 +38,8 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
     std::pair<std::vector<SubgraphKey>, int> best_exec_plan =
         engine_.GetSubgraphWithMinCost(
             job, waiting_time,
-            [](double lat, std::map<SensorFlag, double> therm) -> double {
+            [](double lat, std::map<SensorFlag, double> therm,
+               std::map<SensorFlag, double> cur_therm) -> double {
               return lat;
             });
     // Get first executable subgraph plan
@@ -69,20 +73,24 @@ bool LeastSlackFirstScheduler::Schedule(JobQueue& requests) {
   return success;
 }
 
-int64_t LeastSlackFirstScheduler::GetSlackTime(int64_t current_time,
-                                               const Job& job) {
+double LeastSlackFirstScheduler::GetSlackTime(double current_time,
+                                              const Job& job) {
   if (job.slo_us > 0) {
-    int64_t deadline = job.enqueue_time + job.slo_us;
-    int64_t remaining_execution_time = job.expected_latency;
-    return deadline - current_time - remaining_execution_time;
+    double deadline = job.enqueue_time + job.slo_us;
+    double remaining_execution_time = job.expected_latency;
+    auto slack = deadline - current_time - remaining_execution_time;
+    BAND_LOG_PROD(BAND_LOG_INFO, "Job %d (%s) has the slack time %f", job.job_id,
+                  job.subgraph_key.ToString().c_str(), slack);
+    return slack;
   } else {
-    return INT_MAX;
+    BAND_LOG_PROD(BAND_LOG_WARNING, "Job %d does not have SLO", job.job_id);
+    return std::numeric_limits<double>::max() / 2;
   }
 }
 
 void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests,
                                                int window_size,
-                                               int64_t current_time) {
+                                               double current_time) {
   UpdateExpectedLatency(requests, window_size);
   std::sort(requests.begin(), requests.begin() + window_size,
             [&](const Job& first, const Job& second) -> bool {
@@ -94,14 +102,19 @@ void LeastSlackFirstScheduler::SortBySlackTime(JobQueue& requests,
 void LeastSlackFirstScheduler::UpdateExpectedLatency(JobQueue& requests,
                                                      int window_size) {
   for (auto it = requests.begin(); it != requests.begin() + window_size; ++it) {
-    it->expected_latency =
-        engine_
-            .GetSubgraphWithMinCost(
-                *it, engine_.GetWorkerWaitingTime(),
-                [](double lat, std::map<SensorFlag, double> therm) -> double {
-                  return lat;
-                })
-            .second;
+    double expected_lat;
+    std::map<SensorFlag, double> expected_therm;
+    engine_.GetSubgraphWithMinCost(
+        *it, engine_.GetWorkerWaitingTime(),
+        [&expected_lat, &expected_therm](
+            double lat, std::map<SensorFlag, double> therm,
+            std::map<SensorFlag, double> cur_therm) -> double {
+          expected_lat = lat;
+          expected_therm = therm;
+          return lat;
+        });
+    it->expected_latency = expected_lat;
+    it->expected_thermal = expected_therm;
   }
 }
 

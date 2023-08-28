@@ -34,12 +34,12 @@ bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
     // for longer than others.
 
     // find the most urgent job and save its index within the queue
-    int64_t largest_shortest_latency = -1;
+    double largest_shortest_latency = -1;
     int target_job_idx;
     SubgraphKey target_subgraph_key;
     WorkerWaitingTime worker_waiting = engine_.GetWorkerWaitingTime();
 
-    std::unordered_set<std::pair<int, BitMask>, JobIdBitMaskHash> searched_jobs;
+    std::set<std::pair<int, BitMask>> searched_jobs;
     for (auto it = local_jobs.begin(); it != local_jobs.end(); ++it) {
       Job& next_job = *it;
 
@@ -54,7 +54,8 @@ bool ShortestExpectedLatencyScheduler::Schedule(JobQueue& requests) {
       std::pair<std::vector<SubgraphKey>, double> best_subgraph =
           engine_.GetSubgraphWithMinCost(
               next_job, worker_waiting,
-              [](double lat, std::map<SensorFlag, double> therm) -> double {
+              [](double lat, std::map<SensorFlag, double> therm,
+                 std::map<SensorFlag, double> cur_therm) -> double {
                 return lat;
               });
 

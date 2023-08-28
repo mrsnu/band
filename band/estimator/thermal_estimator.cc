@@ -29,7 +29,9 @@ template <typename T>
 T ConvertEigenVectorToTMap(const Eigen::VectorXd& vec) {
   T value;
   for (int i = 0; i < vec.size(); i++) {
-    value[static_cast<SensorFlag>(i)] = vec(i);
+    if (vec(i) != 0) {
+      value[static_cast<SensorFlag>(i)] = vec(i);
+    }
   }
   return value;
 }
@@ -109,7 +111,7 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   if (features_.size() > window_size_) {
     features_.pop_front();
   }
-
+  
   size_t window_size = std::min(window_size_, features_.size());
   Eigen::MatrixXd data(window_size, feature_size);
   Eigen::MatrixXd target(window_size, target_size);
@@ -142,9 +144,10 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
   const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
-  double latency = frequency_latency_estimator_->GetExpected(key);
+  double latency = latency_estimator_->GetExpected(key);
   auto cur_freq_map = frequency_profiler_->GetAllFrequency();
   auto cur_therm_map = thermal_profiler_->GetAllThermal();
+  profile_database_[key] = cur_therm_map;
 
   Eigen::VectorXd old_therm_vec =
       ConvertTMapToEigenVector<ThermalMap>(cur_therm_map, num_sensors);

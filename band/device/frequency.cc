@@ -36,28 +36,28 @@ Frequency::Frequency(DeviceConfig config) {
   if (config.cpu_freq_path != "" && CheckFrequency(config.cpu_freq_path)) {
     freq_device_map_[DeviceFlag::kCPU] = config.cpu_freq_path;
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "CPU frequency path %s is not available.",
+    BAND_LOG_PROD(BAND_LOG_ERROR, "CPU frequency path \"%s\" is not available.",
                   config.cpu_freq_path.c_str());
   }
 
   if (config.gpu_freq_path != "" && CheckFrequency(config.gpu_freq_path)) {
     freq_device_map_[DeviceFlag::kGPU] = config.gpu_freq_path;
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "GPU frequency path %s is not available.",
+    BAND_LOG_PROD(BAND_LOG_ERROR, "GPU frequency path \"%s\" is not available.",
                   config.gpu_freq_path.c_str());
   }
 
   if (config.dsp_freq_path != "" && CheckFrequency(config.dsp_freq_path)) {
     freq_device_map_[DeviceFlag::kDSP] = config.dsp_freq_path;
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "DSP frequency path %s is not available.",
+    BAND_LOG_PROD(BAND_LOG_ERROR, "DSP frequency path \"%s\" is not available.",
                   config.dsp_freq_path.c_str());
   }
 
   if (config.npu_freq_path != "" && CheckFrequency(config.npu_freq_path)) {
     freq_device_map_[DeviceFlag::kNPU] = config.npu_freq_path;
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "NPU frequency path %s is not available.",
+    BAND_LOG_PROD(BAND_LOG_ERROR, "NPU frequency path \"%s\" is not available.",
                   config.npu_freq_path.c_str());
   }
 }

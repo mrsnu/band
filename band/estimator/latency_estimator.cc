@@ -79,10 +79,13 @@ size_t LatencyEstimator::GetProfileHash() const {
   auto hash_func = std::hash<int>();
   size_t hash = hash_func(engine_->GetNumWorkers());
   for (int i = 0; i < engine_->GetNumWorkers(); i++) {
-    hash ^= hash_func(static_cast<int>(engine_->GetWorker(i)->GetDeviceFlag()));
-    hash ^= hash_func(engine_->GetWorker(i)->GetNumThreads());
-    hash ^= hash_func(static_cast<int>(
-        engine_->GetWorker(i)->GetWorkerThreadAffinity().GetCPUMaskFlag()));
+    if (engine_->GetWorker(i) != nullptr) {
+      hash ^=
+          hash_func(static_cast<int>(engine_->GetWorker(i)->GetDeviceFlag()));
+      hash ^= hash_func(engine_->GetWorker(i)->GetNumThreads());
+      hash ^= hash_func(static_cast<int>(
+          engine_->GetWorker(i)->GetWorkerThreadAffinity().GetCPUMaskFlag()));
+    }
   }
   return hash;
 }
@@ -138,7 +141,7 @@ Json::Value LatencyEstimator::ProfileToJson() {
     const int model_id = key.GetModelId();
 
     auto model_spec = engine_->GetModelSpec(model_id);
-    if (model_spec == nullptr || model_spec->path.empty()) {
+    if (model_spec == nullptr) {
       BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                         "Cannot find model %d from "
                         "model_configs. Will ignore.",
@@ -147,12 +150,27 @@ Json::Value LatencyEstimator::ProfileToJson() {
     }
 
     // copy all entries in id_profile --> database_json
-    models_json[model_id][key.GetUnitIndicesString()][key.GetWorkerId()]
-               ["profiled"] = pair.second.profiled;
-    models_json[model_id][key.GetUnitIndicesString()][key.GetWorkerId()]
-               ["moving_averaged"] = pair.second.moving_averaged;
+    if (models_json[model_id].empty()) {
+      models_json[model_id] = Json::Value();
+    }
+    if (models_json[model_id][key.GetUnitIndicesString()].empty()) {
+      models_json[model_id][key.GetUnitIndicesString()] = Json::Value();
+    }
+    if (models_json[model_id][key.GetUnitIndicesString()]
+                   [std::to_string(key.GetWorkerId())]
+                       .empty()) {
+      models_json[model_id][key.GetUnitIndicesString()]
+                 [std::to_string(key.GetWorkerId())] = Json::Value();
+    }
+
+    models_json[model_id][key.GetUnitIndicesString()]
+               [std::to_string(key.GetWorkerId())]["profiled"] =
+                   pair.second.profiled;
+    models_json[model_id][key.GetUnitIndicesString()]
+               [std::to_string(key.GetWorkerId())]["moving_averaged"] =
+                   pair.second.moving_averaged;
   }
-  models_json["models"] = models_json;
+  profile_database_json["models"] = models_json;
   return profile_database_json;
 }
 

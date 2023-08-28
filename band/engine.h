@@ -127,16 +127,19 @@ class Engine : public IEngine {
   std::pair<SubgraphKey, double> GetMinCost(
       ModelId model_id, BitMask resolved_unit_subgraphs, double start_time,
       const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap)> cost) const override;
+      const std::function<double(double, ThermalMap, ThermalMap)> cost)
+      const override;
 
   std::pair<std::vector<SubgraphKey>, double> GetMinCostWithUnitSubgraph(
       ModelId model_id, int start_unit_idx,
       const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap)> cost) const override;
+      const std::function<double(double, ThermalMap, ThermalMap)> cost)
+      const override;
 
   std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
       const Job& job, const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap)> cost) const override;
+      const std::function<double(double, ThermalMap, ThermalMap)> cost)
+      const override;
 
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,
@@ -148,7 +151,7 @@ class Engine : public IEngine {
   std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, double start_time,
       const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap)> cost) const;
+      const std::function<double(double, ThermalMap, ThermalMap)> cost) const;
 
   /* estimators */
   void UpdateWithEvent(const SubgraphKey&, size_t event_id) override;
@@ -207,8 +210,7 @@ class Engine : public IEngine {
 
   // Scheduling
   // cache for GetMinCost()
-  mutable std::unordered_map<std::pair<ModelId, BitMask>,
-                             std::pair<SubgraphKey, double>, JobIdBitMaskHash>
+  mutable std::map<std::pair<ModelId, BitMask>, std::pair<SubgraphKey, double>>
       cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
@@ -224,9 +226,12 @@ class Engine : public IEngine {
   std::vector<Profiler*> profilers_;
 
   // Estimators
+#ifdef BAND_FREQ
+  std::unique_ptr<FrequencyLatencyEstimator> latency_estimator_;
+#else
   std::unique_ptr<LatencyEstimator> latency_estimator_;
+#endif  // BAND_FREQ
   std::unique_ptr<ThermalEstimator> thermal_estimator_;
-  std::unique_ptr<FrequencyLatencyEstimator> frequency_latency_estimator_;
 };
 
 }  // namespace band

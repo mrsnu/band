@@ -14,9 +14,9 @@ class LeastSlackFirstScheduler : public IScheduler {
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
 
  private:
-  int64_t GetSlackTime(int64_t current_time, const Job& job);
+  double GetSlackTime(double current_time, const Job& job);
   void SortBySlackTime(JobQueue& requests, int window_size,
-                       int64_t current_time);
+                       double current_time);
   void UpdateExpectedLatency(JobQueue& requests, int window_size);
   const int window_size_;
 };

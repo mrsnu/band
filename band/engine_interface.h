@@ -73,18 +73,18 @@ class IEngine {
   virtual std::pair<SubgraphKey, double> GetMinCost(
       int model_id, BitMask resolved_unit_subgraphs, double start_time,
       const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, std::map<SensorFlag, double>)> cost)
+      const std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)> cost)
       const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, double>
   GetMinCostWithUnitSubgraph(
       int model_id, int start_unit_idx, const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, std::map<SensorFlag, double>)> cost)
+      const std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)> cost)
       const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
       const Job& job, const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, std::map<SensorFlag, double>)> cost)
+      const std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)> cost)
       const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(

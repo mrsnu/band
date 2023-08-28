@@ -37,7 +37,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
       target_job_index = -1;
 
       // only check up to `num_jobs` requests
-      std::unordered_set<std::pair<int, BitMask>, JobIdBitMaskHash>
+      std::set<std::pair<int, BitMask>>
           searched_jobs;
       for (auto it = requests.begin(); it != requests.begin() + num_jobs;
            ++it) {
@@ -72,7 +72,8 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
             engine_.GetSubgraphWithMinCost(
                 job, reserved_time,
                 [&expected_lat, &expected_therm](
-                    double lat, std::map<SensorFlag, double> therm) -> double {
+                    double lat, std::map<SensorFlag, double> therm,
+                    std::map<SensorFlag, double> cur_therm) -> double {
                   expected_lat = lat;
                   expected_therm = therm;
                   return lat;

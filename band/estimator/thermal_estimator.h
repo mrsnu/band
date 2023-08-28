@@ -9,7 +9,13 @@
 #include "band/common.h"
 #include "band/config.h"
 #include "band/estimator/estimator_interface.h"
+
+#ifdef BAND_FREQ
 #include "band/estimator/frequency_latency_estimator.h"
+#else
+#include "band/estimator/latency_estimator.h"
+#endif  // BAND_FREQ
+
 #include "band/profiler/frequency_profiler.h"
 #include "band/profiler/latency_profiler.h"
 #include "band/profiler/thermal_profiler.h"
@@ -25,12 +31,18 @@ class ThermalEstimator
   explicit ThermalEstimator(
       IEngine* engine, ThermalProfiler* thermal_profiler,
       FrequencyProfiler* frequency_profiler, LatencyProfiler* latency_profiler,
-      FrequencyLatencyEstimator* frequency_latency_estimator)
+#ifdef BAND_FREQ
+      FrequencyLatencyEstimator* latency_estimator
+#else
+      LatencyEstimator* latency_estimator
+#endif  // BAND_FREQ
+      )
       : IEstimator(engine),
         thermal_profiler_(thermal_profiler),
         frequency_profiler_(frequency_profiler),
         latency_profiler_(latency_profiler),
-        frequency_latency_estimator_(frequency_latency_estimator) {}
+        latency_estimator_(latency_estimator) {
+  }
   absl::Status Init(const ThermalProfileConfig& config);
   void Update(const SubgraphKey& key, ThermalMap therm_start,
               ThermalMap therm_end, FreqMap freq, double latency);
@@ -54,14 +66,18 @@ class ThermalEstimator
   ThermalProfiler* thermal_profiler_;
   FrequencyProfiler* frequency_profiler_;
   LatencyProfiler* latency_profiler_;
-  FrequencyLatencyEstimator* frequency_latency_estimator_;
+#ifdef BAND_FREQ
+  FrequencyLatencyEstimator* latency_estimator_;
+#else
+  LatencyEstimator* latency_estimator_;
+#endif  // BAND_FREQ
 
   size_t num_resources_ = 0;
   size_t window_size_;
 
   Eigen::MatrixXd model_;
   std::deque<std::pair<Eigen::VectorXd, Eigen::VectorXd>> features_;
-  std::map<SubgraphKey, ThermalMap> profile_database_;
+  mutable std::map<SubgraphKey, ThermalMap> profile_database_;
 };
 
 }  // namespace band

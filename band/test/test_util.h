@@ -38,20 +38,20 @@ struct MockEngineBase : public IEngine {
   MOCK_CONST_METHOD5(GetMinCost,
                      std::pair<SubgraphKey, double>(
                          ModelId, BitMask, double, WorkerWaiting,
-                         std::function<double(double, std::map<SensorFlag, double>)>));
+                         std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
 
   MOCK_CONST_METHOD4(GetMinCostWithUnitSubgraph,
                      MinCostWithUnitSubgraph(
                          ModelId, int, WorkerWaiting,
-                         std::function<double(double, std::map<SensorFlag, double>)>));
+                         std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
   MOCK_CONST_METHOD3(
       GetSubgraphWithMinCost,
       SubgraphWithMinCost(const Job&, WorkerWaiting,
-                                  std::function<double(double, std::map<SensorFlag, double>)>));
+                                  std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
   MOCK_CONST_METHOD4(GetSubgraphIdxSatisfyingSLO,
                      SubgraphKey(const Job&, WorkerWaiting,
                                  const std::set<WorkerId>&,
-                                 std::function<double(double, std::map<SensorFlag, double>)>));
+                                 std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
 
   /* estimators */
   MOCK_METHOD2(Update, void(const SubgraphKey&, int64_t));

@@ -168,8 +168,9 @@ JNIEXPORT jint JNICALL Java_org_mrsnu_band_NativeEngineWrapper_requestAsync(
 JNIEXPORT jintArray JNICALL
 Java_org_mrsnu_band_NativeEngineWrapper_requestAsyncBatch(
     JNIEnv* env, jclass clazz, jlong engineHandle, jobject models,
-    jobject inputTensorsList, jobject targetWorkersList,
-    jobject requireCallbacksList, jobject sloUsList, jobject sloScaleList) {
+    jobject inputTensorsList, jintArray targetWorkersList,
+    jbooleanArray requireCallbacksList, jintArray sloUsList,
+    jfloatArray sloScaleList) {
   Engine* engine = ConvertLongToEngine(env, engineHandle);
   JNI_DEFINE_CLS_AND_MTD(mdl, "org/mrsnu/band/Model", "getNativeHandle", "()J");
   JNI_DEFINE_CLS_AND_MTD(tnr, "org/mrsnu/band/Tensor", "getNativeHandle",
@@ -184,12 +185,19 @@ Java_org_mrsnu_band_NativeEngineWrapper_requestAsyncBatch(
   for (Model* model : model_list) {
     model_ids.push_back(model->GetId());
   }
-  std::vector<band::RequestOption> request_options(
-      model_list.size(), band::RequestOption::GetDefaultOption());
+  std::vector<band::RequestOption> request_options;
+  for (int i = 0; i < model_list.size(); i++) {
+    int target_worker = env->GetIntArrayElements(targetWorkersList, nullptr)[i];
+    bool require_callback =
+        env->GetBooleanArrayElements(requireCallbacksList, nullptr)[i];
+    int slo_us = env->GetIntArrayElements(sloUsList, nullptr)[i];
+    float slo_scale = env->GetFloatArrayElements(sloScaleList, nullptr)[i];
+    request_options.push_back(
+        {target_worker, require_callback, slo_us, slo_scale});
+  }
 
   std::vector<band::Tensors> input_lists;
-  jint size = env->CallIntMethod(inputTensorsList, list_size_mtd);
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < model_list.size(); i++) {
     jobject input_list =
         env->CallObjectMethod(inputTensorsList, list_get_mtd, i);
     input_lists.push_back(

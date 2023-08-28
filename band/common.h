@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 #include <type_traits>
+#include <array>
 #include <vector>
 #include <deque>
 
@@ -18,7 +19,135 @@ typedef int ModelId;
 typedef int JobId;
 typedef int GraphJobId;
 
-using BitMask = std::bitset<64>;
+struct BitMask {
+  BitMask() : mask() { mask.fill(false); }
+  BitMask(const std::array<bool, 256>& mask) : mask(mask) {}
+  BitMask(const BitMask& other) : mask(other.mask) {}
+  BitMask& operator=(const BitMask& other) {
+    mask = other.mask;
+    return *this;
+  }
+  BitMask& operator=(const std::array<bool, 256>& other) {
+    mask = other;
+    return *this;
+  }
+  bool operator==(const BitMask& other) const { return mask == other.mask; }
+  bool operator!=(const BitMask& other) const { return mask != other.mask; }
+  bool operator<(const BitMask& other) const {
+    for (int i = 0; i < 256; i++) {
+      if (mask[i] != other.mask[i]) {
+        return mask[i] < other.mask[i];
+      }
+    }
+    return false;
+  }
+
+  BitMask operator^(const BitMask& other) const {
+    BitMask result;
+    for (int i = 0; i < 256; i++) {
+      result.mask[i] = mask[i] ^ other.mask[i];
+    }
+    return result;
+  }
+  
+  BitMask operator&(const BitMask& other) const {
+    BitMask result;
+    for (int i = 0; i < 256; i++) {
+      result.mask[i] = mask[i] & other.mask[i];
+    }
+    return result;
+  }
+
+  BitMask operator|(const BitMask& other) const {
+    BitMask result;
+    for (int i = 0; i < 256; i++) {
+      result.mask[i] = mask[i] | other.mask[i];
+    }
+    return result;
+  }
+
+  BitMask operator~() const {
+    BitMask result;
+    for (int i = 0; i < 256; i++) {
+      result.mask[i] = !mask[i];
+    }
+    return result;
+  }
+
+  BitMask& operator^=(const BitMask& other) {
+    for (int i = 0; i < 256; i++) {
+      mask[i] ^= other.mask[i];
+    }
+    return *this;
+  }
+
+  BitMask& operator&=(const BitMask& other) {
+    for (int i = 0; i < 256; i++) {
+      mask[i] &= other.mask[i];
+    }
+    return *this;
+  }
+
+  BitMask& operator|=(const BitMask& other) {
+    for (int i = 0; i < 256; i++) {
+      mask[i] |= other.mask[i];
+    }
+    return *this;
+  }
+
+  BitMask& operator|=(int i) {
+    mask[i] = true;
+    return *this;
+  }
+
+  BitMask& operator~() {
+    for (int i = 0; i < 256; i++) {
+      mask[i] = !mask[i];
+    }
+    return *this;
+  }
+
+  bool operator[](int i) const { return mask[i]; }
+  bool any() const { 
+    for (int i = 0; i < 256; i++) {
+      if (mask[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+  bool all() const {
+    for (int i = 0; i < 256; i++) {
+      if (!mask[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  bool none() const {
+    for (int i = 0; i < 256; i++) {
+      if (mask[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  bool test(int i) const { return mask[i]; }
+  void set(int i) { mask[i] = true; }
+  void clear() { mask.fill(false); }
+  size_t size() const { return 256; }
+  std::array<bool, 256> get() const { return mask; }
+  std::string ToString() const {
+    std::string result;
+    for (int i = 0; i < 256; i++) {
+      result += mask[i] ? "1" : "0";
+    }
+    return result;
+  }
+
+private:
+  std::array<bool, 256> mask;
+};
 
 // Empty template.
 template <typename EnumType>
@@ -58,8 +187,7 @@ enum class SchedulerType : size_t {
   kHeterogeneousEarliestFinishTime,
   kLeastSlackTimeFirst,
   kHeterogeneousEarliestFinishTimeReserved,
-  kGreedyThermal,
-  kFrameThermal,
+  kThermal,
 };
 
 enum class CPUMaskFlag : size_t {
@@ -309,6 +437,7 @@ struct Job {
 
   // Profiled invoke execution time
   double profiled_execution_time = 0;
+  double profiled_latency = 0;
   std::map<SensorFlag, double> profiled_thermal;
 
   // Expected
@@ -341,12 +470,6 @@ struct Job {
 
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
-
-// hash function to use pair<int, BitMask> as map key in cache_
-// https://stackoverflow.com/a/32685618
-struct JobIdBitMaskHash {
-  std::size_t operator()(const std::pair<int, BitMask>& p) const;
-};
 
 }  // namespace band
 

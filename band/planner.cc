@@ -8,14 +8,14 @@
 #include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
-#include "band/scheduler/frame_thermal_scheduler.h"
-#include "band/scheduler/greedy_thermal_scheduler.h"
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_idle_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
+#include "band/scheduler/thermal_scheduler.h"
 #include "band/time.h"
+
 
 namespace band {
 
@@ -51,7 +51,6 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   }
 
   bool allow_fallback = false;
-  local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
                       schedulers[i]);
@@ -77,7 +76,7 @@ absl::Status Planner::Init(const PlannerConfig& config) {
                SchedulerType::kHeterogeneousEarliestFinishTimeReserved) {
       schedulers_.emplace_back(
           new HEFTScheduler(engine_, schedule_window_size_, true));
-    } else if (schedulers[i] == SchedulerType::kFrameThermal) {
+    } else if (schedulers[i] == SchedulerType::kThermal) {
       schedulers_.emplace_back(new ThermalScheduler(engine_));
     } else {
       return absl::InternalError("[Planner] Unsupported scheduler type.");
@@ -112,7 +111,6 @@ absl::Status Planner::Init(const PlannerConfig& config) {
 
 absl::Status Planner::AddScheduler(std::unique_ptr<IScheduler> scheduler) {
   schedulers_.emplace_back(std::move(scheduler));
-  local_queues_.resize(schedulers_.size());
   return GetWorkerType() == (static_cast<int>(WorkerType::kDeviceQueue) |
                              static_cast<int>(WorkerType::kGlobalQueue))
              ? absl::InternalError(
@@ -209,7 +207,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
 void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
-  job.resolved_unit_subgraphs = 0;
+  job.resolved_unit_subgraphs.clear();
   job.following_jobs.clear();
 }
 
@@ -263,11 +261,12 @@ absl::Status Planner::Plan() {
       }
       need_cpu_update_ = false;
     }
+    BAND_LOG_PROD(BAND_LOG_INFO, "Planner triggered.");
     CopyToLocalQueues();
+    BAND_LOG_PROD(BAND_LOG_INFO, "Planner copied to local queues.");
     bool need_reschedule = false;
-    for (size_t i = 0; i < local_queues_.size(); ++i) {
-      need_reschedule |= !schedulers_[i]->Schedule(local_queues_[i]);
-    }
+    BAND_LOG_PROD(BAND_LOG_INFO, "Planner start scheduling.");
+    need_reschedule |= !schedulers_[0]->Schedule(local_queue_);
 
     if (need_reschedule) {
       planner_safe_bool_.notify();
@@ -282,21 +281,11 @@ void Planner::CopyToLocalQueues() {
   if (!requests.empty()) {
     if (schedulers_.size() == 1) {
       // Gets jobs from requests and removes those jobs from the requests.
-      auto& local_jobs = local_queues_[0];
+      auto& local_jobs = local_queue_;
       local_jobs.insert(local_jobs.end(),
                         std::make_move_iterator(requests.begin()),
                         std::make_move_iterator(requests.end()));
-    } else if (schedulers_.size() == 2) {
-      // TODO: general method for assigning SLO/non-SLO requests
-      for (Job& job : requests) {
-        if (job.slo_us > 0) {
-          local_queues_[0].push_back(std::move(job));
-        } else {
-          local_queues_[1].push_back(std::move(job));
-        }
-      }
-    }  // other else cases should have been caught in Init()
-
+    }
     requests.clear();
   }
   request_lock.unlock();

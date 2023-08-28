@@ -25,7 +25,7 @@ class JobTracer : protected chrome_tracer::ChromeTracer {
 
   std::mutex mtx_;
   std::map<size_t, std::string> id_to_streams_;
-  std::unordered_map<std::pair<size_t, BitMask>, int32_t, JobIdBitMaskHash>
+  std::map<std::pair<size_t, BitMask>, int32_t>
       job_to_handle_;
 };
 }  // namespace band

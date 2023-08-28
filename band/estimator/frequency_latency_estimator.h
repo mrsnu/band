@@ -17,7 +17,9 @@ class FrequencyLatencyEstimator
                                      LatencyProfiler* latency_profiler)
       : IEstimator(engine),
         frequency_profiler_(frequency_profiler),
-        latency_profiler_(latency_profiler) {}
+        latency_profiler_(latency_profiler) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "FrequencyLatencyEstimator is created");
+  }
   absl::Status Init(const FrequencyLatencyProfileConfig& config);
   void Update(const SubgraphKey& key, FreqInfo freq_info, double latency);
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;

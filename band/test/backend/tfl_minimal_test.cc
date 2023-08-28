@@ -541,7 +541,7 @@ TEST(TFLiteBackend, RetinaFaceTest) {
           .AddSchedulers({SchedulerType::kHeterogeneousEarliestFinishTime})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
-              SubgraphPreparationType::kMergeUnitSubgraph)
+              SubgraphPreparationType::kFallbackPerWorker)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
 #ifdef __ANDROID__

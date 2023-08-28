@@ -110,9 +110,7 @@ class Planner {
   // Request Queue
   ConcurrentJobQueue requests_;
 
-  // Multi-level Local Queue.
-  // The closer the index is to 0, the higher the priority.
-  std::vector<JobQueue> local_queues_;
+  JobQueue local_queue_;
   std::vector<std::unique_ptr<IScheduler>> schedulers_;
 
   std::mutex job_finished_mtx_;

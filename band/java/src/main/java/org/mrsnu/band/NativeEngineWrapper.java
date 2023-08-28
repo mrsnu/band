@@ -52,16 +52,18 @@ public class NativeEngineWrapper implements AutoCloseable {
   public List<Request> requestAsyncBatch(
       List<Model> models, List<List<Tensor>> inputTensors, List<RequestOption> options) {
     List<Request> ret = new ArrayList<>();
-    List<Integer> targetWorkerList = new ArrayList<>();
-    List<Boolean> requireCallbackList = new ArrayList<>();
-    List<Integer> sloUsList = new ArrayList<>();
-    List<Float> sloScaleList = new ArrayList<>();
-    for (RequestOption option : options) {
-      targetWorkerList.add(option.getTargetWorker());
-      requireCallbackList.add(option.getRequireCallback());
-      sloUsList.add(option.getSloUs());
-      sloScaleList.add(option.getSloScale());
+    int[] targetWorkerList = new int[options.size()];
+    boolean[] requireCallbackList = new boolean[options.size()];
+    int[] sloUsList = new int[options.size()];
+    float[] sloScaleList = new float[options.size()];
+
+    for (int i = 0; i < options.size(); i++) {
+      targetWorkerList[i] = options.get(i).getTargetWorker();
+      requireCallbackList[i] = options.get(i).getRequireCallback();
+      sloUsList[i] = options.get(i).getSloUs();
+      sloScaleList[i] = options.get(i).getSloScale();
     }
+
     int[] results = requestAsyncBatch(nativeHandle, models, inputTensors, targetWorkerList,
         requireCallbackList, sloUsList, sloScaleList);
     for (int jobId : results) {
@@ -96,8 +98,8 @@ public class NativeEngineWrapper implements AutoCloseable {
       int target_worker, boolean require_callback, int slo_us, float slo_scale);
 
   private static native int[] requestAsyncBatch(long engineHandle, List<Model> models,
-      List<List<Tensor>> inputTensorsList, List<Integer> targetWorkerList,
-      List<Boolean> requireCallbackList, List<Integer> sloUsList, List<Float> sloScaleList);
+      List<List<Tensor>> inputTensorsList, int[] targetWorkerList, boolean[] requireCallbackList,
+      int[] sloUsList, float[] sloScaleList);
 
   private static native void wait(long engineHandle, int jobId, List<Tensor> outputTensors);
 }

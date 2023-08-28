@@ -165,8 +165,6 @@ absl::StatusOr<std::pair<ModelSpec, std::vector<SubgraphDef>>>
 ModelAnalyzer::CreateSubgraphs() {
   std::vector<SubgraphDef> subgraph_defs;
   std::vector<SubgraphDef> unit_subgraph_defs;
-
-  // TODO(widiba03304): Add error propagation logic.
   auto status = GetUnitSubgraphs(unit_subgraph_defs);
   if (!status.ok()) {
     return status;
@@ -271,7 +269,7 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
     }
 
     // build op_support_table
-    std::vector<BitMask> op_support_table(num_ops, 0U);
+    std::vector<BitMask> op_support_table(num_ops);
     std::map<WorkerId, std::set<int>> unsupported_ops;
     int unit_subgraph_index = 0;
     // TODO(BAND-62): assume that band device type targets a single processor.
@@ -317,7 +315,7 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
 
     while (true) {
       std::set<int> unit_subgraph_ops;
-      BitMask support_workers = 0;
+      BitMask support_workers;
 
       // Find single unit subgraph ops
       while (true) {
@@ -331,12 +329,12 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
             continue;
           }
           // Check the op have same support devices
-          if (support_workers != 0 &&
+          if (support_workers.any() &&
               support_workers != op_support_table[op_index]) {
             continue;
           }
           // Set support devices using first op
-          if (support_workers == 0) {
+          if (support_workers.none()) {
             support_workers = op_support_table[op_index];
           }
           to_add.push_back(op_index);
@@ -531,10 +529,10 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
       if (current_device == DeviceFlag::kCPU &&
           device_flag != DeviceFlag::kCPU) {
         for (auto cpu_worker_id : cpu_worker_ids) {
-          subgraph_defs.push_back({cpu_worker_id, operator_set, {}});
+          subgraph_defs.push_back({cpu_worker_id, operator_set, operator_set});
         }
       } else {
-        subgraph_defs.push_back({worker_id, operator_set, {}});
+        subgraph_defs.push_back({worker_id, operator_set, operator_set});
       }
     }
 
@@ -628,9 +626,6 @@ std::vector<SubgraphDef> ModelAnalyzer::FallbackPerWorker() {
        worker_id++) {
     std::vector<SubgraphDef> worker_subgraphs =
         GetSubgraphsForFallbackOps(worker_id);
-    for (auto& subgraph : worker_subgraphs) {
-      subgraph.unit_subgraph_indices.insert(num_units++);
-    }
     subgraph_defs.insert(subgraph_defs.end(), worker_subgraphs.begin(),
                          worker_subgraphs.end());
   }

@@ -12,7 +12,7 @@ size_t EnumLength<BackendType>() {
 
 template <>
 size_t EnumLength<SchedulerType>() {
-  return static_cast<size_t>(SchedulerType::kFrameThermal) + 1;
+  return static_cast<size_t>(SchedulerType::kThermal) + 1;
 }
 
 template <>
@@ -115,10 +115,7 @@ const char* ToString(SchedulerType scheduler_type) {
     case SchedulerType::kHeterogeneousEarliestFinishTimeReserved: {
       return "heterogeneous_earliest_finish_time_reserved";
     } break;
-    case SchedulerType::kGreedyThermal: {
-      return "greedy_thermal";
-    } break;
-    case SchedulerType::kFrameThermal: {
+    case SchedulerType::kThermal: {
       return "frame_thermal";
     } break;
     default: {
@@ -414,7 +411,10 @@ bool SubgraphKey::operator<(const SubgraphKey& key) const {
     return worker_id < key.GetWorkerId();
   }
 
-  return unit_indices.to_ullong() < key.unit_indices.to_ullong();
+  for (int i = 255; i >= 0; i--) {
+    if (unit_indices[i] ^ key.unit_indices[i]) return key.unit_indices[i];
+  }
+  return false;
 }
 
 bool SubgraphKey::operator==(const SubgraphKey& key) const {
@@ -499,19 +499,14 @@ std::string Job::ToJson() const {
          ",\"expected_execution_time\":" +
          std::to_string(expected_execution_time) +
          ",\"expected_latency\":" + std::to_string(expected_latency) +
+         ",\"profiled_latency\":" + std::to_string(profiled_latency) +
          ",\"slo_us\":" + std::to_string(slo_us) +
          ",\"model_id\":" + std::to_string(model_id) +
          (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
          ",\"unit_indices\": \"" + subgraph_key.GetUnitIndicesString() + "\"" +
          ",\"job_id\":" + std::to_string(job_id) +
-         ",\"expected_therm\": " + "{" + expected_therm_string + "}" + 
-         ",\"profiled_therm\": " + "{" + profiled_therm_string + "}" + 
-         "}";
+         ",\"expected_therm\":" + "{" + expected_therm_string + "}" +
+         ",\"profiled_therm\":" + "{" + profiled_therm_string + "}" + "}";
 }
 
-std::size_t JobIdBitMaskHash::operator()(
-    const std::pair<int, BitMask>& p) const {
-  auto hash_func = std::hash<int>();
-  return hash_func(p.first) ^ hash_func(p.second.to_ullong());
-}
 }  // namespace band

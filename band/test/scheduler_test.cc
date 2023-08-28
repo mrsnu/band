@@ -34,7 +34,7 @@ struct MockEngine : public MockEngineBase {
 
   std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
       const Job& job, const WorkerWaitingTime& worker_waiting,
-      std::function<double(double, std::map<SensorFlag, double>)>)
+      std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>)
       const override {
     return std::pair<std::vector<SubgraphKey>, double>(
         {SubgraphKey(job.model_id, *idle_workers_.begin(), {0})},
