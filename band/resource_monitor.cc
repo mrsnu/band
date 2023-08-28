@@ -5,6 +5,7 @@
 #include "absl/strings/str_format.h"
 #include "band/device/util.h"
 #include "band/logger.h"
+#include "band/time.h"
 #include "resource_monitor.h"
 
 namespace band {
@@ -42,7 +43,7 @@ absl::StatusOr<size_t> TryReadSizeT(std::vector<std::string> paths,
 }
 
 absl::StatusOr<int> TryReadInt(std::vector<std::string> paths,
-                                  std::vector<float> multipliers = {}) {
+                               std::vector<float> multipliers = {}) {
   return TryRead<int>(paths, multipliers);
 }
 
@@ -176,9 +177,8 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
   if (config.log_path.size() > 0) {
     // remove existing log file if exists
     if (device::IsFileAvailable(config.log_path.c_str())) {
-      BAND_LOG_PROD(
-        BAND_LOG_ERROR, "Removing existing monitor log %s",
-        config.log_path.c_str());
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Removing existing monitor log %s",
+                    config.log_path.c_str());
       std::remove(config.log_path.c_str());
     }
     // open log file and start from the beginning
@@ -376,9 +376,9 @@ absl::StatusOr<int> ResourceMonitor::GetPowerSupply(
   PowerSupplyKey key{power_supply_flag, power_supply_device_flag};
   if (power_supply_status_[status_head_].find(key) ==
       power_supply_status_[status_head_].end()) {
-    return absl::InternalError(
-        absl::StrFormat("Powre supply resource %s of device %s is not registered.",
-          ToString(power_supply_flag), ToString(power_supply_device_flag)));
+    return absl::InternalError(absl::StrFormat(
+        "Powre supply resource %s of device %s is not registered.",
+        ToString(power_supply_flag), ToString(power_supply_device_flag)));
   } else {
     return power_supply_status_[status_head_].at(key);
   }
@@ -552,25 +552,24 @@ absl::Status ResourceMonitor::AddPowerSupplyResource(
   std::lock_guard<std::mutex> lock(path_mtx_);
   PowerSupplyKey key{power_supply_flag, power_supply_mask_flag};
   if (power_supply_resources_.find(key) != power_supply_resources_.end()) {
-    return absl::InternalError(
-        absl::StrFormat("Power supply resource %s of device %s is already registered.",
-        ToString(power_supply_flag),
-        ToString(power_supply_mask_flag)));
+    return absl::InternalError(absl::StrFormat(
+        "Power supply resource %s of device %s is already registered.",
+        ToString(power_supply_flag), ToString(power_supply_mask_flag)));
   }
 
   std::string base_path = GetPowerSupplyBasePath();
   std::string device_dirname;
   switch (power_supply_mask_flag) {
-  case PowerSupplyMaskFlag::kCharger:
-    device_dirname = "charger";
-    break;
-  case PowerSupplyMaskFlag::kBattery:
-    device_dirname = "battery";
-    break;
-  default:
-    return absl::InternalError(absl::StrFormat(
-        "Power supply device %s not supported",
-        ToString(power_supply_mask_flag)));
+    case PowerSupplyMaskFlag::kCharger:
+      device_dirname = "charger";
+      break;
+    case PowerSupplyMaskFlag::kBattery:
+      device_dirname = "battery";
+      break;
+    default:
+      return absl::InternalError(
+          absl::StrFormat("Power supply device %s not supported",
+                          ToString(power_supply_mask_flag)));
   }
 
   std::string filename;
@@ -602,9 +601,9 @@ absl::Status ResourceMonitor::AddPowerSupplyResource(
       require_continuous_monitoring = true;
       break;
     default:
-      return absl::InternalError(absl::StrFormat(
-        "Power supply resource for flag %s not supported",
-        ToString(power_supply_flag)));
+      return absl::InternalError(
+          absl::StrFormat("Power supply resource for flag %s not supported",
+                          ToString(power_supply_flag)));
   }
 
   std::string path = base_path + device_dirname + "/" + filename;
@@ -648,8 +647,8 @@ const char* ResourceMonitor::GetPowerSupplyBasePath() {
 absl::StatusOr<std::string> ResourceMonitor::GetDevFreqPath(
     DeviceFlag flag) const {
   if (dev_freq_paths_.find(flag) == dev_freq_paths_.end()) {
-    return absl::InternalError(
-      absl::StrFormat("Dev frequency resource for %s is not registered.", ToString(flag)));
+    return absl::InternalError(absl::StrFormat(
+        "Dev frequency resource for %s is not registered.", ToString(flag)));
   } else {
     return GetDevFreqBasePath() + dev_freq_paths_.at(flag);
   }
@@ -726,8 +725,7 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
               status.value() * resource.second.second;
         } else {
           BAND_LOG_PROD(
-              BAND_LOG_ERROR,
-              "Failed to read thermal resource %s (%s, %d): %s",
+              BAND_LOG_ERROR, "Failed to read thermal resource %s (%s, %d): %s",
               ToString(resource.first.first), resource.second.first.c_str(),
               resource.first.second, status.status().ToString().c_str());
         }
@@ -798,7 +796,7 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
       }
       log_file_ << "{\"thermal\": {";
       for (auto it = thermal_status_[status_head_].begin();
-          it != thermal_status_[status_head_].end(); it++) {
+           it != thermal_status_[status_head_].end(); it++) {
         if (it != thermal_status_[status_head_].begin()) {
           log_file_ << ", ";
         }
@@ -807,7 +805,7 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
       }
       log_file_ << "}, \"cpu_freq\": {";
       for (auto it = cpu_freq_status_[status_head_].begin();
-          it != cpu_freq_status_[status_head_].end(); it++) {
+           it != cpu_freq_status_[status_head_].end(); it++) {
         if (it != cpu_freq_status_[status_head_].begin()) {
           log_file_ << ", ";
         }
@@ -816,7 +814,7 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
       }
       log_file_ << "}, \"dev_freq\": {";
       for (auto it = dev_freq_status_[status_head_].begin();
-          it != dev_freq_status_[status_head_].end(); it++) {
+           it != dev_freq_status_[status_head_].end(); it++) {
         if (it != dev_freq_status_[status_head_].begin()) {
           log_file_ << ", ";
         }
@@ -825,14 +823,15 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
       }
       log_file_ << "}, \"power_supply\": {";
       for (auto it = power_supply_status_[status_head_].begin();
-          it != power_supply_status_[status_head_].end(); it++) {
+           it != power_supply_status_[status_head_].end(); it++) {
         if (it != power_supply_status_[status_head_].begin()) {
           log_file_ << ", ";
         }
         log_file_ << "\"" << ToString(it->first.first) << "_"
                   << ToString(it->first.second) << "\": " << it->second;
       }
-      log_file_ << "}}";
+      log_file_ << "}";
+      log_file_ << ", \"time\": {" << time::NowMicros() << "}}";
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "Resource status logged.");
     }
 
@@ -842,5 +841,5 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
         std::chrono::milliseconds(interval_ms) -
         (std::chrono::high_resolution_clock::now() - start));
   }
-}
+}  // namespace band
 }  // namespace band

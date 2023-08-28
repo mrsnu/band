@@ -429,6 +429,7 @@ band_cc_library(
     hdrs = ["resource_monitor.h"],
     deps = [
         ":common",
+        ":time",
         "//band/device",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
