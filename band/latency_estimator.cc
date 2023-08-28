@@ -24,7 +24,6 @@ absl::Status LatencyEstimator::Init(const ProfileConfig& config) {
   profile_online_ = config.online;
   profile_num_warmups_ = config.num_warmups;
   profile_num_runs_ = config.num_runs;
-  profile_copy_computation_ratio_ = config.copy_computation_ratio;
   profile_smoothing_factor_ = config.smoothing_factor;
 
   return absl::OkStatus();

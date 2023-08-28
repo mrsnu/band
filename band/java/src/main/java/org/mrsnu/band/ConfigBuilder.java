@@ -21,10 +21,6 @@ public class ConfigBuilder {
     wrapper.addNumRuns(numRuns);
   }
 
-  public void addCopyComputationRatio(int[] copyComputationRatio) {
-    wrapper.addCopyComputationRatio(copyComputationRatio);
-  }
-
   public void addProfileDataPath(String profileDataPath) {
     wrapper.addProfileDataPath(profileDataPath);
   }
