@@ -203,6 +203,23 @@ const char* ToString(DeviceFlag device_flag) {
 }
 
 template <>
+const char* ToString(QuantizationType type) {
+  switch (type) {
+    case QuantizationType::kNoQuantization: {
+      return "NoQuantization";
+    } break;
+    case QuantizationType::kAffineQuantization: {
+      return "AffineQuantization";
+    } break;
+    default: {
+      return "Unknown quantization type";
+    } break;
+  }
+  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown quantization type: %d", type);
+  return "Unknown quantization type";
+}
+
+template <>
 const char* ToString(JobStatus job_status) {
   switch (job_status) {
     case JobStatus::kEnqueueFailed: {
