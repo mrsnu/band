@@ -80,13 +80,6 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       int arg = va_arg(vl, int);
       b->impl.AddNumRuns(arg);
     } break;
-    case BAND_PROFILE_COPY_COMPUTATION_RATIO: {
-      std::vector<int> copy_computation_ratio(count);
-      for (int i = 0; i < count; i++) {
-        copy_computation_ratio[i] = va_arg(vl, int);
-      }
-      b->impl.AddCopyComputationRatio(copy_computation_ratio);
-    } break;
     case BAND_PROFILE_SMOOTHING_FACTOR: {
       float arg = va_arg(vl, double);
       b->impl.AddSmoothingFactor(arg);

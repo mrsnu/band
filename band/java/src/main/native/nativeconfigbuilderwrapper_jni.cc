@@ -73,15 +73,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNumRuns(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCopyComputationRatio(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jintArray copyComputationRatio) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddCopyComputationRatio(
-          ConvertIntArrayTo<int>(env, copyComputationRatio));
-}
-
-JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addProfileDataPath(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     jstring profileDataPath) {

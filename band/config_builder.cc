@@ -31,11 +31,6 @@ absl::Status ProfileConfigBuilder::IsValid() {
   REPORT_IF_FALSE(ProfileConfigBuilder, num_warmups_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder, num_runs_ > 0);
   REPORT_IF_FALSE(ProfileConfigBuilder,
-                  copy_computation_ratio_.size() == EnumLength<DeviceFlag>());
-  for (int i = 0; i < EnumLength<DeviceFlag>(); i++) {
-    REPORT_IF_FALSE(ProfileConfigBuilder, copy_computation_ratio_[i] >= 0);
-  }
-  REPORT_IF_FALSE(ProfileConfigBuilder,
                   smoothing_factor_ >= .0f && smoothing_factor_ <= 1.0f);
   if (online_ == false) {
     REPORT_IF_FALSE(ProfileConfigBuilder, profile_data_path_ != "");
@@ -110,7 +105,6 @@ absl::StatusOr<ProfileConfig> ProfileConfigBuilder::Build() {
   profile_config.online = online_;
   profile_config.num_warmups = num_warmups_;
   profile_config.num_runs = num_runs_;
-  profile_config.copy_computation_ratio = copy_computation_ratio_;
   profile_config.smoothing_factor = smoothing_factor_;
   profile_config.profile_data_path = profile_data_path_;
   return profile_config;

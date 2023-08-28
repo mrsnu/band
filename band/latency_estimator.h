@@ -76,7 +76,6 @@ class LatencyEstimator {
   bool profile_online_;
   int profile_num_warmups_;
   int profile_num_runs_;
-  std::vector<int> profile_copy_computation_ratio_;
 
   IEngine* const engine_;
 };

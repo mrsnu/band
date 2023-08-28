@@ -83,7 +83,6 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   auto config = b.AddOnline(true)
                     .AddNumWarmups(1)
                     .AddNumRuns(1)
-                    .AddCopyComputationRatio({1, 2, 3, 4})
                     .AddSmoothingFactor(0.1)
                     .AddProfileDataPath("band/test/data/config.json")
                     .AddMinimumSubgraphSize(5)
@@ -105,10 +104,6 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[0], 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[1], 2);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[2], 3);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[3], 4);
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.profile_config.profile_data_path,
             "band/test/data/config.json");
@@ -136,7 +131,6 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[0], 30000);
   EXPECT_EQ(config_ok.profile_config.profile_data_path, "");
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");

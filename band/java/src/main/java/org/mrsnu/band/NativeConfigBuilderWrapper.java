@@ -35,10 +35,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     addNumRuns(nativeHandle, numRuns);
   }
 
-  public void addCopyComputationRatio(int[] copyComputationRatio) {
-    addCopyComputationRatio(nativeHandle, copyComputationRatio);
-  }
-
   public void addProfileDataPath(String profileDataPath) {
     addProfileDataPath(nativeHandle, profileDataPath);
   }
@@ -149,8 +145,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addNumWarmups(long configBuilderHandle, int numWarmups);
 
   private native void addNumRuns(long configBuilderHandle, int numRuns);
-
-  private native void addCopyComputationRatio(long configBuilderHandle, int[] copyComputationRatio);
 
   private native void addProfileDataPath(long configBuilderHandle, String profileDataPath);
 

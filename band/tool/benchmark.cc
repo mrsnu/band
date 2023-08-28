@@ -191,13 +191,6 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     if (root["profile_num_runs"].isInt()) {
       builder.AddNumRuns(root["profile_num_runs"].asInt());
     }
-    if (root["profile_copy_computation_ratio"].isNumeric()) {
-      std::vector<int> copy_computation_ratio;
-      for (auto ratio : root["profile_copy_computation_ratio"]) {
-        copy_computation_ratio.push_back(ratio.asInt());
-      }
-      builder.AddCopyComputationRatio(copy_computation_ratio);
-    }
     if (root["profile_smoothing_factor"].isNumeric()) {
       builder.AddSmoothingFactor(root["profile_smoothing_factor"].asFloat());
     }
