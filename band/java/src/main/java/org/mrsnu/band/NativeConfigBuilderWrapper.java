@@ -122,10 +122,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     return (Config) build(nativeHandle);
   }
 
-  public boolean isValid() {
-    return isValid(nativeHandle);
-  }
-
   public long getNativeHandle() {
     return nativeHandle;
   }
@@ -182,8 +178,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addResourceMonitorIntervalMs(long configBuilderHandle, int intervalMs);
 
   private native void addResourceMonitorLogPath(long configBuilderHandle, String logPath);
-
-  private native boolean isValid(long configBuilderHandle);
 
   private native Object build(long configBuilderHandle);
 }

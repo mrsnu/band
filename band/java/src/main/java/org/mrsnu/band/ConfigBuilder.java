@@ -105,10 +105,6 @@ public class ConfigBuilder {
     wrapper.addResourceMonitorLogPath(resourceMonitorLogPath);
   }
 
-  public boolean isValid() {
-    return wrapper.isValid();
-  }
-
   public Config build() {
     return wrapper.build();
   }

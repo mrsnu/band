@@ -210,13 +210,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorLogPath(
           ConvertJstringToString(env, resourceMonitorLogPath));
 }
 
-JNIEXPORT jboolean JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_isValid(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle) {
-  return static_cast<jboolean>(
-      ConvertLongToConfigBuilder(env, configBuilderHandle)->IsValid().ok());
-}
-
 JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle) {
   static jclass config_cls = env->FindClass("org/mrsnu/band/Config");
