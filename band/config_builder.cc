@@ -150,8 +150,6 @@ absl::StatusOr<RuntimeConfig> RuntimeConfigBuilder::Build() {
   runtime_config.worker_config = worker_config_builder_.Build().value();
   runtime_config.resource_monitor_config =
       resource_monitor_config_builder_.Build().value();
-  runtime_config.subgraph_config = {minimum_subgraph_size_,
-                                    subgraph_preparation_type_};
   return runtime_config;
 }
 }  // namespace band
