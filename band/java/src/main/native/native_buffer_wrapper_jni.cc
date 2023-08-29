@@ -3,23 +3,6 @@
 #include "band/buffer/buffer.h"
 #include "band/java/src/main/native/jni_utils.h"
 
-/*
-
-
-  private native long createBuffer();
-
-  private native void deleteBuffer(long bufferHandle);
-
-  private native void setFromByteBuffer(
-      long bufferHandle, final byte[] buffer, int width, int height, int
-  bufferFormat);
-
-  private native void setFromYUVBuffer(long bufferHandle, final byte[] y, final
-  byte[] u, final byte[] v, int width, int height, int yRowStride, int
-  uvRowStride, int uvPixelStride);
-
-*/
-
 using band::Buffer;
 
 extern "C" {
@@ -55,6 +38,19 @@ JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromYUVBuffer(
   env->ReleaseByteArrayElements(y, y_bytes, 0);
   env->ReleaseByteArrayElements(u, u_bytes, 0);
   env->ReleaseByteArrayElements(v, v_bytes, 0);
+  return reinterpret_cast<jlong>(buffer);
+}
+
+JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromYUVPlane(
+    JNIEnv* env, jclass clazz, jobject y, jobject u, jobject v, jint width,
+    jint height, jint yRowStride, jint uvRowStride, jint uvPixelStride,
+    jint bufferFormat) {
+  Buffer* buffer = Buffer::CreateFromYUVPlanes(
+      reinterpret_cast<const unsigned char*>(env->GetDirectBufferAddress(y)),
+      reinterpret_cast<const unsigned char*>(env->GetDirectBufferAddress(u)),
+      reinterpret_cast<const unsigned char*>(env->GetDirectBufferAddress(v)),
+      width, height, yRowStride, uvRowStride, uvPixelStride,
+      band::BufferFormat(bufferFormat));
   return reinterpret_cast<jlong>(buffer);
 }
 }  // extern "C"
