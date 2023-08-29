@@ -105,6 +105,9 @@ const char* ToString(SchedulerType scheduler_type) {
     case SchedulerType::kFixedWorker: {
       return "fixed_worker";
     } break;
+    case SchedulerType::kFixedWorkerIdle: {
+      return "fixed_worker_idle";
+    }
     case SchedulerType::kRoundRobin: {
       return "round_robin";
     } break;

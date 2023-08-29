@@ -21,6 +21,7 @@
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
+#include "band/scheduler/fixed_worker_idle_scheduler.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
@@ -65,6 +66,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
                       schedulers[i]);
     if (schedulers[i] == SchedulerType::kFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kFixedWorkerIdle) {
+      schedulers_.emplace_back(new FixedWorkerIdleScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kFixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kRoundRobin) {

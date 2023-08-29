@@ -53,7 +53,12 @@ Engine::~Engine() {
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
                                        ErrorReporter* error_reporter) {
   std::unique_ptr<Engine> engine_ptr(new Engine(error_reporter));
-  return engine_ptr->Init(config).ok() ? std::move(engine_ptr) : nullptr;
+  auto status = engine_ptr->Init(config);
+  if (!status.ok()) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to initialize engine: %s",
+                  status.message());
+  }
+  return status.ok() ? std::move(engine_ptr) : nullptr;
 }
 
 absl::Status Engine::RegisterModel(Model* model) {
