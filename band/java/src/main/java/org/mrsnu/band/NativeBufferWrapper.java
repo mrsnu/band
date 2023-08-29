@@ -1,5 +1,8 @@
 package org.mrsnu.band;
 
+import android.media.Image.Plane;
+import java.nio.ByteBuffer;
+
 public class NativeBufferWrapper implements AutoCloseable {
   private long nativeHandle = 0;
 
@@ -27,6 +30,11 @@ public class NativeBufferWrapper implements AutoCloseable {
         yRowStride, uvRowStride, uvPixelStride, bufferFormat.getValue());
   }
 
+  public void setFromYUVPlane(final Plane[] planes, int width, int height, BufferFormat bufferFormat) {
+    this.nativeHandle = createFromYUVPlane(planes[0].getBuffer(), planes[1].getBuffer(),
+        planes[2].getBuffer(), width, height, planes[0].getRowStride(), planes[1].getRowStride(), planes[1].getPixelStride(), bufferFormat.getValue());
+  }
+
   private static native void deleteBuffer(long bufferHandle);
 
   private static native long createFromByteBuffer(
@@ -34,4 +42,7 @@ public class NativeBufferWrapper implements AutoCloseable {
 
   private static native long createFromYUVBuffer(final byte[] y, final byte[] u, final byte[] v,
       int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
+
+  private static native long createFromYUVPlane(final ByteBuffer y, final ByteBuffer u,
+      final ByteBuffer v, int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
 }
