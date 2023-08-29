@@ -184,7 +184,7 @@ void Worker::Work() {
     Job* current_job = GetCurrentJob();
     lock.unlock();
 
-    if (!current_job || !IsValid(*current_job)) {
+    if (!current_job || (!current_job->is_idle_job && !IsValid(*current_job))) {
       BAND_REPORT_ERROR(GetErrorReporter(),
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "

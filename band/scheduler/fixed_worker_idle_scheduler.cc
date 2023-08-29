@@ -14,15 +14,20 @@
 
 #include "band/scheduler/fixed_worker_idle_scheduler.h"
 
-#include "band/error_reporter.h"
+#include "band/logger.h"
 
 namespace band {
 bool FixedWorkerIdleScheduler::Schedule(JobQueue& requests) {
   bool success = true;
-  // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   while (!requests.empty()) {
     Job to_execute = requests.front();
-    requests.pop_front();  // erase job
+    requests.pop_front();
+
+    if (to_execute.target_worker_id == -1) {
+      BAND_LOG_PROD(BAND_LOG_ERROR,
+                    "Job target_worker_id is not set. Fallback to 0.");
+      to_execute.target_worker_id = 0;
+    }
 
     int model_id = to_execute.model_id;
     SubgraphKey key =

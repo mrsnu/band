@@ -145,6 +145,9 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
   for (int i = 0; i < root["models"].size(); ++i) {
     ModelConfig model;
     Json::Value model_json_value = root["models"][i];
+    if (root["target_worker_id"].isInt()) {
+      model.worker_id = root["target_worker_id"].asInt();
+    }
 
     // Set model filepath.
     // Required for all cases.
@@ -281,9 +284,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
               << builder_status.status().message() << std::endl;
     return false;
   }
-
   runtime_config_ = new RuntimeConfig(builder_status.value());
-
   return true;
 }
 
