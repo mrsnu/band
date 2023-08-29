@@ -956,13 +956,13 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
 bool Engine::EnqueueToWorker(const ScheduleAction& action, const int idle_us) {
-  return EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
+  return EnqueueToWorkerBatch(std::vector<ScheduleAction>{action}, {idle_us});
 }
 
 bool Engine::EnqueueToWorkerBatch(
     const std::vector<ScheduleAction>& schedule_action,
     const std::vector<int> idle_uses) {
-  return planner_->EnqueueToWorker(schedule_action);
+  return planner_->EnqueueToWorker(schedule_action, idle_uses);
 }
 
 const Worker* Engine::GetWorker(WorkerId id) const {
