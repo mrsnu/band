@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.mrsnu.band.example;
 
 import android.content.res.AssetFileDescriptor;
@@ -36,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     ConfigBuilder b = new ConfigBuilder();
     Engine engine = null;
 
-    b.addPlannerLogPath("/data/data/org.mrsnu.band.example/log.tsv");
+    b.addPlannerLogPath("/data/data/org.mrsnu.band.example/log.json");
     b.addSchedulers(new SchedulerType[] {SchedulerType.ROUND_ROBIN});
     b.addMinimumSubgraphSize(7);
     b.addSubgraphPreparationType(SubgraphPreparationType.MERGE_UNIT_SUBGRAPH);

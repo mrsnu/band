@@ -14,28 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef BAND_SAFE_BOOL_H_
-#define BAND_SAFE_BOOL_H_
+#ifndef BAND_SCHEDULER_FIXED_WORKER_IDLE_SCHEDULER_H_
+#define BAND_SCHEDULER_FIXED_WORKER_IDLE_SCHEDULER_H_
 
-#include <condition_variable>
-#include <mutex>
+#include "band/scheduler/scheduler.h"
+
 namespace band {
-class SafeBool {
+
+// Assigns requested model to devices according to a direct request from engine
+// or model_id.
+class FixedWorkerIdleScheduler : public IScheduler {
  public:
-  SafeBool() = default;
-  ~SafeBool() = default;
-
-  void notify();
-  bool wait();
-  void terminate();
-
- private:
-  mutable std::mutex m;
-  bool flag = false;
-  bool exit = false;
-  std::condition_variable c;
+  using IScheduler::IScheduler;
+  bool Schedule(JobQueue& requests) override;
+  bool NeedProfile() override { return true; }
+  bool NeedFallbackSubgraphs() override { return false; }
+  WorkerType GetWorkerType() override { return WorkerType::kDeviceQueue; }
 };
 
 }  // namespace band
 
-#endif  // BAND_SAFE_BOOL_H_
+#endif  // BAND_SCHEDULER_FIXED_WORKER_IDLE_SCHEDULER_H_

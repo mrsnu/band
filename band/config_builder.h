@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef BAND_CONFIG_BUILDER_H_
 #define BAND_CONFIG_BUILDER_H_
 
@@ -18,9 +34,7 @@ class ProfileConfigBuilder {
                                       // RuntimeConfigBuilder to access
                                       // variables
  public:
-  ProfileConfigBuilder() {
-    copy_computation_ratio_ = std::vector<int>(EnumLength<DeviceFlag>(), 30000);
-  }
+  ProfileConfigBuilder() {}
   ProfileConfigBuilder& AddOnline(bool online) {
     online_ = online;
     return *this;
@@ -31,11 +45,6 @@ class ProfileConfigBuilder {
   }
   ProfileConfigBuilder& AddNumRuns(int num_runs) {
     num_runs_ = num_runs;
-    return *this;
-  }
-  ProfileConfigBuilder& AddCopyComputationRatio(
-      std::vector<int> copy_computation_ratio) {
-    copy_computation_ratio_ = copy_computation_ratio;
     return *this;
   }
   ProfileConfigBuilder& AddProfileDataPath(std::string profile_data_path) {
@@ -54,7 +63,6 @@ class ProfileConfigBuilder {
   bool online_ = true;
   int num_warmups_ = 1;
   int num_runs_ = 1;
-  std::vector<int> copy_computation_ratio_;
   std::string profile_data_path_ = "";
   float smoothing_factor_ = 0.1;
 };
@@ -88,7 +96,7 @@ class PlannerConfigBuilder {
  private:
   absl::Status IsValid();
 
-  int schedule_window_size_ = INT_MAX;
+  int schedule_window_size_ = std::numeric_limits<int>::max();
   std::vector<SchedulerType> schedulers_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";
@@ -192,12 +200,6 @@ class RuntimeConfigBuilder {
     profile_config_builder_.AddNumRuns(num_runs);
     return *this;
   }
-  RuntimeConfigBuilder& AddCopyComputationRatio(
-      std::vector<int> copy_computation_ratio) {
-    profile_config_builder_.AddCopyComputationRatio(copy_computation_ratio);
-    return *this;
-  }
-
   RuntimeConfigBuilder& AddSmoothingFactor(float smoothing_factor) {
     profile_config_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;

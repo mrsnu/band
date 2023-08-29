@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef BAND_PLANNER_H_
 #define BAND_PLANNER_H_
 
@@ -49,9 +65,9 @@ class Planner {
   void PrepareReenqueue(Job& job);
   // Enqueue the request to the worker.
   // Returns true if the request is successfully enqueued.
-  bool EnqueueToWorker(const std::vector<ScheduleAction>& action);
+  bool EnqueueToWorker(const std::vector<ScheduleAction>& action,
+                       const std::vector<int> idle_uses = {});
   void Trigger() { planner_safe_bool_.notify(); }
-  int IssueSchedId() { return sched_id_++; }
 
   // Check whether profiling is required or not.
   bool NeedProfile();
@@ -69,7 +85,10 @@ class Planner {
     return model_execution_count_;
   }
   // Sets the callback function pointer to report the end of invoke.
-  void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
+  CallbackId SetOnEndRequest(
+      std::function<void(int, absl::Status)> on_end_request);
+  absl::Status UnsetOnEndRequest(CallbackId callback_id);
+
   // Get the Job instance with the `job_id`.
   Job GetFinishedJob(int job_id);
   // Get which worker types the schedulers require.
@@ -103,7 +122,10 @@ class Planner {
   // Jobs Finished
   std::map<int, int> model_execution_count_;
 
-  std::function<void(int, absl::Status)> on_end_request_;
+  mutable std::mutex on_end_request_mtx_;
+  std::map<CallbackId, std::function<void(int, absl::Status)>>
+      on_end_request_callbacks_;
+  CallbackId next_callback_id_ = 0;
 
   // Request Queue
   ConcurrentJobQueue requests_;
@@ -121,8 +143,7 @@ class Planner {
   std::condition_variable end_invoke_;
   std::string log_path_;
 
-  int schedule_window_size_ = INT_MAX;
-  int sched_id_ = 0;
+  int schedule_window_size_ = std::numeric_limits<int>::max();
 
   std::thread planner_thread_;
   // Map structure to find assigned worker of model idx (model_id, worker_id)

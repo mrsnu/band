@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "band/scheduler/fixed_worker_scheduler.h"
+#include "band/scheduler/fixed_worker_idle_scheduler.h"
 
-#include "band/error_reporter.h"
+#include "band/logger.h"
 
 namespace band {
-bool FixedWorkerScheduler::Schedule(JobQueue& requests) {
+bool FixedWorkerIdleScheduler::Schedule(JobQueue& requests) {
   bool success = true;
-  // TODO: fallback subgraphs for FixedDeviceFixedWorkerPlanner?
   while (!requests.empty()) {
     Job to_execute = requests.front();
-    requests.pop_front();  // erase job
+    requests.pop_front();
+
+    if (to_execute.target_worker_id == -1) {
+      BAND_LOG_PROD(BAND_LOG_ERROR,
+                    "Job target_worker_id is not set. Fallback to 0.");
+      to_execute.target_worker_id = 0;
+    }
 
     int model_id = to_execute.model_id;
-    // Priority
-    // (1) : direct request from the engine
-    // (2) : predefined mapping from the config
-    WorkerId worker_id = to_execute.target_worker_id == -1
-                             ? engine_.GetModelWorker(model_id)
-                             : to_execute.target_worker_id;
-    SubgraphKey key = engine_.GetLargestSubgraphKey(model_id, worker_id);
-    success &= engine_.EnqueueToWorker({to_execute, key});
+    SubgraphKey key =
+        engine_.GetLargestSubgraphKey(model_id, to_execute.target_worker_id);
+    success &= engine_.EnqueueToWorker({to_execute, key}, 10000);
   }
   return success;
 }

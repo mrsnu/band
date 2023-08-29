@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef BAND_TEST_TEST_UTIL_H_
 #define BAND_TEST_TEST_UTIL_H_
 
@@ -59,8 +75,9 @@ struct MockEngineBase : public IEngine {
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
   MOCK_METHOD1(PrepareReenqueue, void(Job&));
   MOCK_METHOD1(EnqueueFinishedJob, void(Job&));
-  MOCK_METHOD1(EnqueueToWorker, bool(const ScheduleAction&));
-  MOCK_METHOD1(EnqueueToWorkerBatch, bool(const std::vector<ScheduleAction>&));
+  MOCK_METHOD2(EnqueueToWorker, bool(const ScheduleAction&, const int));
+  MOCK_METHOD2(EnqueueToWorkerBatch, bool(const std::vector<ScheduleAction>&,
+                                          const std::vector<int>));
 
   /* getters */
   ErrorReporter* GetErrorReporter() { return DefaultErrorReporter(); }

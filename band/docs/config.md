@@ -36,12 +36,11 @@ Each configuration field is optional or required. If a field is optional, then i
 - `online` [type: `bool`, default: `true`]: Profile online if true, offline if false.
 - `num_warmups` [type: `int`, default: `1`]: The number of warmup runs before profile.
 - `num_runs` [type: `int`, default: `1`]: The number of runs for profile
-- `copy_computation_ratio` [type: `std::vector<int>`, default: `[30000, ...]`]: The ratio of computation to input-output copy. Used for latency estimation. The size of the list should be the same as the number of devices.
 - `smoothing_factor` [type: `float`, default: `0.1`]: The momentum to reflect current profiled data. `<updateed_profile> = <smoothing_factor> * <curr_profile> + (1. - <smoothing_factor>) * <prev_profile>`.
 - `profile_data_path` [type: `std::string`, default: `""`]: The input path to the file for offline profile results. If not specified, this will be ignored and will not generate the result file. 
 
 ## `PlannerConfig`
-- `schedule_window_size` [type: `int`, default: `INT_MAX`]: The size of window that scheduler will use.
+- `schedule_window_size` [type: `int`, default: `std::numeric_limits<int>::max()`]: The size of window that scheduler will use.
 - `schedulers` [type: `std::vector<SchedulerType>`, __required__]: The types of schedulers. If `N` schedulers are specified, `N` queues will be generated.
 - `cpu_mask` [type: `CPUMaskFlag`, default: `CPUMaskFlag::kAll`]: CPU masks to set CPU affinity.
 - `log_path` [type: `std::string`, default: `""`]: The output path to the file for planner's log. If not specified, this will be ignored and will not generate the result file. 
@@ -76,7 +75,6 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddOnline(bool online)`
 - `AddNumWarmups(int num_warmups)`
 - `AddNumRuns(int num_runs)`
-- `AddCopyComputationRatio(std::vector<int> copy_computation_ratio)`
 - `AddSmoothingFactor(float smoothing_factor)`
 - `AddProfileLogPath(std::string profile_data_path)`
 - `AddPlannerLogPath(std::string planner_log_path)`

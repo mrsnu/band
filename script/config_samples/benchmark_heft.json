@@ -11,7 +11,7 @@
             "batch_size": 2
         }
     ],
-    "log_path": "/data/local/tmp/log.csv",
+    "log_path": "/data/local/tmp/log.json",
     "schedulers": [
         "heterogeneous_earliest_finish_time"
     ],
@@ -54,13 +54,6 @@
     "profile_online": true,
     "profile_warmup_runs": 3,
     "profile_num_runs": 50,
-    "profile_copy_computation_ratio": [
-        1000,
-        1000,
-        1000,
-        1000,
-        1000
-    ],
     "allow_work_steal": true,
     "availability_check_interval_ms": 30000,
     "schedule_window_size": 10,

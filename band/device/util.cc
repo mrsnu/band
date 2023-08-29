@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/device/util.h"
 
 #if defined(_POSIX_VERSION)
@@ -91,11 +105,11 @@ std::vector<std::string> ListDirectoriesInPath(const char* path) {
 }
 
 bool IsFileAvailable(std::string path) {
-#if defined(_POSIX_VERSION)
-  return access(path.c_str(), F_OK) != -1;
-#elif defined(_WIN32)
+#ifdef _WIN32
   return GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES;
-#endif
+#else
+  return access(path.c_str(), F_OK) != -1;
+#endif  // _WIN32
 }
 
 std::string RunCommand(const std::string& command) {

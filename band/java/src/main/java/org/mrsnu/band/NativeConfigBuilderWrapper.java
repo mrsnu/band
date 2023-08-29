@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.mrsnu.band;
 
 public class NativeConfigBuilderWrapper implements AutoCloseable {
@@ -17,10 +33,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
 
   public void addNumRuns(int numRuns) {
     addNumRuns(nativeHandle, numRuns);
-  }
-
-  public void addCopyComputationRatio(int[] copyComputationRatio) {
-    addCopyComputationRatio(nativeHandle, copyComputationRatio);
   }
 
   public void addProfileDataPath(String profileDataPath) {
@@ -110,10 +122,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
     return (Config) build(nativeHandle);
   }
 
-  public boolean isValid() {
-    return isValid(nativeHandle);
-  }
-
   public long getNativeHandle() {
     return nativeHandle;
   }
@@ -133,8 +141,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addNumWarmups(long configBuilderHandle, int numWarmups);
 
   private native void addNumRuns(long configBuilderHandle, int numRuns);
-
-  private native void addCopyComputationRatio(long configBuilderHandle, int[] copyComputationRatio);
 
   private native void addProfileDataPath(long configBuilderHandle, String profileDataPath);
 
@@ -172,8 +178,6 @@ public class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addResourceMonitorIntervalMs(long configBuilderHandle, int intervalMs);
 
   private native void addResourceMonitorLogPath(long configBuilderHandle, String logPath);
-
-  private native boolean isValid(long configBuilderHandle);
 
   private native Object build(long configBuilderHandle);
 }

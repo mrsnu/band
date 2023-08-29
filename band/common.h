@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef BAND_COMMON_H_
 #define BAND_COMMON_H_
 
@@ -15,6 +31,7 @@ namespace band {
 typedef int WorkerId;
 typedef int ModelId;
 typedef int JobId;
+typedef int CallbackId;
 
 using BitMask = std::bitset<64>;
 
@@ -32,7 +49,7 @@ const char* ToString(EnumType t) {
 }
 
 template <typename EnumType>
-EnumType FromString(const char* str) {
+EnumType FromString(std::string str) {
   for (size_t i = 0; i < EnumLength<EnumType>(); i++) {
     EnumType t = static_cast<EnumType>(i);
     if (ToString(t) == str) {
@@ -49,19 +66,20 @@ enum class BackendType : size_t {
 
 enum class SchedulerType : size_t {
   kFixedWorker = 0,
-  kRoundRobin = 1,
-  kShortestExpectedLatency = 2,
-  kFixedWorkerGlobalQueue = 3,
-  kHeterogeneousEarliestFinishTime = 4,
-  kLeastSlackTimeFirst = 5,
-  kHeterogeneousEarliestFinishTimeReserved = 6,
+  kFixedWorkerIdle,
+  kRoundRobin,
+  kShortestExpectedLatency,
+  kFixedWorkerGlobalQueue,
+  kHeterogeneousEarliestFinishTime,
+  kLeastSlackTimeFirst,
+  kHeterogeneousEarliestFinishTimeReserved,
 };
 
 enum class CPUMaskFlag : size_t {
   kAll = 0,
-  kLittle = 1,
-  kBig = 2,
-  kPrimary = 3,
+  kLittle,
+  kBig,
+  kPrimary,
 };
 
 enum class PowerSupplyMaskFlag : size_t {
@@ -71,24 +89,24 @@ enum class PowerSupplyMaskFlag : size_t {
 
 enum class SubgraphPreparationType : size_t {
   kNoFallbackSubgraph = 0,
-  kFallbackPerWorker = 1,
-  kUnitSubgraph = 2,
-  kMergeUnitSubgraph = 3,
+  kFallbackPerWorker,
+  kUnitSubgraph,
+  kMergeUnitSubgraph,
 };
 
 enum class DataType : size_t {
   kNoType = 0,
-  kFloat32 = 1,
-  kInt32 = 2,
-  kUInt8 = 3,
-  kInt64 = 4,
-  kString = 5,
-  kBool = 6,
-  kInt16 = 7,
-  kComplex64 = 8,
-  kInt8 = 9,
-  kFloat16 = 10,
-  kFloat64 = 11,
+  kFloat32,
+  kInt32,
+  kUInt8,
+  kInt64,
+  kString,
+  kBool,
+  kInt16,
+  kComplex64,
+  kInt8,
+  kFloat16,
+  kFloat64,
 };
 
 size_t GetDataTypeBytes(DataType type);
@@ -96,15 +114,15 @@ size_t GetDataTypeBytes(DataType type);
 enum class BufferFormat : size_t {
   // image format
   kGrayScale = 0,
-  kRGB = 1,
-  kRGBA = 2,
-  kYV12 = 3,
-  kYV21 = 4,
-  kNV21 = 5,
-  kNV12 = 6,
+  kRGB,
+  kRGBA,
+  kYV12,
+  kYV21,
+  kNV21,
+  kNV12,
   // raw format, from tensor
   // internal format follows DataType
-  kRaw = 7
+  kRaw
 };
 
 // Buffer content orientation follows EXIF specification. The name of
@@ -113,34 +131,34 @@ enum class BufferFormat : size_t {
 // details.
 enum class BufferOrientation : size_t {
   kTopLeft = 1,
-  kTopRight = 2,
-  kBottomRight = 3,
-  kBottomLeft = 4,
-  kLeftTop = 5,
-  kRightTop = 6,
-  kRightBottom = 7,
-  kLeftBottom = 8,
+  kTopRight,
+  kBottomRight,
+  kBottomLeft,
+  kLeftTop,
+  kRightTop,
+  kRightBottom,
+  kLeftBottom,
 };
 
 enum class DeviceFlag : size_t {
   kCPU = 0,
-  kGPU = 1,
-  kDSP = 2,
-  kNPU = 3,
+  kGPU,
+  kDSP,
+  kNPU,
 };
 
 enum class QuantizationType : size_t {
   kNoQuantization = 0,
-  kAffineQuantization = 1,
+  kAffineQuantization,
 };
 
 enum class WorkerType : size_t {
-  kDeviceQueue = 1,
-  kGlobalQueue = 2,
+  kDeviceQueue = 1 << 0,
+  kGlobalQueue = 1 << 1,
 };
 
 enum class JobStatus : size_t {
-  kEnqueueFailed,
+  kEnqueueFailed = 0,
   kQueued,
   kSuccess,
   kSLOViolation,
@@ -272,6 +290,16 @@ struct Job {
   explicit Job(ModelId model_id, int64_t slo)
       : model_id(model_id), slo_us(slo) {}
 
+  static Job CreateIdleJob(int idle_us, SubgraphKey key) {
+    static int count = -1;
+    Job idle_job;
+    idle_job.job_id = count--;
+    idle_job.is_idle_job = true;
+    idle_job.idle_us = idle_us;
+    idle_job.subgraph_key = key;
+    return idle_job;
+  }
+
   std::string ToJson() const;
 
   // Constant variables (Valid after invoke)
@@ -280,7 +308,6 @@ struct Job {
   int input_handle = -1;
   int output_handle = -1;
   JobId job_id = -1;
-  int sched_id = -1;
   std::string model_fname;
   bool require_callback = true;
 
@@ -307,6 +334,10 @@ struct Job {
   // Resolved unit subgraphs and executed subgraph keys
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
+
+  // Idle job
+  bool is_idle_job = false;
+  int idle_us = 0;
 };
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618

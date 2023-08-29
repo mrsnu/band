@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/worker.h"
 
 #include "absl/strings/str_format.h"
@@ -170,7 +184,7 @@ void Worker::Work() {
     Job* current_job = GetCurrentJob();
     lock.unlock();
 
-    if (!current_job || !IsValid(*current_job)) {
+    if (!current_job || (!current_job->is_idle_job && !IsValid(*current_job))) {
       BAND_REPORT_ERROR(GetErrorReporter(),
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
@@ -192,12 +206,16 @@ void Worker::Work() {
                     worker_id_);
     }
 
-    if (engine_->TryCopyInputTensors(*current_job).ok()) {
+    BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
+    if (current_job->is_idle_job) {
+      time::SleepForMicros(current_job->idle_us);
+      current_job->end_time = time::NowMicros();
+      current_job->status = JobStatus::kSuccess;
+    } else if (engine_->TryCopyInputTensors(*current_job).ok()) {
       lock.lock();
       current_job->invoke_time = time::NowMicros();
       lock.unlock();
 
-      BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
       absl::Status status = engine_->Invoke(subgraph_key);
       if (status.ok()) {
         // end_time is never read/written by any other thread as long as
@@ -206,7 +224,7 @@ void Worker::Work() {
         engine_->UpdateLatency(
             subgraph_key, (current_job->end_time - current_job->invoke_time));
         if (current_job->following_jobs.size() != 0) {
-          engine_->EnqueueBatch(current_job->following_jobs);
+          engine_->EnqueueBatch(current_job->following_jobs, true);
         }
         {
           auto status = engine_->TryCopyOutputTensors(*current_job);

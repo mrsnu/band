@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/planner.h"
 
 #include <fstream>
@@ -7,6 +21,7 @@
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
+#include "band/scheduler/fixed_worker_idle_scheduler.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
@@ -51,6 +66,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
                       schedulers[i]);
     if (schedulers[i] == SchedulerType::kFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kFixedWorkerIdle) {
+      schedulers_.emplace_back(new FixedWorkerIdleScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kFixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kRoundRobin) {
@@ -176,8 +193,10 @@ void Planner::EnqueueFinishedJob(Job& job) {
       engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
   // record finished / failed job
   if (is_finished) {
-    jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
-    num_finished_jobs_++;
+    if (!job.is_idle_job) {
+      jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
+      num_finished_jobs_++;
+    }
     end_invoke_.notify_all();
   }
   // make sure to unlock before calling callback to avoid
@@ -185,10 +204,13 @@ void Planner::EnqueueFinishedJob(Job& job) {
   finished_lock.unlock();
 
   // report end invoke using callback
-  if (on_end_request_ && job.require_callback && is_finished) {
-    on_end_request_(job.job_id, job.status == JobStatus::kSuccess
-                                    ? absl::OkStatus()
-                                    : absl::InternalError("Job failed."));
+  if (!job.is_idle_job && job.require_callback && is_finished) {
+    std::unique_lock<std::mutex> callback_lock(on_end_request_mtx_);
+    for (auto& id_callback : on_end_request_callbacks_) {
+      id_callback.second(job.job_id, job.status == JobStatus::kSuccess
+                                         ? absl::OkStatus()
+                                         : absl::InternalError("Job failed."));
+    }
   }
 }
 
@@ -227,9 +249,22 @@ Job Planner::GetFinishedJob(int job_id) {
   }
 }
 
-void Planner::SetOnEndRequest(
+CallbackId Planner::SetOnEndRequest(
     std::function<void(int, absl::Status)> on_end_request) {
-  on_end_request_ = on_end_request;
+  std::lock_guard<std::mutex> lock(on_end_request_mtx_);
+  on_end_request_callbacks_[next_callback_id_] = on_end_request;
+  return next_callback_id_++;
+}
+
+absl::Status Planner::UnsetOnEndRequest(CallbackId callback_id) {
+  std::lock_guard<std::mutex> lock(on_end_request_mtx_);
+  if (on_end_request_callbacks_.find(callback_id) ==
+      on_end_request_callbacks_.end()) {
+    return absl::InternalError("Callback id not found.");
+  }
+
+  on_end_request_callbacks_.erase(callback_id);
+  return absl::OkStatus();
 }
 
 int Planner::GetWorkerType() const {
@@ -295,13 +330,14 @@ void Planner::CopyToLocalQueues() {
   request_lock.unlock();
 }
 
-bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
+bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions,
+                              const std::vector<int> idle_uses) {
   bool success = true;
-  for (auto& action : actions) {
+  for (int i = 0; i < actions.size(); i++) {
     Job job;
     SubgraphKey target_key;
 
-    std::tie(job, target_key) = action;
+    std::tie(job, target_key) = actions[i];
 
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
@@ -332,6 +368,16 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
                         "unavailable worker id %d",
                         target_key.GetWorkerId());
         }
+        if (idle_uses.size() > 0) {
+          Job idle_job = Job::CreateIdleJob(idle_uses[i], target_key);
+          if (!worker->EnqueueJob(idle_job)) {
+            BAND_LOG_PROD(
+                BAND_LOG_ERROR,
+                "EnqueueToWorker failed. Idle job requests scheduled to "
+                "unavailable worker id %d",
+                target_key.GetWorkerId());
+          }
+        }
       } else {
         EnqueueRequest(job, true);
       }
@@ -360,7 +406,6 @@ bool Planner::IsSLOViolated(Job& job) {
 
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
-  job.sched_id = IssueSchedId();
   job.profiled_execution_time = engine_.GetProfiled(target_key);
   job.expected_execution_time = engine_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
@@ -372,7 +417,6 @@ void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
     remaining_ops.enqueue_time = job.enqueue_time;
     remaining_ops.following_jobs = job.following_jobs;
     remaining_ops.expected_latency = job.expected_latency;
-    remaining_ops.sched_id = job.sched_id;
     remaining_ops.job_id = job.job_id;
     remaining_ops.input_handle = job.input_handle;
     remaining_ops.output_handle = job.output_handle;

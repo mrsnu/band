@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/tool/benchmark.h"
 
 #include <algorithm>
@@ -131,6 +145,9 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
   for (int i = 0; i < root["models"].size(); ++i) {
     ModelConfig model;
     Json::Value model_json_value = root["models"][i];
+    if (root["target_worker_id"].isInt()) {
+      model.worker_id = root["target_worker_id"].asInt();
+    }
 
     // Set model filepath.
     // Required for all cases.
@@ -176,13 +193,6 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
     if (root["profile_num_runs"].isInt()) {
       builder.AddNumRuns(root["profile_num_runs"].asInt());
-    }
-    if (root["profile_copy_computation_ratio"].isNumeric()) {
-      std::vector<int> copy_computation_ratio;
-      for (auto ratio : root["profile_copy_computation_ratio"]) {
-        copy_computation_ratio.push_back(ratio.asInt());
-      }
-      builder.AddCopyComputationRatio(copy_computation_ratio);
     }
     if (root["profile_smoothing_factor"].isNumeric()) {
       builder.AddSmoothingFactor(root["profile_smoothing_factor"].asFloat());
@@ -297,9 +307,7 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
               << builder_status.status().message() << std::endl;
     return false;
   }
-
   runtime_config_ = new RuntimeConfig(builder_status.value());
-
   return true;
 }
 

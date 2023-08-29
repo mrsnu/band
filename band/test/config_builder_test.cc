@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/config_builder.h"
 
 #include <gtest/gtest.h>
@@ -69,7 +83,6 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   auto config = b.AddOnline(true)
                     .AddNumWarmups(1)
                     .AddNumRuns(1)
-                    .AddCopyComputationRatio({1, 2, 3, 4})
                     .AddSmoothingFactor(0.1)
                     .AddProfileDataPath("band/test/data/config.json")
                     .AddMinimumSubgraphSize(5)
@@ -91,10 +104,6 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[0], 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[1], 2);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[2], 3);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[3], 4);
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.profile_config.profile_data_path,
             "band/test/data/config.json");
@@ -122,13 +131,12 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.profile_config.online, true);
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
-  EXPECT_EQ(config_ok.profile_config.copy_computation_ratio[0], 30000);
   EXPECT_EQ(config_ok.profile_config.profile_data_path, "");
   EXPECT_EQ(config_ok.profile_config.smoothing_factor, 0.1f);
   EXPECT_EQ(config_ok.planner_config.log_path, "");
   EXPECT_EQ(config_ok.planner_config.schedulers[0],
             SchedulerType::kFixedWorker);
-  EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);
+  EXPECT_EQ(config_ok.planner_config.schedule_window_size, std::numeric_limits<int>::max());
   EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlag::kAll);
   EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlag::kCPU);
   EXPECT_EQ(config_ok.worker_config.workers[1], DeviceFlag::kGPU);

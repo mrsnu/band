@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <jni.h>
 
 #include "band/config_builder.h"
@@ -56,15 +70,6 @@ JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNumRuns(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint numRuns) {
   ConvertLongToConfigBuilder(env, configBuilderHandle)->AddNumRuns(numRuns);
-}
-
-JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCopyComputationRatio(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jintArray copyComputationRatio) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddCopyComputationRatio(
-          ConvertIntArrayTo<int>(env, copyComputationRatio));
 }
 
 JNIEXPORT void JNICALL
@@ -203,13 +208,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorLogPath(
   ConvertLongToConfigBuilder(env, configBuilderHandle)
       ->AddResourceMonitorLogPath(
           ConvertJstringToString(env, resourceMonitorLogPath));
-}
-
-JNIEXPORT jboolean JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_isValid(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle) {
-  return static_cast<jboolean>(
-      ConvertLongToConfigBuilder(env, configBuilderHandle)->IsValid().ok());
 }
 
 JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
