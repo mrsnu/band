@@ -26,7 +26,6 @@ class RoundRobinScheduler : public IScheduler {
  public:
   using IScheduler::IScheduler;
   bool Schedule(JobQueue& requests) override;
-  bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
   WorkerType GetWorkerType() override { return WorkerType::kDeviceQueue; }
 };
