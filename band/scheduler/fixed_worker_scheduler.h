@@ -27,7 +27,6 @@ class FixedWorkerScheduler : public IScheduler {
  public:
   using IScheduler::IScheduler;
   bool Schedule(JobQueue& requests) override;
-  bool NeedProfile() override { return false; }
   bool NeedFallbackSubgraphs() override { return false; }
   WorkerType GetWorkerType() override { return WorkerType::kDeviceQueue; }
 };
@@ -39,7 +38,6 @@ class FixedWorkerGlobalQueueScheduler : public IScheduler {
   // Required for checking SLO violation.
   // We could add an option to this planner for skipping the SLO check,
   // in which case this function can return false.
-  bool NeedProfile() override { return true; }
   bool NeedFallbackSubgraphs() override { return false; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
 };

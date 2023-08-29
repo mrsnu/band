@@ -34,7 +34,6 @@ class IScheduler {
   // enqueued to the worker and removed from original queue.
   // Returns false if the scheduler wants to be called again.
   virtual bool Schedule(JobQueue& requests) = 0;
-  virtual bool NeedProfile() = 0;
   virtual bool NeedFallbackSubgraphs() = 0;
   virtual WorkerType GetWorkerType() = 0;
 

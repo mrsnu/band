@@ -43,7 +43,6 @@ class MockScheduler : public IScheduler {
   using IScheduler::IScheduler;
 
   MOCK_METHOD1(Schedule, bool(JobQueue&));
-  MOCK_METHOD0(NeedProfile, bool());
   MOCK_METHOD0(NeedFallbackSubgraphs, bool());
   // MOCK_METHOD0(GetWorkerType, WorkerType());
   WorkerType GetWorkerType() { return WorkerType::kDeviceQueue; }
@@ -65,6 +64,7 @@ TEST(PlannerSuite, SingleQueue) {
   // TODO: Add tests!
   EXPECT_TRUE(true);
 }
+
 }  // namespace test
 }  // namespace band
 

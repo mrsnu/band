@@ -254,8 +254,7 @@ absl::Status Engine::RegisterModel(Model* model) {
                           error_reporter_, output_tensors, output_indices));
       }
     }
-
-    if (planner_->NeedProfile()) {
+    {
       auto status = latency_estimator_->ProfileModel(model_id);
       if (!status.ok()) {
         return status;
@@ -516,14 +515,14 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   {
     subgraph_config_ = config.subgraph_config;
 
-    if (planner_->NeedProfile()) {
-      latency_estimator_ = std::make_unique<LatencyEstimator>(this);
-      auto status = latency_estimator_->Init(config.profile_config);
-      if (!status.ok()) {
-        return status;
-      }
+    latency_estimator_ = std::make_unique<LatencyEstimator>(this);
+    auto status = latency_estimator_->Init(config.profile_config);
+    if (!status.ok()) {
+      return status;
     }
+  }
 
+  {
 #if BAND_IS_MOBILE
     const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
     auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
