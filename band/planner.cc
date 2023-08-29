@@ -190,8 +190,10 @@ void Planner::EnqueueFinishedJob(Job& job) {
       engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
   // record finished / failed job
   if (is_finished) {
-    jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
-    num_finished_jobs_++;
+    if (!job.is_idle_job) {
+      jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
+      num_finished_jobs_++;
+    }
     end_invoke_.notify_all();
   }
   // make sure to unlock before calling callback to avoid
@@ -199,7 +201,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
   finished_lock.unlock();
 
   // report end invoke using callback
-  if (job.require_callback && is_finished) {
+  if (!job.is_idle_job && job.require_callback && is_finished) {
     std::unique_lock<std::mutex> callback_lock(on_end_request_mtx_);
     for (auto& id_callback : on_end_request_callbacks_) {
       id_callback.second(job.job_id, job.status == JobStatus::kSuccess
@@ -325,13 +327,14 @@ void Planner::CopyToLocalQueues() {
   request_lock.unlock();
 }
 
-bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
+bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions,
+                              const std::vector<int> idle_uses) {
   bool success = true;
-  for (auto& action : actions) {
+  for (int i = 0; i < actions.size(); i++) {
     Job job;
     SubgraphKey target_key;
 
-    std::tie(job, target_key) = action;
+    std::tie(job, target_key) = actions[i];
 
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
@@ -361,6 +364,16 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
                         "EnqueueToWorker failed. Requests scheduled to "
                         "unavailable worker id %d",
                         target_key.GetWorkerId());
+        }
+        if (idle_uses.size() > 0) {
+          Job idle_job = Job::CreateIdleJob(idle_uses[i], target_key);
+          if (!worker->EnqueueJob(idle_job)) {
+            BAND_LOG_PROD(
+                BAND_LOG_ERROR,
+                "EnqueueToWorker failed. Idle job requests scheduled to "
+                "unavailable worker id %d",
+                target_key.GetWorkerId());
+          }
         }
       } else {
         EnqueueRequest(job, true);

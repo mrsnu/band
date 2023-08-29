@@ -206,12 +206,16 @@ void Worker::Work() {
                     worker_id_);
     }
 
-    if (engine_->TryCopyInputTensors(*current_job).ok()) {
+    BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
+    if (current_job->is_idle_job) {
+      time::SleepForMicros(current_job->idle_us);
+      current_job->end_time = time::NowMicros();
+      current_job->status = JobStatus::kSuccess;
+    } else if (engine_->TryCopyInputTensors(*current_job).ok()) {
       lock.lock();
       current_job->invoke_time = time::NowMicros();
       lock.unlock();
 
-      BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
       absl::Status status = engine_->Invoke(subgraph_key);
       if (status.ok()) {
         // end_time is never read/written by any other thread as long as

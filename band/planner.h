@@ -65,7 +65,8 @@ class Planner {
   void PrepareReenqueue(Job& job);
   // Enqueue the request to the worker.
   // Returns true if the request is successfully enqueued.
-  bool EnqueueToWorker(const std::vector<ScheduleAction>& action);
+  bool EnqueueToWorker(const std::vector<ScheduleAction>& action,
+                       const std::vector<int> idle_uses = {});
   void Trigger() { planner_safe_bool_.notify(); }
 
   // Check whether profiling is required or not.

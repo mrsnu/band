@@ -279,6 +279,7 @@ band_cc_library(
     srcs = [
         "scheduler/fixed_worker_global_queue_scheduler.cc",
         "scheduler/fixed_worker_scheduler.cc",
+        "scheduler/fixed_worker_idle_scheduler.cc",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.cc",
         "scheduler/least_slack_first_scheduler.cc",
         "scheduler/round_robin_scheduler.cc",
@@ -286,6 +287,7 @@ band_cc_library(
     ],
     hdrs = [
         "scheduler/fixed_worker_scheduler.h",
+        "scheduler/fixed_worker_idle_scheduler.h",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.h",
         "scheduler/least_slack_first_scheduler.h",
         "scheduler/round_robin_scheduler.h",

@@ -280,6 +280,16 @@ struct Job {
   explicit Job(ModelId model_id, int64_t slo)
       : model_id(model_id), slo_us(slo) {}
 
+  static Job CreateIdleJob(int idle_us, SubgraphKey key) {
+    static int count = -1;
+    Job idle_job;
+    idle_job.job_id = count--;
+    idle_job.is_idle_job = true;
+    idle_job.idle_us = idle_us;
+    idle_job.subgraph_key = key;
+    return idle_job;
+  }
+
   std::string ToJson() const;
 
   // Constant variables (Valid after invoke)
@@ -314,6 +324,10 @@ struct Job {
   // Resolved unit subgraphs and executed subgraph keys
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
+
+  // Idle job
+  bool is_idle_job = false;
+  int idle_us = 0;
 };
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618
