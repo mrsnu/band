@@ -33,3 +33,6 @@ band.aar
 
 # mac icloud
 *.icloud
+
+# Temporary config file
+script/config_samples/benchmark_config.json

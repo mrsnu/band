@@ -13,11 +13,11 @@
     ],
     "log_path": "/data/local/tmp/log.json",
     "schedulers": [
-        "heterogeneous_earliest_finish_time"
+        "fixed_worker_idle"
     ],
     "minimum_subgraph_size": 1,
     "subgraph_preparation_type": "merge_unit_subgraph",
-    "execution_mode": "stream",
+    "execution_mode": "periodic",
     "cpu_masks": "ALL",
     "num_threads": 1,
     "planner_cpu_masks": "PRIMARY",
@@ -60,5 +60,6 @@
     "monitor_log_path": "/data/local/tmp/monitor_log_path.json",
     "monitor_interval": 30,
     "monitor_dev_freqs": {
-    }
+    },
+    "target_worker_id": 1
 }
