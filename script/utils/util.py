@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ast import parse
-from genericpath import isfile
 import os
 import argparse
 import platform as plf
 import shlex
 import shutil
 import subprocess
-import multiprocessing
+from typing import Literal, overload
 from .docker import run_cmd_docker
 
 PLATFORM = {
@@ -52,9 +50,12 @@ def canon_path(path):
     return path
 
 
-def run_cmd(cmd):
+def run_cmd(cmd, capture_output=False):
     args = shlex.split(cmd)
-    subprocess.check_call(args, cwd=os.getcwd())
+    proc = subprocess.run(args, cwd=os.getcwd(), check=True,
+                          capture_output=capture_output, text=True)
+    if capture_output:
+        return proc.stdout
 
 
 def copy(src, dst):
@@ -114,16 +115,30 @@ def push_to_android(src, dst):
 
 
 def run_binary_android(basepath, path, option='', run_as_su=False):
+    run_on_android(f'chmod 777 {ANDROID_BASE}{basepath}{path}', run_as_su=run_as_su)
+    run_on_android(f'./{path} {option}', cwd=f'{ANDROID_BASE}{basepath}', run_as_su=run_as_su)
+
+
+@overload
+def run_on_android(cmd, cwd='.', run_as_su=False, capture_output: Literal[False] = ...) -> None:
+    ...
+
+
+@overload
+def run_on_android(cmd, cwd='.', run_as_su=False, capture_output: Literal[True] = ...) -> str:
+    ...
+
+
+def run_on_android(cmd, cwd='.', run_as_su=False, capture_output: bool = False):
+    if "'" in cmd or '"' in cmd:
+        raise ValueError('cmd should not contain " or \'')
     if run_as_su:
-        chmod_command = f'su -c "chmod 777 {ANDROID_BASE}{basepath}{path}"'
-        # cd & run -- to preserve the relative relation of the binary
-        run_command = f'"cd {ANDROID_BASE}{basepath} && su -c ./{path} {option}"'
-    else:
-        chmod_command = f'chmod 777 {ANDROID_BASE}{basepath}{path}'
-        # cd & run -- to preserve the relative relation of the binary
-        run_command = f'cd {ANDROID_BASE}{basepath} && ./{path} {option}'
-    run_cmd(f'adb -d shell {chmod_command}')
-    run_cmd(f'adb -d shell {run_command}')
+        cmd = f'su -c "{cmd}"'
+    try:
+        return run_cmd(f'adb -d shell \'cd {cwd} && {cmd}\'', capture_output=capture_output)
+    except subprocess.CalledProcessError as e:
+        print(e.stderr)
+        raise e
 
 
 def get_argument_parser(desc: str):
