@@ -215,7 +215,16 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
                       "Please check if given scheduler is valid");
         return false;
       }
-      schedulers.push_back(FromString<SchedulerType>(scheduler.asCString()));
+      SchedulerType scheduler_type = FromString<SchedulerType>(scheduler.asCString());
+      schedulers.push_back(scheduler_type);
+      if (scheduler_type == SchedulerType::kFixedWorkerIdle) {
+        if (!root["fixed_idle_us"].isInt()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR,
+                      "Please check if given fixed_idle_us is valid");
+          return false;  
+        }
+        builder.AddFixedIdleTime(root["fixed_idle_us"].asInt());
+      }
     }
     builder.AddSchedulers(schedulers);
 

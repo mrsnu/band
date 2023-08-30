@@ -113,6 +113,7 @@ class Engine : public IEngine {
   int64_t GetExpected(const SubgraphKey& key) const override;
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
+  const ExperimentConfig& GetExperimentConfig() const override;
 
  private:
   /* engine */
@@ -191,6 +192,7 @@ class Engine : public IEngine {
   Engine& operator=(const Engine&&) = delete;
 
   SubgraphConfig subgraph_config_;
+  ExperimentConfig experiment_config_;
 
   std::map<std::pair<ModelId, WorkerId>,
            std::unique_ptr<interface::IModelExecutor>>

@@ -151,6 +151,18 @@ absl::Status ResourceMonitorConfigBuilder::IsValid() {
   return absl::OkStatus();
 }
 
+absl::StatusOr<ExperimentConfig> ExperimentConfigBuilder::Build() {
+  RETURN_IF_ERROR(IsValid());
+
+  ExperimentConfig experiment_config;
+  experiment_config.fixed_idle_us = fixed_idle_us_;
+  return experiment_config;
+}
+
+absl::Status ExperimentConfigBuilder::IsValid() {
+  return absl::OkStatus();
+}
+
 absl::StatusOr<RuntimeConfig> RuntimeConfigBuilder::Build() {
   RETURN_IF_ERROR(IsValid());
   RuntimeConfig runtime_config;
@@ -164,6 +176,7 @@ absl::StatusOr<RuntimeConfig> RuntimeConfigBuilder::Build() {
   runtime_config.worker_config = worker_config_builder_.Build().value();
   runtime_config.resource_monitor_config =
       resource_monitor_config_builder_.Build().value();
+  runtime_config.experiment_config = experiment_config_builder_.Build().value();
   return runtime_config;
 }
 }  // namespace band

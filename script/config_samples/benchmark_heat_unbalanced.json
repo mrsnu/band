@@ -3,12 +3,27 @@
         {
             "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
             "period_ms": 500,
-            "batch_size": 10
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 500,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 500,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 500,
+            "batch_size": 1
         }
     ],
     "log_path": "/data/local/tmp/log.json",
     "schedulers": [
-        "fixed_worker_idle"
+        "fixed_worker"
     ],
     "minimum_subgraph_size": 1,
     "subgraph_preparation_type": "merge_unit_subgraph",

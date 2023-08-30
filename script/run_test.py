@@ -45,7 +45,7 @@ if __name__ == '__main__':
                 backend=args.backend,
                 target=TARGET
             )
-        subprocess.call(['mkdir', '-p', get_target(args.debug)])
+        subprocess.check_call(['mkdir', '-p', get_target(args.debug)])
         if args.docker:
             run_cmd_docker(build_cmd)
             copy_docker(f'bazel-bin/band/test', get_target(args.debug))

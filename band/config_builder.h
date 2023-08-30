@@ -184,6 +184,23 @@ class ResourceMonitorConfigBuilder {
   int monitor_interval_ms_ = 10;
 };
 
+class ExperimentConfigBuilder {
+  friend class RuntimeConfigBuilder;
+
+ public: 
+  ExperimentConfigBuilder& AddFixedIdleTime(int fixed_idle_us) {
+    fixed_idle_us_ = fixed_idle_us;
+    return *this;
+  }
+
+  absl::StatusOr<ExperimentConfig> Build();
+
+ private:
+  absl::Status IsValid();
+
+  int fixed_idle_us_ = -1;
+};
+
 // Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
@@ -250,6 +267,8 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
+
+  // Add ResourceMonitorConfig
   RuntimeConfigBuilder& AddResourceMonitorLogPath(std::string log_path) {
     resource_monitor_config_builder_.AddResourceMonitorLogPath(log_path);
     return *this;
@@ -265,6 +284,14 @@ class RuntimeConfigBuilder {
         monitor_interval_ms);
     return *this;
   }
+
+  // Add ExperimentConfig
+  RuntimeConfigBuilder& AddFixedIdleTime(int fixed_idle_us) {
+    experiment_config_builder_.fixed_idle_us_ = fixed_idle_us;
+    return *this;
+  }
+
+  // Add RuntimeConfig
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
     minimum_subgraph_size_ = minimum_subgraph_size;
     return *this;
@@ -288,6 +315,7 @@ class RuntimeConfigBuilder {
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
   ResourceMonitorConfigBuilder resource_monitor_config_builder_;
+  ExperimentConfigBuilder experiment_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
       SubgraphPreparationType::kMergeUnitSubgraph;

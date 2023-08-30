@@ -23,7 +23,7 @@ def run_balance_effect(args: Namespace):
     # Need to set Android build option in ./configure
     label_configs = [
         ('unbalanced', 'script/config_samples/benchmark_heat_unbalanced.json'),
-        # ('balanced', 'script/config_samples/benchmark_heat_balanced.json'),
+        ('balanced', 'script/config_samples/benchmark_heat_balanced.json'),
         ]
     for label, config_path in label_configs:
         benchmark_android(args.debug, args.trace, get_platform(), args.backend,

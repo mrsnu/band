@@ -54,11 +54,11 @@ def canon_path(path):
 
 def run_cmd(cmd):
     args = shlex.split(cmd)
-    subprocess.call(args, cwd=os.getcwd())
+    subprocess.check_call(args, cwd=os.getcwd())
 
 
 def copy(src, dst):
-    subprocess.call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
+    subprocess.check_call(['mkdir', '-p', f'{os.path.normpath(dst)}'])
     # append filename to dst directory
 
     dst = canon_path(os.path.join(dst, os.path.basename(src)))

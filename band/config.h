@@ -71,12 +71,17 @@ struct ResourceMonitorConfig {
   int monitor_interval_ms = 10;
 };
 
+struct ExperimentConfig {
+  int fixed_idle_us = -1;
+};
+
 struct RuntimeConfig {
   CPUMaskFlag cpu_mask;
   SubgraphConfig subgraph_config;
   ProfileConfig profile_config;
   PlannerConfig planner_config;
   WorkerConfig worker_config;
+  ExperimentConfig experiment_config;
   ResourceMonitorConfig resource_monitor_config;
 
  private:

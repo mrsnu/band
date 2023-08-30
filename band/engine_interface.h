@@ -132,6 +132,7 @@ class IEngine {
   virtual const Worker* GetWorker(WorkerId id) const = 0;
   virtual Worker* GetWorker(WorkerId id) = 0;
   virtual size_t GetNumWorkers() const = 0;
+  virtual const ExperimentConfig& GetExperimentConfig() const = 0;
 
   /* tensor communication */
   virtual absl::Status TryCopyInputTensors(const Job& job) = 0;

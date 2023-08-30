@@ -1,20 +1,31 @@
 {
     "models": [
         {
-            "graph": "/data/local/tmp/model/retinaface_mbv2_quant_160.tflite",
-            "period_ms": 30,
-            "batch_size": 3
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 500,
+            "batch_size": 1
         },
         {
             "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 30,
-            "batch_size": 2
+            "period_ms": 500,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 500,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 500,
+            "batch_size": 1
         }
     ],
     "log_path": "/data/local/tmp/log.json",
     "schedulers": [
         "fixed_worker_idle"
     ],
+    "fixed_idle_us": 27e3,
     "minimum_subgraph_size": 1,
     "subgraph_preparation_type": "merge_unit_subgraph",
     "execution_mode": "periodic",
@@ -61,5 +72,5 @@
     "monitor_interval": 30,
     "monitor_dev_freqs": {
     },
-    "target_worker_id": 1
+    "target_worker_id": 0
 }

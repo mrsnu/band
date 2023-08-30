@@ -62,7 +62,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path="",
     if docker:
         run_cmd_docker(build_command)
         # create a local path
-        subprocess.call(['mkdir', '-p', f'{target_base_dir}'])
+        subprocess.check_call(['mkdir', '-p', f'{target_base_dir}'])
         # run_cmd(
         #     f'sh script/docker_util.sh -d bazel-bin/band/tool/band_benchmark {target_base_dir}')
         copy_docker('bazel-bin/band/tool/band_benchmark', target_base_dir)

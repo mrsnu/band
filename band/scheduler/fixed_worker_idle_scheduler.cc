@@ -32,7 +32,8 @@ bool FixedWorkerIdleScheduler::Schedule(JobQueue& requests) {
     int model_id = to_execute.model_id;
     SubgraphKey key =
         engine_.GetLargestSubgraphKey(model_id, to_execute.target_worker_id);
-    success &= engine_.EnqueueToWorker({to_execute, key}, 10000);
+    int fixed_idle_us = engine_.GetExperimentConfig().fixed_idle_us;
+    success &= engine_.EnqueueToWorker({to_execute, key}, fixed_idle_us);
   }
   return success;
 }

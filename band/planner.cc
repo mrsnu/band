@@ -368,7 +368,7 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions,
                         "unavailable worker id %d",
                         target_key.GetWorkerId());
         }
-        if (idle_uses.size() > 0) {
+        if (idle_uses.size() > 0 && idle_uses[i] != -1) {
           Job idle_job = Job::CreateIdleJob(idle_uses[i], target_key);
           if (!worker->EnqueueJob(idle_job)) {
             BAND_LOG_PROD(

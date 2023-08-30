@@ -640,6 +640,10 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     }
   }
 
+  {
+    experiment_config_ = config.experiment_config;
+  }
+
   return absl::OkStatus();
 }
 
@@ -1036,6 +1040,10 @@ Worker* Engine::GetWorker(WorkerId id) {
   } else {
     return nullptr;
   }
+}
+
+const ExperimentConfig& Engine::GetExperimentConfig() const {
+  return experiment_config_;
 }
 
 absl::Status Engine::TryCopyInputTensors(const Job& job) {
