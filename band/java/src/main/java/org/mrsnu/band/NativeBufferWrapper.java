@@ -40,9 +40,9 @@ public class NativeBufferWrapper implements AutoCloseable {
   private static native long createFromByteBuffer(
       final byte[] buffer, int width, int height, int bufferFormat);
 
-  private static native long createFromYUVBuffer(final byte[] y, final byte[] u, final byte[] v,
+  private static native long createFromYUVBuffer(byte[] y, byte[] u, byte[] v,
       int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
 
-  private static native long createFromYUVPlane(final ByteBuffer y, final ByteBuffer u,
-      final ByteBuffer v, int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
+  private static native long createFromYUVPlane(ByteBuffer y, ByteBuffer u,
+      ByteBuffer v, int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
 }
