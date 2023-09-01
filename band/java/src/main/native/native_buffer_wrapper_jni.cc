@@ -53,4 +53,5 @@ JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromYUVPlane(
       band::BufferFormat(bufferFormat));
   return reinterpret_cast<jlong>(buffer);
 }
+
 }  // extern "C"
