@@ -77,6 +77,8 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path="",
         shutil.copy(config_path, f'{LOCAL_BENCHMARK_DIRNAME}/{name}')
         print (f'Push {name} to Android')
 
+    run_on_android(f'rm -rf {ANDROID_BASE}{LOCAL_BENCHMARK_DIRNAME}',
+                   run_as_su=run_as_su)
     push_to_android(f'{LOCAL_BENCHMARK_DIRNAME}', '')
 
     for config_path in config_paths:

@@ -2,53 +2,8 @@
     "models": [
         {
             "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
-        },
-        {
-            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 160,
-            "batch_size": 1
+            "period_ms": 90,
+            "batch_size": 10
         }
     ],
     "log_path": "/data/local/tmp/log_unbalanced.json",

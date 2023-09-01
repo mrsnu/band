@@ -4,7 +4,7 @@ import json
 import os
 import shutil
 
-from utils import clean_bazel, get_argument_parser, get_platform, run_cmd
+from utils import clean_bazel, get_argument_parser, get_platform, run_cmd, run_on_android
 from utils.dvfs import fix_all_cpufreq_max, set_all_cpu_governor_schedutil
 from run_benchmark import benchmark_android, LOCAL_BENCHMARK_DIRNAME
 
@@ -28,12 +28,14 @@ def run_balance_effect(args: Namespace):
         ('balanced', 'script/config_samples/benchmark_heat_balanced.json'),
         ]
     for label, config_path in label_configs:
-        benchmark_android(args.debug, args.trace, get_platform(), args.backend,
-                        args.docker, config_path, run_as_su=args.run_as_su)
         with open(config_path) as fp:
             config_dict = json.load(fp)
             monitor_log_path = config_dict['monitor_log_path']
             log_path = config_dict['log_path']
+        run_on_android(f'rm -rf {monitor_log_path} {log_path}',
+                       run_as_su=args.run_as_su)
+        benchmark_android(args.debug, args.trace, get_platform(), args.backend,
+                        args.docker, config_path, run_as_su=args.run_as_su)
         run_cmd(f'adb pull {monitor_log_path} {LOCAL_BENCHMARK_DIRNAME}/monitor_log_{label}.json')
         run_cmd(f'adb pull {log_path} {LOCAL_BENCHMARK_DIRNAME}/log_{label}.json')
     set_all_cpu_governor_schedutil()
