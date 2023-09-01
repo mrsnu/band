@@ -17,7 +17,8 @@ import shutil
 
 from utils import *
 
-BASE_DIR = 'benchmark'
+ANDROID_BENCHMARK_DIRPATH = f'{ANDROID_BASE}benchmark'
+LOCAL_BENCHMARK_DIRNAME = 'benchmark'
 TARGET = "band/tool:band_benchmark"
 DEFAULT_CONFIG = 'script/config_samples/benchmark_config.json'
 
@@ -32,23 +33,16 @@ def benchmark_local(debug, trace, platform, backend, build_only, config_path):
         target=TARGET
     )
     run_cmd(build_cmd)
-    copy('bazel-bin/band/tool/band_benchmark', BASE_DIR)
-    run_cmd(
-        f'chmod 777 {BASE_DIR}/band_benchmark'
-    )
+    copy('bazel-bin/band/tool/band_benchmark', LOCAL_BENCHMARK_DIRNAME)
+    run_cmd(f'chmod 777 {LOCAL_BENCHMARK_DIRNAME}/band_benchmark')
     if platform == "linux":
-        run_cmd(
-            f'{BASE_DIR}/band_benchmark {config_path}'
-        )
+        run_cmd(f'{LOCAL_BENCHMARK_DIRNAME}/band_benchmark {config_path}')
     else:
-        run_cmd(
-            f'{BASE_DIR}/band_benchmark.exe {config_path}'
-        )
+        run_cmd(f'{LOCAL_BENCHMARK_DIRNAME}/band_benchmark.exe {config_path}')
 
 
 def benchmark_android(debug, trace, platform, backend, docker, config_path="",
                       run_as_su=False):
-    target_base_dir = BASE_DIR
     # build android targets only (specified in band_cc_android_test tags)
 
     build_command = make_cmd(
@@ -62,13 +56,13 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path="",
     if docker:
         run_cmd_docker(build_command)
         # create a local path
-        subprocess.check_call(['mkdir', '-p', f'{target_base_dir}'])
+        subprocess.check_call(['mkdir', '-p', f'{LOCAL_BENCHMARK_DIRNAME}'])
         # run_cmd(
-        #     f'sh script/docker_util.sh -d bazel-bin/band/tool/band_benchmark {target_base_dir}')
-        copy_docker('bazel-bin/band/tool/band_benchmark', target_base_dir)
+        #     f'sh script/docker_util.sh -d bazel-bin/band/tool/band_benchmark {LOCAL_BENCHMARK_DIRNAME}')
+        copy_docker('bazel-bin/band/tool/band_benchmark', LOCAL_BENCHMARK_DIRNAME)
     elif platform.system() == 'Linux':
         run_cmd(build_command)
-        copy('bazel-bin/band/tool/band_benchmark', target_base_dir)
+        copy('bazel-bin/band/tool/band_benchmark', LOCAL_BENCHMARK_DIRNAME)
 
     config_paths = []
     if os.path.isfile(config_path):
@@ -80,16 +74,18 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path="",
 
     for config_path in config_paths:
         name = os.path.basename(config_path)
-        shutil.copy(config_path, f'{target_base_dir}/{name}')
+        shutil.copy(config_path, f'{LOCAL_BENCHMARK_DIRNAME}/{name}')
         print (f'Push {name} to Android')
 
-    push_to_android(f'{target_base_dir}', '')
+    push_to_android(f'{LOCAL_BENCHMARK_DIRNAME}', '')
 
     for config_path in config_paths:
         name = os.path.basename(config_path)
         print(f'Run {name}')
-        run_binary_android('', f'{target_base_dir}/band_benchmark',
-                           f'{target_base_dir}/{name}', run_as_su=run_as_su)
+        android_benchmark_dirnatm = ANDROID_BENCHMARK_DIRPATH.split('/')[-1]
+        run_binary_android(
+            android_benchmark_dirnatm, 'band_benchmark', name,
+            run_as_su=run_as_su)
 
 
 if __name__ == '__main__':
@@ -111,8 +107,8 @@ if __name__ == '__main__':
     if args.rebuild:
         clean_bazel(args.docker)
 
-    if os.path.isdir(BASE_DIR):
-        shutil.rmtree(BASE_DIR)
+    if os.path.isdir(ANDROID_BENCHMARK_DIRPATH):
+        shutil.rmtree(ANDROID_BENCHMARK_DIRPATH)
 
     if args.android:
         # Need to set Android build option in ./configure

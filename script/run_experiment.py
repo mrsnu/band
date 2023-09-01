@@ -5,7 +5,8 @@ import os
 import shutil
 
 from utils import clean_bazel, get_argument_parser, get_platform, run_cmd
-from run_benchmark import BASE_DIR, benchmark_android
+from utils.dvfs import fix_all_cpufreq_max, set_all_cpu_governor_schedutil
+from run_benchmark import benchmark_android, LOCAL_BENCHMARK_DIRNAME
 
 
 def run(args):
@@ -16,10 +17,11 @@ def run(args):
 
 
 def run_balance_effect(args: Namespace):
+    fix_all_cpufreq_max()
     if args.rebuild:
         clean_bazel(args.docker)
-    if os.path.isdir(BASE_DIR):
-        shutil.rmtree(BASE_DIR)
+    if os.path.isdir(LOCAL_BENCHMARK_DIRNAME):
+        shutil.rmtree(LOCAL_BENCHMARK_DIRNAME)
     # Need to set Android build option in ./configure
     label_configs = [
         ('unbalanced', 'script/config_samples/benchmark_heat_unbalanced.json'),
@@ -32,8 +34,9 @@ def run_balance_effect(args: Namespace):
             config_dict = json.load(fp)
             monitor_log_path = config_dict['monitor_log_path']
             log_path = config_dict['log_path']
-        run_cmd(f'adb pull {monitor_log_path} {BASE_DIR}/monitor_log_{label}.json')
-        run_cmd(f'adb pull {log_path} {BASE_DIR}/log_{label}.json')
+        run_cmd(f'adb pull {monitor_log_path} {LOCAL_BENCHMARK_DIRNAME}/monitor_log_{label}.json')
+        run_cmd(f'adb pull {log_path} {LOCAL_BENCHMARK_DIRNAME}/log_{label}.json')
+    set_all_cpu_governor_schedutil()
 
 
 def get_args():

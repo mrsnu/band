@@ -114,9 +114,9 @@ def push_to_android(src, dst):
     run_cmd(f'adb -d push {src} {ANDROID_BASE}{dst}')
 
 
-def run_binary_android(basepath, path, option='', run_as_su=False):
-    run_on_android(f'chmod 777 {ANDROID_BASE}{basepath}{path}', run_as_su=run_as_su)
-    run_on_android(f'./{path} {option}', cwd=f'{ANDROID_BASE}{basepath}', run_as_su=run_as_su)
+def run_binary_android(target_dirname, binary_name, option='', run_as_su=False):
+    run_on_android(f'chmod 777 {ANDROID_BASE}{target_dirname}/{binary_name}', run_as_su=run_as_su)
+    run_on_android(f'./{binary_name} {option}', cwd=f'{ANDROID_BASE}{target_dirname}', run_as_su=run_as_su)
 
 
 @overload

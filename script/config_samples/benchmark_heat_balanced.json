@@ -2,30 +2,60 @@
     "models": [
         {
             "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 500,
+            "period_ms": 160,
             "batch_size": 1
         },
         {
             "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 500,
+            "period_ms": 160,
             "batch_size": 1
         },
         {
             "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 500,
+            "period_ms": 160,
             "batch_size": 1
         },
         {
             "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
-            "period_ms": 500,
+            "period_ms": 160,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 160,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 160,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 160,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 160,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 160,
+            "batch_size": 1
+        },
+        {
+            "graph": "/data/local/tmp/model/mobilenet_v2_1.0_224_quant.tflite",
+            "period_ms": 160,
             "batch_size": 1
         }
     ],
-    "log_path": "/data/local/tmp/log.json",
+    "log_path": "/data/local/tmp/log_balanced.json",
     "schedulers": [
         "fixed_worker_idle"
     ],
-    "fixed_idle_us": 27e3,
+    "fixed_idle_us": 8e3,
     "minimum_subgraph_size": 1,
     "subgraph_preparation_type": "merge_unit_subgraph",
     "execution_mode": "periodic",
@@ -68,7 +98,7 @@
     "allow_work_steal": true,
     "availability_check_interval_ms": 30000,
     "schedule_window_size": 10,
-    "monitor_log_path": "/data/local/tmp/monitor_log_path.json",
+    "monitor_log_path": "/data/local/tmp/monitor_log_balanced.json",
     "monitor_interval": 30,
     "monitor_dev_freqs": {
     },
