@@ -31,7 +31,7 @@ public class NativeBufferWrapper implements AutoCloseable {
   }
 
   public void setFromYUVPlane(final Plane[] planes, int width, int height, BufferFormat bufferFormat) {
-    this.nativeHandle = createFromYUVPlane(planes[0].getBuffer(), planes[1].getBuffer(),
+    this.nativeHandle = createFromYUVPlanes(planes[0].getBuffer(), planes[1].getBuffer(),
         planes[2].getBuffer(), width, height, planes[0].getRowStride(), planes[1].getRowStride(), planes[1].getPixelStride(), bufferFormat.getValue());
   }
 
@@ -43,6 +43,6 @@ public class NativeBufferWrapper implements AutoCloseable {
   private static native long createFromYUVBuffer(byte[] y, byte[] u, byte[] v,
       int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
 
-  private static native long createFromYUVPlane(ByteBuffer y, ByteBuffer u,
+  private static native long createFromYUVPlanes(ByteBuffer y, ByteBuffer u,
       ByteBuffer v, int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
 }

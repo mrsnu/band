@@ -37,10 +37,10 @@ Tensor* ConvertJobjectToTensor(JNIEnv* env, jobject tensor) {
 }
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_ImageProcessor_process(
-    JNIEnv* env, jclass clazz, jobject imageProcessorHandle,
-    jobject bufferHandle, jobject outputTensorHandle) {
+    JNIEnv* env, jclass clazz, jlong imageProcessorHandle, jobject bufferHandle,
+    jobject outputTensorHandle) {
   BufferProcessor* processor =
-      ConvertJobjectToBufferProcessor(env, imageProcessorHandle);
+      ConvertLongToBufferProcessor(env, imageProcessorHandle);
   Buffer* buffer = ConvertJobjectToBuffer(env, bufferHandle);
   Tensor* outputTensor = ConvertJobjectToTensor(env, outputTensorHandle);
   std::shared_ptr<Buffer> outputTensorBuffer(

@@ -12,7 +12,6 @@
 #include "band/model.h"
 #include "band/tensor.h"
 
-
 namespace band {
 namespace jni {
 
@@ -102,6 +101,8 @@ Model* ConvertLongToModel(JNIEnv* env, jlong handle);
 Tensor* ConvertLongToTensor(JNIEnv* env, jlong handle);
 
 Buffer* ConvertLongToBuffer(JNIEnv* env, jlong handle);
+
+BufferProcessor* ConvertLongToBufferProcessor(JNIEnv* env, jlong handle);
 
 int ConvertLongToJobId(jint request_handle);
 
