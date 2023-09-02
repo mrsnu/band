@@ -7,12 +7,13 @@ using band::Buffer;
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_org_mrsnu_band_Buffer_deleteBuffer(
+JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeBufferWrapper_deleteBuffer(
     JNIEnv* env, jclass clazz, jlong bufferHandle) {
   delete reinterpret_cast<Buffer*>(bufferHandle);
 }
 
-JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromByteBuffer(
+JNIEXPORT jlong JNICALL
+Java_org_mrsnu_band_NativeBufferWrapper_createFromByteBuffer(
     JNIEnv* env, jclass clazz, jbyteArray raw_buffer, jint width, jint height,
     jint bufferFormat) {
   jbyte* raw_buffer_bytes = env->GetByteArrayElements(raw_buffer, nullptr);
@@ -23,7 +24,8 @@ JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromByteBuffer(
   return reinterpret_cast<jlong>(buffer);
 }
 
-JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromYUVBuffer(
+JNIEXPORT jlong JNICALL
+Java_org_mrsnu_band_NativeBufferWrapper_createFromYUVBuffer(
     JNIEnv* env, jclass clazz, jbyteArray y, jbyteArray u, jbyteArray v,
     jint width, jint height, jint yRowStride, jint uvRowStride,
     jint uvPixelStride, jint bufferFormat) {
@@ -41,7 +43,8 @@ JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromYUVBuffer(
   return reinterpret_cast<jlong>(buffer);
 }
 
-JNIEXPORT jlong JNICALL Java_org_mrsnu_band_Buffer_createFromYUVPlane(
+JNIEXPORT jlong JNICALL
+Java_org_mrsnu_band_NativeBufferWrapper_createFromYUVPlanes(
     JNIEnv* env, jclass clazz, jobject y, jobject u, jobject v, jint width,
     jint height, jint yRowStride, jint uvRowStride, jint uvPixelStride,
     jint bufferFormat) {
