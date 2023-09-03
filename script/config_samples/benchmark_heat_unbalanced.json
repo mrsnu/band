@@ -43,7 +43,7 @@
             "cpu_masks": "PRIMARY"
         }
     ],
-    "running_time_ms": 10000,
+    "running_time_ms": 600e3,
     "profile_smoothing_factor": 0.1,
     "profile_data_path": "/data/local/tmp/profile.json",
     "profile_online": true,

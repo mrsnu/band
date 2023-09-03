@@ -16,6 +16,22 @@ def fix_all_cpufreq_max():
             raise ValueError(cpufreq, max_freq)
 
 
+def fix_all_cpufreq_min():
+    cpufreq_policies = get_cpufreq_policies()
+    # Not sure why we can't set the lowest frequency for policy0 (Little Core) with this code.
+    for cpufreq_policy in cpufreq_policies[1:]:
+        set_cpufreq_governor(cpufreq_policy, 'userspace')
+        cpu_governor = get_cpufreq_governor(cpufreq_policy)
+        if cpu_governor != 'userspace':
+            raise ValueError(cpu_governor)
+        available_freqs = get_cpufreq_available_freqs(cpufreq_policy)
+        min_freq = sorted(available_freqs)[0]
+        set_cpufreq_freq(cpufreq_policy, min_freq)
+        cpufreq = get_cpufreq_curfreq(cpufreq_policy)
+        if cpufreq != min_freq:
+            raise ValueError(cpufreq, min_freq)
+
+
 def set_all_cpu_governor_schedutil():
     for policy in get_cpufreq_policies():
         set_cpufreq_governor(policy, 'schedutil')
