@@ -6,43 +6,26 @@
 using band::Buffer;
 using band::BufferProcessor;
 using band::Tensor;
-using band::jni::JNIImageProcessor;
 using namespace band::jni;
 
 extern "C" {
 
-BufferProcessor* ConvertJobjectToBufferProcessor(JNIEnv* env,
-                                                 jobject processor) {
-  JNI_DEFINE_CLS_AND_MTD(proc, "org/mrsnu/band/ImageProcessor",
-                         "getNativeHandle", "()J");
-  JNIImageProcessor* imageProcessor = reinterpret_cast<JNIImageProcessor*>(
-      env->CallLongMethod(processor, proc_mtd));
-  return imageProcessor->impl.get();
-}
-
-Buffer* ConvertJobjectToBuffer(JNIEnv* env, jobject buffer) {
-  JNI_DEFINE_CLS_AND_MTD(buf, "org/mrsnu/band/Buffer", "getNativeHandle",
-                         "()J");
-  Buffer* buf_ptr =
-      reinterpret_cast<Buffer*>(env->CallLongMethod(buffer, buf_mtd));
-  return buf_ptr;
-}
-
-Tensor* ConvertJobjectToTensor(JNIEnv* env, jobject tensor) {
-  JNI_DEFINE_CLS_AND_MTD(tsr, "org/mrsnu/band/Tensor", "getNativeHandle",
-                         "()J");
-  Tensor* tsr_ptr =
-      reinterpret_cast<Tensor*>(env->CallLongMethod(tensor, tsr_mtd));
-  return tsr_ptr;
-}
-
 JNIEXPORT void JNICALL Java_org_mrsnu_band_ImageProcessor_process(
-    JNIEnv* env, jclass clazz, jlong imageProcessorHandle, jobject bufferHandle,
-    jobject outputTensorHandle) {
+    JNIEnv* env, jclass clazz, jlong imageProcessorHandle, jlong bufferHandle,
+    jlong outputTensorHandle) {
   BufferProcessor* processor =
       ConvertLongToBufferProcessor(env, imageProcessorHandle);
-  Buffer* buffer = ConvertJobjectToBuffer(env, bufferHandle);
-  Tensor* outputTensor = ConvertJobjectToTensor(env, outputTensorHandle);
+  Buffer* buffer = ConvertLongToBuffer(env, bufferHandle);
+  Tensor* outputTensor = ConvertLongToTensor(env, outputTensorHandle);
+  if (processor == nullptr || buffer == nullptr || outputTensor == nullptr) {
+    // log error about why
+    BAND_LOG_PROD(band::BAND_LOG_ERROR,
+                  "Cannot convert long to object processor: %p, buffer: %p, "
+                  "outputTensor: %p",
+                  processor, buffer, outputTensor);
+    return;
+  }
+
   std::shared_ptr<Buffer> outputTensorBuffer(
       Buffer::CreateFromTensor(outputTensor));
 
@@ -55,6 +38,6 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_ImageProcessor_process(
 
 JNIEXPORT void JNICALL Java_org_mrsnu_band_ImageProcessor_deleteImageProcessor(
     JNIEnv* env, jclass clazz, jlong imageProcessorHandle) {
-  delete reinterpret_cast<JNIImageProcessor*>(imageProcessorHandle);
+  delete reinterpret_cast<BufferProcessor*>(imageProcessorHandle);
 }
 }  // extern "C"

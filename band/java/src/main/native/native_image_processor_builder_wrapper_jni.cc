@@ -8,7 +8,6 @@
 using band::BufferFormat;
 using namespace band::buffer;
 using band::ImageProcessorBuilder;
-using band::jni::JNIImageProcessor;
 
 extern "C" {
 
@@ -93,8 +92,7 @@ Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_build(
     return nullptr;
   } else {
     return env->NewObject(imageProcessor_cls, imageProcessor_constructor,
-                          reinterpret_cast<jlong>(new JNIImageProcessor(
-                              std::move(status.value()))));
+                          reinterpret_cast<jlong>(status.value().release()));
   }
 }
 }

@@ -60,13 +60,6 @@ struct JNIRuntimeConfig {
   RuntimeConfig impl;
 };
 
-struct JNIImageProcessor {
-  JNIImageProcessor(std::unique_ptr<BufferProcessor> processor)
-      : impl(std::move(processor)) {}
-
-  std::unique_ptr<BufferProcessor> impl;
-};
-
 void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...);
 
 bool CheckJniInitializedOrThrow(JNIEnv* env);
