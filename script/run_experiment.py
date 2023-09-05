@@ -4,11 +4,14 @@ import json
 import os
 import shutil
 import subprocess
-from time import sleep
+from time import sleep, time
 
 from utils import clean_bazel, get_argument_parser, get_platform, run_cmd, run_on_android
-import utils.dvfs as dvfs
+from utils.dvfs import DVFS
 from run_benchmark import benchmark_android, LOCAL_BENCHMARK_DIRNAME
+
+
+dvfs = DVFS()
 
 
 def shutdown_thermal_engine():
@@ -40,29 +43,29 @@ def busywait(seconds):
     subprocess.check_call(f'adb shell "{shcmd}"')
 
 
-def wait_until_temperature(args):
+def stabalize_init_temperature(args):
+    dvfs.set_cpufreq_all_governors('userspace')
+    start_time = time()
+    stabalization_start_time = -1
     ref_temp = get_reference_temperature(args)
     is_cooling = ref_temp > args.init_temperature
-    print('ref_temp:', ref_temp, 'is_cooling:', is_cooling)
-    if is_cooling:
-        dvfs.fix_all_cpufreq_min()
-    else:
-        dvfs.fix_all_cpufreq_max()
-    while True:
+    while (stabalization_start_time < 0
+           or time() - stabalization_start_time
+            < args.temperature_stabalization_mins * 60):
         ref_temp = get_reference_temperature(args)
-        print('ref_temp:', ref_temp, end='\r')
-        if is_cooling:
-            if ref_temp > args.init_temperature:
-                sleep(1)
-            else:
-                break
+        if (stabalization_start_time < 0
+            and ((is_cooling and ref_temp < args.init_temperature)
+                 or (not is_cooling and ref_temp >= args.init_temperature))):
+            stabalization_start_time = time()
+        print(f'ref_temp: {ref_temp}, time: {int(time() - start_time)} s')
+        if ref_temp > args.init_temperature:
+            dvfs.fix_all_cpufreq_min()
+            sleep(1)
         else:
-            if ref_temp < args.init_temperature:
-                busywait(seconds=1)
-            else:
-                break
+            dvfs.fix_all_cpufreq_max()
+            busywait(seconds=1)
     print()
-    dvfs.set_all_cpu_governor_schedutil()
+    dvfs.set_cpufreq_all_governors('schedutil')
 
 
 def run_balance_effect(args: Namespace):
@@ -82,12 +85,13 @@ def run_balance_effect(args: Namespace):
             log_path = config_dict['log_path']
         run_on_android(f'rm -rf {monitor_log_path} {log_path}',
                        run_as_su=args.run_as_su)
-        wait_until_temperature(args)
+        stabalize_init_temperature(args)
         shutdown_thermal_engine()
+        dvfs.set_cpufreq_all_governors('userspace')
         dvfs.fix_all_cpufreq_max()
         benchmark_android(args.debug, args.trace, get_platform(), args.backend,
                         args.docker, config_path, run_as_su=args.run_as_su)
-        dvfs.set_all_cpu_governor_schedutil()
+        dvfs.set_cpufreq_all_governors('schedutil')
         start_thermal_engine()
         run_cmd(f'adb pull {monitor_log_path} {LOCAL_BENCHMARK_DIRNAME}/monitor_log_{label}.json')
         run_cmd(f'adb pull {log_path} {LOCAL_BENCHMARK_DIRNAME}/log_{label}.json')
@@ -98,6 +102,7 @@ def get_args():
                                  "The user should prepare/specify dependent files either absolute path or relative path depending on an execution mode. "
                                  "This script executes the benchmark from (Android: /data/local/tmp, Other: current working directory)")
     parser.add_argument('--init-temperature', type=float, default=35)
+    parser.add_argument('--temperature-stabalization-mins', type=float, default=10)
     parser.set_defaults(docker=True, android=True)
     parser.add_argument('experiment_name')
     return parser.parse_args()
