@@ -25,8 +25,8 @@ public class NativeImageProcessorBuilderWrapper implements AutoCloseable {
     addFlip(nativeHandle, horizontal, vertical);
   }
 
-  public void addConvertColor(BufferFormat dstColorSpace) {
-    addConvertColor(nativeHandle, dstColorSpace.getValue());
+  public void addColorSpaceConvert(BufferFormat dstColorSpace) {
+    addColorSpaceConvert(nativeHandle, dstColorSpace.getValue());
   }
 
   public void addNormalize(float mean, float std) {
@@ -61,7 +61,7 @@ public class NativeImageProcessorBuilderWrapper implements AutoCloseable {
   private native void addFlip(
       long imageProcessorBuilderHandle, boolean horizontal, boolean vertical);
 
-  private native void addConvertColor(long imageProcessorBuilderHandle, int dstColorSpace);
+  private native void addColorSpaceConvert(long imageProcessorBuilderHandle, int dstColorSpace);
 
   private native void addNormalize(long imageProcessorBuilderHandle, float mean, float std);
 

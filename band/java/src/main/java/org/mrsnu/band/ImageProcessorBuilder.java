@@ -24,8 +24,8 @@ public class ImageProcessorBuilder {
     wrapper.addFlip(horizontal, vertical);
   }
 
-  public void addConvertColor(BufferFormat dstColorSpace) {
-    wrapper.addConvertColor(dstColorSpace);
+  public void addColorSpaceConvert(BufferFormat dstColorSpace) {
+    wrapper.addColorSpaceConvert(dstColorSpace);
   }
 
   public void addNormalize(float mean, float std) {
