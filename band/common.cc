@@ -12,7 +12,7 @@ size_t EnumLength<BackendType>() {
 
 template <>
 size_t EnumLength<SchedulerType>() {
-  return static_cast<size_t>(SchedulerType::kFrameThermal) + 1;
+  return static_cast<size_t>(SchedulerType::kThermal) + 1;
 }
 
 template <>
@@ -115,11 +115,8 @@ const char* ToString(SchedulerType scheduler_type) {
     case SchedulerType::kHeterogeneousEarliestFinishTimeReserved: {
       return "heterogeneous_earliest_finish_time_reserved";
     } break;
-    case SchedulerType::kGreedyThermal: {
-      return "greedy_thermal";
-    } break;
-    case SchedulerType::kFrameThermal: {
-      return "frame_thermal";
+    case SchedulerType::kThermal: {
+      return "thermal";
     } break;
     default: {
       return "Unknown scheduler type";

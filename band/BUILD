@@ -118,6 +118,14 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "freq",
+    define_values = {
+        "freq": "true",
+    },
+    visibility = ["//visibility:public"],
+)
+
 band_cc_library(
     name = "common",
     srcs = [

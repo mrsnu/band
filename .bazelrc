@@ -38,6 +38,15 @@ test:trace --define trace=true
 test:trace --copt=-DBAND_TRACE
 test:trace --cxxopt=-DBAND_TRACE
 
+# Band build config for frequency setting.
+build:freq --define freq=true
+build:freq --copt=-DBAND_FREQ
+build:freq --cxxopt=-DBAND_FREQ
+build:freq --action_env DBAND_FREQ=true
+test:freq --define freq=true
+test:freq --copt=-DBAND_FREQ
+test:freq --cxxopt=-DBAND_FREQ
+
 # Linux build config for Band Engine.
 build:linux_x86_64 --config=linux
 build:linux_x86_64 --cpu=k8
