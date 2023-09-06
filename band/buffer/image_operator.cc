@@ -102,6 +102,11 @@ absl::Status Crop::ValidateInput(const Buffer& input) const {
     return absl::InvalidArgumentError("Crop: crop region is out of bounds.");
   }
 
+  if (input.GetDataType() != DataType::kUInt8) {
+    return absl::InvalidArgumentError(
+        "Crop: only UInt8 data type is supported.");
+  }
+
   return absl::OkStatus();
 }  // namespace buffer
 
@@ -112,6 +117,13 @@ absl::Status Crop::ValidateOutput(const Buffer& input) const {
                         "compatible. %s vs %s",
                         ToString(input.GetBufferFormat()),
                         ToString(output_->GetBufferFormat())));
+  }
+
+  if (input.GetDataType() != output_->GetDataType()) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Crop: output buffer data type is not "
+        "compatible. %s vs %s",
+        ToString(input.GetDataType()), ToString(output_->GetDataType())));
   }
 
   const std::vector<size_t> crop_dimension =
@@ -163,6 +175,11 @@ absl::Status Resize::ValidateOutput(const Buffer& input) const {
     return absl::InvalidArgumentError(
         "Resize: input and output buffer dimensions "
         "are the same.");
+  }
+
+  if (!input.IsBufferFormatCompatible(*output_)) {
+    return absl::InvalidArgumentError(
+        "Resize: input and output buffer formats are not compatible.");
   }
 
   switch (input.GetBufferFormat()) {
