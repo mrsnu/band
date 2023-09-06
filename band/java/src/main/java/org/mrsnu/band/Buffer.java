@@ -5,6 +5,11 @@ import android.media.Image.Plane;
 public class Buffer {
   private NativeBufferWrapper wrapper;
 
+  public Buffer(final Tensor tensor) {
+    wrapper = new NativeBufferWrapper();
+    wrapper.setFromTensor(tensor);
+  }
+
   public Buffer(final byte[] buffer, int width, int height, BufferFormat bufferFormat) {
     wrapper = new NativeBufferWrapper();
     wrapper.setFromByteBuffer(buffer, width, height, bufferFormat);
