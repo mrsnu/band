@@ -19,6 +19,10 @@ public class NativeBufferWrapper implements AutoCloseable {
     deleteBuffer(nativeHandle);
   }
 
+  public void setFromTensor(final Tensor tensor) {
+    this.nativeHandle = createFromTensor(tensor.getNativeHandle());
+  }
+
   public void setFromByteBuffer(
       final byte[] buffer, int width, int height, BufferFormat bufferFormat) {
     this.nativeHandle = createFromByteBuffer(buffer, width, height, bufferFormat.getValue());
@@ -30,19 +34,23 @@ public class NativeBufferWrapper implements AutoCloseable {
         yRowStride, uvRowStride, uvPixelStride, bufferFormat.getValue());
   }
 
-  public void setFromYUVPlane(final Plane[] planes, int width, int height, BufferFormat bufferFormat) {
+  public void setFromYUVPlane(
+      final Plane[] planes, int width, int height, BufferFormat bufferFormat) {
     this.nativeHandle = createFromYUVPlanes(planes[0].getBuffer(), planes[1].getBuffer(),
-        planes[2].getBuffer(), width, height, planes[0].getRowStride(), planes[1].getRowStride(), planes[1].getPixelStride(), bufferFormat.getValue());
+        planes[2].getBuffer(), width, height, planes[0].getRowStride(), planes[1].getRowStride(),
+        planes[1].getPixelStride(), bufferFormat.getValue());
   }
 
   private static native void deleteBuffer(long bufferHandle);
 
+  private static native long createFromTensor(long tensorHandle);
+
   private static native long createFromByteBuffer(
       final byte[] buffer, int width, int height, int bufferFormat);
 
-  private static native long createFromYUVBuffer(byte[] y, byte[] u, byte[] v,
-      int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
+  private static native long createFromYUVBuffer(byte[] y, byte[] u, byte[] v, int width,
+      int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
 
-  private static native long createFromYUVPlanes(ByteBuffer y, ByteBuffer u,
-      ByteBuffer v, int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
+  private static native long createFromYUVPlanes(ByteBuffer y, ByteBuffer u, ByteBuffer v,
+      int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
 }
