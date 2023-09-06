@@ -26,10 +26,10 @@ Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_deleteImageProcessorBuild
 
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_addCrop(
-    JNIEnv* env, jclass clazz, jlong imageProcessorBuilderHandle, jint x,
-    jint y, jint width, jint height) {
+    JNIEnv* env, jclass clazz, jlong imageProcessorBuilderHandle, jint x0,
+    jint y0, jint x1, jint y1) {
   reinterpret_cast<ImageProcessorBuilder*>(imageProcessorBuilderHandle)
-      ->AddOperation(std::make_unique<Crop>(x, y, width, height));
+      ->AddOperation(std::make_unique<Crop>(x0, y0, x1, y1));
 }
 
 JNIEXPORT void JNICALL
@@ -81,14 +81,15 @@ Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_addDataTypeConvert(
 JNIEXPORT jobject JNICALL
 Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_build(
     JNIEnv* env, jclass clazz, jlong imageProcessorBuilderHandle) {
-  static jclass imageProcessor_cls =
-      env->FindClass("org/mrsnu/band/ImageProcessor");
-  static jmethodID imageProcessor_constructor =
+  jclass imageProcessor_cls = env->FindClass("org/mrsnu/band/ImageProcessor");
+  jmethodID imageProcessor_constructor =
       env->GetMethodID(imageProcessor_cls, "<init>", "(J)V");
   auto status =
       reinterpret_cast<ImageProcessorBuilder*>(imageProcessorBuilderHandle)
           ->Build();
   if (!status.ok()) {
+    BAND_LOG_PROD(band::BAND_LOG_ERROR, "Failed to build ImageProcessor: %s",
+                  status.status().message().data());
     return nullptr;
   } else {
     return env->NewObject(imageProcessor_cls, imageProcessor_constructor,

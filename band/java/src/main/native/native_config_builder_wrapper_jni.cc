@@ -212,8 +212,8 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorLogPath(
 
 JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle) {
-  static jclass config_cls = env->FindClass("org/mrsnu/band/Config");
-  static jmethodID config_ctor = env->GetMethodID(config_cls, "<init>", "(J)V");
+  jclass config_cls = env->FindClass("org/mrsnu/band/Config");
+  jmethodID config_ctor = env->GetMethodID(config_cls, "<init>", "(J)V");
   RuntimeConfigBuilder* b =
       ConvertLongToConfigBuilder(env, configBuilderHandle);
   auto runtime_config = b->Build();
