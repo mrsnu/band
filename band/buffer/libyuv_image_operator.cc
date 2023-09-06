@@ -552,7 +552,7 @@ absl::Status ConvertFromRgb(const Buffer& buffer, Buffer& output_buffer) {
       yuv_frame_buffer = std::shared_ptr<Buffer>(
           Buffer::CreateFromRaw(tmp_yuv_buffer.get(), buffer.GetDimension()[0],
                                 buffer.GetDimension()[1], BufferFormat::kYV21,
-                                buffer.GetOrientation()));
+                                DataType::kUInt8, buffer.GetOrientation()));
       if (!yuv_frame_buffer) {
         return absl::InternalError("Failed to create YV21 buffer.");
       }
@@ -833,7 +833,7 @@ absl::Status RotateNv(const Buffer& buffer, int angle_deg,
       absl::make_unique<unsigned char[]>(rotated_buffer_size);
   std::shared_ptr<Buffer> rotated_yuv_buffer(Buffer::CreateFromRaw(
       rotated_yuv_raw_buffer.get(), output_buffer.GetDimension()[0],
-      output_buffer.GetDimension()[1], BufferFormat::kYV21,
+      output_buffer.GetDimension()[1], BufferFormat::kYV21, DataType::kUInt8,
       output_buffer.GetOrientation()));
   if (!rotated_yuv_buffer) {
     return absl::InternalError("Failed to create YV21 buffer.");

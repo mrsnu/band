@@ -151,9 +151,9 @@ absl::Status Normalize::ValidateOutput(const Buffer& input) const {
 
 absl::Status Normalize::CreateOutput(const Buffer& input) {
   if (!inplace_) {
-    output_ =
-        Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                            input.GetBufferFormat(), input.GetOrientation());
+    output_ = Buffer::CreateEmpty(
+        input.GetDimension()[0], input.GetDimension()[1],
+        input.GetBufferFormat(), input.GetDataType(), input.GetOrientation());
   }
 
   return absl::Status();
