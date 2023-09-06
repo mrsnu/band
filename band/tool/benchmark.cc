@@ -338,7 +338,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
            worker_id++) {
         worst_us = std::max(engine_->GetProfiled(engine_->GetLargestSubgraphKey(
                                 model_id, worker_id)),
-                            worst_us);
+                            static_cast<double>(worst_us));
       }
 
       if (worst_us == 0) {

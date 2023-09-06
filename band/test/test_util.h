@@ -31,33 +31,36 @@ struct MockEngineBase : public IEngine {
 
   /* scheduling */
   using WorkerWaiting = const std::map<WorkerId, double>&;
-  using MinCostWithUnitSubgraph =
-      std::pair<std::vector<SubgraphKey>, double>;
-  using SubgraphWithMinCost =
-      std::pair<std::vector<SubgraphKey>, double>;
-  MOCK_CONST_METHOD5(GetMinCost,
-                     std::pair<SubgraphKey, double>(
-                         ModelId, BitMask, double, WorkerWaiting,
-                         std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
+  using MinCostWithUnitSubgraph = std::pair<std::vector<SubgraphKey>, double>;
+  using SubgraphWithMinCost = std::pair<std::vector<SubgraphKey>, double>;
+  MOCK_CONST_METHOD5(
+      GetMinCost,
+      std::pair<SubgraphKey, double>(
+          int, BitMask, double, WorkerWaiting&,
+          const std::function<double(double, std::map<SensorFlag, double>,
+                                     std::map<SensorFlag, double>)>));
 
-  MOCK_CONST_METHOD4(GetMinCostWithUnitSubgraph,
-                     MinCostWithUnitSubgraph(
-                         ModelId, int, WorkerWaiting,
-                         std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
+  MOCK_CONST_METHOD4(
+      GetMinCostWithUnitSubgraph,
+      MinCostWithUnitSubgraph(
+          ModelId, int, WorkerWaiting,
+          const std::function<double(double, std::map<SensorFlag, double>,
+                                     std::map<SensorFlag, double>)>));
   MOCK_CONST_METHOD3(
       GetSubgraphWithMinCost,
-      SubgraphWithMinCost(const Job&, WorkerWaiting,
-                                  std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
-  MOCK_CONST_METHOD4(GetSubgraphIdxSatisfyingSLO,
-                     SubgraphKey(const Job&, WorkerWaiting,
-                                 const std::set<WorkerId>&,
-                                 std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)>));
+      SubgraphWithMinCost(
+          const Job&, WorkerWaiting,
+          const std::function<double(double, std::map<SensorFlag, double>,
+                                     std::map<SensorFlag, double>)>));
+  MOCK_CONST_METHOD3(GetSubgraphIdxSatisfyingSLO,
+                     SubgraphKey(const Job&, WorkerWaiting&,
+                                 const std::set<WorkerId>&));
 
   /* estimators */
   MOCK_METHOD2(Update, void(const SubgraphKey&, int64_t));
   MOCK_METHOD2(UpdateWithEvent, void(const SubgraphKey&, size_t));
-  MOCK_CONST_METHOD1(GetProfiled, int64_t(const SubgraphKey&));
-  MOCK_CONST_METHOD1(GetExpected, int64_t(const SubgraphKey&));
+  MOCK_CONST_METHOD1(GetProfiled, double(const SubgraphKey&));
+  MOCK_CONST_METHOD1(GetExpected, double(const SubgraphKey&));
 
   /* profiler */
   MOCK_METHOD0(BeginEvent, size_t());
@@ -69,8 +72,9 @@ struct MockEngineBase : public IEngine {
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
   MOCK_METHOD1(PrepareReenqueue, void(Job&));
   MOCK_METHOD1(EnqueueFinishedJob, void(Job&));
-  MOCK_METHOD1(EnqueueToWorker, bool(const ScheduleAction&));
-  MOCK_METHOD1(EnqueueToWorkerBatch, bool(const std::vector<ScheduleAction>&));
+  MOCK_METHOD2(EnqueueToWorker, bool(const ScheduleAction&, const int));
+  MOCK_METHOD2(EnqueueToWorkerBatch, bool(const std::vector<ScheduleAction>&,
+                                          const std::vector<int>));
 
   /* getters */
   ErrorReporter* GetErrorReporter() { return DefaultErrorReporter(); }

@@ -8,6 +8,7 @@
 #include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
+#include "band/scheduler/thermal_scheduler.h"
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_idle_scheduler.h"

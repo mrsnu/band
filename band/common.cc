@@ -116,7 +116,7 @@ const char* ToString(SchedulerType scheduler_type) {
       return "heterogeneous_earliest_finish_time_reserved";
     } break;
     case SchedulerType::kThermal: {
-      return "frame_thermal";
+      return "thermal";
     } break;
     default: {
       return "Unknown scheduler type";
