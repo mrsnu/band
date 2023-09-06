@@ -362,6 +362,10 @@ bool Buffer::IsYUV(BufferFormat buffer_format) {
 }
 
 bool Buffer::IsBufferFormatCompatible(const Buffer& rhs) const {
+  if (data_type_ != rhs.data_type_) {
+    return false;
+  }
+
   switch (buffer_format_) {
     case BufferFormat::kRGB:
     case BufferFormat::kRGBA:
