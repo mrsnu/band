@@ -31,7 +31,7 @@ class Buffer {
 
   static Buffer* CreateFromRaw(
       const unsigned char* data, size_t width, size_t height,
-      BufferFormat buffer_format,
+      BufferFormat buffer_format, DataType data_type = DataType::kUInt8,
       BufferOrientation orientation = BufferOrientation::kTopLeft,
       bool owns_data = false);
 
@@ -47,6 +47,7 @@ class Buffer {
 
   static Buffer* CreateEmpty(
       size_t width, size_t height, BufferFormat buffer_format,
+      DataType data_type,
       BufferOrientation orientation = BufferOrientation::kTopLeft);
 
   const std::vector<size_t>& GetDimension() const;

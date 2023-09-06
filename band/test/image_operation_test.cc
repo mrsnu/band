@@ -43,6 +43,37 @@ TEST(ImageOperationTest, CropOperationImageTest) {
   }
 }
 
+TEST(ImageOperationTest, CropOperationFailureTest) {
+  // load (598x305) img
+  std::shared_ptr<Buffer> input_buffer = LoadImage("band/test/data/hippo.jpg");
+  // x1 > width && y1 > height
+  Crop crop_out_of_bound(0, 0, 600, 400);
+  EXPECT_EQ(crop_out_of_bound.Process(*input_buffer).code(),
+            absl::StatusCode::kInvalidArgument);
+  // x0 > x1
+  Crop crop_out_of_bound2(255, 0, 0, 255);
+  EXPECT_EQ(crop_out_of_bound2.Process(*input_buffer).code(),
+            absl::StatusCode::kInvalidArgument);
+  // y0 > y1
+  Crop crop_out_of_bound3(0, 255, 255, 0);
+  EXPECT_EQ(crop_out_of_bound3.Process(*input_buffer).code(),
+            absl::StatusCode::kInvalidArgument);
+
+  // negative value
+  Crop crop_negative(-1, -1, 256, 256);
+  EXPECT_EQ(crop_negative.Process(*input_buffer).code(),
+            absl::StatusCode::kInvalidArgument);
+
+  // negative value (x1 and y1)
+  Crop crop_negative2(0, 0, -1, -1);
+  EXPECT_EQ(crop_negative2.Process(*input_buffer).code(),
+            absl::StatusCode::kInvalidArgument);
+
+  Crop crop_negative3(-1, -1, -1, -1);
+  EXPECT_EQ(crop_negative3.Process(*input_buffer).code(),
+            absl::StatusCode::kInvalidArgument);
+}
+
 TEST(ImageOperationTest, ConvertImageTest) {
   ColorSpaceConvert convert_op;
   // load 3-channel images
@@ -52,7 +83,8 @@ TEST(ImageOperationTest, ConvertImageTest) {
   // convert to gray scale
   std::shared_ptr<Buffer> output_buffer(Buffer::CreateEmpty(
       rgb_buffer->GetDimension()[0], rgb_buffer->GetDimension()[1],
-      BufferFormat::kGrayScale, rgb_buffer->GetOrientation()));
+      BufferFormat::kGrayScale, DataType::kUInt8,
+      rgb_buffer->GetOrientation()));
   convert_op.SetOutput(output_buffer.get());
 
   EXPECT_EQ(convert_op.Process(*rgb_buffer), absl::OkStatus());

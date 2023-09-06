@@ -58,9 +58,12 @@ IBufferOperator::Type ColorSpaceConvert::GetOpType() const {
 IBufferOperator::Type AutoConvert::GetOpType() const { return Type(); }
 
 absl::Status Crop::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(BAND_LOG_INFO, "Crop: %d x %d -> %d x %d",
-                input.GetDimension()[0], input.GetDimension()[1],
-                output_->GetDimension()[0], output_->GetDimension()[1]);
+  BAND_LOG_PROD(
+      BAND_LOG_INFO, "Crop: %d x %d (%s, %s) -> %d x %d (%s, %s)",
+      input.GetDimension()[0], input.GetDimension()[1],
+      ToString(input.GetBufferFormat()), ToString(input.GetDataType()),
+      output_->GetDimension()[0], output_->GetDimension()[1],
+      ToString(output_->GetBufferFormat()), ToString(output_->GetDataType()));
 
   return LibyuvImageOperator::Crop(input, x0_, y0_, x1_, y1_, *GetOutput());
 }
@@ -115,9 +118,9 @@ absl::Status Crop::ValidateOutput(const Buffer& input) const {
 absl::Status Crop::CreateOutput(const Buffer& input) {
   const std::vector<size_t> crop_dimension =
       Buffer::GetCropDimension(x0_, x1_, y0_, y1_);
-  output_ =
-      Buffer::CreateEmpty(crop_dimension[0], crop_dimension[1],
-                          input.GetBufferFormat(), input.GetOrientation());
+  output_ = Buffer::CreateEmpty(crop_dimension[0], crop_dimension[1],
+                                input.GetBufferFormat(), input.GetDataType(),
+                                input.GetOrientation());
   return absl::OkStatus();
 }
 
@@ -191,7 +194,7 @@ absl::Status Resize::CreateOutput(const Buffer& input) {
   }
 
   output_ = Buffer::CreateEmpty(dims_[0], dims_[1], input.GetBufferFormat(),
-                                input.GetOrientation());
+                                input.GetDataType(), input.GetOrientation());
   return absl::OkStatus();
 }
 
@@ -247,7 +250,7 @@ absl::Status Rotate::CreateOutput(const Buffer& input) {
       is_dimension_change ? input.GetDimension()[0] : input.GetDimension()[1];
 
   output_ = Buffer::CreateEmpty(width, height, input.GetBufferFormat(),
-                                input.GetOrientation());
+                                input.GetDataType(), input.GetOrientation());
   return absl::OkStatus();
 }
 
@@ -297,14 +300,14 @@ absl::Status Flip::ValidateOutput(const Buffer& input) const {
 
 absl::Status Flip::CreateOutput(const Buffer& input) {
   if (horizontal_ && vertical_) {
-    intermediate_buffer_ =
-        Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                            input.GetBufferFormat(), input.GetOrientation());
+    intermediate_buffer_ = Buffer::CreateEmpty(
+        input.GetDimension()[0], input.GetDimension()[1],
+        input.GetBufferFormat(), input.GetDataType(), input.GetOrientation());
   }
 
-  output_ =
-      Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                          input.GetBufferFormat(), input.GetOrientation());
+  output_ = Buffer::CreateEmpty(
+      input.GetDimension()[0], input.GetDimension()[1], input.GetBufferFormat(),
+      input.GetDataType(), input.GetOrientation());
   return absl::Status();
 }
 
@@ -355,9 +358,15 @@ absl::Status ColorSpaceConvert::CreateOutput(const Buffer& input) {
     return absl::InvalidArgumentError(
         "Convert: output buffer format is not set.");
   } else {
+    DataType data_type = input.GetDataType();
+
+    if (Buffer::IsYUV(output_format_)) {
+      data_type = DataType::kUInt8;
+    }
+
     output_ =
         Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                            output_format_, input.GetOrientation());
+                            output_format_, data_type, input.GetOrientation());
   }
 
   return absl::OkStatus();
