@@ -8,8 +8,8 @@ public class ImageProcessorBuilder {
     wrapper = new NativeImageProcessorBuilderWrapper();
   }
 
-  public void addCrop(int x, int y, int width, int height) {
-    wrapper.addCrop(x, y, width, height);
+  public void addCrop(int x0, int y0, int x1, int y1) {
+    wrapper.addCrop(x0, y0, x1, y1);
   }
 
   public void addResize(int width, int height) {

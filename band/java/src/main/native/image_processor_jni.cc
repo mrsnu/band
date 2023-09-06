@@ -29,9 +29,16 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_ImageProcessor_process(
   std::shared_ptr<Buffer> outputTensorBuffer(
       Buffer::CreateFromTensor(outputTensor));
 
+  if (outputTensorBuffer == nullptr) {
+    BAND_LOG_PROD(band::BAND_LOG_ERROR, "Cannot create buffer from tensor: %p",
+                  outputTensor);
+    return;
+  }
+
   auto status = processor->Process(*buffer, *outputTensorBuffer);
   if (!status.ok()) {
     // TODO: refactor absl
+    BAND_LOG_PROD(band::BAND_LOG_ERROR, "Cannot process buffer: %p", buffer);
     return;
   }
 }
