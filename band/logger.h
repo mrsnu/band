@@ -19,62 +19,78 @@
 
 #include <cstdarg>
 
+#include "band/common.h"
+
 namespace band {
-enum LogSeverity {
-  BAND_LOG_INFO = 0,
-  BAND_LOG_WARNING = 1,
-  BAND_LOG_ERROR = 2,
-  BAND_LOG_NUM_SEVERITIES = 3,
-};
+/*
+  Logger is a singleton class that provides basic thread-safe logging
+  functionality. It is used by the BAND_LOG_* macros defined below from internal
+  sources.
+
+  The logger can be configured to log at a certain verbosity level, e.g., only
+  warnings and errors if its verbosity is set to kWarning. The def
+  provides two additional ways to handle log messages. First, the logger can be
+  configured to report log messages to user-defined reporter function. Second,
+  the logger provides a way to retrieve the last log message via
+  GetLastMessage().
+*/
 
 class Logger {
  public:
-  static void SetVerbosity(int severity);
-  static const char* GetSeverityName(LogSeverity severity);
+  static Logger& GetInstance();
 
-  // Logging hook that takes variadic args.
-  static void Log(LogSeverity severity, const char* format, ...);
+  void SetVerbosity(int severity);
+  void SetReporter(
+      std::function<void(LogSeverity, absl::Status, const char*)> reporter);
+  std::tuple<LogSeverity, absl::Status, std::string> GetLastMessage() const;
+  const char* GetSeverityName(LogSeverity severity) const;
 
-  // Logging hook that takes a formatted va_list.
-  static void LogFormatted(LogSeverity severity, const char* format,
-                           va_list args);
+  // DebugLog is only enabled in debug mode.
+  void DebugLog(const char* format, ...);
+  void Log(LogSeverity severity, const char* format, ...);
 
  private:
-  // Only accept logs with higher severity than verbosity level.
-  static LogSeverity verbosity;
+  void LogFormatted(LogSeverity severity, const char* format, va_list args);
+
+  Logger();
+  Logger(const Logger&) = delete;
+  Logger& operator=(const Logger&) = delete;
+
+  LogSeverity verbosity = kInfo;
+  std::function<void(LogSeverity, absl::Status, const char*)> reporter;
+  Logger& operator=(const Logger&) = delete;
+
+  LogSeverity verbosity = kInfo;
+
+  std::function<void(LogSeverity, absl::Status, const char*)> reporter;
+  std::tuple<LogSeverity, absl::Status, std::string> last_message;
 };
 }  // namespace band
 
-// Convenience macro for basic internal logging in production builds.
-// Note: This should never be used for debug-type logs, as it will *not* be
-// stripped in release optimized builds. In general, prefer the error reporting
-// APIs for developer-facing errors, and only use this for diagnostic output
-// that should always be logged in user builds.
-#define BAND_LOG_PROD(severity, format, ...) \
-  band::Logger::Log(severity, format, ##__VA_ARGS__);
+#ifdef NDEBUG
+#define BAND_LOG_DEBUG(format, ...) \
+  do {                              \
+  } while (false);
+#else
+#define BAND_LOG_DEBUG(format, ...) \
+  band::Logger::GetInstance().DebugLog(format, ##__VA_ARGS__);
+#endif
+
+#define BAND_LOG(severity, format, ...) \
+  band::Logger::GetInstance().Log(severity, format, ##__VA_ARGS__);
 
 // Convenience macro for logging a statement *once* for a given process lifetime
-// in production builds.
-#define BAND_LOG_PROD_ONCE(severity, format, ...)    \
-  do {                                               \
-    static const bool s_logged = [&] {               \
-      BAND_LOG_PROD(severity, format, ##__VA_ARGS__) \
-      return true;                                   \
-    }();                                             \
-    (void)s_logged;                                  \
+#define BAND_LOG_ONCE(severity, format, ...)    \
+  do {                                          \
+    static const bool s_logged = [&] {          \
+      BAND_LOG(severity, format, ##__VA_ARGS__) \
+      return true;                              \
+    }();                                        \
+    (void)s_logged;                             \
   } while (false);
 
-#ifndef NDEBUG
-// In debug builds, always log.
-#define BAND_LOG_INTERNAL BAND_LOG_PROD
-#define BAND_LOG_ONCE BAND_LOG_PROD_ONCE
-#else
-// In prod builds, never log, but ensure the code is well-formed and compiles.
-#define BAND_LOG_INTERNAL(severity, format, ...)    \
-  while (false) {                                   \
-    BAND_LOG_PROD(severity, format, ##__VA_ARGS__); \
-  }
-#define BAND_LOG_ONCE(severity, format, ...) ({ ; })
-#endif
+#define BAND_NOT_IMPLEMENTED                                 \
+  BAND_LOG(band::LogSeverity::kError, "Not implemented: %s", \
+           __PRETTY_FUNCTION__);
 
 #endif

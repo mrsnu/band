@@ -136,7 +136,6 @@ band_cc_library(
     name = "common",
     srcs = [
         "common.cc",
-        "error_reporter.cc",
         "logger.cc",
         "model_spec.cc",
     ],
@@ -144,7 +143,6 @@ band_cc_library(
         "common.h",
         "config.h",
         "engine_interface.h",
-        "error_reporter.h",
         "logger.h",
         "model_spec.h",
     ],

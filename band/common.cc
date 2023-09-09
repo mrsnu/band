@@ -14,10 +14,14 @@
 
 #include "band/common.h"
 
-#include "band/logger.h"
 #include "common.h"
 
 namespace band {
+
+template <>
+size_t EnumLength<LogSeverity>() {
+  return static_cast<size_t>(LogSeverity::kError) + 1;
+}
 
 template <>
 size_t EnumLength<BackendType>() {
@@ -229,7 +233,6 @@ const char* ToString(QuantizationType type) {
       return "Unknown quantization type";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown quantization type: %d", type);
   return "Unknown quantization type";
 }
 
@@ -258,8 +261,23 @@ const char* ToString(JobStatus job_status) {
       return "InvokeFailure";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", job_status);
   return "Unknown job status";
+}
+
+template <>
+const char* ToString(LogSeverity log_severity) {
+  switch (log_severity) {
+    case LogSeverity::kInfo: {
+      return "Info";
+    } break;
+    case LogSeverity::kWarning: {
+      return "Warning";
+    } break;
+    case LogSeverity::kError: {
+      return "Error";
+    } break;
+  }
+  return "Unknown log severity";
 }
 
 template <>
@@ -357,8 +375,6 @@ size_t GetDataTypeBytes(DataType type) {
     default:
       break;
   }
-
-  BAND_LOG_PROD(BAND_LOG_WARNING, "Unsupported data type : %s", ToString(type));
   return 0;
 }
 
@@ -386,7 +402,6 @@ std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
       return os << "InvokeFailure";
     } break;
   }
-  BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", status);
   return os;
 }
 
