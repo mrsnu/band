@@ -25,7 +25,7 @@ public final class Band {
 
   private static final Throwable LOAD_LIBRARY_EXCEPTION;
   private static volatile boolean isInit = false;
-  
+
   static {
     Throwable loadLibraryException = null;
     try {
@@ -40,8 +40,9 @@ public final class Band {
     LOAD_LIBRARY_EXCEPTION = loadLibraryException;
   }
 
-  private Band() {}
-  
+  private Band() {
+  }
+
   public static void init() {
     if (isInit) {
       return;
@@ -52,18 +53,27 @@ public final class Band {
       isInit = true;
     } catch (UnsatisfiedLinkError e) {
       Throwable exceptionToLog = LOAD_LIBRARY_EXCEPTION != null ? LOAD_LIBRARY_EXCEPTION : e;
-      UnsatisfiedLinkError exceptionToThrow =
-          new UnsatisfiedLinkError(
-              "Failed to load native Band methods. Check that the correct native"
-                  + " libraries are present, and, if using a custom native library, have been"
-                  + " properly loaded via System.loadLibrary():\n"
-                  + "  "
-                  + exceptionToLog);
+      UnsatisfiedLinkError exceptionToThrow = new UnsatisfiedLinkError(
+          "Failed to load native Band methods. Check that the correct native"
+              + " libraries are present, and, if using a custom native library, have been"
+              + " properly loaded via System.loadLibrary():\n"
+              + "  "
+              + exceptionToLog);
       exceptionToThrow.initCause(e);
       throw exceptionToThrow;
     }
   }
 
+  public static void setVerbosity(LogSeverity severity) {
+    nativeSetVerbosity(severity.getValue());
+  }
+
+  public static String getLastLog() {
+    return nativeGetLastLog();
+  }
+
+  private static native void nativeSetVerbosity(int severity);
+  private static native String nativeGetLastLog();
   private static native void nativeDoNothing();
-  
+
 }

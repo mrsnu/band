@@ -26,6 +26,9 @@
 
 int LogSeverityToAndroid(band::LogSeverity severity) {
   switch (severity) {
+    case band::LogSeverity::kInternal:
+      return ANDROID_LOG_DEBUG;
+      break;
     case band::LogSeverity::kInfo:
       return ANDROID_LOG_INFO;
       break;
@@ -34,9 +37,6 @@ int LogSeverityToAndroid(band::LogSeverity severity) {
       break;
     case band::LogSeverity::kError:
       return ANDROID_LOG_ERROR;
-      break;
-    case band::BAND_LOG_NUM_SEVERITIES:
-    default:
       break;
   }
   return -1;
@@ -67,7 +67,7 @@ absl::Status Logger::RemoveReporter(CallbackId callback_id) {
   return absl::OkStatus();
 }
 
-std::pair<LogSeverity, std::string> Logger::GetLastMessage() const {
+std::pair<LogSeverity, std::string> Logger::GetLastLog() const {
   return last_message_;
 }
 

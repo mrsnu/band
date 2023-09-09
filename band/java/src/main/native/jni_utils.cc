@@ -41,37 +41,6 @@ void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...) {
   va_end(args);
 }
 
-BufferErrorReporter::BufferErrorReporter(JNIEnv* env, int limit) {
-  buffer_ = new char[limit];
-  if (!buffer_) {
-    ThrowException(env, kNullPointerException,
-                   "Internal error: Malloc of BufferErrorReporter to hold %d "
-                   "char failed.",
-                   limit);
-    return;
-  }
-  buffer_[0] = '\0';
-  start_idx_ = 0;
-  end_idx_ = limit - 1;
-}
-
-BufferErrorReporter::~BufferErrorReporter() { delete[] buffer_; }
-
-int BufferErrorReporter::Report(const char* format, va_list args) {
-  int size = 0;
-  if (start_idx_ > 0 && start_idx_ < end_idx_) {
-    buffer_[start_idx_++] = '\n';
-    ++size;
-  }
-  if (start_idx_ < end_idx_) {
-    size = vsnprintf(buffer_ + start_idx_, end_idx_ - start_idx_, format, args);
-  }
-  start_idx_ += size;
-  return size;
-}
-
-const char* BufferErrorReporter::CachedErrorMessage() { return buffer_; }
-
 std::string ConvertJstringToString(JNIEnv* env, jstring jstr) {
   if (!jstr) {
     return "";
@@ -124,10 +93,6 @@ BufferProcessor* ConvertLongToBufferProcessor(JNIEnv* env, jlong handle) {
 
 int ConvertLongToJobId(jint request_handle) {
   return static_cast<int>(request_handle);
-}
-
-BufferErrorReporter* ConvertLongToErrorReporter(JNIEnv* env, jlong handle) {
-  return CastLongToPointer<BufferErrorReporter>(env, handle);
 }
 
 }  // namespace jni

@@ -37,7 +37,7 @@ namespace band {
   provides two additional ways to handle log messages. First, the logger can be
   configured to report log messages to user-defined reporter function. Second,
   the logger provides a way to retrieve the last log message via
-  GetLastMessage().
+  GetLastLog().
 */
 
 class Logger {
@@ -48,7 +48,7 @@ class Logger {
   CallbackId SetReporter(
       std::function<void(LogSeverity, const char*)> reporter);
   absl::Status RemoveReporter(CallbackId callback_id);
-  std::pair<LogSeverity, std::string> GetLastMessage() const;
+  std::pair<LogSeverity, std::string> GetLastLog() const;
 
   // DebugLog is only enabled in debug mode.
   void DebugLog(const char* format, ...);
