@@ -428,58 +428,83 @@ absl::Status AutoConvert::ValidateInput(const Buffer& input) const {
 }
 
 absl::Status AutoConvert::ValidateOutput(const Buffer& input) const {
-  Buffer const* current = &input;
   if (RequiresColorSpaceConvert(input)) {
     if (!color_space_convert_.GetOutput()) {
       return absl::InvalidArgumentError(
           "color_space_convert_ output is nullptr.");
     }
-
-    RETURN_IF_ERROR(color_space_convert_.ValidateOutput(input));
-    current = color_space_convert_.GetOutput();
   }
 
-  if (RequiresResize(*current)) {
+  if (RequiresResize(input)) {
     if (!resize_.GetOutput()) {
       return absl::InvalidArgumentError("resize_ output is nullptr.");
     }
-
-    RETURN_IF_ERROR(resize_.ValidateOutput(*current));
-    current = resize_.GetOutput();
   }
 
-  if (RequiresDataTypeConvert(*current)) {
-    RETURN_IF_ERROR(data_type_convert_.ValidateOutput(*current));
+  if (RequiresDataTypeConvert(input)) {
+    if (!data_type_convert_.GetOutput()) {
+      return absl::InvalidArgumentError(
+          "data_type_convert_ output is nullptr.");
+    }
   }
-
-  return absl::Status();
+  return absl::OkStatus();
 }
 
 absl::Status AutoConvert::CreateOutput(const Buffer& input) {
   IBufferOperator* last_operation = nullptr;
 
-  Buffer const* current = &input;
-  if (RequiresColorSpaceConvert(input)) {
-    color_space_convert_ = ColorSpaceConvert(output_->GetBufferFormat());
-    RETURN_IF_ERROR(color_space_convert_.CreateOutput(*current));
-    current = color_space_convert_.GetOutput();
-    last_operation = &color_space_convert_;
+  {
+    Buffer const* current = &input;
+    if (RequiresColorSpaceConvert(input)) {
+      color_space_convert_ = ColorSpaceConvert(output_->GetBufferFormat());
+      RETURN_IF_ERROR(color_space_convert_.CreateOutput(*current));
+      current = color_space_convert_.GetOutput();
+      last_operation = &color_space_convert_;
+    }
+
+    if (RequiresResize(*current)) {
+      resize_ = Resize(output_->GetDimension()[0], output_->GetDimension()[1]);
+      RETURN_IF_ERROR(resize_.CreateOutput(*current));
+      current = resize_.GetOutput();
+      last_operation = &resize_;
+    }
+
+    if (RequiresDataTypeConvert(*current)) {
+      data_type_convert_ = DataTypeConvert();
+      last_operation = &data_type_convert_;
+    }
+
+    if (last_operation) {
+      last_operation->SetOutput(output_);
+    }
   }
 
-  if (RequiresResize(*current)) {
-    resize_ = Resize(output_->GetDimension()[0], output_->GetDimension()[1]);
-    RETURN_IF_ERROR(resize_.CreateOutput(*current));
-    current = resize_.GetOutput();
-    last_operation = &resize_;
-  }
+  // auto convert must lazily validate the output buffer,
+  // since the output buffer is not created until the input buffer is given.
+  {
+    Buffer const* current = &input;
+    if (RequiresColorSpaceConvert(input)) {
+      if (!color_space_convert_.GetOutput()) {
+        return absl::InvalidArgumentError(
+            "color_space_convert_ output is nullptr.");
+      }
 
-  if (RequiresDataTypeConvert(*current)) {
-    data_type_convert_ = DataTypeConvert();
-    last_operation = &data_type_convert_;
-  }
+      RETURN_IF_ERROR(color_space_convert_.ValidateOutput(input));
+      current = color_space_convert_.GetOutput();
+    }
 
-  if (last_operation) {
-    last_operation->SetOutput(output_);
+    if (RequiresResize(*current)) {
+      if (!resize_.GetOutput()) {
+        return absl::InvalidArgumentError("resize_ output is nullptr.");
+      }
+
+      RETURN_IF_ERROR(resize_.ValidateOutput(*current));
+      current = resize_.GetOutput();
+    }
+
+    if (RequiresDataTypeConvert(*current)) {
+      RETURN_IF_ERROR(data_type_convert_.ValidateOutput(*current));
+    }
   }
 
   return absl::OkStatus();

@@ -1,4 +1,3 @@
-
 #include "band/buffer/image_processor.h"
 
 #include "absl/strings/str_format.h"
