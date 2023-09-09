@@ -138,7 +138,8 @@ typedef enum BandQuantizationType {
   kBandNoQuantization = 0,
   // Affine quantization (with support for per-channel quantization).
   // Corresponds to BandAffineQuantization.
-  kBandAffineQuantization1,
+  kBandAffineQuantization,
+  kBandNumQuantizationType,
 } BandQuantizationType;
 
 // TODO #23, #30
