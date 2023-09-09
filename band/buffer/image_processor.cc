@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "band/buffer/image_processor.h"
 
 #include "absl/strings/str_format.h"
