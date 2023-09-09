@@ -185,13 +185,13 @@ ModelAnalyzer::ModelAnalyzer(const IEngine& engine, bool need_fallback_subgraph,
           .value());
 
   for (auto device_unsupported_ops : model_spec_->unsupported_ops) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported ops %s (%s)",
-                  SetToString(device_unsupported_ops.second).c_str(),
-                  ToString(device_unsupported_ops.first));
+    BAND_LOG_DEBUG("Unsupported ops %s (%s)",
+                   SetToString(device_unsupported_ops.second).c_str(),
+                   ToString(device_unsupported_ops.first));
   }
 
   for (auto device : model_spec_->unavailable_devices) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Unsupported devices %s", ToString(device));
+    BAND_LOG_DEBUG("Unsupported devices %s", ToString(device));
   }
 }
 
@@ -282,11 +282,10 @@ ModelAnalyzer::CreateSubgraphs() {
           : SummarizeFallbackPerWorkerSubgraphs(unit_subgraph_defs,
                                                 subgraph_defs);
 
-  BAND_LOG_PROD(BAND_LOG_INFO,
-                "Create %d subgraphs for model %s with mode %s %s",
-                subgraph_defs.size(), model_spec_->path.c_str(),
-                ToString(subgraph_config_.subgraph_preparation_type),
-                subgraph_summary.c_str());
+  BAND_LOG_DEBUG("Create %d subgraphs for model %s with mode %s %s",
+                 subgraph_defs.size(), model_spec_->path.c_str(),
+                 ToString(subgraph_config_.subgraph_preparation_type),
+                 subgraph_summary.c_str());
 
   return std::make_pair(*model_spec_, subgraph_defs);
 }
@@ -491,9 +490,9 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
     }
   }
 
-  BAND_LOG_PROD(BAND_LOG_INFO,
-                "Create %d unit subgraphs, planner requires subgraph %d",
-                unique_unit_subgraph_indices.size(), NeedFallbackSubgraph());
+  BAND_LOG(LogSeverity::kInfo,
+           "Create %d unit subgraphs, planner requires subgraph %d",
+           unique_unit_subgraph_indices.size(), NeedFallbackSubgraph());
 
   return absl::OkStatus();
 }
@@ -502,8 +501,7 @@ std::vector<SubgraphDef> band::ModelAnalyzer::GetSubgraphsForFallbackOps(
     WorkerId worker_id) {
   const Worker* worker = engine_.GetWorker(worker_id);
   if (!worker) {
-    BAND_REPORT_ERROR(engine_.GetErrorReporter(), "Invalied worker_id %d",
-                      worker_id);
+    BAND_LOG(LogSeverity::kWarning, "Invalied worker_id %d", worker_id);
     return {};
   }
 
@@ -704,8 +702,8 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
     }
   }
 
-  BAND_LOG_PROD(BAND_LOG_INFO, "Create %d merged subgraphs",
-                result_subgraphs.size() - num_subgraphs_before_merge);
+  BAND_LOG(LogSeverity::kInfo, "Create %d merged subgraphs",
+           result_subgraphs.size() - num_subgraphs_before_merge);
 
   return result_subgraphs;
 }

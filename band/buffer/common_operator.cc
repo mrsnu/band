@@ -32,7 +32,7 @@ void NormalizeFromTo(const Buffer& input, Buffer* output, float mean,
   for (int i = 0; i < input.GetNumElements(); ++i) {
     output_data[i] = static_cast<OutputType>((input_data[i] - mean)) / std;
   }
-  BAND_LOG_PROD(BAND_LOG_INFO, "Normalize: %s %s %f %f",
+  BAND_LOG(LogSeverity::kInfo, "Normalize: %s %s %f %f",
                 ToString(input.GetDataType()), ToString(output->GetDataType()),
                 mean, std);
 }
@@ -56,7 +56,7 @@ void NormalizeFrom(const Buffer& input, Buffer* output, float mean, float std) {
       NormalizeFromTo<InputType, float>(input, output, mean, std);
       break;
     default:
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Normalize: unsupported data type %s",
+      BAND_LOG(LogSeverity::kError, "Normalize: unsupported data type %s",
                     ToString(output->GetDataType()));
       break;
   }
@@ -68,8 +68,8 @@ IBufferOperator::Type Normalize::GetOpType() const { return Type::kCommon; }
 
 void Normalize::SetOutput(Buffer* output) {
   if (inplace_) {
-    BAND_LOG_PROD(
-        BAND_LOG_ERROR,
+    BAND_LOG(
+        LogSeverity::kError,
         "Normalize: setting output buffer is not allowed for inplace");
   } else {
     IBufferOperator::SetOutput(output);

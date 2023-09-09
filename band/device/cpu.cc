@@ -311,8 +311,8 @@ int SetupThreadAffinityMasks() {
     g_thread_affinity_mask_primary.DisableAll();
   }
 
-  BAND_LOG_INTERNAL(
-      BAND_LOG_INFO,
+  BAND_LOG(
+      LogSeverity::kInfo,
       "CPU affinity masks: all(%s), little(%s), big(%s), primary(%s)",
       g_thread_affinity_mask_all.ToString().c_str(),
       g_thread_affinity_mask_little.ToString().c_str(),

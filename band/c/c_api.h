@@ -51,6 +51,12 @@ typedef struct BandEngine BandEngine;
 typedef int BandRequestHandle;
 typedef int BandCallbackHandle;
 
+/* logging */
+BAND_CAPI_EXPORT extern void BandSetLogSeverity(BandLogSeverity severity);
+BAND_CAPI_EXPORT extern BandCallbackHandle BandSetLogReporter(
+    void (*reporter)(BandLogSeverity severity, const char* msg));
+BAND_CAPI_EXPORT extern void BandUnsetLogReporter(BandCallbackHandle handle);
+
 /* config builder */
 BAND_CAPI_EXPORT extern BandConfigBuilder* BandConfigBuilderCreate();
 BAND_CAPI_EXPORT extern void BandAddConfig(BandConfigBuilder* b, int field,

@@ -24,7 +24,6 @@
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
-#include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/tensor.h"
@@ -32,19 +31,18 @@
 namespace band {
 namespace jni {
 
-#define JNI_DEFINE_CLS(tag, cls)                                            \
-  static jclass tag##_cls = env->FindClass(cls);                            \
-  if (tag##_cls == nullptr) {                                               \
-    BAND_LOG_INTERNAL(band::BAND_LOG_ERROR, "Canont find class named `%s`", \
-                      cls);                                                 \
+#define JNI_DEFINE_CLS(tag, cls)                          \
+  static jclass tag##_cls = env->FindClass(cls);          \
+  if (tag##_cls == nullptr) {                             \
+    BAND_LOGND_LOG_ERROR, "Canont find class named `%s`", \
+                      cls);                               \
   }
 
-#define JNI_DEFINE_MTD(tag, cls_var, mtd, sig)                             \
-  static jmethodID tag##_mtd = env->GetMethodID(cls_var, mtd, sig);        \
-  if (tag##_mtd == nullptr) {                                              \
-    BAND_LOG_INTERNAL(band::BAND_LOG_ERROR,                                \
-                      "Cannot find method named `%s` with signature `%s`", \
-                      mtd, sig);                                           \
+#define JNI_DEFINE_MTD(tag, cls_var, mtd, sig)                               \
+  static jmethodID tag##_mtd = env->GetMethodID(cls_var, mtd, sig);          \
+  if (tag##_mtd == nullptr) {                                                \
+    BAND_LOG(band::LogSeverity::kError,                                      \
+             "Cannot find method named `%s` with signature `%s`", mtd, sig); \
   }
 
 #define JNI_DEFINE_CLS_AND_MTD(tag, cls, mtd, sig) \

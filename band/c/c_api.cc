@@ -17,6 +17,7 @@
 #include "band/c/c_api_internal.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
+#include "c_api.h"
 
 namespace {
 
@@ -31,7 +32,7 @@ std::vector<band::interface::ITensor*> BandTensorArrayToVec(
 
 BandStatus ToBandStatus(absl::Status& status) {
   if (status.code() == absl::StatusCode::kInternal) {
-    return kBandError;
+    return kBandErr;
   } else {
     return kBandOk;
   }
@@ -39,7 +40,7 @@ BandStatus ToBandStatus(absl::Status& status) {
 
 BandStatus ToBandStatus(absl::Status&& status) {
   if (status.code() == absl::StatusCode::kInternal) {
-    return kBandError;
+    return kBandErr;
   } else {
     return kBandOk;
   }
@@ -61,6 +62,26 @@ extern "C" {
 #endif  // __cplusplus
 
 BandConfigBuilder* BandConfigBuilderCreate() { return new BandConfigBuilder; }
+
+void BandSetLogSeverity(BandLogSeverity severity) {
+  band::Logger::Get().SetVerbosity(static_cast<band::LogSeverity>(severity));
+}
+
+BandCallbackHandle BandSetLogReporter(void (*reporter)(BandLogSeverity severity,
+                                                       const char* msg)) {
+  std::function<void(band::LogSeverity, const char*)> reporter_invoke =
+      [reporter](band::LogSeverity severity, const char* msg) {
+        reporter(static_cast<BandLogSeverity>(severity), msg);
+      };
+  return band::Logger::Get().SetReporter(reporter_invoke);
+}
+
+void BandUnsetLogReporter(BandCallbackHandle handle) {
+  if (!band::Logger::Get().RemoveReporter(handle).ok()) {
+    BAND_LOG(band::LogSeverity::kWarning,
+             "Failed to remove reporter with handle %d", handle);
+  }
+}
 
 void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
   // TODO(widiba03304): Error handling should be properly done.

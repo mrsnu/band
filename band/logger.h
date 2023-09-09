@@ -18,8 +18,13 @@
 #define BAND_LOGGER_H_
 
 #include <cstdarg>
+#include <functional>
+#include <map>
+#include <string>
 
+#include "absl/status/status.h"
 #include "band/common.h"
+
 
 namespace band {
 /*
@@ -37,13 +42,13 @@ namespace band {
 
 class Logger {
  public:
-  static Logger& GetInstance();
+  static Logger& Get();
 
-  void SetVerbosity(int severity);
-  void SetReporter(
-      std::function<void(LogSeverity, absl::Status, const char*)> reporter);
-  std::tuple<LogSeverity, absl::Status, std::string> GetLastMessage() const;
-  const char* GetSeverityName(LogSeverity severity) const;
+  void SetVerbosity(LogSeverity severity);
+  CallbackId SetReporter(
+      std::function<void(LogSeverity, const char*)> reporter);
+  absl::Status RemoveReporter(CallbackId callback_id);
+  std::pair<LogSeverity, std::string> GetLastMessage() const;
 
   // DebugLog is only enabled in debug mode.
   void DebugLog(const char* format, ...);
@@ -52,18 +57,16 @@ class Logger {
  private:
   void LogFormatted(LogSeverity severity, const char* format, va_list args);
 
-  Logger();
+  Logger() = default;
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
 
-  LogSeverity verbosity = kInfo;
-  std::function<void(LogSeverity, absl::Status, const char*)> reporter;
-  Logger& operator=(const Logger&) = delete;
+  CallbackId next_callback_id_ = 0;
+  std::map<CallbackId, std::function<void(LogSeverity, const char*)>>
+      reporters_;
 
-  LogSeverity verbosity = kInfo;
-
-  std::function<void(LogSeverity, absl::Status, const char*)> reporter;
-  std::tuple<LogSeverity, absl::Status, std::string> last_message;
+  LogSeverity verbosity_ = LogSeverity::kInfo;
+  std::pair<LogSeverity, std::string> last_message_;
 };
 }  // namespace band
 
@@ -73,11 +76,11 @@ class Logger {
   } while (false);
 #else
 #define BAND_LOG_DEBUG(format, ...) \
-  band::Logger::GetInstance().DebugLog(format, ##__VA_ARGS__);
+  band::Logger::Get().DebugLog(format, ##__VA_ARGS__);
 #endif
 
 #define BAND_LOG(severity, format, ...) \
-  band::Logger::GetInstance().Log(severity, format, ##__VA_ARGS__);
+  band::Logger::Get().Log(severity, format, ##__VA_ARGS__);
 
 // Convenience macro for logging a statement *once* for a given process lifetime
 #define BAND_LOG_ONCE(severity, format, ...)    \

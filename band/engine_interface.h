@@ -25,7 +25,7 @@
 #include "absl/status/status.h"
 #include "band/common.h"
 #include "band/config.h"
-#include "band/error_reporter.h"
+#include "band/logger.h"
 
 namespace band {
 namespace interface {
@@ -51,9 +51,7 @@ using JobQueue = std::deque<Job>;
 // Minimal interfaces for Band framework
 class IEngine {
  public:
-  IEngine(ErrorReporter* error_reporeter = DefaultErrorReporter())
-      : error_reporter_(error_reporeter) {}
-
+  IEngine() = default;
   virtual ~IEngine() = default;
 
   virtual absl::Status Init(const RuntimeConfig& config) {
@@ -124,9 +122,6 @@ class IEngine {
       const std::vector<ScheduleAction>& schedule_action) = 0;
 
   /* getters */
-  virtual const ErrorReporter* GetErrorReporter() const {
-    return error_reporter_;
-  }
   virtual const Worker* GetWorker(WorkerId id) const = 0;
   virtual Worker* GetWorker(WorkerId id) = 0;
   virtual size_t GetNumWorkers() const = 0;
@@ -134,9 +129,6 @@ class IEngine {
   /* tensor communication */
   virtual absl::Status TryCopyInputTensors(const Job& job) = 0;
   virtual absl::Status TryCopyOutputTensors(const Job& job) = 0;
-
- protected:
-  ErrorReporter* error_reporter_;
 };
 }  // namespace band
 

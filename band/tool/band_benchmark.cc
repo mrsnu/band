@@ -22,11 +22,11 @@ int main(int argc, const char** argv) {
   if (benchmark.Initialize(argc, argv).ok()) {
     auto status = benchmark.Run();
     if (!status.ok()) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Benchmark failed: %s", status.message());
+      BAND_LOG(LogSeverity::kError, "Benchmark failed: %s", status.message());
       return -1;
     }
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Benchmark failed to initialize");
+    BAND_LOG(LogSeverity::kError, "Benchmark failed to initialize");
     return -1;
   }
   return 0;

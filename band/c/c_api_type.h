@@ -25,16 +25,22 @@
 extern "C" {
 #endif  // __cplusplus
 
+// Verbosity level for logging.
+// By default, only log messages with severity kBandInfo or higher are printed.
+typedef enum BandLogSeverity {
+  kBandInternal = 0,
+  kBandInfo,
+  kBandWarning,
+  kBandError,
+  kBandLogNumSeverities
+} BandLogSeverity;
+
 typedef enum BandBackendType {
   kBandTfLite = 0,
   kBandNumBackendType
 } BandBackendType;
 
-typedef enum BandStatus {
-  kBandOk = 0,
-  kBandError,
-  kBandDelegateError
-} BandStatus;
+typedef enum BandStatus { kBandOk = 0, kBandErr, kBandDelegateErr } BandStatus;
 
 typedef enum BandWorkerType {
   kBandDeviceQueue = 1 << 0,

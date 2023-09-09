@@ -94,17 +94,17 @@ bool Benchmark::ParseArgs(int argc, const char** argv) {
                  "default value: WARNING]"
               << std::endl;
     std::cout << "List of valid verbosity levels:" << std::endl;
-    for (int i = 0; i < BAND_LOG_NUM_SEVERITIES; i++) {
-      std::cout << "\t" << i << " : "
-                << band::Logger::GetSeverityName(static_cast<LogSeverity>(i))
+    for (int i = 0; i < EnumLength<band::LogSeverity>(); i++) {
+      std::cout << "\t" << i << " : " << ToString(static_cast<LogSeverity>(i))
                 << std::endl;
     }
     return false;
   }
   if (argc >= 3) {
-    band::Logger::SetVerbosity(atoi(argv[2]));
+    band::Logger::Get().SetVerbosity(
+        static_cast<LogSeverity>(std::stoi(argv[2])));
   } else {
-    band::Logger::SetVerbosity(BAND_LOG_WARNING);
+    band::Logger::Get().SetVerbosity(LogSeverity::kWarning);
   }
 
   Json::Value json_config = json::LoadFromFile(argv[1]);
@@ -208,8 +208,8 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     std::vector<SchedulerType> schedulers;
     for (auto scheduler : root["schedulers"]) {
       if (!scheduler.isString()) {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
-                      "Please check if given scheduler is valid");
+        BAND_LOG(LogSeverity::kError,
+                 "Please check if given scheduler is valid");
         return false;
       }
       schedulers.push_back(FromString<SchedulerType>(scheduler.asCString()));
@@ -433,7 +433,7 @@ void Benchmark::RunPeriodic() {
         [this](ModelContext* model_context, const size_t period_us) {
           while (true) {
             if (!model_context->PrepareInput().ok()) {
-              BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+              BAND_LOG(LogSeverity::kWarning, "Failed to prepare input");
               continue;
             }
 
@@ -479,7 +479,7 @@ void Benchmark::RunStream() {
 
     for (auto model_context : model_contexts_) {
       if (!model_context->PrepareInput().ok()) {
-        BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+        BAND_LOG(LogSeverity::kWarning, "Failed to prepare input");
         continue;
       }
 

@@ -72,8 +72,8 @@ IBufferOperator::Type ColorSpaceConvert::GetOpType() const {
 IBufferOperator::Type AutoConvert::GetOpType() const { return Type(); }
 
 absl::Status Crop::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(
-      BAND_LOG_INFO, "Crop: %d x %d (%s, %s) -> %d x %d (%s, %s)",
+  BAND_LOG(
+      LogSeverity::kInfo, "Crop: %d x %d (%s, %s) -> %d x %d (%s, %s)",
       input.GetDimension()[0], input.GetDimension()[1],
       ToString(input.GetBufferFormat()), ToString(input.GetDataType()),
       output_->GetDimension()[0], output_->GetDimension()[1],
@@ -151,7 +151,7 @@ absl::Status Crop::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Resize::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(BAND_LOG_INFO, "Resize: %d x %d -> %d x %d",
+  BAND_LOG(LogSeverity::kInfo, "Resize: %d x %d -> %d x %d",
                 input.GetDimension()[0], input.GetDimension()[1],
                 output_->GetDimension()[0], output_->GetDimension()[1]);
   return LibyuvImageOperator::Resize(input, *GetOutput());
@@ -230,7 +230,7 @@ absl::Status Resize::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Rotate::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(BAND_LOG_INFO,
+  BAND_LOG(LogSeverity::kInfo,
                 "Rotate: input dimension: %d x %d, output dimension: %d x "
                 "%d, angle: %d",
                 input.GetDimension()[0], input.GetDimension()[1],
@@ -343,8 +343,8 @@ absl::Status Flip::CreateOutput(const Buffer& input) {
 }
 
 absl::Status ColorSpaceConvert::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(
-      BAND_LOG_INFO, "ColorSpaceConvert: input format: %s, output format: %s",
+  BAND_LOG(
+      LogSeverity::kInfo, "ColorSpaceConvert: input format: %s, output format: %s",
       ToString(input.GetBufferFormat()), ToString(output_->GetBufferFormat()));
 
   return LibyuvImageOperator::ColorSpaceConvert(input, *GetOutput());

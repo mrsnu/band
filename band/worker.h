@@ -64,7 +64,6 @@ class Worker {
   virtual bool HasJob() = 0;
 
  protected:
-  const ErrorReporter* GetErrorReporter() const;
   bool IsValid(Job& job);
   absl::Status TryUpdateWorkerThread();
   void Work();

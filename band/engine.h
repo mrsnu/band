@@ -26,7 +26,6 @@
 #include "band/common.h"
 #include "band/config.h"
 #include "band/engine_interface.h"
-#include "band/error_reporter.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
@@ -67,9 +66,7 @@ typedef std::vector<interface::ITensor*> Tensors;
 class Engine : public IEngine {
  public:
   ~Engine() override;
-  static std::unique_ptr<Engine> Create(
-      const RuntimeConfig& config,
-      ErrorReporter* error_reporter = DefaultErrorReporter());
+  static std::unique_ptr<Engine> Create(const RuntimeConfig& config);
 
   absl::Status RegisterModel(Model* model);
   absl::Status UnregisterModel(Model* model);
@@ -181,8 +178,7 @@ class Engine : public IEngine {
   const interface::IModelExecutor* GetModelExecutor(
       const SubgraphKey& key) const;
 
-  Engine() = delete;
-  Engine(ErrorReporter* error_reporeter);
+  Engine() = default;
   Engine(const Engine&) = delete;
   Engine(const Engine&&) = delete;
   Engine& operator=(const Engine&) = delete;

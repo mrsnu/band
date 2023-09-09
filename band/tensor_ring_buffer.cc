@@ -19,19 +19,15 @@
 #include <mutex>
 
 #include "absl/strings/str_format.h"
-#include "band/error_reporter.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
 #include "band/tensor.h"
 
 namespace band {
 TensorRingBuffer::TensorRingBuffer(
-    ErrorReporter* error_reporter,
     std::vector<std::shared_ptr<interface::ITensor>> tensors,
     std::vector<int> tensor_indices, int size)
-    : error_reporter_(error_reporter),
-      tensors_(new std::vector<interface::ITensor*>[size]),
-      size_(size) {
+    : tensors_(new std::vector<interface::ITensor*>[size]), size_(size) {
   assert(size_ > 0);
   for (size_t i = 0; i < size_; i++) {
     tensors_[i].resize(tensors.size());

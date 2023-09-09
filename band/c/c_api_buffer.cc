@@ -37,7 +37,7 @@ BandStatus BandBufferSetFromRawData(BandBuffer* buffer, const void* data,
   buffer->impl = std::shared_ptr<band::Buffer>(
       band::Buffer::CreateFromRaw(static_cast<const unsigned char*>(data),
                                   width, height, BufferFormat(format)));
-  return buffer->impl ? BandStatus::kBandOk : BandStatus::kBandError;
+  return buffer->impl ? BandStatus::kBandOk : BandStatus::kBandErr;
 }
 
 BandStatus BandBufferSetFromYUVData(BandBuffer* buffer, const void* y_data,
@@ -53,7 +53,7 @@ BandStatus BandBufferSetFromYUVData(BandBuffer* buffer, const void* y_data,
           static_cast<const unsigned char*>(v_data), width, height,
           row_stride_y, row_stride_uv, pixel_stride_uv,
           BufferFormat(buffer_format)));
-  return buffer->impl ? BandStatus::kBandOk : BandStatus::kBandError;
+  return buffer->impl ? BandStatus::kBandOk : BandStatus::kBandErr;
 }
 
 BandImageProcessorBuilder* BandImageProcessorBuilderCreate() {
@@ -83,7 +83,7 @@ BandAddOperator(BandImageProcessorBuilder* builder,
   switch (field) {
     case BandImageProcessorBuilderField::BAND_CROP: {
       if (count != 4) {
-        return BandStatus::kBandError;
+        return BandStatus::kBandErr;
       }
 
       int x0 = va_arg(vl, int);
@@ -96,7 +96,7 @@ BandAddOperator(BandImageProcessorBuilder* builder,
     }
     case BandImageProcessorBuilderField::BAND_RESIZE: {
       if (count != 2) {
-        return BandStatus::kBandError;
+        return BandStatus::kBandErr;
       }
 
       int width = va_arg(vl, int);
@@ -107,7 +107,7 @@ BandAddOperator(BandImageProcessorBuilder* builder,
     }
     case BandImageProcessorBuilderField::BAND_ROTATE: {
       if (count != 1) {
-        return BandStatus::kBandError;
+        return BandStatus::kBandErr;
       }
 
       int angle = va_arg(vl, int);
@@ -116,7 +116,7 @@ BandAddOperator(BandImageProcessorBuilder* builder,
     }
     case BandImageProcessorBuilderField::BAND_FLIP: {
       if (count != 2) {
-        return BandStatus::kBandError;
+        return BandStatus::kBandErr;
       }
 
       bool horizontal = va_arg(vl, int);
@@ -127,7 +127,7 @@ BandAddOperator(BandImageProcessorBuilder* builder,
     }
     case BandImageProcessorBuilderField::BAND_COLOR_SPACE_CONVERT: {
       if (count != 1) {
-        return BandStatus::kBandError;
+        return BandStatus::kBandErr;
       }
 
       int format = va_arg(vl, int);
@@ -137,7 +137,7 @@ BandAddOperator(BandImageProcessorBuilder* builder,
     }
     case BandImageProcessorBuilderField::BAND_NORMALIZE: {
       if (count != 2) {
-        return BandStatus::kBandError;
+        return BandStatus::kBandErr;
       }
 
       float mean = va_arg(vl, double);
@@ -148,7 +148,7 @@ BandAddOperator(BandImageProcessorBuilder* builder,
     }
     case BandImageProcessorBuilderField::BAND_DATA_TYPE_CONVERT: {
       if (count != 0) {
-        return BandStatus::kBandError;
+        return BandStatus::kBandErr;
       }
 
       builder->impl->AddOperation(std::make_unique<buffer::DataTypeConvert>());
@@ -167,7 +167,7 @@ BandStatus BandImageProcessorProcess(BandImageProcessor* image_processor,
       Buffer::CreateFromTensor(target_tensor->impl.get()));
   absl::Status status =
       image_processor->impl->Process(*buffer->impl.get(), *tensor_buffer.get());
-  return status.ok() ? BandStatus::kBandOk : BandStatus::kBandError;
+  return status.ok() ? BandStatus::kBandOk : BandStatus::kBandErr;
 }
 
 void BandImageProcessorDelete(BandImageProcessor* processor) {

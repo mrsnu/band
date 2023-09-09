@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "band/error_reporter.h"
+#include "band/logger.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
 #include "band/time.h"
 
@@ -26,8 +26,7 @@ bool FixedWorkerGlobalQueueScheduler::Schedule(JobQueue& requests) {
     // no device is idle; wait for next iteration
     return success;
   }
-
-  BAND_REPORT_ERROR(DefaultErrorReporter(), "NOT IMPLEMENTED");
+  BAND_NOT_IMPLEMENTED
   return success;
   // for (auto it = engine_.requests_.begin(); it !=
   // engine_.requests_.end();)

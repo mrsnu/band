@@ -24,7 +24,7 @@ void BenchmarkProfiler::EndEvent(size_t event_handle, absl::Status status) {
   } else if (status.code() == absl::StatusCode::kDeadlineExceeded) {
     canceled_events_.insert(event_handle);
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Event %zu failed: %s", event_handle,
+    BAND_LOG(LogSeverity::kError, "Event %zu failed: %s", event_handle,
                   status.message());
   }
 }

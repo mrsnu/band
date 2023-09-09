@@ -116,7 +116,7 @@ TEST_P(CPUMaskFixture, AffinityPropagateTest) {
   LatencyEstimator latency_estimator(&engine);
 
   EXPECT_EQ(latency_estimator.Init(config), absl::OkStatus());
-  // This will be kBandError if affinity propagation fails
+  // This will be kBandErr if affinity propagation fails
   EXPECT_EQ(latency_estimator.ProfileModel(0), absl::OkStatus());
 
   worker.End();

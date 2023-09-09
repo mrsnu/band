@@ -25,7 +25,7 @@ namespace band {
 
 bool GlobalQueueWorker::EnqueueJob(Job& job) {
   if (!IsEnqueueReady()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Worker is not ready to enqueue");
+    BAND_LOG(LogSeverity::kError, "Worker is not ready to enqueue");
     return false;
   }
 

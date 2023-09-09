@@ -104,7 +104,7 @@ Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_build(
       reinterpret_cast<ImageProcessorBuilder*>(imageProcessorBuilderHandle)
           ->Build();
   if (!status.ok()) {
-    BAND_LOG_PROD(band::BAND_LOG_ERROR, "Failed to build ImageProcessor: %s",
+    BAND_LOG(band::LogSeverity::kError, "Failed to build ImageProcessor: %s",
                   status.status().message().data());
     return nullptr;
   } else {

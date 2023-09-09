@@ -267,6 +267,9 @@ const char* ToString(JobStatus job_status) {
 template <>
 const char* ToString(LogSeverity log_severity) {
   switch (log_severity) {
+    case LogSeverity::kInternal: {
+      return "Internal";
+    } break;
     case LogSeverity::kInfo: {
       return "Info";
     } break;

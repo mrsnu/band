@@ -194,9 +194,9 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
       for (auto& keyword : target_keyword.second) {
         if (dev_freq_path_candidate.find(keyword) != std::string::npos) {
           dev_freq_paths_[target_keyword.first] = dev_freq_path_candidate;
-          BAND_LOG_INTERNAL(
-              BAND_LOG_INFO, "Found dev freq path for device %s: %s",
-              ToString(target_keyword.first), dev_freq_path_candidate.c_str());
+          BAND_LOG(LogSeverity::kInfo, "Found dev freq path for device %s: %s",
+                   ToString(target_keyword.first),
+                   dev_freq_path_candidate.c_str());
         }
       }
     }
@@ -230,16 +230,15 @@ std::vector<std::string> ResourceMonitor::GetCpuFreqPaths() const {
     }
     auto cpu_freq_path = GetCpuFreqPath(cpu_mask);
     if (cpu_freq_path.ok()) {
-      BAND_LOG_PROD(BAND_LOG_INFO, "CPU frequency path: %s",
-                    cpu_freq_path.value().c_str());
+      BAND_LOG_DEBUG("CPU frequency path: %s", cpu_freq_path.value().c_str());
       auto pathes = device::ListFilesInPath(cpu_freq_path.value().c_str());
       for (auto& path : pathes) {
         ret.push_back(cpu_freq_path.value() + "/" + path);
       }
     } else {
-      BAND_LOG_PROD(BAND_LOG_INFO,
-                    "CPU frequency path for cpu set %s not found.",
-                    ToString(cpu_mask));
+      BAND_LOG(LogSeverity::kWarning,
+               "CPU frequency path for cpu set %s not found.",
+               ToString(cpu_mask));
     }
   }
   return ret;
@@ -260,9 +259,9 @@ std::vector<std::string> ResourceMonitor::GetDevFreqPaths() const {
         ret.push_back(dev_freq_path.value() + "/" + path);
       }
     } else {
-      BAND_LOG_PROD(BAND_LOG_INFO,
-                    "Device frequency path for device %s not found.",
-                    ToString(device_flag));
+      BAND_LOG(LogSeverity::kWarning,
+               "Device frequency path for device %s not found.",
+               ToString(device_flag));
     }
   }
   return ret;
@@ -612,11 +611,11 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
           thermal_status_[next_head][resource.first] =
               status.value() * resource.second.second;
         } else {
-          BAND_LOG_INTERNAL(
-              BAND_LOG_WARNING,
-              "Failed to read thermal resource %s (%s, %d): %s",
-              ToString(resource.first.first), resource.second.first.c_str(),
-              resource.first.second, status.status().ToString().c_str());
+          BAND_LOG(LogSeverity::kWarning,
+                   "Failed to read thermal resource %s (%s, %d): %s",
+                   ToString(resource.first.first),
+                   resource.second.first.c_str(), resource.first.second,
+                   status.status().ToString().c_str());
         }
       }
 
@@ -627,10 +626,10 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
           cpu_freq_status_[next_head][resource.first] =
               status.value() * resource.second.second;
         } else {
-          BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                            "Failed to read cpu freq resource %s: %s",
-                            resource.second.first.c_str(),
-                            status.status().ToString().c_str());
+          BAND_LOG(LogSeverity::kWarning,
+                   "Failed to read cpu freq resource %s: %s",
+                   resource.second.first.c_str(),
+                   status.status().ToString().c_str());
         }
       }
 
@@ -641,10 +640,10 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
           dev_freq_status_[next_head][resource.first] =
               status.value() * resource.second.second;
         } else {
-          BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                            "Failed to read dev freq resource %s: %s",
-                            resource.second.first.c_str(),
-                            status.status().ToString().c_str());
+          BAND_LOG(LogSeverity::kWarning,
+                   "Failed to read dev freq resource %s: %s",
+                   resource.second.first.c_str(),
+                   status.status().ToString().c_str());
         }
       }
     }
@@ -665,7 +664,6 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
 
     // log to file
     if (log_file_.is_open()) {
-      BAND_LOG_PROD(BAND_LOG_INFO, "Logging resource status.");
       log_file_ << "{\"thermal\": {";
       for (auto& resource : thermal_status_[status_head_]) {
         log_file_ << "\"" << ToString(resource.first.first) << "_"
@@ -684,7 +682,6 @@ void ResourceMonitor::Monitor(size_t interval_ms) {
                   << "\": " << resource.second << ", ";
       }
       log_file_ << "}},";
-      BAND_LOG_INTERNAL(BAND_LOG_INFO, "Resource status logged.");
     }
 
     std::this_thread::sleep_for(
