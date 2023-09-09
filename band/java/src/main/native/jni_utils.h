@@ -72,6 +72,13 @@ T* CastLongToPointer(JNIEnv* env, jlong handle) {
 }
 
 template <typename T>
+T* ConvertJObjectToPointer(JNIEnv* env, const char* cls, jobject object) {
+  JNI_DEFINE_CLS_AND_MTD(ptr, cls, "getNativeHandle", "()J");
+  jlong native_handle = env->CallLongMethod(object, ptr_mtd);
+  return CastLongToPointer<T>(env, native_handle);
+}
+
+template <typename T>
 std::vector<T*> ConvertListToVectorOfPointer(JNIEnv* env, jobject object,
                                              jmethodID mtd) {
   JNI_DEFINE_CLS(list, "java/util/List");

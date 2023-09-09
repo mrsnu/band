@@ -3,7 +3,7 @@ package org.mrsnu.band;
 import java.util.List;
 import java.nio.ByteBuffer;
 
-public class NativeTensorWrapper implements AutoCloseable {
+class NativeTensorWrapper implements AutoCloseable {
   private long nativeHandle = 0;
 
   NativeTensorWrapper(long nativeHandle) {

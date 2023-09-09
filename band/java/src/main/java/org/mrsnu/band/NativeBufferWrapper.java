@@ -19,7 +19,7 @@ package org.mrsnu.band;
 import android.media.Image.Plane;
 import java.nio.ByteBuffer;
 
-public class NativeBufferWrapper implements AutoCloseable {
+class NativeBufferWrapper implements AutoCloseable {
   private long nativeHandle = 0;
 
   NativeBufferWrapper() {
@@ -36,7 +36,7 @@ public class NativeBufferWrapper implements AutoCloseable {
   }
 
   public void setFromTensor(final Tensor tensor) {
-    this.nativeHandle = createFromTensor(tensor.getNativeHandle());
+    this.nativeHandle = createFromTensor(tensor);
   }
 
   public void setFromByteBuffer(
@@ -57,9 +57,9 @@ public class NativeBufferWrapper implements AutoCloseable {
         planes[1].getPixelStride(), bufferFormat.getValue());
   }
 
-  private static native void deleteBuffer(long bufferHandle);
+  private static native void deleteBuffer(long bufferHandle); 
 
-  private static native long createFromTensor(long tensorHandle);
+  private static native long createFromTensor(Object tensorObject);
 
   private static native long createFromByteBuffer(
       final byte[] buffer, int width, int height, int bufferFormat);

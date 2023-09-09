@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NativeModelWrapper implements AutoCloseable {
+class NativeModelWrapper implements AutoCloseable {
   private long nativeHandle = 0;
   private ByteBuffer modelBuffer;
 

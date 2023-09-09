@@ -24,7 +24,7 @@ public class ImageProcessor implements AutoCloseable {
   }
 
   public void process(Buffer srcBuffer, Tensor dstTensor) {
-    process(nativeHandle, srcBuffer.getNativeHandle(), dstTensor.getNativeHandle());
+    process(nativeHandle, srcBuffer, dstTensor);
   }
 
   private long getNativeHandle() {
@@ -37,7 +37,7 @@ public class ImageProcessor implements AutoCloseable {
   }
 
   private native void process(
-    long imageProcessorHandle, long srcBufferHandle, long dstTensorHandle);
+    long imageProcessorHandle, Object srcBufferObject, Object dstTensorObject);
 
   private native void deleteImageProcessor(long imageProcessorHandle);
 }

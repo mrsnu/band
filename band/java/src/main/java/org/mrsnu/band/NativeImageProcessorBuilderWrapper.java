@@ -18,7 +18,7 @@ package org.mrsnu.band;
 
 import java.nio.ByteBuffer;
 
-public class NativeImageProcessorBuilderWrapper implements AutoCloseable {
+class NativeImageProcessorBuilderWrapper implements AutoCloseable {
   private long nativeHandle = 0;
 
   NativeImageProcessorBuilderWrapper() {

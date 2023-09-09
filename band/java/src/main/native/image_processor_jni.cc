@@ -9,14 +9,15 @@ using band::Tensor;
 using namespace band::jni;
 
 extern "C" {
-
 JNIEXPORT void JNICALL Java_org_mrsnu_band_ImageProcessor_process(
-    JNIEnv* env, jclass clazz, jlong imageProcessorHandle, jlong bufferHandle,
-    jlong outputTensorHandle) {
+    JNIEnv* env, jclass clazz, jlong imageProcessorHandle, jobject bufferObject,
+    jobject outputTensorObject) {
   BufferProcessor* processor =
       ConvertLongToBufferProcessor(env, imageProcessorHandle);
-  Buffer* buffer = ConvertLongToBuffer(env, bufferHandle);
-  Tensor* outputTensor = ConvertLongToTensor(env, outputTensorHandle);
+  Buffer* buffer = ConvertJObjectToPointer<Buffer>(env, "org/mrsnu/band/Buffer",
+                                                   bufferObject);
+  Tensor* outputTensor = ConvertJObjectToPointer<Tensor>(
+      env, "org/mrsnu/band/Tensor", outputTensorObject);
   if (processor == nullptr || buffer == nullptr || outputTensor == nullptr) {
     // log error about why
     BAND_LOG_PROD(band::BAND_LOG_ERROR,

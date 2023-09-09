@@ -21,6 +21,7 @@
 
 using band::Buffer;
 using band::Tensor;
+using band::jni::ConvertJObjectToPointer;
 using band::jni::ConvertLongToTensor;
 
 extern "C" {
@@ -33,8 +34,9 @@ JNIEXPORT void JNICALL Java_org_mrsnu_band_NativeBufferWrapper_deleteBuffer(
 JNIEXPORT jlong JNICALL
 Java_org_mrsnu_band_NativeBufferWrapper_createFromTensor(JNIEnv* env,
                                                          jclass clazz,
-                                                         jlong tensorHandle) {
-  Tensor* tensor = ConvertLongToTensor(env, tensorHandle);
+                                                         jobject tensorObject) {
+  Tensor* tensor = ConvertJObjectToPointer<Tensor>(env, "org/mrsnu/band/Tensor",
+                                                   tensorObject);
   Buffer* buffer = Buffer::CreateFromTensor(tensor);
   return reinterpret_cast<jlong>(buffer);
 }
