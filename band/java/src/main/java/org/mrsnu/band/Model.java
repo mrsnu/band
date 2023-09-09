@@ -38,7 +38,7 @@ public class Model {
     return wrapper.getSupportedBackends();
   }
 
-  public long getNativeHandle() {
+  private long getNativeHandle() {
     return wrapper.getNativeHandle();
   }
 }

@@ -67,7 +67,7 @@ public class Tensor {
     wrapper.setQuantization(quantization);
   }
 
-  public long getNativeHandle() {
+  private long getNativeHandle() {
     return wrapper.getNativeHandle();
   }
 }

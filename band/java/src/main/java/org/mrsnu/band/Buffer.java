@@ -43,7 +43,7 @@ public class Buffer {
     wrapper.setFromYUVPlane(planes, width, height, bufferFormat);
   }
 
-  public long getNativeHandle() {
+  private long getNativeHandle() {
     return wrapper.getNativeHandle();
   }
 }

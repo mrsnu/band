@@ -19,7 +19,7 @@ package org.mrsnu.band;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NativeEngineWrapper implements AutoCloseable {
+class NativeEngineWrapper implements AutoCloseable {
   private long nativeHandle = 0;
   private static final int ERROR_BUFFER_SIZE = 512;
 
