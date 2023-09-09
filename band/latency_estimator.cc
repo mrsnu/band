@@ -111,10 +111,10 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
             const int64_t latency =
                 average_profiler
                     .GetAverageElapsedTime<std::chrono::microseconds>();
-            BAND_LOG_DEBUG(,
-                           "Profiled latency of subgraph (%s) in worker "
-                           "%d: %ld us",
-                           subgraph_key.ToString().c_str(), worker_id, latency);
+            BAND_LOG_DEBUG(
+                "Profiled latency of subgraph (%s) in worker "
+                "%d: %ld us",
+                subgraph_key.ToString().c_str(), worker_id, latency);
 
             profile_database_[subgraph_key] = {latency, latency};
           }
@@ -134,7 +134,7 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
       if (model_profile.size() > 0) {
         profile_database_.insert(model_profile.begin(), model_profile.end());
         BAND_LOG_DEBUG(
-            , "Successfully found %d profile entries for model (%s, %d).",
+            "Successfully found %d profile entries for model (%s, %d).",
             model_profile.size(), model_name.c_str(), model_id);
       } else {
         BAND_LOG(LogSeverity::kWarning,
