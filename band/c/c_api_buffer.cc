@@ -40,9 +40,9 @@ void BandBufferDelete(BandBuffer* buffer) {
 BandStatus BandBufferSetFromRawData(BandBuffer* buffer, const void* data,
                                     size_t width, size_t height,
                                     BandBufferFormat format) {
-  if (!buffer || !data || !buffer->impl) {
+  if (!buffer || !data) {
     BAND_LOG(LogSeverity::kError, "BandBuffer (%d) or data (%d) is null",
-             buffer && buffer->impl, data);
+             buffer, data);
     return BandStatus::kBandErr;
   }
 
@@ -58,11 +58,11 @@ BandStatus BandBufferSetFromYUVData(BandBuffer* buffer, const void* y_data,
                                     size_t row_stride_y, size_t row_stride_uv,
                                     size_t pixel_stride_uv,
                                     BandBufferFormat buffer_format) {
-  if (!buffer || !y_data || !u_data || !v_data || !buffer->impl) {
+  if (!buffer || !y_data || !u_data || !v_data) {
     BAND_LOG(LogSeverity::kError,
              "BandBuffer (%d) or y_data (%d) or u_data (%d) or v_data (%d) is "
              "null",
-             buffer && buffer->impl, y_data, u_data, v_data);
+             buffer, y_data, u_data, v_data);
     return BandStatus::kBandErr;
   }
 

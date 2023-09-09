@@ -271,7 +271,7 @@ void BandTensorDelete(BandTensor* tensor) {
 BandDataType BandTensorGetType(BandTensor* tensor) {
   if (!tensor) {
     BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
-    return;
+    return BandDataType::kBandNumDataType;
   }
 
   return static_cast<BandDataType>(tensor->impl->GetType());
@@ -280,7 +280,7 @@ BandDataType BandTensorGetType(BandTensor* tensor) {
 void* BandTensorGetData(BandTensor* tensor) {
   if (!tensor) {
     BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
-    return;
+    return nullptr;
   }
 
   return tensor->impl->GetData();
@@ -289,32 +289,36 @@ void* BandTensorGetData(BandTensor* tensor) {
 size_t BandTensorGetNumDims(BandTensor* tensor) {
   if (!tensor) {
     BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
-    return;
+    return 0;
   }
+
   return tensor->impl->GetNumDims();
 }
 
 const int* BandTensorGetDims(BandTensor* tensor) {
   if (!tensor) {
     BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
-    return;
+    return nullptr;
   }
+
   return tensor->impl->GetDims();
 }
 
 size_t BandTensorGetBytes(BandTensor* tensor) {
   if (!tensor) {
     BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
-    return;
+    return 0;
   }
+
   return tensor->impl->GetBytes();
 }
 
 const char* BandTensorGetName(BandTensor* tensor) {
   if (!tensor) {
     BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
-    return;
+    return nullptr;
   }
+
   return tensor->impl->GetName();
 }
 
@@ -333,7 +337,7 @@ void* BandTensorGetQuantizationParams(BandTensor* tensor) {
     BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
     return nullptr;
   }
-  
+
   return tensor->impl->GetQuantization().GetParams();
 }
 
