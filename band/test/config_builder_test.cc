@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/config_builder.h"
 
 #include <gtest/gtest.h>
@@ -17,27 +31,30 @@ TEST(ConfigBuilderTest, LatencyProfileConfigBuilderTest) {
 
 TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
   PlannerConfigBuilder b;
-  PlannerConfig config_ok = b.AddLogPath("band/test/data/config.json")
-                                .AddScheduleWindowSize(5)
-                                .AddSchedulers({SchedulerType::kFixedWorker})
-                                .Build();
+  auto config = b.AddLogPath("band/test/data/config.json")
+                    .AddScheduleWindowSize(5)
+                    .AddSchedulers({SchedulerType::kFixedWorker})
+                    .Build();
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  PlannerConfig config_ok = config.value();
   EXPECT_EQ(config_ok.log_path, "band/test/data/config.json");
   EXPECT_EQ(config_ok.schedule_window_size, 5);
   EXPECT_EQ(config_ok.cpu_mask, CPUMaskFlag::kAll);
 
   b.AddScheduleWindowSize(-1);
-  EXPECT_FALSE(b.IsValid());
+  EXPECT_FALSE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   WorkerConfigBuilder b;
-  WorkerConfig config_ok =
-      b.AddAllowWorkSteal(false)
-          .AddAvailabilityCheckIntervalMs(1000)
-          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kDSP})
-          .AddCPUMasks({CPUMaskFlag::kAll, CPUMaskFlag::kAll})
-          .AddNumThreads({1, 1})
-          .Build();
+  auto config = b.AddAllowWorkSteal(false)
+                    .AddAvailabilityCheckIntervalMs(1000)
+                    .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kDSP})
+                    .AddCPUMasks({CPUMaskFlag::kAll, CPUMaskFlag::kAll})
+                    .AddNumThreads({1, 1})
+                    .Build();
+  EXPECT_EQ(config.status(), absl::OkStatus());
+  WorkerConfig config_ok = config.value();
   EXPECT_EQ(config_ok.allow_worksteal, false);
   EXPECT_EQ(config_ok.availability_check_interval_ms, 1000);
   EXPECT_EQ(config_ok.workers.size(), 2);
@@ -45,9 +62,10 @@ TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   EXPECT_EQ(config_ok.num_threads.size(), config_ok.workers.size());
 
   b.AddWorkers({DeviceFlag::kCPU});
-  EXPECT_FALSE(b.IsValid());
+
+  EXPECT_FALSE(b.Build().ok());
   b.AddWorkers({DeviceFlag::kCPU, DeviceFlag::kGPU});
-  EXPECT_TRUE(b.IsValid());
+  EXPECT_TRUE(b.Build().ok());
 }
 
 TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
@@ -102,7 +120,7 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.planner_config.log_path, "");
   EXPECT_EQ(config_ok.planner_config.schedulers[0],
             SchedulerType::kFixedWorker);
-  EXPECT_EQ(config_ok.planner_config.schedule_window_size, INT_MAX);
+  EXPECT_EQ(config_ok.planner_config.schedule_window_size, std::numeric_limits<int>::max());
   EXPECT_EQ(config_ok.planner_config.cpu_mask, CPUMaskFlag::kAll);
   EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlag::kCPU);
   EXPECT_EQ(config_ok.worker_config.workers[1], DeviceFlag::kGPU);

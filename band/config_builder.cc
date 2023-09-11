@@ -1,14 +1,27 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/config_builder.h"
 
-#include "config_builder.h"
+#include "band/common.h"
 
 namespace band {
 
 #define REPORT_IF_FALSE(engine, expr)                            \
   do {                                                           \
-    result &= (expr);                                            \
     if (!(expr)) {                                               \
-      BAND_REPORT_ERROR(error_reporter, "[" #engine "] " #expr); \
+      return absl::InvalidArgumentError("[" #engine "] " #expr); \
     }                                                            \
   } while (0);
 
@@ -49,9 +62,7 @@ bool DeviceConfigBuilder::IsValid(
   return result;
 }
 
-bool PlannerConfigBuilder::IsValid(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  bool result = true;
+absl::Status PlannerConfigBuilder::IsValid() {
   REPORT_IF_FALSE(PlannerConfigBuilder, /*log_path_*/ true);  // Always true
   REPORT_IF_FALSE(PlannerConfigBuilder, schedule_window_size_ > 0);
   REPORT_IF_FALSE(PlannerConfigBuilder, schedulers_.size() > 0);
@@ -59,12 +70,10 @@ bool PlannerConfigBuilder::IsValid(
                                             cpu_mask_ == CPUMaskFlag::kLittle ||
                                             cpu_mask_ == CPUMaskFlag::kBig ||
                                             cpu_mask_ == CPUMaskFlag::kPrimary);
-  return result;
+  return absl::OkStatus();
 }
 
-bool WorkerConfigBuilder::IsValid(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  bool result = true;
+absl::Status WorkerConfigBuilder::IsValid() {
   for (int i = 0; i < workers_.size(); i++) {
     REPORT_IF_FALSE(WorkerConfigBuilder, workers_[i] == DeviceFlag::kCPU ||
                                              workers_[i] == DeviceFlag::kGPU ||
@@ -86,7 +95,7 @@ bool WorkerConfigBuilder::IsValid(
   REPORT_IF_FALSE(WorkerConfigBuilder,
                   allow_worksteal_ == true || allow_worksteal_ == false);
   REPORT_IF_FALSE(WorkerConfigBuilder, availability_check_interval_ms_ > 0);
-  return result;
+  return absl::OkStatus();
 }
 
 bool SubgraphConfigBuilder::IsValid(
@@ -119,7 +128,7 @@ bool RuntimeConfigBuilder::IsValid(
   REPORT_IF_FALSE(RuntimeConfigBuilder, worker_config_builder_.IsValid());
   REPORT_IF_FALSE(RuntimeConfigBuilder, subgraph_config_builder_.IsValid());
 
-  return result;
+  return absl::OkStatus();
 }
 
 ProfileConfig ProfileConfigBuilder::Build(
@@ -212,13 +221,9 @@ PlannerConfig PlannerConfigBuilder::Build(
   return planner_config;
 }
 
-WorkerConfig WorkerConfigBuilder::Build(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  // TODO(widiba03304): This should not terminate the program. After employing
-  // abseil, Build() should return error.
-  if (!IsValid(error_reporter)) {
-    abort();
-  }
+absl::StatusOr<WorkerConfig> WorkerConfigBuilder::Build() {
+  RETURN_IF_ERROR(IsValid());
+
   WorkerConfig worker_config;
   worker_config.workers = workers_;
   worker_config.cpu_masks = cpu_masks_;
@@ -242,14 +247,8 @@ SubgraphConfig SubgraphConfigBuilder::Build(
   return subgraph_config;
 }
 
-RuntimeConfig RuntimeConfigBuilder::Build(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  // TODO(widiba03304): This should not terminate the program. After employing
-  // abseil, Build() should return error.
-  if (!IsValid(error_reporter)) {
-    abort();
-  }
-
+absl::StatusOr<RuntimeConfig> RuntimeConfigBuilder::Build() {
+  RETURN_IF_ERROR(IsValid());
   RuntimeConfig runtime_config;
   ProfileConfig profile_config = profile_config_builder_.Build();
   DeviceConfig device_config = device_config_builder_.Build();
@@ -265,5 +264,4 @@ RuntimeConfig RuntimeConfigBuilder::Build(
   runtime_config.subgraph_config = subgraph_config;
   return runtime_config;
 }
-
 }  // namespace band

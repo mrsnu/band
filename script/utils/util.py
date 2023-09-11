@@ -1,3 +1,17 @@
+# Copyright 2023 Seoul National University
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from genericpath import isfile
 import os
 import argparse
@@ -49,7 +63,7 @@ def copy(src, dst):
     dst = canon_path(os.path.join(dst, os.path.basename(src)))
 
     if os.path.isdir(src):
-        shutil.copytree(src, dst)
+        shutil.copytree(src, dst, ignore_dangling_symlinks=True, symlinks=True)
     else:
         try:
             shutil.copy(src, dst)

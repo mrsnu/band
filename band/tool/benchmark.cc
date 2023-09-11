@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/tool/benchmark.h"
 
 #include <algorithm>
@@ -262,12 +276,14 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
   }
 
-  if (!builder.IsValid()) {
-    std::cout << "Please check if given runtime config is valid" << std::endl;
+  auto builder_status = builder.Build();
+  if (builder_status.status() != absl::OkStatus()) {
+    std::cout << "Please check if given runtime config is valid. "
+              << builder_status.status().message() << std::endl;
     return false;
   }
 
-  runtime_config_ = new RuntimeConfig(builder.Build());
+  runtime_config_ = new RuntimeConfig(builder_status.value());
 
   return true;
 }

@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/c/c_api.h"
 
 #include "band/c/c_api_internal.h"
@@ -143,9 +157,12 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
 void BandConfigBuilderDelete(BandConfigBuilder* b) { delete b; }
 
 BandConfig* BandConfigCreate(BandConfigBuilder* b) {
-  // TODO(widiba03304): Error handling is not properly done here.
-  BandConfig* config = new BandConfig(b->impl.Build());
-  return config;
+  auto config = b->impl.Build();
+  if (!config.status().ok()) {
+    return nullptr;
+  } else {
+    return new BandConfig(config.value());
+  }
 }
 
 void BandConfigDelete(BandConfig* config) { delete config; }
@@ -306,11 +323,10 @@ BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
       handle, BandTensorArrayToVec(output_tensors, num_outputs)));
 }
 
-void BandEngineSetOnEndRequest(BandEngine* engine,
-                               void (*on_end_invoke)(void* user_data,
-                                                     int job_id,
-                                                     BandStatus status),
-                               void* user_data) {
+BandCallbackHandle BandEngineSetOnEndRequest(
+    BandEngine* engine,
+    void (*on_end_invoke)(void* user_data, int job_id, BandStatus status),
+    void* user_data) {
   auto user_data_invoke = std::bind(
       on_end_invoke, user_data, std::placeholders::_1, std::placeholders::_2);
   std::function<void(int, absl::Status)> new_on_end_invoke =
@@ -318,6 +334,11 @@ void BandEngineSetOnEndRequest(BandEngine* engine,
         user_data_invoke(job_id, ToBandStatus(status));
       };
   return engine->impl->SetOnEndRequest(new_on_end_invoke);
+}
+
+BandStatus BandEngineUnsetOnEndRequest(BandEngine* engine,
+                                       BandCallbackHandle handle) {
+  return ToBandStatus(engine->impl->UnsetOnEndRequest(handle));
 }
 
 #ifdef __cplusplus

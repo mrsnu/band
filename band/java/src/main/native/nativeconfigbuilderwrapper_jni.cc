@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <jni.h>
 
 #include "band/config_builder.h"
@@ -277,9 +291,14 @@ JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
   static jmethodID config_ctor = env->GetMethodID(config_cls, "<init>", "(J)V");
   RuntimeConfigBuilder* b =
       ConvertLongToConfigBuilder(env, configBuilderHandle);
-  return env->NewObject(
-      config_cls, config_ctor,
-      reinterpret_cast<jlong>(new JNIRuntimeConfig(b->Build())));
+  auto runtime_config = b->Build();
+  if (!runtime_config.ok()) {
+    return nullptr;
+  } else {
+    return env->NewObject(
+        config_cls, config_ctor,
+        reinterpret_cast<jlong>(new JNIRuntimeConfig(runtime_config.value())));
+  }
 }
 
 }  // extern "C"

@@ -1,3 +1,17 @@
+// Copyright 2023 Seoul National University
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "band/engine.h"
 
 #include <algorithm>
@@ -182,7 +196,6 @@ absl::Status Engine::RegisterModel(Model* model) {
                   absl::StrFormat("Output format is not correct for worker %d",
                                   subgraph_def.worker_id));
             }
-
             unit_subgraphs_to_subgraph_keys_
                 [model_id][*subgraph_def.unit_subgraph_indices.begin()]
                 [*subgraph_def.unit_subgraph_indices.rbegin()]
@@ -495,9 +508,13 @@ absl::Status Engine::GetOutputTensors(JobId job_id, Tensors outputs) {
   return absl::OkStatus();
 }
 
-void Engine::SetOnEndRequest(
+CallbackId Engine::SetOnEndRequest(
     std::function<void(int, absl::Status)> on_end_request) {
-  planner_->SetOnEndRequest(on_end_request);
+  return planner_->SetOnEndRequest(on_end_request);
+}
+
+absl::Status Engine::UnsetOnEndRequest(CallbackId callback_id) {
+  return planner_->UnsetOnEndRequest(callback_id);
 }
 
 absl::Status Engine::Init(const RuntimeConfig& config) {
@@ -688,9 +705,9 @@ bool Engine::HasSubgraph(const SubgraphKey& key) const {
 }
 
 void Engine::ForEachSubgraph(
-    std::function<void(const SubgraphKey&)> iterator) const {
+    std::function<void(const SubgraphKey&)> visitor) const {
   for (auto& model_executor : model_executors_) {
-    model_executor.second->ForEachSubgraph(iterator);
+    model_executor.second->ForEachSubgraph(visitor);
   }
 }
 
@@ -834,6 +851,7 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
       // Search from the profile result of the unit subgraph.
       const auto& subgraph_keys =
           unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).at(j);
+
       int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
       std::pair<SubgraphKey, double> target_pair =
           GetMinCostSubgraphKey(subgraph_keys, start, worker_waiting, cost);

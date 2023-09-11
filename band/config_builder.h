@@ -1,9 +1,27 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef BAND_CONFIG_BUILDER_H_
 #define BAND_CONFIG_BUILDER_H_
 
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "band/common.h"
 #include "band/config.h"
 #include "band/device/cpu.h"
@@ -197,7 +215,9 @@ class PlannerConfigBuilder {
     return *this;
   }
   PlannerConfigBuilder& AddSchedulers(std::vector<SchedulerType> schedulers) {
-    schedulers_ = schedulers;
+    if (schedulers.size() != 0) {
+      schedulers_ = schedulers;
+    }
     return *this;
   }
   PlannerConfigBuilder& AddCPUMask(CPUMaskFlag cpu_mask) {
@@ -209,11 +229,12 @@ class PlannerConfigBuilder {
     return *this;
   }
 
-  PlannerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<PlannerConfig> Build();
 
  private:
-  int schedule_window_size_ = INT_MAX;
+  absl::Status IsValid();
+
+  int schedule_window_size_ = std::numeric_limits<int>::max();
   std::vector<SchedulerType> schedulers_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";
@@ -233,15 +254,21 @@ class WorkerConfigBuilder {
     num_threads_ = std::vector<int>(EnumLength<DeviceFlag>(), 1);
   }
   WorkerConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
-    workers_ = workers;
+    if (workers.size() != 0) {
+      workers_ = workers;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddCPUMasks(std::vector<CPUMaskFlag> cpu_masks) {
-    cpu_masks_ = cpu_masks;
+    if (cpu_masks.size() != 0) {
+      cpu_masks_ = cpu_masks;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddNumThreads(std::vector<int> num_threads) {
-    num_threads_ = num_threads;
+    if (num_threads.size() != 0) {
+      num_threads_ = num_threads;
+    }
     return *this;
   }
   WorkerConfigBuilder& AddAllowWorkSteal(bool allow_worksteal) {
@@ -253,10 +280,11 @@ class WorkerConfigBuilder {
     availability_check_interval_ms_ = availability_check_interval_ms;
     return *this;
   }
-  WorkerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<WorkerConfig> Build();
 
  private:
+  absl::Status IsValid();
+
   std::vector<DeviceFlag> workers_;
   std::vector<CPUMaskFlag> cpu_masks_;
   std::vector<int> num_threads_;
@@ -437,10 +465,11 @@ class RuntimeConfigBuilder {
     return *this;
   }
 
-  RuntimeConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
+  absl::StatusOr<RuntimeConfig> Build();
 
  private:
+  absl::Status IsValid();
+
   ProfileConfigBuilder profile_config_builder_;
   DeviceConfigBuilder device_config_builder_;
   PlannerConfigBuilder planner_config_builder_;

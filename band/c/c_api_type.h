@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 Seoul National University
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef BAND_C_C_TYPE_H_
 #define BAND_C_C_TYPE_H_
 
@@ -11,13 +27,13 @@ extern "C" {
 
 typedef enum BandBackendType {
   kBandTfLite = 0,
-  kBandNumBackendType = 1
+  kBandNumBackendType
 } BandBackendType;
 
 typedef enum BandStatus {
   kBandOk = 0,
-  kBandError = 1,
-  kBandDelegateError = 2
+  kBandError,
+  kBandDelegateError
 } BandStatus;
 
 typedef enum BandWorkerType {
@@ -39,18 +55,18 @@ typedef enum BandSchedulerType {
 
 typedef enum BandCPUMaskFlag {
   kBandAll = 0,
-  kBandLittle = 1,
-  kBandBig = 2,
-  kBandPrimary = 3,
-  kBandNumCpuMask = 4
+  kBandLittle,
+  kBandBig,
+  kBandPrimary,
+  kBandNumCpuMask
 } BandCPUMaskFlag;
 
 typedef enum BandSubgraphPreparationType {
   kBandNoFallbackSubgraph = 0,
-  kBandFallbackPerWorker = 1,
-  kBandUnitSubgraph = 2,
-  kBandMergeUnitSubgraph = 3,
-  kBandNumSubgraphPreparationType = 4,
+  kBandFallbackPerWorker,
+  kBandUnitSubgraph,
+  kBandMergeUnitSubgraph,
+  kBandNumSubgraphPreparationType
 } BandSubgraphPreparationType;
 
 // Single-precision complex data type compatible with the C99 definition.
@@ -66,33 +82,33 @@ typedef struct BandFloat16 {
 // Types supported by tensor
 typedef enum {
   kBandNoType = 0,
-  kBandFloat32 = 1,
-  kBandInt32 = 2,
-  kBandUInt8 = 3,
-  kBandInt64 = 4,
-  kBandString = 5,
-  kBandBool = 6,
-  kBandInt16 = 7,
-  kBandComplex64 = 8,
-  kBandInt8 = 9,
-  kBandFloat16 = 10,
-  kBandFloat64 = 11,
-  kBandNumDataType = 12,
+  kBandFloat32,
+  kBandInt32,
+  kBandUInt8,
+  kBandInt64,
+  kBandString,
+  kBandBool,
+  kBandInt16,
+  kBandComplex64,
+  kBandInt8,
+  kBandFloat16,
+  kBandFloat64,
+  kBandNumDataType,
 } BandDataType;
 
 typedef enum {
   // image format
   kBandGrayScale = 0,
-  kBandRGB = 1,
-  kBandRGBA = 2,
-  kBandYV12 = 3,
-  kBandYV21 = 4,
-  kBandNV21 = 5,
-  kBandNV12 = 6,
+  kBandRGB,
+  kBandRGBA,
+  kBandYV12,
+  kBandYV21,
+  kBandNV21,
+  kBandNV12,
   // raw format, from tensor
   // internal format follows DataType
-  kBandRaw = 7,
-  kBandNumBufferFormat = 8,
+  kBandRaw,
+  kBandNumBufferFormat,
 } BandBufferFormat;
 
 // Buffer content orientation follows EXIF specification. The name of
@@ -101,14 +117,14 @@ typedef enum {
 // details.
 typedef enum {
   kBandTopLeft = 1,
-  kBandTopRight = 2,
-  kBandBottomRight = 3,
-  kBandBottomLeft = 4,
-  kBandLeftTop = 5,
-  kBandRightTop = 6,
-  kBandRightBottom = 7,
-  kBandLeftBottom = 8,
-  kBandNumBufferOrientation = 9,
+  kBandTopRight,
+  kBandBottomRight,
+  kBandBottomLeft,
+  kBandLeftTop,
+  kBandRightTop,
+  kBandRightBottom,
+  kBandLeftBottom,
+  kBandNumBufferOrientation,
 } BandBufferOrientation;
 
 // Supported Quantization Types.
@@ -117,17 +133,17 @@ typedef enum BandQuantizationType {
   kBandNoQuantization = 0,
   // Affine quantization (with support for per-channel quantization).
   // Corresponds to BandAffineQuantization.
-  kBandAffineQuantization = 1,
+  kBandAffineQuantization1,
 } BandQuantizationType;
 
 // TODO #23, #30
 // Add additional devices for HTA, NPU
 typedef enum BandDeviceFlag {
   kBandCPU = 0,
-  kBandGPU = 1,
-  kBandDSP = 2,
-  kBandNPU = 3,
-  kBandNumDeviceFlag = 4,
+  kBandGPU,
+  kBandDSP,
+  kBandNPU,
+  kBandNumDeviceFlag,
 } BandDeviceFlag;
 
 typedef enum BandConfigField {
@@ -152,12 +168,12 @@ typedef enum BandConfigField {
 
 typedef enum BandImageProcessorBuilderField {
   BAND_CROP = 0,
-  BAND_RESIZE = 1,
-  BAND_ROTATE = 2,
-  BAND_FLIP = 3,
-  BAND_COLOR_SPACE_CONVERT = 4,
-  BAND_NORMALIZE = 5,
-  BAND_DATA_TYPE_CONVERT = 6,
+  BAND_RESIZE,
+  BAND_ROTATE,
+  BAND_FLIP,
+  BAND_COLOR_SPACE_CONVERT,
+  BAND_NORMALIZE,
+  BAND_DATA_TYPE_CONVERT
 } BandImageProcessorBuilderField;
 
 typedef struct BandRequestOption {
