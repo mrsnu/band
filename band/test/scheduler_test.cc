@@ -284,7 +284,7 @@ TEST_P(ModelLevelWithLatencyTestsFixture, ShortestExepectedLatencyRequestTests) 
     return a.expected_latency > b.expected_latency;
   });
 
-  MockContext context(available_workers);
+  MockEngine context(available_workers);
   ShortestExpectedLatencyScheduler sel_scheduler(context, std::min(window_size, requests.size()));
   sel_scheduler.Schedule(requests);
 
@@ -328,7 +328,7 @@ TEST_P(HeftFixture, HEFTRequestTests) {
 
   const int count_requests = requests.size();
 
-  MockContext context(available_workers);
+  MockEngine context(available_workers);
   HEFTScheduler heft_scheduler(context, std::min(window_size, requests.size()), reserve);
   heft_scheduler.Schedule(requests);
 
