@@ -16,29 +16,28 @@
 
 package org.mrsnu.band;
 
-import java.nio.ByteBuffer;
-import java.util.List;
+public class ImageProcessor implements AutoCloseable {
+  private long nativeHandle = 0;
 
-public class Model {
-  private NativeModelWrapper wrapper;
-  
-  public Model(BackendType backendType, String filePath) {
-    Band.init();
-    wrapper = new NativeModelWrapper();
-    wrapper.loadFromFile(backendType, filePath);
-  }
-  
-  public Model(BackendType backendType, ByteBuffer modelBuffer) {
-    Band.init();
-    wrapper = new NativeModelWrapper();
-    wrapper.loadFromBuffer(backendType, modelBuffer);
+  private ImageProcessor(long nativeHandle) {
+    this.nativeHandle = nativeHandle;
   }
 
-  public List<BackendType> getSupportedBackends() {
-    return wrapper.getSupportedBackends();
+  public void process(Buffer srcBuffer, Tensor dstTensor) {
+    process(nativeHandle, srcBuffer, dstTensor);
   }
 
   private long getNativeHandle() {
-    return wrapper.getNativeHandle();
+    return nativeHandle;
   }
+
+  @Override
+  public void close() {
+    deleteImageProcessor(nativeHandle);
+  }
+
+  private native void process(
+    long imageProcessorHandle, Object srcBufferObject, Object dstTensorObject);
+
+  private native void deleteImageProcessor(long imageProcessorHandle);
 }

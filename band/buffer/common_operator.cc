@@ -131,10 +131,10 @@ absl::Status Normalize::ValidateOutput(const Buffer& input) const {
     if (input.GetBufferFormat() != output_->GetBufferFormat()) {
       return absl::InvalidArgumentError(
           absl::StrFormat("input buffer should have the same format as output "
-                          "buffer, but input format is %d and output format is "
-                          "%d.",
-                          static_cast<int>(input.GetBufferFormat()),
-                          static_cast<int>(output_->GetBufferFormat())));
+                          "buffer, but input format is %s and output format is "
+                          "%s.",
+                          ToString(input.GetBufferFormat()),
+                          ToString(output_->GetBufferFormat())));
     }
 
     if (input.GetDimension() != output_->GetDimension()) {
@@ -151,9 +151,9 @@ absl::Status Normalize::ValidateOutput(const Buffer& input) const {
 
 absl::Status Normalize::CreateOutput(const Buffer& input) {
   if (!inplace_) {
-    output_ =
-        Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                            input.GetBufferFormat(), input.GetOrientation());
+    output_ = Buffer::CreateEmpty(
+        input.GetDimension()[0], input.GetDimension()[1],
+        input.GetBufferFormat(), input.GetDataType(), input.GetOrientation());
   }
 
   return absl::Status();

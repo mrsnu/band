@@ -55,16 +55,6 @@ band::Quantization ConvertQuantizationToNative(JNIEnv* env,
               env->CallLongMethod(quantization, quant_get_param_mtd))};
 }
 
-// jbyteArray ConvertNativeToByteArray(JNIEnv* env, int bytes, const char* data)
-// {
-//   jbyteArray arr = env->NewByteArray(bytes);
-//   // Note: Maybe JNI uses `signed char` to represent bytes. It can be
-//   // problematic if arithmetic operations are performed on the data.
-//   env->SetByteArrayRegion(arr, 0, bytes,
-//                           reinterpret_cast<const signed char*>(data));
-//   return arr;
-// }
-
 jintArray ConvertNativeToIntArray(JNIEnv* env, int length, const int* array) {
   jintArray arr = env->NewIntArray(length);
   env->SetIntArrayRegion(arr, 0, length, array);

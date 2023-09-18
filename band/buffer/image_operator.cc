@@ -72,9 +72,12 @@ IBufferOperator::Type ColorSpaceConvert::GetOpType() const {
 IBufferOperator::Type AutoConvert::GetOpType() const { return Type(); }
 
 absl::Status Crop::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(BAND_LOG_INFO, "Crop: %d x %d -> %d x %d",
-                input.GetDimension()[0], input.GetDimension()[1],
-                output_->GetDimension()[0], output_->GetDimension()[1]);
+  BAND_LOG_PROD(
+      BAND_LOG_INFO, "Crop: %d x %d (%s, %s) -> %d x %d (%s, %s)",
+      input.GetDimension()[0], input.GetDimension()[1],
+      ToString(input.GetBufferFormat()), ToString(input.GetDataType()),
+      output_->GetDimension()[0], output_->GetDimension()[1],
+      ToString(output_->GetBufferFormat()), ToString(output_->GetDataType()));
 
   return LibyuvImageOperator::Crop(input, x0_, y0_, x1_, y1_, *GetOutput());
 }
@@ -99,6 +102,11 @@ absl::Status Crop::ValidateInput(const Buffer& input) const {
     return absl::InvalidArgumentError("Crop: crop region is out of bounds.");
   }
 
+  if (input.GetDataType() != DataType::kUInt8) {
+    return absl::InvalidArgumentError(
+        "Crop: only UInt8 data type is supported.");
+  }
+
   return absl::OkStatus();
 }  // namespace buffer
 
@@ -109,6 +117,13 @@ absl::Status Crop::ValidateOutput(const Buffer& input) const {
                         "compatible. %s vs %s",
                         ToString(input.GetBufferFormat()),
                         ToString(output_->GetBufferFormat())));
+  }
+
+  if (input.GetDataType() != output_->GetDataType()) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Crop: output buffer data type is not "
+        "compatible. %s vs %s",
+        ToString(input.GetDataType()), ToString(output_->GetDataType())));
   }
 
   const std::vector<size_t> crop_dimension =
@@ -129,9 +144,9 @@ absl::Status Crop::ValidateOutput(const Buffer& input) const {
 absl::Status Crop::CreateOutput(const Buffer& input) {
   const std::vector<size_t> crop_dimension =
       Buffer::GetCropDimension(x0_, x1_, y0_, y1_);
-  output_ =
-      Buffer::CreateEmpty(crop_dimension[0], crop_dimension[1],
-                          input.GetBufferFormat(), input.GetOrientation());
+  output_ = Buffer::CreateEmpty(crop_dimension[0], crop_dimension[1],
+                                input.GetBufferFormat(), input.GetDataType(),
+                                input.GetOrientation());
   return absl::OkStatus();
 }
 
@@ -160,6 +175,11 @@ absl::Status Resize::ValidateOutput(const Buffer& input) const {
     return absl::InvalidArgumentError(
         "Resize: input and output buffer dimensions "
         "are the same.");
+  }
+
+  if (!input.IsBufferFormatCompatible(*output_)) {
+    return absl::InvalidArgumentError(
+        "Resize: input and output buffer formats are not compatible.");
   }
 
   switch (input.GetBufferFormat()) {
@@ -205,7 +225,7 @@ absl::Status Resize::CreateOutput(const Buffer& input) {
   }
 
   output_ = Buffer::CreateEmpty(dims_[0], dims_[1], input.GetBufferFormat(),
-                                input.GetOrientation());
+                                input.GetDataType(), input.GetOrientation());
   return absl::OkStatus();
 }
 
@@ -261,7 +281,7 @@ absl::Status Rotate::CreateOutput(const Buffer& input) {
       is_dimension_change ? input.GetDimension()[0] : input.GetDimension()[1];
 
   output_ = Buffer::CreateEmpty(width, height, input.GetBufferFormat(),
-                                input.GetOrientation());
+                                input.GetDataType(), input.GetOrientation());
   return absl::OkStatus();
 }
 
@@ -311,14 +331,14 @@ absl::Status Flip::ValidateOutput(const Buffer& input) const {
 
 absl::Status Flip::CreateOutput(const Buffer& input) {
   if (horizontal_ && vertical_) {
-    intermediate_buffer_ =
-        Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                            input.GetBufferFormat(), input.GetOrientation());
+    intermediate_buffer_ = Buffer::CreateEmpty(
+        input.GetDimension()[0], input.GetDimension()[1],
+        input.GetBufferFormat(), input.GetDataType(), input.GetOrientation());
   }
 
-  output_ =
-      Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                          input.GetBufferFormat(), input.GetOrientation());
+  output_ = Buffer::CreateEmpty(
+      input.GetDimension()[0], input.GetDimension()[1], input.GetBufferFormat(),
+      input.GetDataType(), input.GetOrientation());
   return absl::Status();
 }
 
@@ -369,9 +389,15 @@ absl::Status ColorSpaceConvert::CreateOutput(const Buffer& input) {
     return absl::InvalidArgumentError(
         "Convert: output buffer format is not set.");
   } else {
+    DataType data_type = input.GetDataType();
+
+    if (Buffer::IsYUV(output_format_)) {
+      data_type = DataType::kUInt8;
+    }
+
     output_ =
         Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
-                            output_format_, input.GetOrientation());
+                            output_format_, data_type, input.GetOrientation());
   }
 
   return absl::OkStatus();
@@ -416,58 +442,83 @@ absl::Status AutoConvert::ValidateInput(const Buffer& input) const {
 }
 
 absl::Status AutoConvert::ValidateOutput(const Buffer& input) const {
-  Buffer const* current = &input;
   if (RequiresColorSpaceConvert(input)) {
     if (!color_space_convert_.GetOutput()) {
       return absl::InvalidArgumentError(
           "color_space_convert_ output is nullptr.");
     }
-
-    RETURN_IF_ERROR(color_space_convert_.ValidateOutput(input));
-    current = color_space_convert_.GetOutput();
   }
 
-  if (RequiresResize(*current)) {
+  if (RequiresResize(input)) {
     if (!resize_.GetOutput()) {
       return absl::InvalidArgumentError("resize_ output is nullptr.");
     }
-
-    RETURN_IF_ERROR(resize_.ValidateOutput(*current));
-    current = resize_.GetOutput();
   }
 
-  if (RequiresDataTypeConvert(*current)) {
-    RETURN_IF_ERROR(data_type_convert_.ValidateOutput(*current));
+  if (RequiresDataTypeConvert(input)) {
+    if (!data_type_convert_.GetOutput()) {
+      return absl::InvalidArgumentError(
+          "data_type_convert_ output is nullptr.");
+    }
   }
-
-  return absl::Status();
+  return absl::OkStatus();
 }
 
 absl::Status AutoConvert::CreateOutput(const Buffer& input) {
   IBufferOperator* last_operation = nullptr;
 
-  Buffer const* current = &input;
-  if (RequiresColorSpaceConvert(input)) {
-    color_space_convert_ = ColorSpaceConvert(output_->GetBufferFormat());
-    RETURN_IF_ERROR(color_space_convert_.CreateOutput(*current));
-    current = color_space_convert_.GetOutput();
-    last_operation = &color_space_convert_;
+  {
+    Buffer const* current = &input;
+    if (RequiresColorSpaceConvert(input)) {
+      color_space_convert_ = ColorSpaceConvert(output_->GetBufferFormat());
+      RETURN_IF_ERROR(color_space_convert_.CreateOutput(*current));
+      current = color_space_convert_.GetOutput();
+      last_operation = &color_space_convert_;
+    }
+
+    if (RequiresResize(*current)) {
+      resize_ = Resize(output_->GetDimension()[0], output_->GetDimension()[1]);
+      RETURN_IF_ERROR(resize_.CreateOutput(*current));
+      current = resize_.GetOutput();
+      last_operation = &resize_;
+    }
+
+    if (RequiresDataTypeConvert(*current)) {
+      data_type_convert_ = DataTypeConvert();
+      last_operation = &data_type_convert_;
+    }
+
+    if (last_operation) {
+      last_operation->SetOutput(output_);
+    }
   }
 
-  if (RequiresResize(*current)) {
-    resize_ = Resize(output_->GetDimension()[0], output_->GetDimension()[1]);
-    RETURN_IF_ERROR(resize_.CreateOutput(*current));
-    current = resize_.GetOutput();
-    last_operation = &resize_;
-  }
+  // auto convert must lazily validate the output buffer,
+  // since the output buffer is not created until the input buffer is given.
+  {
+    Buffer const* current = &input;
+    if (RequiresColorSpaceConvert(input)) {
+      if (!color_space_convert_.GetOutput()) {
+        return absl::InvalidArgumentError(
+            "color_space_convert_ output is nullptr.");
+      }
 
-  if (RequiresDataTypeConvert(*current)) {
-    data_type_convert_ = DataTypeConvert();
-    last_operation = &data_type_convert_;
-  }
+      RETURN_IF_ERROR(color_space_convert_.ValidateOutput(input));
+      current = color_space_convert_.GetOutput();
+    }
 
-  if (last_operation) {
-    last_operation->SetOutput(output_);
+    if (RequiresResize(*current)) {
+      if (!resize_.GetOutput()) {
+        return absl::InvalidArgumentError("resize_ output is nullptr.");
+      }
+
+      RETURN_IF_ERROR(resize_.ValidateOutput(*current));
+      current = resize_.GetOutput();
+    }
+
+    if (RequiresDataTypeConvert(*current)) {
+      RETURN_IF_ERROR(data_type_convert_.ValidateOutput(*current));
+    }
   }
 
   return absl::OkStatus();

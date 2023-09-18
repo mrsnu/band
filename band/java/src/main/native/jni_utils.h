@@ -19,6 +19,8 @@
 
 #include <jni.h>
 
+#include "band/buffer/buffer.h"
+#include "band/buffer/image_processor.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
@@ -87,6 +89,13 @@ T* CastLongToPointer(JNIEnv* env, jlong handle) {
 }
 
 template <typename T>
+T* ConvertJObjectToPointer(JNIEnv* env, const char* cls, jobject object) {
+  JNI_DEFINE_CLS_AND_MTD(ptr, cls, "getNativeHandle", "()J");
+  jlong native_handle = env->CallLongMethod(object, ptr_mtd);
+  return CastLongToPointer<T>(env, native_handle);
+}
+
+template <typename T>
 std::vector<T*> ConvertListToVectorOfPointer(JNIEnv* env, jobject object,
                                              jmethodID mtd) {
   JNI_DEFINE_CLS(list, "java/util/List");
@@ -114,6 +123,10 @@ RuntimeConfig* ConvertLongToConfig(JNIEnv* env, jlong handle);
 Model* ConvertLongToModel(JNIEnv* env, jlong handle);
 
 Tensor* ConvertLongToTensor(JNIEnv* env, jlong handle);
+
+Buffer* ConvertLongToBuffer(JNIEnv* env, jlong handle);
+
+BufferProcessor* ConvertLongToBufferProcessor(JNIEnv* env, jlong handle);
 
 int ConvertLongToJobId(jint request_handle);
 

@@ -17,6 +17,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "jni_utils.h"
+
 namespace band {
 namespace jni {
 
@@ -110,6 +112,14 @@ Model* ConvertLongToModel(JNIEnv* env, jlong handle) {
 
 Tensor* ConvertLongToTensor(JNIEnv* env, jlong handle) {
   return CastLongToPointer<Tensor>(env, handle);
+}
+
+Buffer* ConvertLongToBuffer(JNIEnv* env, jlong handle) {
+  return CastLongToPointer<Buffer>(env, handle);
+}
+
+BufferProcessor* ConvertLongToBufferProcessor(JNIEnv* env, jlong handle) {
+  return CastLongToPointer<BufferProcessor>(env, handle);
 }
 
 int ConvertLongToJobId(jint request_handle) {

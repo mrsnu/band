@@ -37,13 +37,14 @@ Buffer* Buffer::CreateFromPlanes(const std::vector<DataPlane>& data_planes,
 
 Buffer* Buffer::CreateFromRaw(const unsigned char* data, size_t width,
                               size_t height, BufferFormat buffer_format,
-                              BufferOrientation orientation, bool owns_data) {
+                              DataType data_type, BufferOrientation orientation,
+                              bool owns_data) {
   if (buffer_format <= BufferFormat::kRGBA) {
     return new Buffer(std::vector<size_t>{width, height},
                       std::vector<DataPlane>{
                           {data, width * GetNumPixelElements(buffer_format),
                            GetNumPixelElements(buffer_format)}},
-                      buffer_format, DataType::kUInt8, orientation, owns_data);
+                      buffer_format, data_type, orientation, owns_data);
   }
 
   switch (buffer_format) {
@@ -165,42 +166,48 @@ Buffer* Buffer::CreateFromTensor(const interface::ITensor* tensor) {
 }
 
 Buffer* Buffer::CreateEmpty(size_t width, size_t height,
-                            BufferFormat buffer_format,
+                            BufferFormat buffer_format, DataType data_type,
                             BufferOrientation orientation) {
   size_t total_bytes = GetSize({width, height});
 
-  switch (buffer_format) {
-    case BufferFormat::kGrayScale:
-    case BufferFormat::kRGB:
-    case BufferFormat::kRGBA: {
-      // pixel stride bytes
-      total_bytes *= GetNumPixelElements(buffer_format);
-      break;
+  if (buffer_format == BufferFormat::kRGB ||
+      buffer_format == BufferFormat::kRGBA) {
+    total_bytes *= GetNumPixelElements(buffer_format);
+    // custom format type has only one data plane
+    return CreateFromRaw(new unsigned char[total_bytes], width, height,
+                         buffer_format, data_type, orientation, true);
+  } else {
+    switch (buffer_format) {
+      case BufferFormat::kGrayScale: {
+        // pixel stride bytes
+        total_bytes *= GetNumPixelElements(buffer_format);
+        break;
+      }
+
+      case BufferFormat::kNV21:
+      case BufferFormat::kNV12:
+      case BufferFormat::kYV21:
+      case BufferFormat::kYV12: {
+        // uv plane has 2 bytes per pixel
+        total_bytes += GetSize(GetUvDims({width, height}, buffer_format)) * 2;
+        break;
+      }
+
+      case BufferFormat::kRaw: {
+        BAND_LOG_PROD(BAND_LOG_ERROR,
+                      "Raw format type requires external input to create "
+                      "empty buffer");
+        return nullptr;
+      }
+      default:
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
+                      ToString(buffer_format));
+        return nullptr;
     }
 
-    case BufferFormat::kNV21:
-    case BufferFormat::kNV12:
-    case BufferFormat::kYV21:
-    case BufferFormat::kYV12: {
-      // uv plane has 2 bytes per pixel
-      total_bytes += GetSize(GetUvDims({width, height}, buffer_format)) * 2;
-      break;
-    }
-
-    case BufferFormat::kRaw: {
-      BAND_LOG_PROD(BAND_LOG_ERROR,
-                    "Raw format type requires external input to create "
-                    "empty buffer");
-      return nullptr;
-    }
-    default:
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
-                    ToString(buffer_format));
-      return nullptr;
+    return CreateFromRaw(new unsigned char[total_bytes], width, height,
+                         buffer_format, DataType::kUInt8, orientation, true);
   }
-
-  return CreateFromRaw(new unsigned char[total_bytes], width, height,
-                       buffer_format, orientation, true);
 }
 
 Buffer::Buffer(std::vector<size_t> dimension,
@@ -369,6 +376,10 @@ bool Buffer::IsYUV(BufferFormat buffer_format) {
 }
 
 bool Buffer::IsBufferFormatCompatible(const Buffer& rhs) const {
+  if (data_type_ != rhs.data_type_) {
+    return false;
+  }
+
   switch (buffer_format_) {
     case BufferFormat::kRGB:
     case BufferFormat::kRGBA:
