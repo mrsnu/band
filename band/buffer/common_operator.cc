@@ -32,7 +32,7 @@ void NormalizeFromTo(const Buffer& input, Buffer* output, float mean,
   for (int i = 0; i < input.GetNumElements(); ++i) {
     output_data[i] = static_cast<OutputType>((input_data[i] - mean)) / std;
   }
-  BAND_LOG(LogSeverity::kInfo, "Normalize: %s %s %f %f",
+  BAND_LOG(LogSeverity::kInternal, "Normalize: %s %s %f %f",
                 ToString(input.GetDataType()), ToString(output->GetDataType()),
                 mean, std);
 }
