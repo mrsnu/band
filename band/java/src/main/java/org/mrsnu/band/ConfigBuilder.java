@@ -30,7 +30,6 @@ public class ConfigBuilder {
 
   public void addNumWarmups(int numWarmups) {
     wrapper.addNumWarmups(numWarmups);
-    ;
   }
 
   public void addNumRuns(int numRuns) {
