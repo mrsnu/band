@@ -78,7 +78,7 @@ absl::Status Worker::UpdateWorkerThread(const CpuSet thread_affinity_mask,
 void Worker::WaitUntilDeviceAvailable(SubgraphKey& subgraph) {
   while (true) {
     time::SleepForMicros(1000 * availability_check_interval_ms_);
-    BAND_LOG(LogSeverity::kInfo, "Availability check at %d ms.",
+    BAND_LOG(LogSeverity::kInternal, "Availability check at %d ms.",
              time::NowMicros());
     if (engine_->Invoke(subgraph).ok()) {
       return;
@@ -249,7 +249,7 @@ void Worker::Work() {
     lock.unlock();
 
     engine_->Trigger();
-    BAND_LOG(LogSeverity::kInfo, "Worker %d finished job %d", worker_id_,
+    BAND_LOG(LogSeverity::kInternal, "Worker %d finished job %d", worker_id_,
              current_job->job_id);
   }
 }

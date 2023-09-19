@@ -99,7 +99,7 @@ absl::Status Engine::RegisterModel(Model* model) {
                   worker->GetWorkerThreadAffinity(), worker->GetNumThreads()));
           model_executors_[{model_id, worker_id}] = std::move(model_executor);
           added_once = true;
-          BAND_LOG(LogSeverity::kInfo,
+          BAND_LOG(LogSeverity::kInternal,
                    "Create model executor for model %d worker %s", model_id,
                    ToString(GetWorkerDevice(worker_id)));
         }
@@ -564,7 +564,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
             "Worker::Init() failed for worker : %s.", ToString(device_flag)));
       }
 
-      BAND_LOG(LogSeverity::kInfo, "%s worker is created.",
+      BAND_LOG(LogSeverity::kInternal, "%s worker is created.",
                ToString(device_flag));
       worker->Start();
       workers_.push_back(std::move(worker));

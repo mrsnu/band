@@ -54,7 +54,7 @@ void JobTracer::EndSubgraph(const Job& job) {
     EndEvent(GetStreamName(job.subgraph_key.GetWorkerId()),
              job_to_handle_.at(key), job.ToJson());
   } else {
-    BAND_LOG(LogSeverity::kInfo,
+    BAND_LOG(LogSeverity::kWarning,
              "The given job does not exists. (id:%d, unit_indices:%s)",
              job.job_id, job.subgraph_key.GetUnitIndicesString().c_str());
   }
@@ -68,7 +68,7 @@ void JobTracer::AddWorker(DeviceFlag device_flag, size_t id) {
     id_to_streams_[id] = stream_name;
     chrome_tracer::ChromeTracer::AddStream(stream_name);
   } else {
-    BAND_LOG(LogSeverity::kInfo, "The given worker id already exists. %zd", id);
+    BAND_LOG(LogSeverity::kWarning, "The given worker id already exists. %zd", id);
   }
 }
 

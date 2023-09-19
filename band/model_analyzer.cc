@@ -490,7 +490,7 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
     }
   }
 
-  BAND_LOG(LogSeverity::kInfo,
+  BAND_LOG(LogSeverity::kInternal,
            "Create %d unit subgraphs, planner requires subgraph %d",
            unique_unit_subgraph_indices.size(), NeedFallbackSubgraph());
 
@@ -702,7 +702,7 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
     }
   }
 
-  BAND_LOG(LogSeverity::kInfo, "Create %d merged subgraphs",
+  BAND_LOG(LogSeverity::kInternal, "Create %d merged subgraphs",
            result_subgraphs.size() - num_subgraphs_before_merge);
 
   return result_subgraphs;

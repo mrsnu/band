@@ -194,7 +194,7 @@ absl::Status ResourceMonitor::Init(const ResourceMonitorConfig& config) {
       for (auto& keyword : target_keyword.second) {
         if (dev_freq_path_candidate.find(keyword) != std::string::npos) {
           dev_freq_paths_[target_keyword.first] = dev_freq_path_candidate;
-          BAND_LOG(LogSeverity::kInfo, "Found dev freq path for device %s: %s",
+          BAND_LOG(LogSeverity::kInternal, "Found dev freq path for device %s: %s",
                    ToString(target_keyword.first),
                    dev_freq_path_candidate.c_str());
         }

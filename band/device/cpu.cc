@@ -312,7 +312,7 @@ int SetupThreadAffinityMasks() {
   }
 
   BAND_LOG(
-      LogSeverity::kInfo,
+      LogSeverity::kInternal,
       "CPU affinity masks: all(%s), little(%s), big(%s), primary(%s)",
       g_thread_affinity_mask_all.ToString().c_str(),
       g_thread_affinity_mask_little.ToString().c_str(),
