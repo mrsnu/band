@@ -264,10 +264,11 @@ absl::Status Rotate::ValidateOutput(const Buffer& input) const {
   const bool are_dimensions_equal =
       input.GetDimension() == output_->GetDimension();
 
-  if (angle_deg_ >= 360 || angle_deg_ <= 0 || angle_deg_ % 90 != 0) {
-    return absl::InvalidArgumentError(
-        "Rotation angle must be between 0 and 360, in multiples of 90 "
-        "degrees.");
+  if (angle_deg_ > 360 || angle_deg_ < 0 || angle_deg_ % 90 != 0) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Rotation angle (%d) must be between 0 and 360, in multiples of 90 "
+        "degrees.",
+        angle_deg_));
   } else if ((is_dimension_change && !are_dimensions_rotated) ||
              (!is_dimension_change && !are_dimensions_equal)) {
     return absl::InvalidArgumentError(
