@@ -17,6 +17,7 @@
 #include "band/c/c_api_internal.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
+#include "c_api.h"
 
 namespace {
 
@@ -234,10 +235,16 @@ void* BandTensorGetQuantizationParams(BandTensor* tensor) {
 
 BandRequestOption BandRequestOptionGetDefault() { return {-1, true, -1, -1.f}; }
 
+BandEngine* BandEngineCreateWithDefaultConfig() {
+  BandConfig config{band::RuntimeConfigBuilder::GetDefaultConfig()};
+  return BandEngineCreate(&config);
+}
+
 BandEngine* BandEngineCreate(BandConfig* config) {
   std::unique_ptr<band::Engine> engine(band::Engine::Create(config->impl));
   return engine ? new BandEngine(std::move(engine)) : nullptr;
 }
+
 void BandEngineDelete(BandEngine* engine) {
   if (engine) {
     delete engine;

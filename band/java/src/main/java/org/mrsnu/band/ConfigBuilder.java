@@ -24,85 +24,104 @@ public class ConfigBuilder {
     this.wrapper = new NativeConfigBuilderWrapper();
   }
 
-  public void addOnline(boolean online) {
+  public ConfigBuilder addOnline(boolean online) {
     wrapper.addOnline(online);
+    return this;
   }
 
-  public void addNumWarmups(int numWarmups) {
+  public ConfigBuilder addNumWarmups(int numWarmups) {
     wrapper.addNumWarmups(numWarmups);
-    ;
+    return this;
   }
 
-  public void addNumRuns(int numRuns) {
+  public ConfigBuilder addNumRuns(int numRuns) {
     wrapper.addNumRuns(numRuns);
+    return this;
   }
 
-  public void addProfileDataPath(String profileDataPath) {
+  public ConfigBuilder addProfileDataPath(String profileDataPath) {
     wrapper.addProfileDataPath(profileDataPath);
+    return this;
   }
 
-  public void addSmoothingFactor(float smoothingFactor) {
+  public ConfigBuilder addSmoothingFactor(float smoothingFactor) {
     wrapper.addSmoothingFactor(smoothingFactor);
+    return this;
   }
 
-  public void addPlannerLogPath(String plannerLogPath) {
+  public ConfigBuilder addPlannerLogPath(String plannerLogPath) {
     wrapper.addPlannerLogPath(plannerLogPath);
+    return this;
   }
 
-  public void addScheduleWindowSize(int scheduleWindowSize) {
+  public ConfigBuilder addScheduleWindowSize(int scheduleWindowSize) {
     wrapper.addScheduleWindowSize(scheduleWindowSize);
+    return this;
   }
 
-  public void addSchedulers(SchedulerType[] scheduers) {
+  public ConfigBuilder addSchedulers(SchedulerType[] scheduers) {
     wrapper.addSchedulers(scheduers);
+    return this;
   }
 
-  public void addPlannerCPUMask(CpuMaskFlag cpuMasks) {
+  public ConfigBuilder addPlannerCPUMask(CpuMaskFlag cpuMasks) {
     wrapper.addPlannerCPUMask(cpuMasks);
+    return this;
   }
 
-  public void addWorkers(Device[] workers) {
+  public ConfigBuilder addWorkers(Device[] workers) {
     wrapper.addWorkers(workers);
+    return this;
   }
 
-  public void addWorkerCPUMasks(CpuMaskFlag[] cpuMasks) {
+  public ConfigBuilder addWorkerCPUMasks(CpuMaskFlag[] cpuMasks) {
     wrapper.addWorkerCPUMasks(cpuMasks);
+    return this;
   }
 
-  public void addWorkerNumThreads(int[] numThreads) {
+  public ConfigBuilder addWorkerNumThreads(int[] numThreads) {
     wrapper.addWorkerNumThreads(numThreads);
+    return this;
   }
 
-  public void addAllowWorkSteal(boolean allowWorkSteal) {
+  public ConfigBuilder addAllowWorkSteal(boolean allowWorkSteal) {
     wrapper.addAllowWorkSteal(allowWorkSteal);
+    return this;
   }
 
-  public void addAvailabilityCheckIntervalMs(int availabilityCheckIntervalMs) {
+  public ConfigBuilder addAvailabilityCheckIntervalMs(int availabilityCheckIntervalMs) {
     wrapper.addAvailabilityCheckIntervalMs(availabilityCheckIntervalMs);
+    return this;
   }
 
-  public void addMinimumSubgraphSize(int minimumSubgraphSize) {
+  public ConfigBuilder addMinimumSubgraphSize(int minimumSubgraphSize) {
     wrapper.addMinimumSubgraphSize(minimumSubgraphSize);
+    return this;
   }
 
-  public void addSubgraphPreparationType(SubgraphPreparationType subgraphPreparationType) {
+  public ConfigBuilder addSubgraphPreparationType(SubgraphPreparationType subgraphPreparationType) {
     wrapper.addSubgraphPreparationType(subgraphPreparationType);
+    return this;
   }
 
-  public void addCPUMask(CpuMaskFlag cpuMask) {
+  public ConfigBuilder addCPUMask(CpuMaskFlag cpuMask) {
     wrapper.addCPUMask(cpuMask);
+    return this;
   }
 
-  public void addResourceMonitorDeviceFreqPath(Device deviceFlag, String devicePath) {
+  public ConfigBuilder addResourceMonitorDeviceFreqPath(Device deviceFlag, String devicePath) {
     wrapper.addResourceMonitorDeviceFreqPath(deviceFlag, devicePath);
+    return this;
   }
 
-  public void addResourceMonitorIntervalMs(int resourceMonitorIntervalMs) {
+  public ConfigBuilder addResourceMonitorIntervalMs(int resourceMonitorIntervalMs) {
     wrapper.addResourceMonitorIntervalMs(resourceMonitorIntervalMs);
+    return this;
   }
 
-  public void addResourceMonitorLogPath(String resourceMonitorLogPath) {
+  public ConfigBuilder addResourceMonitorLogPath(String resourceMonitorLogPath) {
     wrapper.addResourceMonitorLogPath(resourceMonitorLogPath);
+    return this;
   }
 
   public Config build() {

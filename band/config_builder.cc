@@ -15,6 +15,7 @@
 #include "band/config_builder.h"
 
 #include "band/common.h"
+#include "config_builder.h"
 
 namespace band {
 
@@ -166,4 +167,31 @@ absl::StatusOr<RuntimeConfig> RuntimeConfigBuilder::Build() {
       resource_monitor_config_builder_.Build().value();
   return runtime_config;
 }
+
+RuntimeConfig RuntimeConfigBuilder::GetDefaultConfig() {
+  RuntimeConfigBuilder builder;
+
+  builder.AddPlannerLogPath("/data/local/tmp/log.json");
+  builder.AddSchedulers({SchedulerType::kHeterogeneousEarliestFinishTime});
+  builder.AddMinimumSubgraphSize(7);
+  builder.AddSubgraphPreparationType(
+      SubgraphPreparationType::kMergeUnitSubgraph);
+  builder.AddCPUMask(CPUMaskFlag::kAll);
+  builder.AddPlannerCPUMask(CPUMaskFlag::kPrimary);
+  builder.AddWorkers(
+      {DeviceFlag::kCPU, DeviceFlag::kGPU, DeviceFlag::kDSP, DeviceFlag::kNPU});
+  builder.AddWorkerNumThreads({1, 1, 1, 1});
+  builder.AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kBig,
+                             CPUMaskFlag::kBig, CPUMaskFlag::kBig});
+  builder.AddSmoothingFactor(0.1f);
+  builder.AddProfileDataPath("/data/local/tmp/profile.json");
+  builder.AddOnline(true);
+  builder.AddNumWarmups(1);
+  builder.AddNumRuns(1);
+  builder.AddAllowWorkSteal(true);
+  builder.AddAvailabilityCheckIntervalMs(30000);
+  builder.AddScheduleWindowSize(10);
+  return builder.Build().value();
+}
+
 }  // namespace band

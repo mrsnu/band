@@ -23,6 +23,11 @@ class NativeEngineWrapper implements AutoCloseable {
   private long nativeHandle = 0;
   private static final int ERROR_BUFFER_SIZE = 512;
 
+  NativeEngineWrapper() {
+    Band.init();
+    nativeHandle = createEngineWithDefaultConfig();
+  }
+
   NativeEngineWrapper(Config config) {
     Band.init();
     nativeHandle = createEngine(config);
@@ -75,6 +80,8 @@ class NativeEngineWrapper implements AutoCloseable {
     wait(nativeHandle, request.getJobId(), outputTensors);
   }
 
+  private static native long createEngineWithDefaultConfig();
+
   private static native long createEngine(Config config);
 
   private static native void deleteEngine(long engineHandle);
@@ -89,12 +96,13 @@ class NativeEngineWrapper implements AutoCloseable {
 
   private static native long createOutputTensor(long engineHandle, Model model, int index);
 
-  private static native void requestSync(long engineHandle, Model model, List<Tensor> inputTensors,
-      List<Tensor> outputTensors);
+  private static native void requestSync(
+      long engineHandle, Model model, List<Tensor> inputTensors, List<Tensor> outputTensors);
 
   private static native int requestAsync(long engineHandle, Model model, List<Tensor> inputTensors);
 
-  private static native int[] requestAsyncBatch(long engineHandle, List<Model> models, List<List<Tensor>> inputTensorsList);
+  private static native int[] requestAsyncBatch(
+      long engineHandle, List<Model> models, List<List<Tensor>> inputTensorsList);
 
   private static native void wait(long engineHandle, int jobId, List<Tensor> outputTensors);
 }
