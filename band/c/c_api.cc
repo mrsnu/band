@@ -17,7 +17,6 @@
 #include "band/c/c_api_internal.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
-#include "c_api.h"
 
 namespace {
 

@@ -15,7 +15,6 @@
 #include "band/config_builder.h"
 
 #include "band/common.h"
-#include "config_builder.h"
 
 namespace band {
 
