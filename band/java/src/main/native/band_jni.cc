@@ -20,19 +20,18 @@
 extern "C" {
 #endif  // __cplusplus
 
-JNIEXPORT JNICALL void Java_org_mrsnu_band_Band_nativeDoNothing(
-    JNIEnv* env, jclass /*clazz*/) {
+JNIEXPORT JNICALL void Java_org_mrsnu_band_Band_doNothing(JNIEnv* env,
+                                                          jclass /*clazz*/) {
   // Do nothing. Used for check if the native library is loaded.
 }
 
-JNIEXPORT JNICALL void Java_org_mrsnu_band_Band_setVerbosity(JNIEnv* env,
-                                                             jclass /*clazz*/,
-                                                             jint verbosity) {
+JNIEXPORT JNICALL void Java_org_mrsnu_band_Band_nativeSetVerbosity(
+    JNIEnv* env, jclass /*clazz*/, jint verbosity) {
   band::Logger::Get().SetVerbosity(static_cast<band::LogSeverity>(verbosity));
 }
 
 JNIEXPORT JNICALL jstring
-Java_org_mrsnu_band_Band_getLastLog(JNIEnv* env, jclass /*clazz*/) {
+Java_org_mrsnu_band_Band_nativeGetLastLog(JNIEnv* env, jclass /*clazz*/) {
   return env->NewStringUTF(band::Logger::Get().GetLastLog().second.c_str());
 }
 
