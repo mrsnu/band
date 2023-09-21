@@ -47,7 +47,12 @@ class Resize : public IBufferOperator {
 // (counter-clockwise). The output buffer will be created automatically.
 class Rotate : public IBufferOperator {
  public:
-  Rotate(int angle_deg) : angle_deg_(angle_deg) {}
+  Rotate(int angle_deg) : angle_deg_(angle_deg) {
+    angle_deg_ = angle_deg_ % 360;
+    if (angle_deg_ < 0) {
+      angle_deg_ += 360;
+    }
+  }
 
   virtual Type GetOpType() const override;
 
