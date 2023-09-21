@@ -59,7 +59,7 @@ Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_addResize(
 JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeImageProcessorBuilderWrapper_addRotate(
     JNIEnv* env, jclass clazz, jlong imageProcessorBuilderHandle,
-    jfloat angle_deg) {
+    jint angle_deg) {
   reinterpret_cast<ImageProcessorBuilder*>(imageProcessorBuilderHandle)
       ->AddOperation(std::make_unique<Rotate>(angle_deg));
 }
