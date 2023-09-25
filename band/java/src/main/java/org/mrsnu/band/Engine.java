@@ -21,6 +21,11 @@ import java.util.List;
 public class Engine {
   private NativeEngineWrapper wrapper;
 
+  public Engine() {
+    Band.init();
+    wrapper = new NativeEngineWrapper();
+  }
+
   public Engine(Config config) {
     Band.init();
     wrapper = new NativeEngineWrapper(config);

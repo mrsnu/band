@@ -234,10 +234,16 @@ void* BandTensorGetQuantizationParams(BandTensor* tensor) {
 
 BandRequestOption BandRequestOptionGetDefault() { return {-1, true, -1, -1.f}; }
 
+BandEngine* BandEngineCreateWithDefaultConfig() {
+  BandConfig config{band::RuntimeConfigBuilder::GetDefaultConfig()};
+  return BandEngineCreate(&config);
+}
+
 BandEngine* BandEngineCreate(BandConfig* config) {
   std::unique_ptr<band::Engine> engine(band::Engine::Create(config->impl));
   return engine ? new BandEngine(std::move(engine)) : nullptr;
 }
+
 void BandEngineDelete(BandEngine* engine) {
   if (engine) {
     delete engine;

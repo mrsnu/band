@@ -89,6 +89,7 @@ BAND_CAPI_EXPORT extern void* BandTensorGetQuantizationParams(
 BAND_CAPI_EXPORT extern BandRequestOption BandRequestOptionGetDefault();
 
 /* engine */
+BAND_CAPI_EXPORT extern BandEngine* BandEngineCreateWithDefaultConfig();
 BAND_CAPI_EXPORT extern BandEngine* BandEngineCreate(BandConfig* config);
 BAND_CAPI_EXPORT extern void BandEngineDelete(BandEngine* engine);
 BAND_CAPI_EXPORT extern BandStatus BandEngineRegisterModel(BandEngine* engine,
@@ -152,6 +153,7 @@ typedef size_t (*PFN_BandTensorGetBytes)(BandTensor*);
 typedef const char* (*PFN_BandTensorGetName)(BandTensor*);
 typedef BandQuantizationType (*PFN_BandTensorGetQuantizationType)(BandTensor*);
 typedef void* (*PFN_BandTensorGetQuantizationParams)(BandTensor*);
+typedef BandEngine* (*PFN_BandEngineCreateWithDefaultConfig)();
 typedef BandEngine* (*PFN_BandEngineCreate)(BandConfig*);
 typedef void (*PFN_BandEngineDelete)(BandEngine*);
 typedef BandStatus (*PFN_BandEngineRegisterModel)(BandEngine*, BandModel*);
