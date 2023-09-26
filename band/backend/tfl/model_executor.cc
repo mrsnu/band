@@ -27,6 +27,7 @@
 
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
+#include "tensorflow/lite/delegates/hexagon/hexagon_delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/nnapi/nnapi_util.h"
 #endif  // __ANDROID__
@@ -419,6 +420,31 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
       case DeviceFlag::kNPU: {
         string_device_names_list = tflite::nnapi::GetDeviceNamesList();
 
+        // fallback to hexagon delegate
+        if (target_delegate == nullptr && device == DeviceFlag::kDSP) {
+          TfLiteHexagonInitWithPath("/data/local/tmp");
+          TfLiteHexagonDelegateOptions hexagon_options =
+              TfLiteHexagonDelegateOptionsDefault();
+          target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
+              TfLiteHexagonDelegateCreate(&hexagon_options),
+              [](TfLiteDelegate* delegate) {
+                TfLiteHexagonDelegateDelete(delegate);
+                TfLiteHexagonTearDown();
+              });
+          if (target_delegate != nullptr) {
+            BAND_LOG_INTERNAL(BAND_LOG_INFO,
+                              "Create Tensorflow Lite Hexagon delegate");
+          } else {
+            BAND_LOG_INTERNAL(BAND_LOG_WARNING,
+                              "Failed to create Tensorflow Lite Hexagon "
+                              "delegate. Fallback to NNAPI");
+          }
+        }
+
+        if (target_delegate != nullptr) {
+          break;
+        }
+
         // TODO #23 : Add more nnapi names
         // Possible device runtime names
         // nnapi : nnapi-default, nnapi-reference
@@ -476,7 +502,6 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
 
         break;
       }
-
 #endif  // defined(__ANDROID__)
 
       default: {
@@ -496,7 +521,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
 
     return delegates_.at(device).get();
   }
-}  // namespace tfl
+}
 
 }  // namespace tfl
 }  // namespace band
