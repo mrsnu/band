@@ -49,12 +49,12 @@ band_cc_library(
     ] + select({
         "//band:android": [
             "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
-            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate"
         ],
         "//band:android_arm64": [
             "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
-            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
-        ],
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate"
+        ], 
         "//conditions:default": [],
     }),
 )

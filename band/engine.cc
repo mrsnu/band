@@ -441,10 +441,6 @@ absl::Status Engine::Wait(JobId job_id, Tensors outputs) {
 
 absl::Status Engine::Wait(std::vector<JobId> job_ids,
                           std::vector<Tensors> outputs) {
-  for (auto job_id : job_ids) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "Wait for job %d", job_id);
-  }
-
   planner_->Wait(job_ids);
   for (size_t i = 0; i < outputs.size(); i++) {
     auto status = GetOutputTensors(job_ids[i], outputs[i]);

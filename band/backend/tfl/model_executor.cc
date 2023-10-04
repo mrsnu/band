@@ -425,6 +425,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
           TfLiteHexagonInitWithPath("/data/local/tmp");
           TfLiteHexagonDelegateOptions hexagon_options =
               TfLiteHexagonDelegateOptionsDefault();
+          hexagon_options.debug_level = 5;
           target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
               TfLiteHexagonDelegateCreate(&hexagon_options),
               [](TfLiteDelegate* delegate) {
@@ -432,7 +433,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
                 TfLiteHexagonTearDown();
               });
           if (target_delegate != nullptr) {
-            BAND_LOG_INTERNAL(BAND_LOG_INFO,
+            BAND_LOG_INTERNAL(BAND_LOG_WARNING,
                               "Create Tensorflow Lite Hexagon delegate");
           } else {
             BAND_LOG_INTERNAL(BAND_LOG_WARNING,

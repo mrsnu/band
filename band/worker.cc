@@ -256,8 +256,6 @@ void Worker::Work() {
     lock.unlock();
 
     engine_->Trigger();
-    BAND_LOG_PROD(BAND_LOG_INFO, "Worker %d finished job %d", worker_id_,
-                  current_job->job_id);
   }
 }
 
