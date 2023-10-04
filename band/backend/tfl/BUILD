@@ -37,6 +37,13 @@ band_cc_library(
     copts = [
         "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
+    data = [
+        "LICENSE"]
+         + select({ 
+        "//band:android": ["//third_party/hexagon_nn"],
+        "//band:android_arm64": ["//third_party/hexagon_nn"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//band:framework",
         "@org_tensorflow//tensorflow/lite:framework",
@@ -45,11 +52,11 @@ band_cc_library(
     ] + select({
         "//band:android": [
             "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
-            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate"
         ],
         "//band:android_arm64": [
             "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
-            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate"
         ],
         "//conditions:default": [],
     }),

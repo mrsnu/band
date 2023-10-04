@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-licenses(["notice"])  # BSD license
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
 
-exports_files(["LICENSE"])
-
-cc_library(
+# install the hexagon_nn shared library
+filegroup(
     name = "hexagon_nn",
-    srcs = glob(
-        [
-            "*.so",
-        ],
-    ),
-    visibility = ["//visibility:public"],
+    srcs = glob([
+        "*.so",
+    ]),
 )

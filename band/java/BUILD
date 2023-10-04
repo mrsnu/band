@@ -86,4 +86,8 @@ band_jni_binary(
         ],
         "//conditions:default": [],
     }),
+    data = select({ 
+        clean_dep("//band:tflite"): ["//third_party/hexagon_nn"],
+        "//conditions:default": [],
+    })
 )

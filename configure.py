@@ -104,21 +104,34 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--android_output",
+        "--output",
         type=str,
         default=".band_android_config.bazelrc",
-        required=False,
-    )
-    parser.add_argument(
-        "--hexagon_output",
-        type=str,
-        default=".band_hexagon_config.bazelrc",
         required=False,
     )
 
     args = parser.parse_args()
 
     ROOT_DIR = args.workspace
+    
+    # check first if hexagon license is accepted
+    hexagon_license_path = os.path.join(ROOT_DIR, HEXAGON_LICENSE_PATH)
+    if not os.path.exists(hexagon_license_path):
+        raise EnvironmentError(
+            "Cannot find hexagon license file. Please check HEXAGON_LICENSE_PATH."
+        )
+    
+    # print content of license file and ask user to accept
+    with open(hexagon_license_path, "rb") as f:
+        for line in f:
+            print(line.decode("ISO-8859-1"), end="")
+        print("Do you accept the license? [y/n]")
+        accept = input()
+        if accept != "y":
+            raise EnvironmentError(
+                "Hexagon license is not accepted. Please accept the license to crosscompile towards android."
+            )
+
 
     env = dict(os.environ)
 
@@ -145,7 +158,7 @@ def main():
     # ANDROID_NDK_API_LEVEL
     android_ndk_api_level = get_var("ANDROID_NDK_API_LEVEL", "21")
 
-    config_file_path = os.path.join(ROOT_DIR, args.android_output)
+    config_file_path = os.path.join(ROOT_DIR, args.output)
     bazel_config = BazelConfig()
     bazel_config.add_config("ANDROID_BUILD_TOOLS_VERSION", android_build_tools_version)
     bazel_config.add_config("ANDROID_SDK_API_LEVEL", android_api_level)
@@ -154,28 +167,6 @@ def main():
     bazel_config.add_config("ANDROID_NDK_HOME", android_ndk_path)
     bazel_config.save(config_file_path)
     print(f"Successfully saved Android configuration to {config_file_path}")
-
-    hexagon_config_file_path = os.path.join(ROOT_DIR, args.hexagon_output)
-    hexagon_config = BazelConfig()
-
-    hexagon_license_path = os.path.join(ROOT_DIR, HEXAGON_LICENSE_PATH)
-    if not os.path.exists(hexagon_license_path):
-        raise EnvironmentError(
-            "Cannot find hexagon license file. Please check HEXAGON_LICENSE_PATH."
-        )
-    # print content of license file and ask user to accept
-    with open(hexagon_license_path, "rb") as f:
-        for line in f:
-            print(line.decode("ISO-8859-1"), end="")
-        print("Do you accept the license? [y/n]")
-        accept = input()
-        if accept != "y":
-            raise EnvironmentError(
-                "Hexagon license is not accepted. Please accept the license."
-            )
-    hexagon_config.add_config("HEXAGON_ACCEPT_LICENSE", "1")
-    hexagon_config.save(hexagon_config_file_path)
-
 
 if __name__ == "__main__":
     main()

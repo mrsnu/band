@@ -306,6 +306,7 @@ def band_jni_binary(
         deps = [],
         tags = [],
         srcs = [],
+        data = [],
         visibility = None):  # 'None' means use the default visibility.
     """Builds a jni binary for TFLite."""
     linkopts = linkopts + select({
@@ -323,6 +324,7 @@ def band_jni_binary(
         deps = deps + [linkscript, exported_symbols],
         srcs = srcs,
         tags = tags,
+        data = data,
         linkopts = linkopts,
         testonly = testonly,
         visibility = visibility,

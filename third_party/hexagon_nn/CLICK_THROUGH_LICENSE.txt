@@ -238,6 +238,3 @@ OF THIS AGREEMENT.
     e. Entire Agreement. This Agreement completely and exclusively
        states the agreement between You and Licensor regarding this
        subject matter.
-
-Type "I ACCEPT" if you agree to the terms of the license:
-You didn't accept the license. Extraction aborted.

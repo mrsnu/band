@@ -421,14 +421,11 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
         string_device_names_list = tflite::nnapi::GetDeviceNamesList();
         // fallback to hexagon delegate
         if (target_delegate == nullptr && device == DeviceFlag::kDSP) {
-          BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                            "Failed to create Tensorflow Lite NNAPI delegate. "
-                            "Fallback to Hexagon delegate");
-
           TfLiteHexagonInitWithPath("/data/local/tmp");
           TfLiteHexagonDelegateOptions hexagon_options =
               TfLiteHexagonDelegateOptionsDefault();
           hexagon_options.debug_level = 5;
+          hexagon_options.print_graph_profile = true;
           target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
               TfLiteHexagonDelegateCreate(&hexagon_options),
               [](TfLiteDelegate* delegate) {
@@ -436,12 +433,12 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
                 TfLiteHexagonTearDown();
               });
           if (target_delegate != nullptr) {
-            BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                              "Create Tensorflow Lite Hexagon delegate");
+            BAND_LOG_PROD(BAND_LOG_WARNING,
+                          "Create Tensorflow Lite Hexagon delegate");
           } else {
-            BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                              "Failed to create Tensorflow Lite Hexagon "
-                              "delegate. Fallback to NNAPI");
+            BAND_LOG_PROD(BAND_LOG_WARNING,
+                          "Failed to create Tensorflow Lite Hexagon "
+                          "delegate. Fallback to NNAPI");
           }
         }
 
