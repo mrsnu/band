@@ -110,4 +110,5 @@ test:windows_tflite --config=windows
 test:windows_tflite --config=tflite
 
 try-import %workspace%/.band_android_config.bazelrc
+try-import %workspace%/.band_hexagon_config.bazelrc
 try-import %workspace%/.tflite_config.bazelrc

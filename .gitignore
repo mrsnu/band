@@ -6,6 +6,7 @@ bazel-testlogs
 
 # Configuration files
 .band_android_config.bazelrc
+.band_hexagon_config.bazelrc
 
 # Android
 .gradle

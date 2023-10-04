@@ -11,35 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+load("//band:band.bzl", "band_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
 )
 
-load("//band:band.bzl", "band_cc_library")
-
 band_cc_library(
     name = "tfl_backend",
     srcs = [
         "backend.cc",
-        "model_executor.cc",
         "model.cc",
+        "model_executor.cc",
         "tensor.cc",
         "util.cc",
     ],
     hdrs = [
         "backend.h",
-        "model_executor.h",
         "model.h",
+        "model_executor.h",
         "tensor.h",
         "util.h",
     ],
-    # force to link band::TfLiteRegisterCreators (in backend.cc)
-    # to override the weak symbol in //band:backend_factory
-    alwayslink = True,
     copts = [
-        "-DTF_LITE_STRIP_ERROR_STRINGS"
+        "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
     deps = [
         "//band:framework",
@@ -49,12 +45,15 @@ band_cc_library(
     ] + select({
         "//band:android": [
             "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
-            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate"
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
         ],
         "//band:android_arm64": [
             "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
-            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate"
-        ], 
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
+        ],
         "//conditions:default": [],
     }),
+    # force to link band::TfLiteRegisterCreators (in backend.cc)
+    # to override the weak symbol in //band:backend_factory
+    alwayslink = True,
 )

@@ -419,9 +419,12 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
       case DeviceFlag::kDSP:
       case DeviceFlag::kNPU: {
         string_device_names_list = tflite::nnapi::GetDeviceNamesList();
-
         // fallback to hexagon delegate
         if (target_delegate == nullptr && device == DeviceFlag::kDSP) {
+          BAND_LOG_INTERNAL(BAND_LOG_WARNING,
+                            "Failed to create Tensorflow Lite NNAPI delegate. "
+                            "Fallback to Hexagon delegate");
+
           TfLiteHexagonInitWithPath("/data/local/tmp");
           TfLiteHexagonDelegateOptions hexagon_options =
               TfLiteHexagonDelegateOptionsDefault();
