@@ -51,7 +51,7 @@ void LatencyEstimator::UpdateLatency(const SubgraphKey& key, int64_t latency) {
         profile_smoothing_factor_ * latency +
         (1 - profile_smoothing_factor_) * prev_latency;
   } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
+    BAND_LOG_PROD(BAND_LOG_WARNING,
                   "[LatencyEstimator::UpdateLatency] The given SubgraphKey %s "
                   "cannot be found.",
                   key.ToString().c_str());
@@ -111,12 +111,6 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
             const int64_t latency =
                 average_profiler
                     .GetAverageElapsedTime<std::chrono::microseconds>();
-
-            BAND_LOG_PROD(BAND_LOG_INFO,
-                          "Profiled latency of subgraph (%s) in worker "
-                          "%d: %ld us",
-                          subgraph_key.ToString().c_str(), worker_id, latency);
-
             profile_database_[subgraph_key] = {latency, latency};
           }
         });
@@ -153,7 +147,7 @@ int64_t LatencyEstimator::GetProfiled(const SubgraphKey& key) const {
   if (it != profile_database_.end()) {
     return it->second.profiled;
   } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
+    BAND_LOG_PROD(BAND_LOG_WARNING,
                   "[LatencyEstimator::GetProfiled] The given %s not found",
                   key.ToString().c_str());
     return -1;
@@ -165,7 +159,7 @@ int64_t LatencyEstimator::GetExpected(const SubgraphKey& key) const {
   if (it != profile_database_.end()) {
     return it->second.moving_averaged;
   } else {
-    BAND_LOG_PROD(BAND_LOG_INFO,
+    BAND_LOG_PROD(BAND_LOG_WARNING,
                   "[LatencyEstimator::GetExpected] The given %s not found",
                   key.ToString().c_str());
     return std::numeric_limits<int32_t>::max();
