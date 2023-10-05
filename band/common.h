@@ -315,11 +315,18 @@ struct Job {
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
 };
+
 // hash function to use pair<int, BitMask> as map key in cache_
 // https://stackoverflow.com/a/32685618
 struct JobIdBitMaskHash {
   std::size_t operator()(const std::pair<int, BitMask>& p) const;
 };
+
+// utility functions for dynamic loading of shared libraries
+// currently, Java side registers an application's native library directory
+// using this method when the application initializes Band.
+void RegisterSharedLibDir(const char* native_lib_dir);
+const char* GetSharedLibDir();
 
 }  // namespace band
 

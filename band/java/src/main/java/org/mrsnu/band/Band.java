@@ -16,6 +16,8 @@
 
 package org.mrsnu.band;
 
+import android.app.Application;
+import android.content.pm.ApplicationInfo;
 import java.util.logging.Logger;
 
 /** Static utility methods for loading the Band runtime and native code. */
@@ -25,7 +27,7 @@ public final class Band {
 
   private static final Throwable LOAD_LIBRARY_EXCEPTION;
   private static volatile boolean isInit = false;
-  
+
   static {
     Throwable loadLibraryException = null;
     try {
@@ -41,29 +43,34 @@ public final class Band {
   }
 
   private Band() {}
-  
+
+  public static Application getApplicationUsingReflection() throws Exception {
+    return (Application) Class.forName("android.app.ActivityThread")
+        .getMethod("currentApplication")
+        .invoke(null, (Object[]) null);
+  }
+
   public static void init() {
     if (isInit) {
       return;
     }
 
     try {
-      nativeDoNothing();
+      registerNativeLibDirs(getApplicationUsingReflection().getApplicationInfo().nativeLibraryDir);
       isInit = true;
     } catch (UnsatisfiedLinkError e) {
       Throwable exceptionToLog = LOAD_LIBRARY_EXCEPTION != null ? LOAD_LIBRARY_EXCEPTION : e;
-      UnsatisfiedLinkError exceptionToThrow =
-          new UnsatisfiedLinkError(
-              "Failed to load native Band methods. Check that the correct native"
-                  + " libraries are present, and, if using a custom native library, have been"
-                  + " properly loaded via System.loadLibrary():\n"
-                  + "  "
-                  + exceptionToLog);
+      UnsatisfiedLinkError exceptionToThrow = new UnsatisfiedLinkError(
+          "Failed to load native Band methods. Check that the correct native"
+          + " libraries are present, and, if using a custom native library, have been"
+          + " properly loaded via System.loadLibrary():\n"
+          + "  " + exceptionToLog);
       exceptionToThrow.initCause(e);
       throw exceptionToThrow;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
-  private static native void nativeDoNothing();
-  
+  private static native void registerNativeLibDirs(String nativeLibDir);
 }

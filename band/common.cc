@@ -15,7 +15,6 @@
 #include "band/common.h"
 
 #include "band/logger.h"
-#include "common.h"
 
 namespace band {
 
@@ -389,6 +388,16 @@ std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
   BAND_LOG_PROD(BAND_LOG_ERROR, "Unknown job status: %d", status);
   return os;
 }
+
+std::string g_shared_lib_dir;
+
+void RegisterSharedLibDir(const char* native_lib_dir) {
+  g_shared_lib_dir = native_lib_dir;
+  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Registering shared library directory %s",
+                    native_lib_dir);
+}
+
+const char* GetSharedLibDir() { return g_shared_lib_dir.c_str(); }
 
 SubgraphKey::SubgraphKey() {}
 // special case - entire model subgraph
