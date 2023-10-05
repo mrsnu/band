@@ -493,7 +493,8 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
           if (!shared_lib_path.empty()) {
             // log current directory
             BAND_LOG_PROD(BAND_LOG_WARNING,
-                          "Try to load Hexagon libraries from directory: %s",
+                          "[FIXME LATER] Try to load Hexagon libraries from "
+                          "directory: %s",
                           shared_lib_path.c_str());
 
             TfLiteHexagonInitWithPath(shared_lib_path.c_str());
@@ -506,8 +507,9 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
                   TfLiteHexagonTearDown();
                 });
             if (target_delegate != nullptr) {
-              BAND_LOG_PROD(BAND_LOG_WARNING,
-                            "Create Tensorflow Lite Hexagon delegate");
+              BAND_LOG_PROD(
+                  BAND_LOG_WARNING,
+                  "[FIXME LATER] Create Tensorflow Lite Hexagon delegate");
             } else {
               BAND_LOG_PROD(BAND_LOG_WARNING,
                             "Failed to create Tensorflow Lite Hexagon "

@@ -37,9 +37,6 @@ band_cc_library(
     copts = [
         "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
-    data = [
-        "LICENSE",
-    ],
     deps = [
         "//band:framework",
         "@org_tensorflow//tensorflow/lite:framework",
