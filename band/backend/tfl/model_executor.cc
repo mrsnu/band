@@ -424,8 +424,6 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
           TfLiteHexagonInitWithPath("/data/local/tmp");
           TfLiteHexagonDelegateOptions hexagon_options =
               TfLiteHexagonDelegateOptionsDefault();
-          hexagon_options.debug_level = 5;
-          hexagon_options.print_graph_profile = true;
           target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
               TfLiteHexagonDelegateCreate(&hexagon_options),
               [](TfLiteDelegate* delegate) {
