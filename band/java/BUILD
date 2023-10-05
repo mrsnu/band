@@ -35,6 +35,10 @@ filegroup(
 aar_with_jni(
     name = "band",
     android_library = ":band_runtime",
+    external_libraries = select({
+        clean_dep("//band:tflite"): ["//third_party/hexagon_nn"],
+        "//conditions:default": [],
+    }),
     headers = [
         "//band/c:c_api.h",
         "//band/c:c_api_type.h",
@@ -86,8 +90,4 @@ band_jni_binary(
         ],
         "//conditions:default": [],
     }),
-    data = select({ 
-        clean_dep("//band:tflite"): ["//third_party/hexagon_nn"],
-        "//conditions:default": [],
-    })
 )

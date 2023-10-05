@@ -21,6 +21,6 @@ package(
 filegroup(
     name = "hexagon_nn",
     srcs = glob([
-        "*.so",
+        "**/*.so",
     ]),
 )
