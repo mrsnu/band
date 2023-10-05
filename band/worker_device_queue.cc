@@ -64,10 +64,6 @@ bool DeviceQueueWorker::EnqueueJob(Job& job) {
   if (!IsEnqueueReady()) {
     return false;
   }
-
-  BAND_LOG_PROD(BAND_LOG_INFO, "Enqueue job %d to worker %d", job.job_id,
-                worker_id_);
-
   requests_.push_back(job);
   request_cv_.notify_one();
   return true;
