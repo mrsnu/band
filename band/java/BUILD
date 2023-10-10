@@ -91,7 +91,6 @@ band_jni_binary(
     ] + select({
         clean_dep("//band:tflite"): [
             "//band/backend/tfl:tfl_backend",
-            "//band/backend/tfl:tfl_backend_java",
         ],
         "//conditions:default": [],
     }),
