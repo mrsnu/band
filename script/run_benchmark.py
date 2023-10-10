@@ -86,7 +86,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
     for config_path in config_paths:
         name = os.path.basename(config_path)
         shutil.copy(config_path, f'{target_base_dir}/{name}')
-        print (f'Push {name} to Android')
+        print(f'Push {name} to Android')
 
     push_to_android(f'{target_base_dir}', '', , device_connection_flag)
 
@@ -105,13 +105,13 @@ if __name__ == '__main__':
                         help=f'Target config file or directory (default = {DEFAULT_CONFIG})')
     args = parser.parse_args()
 
-    # copy from band/test/data/benchmark_config.json 
+    # copy from band/test/data/benchmark_config.json
     if args.config == DEFAULT_CONFIG:
         if args.android:
-            shutil.copy('script/config_samples/benchmark_heft.json', f'{DEFAULT_CONFIG}')
+            shutil.copy('script/config_samples/benchmark_heft.json',
+                        f'{DEFAULT_CONFIG}')
         else:
             args.config = 'band/test/data/benchmark_config.json'
-
 
     if args.rebuild:
         clean_bazel(args.docker)
@@ -122,6 +122,7 @@ if __name__ == '__main__':
     if args.android:
         # Need to set Android build option in ./configure
         print('Benchmark Android')
+        push_external_libs_to_android()
         benchmark_android(args.debug, args.trace, get_platform(), args.backend,
                           args.docker, args.config)
     else:
