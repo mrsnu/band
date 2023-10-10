@@ -380,14 +380,15 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
 }
 
 tflite::Interpreter::TfLiteDelegatePtr TryCreateHexagonDelegate() {
-  tflite::Interpreter::TfLiteDelegatePtr delegate =
+tflite::Interpreter::TfLiteDelegatePtr delegate =
       tflite::Interpreter::TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
 
 // Try to load shared libraries from the following directories:
-// 1. native library directory (Android only -
-// getApplicationInfo().nativeLibraryDir)
-// 2.
-// 3. /data/local/tmp
+// 1. native library directory (getApplicationInfo().nativeLibraryDir)
+// 2. sytem library directories
+// (/system/lib/rfsa/adsp;/system/vendor/lib/rfsa/adsp;/dsp)
+// 3. /data/local/tmp - Some manufacturers lock DSP access from external apps
+// see #305 for more details
 #if defined(__ANDROID__)
 
   for (auto& shared_lib_path : GetSharedLibDirs()) {
