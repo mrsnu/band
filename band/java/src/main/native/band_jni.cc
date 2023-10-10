@@ -14,13 +14,15 @@
 
 #include <jni.h>
 
+#include "band/common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
-
-JNIEXPORT JNICALL void Java_org_mrsnu_band_Band_nativeDoNothing(
-    JNIEnv* env, jclass /*clazz*/) {
-  // Do nothing. Used for check if the native library is loaded.
+JNIEXPORT JNICALL void Java_org_mrsnu_band_Band_registerNativeLibDirs(
+    JNIEnv* env, jclass /*clazz*/, jstring native_lib_dir) {
+  const char* native_lib_dir_str = env->GetStringUTFChars(native_lib_dir, 0);
+  band::RegisterSharedLibDir(native_lib_dir_str);
 }
 
 #ifdef __cplusplus

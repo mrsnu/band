@@ -22,6 +22,7 @@ from utils import *
 BASE_DIR = 'test_bin'
 TARGET = "band/test/..."
 
+
 def get_target(debug, postfix=""):
     return f'{get_dst_path(BASE_DIR, "armv8-a", debug)}/' + postfix
 
@@ -33,18 +34,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print(f"Test {get_platform()}")
-    if args.rebuild: 
+    if args.rebuild:
         clean_bazel(args.docker)
-    
+
     if args.android:
         build_cmd = make_cmd(
-                build_only=True,
-                debug=args.debug,
-                trace=args.trace,   
-                platform='android',
-                backend=args.backend,
-                target=TARGET
-            )
+            build_only=True,
+            debug=args.debug,
+            trace=args.trace,
+            platform='android',
+            backend=args.backend,
+            target=TARGET
+        )
         subprocess.call(['mkdir', '-p', get_target(args.debug)])
         if args.docker:
             run_cmd_docker(build_cmd)
@@ -55,6 +56,7 @@ if __name__ == '__main__':
 
         temp_dir_name = next(tempfile._get_candidate_names())
         print("Copy test data to device")
+        push_external_libs_to_android()
         push_to_android('band/test', f'{temp_dir_name}/band/test')
         for test_file in os.listdir(get_target(args.debug, 'test')):
             if args.filter != "":
@@ -72,11 +74,11 @@ if __name__ == '__main__':
             f'adb -d shell rm -r /data/local/tmp/{temp_dir_name}')
     else:
         cmd = make_cmd(
-                args.build, 
-                args.debug,
-                args.trace,
-                get_platform(),
-                args.backend, 
-                TARGET
-            )
+            args.build,
+            args.debug,
+            args.trace,
+            get_platform(),
+            args.backend,
+            TARGET
+        )
         run_cmd(cmd)

@@ -32,20 +32,20 @@ package(
 band_cc_shared_object(
     name = "band_c",
     linkopts = select({
-        "//band:windows": [],
-        "//conditions:default": [
-            "-z defs",
-            "-Wl,--version-script,$(location //band/c:version_scripts.lds)",
-        ],
+            "//band:windows": [],
+            "//conditions:default": [
+                "-z defs",
+                "-Wl,--version-script,$(location //band/c:version_scripts.lds)",
+            ],
     }),
     per_os_targets = True,
     deps = [
         ":c_api",
         ":version_scripts.lds",
     ] + select({
-        "//band:tflite": [
-            "//band/backend/tfl:tfl_backend",
-        ],
+            "//band:tflite": [
+                "//band/backend/tfl:tfl_backend",
+            ],
         "//conditions:default": [
         ],
     }),
@@ -57,18 +57,18 @@ cc_binary(
         "example/band_c_main.c",
     ],
     linkopts = select({
-        clean_dep("//band:android"): [],
-        clean_dep("//band:windows"): [],
-        "//conditions:default": [
-            "-lpthread",
-        ],
+            clean_dep("//band:android"): [],
+            clean_dep("//band:windows"): [],
+            "//conditions:default": [
+                "-lpthread",
+            ],
     }),
     deps = [
         ":c_api",
     ] + select({
-        clean_dep("//band:tflite"): [
-            "//band/backend/tfl:tfl_backend",
-        ],
+            clean_dep("//band:tflite"): [
+                "//band/backend/tfl:tfl_backend",
+            ],
         "//conditions:default": [
         ],
     }),
@@ -130,7 +130,14 @@ pkg_tar(
 
 pkg_tar(
     name = "c_api_lib_pkg",
-    srcs = [":band_c"],
+    srcs = [":band_c"] +
+           select(
+               {
+                   "//band:android": ["//third_party/hexagon_nn"],
+                   "//band:android_arm64": ["//third_party/hexagon_nn"],
+                   "//conditions:default": [],
+               },
+           ),
     package_dir = "lib",
 )
 

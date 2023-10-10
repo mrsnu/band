@@ -74,24 +74,25 @@ def copy(src, dst):
 
 def get_bazel_options(
         debug: bool,
-        trace: bool, 
+        trace: bool,
         platform: str,
         backend: str):
     opt = ""
     opt += "-c " + ("dbg" if debug else "opt") + " "
     opt += "--strip " + ("never" if debug else "always") + " "
-    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + ("" if trace == False else " --config trace") + " "
+    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + (
+        "" if trace == False else " --config trace") + " "
     return opt
 
 
 def make_cmd(
-        build_only: bool, 
-        debug: bool,
-        trace: bool, 
-        platform: str, 
-        backend: str, 
-        target: str,
-    ):
+    build_only: bool,
+    debug: bool,
+    trace: bool,
+    platform: str,
+    backend: str,
+    target: str,
+):
     cmd = "bazel" + " "
     cmd += ("build" if build_only else "test") + " "
     cmd += get_bazel_options(debug, trace, platform, backend)
@@ -106,10 +107,21 @@ def get_dst_path(base_dir, target_platform, debug):
 
 
 ANDROID_BASE = '/data/local/tmp/'
+EXTERNAL_SHARED_LIBS = [
+    "third_party/hexagon_nn/arm64-v8a/libhexagon_nn_skel.so",
+    "third_party/hexagon_nn/arm64-v8a/libhexagon_nn_skel_v65.so",
+    "third_party/hexagon_nn/arm64-v8a/libhexagon_nn_skel_v66.so",
+    "third_party/hexagon_nn/arm64-v8a/libhexagon_interface.so",
+]
 
 
 def push_to_android(src, dst):
     run_cmd(f'adb -d push {src} {ANDROID_BASE}{dst}')
+
+
+def push_external_libs_to_android():
+    for lib in EXTERNAL_SHARED_LIBS:
+        push_to_android(lib, '')
 
 
 def run_binary_android(basepath, path, option=''):
@@ -127,8 +139,10 @@ def get_argument_parser(desc: str):
                         help='Test on Android (with adb)')
     parser.add_argument('-docker', action="store_true", default=False,
                         help='Compile / Pull cross-compiled binaries for android from docker (assuming that the current docker engine has devcontainer built with a /.devcontainer')
-    parser.add_argument('-s', '--ssh', required=False, default=None, help="SSH host name (e.g. dev@ssh.band.org)")
-    parser.add_argument('-t', '--trace', action="store_true", default=True, help='Build with trace (default = True)')
+    parser.add_argument('-s', '--ssh', required=False, default=None,
+                        help="SSH host name (e.g. dev@ssh.band.org)")
+    parser.add_argument('-t', '--trace', action="store_true",
+                        default=True, help='Build with trace (default = True)')
     parser.add_argument('-d', '--debug', action="store_true", default=False,
                         help='Build debug (default = release)')
     parser.add_argument('-r', '--rebuild', action="store_true", default=False,

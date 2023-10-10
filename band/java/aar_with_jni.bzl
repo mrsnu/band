@@ -15,10 +15,11 @@
 load("@build_bazel_rules_android//android:rules.bzl", "android_binary")
 
 def aar_with_jni(
-    name,
-    android_library,
-    headers = None,
-    flatten_headers = False):
+        name,
+        android_library,
+        headers = None,
+        flatten_headers = False,
+        external_libraries = None):
     """Generates an Android AAR with repo root license given an Android library target.
 
     Args:
@@ -30,6 +31,8 @@ def aar_with_jni(
           generated .aar file. This is useful for distributing self-contained
           .aars with native libs that can be used directly by native clients.
       flatten_headers: Whether to flatten the output paths of included headers.
+      external_libraries: Optional list of external libraries that will be
+          included in the generated .aar file.
     """
 
     # Generate dummy AndroidManifest.xml for dummy apk usage
@@ -48,6 +51,9 @@ EOF
 """ # `android:minSdkVersion="999"` means this manifest cannot be used.
     )
 
+    # Assuming external_libraries have .so files relative to their root.
+    assets_dir = "./" if external_libraries else ""
+
     # TODO(widiba03304): Find more efficient way to do this.
     # Generate dummy apk including .so files and later we extract out
     # .so files and throw away the apk.
@@ -56,6 +62,8 @@ EOF
         manifest = name + "_generated_AndroidManifest.xml",
         custom_package = "dummy.package.for.so",
         deps = [android_library],
+        assets = external_libraries,
+        assets_dir = assets_dir,
         multidex = "native",
         # In some platforms we don't have an Android SDK/NDK and this target
         # can't be built. We need to prevent the build system from trying to
@@ -74,8 +82,11 @@ cp $(location {0}.aar) $(location :{1}.aar)
 chmod +w $(location :{1}.aar)
 origdir=$$PWD
 cd $$(mktemp -d)
+echo "Extracting .so files from dummy apk... $(location :{1}_dummy_app_for_so_unsigned.apk) to $$PWD"
 unzip $$origdir/$(location :{1}_dummy_app_for_so_unsigned.apk) "lib/*"
 cp -r lib jni
+unzip $$origdir/$(location :{1}_dummy_app_for_so_unsigned.apk) "assets/*"
+cp -r assets/* jni
 zip -r $$origdir/$(location :{1}.aar) jni/*/*.so
 cp $$origdir/$(location //:LICENSE) ./
 zip $$origdir/$(location :{1}.aar) LICENSE
