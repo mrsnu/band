@@ -25,10 +25,15 @@
 #include "tensorflow/lite/core/subgraph.h"
 
 #if defined(__ANDROID__)
+#include <jni.h>
+
 #include "tensorflow/lite/delegates/gpu/delegate.h"
+#include "tensorflow/lite/delegates/hexagon/hexagon_delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/nnapi/nnapi_util.h"
+
 #endif  // __ANDROID__
+
 #include "absl/strings/str_format.h"
 #include "tensorflow/lite/interpreter_builder.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -372,6 +377,52 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
   return std::move(interpreter);
 }
 
+tflite::Interpreter::TfLiteDelegatePtr TryCreateHexagonDelegate() {
+tflite::Interpreter::TfLiteDelegatePtr delegate =
+      tflite::Interpreter::TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
+
+// Try to load shared libraries from the following directories:
+// 1. native library directory (getApplicationInfo().nativeLibraryDir)
+// 2. sytem library directories
+// (/system/lib/rfsa/adsp;/system/vendor/lib/rfsa/adsp;/dsp)
+// 3. /data/local/tmp - Some manufacturers lock DSP access from external apps
+// see #305 for more details
+#if defined(__ANDROID__)
+
+  for (auto& shared_lib_path : GetSharedLibDirs()) {
+    if (shared_lib_path.empty()) {
+      char* current_dir_cstr = getcwd(nullptr, 0);
+      if (current_dir_cstr != nullptr) {
+        shared_lib_path = current_dir_cstr;
+        free(current_dir_cstr);
+      }
+    }
+
+    if (!shared_lib_path.empty()) {
+      TfLiteHexagonInitWithPath(shared_lib_path.c_str());
+      TfLiteHexagonDelegateOptions hexagon_options =
+          TfLiteHexagonDelegateOptionsDefault();
+      delegate = tflite::Interpreter::TfLiteDelegatePtr(
+          TfLiteHexagonDelegateCreate(&hexagon_options),
+          [](TfLiteDelegate* delegate) {
+            TfLiteHexagonDelegateDelete(delegate);
+            TfLiteHexagonTearDown();
+          });
+      if (delegate != nullptr) {
+        break;
+      } else {
+        BAND_LOG_PROD(BAND_LOG_WARNING,
+                      "Failed to create Tensorflow Lite Hexagon "
+                      "delegate from %s.",
+                      shared_lib_path.c_str());
+      }
+    }
+  }
+
+#endif
+  return std::move(delegate);
+}
+
 absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
     DeviceFlag device) {
   auto delegate_it = delegates_.find(device);
@@ -416,7 +467,6 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
       case DeviceFlag::kDSP:
       case DeviceFlag::kNPU: {
         string_device_names_list = tflite::nnapi::GetDeviceNamesList();
-
         // TODO #23 : Add more nnapi names
         // Possible device runtime names
         // nnapi : nnapi-default, nnapi-reference
@@ -470,9 +520,13 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
           }
         }
 
+        // fallback to hexagon delegate
+        if (target_delegate == nullptr && device == DeviceFlag::kDSP) {
+          target_delegate = TryCreateHexagonDelegate();
+        }
+
         break;
       }
-
 #endif  // defined(__ANDROID__)
 
       default: {
@@ -492,7 +546,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
 
     return delegates_.at(device).get();
   }
-}  // namespace tfl
+}
 
 }  // namespace tfl
 }  // namespace band

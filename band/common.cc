@@ -13,8 +13,7 @@
 // limitations under the License.
 
 #include "band/common.h"
-
-#include "common.h"
+#include "band/logger.h"
 
 namespace band {
 
@@ -406,6 +405,32 @@ std::ostream& operator<<(std::ostream& os, const JobStatus& status) {
     } break;
   }
   return os;
+}
+
+std::vector<std::string> g_shared_lib_dirs;
+
+void RegisterSharedLibDir(const char* native_lib_dir) {
+  // see if the directory is already registered
+  for (const std::string& dir : g_shared_lib_dirs) {
+    if (dir == native_lib_dir) {
+      BAND_LOG_INTERNAL(BAND_LOG_INFO,
+                        "Shared library directory %s is already registered",
+                        native_lib_dir);
+      return;
+    }
+  }
+
+  g_shared_lib_dirs.push_back(native_lib_dir);
+  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Registering shared library directory %s",
+                    native_lib_dir);
+}
+
+std::vector<std::string> GetSharedLibDirs() {
+  static std::vector<std::string> default_dirs = {"/data/local/tmp"};
+  std::vector<std::string> dirs = g_shared_lib_dirs;
+  // concatenate default dirs
+  dirs.insert(dirs.end(), default_dirs.begin(), default_dirs.end());
+  return dirs;
 }
 
 SubgraphKey::SubgraphKey() {}
