@@ -71,12 +71,7 @@ android_library(
     proguard_specs = ["proguard.flags"],
     deps = [
         "@org_checkerframework_qual",
-    ] + select({
-        clean_dep("//band:tflite"): [
-            "@org_tensorflow//tensorflow/lite/delegates/hexagon/java:tensorflowlite_hexagon",
-        ],
-        "//conditions:default": [],
-    }),
+    ],
 )
 
 band_cc_library(

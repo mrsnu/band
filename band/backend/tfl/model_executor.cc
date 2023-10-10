@@ -382,6 +382,12 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
 tflite::Interpreter::TfLiteDelegatePtr TryCreateHexagonDelegate() {
   tflite::Interpreter::TfLiteDelegatePtr delegate =
       tflite::Interpreter::TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
+
+// Try to load shared libraries from the following directories:
+// 1. native library directory (Android only -
+// getApplicationInfo().nativeLibraryDir)
+// 2.
+// 3. /data/local/tmp
 #if defined(__ANDROID__)
 
   for (auto& shared_lib_path : GetSharedLibDirs()) {
@@ -394,12 +400,6 @@ tflite::Interpreter::TfLiteDelegatePtr TryCreateHexagonDelegate() {
     }
 
     if (!shared_lib_path.empty()) {
-      // log current directory
-      BAND_LOG_PROD(BAND_LOG_WARNING,
-                    "[FIXME LATER] Try to load Hexagon libraries from "
-                    "directory: %s",
-                    shared_lib_path.c_str());
-
       TfLiteHexagonInitWithPath(shared_lib_path.c_str());
       TfLiteHexagonDelegateOptions hexagon_options =
           TfLiteHexagonDelegateOptionsDefault();
@@ -411,8 +411,6 @@ tflite::Interpreter::TfLiteDelegatePtr TryCreateHexagonDelegate() {
           });
       if (delegate != nullptr) {
         break;
-        BAND_LOG_PROD(BAND_LOG_INFO,
-                      "[FIXME LATER] Create Tensorflow Lite Hexagon delegate");
       } else {
         BAND_LOG_PROD(BAND_LOG_WARNING,
                       "Failed to create Tensorflow Lite Hexagon "

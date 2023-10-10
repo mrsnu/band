@@ -25,6 +25,9 @@ public final class Band {
   private static final Logger logger = Logger.getLogger(Band.class.getName());
   private static final String BAND_RUNTIME_LIBNAME = "band_jni";
 
+  // This field is used by the static initializer of TensorFlowLite to load the
+  // native TensorFlowLite library.
+
   private static final Throwable LOAD_LIBRARY_EXCEPTION;
   private static volatile boolean isInit = false;
 
@@ -32,7 +35,6 @@ public final class Band {
     Throwable loadLibraryException = null;
     try {
       System.loadLibrary(BAND_RUNTIME_LIBNAME);
-      System.loadLibrary("tensorflowlite_hexagon_jni");
     } catch (UnsatisfiedLinkError e) {
       if (loadLibraryException == null) {
         loadLibraryException = e;
