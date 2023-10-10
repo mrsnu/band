@@ -27,7 +27,8 @@ package(
 
 band_cc_shared_object(
     name = "band_c",
-    linkopts = select(        {
+    linkopts = select(
+        {
             "//band:windows": [],
             "//conditions:default": [
                 "-z defs",
