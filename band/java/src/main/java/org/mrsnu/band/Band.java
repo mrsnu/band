@@ -32,6 +32,7 @@ public final class Band {
     Throwable loadLibraryException = null;
     try {
       System.loadLibrary(BAND_RUNTIME_LIBNAME);
+      System.loadLibrary("tensorflowlite_hexagon_jni");
     } catch (UnsatisfiedLinkError e) {
       if (loadLibraryException == null) {
         loadLibraryException = e;

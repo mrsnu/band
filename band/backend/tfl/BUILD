@@ -57,3 +57,18 @@ band_cc_library(
     # to override the weak symbol in //band:backend_factory
     alwayslink = True,
 )
+
+band_cc_library(
+    name = "tfl_backend_java",
+    deps = [
+        ":tfl_backend",
+    ] + select({
+        "//band:android": [
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon/java:tensorflowlite_hexagon",
+        ],
+        "//band:android_arm64": [
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon/java:tensorflowlite_hexagon",
+        ],
+        "//conditions:default": [],
+    }),
+)

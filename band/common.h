@@ -326,7 +326,7 @@ struct JobIdBitMaskHash {
 // currently, Java side registers an application's native library directory
 // using this method when the application initializes Band.
 void RegisterSharedLibDir(const char* native_lib_dir);
-const char* GetSharedLibDir();
+std::vector<std::string> GetSharedLibDirs();
 
 }  // namespace band
 

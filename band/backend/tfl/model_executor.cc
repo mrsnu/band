@@ -379,6 +379,53 @@ TfLiteModelExecutor::CreateTfLiteInterpreter(interface::IModel* model,
   return std::move(interpreter);
 }
 
+tflite::Interpreter::TfLiteDelegatePtr TryCreateHexagonDelegate() {
+  tflite::Interpreter::TfLiteDelegatePtr delegate =
+      tflite::Interpreter::TfLiteDelegatePtr(nullptr, [](TfLiteDelegate*) {});
+#if defined(__ANDROID__)
+
+  for (auto& shared_lib_path : GetSharedLibDirs()) {
+    if (shared_lib_path.empty()) {
+      char* current_dir_cstr = getcwd(nullptr, 0);
+      if (current_dir_cstr != nullptr) {
+        shared_lib_path = current_dir_cstr;
+        free(current_dir_cstr);
+      }
+    }
+
+    if (!shared_lib_path.empty()) {
+      // log current directory
+      BAND_LOG_PROD(BAND_LOG_WARNING,
+                    "[FIXME LATER] Try to load Hexagon libraries from "
+                    "directory: %s",
+                    shared_lib_path.c_str());
+
+      TfLiteHexagonInitWithPath(shared_lib_path.c_str());
+      TfLiteHexagonDelegateOptions hexagon_options =
+          TfLiteHexagonDelegateOptionsDefault();
+      delegate = tflite::Interpreter::TfLiteDelegatePtr(
+          TfLiteHexagonDelegateCreate(&hexagon_options),
+          [](TfLiteDelegate* delegate) {
+            TfLiteHexagonDelegateDelete(delegate);
+            TfLiteHexagonTearDown();
+          });
+      if (delegate != nullptr) {
+        break;
+        BAND_LOG_PROD(BAND_LOG_INFO,
+                      "[FIXME LATER] Create Tensorflow Lite Hexagon delegate");
+      } else {
+        BAND_LOG_PROD(BAND_LOG_WARNING,
+                      "Failed to create Tensorflow Lite Hexagon "
+                      "delegate from %s.",
+                      shared_lib_path.c_str());
+      }
+    }
+  }
+
+#endif
+  return std::move(delegate);
+}
+
 absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
     DeviceFlag device) {
   auto delegate_it = delegates_.find(device);
@@ -480,46 +527,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
 
         // fallback to hexagon delegate
         if (target_delegate == nullptr && device == DeviceFlag::kDSP) {
-          std::string shared_lib_path = GetSharedLibDir();
-
-          if (shared_lib_path.empty()) {
-            char* current_dir_cstr = getcwd(nullptr, 0);
-            if (current_dir_cstr != nullptr) {
-              shared_lib_path = current_dir_cstr;
-              free(current_dir_cstr);
-            }
-          }
-
-          if (!shared_lib_path.empty()) {
-            // log current directory
-            BAND_LOG_PROD(BAND_LOG_WARNING,
-                          "[FIXME LATER] Try to load Hexagon libraries from "
-                          "directory: %s",
-                          shared_lib_path.c_str());
-
-            TfLiteHexagonInitWithPath(shared_lib_path.c_str());
-            TfLiteHexagonDelegateOptions hexagon_options =
-                TfLiteHexagonDelegateOptionsDefault();
-            target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
-                TfLiteHexagonDelegateCreate(&hexagon_options),
-                [](TfLiteDelegate* delegate) {
-                  TfLiteHexagonDelegateDelete(delegate);
-                  TfLiteHexagonTearDown();
-                });
-            if (target_delegate != nullptr) {
-              BAND_LOG_PROD(
-                  BAND_LOG_WARNING,
-                  "[FIXME LATER] Create Tensorflow Lite Hexagon delegate");
-            } else {
-              BAND_LOG_PROD(BAND_LOG_WARNING,
-                            "Failed to create Tensorflow Lite Hexagon "
-                            "delegate.");
-            }
-
-          } else {
-            BAND_LOG_INTERNAL(BAND_LOG_WARNING,
-                              "Failed to get current directory");
-          }
+          target_delegate = TryCreateHexagonDelegate();
         }
 
         break;

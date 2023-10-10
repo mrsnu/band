@@ -36,7 +36,9 @@ aar_with_jni(
     name = "band",
     android_library = ":band_runtime",
     external_libraries = select({
-        clean_dep("//band:tflite"): ["//third_party/hexagon_nn"],
+        clean_dep("//band:tflite"): [
+            "//third_party/hexagon_nn",
+        ],
         "//conditions:default": [],
     }),
     headers = [
@@ -62,12 +64,19 @@ android_library(
 
 android_library(
     name = "band_api",
-    srcs = [":java_srcs"],
+    srcs = [
+        ":java_srcs",
+    ],
     manifest = "AndroidManifest.xml",
     proguard_specs = ["proguard.flags"],
     deps = [
         "@org_checkerframework_qual",
-    ],
+    ] + select({
+        clean_dep("//band:tflite"): [
+            "@org_tensorflow//tensorflow/lite/delegates/hexagon/java:tensorflowlite_hexagon",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 band_cc_library(
@@ -87,6 +96,7 @@ band_jni_binary(
     ] + select({
         clean_dep("//band:tflite"): [
             "//band/backend/tfl:tfl_backend",
+            "//band/backend/tfl:tfl_backend_java",
         ],
         "//conditions:default": [],
     }),
