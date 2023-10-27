@@ -25,8 +25,8 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     std::set<JobId> jobs_to_yield;
 
     // basically the same as ShortestExpectedLatencyScheduler
-    double largest_min_cost;
-    double largest_expected_latency;
+    double largest_min_cost = -1;
+    double largest_expected_latency = -1;
     std::map<SensorFlag, double> largest_expected_thermal;
     int target_job_index;
     SubgraphKey target_subgraph_key;
@@ -37,7 +37,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
       target_job_index = -1;
 
       // only check up to `num_jobs` requests
-      std::set<std::pair<int, BitMask>>
+      std::unordered_set<std::pair<int, BitMask>, JobIdBitMaskHash>
           searched_jobs;
       for (auto it = requests.begin(); it != requests.begin() + num_jobs;
            ++it) {

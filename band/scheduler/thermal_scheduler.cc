@@ -15,7 +15,7 @@ bool ThermalScheduler::Schedule(JobQueue& requests) {
     engine_.UpdateWorkersWaiting();
     WorkerWaitingTime worker_waiting = engine_.GetWorkerWaitingTime();
     double largest_min_cost = -1;
-    double largest_expected_latency;
+    double largest_expected_latency = -1;
     std::map<SensorFlag, double> largest_expected_thermal;
     int target_job_idx;
     SubgraphKey target_subgraph_key;
@@ -24,7 +24,8 @@ bool ThermalScheduler::Schedule(JobQueue& requests) {
       Job& job = *it;
       std::pair<int, BitMask> job_to_search =
           std::make_pair(job.model_id, job.resolved_unit_subgraphs);
-      std::set<std::pair<int, BitMask>> searched_jobs;
+      std::unordered_set<std::pair<int, BitMask>, JobIdBitMaskHash>
+          searched_jobs;
       if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
         continue;
       } else {

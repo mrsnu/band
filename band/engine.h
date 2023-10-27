@@ -210,7 +210,8 @@ class Engine : public IEngine {
 
   // Scheduling
   // cache for GetMinCost()
-  mutable std::map<std::pair<ModelId, BitMask>, std::pair<SubgraphKey, double>>
+  mutable std::unordered_map<std::pair<ModelId, BitMask>,
+                             std::pair<SubgraphKey, double>, JobIdBitMaskHash>
       cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).

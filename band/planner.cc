@@ -207,7 +207,7 @@ void Planner::EnqueueFinishedJob(Job& job) {
 void Planner::PrepareReenqueue(Job& job) {
   job.invoke_time = 0;
   job.end_time = 0;
-  job.resolved_unit_subgraphs.clear();
+  job.resolved_unit_subgraphs = 0;
   job.following_jobs.clear();
 }
 

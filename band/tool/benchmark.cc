@@ -331,7 +331,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
     }
 
     if (benchmark_model.slo_us <= 0 && benchmark_model.slo_scale > 0.f) {
-      int64_t worst_us = 0;
+      double worst_us = 0;
 
       // calculate worst case latency
       for (int worker_id = 0; worker_id < engine_->GetNumWorkers();

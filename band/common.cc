@@ -411,10 +411,7 @@ bool SubgraphKey::operator<(const SubgraphKey& key) const {
     return worker_id < key.GetWorkerId();
   }
 
-  for (int i = 255; i >= 0; i--) {
-    if (unit_indices[i] ^ key.unit_indices[i]) return key.unit_indices[i];
-  }
-  return false;
+  return unit_indices.to_ullong() < key.unit_indices.to_ullong();
 }
 
 bool SubgraphKey::operator==(const SubgraphKey& key) const {
@@ -507,6 +504,12 @@ std::string Job::ToJson() const {
          ",\"job_id\":" + std::to_string(job_id) +
          ",\"expected_therm\":" + "{" + expected_therm_string + "}" +
          ",\"profiled_therm\":" + "{" + profiled_therm_string + "}" + "}";
+}
+
+std::size_t JobIdBitMaskHash::operator()(
+    const std::pair<int, BitMask>& p) const {
+  auto hash_func = std::hash<int>();
+  return hash_func(p.first) ^ hash_func(p.second.to_ullong());
 }
 
 }  // namespace band

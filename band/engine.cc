@@ -734,7 +734,13 @@ std::pair<SubgraphKey, double> Engine::GetMinCost(
   std::vector<SubgraphKey> candidates =
       GetSubgraphCandidates(model_id, resolved_unit_subgraphs);
 
-  std::map<BitMask, std::vector<SubgraphKey>> unit_indicies_subgraphs;
+  auto bit_mask_comparator = [](const BitMask& lhs, const BitMask& rhs) {
+    return lhs.to_ullong() < rhs.to_ullong();
+  };
+
+  std::map<BitMask, std::vector<SubgraphKey>, decltype(bit_mask_comparator)>
+      unit_indicies_subgraphs(bit_mask_comparator);
+
   // group by unit indices
   for (const SubgraphKey& key : candidates) {
     unit_indicies_subgraphs[key.GetUnitIndices()].push_back(key);
@@ -752,9 +758,6 @@ std::pair<SubgraphKey, double> Engine::GetMinCost(
     if (IsEnd(target_subgraph.first)) {
       local_min = target_subgraph;
     } else {
-      // Print resolved_unit_subgraphs
-      BAND_LOG_PROD(BAND_LOG_INFO, "Resolved unit subgraphs: %s",
-                    resolved_unit_subgraphs.ToString().c_str());
       local_min = GetMinCost(
           model_id,
           resolved_unit_subgraphs | target_subgraph.first.GetUnitIndices(),

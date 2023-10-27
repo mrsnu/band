@@ -1,17 +1,17 @@
 #ifndef BAND_COMMON_H_
 #define BAND_COMMON_H_
 
+#include <array>
 #include <bitset>
 #include <cassert>
+#include <deque>
 #include <iostream>
 #include <list>
 #include <map>
 #include <set>
 #include <string>
 #include <type_traits>
-#include <array>
 #include <vector>
-#include <deque>
 
 namespace band {
 typedef int WorkerId;
@@ -19,135 +19,7 @@ typedef int ModelId;
 typedef int JobId;
 typedef int GraphJobId;
 
-struct BitMask {
-  BitMask() : mask() { mask.fill(false); }
-  BitMask(const std::array<bool, 256>& mask) : mask(mask) {}
-  BitMask(const BitMask& other) : mask(other.mask) {}
-  BitMask& operator=(const BitMask& other) {
-    mask = other.mask;
-    return *this;
-  }
-  BitMask& operator=(const std::array<bool, 256>& other) {
-    mask = other;
-    return *this;
-  }
-  bool operator==(const BitMask& other) const { return mask == other.mask; }
-  bool operator!=(const BitMask& other) const { return mask != other.mask; }
-  bool operator<(const BitMask& other) const {
-    for (int i = 0; i < 256; i++) {
-      if (mask[i] != other.mask[i]) {
-        return mask[i] < other.mask[i];
-      }
-    }
-    return false;
-  }
-
-  BitMask operator^(const BitMask& other) const {
-    BitMask result;
-    for (int i = 0; i < 256; i++) {
-      result.mask[i] = mask[i] ^ other.mask[i];
-    }
-    return result;
-  }
-  
-  BitMask operator&(const BitMask& other) const {
-    BitMask result;
-    for (int i = 0; i < 256; i++) {
-      result.mask[i] = mask[i] & other.mask[i];
-    }
-    return result;
-  }
-
-  BitMask operator|(const BitMask& other) const {
-    BitMask result;
-    for (int i = 0; i < 256; i++) {
-      result.mask[i] = mask[i] | other.mask[i];
-    }
-    return result;
-  }
-
-  BitMask operator~() const {
-    BitMask result;
-    for (int i = 0; i < 256; i++) {
-      result.mask[i] = !mask[i];
-    }
-    return result;
-  }
-
-  BitMask& operator^=(const BitMask& other) {
-    for (int i = 0; i < 256; i++) {
-      mask[i] ^= other.mask[i];
-    }
-    return *this;
-  }
-
-  BitMask& operator&=(const BitMask& other) {
-    for (int i = 0; i < 256; i++) {
-      mask[i] &= other.mask[i];
-    }
-    return *this;
-  }
-
-  BitMask& operator|=(const BitMask& other) {
-    for (int i = 0; i < 256; i++) {
-      mask[i] |= other.mask[i];
-    }
-    return *this;
-  }
-
-  BitMask& operator|=(int i) {
-    mask[i] = true;
-    return *this;
-  }
-
-  BitMask& operator~() {
-    for (int i = 0; i < 256; i++) {
-      mask[i] = !mask[i];
-    }
-    return *this;
-  }
-
-  bool operator[](int i) const { return mask[i]; }
-  bool any() const { 
-    for (int i = 0; i < 256; i++) {
-      if (mask[i]) {
-        return true;
-      }
-    }
-    return false;
-  }
-  bool all() const {
-    for (int i = 0; i < 256; i++) {
-      if (!mask[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  bool none() const {
-    for (int i = 0; i < 256; i++) {
-      if (mask[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  bool test(int i) const { return mask[i]; }
-  void set(int i) { mask[i] = true; }
-  void clear() { mask.fill(false); }
-  size_t size() const { return 256; }
-  std::array<bool, 256> get() const { return mask; }
-  std::string ToString() const {
-    std::string result;
-    for (int i = 0; i < 256; i++) {
-      result += mask[i] ? "1" : "0";
-    }
-    return result;
-  }
-
-private:
-  std::array<bool, 256> mask;
-};
+using BitMask = std::bitset<64>;
 
 // Empty template.
 template <typename EnumType>
@@ -470,6 +342,10 @@ struct Job {
 
 // Type definition of job queue.
 using JobQueue = std::deque<Job>;
+
+struct JobIdBitMaskHash {
+  std::size_t operator()(const std::pair<int, BitMask>& p) const;
+};
 
 }  // namespace band
 

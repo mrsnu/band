@@ -51,24 +51,24 @@ Eigen::VectorXd GetFillVector(double value, size_t size) {
   return vec;
 }
 
-std::string ThermalMapToJson(ThermalMap thermal_map) {
-  std::string result = "{";
-  for (auto& pair : thermal_map) {
-    result += "\"" + std::string(ToString(pair.first)) + "\":";
-    result += std::to_string(pair.second);
-    result += ",";
-  }
-  result.pop_back();
-  result += "}";
-  return result;
-}
+// std::string ThermalMapToJson(ThermalMap thermal_map) {
+//   std::string result = "{";
+//   for (auto& pair : thermal_map) {
+//     result += "\"" + std::string(ToString(pair.first)) + "\":";
+//     result += std::to_string(pair.second);
+//     result += ",";
+//   }
+//   result.pop_back();
+//   result += "}";
+//   return result;
+// }
 
-void PrintVector(std::string name, const Eigen::VectorXd& vec) {
-  BAND_LOG_PROD(BAND_LOG_INFO, "%s: ", name.c_str());
-  for (int i = 0; i < vec.size(); i++) {
-    BAND_LOG_PROD(BAND_LOG_INFO, "%f ", vec(i));
-  }
-}
+// void PrintVector(std::string name, const Eigen::VectorXd& vec) {
+//   BAND_LOG_PROD(BAND_LOG_INFO, "%s: ", name.c_str());
+//   for (int i = 0; i < vec.size(); i++) {
+//     BAND_LOG_PROD(BAND_LOG_INFO, "%f ", vec(i));
+//   }
+// }
 
 }  // anonymous namespace
 
