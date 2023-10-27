@@ -44,7 +44,6 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
 * `minimum_subgraph_size`: Minimum subgraph size. If candidate subgraph size is smaller than `minimum_subgraph_size`, the subgraph will not be created. [default: 7]
 * `subgraph_preparation_type`: For schedulers using fallback, determine how to generate candidate subgraphs. [default: `merge_unit_subgraph`]
   * `no_fallback_subgraph`: Generate subgraphs per worker. Explicit fallback subgraph will not be generated.
-  * `fallback_per_worker`: Generate fallback subgraphs for each worker.
   * `unit_subgraph`: Generate unit subgraphs considering all device supportiveness. All ops in same unit subgraph have same support devices.
   * `merge_unit_subgraph`: Add merged unit subgraphs to `unit_subgraph`.
 * `execution_mode`: Specify a exeucution mode. Available execution modes are as follows:

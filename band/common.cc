@@ -130,9 +130,6 @@ const char* ToString(SubgraphPreparationType subgraph_preparation_type) {
     case SubgraphPreparationType::kNoFallbackSubgraph: {
       return "no_fallback_subgraph";
     } break;
-    case SubgraphPreparationType::kFallbackPerWorker: {
-      return "fallback_per_worker";
-    } break;
     case SubgraphPreparationType::kUnitSubgraph: {
       return "unit_subgraph";
     } break;
@@ -479,14 +476,18 @@ std::string Job::ToJson() const {
     expected_therm_string += "\"" + std::string(ToString(pair.first)) +
                              "\":" + std::to_string(pair.second) + ",";
   }
-  expected_therm_string.pop_back();
+  if (!expected_therm_string.empty()) {
+    expected_therm_string.pop_back();
+  }
 
   std::string profiled_therm_string = "";
   for (auto& pair : profiled_thermal) {
     profiled_therm_string += "\"" + std::string(ToString(pair.first)) +
                              "\":" + std::to_string(pair.second) + ",";
   }
-  profiled_therm_string.pop_back();
+  if (!profiled_therm_string.empty()) {
+    profiled_therm_string.pop_back();
+  }
 
   return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
          ",\"invoke_time\":" + std::to_string(invoke_time) +

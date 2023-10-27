@@ -40,8 +40,6 @@ const char* BandSubgraphPreparationToString(BandSubgraphPreparationType type) {
   switch (type) {
     case kBandNoFallbackSubgraph:
       return "no_fallback_subgraph";
-    case kBandFallbackPerWorker:
-      return "fallback_per_worker";
     case kBandUnitSubgraph:
       return "unit_subgraph";
     case kBandMergeUnitSubgraph:

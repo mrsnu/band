@@ -71,9 +71,8 @@ enum class CPUMaskFlag : size_t {
 
 enum class SubgraphPreparationType : size_t {
   kNoFallbackSubgraph = 0,
-  kFallbackPerWorker = 1,
-  kUnitSubgraph = 2,
-  kMergeUnitSubgraph = 3,
+  kUnitSubgraph = 1,
+  kMergeUnitSubgraph = 2,
 };
 
 enum class DataType : size_t {

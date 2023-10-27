@@ -60,6 +60,8 @@ class Engine : public IEngine {
       const RuntimeConfig& config,
       ErrorReporter* error_reporter = DefaultErrorReporter());
 
+  void SetDumpDirectory(std::string path);
+
   absl::Status RegisterModel(Model* model);
   absl::Status UnregisterModel(Model* model);
 
@@ -202,11 +204,12 @@ class Engine : public IEngine {
   std::unique_ptr<Planner> planner_;
 
   // Models
-
   // Maps to model spec
   std::map<ModelId, ModelSpec> model_specs_;
   std::map<ModelId, std::unique_ptr<TensorRingBuffer>> model_input_buffer_;
   std::map<ModelId, std::unique_ptr<TensorRingBuffer>> model_output_buffer_;
+
+  std::string dump_dir_;
 
   // Scheduling
   // cache for GetMinCost()

@@ -1,10 +1,33 @@
-load("//band:band.bzl", "band_cc_android_test", "band_cc_library")
+load("//band:band.bzl", "band_cc_android_test", "band_cc_library", "band_cc_binary")
 
 exports_files(glob([
     "data/*.tflite",
     "data/*.json",
     "data/*.jpg",
 ]))
+
+filegroup(
+    name = "tflite_models",
+    srcs = glob([
+        "data/*.tflite",
+    ]),
+)
+
+filegroup(
+    name = "images",
+    srcs = glob([
+        "data/*.jpg",
+        "data/*.png",
+        "data/*.jpeg",
+    ]),
+)
+
+filegroup(
+    name = "json_files",
+    srcs = glob([
+        "data/*.json",
+    ]),
+)
 
 band_cc_library(
     name = "test_util",
@@ -79,9 +102,8 @@ band_cc_android_test(
     size = "medium",
     srcs = ["tool/benchmark_test.cc"],
     data = [
-        "//band/test:data/add.tflite",
-        "//band/test:data/benchmark_config.json",
-        "//band/test:data/retinaface_mbv2_quant_160.tflite",
+        ":tflite_models",
+        ":json_files",
     ],
     deps = [
         ":test_util",
@@ -114,27 +136,6 @@ band_cc_android_test(
     ],
 )
 
-# band_cc_android_test(
-#     name = "model_analyzer_test",
-#     size = "small",
-#     srcs = ["model_analyzer_test.cc"],
-#     data = [
-#         "//band/test:data/add.tflite",
-#         "//band/test:data/cat.jpg",
-#         "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
-#         "//band/test:data/lite-model_efficientdet_lite0_int8_1.tflite",
-#         "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
-#         "//band/test:data/retinaface-mbv2-int8.tflite",
-#         "//band/test:data/retinaface_mbv2_quant_160.tflite",
-#     ],
-#     deps = [
-#         "//band:config_builder",
-#         "//band/backend/tfl:tfl_backend",
-#         "//band/test:test_util",
-#         "@com_google_googletest//:gtest",
-#     ],
-# )
-
 band_cc_android_test(
     name = "cpu_test",
     size = "small",
@@ -154,16 +155,28 @@ band_cc_android_test(
         "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
     data = [
-        "//band/test:data/add.tflite",
-        "//band/test:data/cat.jpg",
-        "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
-        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
+        ":tflite_models",
+        ":images",
     ],
     deps = [
         "//band:config_builder",
         "//band/backend/tfl:tfl_backend",
         "//band/test:test_util",
         "@com_google_googletest//:gtest",
+    ],
+)
+
+band_cc_binary(
+    name = "tfl_run_test",
+    srcs = ["backend/tfl_run_test.cc"],
+    data = [
+        ":tflite_models",
+        ":images",
+    ],
+    deps = [
+        "//band:config_builder",
+        "//band/backend/tfl:tfl_backend",
+        "//band/test:test_util",
     ],
 )
 
@@ -190,10 +203,7 @@ band_cc_android_test(
         "-DTF_LITE_STRIP_ERROR_STRINGS",
     ],
     data = [
-        "//band/test:data/ICN_quant.tflite",
-        "//band/test:data/lite-model_efficientdet_lite0_int8_1.tflite",
-        "//band/test:data/magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
-        "//band/test:data/retinaface_mbv2_quant_160.tflite",
+        ":tflite_models",
     ],
     deps = [
         "//band:config_builder",
@@ -207,10 +217,8 @@ band_cc_android_test(
     size = "small",
     srcs = ["c/c_api_test.cc"],
     data = [
-        "//band/test:data/add.tflite",
-        "//band/test:data/cat.jpg",
-        "//band/test:data/lite-model_mobilenet_v2_100_224_fp32_1.tflite",
-        "//band/test:data/mobilenet_v2_1.0_224_quant.tflite",
+        ":tflite_models",
+        ":images"
     ],
     deps = [
         "//band:framework",

@@ -119,22 +119,6 @@ std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs) {
   return summary;
 }
 
-std::string SummarizeFallbackPerWorkerSubgraphs(
-    const std::vector<SubgraphDef>& subgraph_defs) {
-  std::string summary = "\n";
-  int num_workers = 0;
-  for (const auto& subgraph_def : subgraph_defs) {
-    num_workers = std::max(num_workers, subgraph_def.worker_id + 1);
-  }
-
-  summary += "Subgraph Definitions\n";
-  for (const auto& subgraph_def : subgraph_defs) {
-    summary += "\t" + subgraph_def.ToString() + "\n";
-  }
-
-  return summary;
-}
-
 ModelAnalyzer::ModelAnalyzer(const IEngine& engine, bool need_fallback_subgraph,
                              SubgraphConfig subgraph_config, Model* model,
                              BackendType backend_type)
@@ -175,9 +159,6 @@ ModelAnalyzer::CreateSubgraphs() {
     case SubgraphPreparationType::kUnitSubgraph: {
       subgraph_defs = unit_subgraph_defs;
     } break;
-    case SubgraphPreparationType::kFallbackPerWorker: {
-      subgraph_defs = FallbackPerWorker();
-    } break;
     case SubgraphPreparationType::kMergeUnitSubgraph: {
       // Add merged atomic subgraphs
       // Note that each merged subgraph consists of unit subgraphs with
@@ -196,27 +177,23 @@ ModelAnalyzer::CreateSubgraphs() {
     }
   }
 
-  // Verify subgraphs
-  // {
-  //   // unit subgraph indices in merged subgraph are continous
-  //   for (const auto& subgraph_def : subgraph_defs) {
-  //     const int begin = *subgraph_def.unit_subgraph_indices.begin();
-  //     const int end = *subgraph_def.unit_subgraph_indices.rbegin();
-  //     if (end - begin != subgraph_def.unit_subgraph_indices.size() - 1) {
-  //       return absl::InternalError(absl::StrFormat(
-  //           "Failed to create subgraph. Unit subgraph indices in "
-  //           "subgraph %s are not continous for model %s and mode %s",
-  //           subgraph_def.ToString().c_str(), model_spec_->path.c_str(),
-  //           ToString(subgraph_config_.subgraph_preparation_type)));
-  //     }
-  //   }
-  // }
+  // Verify subgraph
+  {
+    // unit subgraph indices in merged subgraph are continous
+    for (const auto& subgraph_def : subgraph_defs) {
+      const int begin = *subgraph_def.unit_subgraph_indices.begin();
+      const int end = *subgraph_def.unit_subgraph_indices.rbegin();
+      if (end - begin != subgraph_def.unit_subgraph_indices.size() - 1) {
+        return absl::InternalError(absl::StrFormat(
+            "Failed to create subgraph. Unit subgraph indices in "
+            "subgraph %s are not continous for model %s and mode %s",
+            subgraph_def.ToString().c_str(), model_spec_->path.c_str(),
+            ToString(subgraph_config_.subgraph_preparation_type)));
+      }
+    }
+  }
 
-  const std::string subgraph_summary =
-      subgraph_config_.subgraph_preparation_type !=
-              SubgraphPreparationType::kFallbackPerWorker
-          ? SummarizeSubgraphs(subgraph_defs)
-          : SummarizeFallbackPerWorkerSubgraphs(subgraph_defs);
+  const std::string subgraph_summary = SummarizeSubgraphs(subgraph_defs);
 
   BAND_LOG_PROD(BAND_LOG_INFO,
                 "Create %d subgraphs for model %s with mode %s %s",
@@ -616,20 +593,6 @@ std::vector<SubgraphDef> ModelAnalyzer::MergeUnitSubgraphs(
                 result_subgraphs.size() - num_subgraphs_before_merge);
 
   return result_subgraphs;
-}
-
-std::vector<SubgraphDef> ModelAnalyzer::FallbackPerWorker() {
-  std::vector<SubgraphDef> subgraph_defs;
-
-  size_t num_units = 0;
-  for (WorkerId worker_id = 0; worker_id < engine_.GetNumWorkers();
-       worker_id++) {
-    std::vector<SubgraphDef> worker_subgraphs =
-        GetSubgraphsForFallbackOps(worker_id);
-    subgraph_defs.insert(subgraph_defs.end(), worker_subgraphs.begin(),
-                         worker_subgraphs.end());
-  }
-  return subgraph_defs;
 }
 
 bool ModelAnalyzer::NeedFallbackSubgraph() const {

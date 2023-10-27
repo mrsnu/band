@@ -97,8 +97,6 @@ bool SubgraphConfigBuilder::IsValid(
                   subgraph_preparation_type_ ==
                           SubgraphPreparationType::kNoFallbackSubgraph ||
                       subgraph_preparation_type_ ==
-                          SubgraphPreparationType::kFallbackPerWorker ||
-                      subgraph_preparation_type_ ==
                           SubgraphPreparationType::kUnitSubgraph ||
                       subgraph_preparation_type_ ==
                           SubgraphPreparationType::kMergeUnitSubgraph);

@@ -28,7 +28,6 @@ Each configuration field is optional or required. If a field is optional, then i
 
 - `SubgraphPreparationType`: 
   - `SubgraphPreparationType::kNoFallbackSubgraph`
-  - `SubgraphPreparationType::kFallbackPerWorker`
   - `SubgraphPreparationType::kUnitSubgraph`
   - `SubgraphPreparationType::kMergeUnitSubgraph`
 

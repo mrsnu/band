@@ -71,11 +71,11 @@ INSTANTIATE_TEST_SUITE_P(
     ModelPartitionTests, ModelPartitionTestsFixture,
     testing::Values(
         std::make_tuple("retinaface-mbv2-int8.tflite",
-                        SubgraphPreparationType::kFallbackPerWorker),
+                        SubgraphPreparationType::kUnitSubgraph),
         std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("lite-model_efficientdet_lite0_int8_1.tflite",
-                        SubgraphPreparationType::kFallbackPerWorker),
+                        SubgraphPreparationType::kUnitSubgraph),
         std::make_tuple("ICN_quant.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple(

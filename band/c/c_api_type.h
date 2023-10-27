@@ -47,10 +47,9 @@ typedef enum BandCPUMaskFlag {
 
 typedef enum BandSubgraphPreparationType {
   kBandNoFallbackSubgraph = 0,
-  kBandFallbackPerWorker = 1,
-  kBandUnitSubgraph = 2,
-  kBandMergeUnitSubgraph = 3,
-  kBandNumSubgraphPreparationType = 4,
+  kBandUnitSubgraph = 1,
+  kBandMergeUnitSubgraph = 2,
+  kBandNumSubgraphPreparationType = 3,
 } BandSubgraphPreparationType;
 
 // Single-precision complex data type compatible with the C99 definition.

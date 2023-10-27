@@ -34,8 +34,5 @@ band.aar
 # mac icloud
 *.icloud
 
-# benchmark config
-benchmark_config.json
-
 # experiment
 experiments/*.png

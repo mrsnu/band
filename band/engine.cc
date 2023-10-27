@@ -38,20 +38,23 @@ Engine::~Engine() {
   }
 
   planner_.reset();
-  {
-    auto status = latency_estimator_->DumpModel(
-        "/data/local/tmp/splash/latency_model.json");
-    if (!status.ok()) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to dump latency model: %s",
-                    status.message());
+
+  if (!dump_dir_.empty()) {
+    {
+      auto status = latency_estimator_->DumpModel(
+          absl::StrFormat("%s/latency_model.json", dump_dir_.c_str()));
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to dump latency model: %s",
+                      status.message());
+      }
     }
-  }
-  {
-    auto status = thermal_estimator_->DumpModel(
-        "/data/local/tmp/splash/thermal_model.json");
-    if (!status.ok()) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to dump thermal model: %s",
-                    status.message());
+    {
+      auto status = thermal_estimator_->DumpModel(
+          absl::StrFormat("%s/thermal_model.json", dump_dir_.c_str()));
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to dump thermal model: %s",
+                      status.message());
+      }
     }
   }
 
@@ -59,6 +62,8 @@ Engine::~Engine() {
   delete thermal_profiler_;
   delete frequency_profiler_;
 }
+
+void Engine::SetDumpDirectory(std::string path) { dump_dir_ = path; }
 
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
                                        ErrorReporter* error_reporter) {
@@ -864,25 +869,15 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
 std::pair<std::vector<SubgraphKey>, double> Engine::GetSubgraphWithMinCost(
     const Job& job, const WorkerWaitingTime& worker_waiting,
     const std::function<double(double, ThermalMap, ThermalMap)> cost) const {
-  // if (subgraph_config_.subgraph_preparation_type ==
-  //     SubgraphPreparationType::kFallbackPerWorker) {
-  auto pair = GetMinCost(job.model_id, job.resolved_unit_subgraphs, 0,
-                         worker_waiting, cost);
-  std::pair<std::vector<SubgraphKey>, int64_t> ret =
-      std::pair<std::vector<SubgraphKey>, int64_t>({}, pair.second);
-  ret.first.push_back(pair.first);
-  return ret;
-  // } else {
-  // int start_unit_idx = 0;
-  // for (int i = 0; i < model_specs_.at(job.model_id).GetNumUnitSubgraphs();
-  //      i++) {
-  //   if (job.resolved_unit_subgraphs.test(i)) {
-  //     start_unit_idx = i + 1;
-  //   }
-  // }
-  // return GetMinCostWithUnitSubgraph(job.model_id, start_unit_idx,
-  //                                   worker_waiting, cost);
-  // }
+  int start_unit_idx = 0;
+  for (int i = 0; i < model_specs_.at(job.model_id).GetNumUnitSubgraphs();
+       i++) {
+    if (job.resolved_unit_subgraphs.test(i)) {
+      start_unit_idx = i + 1;
+    }
+  }
+  return GetMinCostWithUnitSubgraph(job.model_id, start_unit_idx,
+                                    worker_waiting, cost);
 }
 
 SubgraphKey Engine::GetSubgraphIdxSatisfyingSLO(

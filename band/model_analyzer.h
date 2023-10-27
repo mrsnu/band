@@ -20,8 +20,6 @@ struct SubgraphDef {
 
 std::string SetToString(const std::set<int>& set);
 std::string SummarizeSubgraphs(const std::vector<SubgraphDef>& subgraph_defs);
-std::string SummarizeFallbackPerWorkerSubgraphs(
-    const std::vector<SubgraphDef>& subgraph_defs);
 
 class ModelAnalyzer {
  public:
@@ -44,7 +42,6 @@ class ModelAnalyzer {
   std::vector<SubgraphDef> GetSubgraphsForFallbackOps(WorkerId worker_id);
   std::vector<SubgraphDef> MergeUnitSubgraphs(
       const std::vector<SubgraphDef>& unit_subgraphs);
-  std::vector<SubgraphDef> FallbackPerWorker();
   bool NeedFallbackSubgraph() const;
   bool IsWorkerValid(WorkerId worker_id) const;
   bool IsResolved(const std::set<int> resolved_tensors, int op_index) const;
