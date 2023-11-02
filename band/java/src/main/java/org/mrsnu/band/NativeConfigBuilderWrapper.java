@@ -150,10 +150,6 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
     return isValid(nativeHandle);
   }
 
-  public boolean isValid() {
-    return isValid(nativeHandle);
-  }
-
   private long getNativeHandle() {
     return nativeHandle;
   }
