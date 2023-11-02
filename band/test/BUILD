@@ -147,6 +147,17 @@ band_cc_android_test(
     ],
 )
 
+
+
+band_cc_android_test(
+    name = "thermal_estimator_test",
+    size = "small",
+    srcs = ["device/thermal_test.cc"],
+    deps = [
+        "//band/device:thermal",
+    ],
+)
+
 band_cc_android_test(
     name = "tfl_minimal_test",
     size = "small",

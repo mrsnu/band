@@ -34,7 +34,7 @@ absl::StatusOr<T> TryRead(std::vector<std::string> paths,
   }
 
   for (size_t i = 0; i < paths.size(); i++) {
-    auto path = paths[i];
+    auto path = paths.at(i);
     std::ifstream fs(path, std::ifstream::binary);
     if (fs.is_open()) {
       T output;
@@ -100,6 +100,41 @@ absl::StatusOr<std::vector<double>> TryReadDoubles(
   }
   return absl::NotFoundError(absl::StrFormat(
       "No available path: %s, %s", paths[0].c_str(), strerror(errno)));
+}
+
+template <typename T>
+absl::Status TryWrite(std::vector<std::string> paths, T value,
+                      std::vector<size_t> multipliers) {
+  if (multipliers.size() == 0) {
+    multipliers.resize(paths.size(), 1.f);
+  }
+
+  if (paths.size() != multipliers.size()) {
+    return absl::InternalError(
+        "Number of paths and multipliers must be the same.");
+  }
+
+  for (size_t i = 0; i < paths.size(); i++) {
+    auto path = paths.at(i);
+    std::ofstream fs(path, std::ofstream::binary);
+    if (fs.is_open()) {
+      T output = value * multipliers[i] / multipliers[i] * multipliers[i];
+      fs << output;
+      return absl::OkStatus();
+    }
+  }
+
+  return absl::NotFoundError(absl::StrFormat(
+      "No available path: %s, %s", paths[0].c_str(), strerror(errno)));
+}
+
+absl::Status TryWriteSizeT(std::vector<std::string> paths, size_t value,
+                           std::vector<size_t> multipliers) {
+  return TryWrite<size_t>(paths, value, multipliers);
+}
+absl::Status TryWriteDouble(std::vector<std::string> paths, double value,
+                            std::vector<size_t> multipliers) {
+  return TryWrite<double>(paths, value, multipliers);
 }
 
 std::vector<std::string> ListFilesInPath(const char* path) {

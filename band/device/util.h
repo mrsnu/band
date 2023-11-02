@@ -33,6 +33,15 @@ absl::StatusOr<std::vector<size_t>> TryReadSizeTs(
 absl::StatusOr<std::vector<double>> TryReadDoubles(
     std::vector<std::string> paths, std::vector<float> multipliers = {1.f});
 
+template <typename T>
+absl::Status TryWrite(std::vector<std::string> paths, T value,
+                      std::vector<size_t> multipliers = {});
+
+absl::Status TryWriteSizeT(std::vector<std::string> paths, size_t value,
+                           std::vector<size_t> multipliers = {1});
+absl::Status TryWriteDouble(std::vector<std::string> paths, double value,
+                            std::vector<size_t> multipliers = {1});
+
 std::vector<std::string> ListFilesInPath(const char* path);
 std::vector<std::string> ListFilesInPathPrefix(const char* path,
                                                const char* prefix);
