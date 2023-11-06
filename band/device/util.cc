@@ -278,6 +278,10 @@ void Root() {
   is_rooted =
       RunCommand("su -c 'echo rooted'").find("rooted") != std::string::npos;
   BAND_LOG_INTERNAL(BAND_LOG_INFO, "Is rooted: %d", is_rooted);
+  // if (!is_rooted) {
+  //   BAND_LOG_INTERNAL(BAND_LOG_ERROR, "Not rooted");
+  //   exit(1);
+  // }
 }
 
 absl::StatusOr<std::string> GetDeviceProperty(const std::string& property) {

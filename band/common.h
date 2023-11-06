@@ -38,7 +38,7 @@ template <typename EnumType>
 EnumType FromString(const char* str) {
   for (size_t i = 0; i < EnumLength<EnumType>(); i++) {
     EnumType t = static_cast<EnumType>(i);
-    if (ToString(t) == str) {
+    if (strncmp(ToString(t), str, strlen(str)) == 0) {
       return t;
     }
   }

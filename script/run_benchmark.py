@@ -1,4 +1,18 @@
 #!/usr/bin/env python
+# Copyright 2023 Seoul National University
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import tempfile
 import shutil
@@ -53,7 +67,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         # run_cmd(
         #     f'sh script/docker_util.sh -d bazel-bin/band/tool/band_benchmark {target_base_dir}')
         copy_docker('bazel-bin/band/tool/band_benchmark', target_base_dir)
-    elif platform.system() == 'Linux':
+    elif platform == 'linux':
         run_cmd(build_command)
         copy('bazel-bin/band/tool/band_benchmark', target_base_dir)
 
@@ -67,6 +81,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
 
     for config_path in config_paths:
         name = os.path.basename(config_path)
+        os.makedirs(f'{target_base_dir}', exist_ok=True)
         shutil.copy(config_path, f'{target_base_dir}/{name}')
         print (f'Push {name} to Android')
 
