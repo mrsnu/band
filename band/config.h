@@ -74,7 +74,6 @@ struct WorkerConfig {
   std::vector<DeviceFlag> workers;
   std::vector<CPUMaskFlag> cpu_masks;
   std::vector<int> num_threads;
-  bool allow_worksteal = false;
   int availability_check_interval_ms = 30000;
 };
 

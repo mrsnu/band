@@ -123,10 +123,6 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
     addWorkerNumThreads(nativeHandle, numThreads);
   }
 
-  public void addAllowWorkSteal(boolean allowWorkSteal) {
-    addAllowWorkSteal(nativeHandle, allowWorkSteal);
-  }
-
   public void addAvailabilityCheckIntervalMs(int availabilityCheckIntervalMs) {
     addAvailabilityCheckIntervalMs(nativeHandle, availabilityCheckIntervalMs);
   }
@@ -219,8 +215,6 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addWorkerCPUMasks(long configBuilderHandle, int[] cpuMasks);
 
   private native void addWorkerNumThreads(long configBuilderHandle, int[] numThreads);
-
-  private native void addAllowWorkSteal(long configBuilderHandle, boolean allowWorkSteal);
 
   private native void addAvailabilityCheckIntervalMs(
       long configBuilderHandle, int availabilityCheckIntervalMs);

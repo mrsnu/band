@@ -50,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
     b.addLatencyProfileConfig("/data/data/org.mrsnu.band.example/profile.json");
     b.addNumWarmups(1);
     b.addNumRuns(1);
-    b.addAllowWorkSteal(true);
     b.addAvailabilityCheckIntervalMs(30000);
     b.addScheduleWindowSize(10);
     Config config = b.build();

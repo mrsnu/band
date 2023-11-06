@@ -32,7 +32,6 @@ TEST(CApi, ConfigLoad) {
                 "band/test/data/profile.json");
   BandAddConfig(b, BAND_PROFILE_NUM_WARMUPS, /*count=*/1, 1);
   BandAddConfig(b, BAND_PROFILE_NUM_RUNS, /*count=*/1, 1);
-  BandAddConfig(b, BAND_WORKER_ALLOW_WORKSTEAL, /*count=*/1, true);
   BandAddConfig(b, BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS, /*count=*/1,
                 30000);
   BandAddConfig(b, BAND_PLANNER_SCHEDULE_WINDOW_SIZE, /*count=*/1, 10);
@@ -70,7 +69,6 @@ TEST(CApi, EngineSimpleInvoke) {
                 "band/test/data/profile.json");
   BandAddConfig(b, BAND_PROFILE_NUM_WARMUPS, /*count=*/1, 1);
   BandAddConfig(b, BAND_PROFILE_NUM_RUNS, /*count=*/1, 1);
-  BandAddConfig(b, BAND_WORKER_ALLOW_WORKSTEAL, /*count=*/1, true);
   BandAddConfig(b, BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS, /*count=*/1,
                 30000);
   BandAddConfig(b, BAND_PLANNER_SCHEDULE_WINDOW_SIZE, /*count=*/1, 10);

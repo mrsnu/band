@@ -90,7 +90,6 @@ class DeviceQueueWorker : public Worker {
   bool EnqueueJob(Job& job) override;
   bool HasJob() override;
   JobQueue& GetDeviceRequests();
-  void AllowWorkSteal();
 
  protected:
   Job* GetCurrentJob() override;

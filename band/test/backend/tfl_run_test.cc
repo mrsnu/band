@@ -59,7 +59,6 @@ void test() {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();

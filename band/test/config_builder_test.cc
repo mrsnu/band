@@ -32,13 +32,11 @@ TEST(ConfigBuilderTest, PlannerConfigBuilderTest) {
 TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
   WorkerConfigBuilder b;
   WorkerConfig config_ok =
-      b.AddAllowWorkSteal(false)
-          .AddAvailabilityCheckIntervalMs(1000)
+      b.AddAvailabilityCheckIntervalMs(1000)
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kDSP})
           .AddCPUMasks({CPUMaskFlag::kAll, CPUMaskFlag::kAll})
           .AddNumThreads({1, 1})
           .Build();
-  EXPECT_EQ(config_ok.allow_worksteal, false);
   EXPECT_EQ(config_ok.availability_check_interval_ms, 1000);
   EXPECT_EQ(config_ok.workers.size(), 2);
   EXPECT_EQ(config_ok.cpu_masks.size(), config_ok.workers.size());
@@ -52,24 +50,24 @@ TEST(ConfigBuilderTest, WorkerConfigBuilderTest) {
 
 TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   RuntimeConfigBuilder b;
-  RuntimeConfig config_ok = b.AddNumWarmups(1)
-                                .AddNumRuns(1)
-                                .AddLatencySmoothingFactor(0.1)
-                                .AddProfilePath("band/test/data/config.json")
-                                .AddMinimumSubgraphSize(5)
-                                .AddSubgraphPreparationType(
-                                    SubgraphPreparationType::kNoFallbackSubgraph)
-                                .AddPlannerLogPath("band/test/data/config.json")
-                                .AddScheduleWindowSize(1)
-                                .AddSchedulers({SchedulerType::kFixedWorker})
-                                .AddPlannerCPUMask(CPUMaskFlag::kBig)
-                                .AddWorkers({})
-                                .AddWorkerCPUMasks({})
-                                .AddWorkerNumThreads({})
-                                .AddAllowWorkSteal(true)
-                                .AddAvailabilityCheckIntervalMs(100)
-                                .AddCPUMask(CPUMaskFlag::kPrimary)
-                                .Build();
+  RuntimeConfig config_ok =
+      b.AddNumWarmups(1)
+          .AddNumRuns(1)
+          .AddLatencySmoothingFactor(0.1)
+          .AddProfilePath("band/test/data/config.json")
+          .AddMinimumSubgraphSize(5)
+          .AddSubgraphPreparationType(
+              SubgraphPreparationType::kNoFallbackSubgraph)
+          .AddPlannerLogPath("band/test/data/config.json")
+          .AddScheduleWindowSize(1)
+          .AddSchedulers({SchedulerType::kFixedWorker})
+          .AddPlannerCPUMask(CPUMaskFlag::kBig)
+          .AddWorkers({})
+          .AddWorkerCPUMasks({})
+          .AddWorkerNumThreads({})
+          .AddAvailabilityCheckIntervalMs(100)
+          .AddCPUMask(CPUMaskFlag::kPrimary)
+          .Build();
   EXPECT_EQ(config_ok.profile_config.num_warmups, 1);
   EXPECT_EQ(config_ok.profile_config.num_runs, 1);
   EXPECT_EQ(config_ok.profile_config.latency_config.smoothing_factor, 0.1f);
@@ -87,7 +85,6 @@ TEST(ConfigBuilderTest, RuntimeConfigBuilderTest) {
   EXPECT_EQ(config_ok.worker_config.workers[0], DeviceFlag::kCPU);
   EXPECT_EQ(config_ok.worker_config.cpu_masks[0], CPUMaskFlag::kAll);
   EXPECT_EQ(config_ok.worker_config.num_threads[0], 1);
-  EXPECT_EQ(config_ok.worker_config.allow_worksteal, true);
   EXPECT_EQ(config_ok.worker_config.availability_check_interval_ms, 100);
 }
 
@@ -116,7 +113,6 @@ TEST(ConfigBuilderTest, DefaultValueTest) {
   EXPECT_EQ(config_ok.worker_config.num_threads[1], 1);
   EXPECT_EQ(config_ok.worker_config.num_threads[2], 1);
   EXPECT_EQ(config_ok.worker_config.num_threads[3], 1);
-  EXPECT_EQ(config_ok.worker_config.allow_worksteal, false);
   EXPECT_EQ(config_ok.worker_config.availability_check_interval_ms, 30000);
   EXPECT_EQ(config_ok.subgraph_config.minimum_subgraph_size, 7);
   EXPECT_EQ(config_ok.subgraph_config.subgraph_preparation_type,

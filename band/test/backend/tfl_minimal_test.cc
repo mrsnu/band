@@ -109,7 +109,6 @@ TEST(TFLiteBackend, SimpleEngineInvokeSync) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
@@ -166,7 +165,6 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
@@ -202,7 +200,6 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
@@ -269,7 +266,6 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
@@ -338,7 +334,6 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
@@ -396,7 +391,6 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
@@ -474,7 +468,6 @@ TEST(TFLiteBackend, ClassificationTest) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();
@@ -570,7 +563,6 @@ TEST(TFLiteBackend, RetinaFaceTest) {
           .AddProfilePath("band/test/data/profile.json")
           .AddNumWarmups(1)
           .AddNumRuns(1)
-          .AddAllowWorkSteal(true)
           .AddAvailabilityCheckIntervalMs(30000)
           .AddScheduleWindowSize(10)
           .Build();

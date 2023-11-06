@@ -163,8 +163,6 @@ int main() {
   printf("BandAddConfig, BAND_PROFILE_NUM_WARMUPS\n");
   pBandAddConfig(b, BAND_PROFILE_NUM_RUNS, /*count=*/1, 1);
   printf("BandAddConfig, BAND_PROFILE_NUM_RUNS\n");
-  pBandAddConfig(b, BAND_WORKER_ALLOW_WORKSTEAL, /*count=*/1, true);
-  printf("BandAddConfig, BAND_WORKER_ALLOW_WORKSTEAL\n");
   pBandAddConfig(b, BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS, /*count=*/1,
                  30000);
   printf("BandAddConfig, BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS\n");

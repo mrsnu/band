@@ -250,10 +250,6 @@ class WorkerConfigBuilder {
     num_threads_ = num_threads;
     return *this;
   }
-  WorkerConfigBuilder& AddAllowWorkSteal(bool allow_worksteal) {
-    allow_worksteal_ = allow_worksteal;
-    return *this;
-  }
   WorkerConfigBuilder& AddAvailabilityCheckIntervalMs(
       int availability_check_interval_ms) {
     availability_check_interval_ms_ = availability_check_interval_ms;
@@ -266,7 +262,6 @@ class WorkerConfigBuilder {
   std::vector<DeviceFlag> workers_;
   std::vector<CPUMaskFlag> cpu_masks_;
   std::vector<int> num_threads_;
-  bool allow_worksteal_ = false;
   int availability_check_interval_ms_ = 30000;
 };
 
@@ -417,10 +412,6 @@ class RuntimeConfigBuilder {
   }
   RuntimeConfigBuilder& AddWorkerNumThreads(std::vector<int> num_threads) {
     worker_config_builder_.AddNumThreads(num_threads);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddAllowWorkSteal(bool allow_worksteal) {
-    worker_config_builder_.AddAllowWorkSteal(allow_worksteal);
     return *this;
   }
   RuntimeConfigBuilder& AddAvailabilityCheckIntervalMs(

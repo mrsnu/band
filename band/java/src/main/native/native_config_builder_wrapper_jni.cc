@@ -232,14 +232,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addWorkerNumThreads(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addAllowWorkSteal(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jboolean allowWorkSteal) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddAllowWorkSteal(static_cast<bool>(allowWorkSteal));
-}
-
-JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addAvailabilityCheckIntervalMs(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     jint availabilityCheckIntervalMs) {

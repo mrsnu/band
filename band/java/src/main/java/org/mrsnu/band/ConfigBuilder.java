@@ -112,10 +112,6 @@ public class ConfigBuilder {
     wrapper.addWorkerNumThreads(numThreads);
   }
 
-  public void addAllowWorkSteal(boolean allowWorkSteal) {
-    wrapper.addAllowWorkSteal(allowWorkSteal);
-  }
-
   public void addAvailabilityCheckIntervalMs(int availabilityCheckIntervalMs) {
     wrapper.addAvailabilityCheckIntervalMs(availabilityCheckIntervalMs);
   }

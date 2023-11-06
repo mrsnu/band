@@ -49,7 +49,6 @@ Each configuration field is optional or required. If a field is optional, then i
 - `workers` [type: `std::vector<DeviceFlag>`, default: `[DeviceFlag::kCPU, DeviceFlag::kGPU, ...]`]: The list of target devices. By default, one worker per device is generated.
 - `cpu_masks` [type: `std::vector<CPUMaskFlag>`, default: `[CPUMaskFlag::kAll, CPUMaskFlag::kAll, ...]`]: CPU masks to set CPU affinity. The size of the list must be the same as the size of `workers`.
 - `num_threads` [type: `std::vector<int>`, default: `[1, 1, ...]`]: The number of threads. The size of the list must be the same as the size of `workers`.
-- `allow_worksteal` [type: `bool`, default: `false`]: Work-stealing is enabled if true, disabled if false.
 - `availability_check_interval_ms` [type: `int`, default: `30_000`]: The interval for checking availability of devices. Used for detecting thermal throttling.
 
 ## `RuntimeConfig`
@@ -85,7 +84,6 @@ All `Add*` methods are idempotent, i.e. multiple calls behaves the same as a sin
 - `AddWorkers(std::vector<DeviceFlag> workers)`
 - `AddWorkerCPUMasks(std::vector<CPUMaskFlag> cpu_masks)`
 - `AddWorkerNumThreads(std::vector<int> num_threads)`
-- `AddAllowWorkSteal(bool allow_worksteal)`
 - `AddAvailabilityCheckIntervalMs(int32_t availability_check_interval_ms)`
 - `AddMinimumSubgraphSize(int minimum_subgraph_size)`
 - `AddSubgraphPreparationType(SubgraphPreparationType subgraph_preparation_type)`

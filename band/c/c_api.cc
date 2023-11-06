@@ -115,10 +115,6 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       }
       b->impl.AddWorkerNumThreads(num_threads);
     } break;
-    case BAND_WORKER_ALLOW_WORKSTEAL: {
-      bool arg = va_arg(vl, int);
-      b->impl.AddAllowWorkSteal(arg);
-    } break;
     case BAND_WORKER_AVAILABILITY_CHECK_INTERVAL_MS: {
       int arg = va_arg(vl, int);
       b->impl.AddAvailabilityCheckIntervalMs(arg);

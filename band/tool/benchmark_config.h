@@ -10,6 +10,7 @@ struct ModelConfig {
   /* mendatory */
   std::string path;
   size_t batch_size = 1;
+  
   /* optional */
   size_t period_ms;  // for periodic requests
   int worker_id = -1;

@@ -9,8 +9,6 @@ namespace band {
 
 JobQueue& DeviceQueueWorker::GetDeviceRequests() { return requests_; }
 
-void DeviceQueueWorker::AllowWorkSteal() { allow_work_steal_ = true; }
-
 bool DeviceQueueWorker::HasJob() { return !requests_.empty(); }
 
 int DeviceQueueWorker::GetCurrentJobId() {

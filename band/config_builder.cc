@@ -83,8 +83,6 @@ bool WorkerConfigBuilder::IsValid(
   for (int i = 0; i < workers_.size(); i++) {
     REPORT_IF_FALSE(WorkerConfigBuilder, num_threads_[i] >= /*or >?*/ 0);
   }
-  REPORT_IF_FALSE(WorkerConfigBuilder,
-                  allow_worksteal_ == true || allow_worksteal_ == false);
   REPORT_IF_FALSE(WorkerConfigBuilder, availability_check_interval_ms_ > 0);
   return result;
 }
@@ -222,7 +220,6 @@ WorkerConfig WorkerConfigBuilder::Build(
   worker_config.workers = workers_;
   worker_config.cpu_masks = cpu_masks_;
   worker_config.num_threads = num_threads_;
-  worker_config.allow_worksteal = allow_worksteal_;
   worker_config.availability_check_interval_ms =
       availability_check_interval_ms_;
   return worker_config;
