@@ -31,7 +31,6 @@ using band::RuntimeConfig;
 using band::RuntimeConfigBuilder;
 using band::Tensor;
 using band::Tensors;
-using band::jni::BufferErrorReporter;
 using band::jni::ConvertListToVectorOfPointer;
 using band::jni::ConvertLongToConfig;
 using band::jni::ConvertLongToEngine;

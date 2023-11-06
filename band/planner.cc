@@ -34,8 +34,8 @@ Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
   planner_thread_ = std::thread([this] {
     auto status = this->Plan();
     if (!status.ok()) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Planner thread failed: %s",
-                    status.message());
+      BAND_LOG(LogSeverity::kError, "Planner thread failed: %s",
+               status.message());
     }
   });
 }
@@ -61,8 +61,7 @@ absl::Status Planner::Init(const PlannerConfig& config) {
   bool allow_fallback = false;
   local_queues_.resize(schedulers.size());
   for (int i = 0; i < schedulers.size(); ++i) {
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "[Planner] create scheduler %d.",
-                      schedulers[i]);
+    BAND_LOG_DEBUG("[Planner] create scheduler %d.", schedulers[i]);
     if (schedulers[i] == SchedulerType::kFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kFixedWorkerGlobalQueue) {
@@ -274,7 +273,7 @@ absl::Status Planner::Plan() {
       {
         auto status = SetCPUThreadAffinity(cpu_set_);
         if (!status.ok()) {
-          BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+          BAND_LOG(LogSeverity::kWarning, "%s", status.message());
         }
       }
       need_cpu_update_ = false;
@@ -328,10 +327,10 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
 
     Worker* worker = engine_.GetWorker(target_key.GetWorkerId());
     if (worker == nullptr) {
-      BAND_LOG_PROD(BAND_LOG_ERROR,
-                    "EnqueueToWorker failed. Requests scheduled to null worker "
-                    "id %d",
-                    target_key.GetWorkerId());
+      BAND_LOG(LogSeverity::kError,
+               "EnqueueToWorker failed. Requests scheduled to null worker "
+               "id %d",
+               target_key.GetWorkerId());
       job.status = JobStatus::kEnqueueFailed;
       EnqueueFinishedJob(job);
     } else if (IsSLOViolated(job)) {
@@ -350,10 +349,10 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
       if (worker->IsEnqueueReady()) {
         UpdateJobScheduleStatus(job, target_key);
         if (!worker->EnqueueJob(job)) {
-          BAND_LOG_PROD(BAND_LOG_ERROR,
-                        "EnqueueToWorker failed. Requests scheduled to "
-                        "unavailable worker id %d",
-                        target_key.GetWorkerId());
+          BAND_LOG(LogSeverity::kError,
+                   "EnqueueToWorker failed. Requests scheduled to "
+                   "unavailable worker id %d",
+                   target_key.GetWorkerId());
         }
       } else {
         EnqueueRequest(job, true);

@@ -29,13 +29,11 @@
 
 namespace band {
 
-class ErrorReporter;
 class Tensor;
 
 class TensorRingBuffer {
  public:
-  TensorRingBuffer(ErrorReporter* error_reporter,
-                   std::vector<std::shared_ptr<interface::ITensor>> tensors,
+  TensorRingBuffer(std::vector<std::shared_ptr<interface::ITensor>> tensors,
                    std::vector<int> tensor_indices, int size = 128);
   ~TensorRingBuffer();
 
@@ -65,7 +63,6 @@ class TensorRingBuffer {
   std::vector<interface::ITensor*>* tensors_;
   // Model's tensor index to ring buffer's index
   std::map<int, int> tensor_to_buffer_;
-  ErrorReporter* error_reporter_;
 };
 }  // namespace band
 

@@ -63,7 +63,7 @@ absl::Status IBufferOperator::ValidateOrCreateOutput(const Buffer& input) {
       status = ValidateOutput(input);
       if (!status.ok()) {
         // real trouble if the created output is not valid
-        BAND_LOG_PROD(BAND_LOG_ERROR,
+        BAND_LOG(LogSeverity::kError,
                       "Failed to create valid output buffer: %s",
                       status.message());
       }

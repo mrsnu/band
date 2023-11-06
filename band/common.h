@@ -60,6 +60,15 @@ EnumType FromString(std::string str) {
   return static_cast<EnumType>(0);
 }
 
+enum class LogSeverity : size_t {
+  // for internal use
+  kInternal = 0,
+  // for general information (default)
+  kInfo,
+  kWarning,
+  kError
+};
+
 enum class BackendType : size_t {
   kTfLite = 0,
 };
@@ -162,6 +171,8 @@ enum class JobStatus : size_t {
 };
 
 template <>
+size_t EnumLength<LogSeverity>();
+template <>
 size_t EnumLength<BackendType>();
 template <>
 size_t EnumLength<SchedulerType>();
@@ -180,6 +191,8 @@ size_t EnumLength<DeviceFlag>();
 template <>
 size_t EnumLength<QuantizationType>();
 
+template <>
+const char* ToString(LogSeverity log_severity);
 template <>
 const char* ToString(BackendType backend_type);
 template <>

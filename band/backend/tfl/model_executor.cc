@@ -19,7 +19,6 @@
 #include "band/backend/tfl/util.h"
 #include "band/common.h"
 #include "band/device/cpu.h"
-#include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/worker.h"
 #include "tensorflow/lite/context_util.h"
@@ -320,9 +319,8 @@ DeviceFlag GetNNAPIDeviceFlag(std::string name) {
   // 1. Add additional NPU / TPU names
   // 2. Is 'hta' belongs to dsp or npu?
 
-  BAND_LOG_PROD(BAND_LOG_WARNING,
-                "Unknown NNAPI device name: %s. Fallback to CPU.",
-                name.c_str());
+  BAND_LOG(LogSeverity::kWarning,
+           "Unknown NNAPI device name: %s. Fallback to CPU.", name.c_str());
   return DeviceFlag::kCPU;
 }
 
@@ -411,7 +409,7 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
         target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
             TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
 
-        BAND_LOG_INTERNAL(BAND_LOG_INFO, "Create Tensorflow Lite GPU delegate");
+        BAND_LOG(LogSeverity::kInfo, "Create Tensorflow Lite GPU delegate");
         break;
       }
 
@@ -429,8 +427,8 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
         // huawei npu : liteadaptor
         for (const char* device_name : string_device_names_list) {
           if (IsNNAPIDeviceUseful(device_name)) {
-            BAND_LOG_INTERNAL(BAND_LOG_INFO, "Available NNAPI device name %s",
-                              device_name);
+            BAND_LOG(LogSeverity::kInfo, "Available NNAPI device name %s",
+                     device_name);
             tflite::StatefulNnApiDelegate::Options nnapi_options =
                 tflite::StatefulNnApiDelegate::Options();
             // Unlimited partition : 0
@@ -455,20 +453,18 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
                       DeviceFlag::kDSP) {
                 target_delegate = std::move(nnapi_delegate);
-                BAND_LOG_INTERNAL(
-                    BAND_LOG_INFO,
-                    "Create Tensorflow Lite NNAPI delegate (%s , %s)",
-                    nnapi_options.accelerator_name, ToString(device));
+                BAND_LOG(LogSeverity::kInfo,
+                         "Create Tensorflow Lite NNAPI delegate (%s , %s)",
+                         nnapi_options.accelerator_name, ToString(device));
               }
 
               if (device == DeviceFlag::kNPU &&
                   GetNNAPIDeviceFlag(nnapi_options.accelerator_name) ==
                       DeviceFlag::kNPU) {
                 target_delegate = std::move(nnapi_delegate);
-                BAND_LOG_INTERNAL(
-                    BAND_LOG_INFO,
-                    "Create Tensorflow Lite NNAPI delegate (%s , %s)",
-                    nnapi_options.accelerator_name, ToString(device));
+                BAND_LOG(LogSeverity::kInfo,
+                         "Create Tensorflow Lite NNAPI delegate (%s , %s)",
+                         nnapi_options.accelerator_name, ToString(device));
               }
             }
           }

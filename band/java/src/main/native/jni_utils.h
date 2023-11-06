@@ -24,7 +24,6 @@
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
-#include "band/error_reporter.h"
 #include "band/logger.h"
 #include "band/model.h"
 #include "band/tensor.h"
@@ -32,19 +31,17 @@
 namespace band {
 namespace jni {
 
-#define JNI_DEFINE_CLS(tag, cls)                                            \
-  static jclass tag##_cls = env->FindClass(cls);                            \
-  if (tag##_cls == nullptr) {                                               \
-    BAND_LOG_INTERNAL(band::BAND_LOG_ERROR, "Canont find class named `%s`", \
-                      cls);                                                 \
+#define JNI_DEFINE_CLS(tag, cls)                                              \
+  static jclass tag##_cls = env->FindClass(cls);                              \
+  if (tag##_cls == nullptr) {                                                 \
+    BAND_LOG(band::LogSeverity::kError, "Canont find class named `%s`", cls); \
   }
 
-#define JNI_DEFINE_MTD(tag, cls_var, mtd, sig)                             \
-  static jmethodID tag##_mtd = env->GetMethodID(cls_var, mtd, sig);        \
-  if (tag##_mtd == nullptr) {                                              \
-    BAND_LOG_INTERNAL(band::BAND_LOG_ERROR,                                \
-                      "Cannot find method named `%s` with signature `%s`", \
-                      mtd, sig);                                           \
+#define JNI_DEFINE_MTD(tag, cls_var, mtd, sig)                               \
+  static jmethodID tag##_mtd = env->GetMethodID(cls_var, mtd, sig);          \
+  if (tag##_mtd == nullptr) {                                                \
+    BAND_LOG(band::LogSeverity::kError,                                      \
+             "Cannot find method named `%s` with signature `%s`", mtd, sig); \
   }
 
 #define JNI_DEFINE_CLS_AND_MTD(tag, cls, mtd, sig) \
@@ -63,20 +60,6 @@ struct JNIRuntimeConfig {
 void ThrowException(JNIEnv* env, const char* clazz, const char* fmt, ...);
 
 bool CheckJniInitializedOrThrow(JNIEnv* env);
-
-class BufferErrorReporter : public ErrorReporter {
- public:
-  BufferErrorReporter(JNIEnv* env, int limit);
-  ~BufferErrorReporter() override;
-  int Report(const char* format, va_list args);
-  const char* CachedErrorMessage();
-  using ErrorReporter::Report;
-
- private:
-  char* buffer_;
-  int start_idx_ = 0;
-  int end_idx_ = 0;
-};
 
 template <typename T>
 T* CastLongToPointer(JNIEnv* env, jlong handle) {
@@ -130,9 +113,6 @@ BufferProcessor* ConvertLongToBufferProcessor(JNIEnv* env, jlong handle);
 
 int ConvertLongToJobId(jint request_handle);
 
-BufferErrorReporter* ConvertLongToErrorReporter(JNIEnv* env, jlong handle);
-
 }  // namespace jni
 }  // namespace band
-
 #endif  // BAND_JAVA_SRC_MAIN_NATIVE_JNI_UTILS_H_

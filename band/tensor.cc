@@ -28,7 +28,7 @@ Tensor::Tensor(ITensor* tensor_view, bool copy_data)
       name_(tensor_view->GetName()) {
   auto status = SetQuantization(tensor_view->GetQuantization());
   if (!status.ok()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set quantization: %s",
+    BAND_LOG(LogSeverity::kError, "Failed to set quantization: %s",
                   status.message());
   }
   if (copy_data) {

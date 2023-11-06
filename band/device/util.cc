@@ -144,7 +144,7 @@ bool IsRooted() {
       [](bool& is_rooted) {
         is_rooted = RunCommand("su -c 'echo rooted'").find("rooted") !=
                     std::string::npos;
-        BAND_LOG_INTERNAL(BAND_LOG_INFO, "Is rooted: %d", is_rooted);
+        BAND_LOG(LogSeverity::kInfo, "Is rooted: %d", is_rooted);
       },
       is_rooted);
 #endif

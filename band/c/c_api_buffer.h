@@ -89,7 +89,7 @@ BAND_CAPI_EXPORT extern BandImageProcessor* BandImageProcessorBuilderBuild(
 // order of the operations applied to the input buffer.
 // E.g., BandAddOperator(builder, BAND_IMAGE_PROCESSOR_CROP, 4, 0, 0, 100, 100);
 // will crop the input buffer from (0, 0) to (100, 100).
-// This will return kBandError if the given variadic arguments are invalid.
+// This will return kBandErr if the given variadic arguments are invalid.
 BAND_CAPI_EXPORT extern BandStatus BandAddOperator(
     BandImageProcessorBuilder* b, BandImageProcessorBuilderField field,
     int count, ...);

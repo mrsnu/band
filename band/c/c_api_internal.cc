@@ -156,9 +156,9 @@ const char* BandStatusToString(BandStatus status) {
   switch (status) {
     case kBandOk:
       return "Ok";
-    case kBandDelegateError:
+    case kBandDelegateErr:
       return "DelegateError";
-    case kBandError:
+    case kBandErr:
       return "Error";
     default: {}
   }

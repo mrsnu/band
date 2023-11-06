@@ -32,7 +32,7 @@ absl::Status BufferProcessor::Process(const Buffer& input, Buffer& output) {
     absl::Status status = operations_[i]->Process(*next_input);
     // skip cancelled status, and continue current input to the next operation
     if (!status.ok()) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "BufferProcessor::Process failed %s",
+      BAND_LOG(LogSeverity::kError, "BufferProcessor::Process failed %s",
                     status.ToString().c_str());
       return status;
     }

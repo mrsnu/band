@@ -85,7 +85,7 @@ Buffer* Buffer::CreateFromRaw(const unsigned char* data, size_t width,
           owns_data);
     }
     default:
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
+      BAND_LOG(LogSeverity::kError, "Unsupported format type : %s",
                     ToString(buffer_format));
       return nullptr;
   }
@@ -108,7 +108,7 @@ Buffer* Buffer::CreateFromYUVPlanes(
                    {u_data, row_stride_uv, pixel_stride_uv},
                    {v_data, row_stride_uv, pixel_stride_uv}};
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported YUV format type : %s",
+    BAND_LOG(LogSeverity::kError, "Unsupported YUV format type : %s",
                   ToString(buffer_format));
     return nullptr;
   }
@@ -119,12 +119,12 @@ Buffer* Buffer::CreateFromYUVPlanes(
 
 Buffer* Buffer::CreateFromTensor(const interface::ITensor* tensor) {
   if (tensor == nullptr) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor is null");
+    BAND_LOG(LogSeverity::kError, "Given tensor is null");
     return nullptr;
   }
 
   if (tensor->GetNumDims() == 0) {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor has no dimension");
+    BAND_LOG(LogSeverity::kError, "Given tensor has no dimension");
     return nullptr;
   }
 
@@ -137,7 +137,7 @@ Buffer* Buffer::CreateFromTensor(const interface::ITensor* tensor) {
 
     dims.push_back(tensor->GetDims()[i]);
     if (dims.back() <= 0) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Given tensor has invalid dimension : %d",
+      BAND_LOG(LogSeverity::kError, "Given tensor has invalid dimension : %d",
                     dims.back());
       return nullptr;
     }
@@ -194,13 +194,13 @@ Buffer* Buffer::CreateEmpty(size_t width, size_t height,
       }
 
       case BufferFormat::kRaw: {
-        BAND_LOG_PROD(BAND_LOG_ERROR,
+        BAND_LOG(LogSeverity::kError,
                       "Raw format type requires external input to create "
                       "empty buffer");
         return nullptr;
       }
       default:
-        BAND_LOG_PROD(BAND_LOG_ERROR, "Unsupported format type : %s",
+        BAND_LOG(LogSeverity::kError, "Unsupported format type : %s",
                       ToString(buffer_format));
         return nullptr;
     }
@@ -236,7 +236,7 @@ size_t Buffer::GetNumPixelElements(BufferFormat buffer_format) {
     case BufferFormat::kRGBA:
       return 4;
     default:
-      BAND_LOG_PROD(BAND_LOG_ERROR,
+      BAND_LOG(LogSeverity::kError,
                     "Given format type requires external input to guess the "
                     "pixel stride : %s",
                     ToString(buffer_format));
@@ -251,7 +251,7 @@ std::vector<size_t> Buffer::GetUvDims(const std::vector<size_t>& dims,
     for (const auto& dim : dims) {
       dims_str += std::to_string(dim) + " ";
     }
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Given dims is not valid for UV plane : %s",
+    BAND_LOG(LogSeverity::kError, "Given dims is not valid for UV plane : %s",
                   dims_str.c_str());
     return std::vector<size_t>();
   }
@@ -260,7 +260,7 @@ std::vector<size_t> Buffer::GetUvDims(const std::vector<size_t>& dims,
     // YUV format has 2 bytes per pixel
     return {(dims[0] + 1) / 2, (dims[1] + 1) / 2};
   } else {
-    BAND_LOG_PROD(BAND_LOG_ERROR, "Given format type is not YUV format : %s",
+    BAND_LOG(LogSeverity::kError, "Given format type is not YUV format : %s",
                   ToString(buffer_format));
     return std::vector<size_t>();
   }
@@ -294,7 +294,7 @@ size_t Buffer::GetSize(const std::vector<size_t>& dims) {
   size_t size = 1;
   for (const auto& dim : dims) {
     if (dim <= 0) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Given dims is not valid : %d", dim);
+      BAND_LOG(LogSeverity::kError, "Given dims is not valid : %d", dim);
       return 0;
     }
     size *= dim;

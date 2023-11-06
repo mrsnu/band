@@ -28,7 +28,7 @@ void Profiler::EndEvent(size_t event_handle) {
     timeline_vector_[event_handle - 1].second =
         std::chrono::system_clock::now();
   } else {
-    BAND_LOG_INTERNAL(BAND_LOG_ERROR,
+    BAND_LOG(LogSeverity::kError,
                       "Profiler end event with an invalid handle %d",
                       event_handle);
   }

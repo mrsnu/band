@@ -12,29 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "band/logger.h"
 
 #include <cstdarg>
 #include <cstdio>
 #include <mutex>
 
+#include "absl/strings/str_format.h"
+
+
 #ifdef __ANDROID__
 #include <android/log.h>
 
 int LogSeverityToAndroid(band::LogSeverity severity) {
   switch (severity) {
-    case band::BAND_LOG_INFO:
+    case band::LogSeverity::kInternal:
+      return ANDROID_LOG_DEBUG;
+      break;
+    case band::LogSeverity::kInfo:
       return ANDROID_LOG_INFO;
       break;
-    case band::BAND_LOG_WARNING:
+    case band::LogSeverity::kWarning:
       return ANDROID_LOG_WARN;
       break;
-    case band::BAND_LOG_ERROR:
+    case band::LogSeverity::kError:
       return ANDROID_LOG_ERROR;
-      break;
-    case band::BAND_LOG_NUM_SEVERITIES:
-    default:
       break;
   }
   return -1;
@@ -42,16 +44,56 @@ int LogSeverityToAndroid(band::LogSeverity severity) {
 #endif
 
 namespace band {
-LogSeverity Logger::verbosity = BAND_LOG_INFO;
+
+Logger& Logger::Get() {
+  static Logger* logger = new Logger;
+  return *logger;
+}
+
+CallbackId Logger::SetReporter(
+    std::function<void(LogSeverity, const char*)> reporter) {
+  CallbackId id = next_callback_id_++;
+  reporters_[id] = reporter;
+  return id;
+}
+
+absl::Status Logger::RemoveReporter(CallbackId callback_id) {
+  if (reporters_.find(callback_id) == reporters_.end()) {
+    return absl::InvalidArgumentError(
+        absl::StrFormat("The given callback id does not exist. %d",
+                        static_cast<int>(callback_id)));
+  }
+  reporters_.erase(callback_id);
+  return absl::OkStatus();
+}
+
+std::pair<LogSeverity, std::string> Logger::GetLastLog() const {
+  return last_message_;
+}
+
+void Logger::DebugLog(const char* format, ...) {
+  static std::mutex log_mutex;
+  std::lock_guard<std::mutex> lock(log_mutex);
+  va_list args;
+  va_start(args, format);
+  LogFormatted(LogSeverity::kInfo, format, args);
+  va_end(args);
+}
 
 void Logger::Log(LogSeverity severity, const char* format, ...) {
-  if (verbosity <= severity) {
+  if (verbosity_ <= severity) {
     static std::mutex log_mutex;
     std::lock_guard<std::mutex> lock(log_mutex);
     va_list args;
     va_start(args, format);
     LogFormatted(severity, format, args);
     va_end(args);
+
+    for (const auto& reporter : reporters_) {
+      reporter.second(severity, format);
+    }
+
+    last_message_ = std::make_pair(severity, format);
   }
 }
 
@@ -59,7 +101,7 @@ void Logger::LogFormatted(LogSeverity severity, const char* format,
                           va_list args) {
   static std::mutex log_mutex;
   std::lock_guard<std::mutex> lock(log_mutex);
-  fprintf(stderr, "%s: ", GetSeverityName(severity));
+  fprintf(stderr, "%s: ", ToString(severity));
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
   vfprintf(stderr, format, args);
@@ -71,22 +113,6 @@ void Logger::LogFormatted(LogSeverity severity, const char* format,
 #endif
 }
 
-void Logger::SetVerbosity(int severity) {
-  verbosity = static_cast<LogSeverity>(severity);
-}
-
-const char* Logger::GetSeverityName(LogSeverity severity) {
-  switch (severity) {
-    case BAND_LOG_INFO:
-      return "INFO";
-    case BAND_LOG_WARNING:
-      return "WARNING";
-    case BAND_LOG_ERROR:
-      return "ERROR";
-    case BAND_LOG_NUM_SEVERITIES:
-    default:
-      return "<Unknown severity>";
-  }
-}
+void Logger::SetVerbosity(LogSeverity severity) { verbosity_ = severity; }
 
 }  // namespace band

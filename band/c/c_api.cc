@@ -17,6 +17,7 @@
 #include "band/c/c_api_internal.h"
 #include "band/interface/tensor.h"
 #include "band/interface/tensor_view.h"
+#include "c_api.h"
 
 namespace {
 
@@ -31,7 +32,7 @@ std::vector<band::interface::ITensor*> BandTensorArrayToVec(
 
 BandStatus ToBandStatus(absl::Status& status) {
   if (status.code() == absl::StatusCode::kInternal) {
-    return kBandError;
+    return kBandErr;
   } else {
     return kBandOk;
   }
@@ -39,7 +40,7 @@ BandStatus ToBandStatus(absl::Status& status) {
 
 BandStatus ToBandStatus(absl::Status&& status) {
   if (status.code() == absl::StatusCode::kInternal) {
-    return kBandError;
+    return kBandErr;
   } else {
     return kBandOk;
   }
@@ -62,8 +63,32 @@ extern "C" {
 
 BandConfigBuilder* BandConfigBuilderCreate() { return new BandConfigBuilder; }
 
+void BandSetLogSeverity(BandLogSeverity severity) {
+  band::Logger::Get().SetVerbosity(static_cast<band::LogSeverity>(severity));
+}
+
+BandCallbackHandle BandSetLogReporter(void (*reporter)(BandLogSeverity severity,
+                                                       const char* msg)) {
+  std::function<void(band::LogSeverity, const char*)> reporter_invoke =
+      [reporter](band::LogSeverity severity, const char* msg) {
+        reporter(static_cast<BandLogSeverity>(severity), msg);
+      };
+  return band::Logger::Get().SetReporter(reporter_invoke);
+}
+
+void BandUnsetLogReporter(BandCallbackHandle handle) {
+  if (!band::Logger::Get().RemoveReporter(handle).ok()) {
+    BAND_LOG(band::LogSeverity::kWarning,
+             "Failed to remove reporter with handle %d", handle);
+  }
+}
+
 void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
-  // TODO(widiba03304): Error handling should be properly done.
+  if (!b) {
+    BAND_LOG(band::LogSeverity::kError, "BandConfigBuilder is null");
+    return;
+  }
+
   va_list vl;
   va_start(vl, count);
   BandConfigField new_field = static_cast<BandConfigField>(field);
@@ -168,9 +193,21 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
   va_end(vl);
 }
 
-void BandConfigBuilderDelete(BandConfigBuilder* b) { delete b; }
+void BandConfigBuilderDelete(BandConfigBuilder* b) {
+  if (!b) {
+    BAND_LOG(band::LogSeverity::kError, "BandConfigBuilder is null");
+    return;
+  }
+
+  delete b;
+}
 
 BandConfig* BandConfigCreate(BandConfigBuilder* b) {
+  if (!b) {
+    BAND_LOG(band::LogSeverity::kError, "BandConfigBuilder is null");
+    return nullptr;
+  }
+
   auto config = b->impl.Build();
   if (!config.status().ok()) {
     return nullptr;
@@ -179,15 +216,33 @@ BandConfig* BandConfigCreate(BandConfigBuilder* b) {
   }
 }
 
-void BandConfigDelete(BandConfig* config) { delete config; }
+void BandConfigDelete(BandConfig* config) {
+  if (!config) {
+    BAND_LOG(band::LogSeverity::kError, "BandConfig is null");
+    return;
+  }
+
+  delete config;
+}
 
 BandModel* BandModelCreate() { return new BandModel; }
 
-void BandModelDelete(BandModel* model) { delete model; }
+void BandModelDelete(BandModel* model) {
+  if (!model) {
+    BAND_LOG(band::LogSeverity::kError, "BandModel is null");
+    return;
+  }
+
+  delete model;
+}
 
 BandStatus BandModelAddFromBuffer(BandModel* model,
                                   BandBackendType backend_type,
                                   const void* model_data, size_t model_size) {
+  if (!model) {
+    BAND_LOG(band::LogSeverity::kError, "BandModel is null");
+    return kBandErr;
+  }
   return ToBandStatus(
       model->impl->FromBuffer(static_cast<band::BackendType>(backend_type),
                               (const char*)model_data, model_size));
@@ -195,40 +250,94 @@ BandStatus BandModelAddFromBuffer(BandModel* model,
 
 BandStatus BandModelAddFromFile(BandModel* model, BandBackendType backend_type,
                                 const char* model_path) {
+  if (!model) {
+    BAND_LOG(band::LogSeverity::kError, "BandModel is null");
+    return kBandErr;
+  }
+
   return ToBandStatus(model->impl->FromPath(
       static_cast<band::BackendType>(backend_type), model_path));
 }
 
-void BandTensorDelete(BandTensor* tensor) { delete tensor; }
+void BandTensorDelete(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return;
+  }
+
+  delete tensor;
+}
 
 BandDataType BandTensorGetType(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return BandDataType::kBandNumDataType;
+  }
+
   return static_cast<BandDataType>(tensor->impl->GetType());
 }
 
-void* BandTensorGetData(BandTensor* tensor) { return tensor->impl->GetData(); }
+void* BandTensorGetData(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return nullptr;
+  }
+
+  return tensor->impl->GetData();
+}
 
 size_t BandTensorGetNumDims(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return 0;
+  }
+
   return tensor->impl->GetNumDims();
 }
 
 const int* BandTensorGetDims(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return nullptr;
+  }
+
   return tensor->impl->GetDims();
 }
 
 size_t BandTensorGetBytes(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return 0;
+  }
+
   return tensor->impl->GetBytes();
 }
 
 const char* BandTensorGetName(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return nullptr;
+  }
+
   return tensor->impl->GetName();
 }
 
 BandQuantizationType BandTensorGetQuantizationType(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return BandQuantizationType::kBandNumQuantizationType;
+  }
+
   return static_cast<BandQuantizationType>(
       tensor->impl->GetQuantization().GetType());
 }
 
 void* BandTensorGetQuantizationParams(BandTensor* tensor) {
+  if (!tensor) {
+    BAND_LOG(band::LogSeverity::kError, "BandTensor is null");
+    return nullptr;
+  }
+
   return tensor->impl->GetQuantization().GetParams();
 }
 
@@ -240,17 +349,33 @@ BandEngine* BandEngineCreateWithDefaultConfig() {
 }
 
 BandEngine* BandEngineCreate(BandConfig* config) {
+  if (!config) {
+    BAND_LOG(band::LogSeverity::kError, "BandConfig is null");
+    return nullptr;
+  }
+
   std::unique_ptr<band::Engine> engine(band::Engine::Create(config->impl));
   return engine ? new BandEngine(std::move(engine)) : nullptr;
 }
 
 void BandEngineDelete(BandEngine* engine) {
-  if (engine) {
-    delete engine;
+  if (!engine) {
+    BAND_LOG(band::LogSeverity::kError, "BandEngine is null");
+    return;
   }
+
+  delete engine;
 }
 
 BandStatus BandEngineRegisterModel(BandEngine* engine, BandModel* model) {
+  if (!engine || !model) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) is "
+             "null",
+             engine, model);
+    return kBandErr;
+  }
+
   auto status = engine->impl->RegisterModel(model->impl.get());
   if (status == absl::OkStatus()) {
     engine->models.push_back(model->impl);
@@ -259,23 +384,57 @@ BandStatus BandEngineRegisterModel(BandEngine* engine, BandModel* model) {
 }
 
 int BandEngineGetNumInputTensors(BandEngine* engine, BandModel* model) {
+  if (!engine || !model) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) is "
+             "null",
+             engine, model);
+    return -1;
+  }
+
   return engine->impl->GetInputTensorIndices(model->impl->GetId()).size();
 }
 
 int BandEngineGetNumOutputTensors(BandEngine* engine, BandModel* model) {
+  if (!engine || !model) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) is "
+             "null",
+             engine, model);
+    return -1;
+  }
+
   return engine->impl->GetOutputTensorIndices(model->impl->GetId()).size();
 }
 
 int BandEngineGetNumWorkers(BandEngine* engine) {
+  if (!engine) {
+    BAND_LOG(band::LogSeverity::kError, "BandEngine is null");
+    return -1;
+  }
+
   return engine->impl->GetNumWorkers();
 }
 
 BandDeviceFlag BandEngineGetWorkerDevice(BandEngine* engine, int worker_id) {
+  if (!engine) {
+    BAND_LOG(band::LogSeverity::kError, "BandEngine is null");
+    return BandDeviceFlag::kBandNumDeviceFlag;
+  }
+
   return static_cast<BandDeviceFlag>(engine->impl->GetWorkerDevice(worker_id));
 }
 
 BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,
                                         size_t index) {
+  if (!engine || !model) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) is "
+             "null",
+             engine, model);
+    return nullptr;
+  }
+
   auto input_indices =
       engine->impl->GetInputTensorIndices(model->impl->GetId());
   return new BandTensor(
@@ -284,6 +443,14 @@ BandTensor* BandEngineCreateInputTensor(BandEngine* engine, BandModel* model,
 
 BandTensor* BandEngineCreateOutputTensor(BandEngine* engine, BandModel* model,
                                          size_t index) {
+  if (!engine || !model) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) is "
+             "null",
+             engine, model);
+    return nullptr;
+  }
+
   auto output_indices =
       engine->impl->GetOutputTensorIndices(model->impl->GetId());
   return new BandTensor(
@@ -293,6 +460,14 @@ BandTensor* BandEngineCreateOutputTensor(BandEngine* engine, BandModel* model,
 BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
                                  BandTensor** input_tensors,
                                  BandTensor** output_tensors) {
+  if (!engine || !model) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) is "
+             "null",
+             engine, model);
+    return kBandErr;
+  }
+
   return ToBandStatus(engine->impl->RequestSync(
       model->impl->GetId(), band::RequestOption::GetDefaultOption(),
       BandTensorArrayToVec(input_tensors,
@@ -303,7 +478,14 @@ BandStatus BandEngineRequestSync(BandEngine* engine, BandModel* model,
 
 BandRequestHandle BandEngineRequestAsync(BandEngine* engine, BandModel* model,
                                          BandTensor** input_tensors) {
-  // TODO(widiba03304): error handling
+  if (!engine || !model) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) is "
+             "null",
+             engine, model);
+    return 0;
+  }
+
   return engine->impl
       ->RequestAsync(
           model->impl->GetId(), band::RequestOption::GetDefaultOption(),
@@ -316,6 +498,15 @@ BandStatus BandEngineRequestSyncOptions(BandEngine* engine, BandModel* model,
                                         BandRequestOption options,
                                         BandTensor** input_tensors,
                                         BandTensor** output_tensors) {
+  if (!engine || !model || !input_tensors || !output_tensors) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) or input_tensors (%d) or "
+             "output_tensors (%d) is "
+             "null",
+             engine, model, input_tensors, output_tensors);
+    return kBandErr;
+  }
+
   return ToBandStatus(engine->impl->RequestSync(
       model->impl->GetId(), ToRequestOption(options),
       BandTensorArrayToVec(input_tensors,
@@ -328,7 +519,14 @@ BandRequestHandle BandEngineRequestAsyncOptions(BandEngine* engine,
                                                 BandModel* model,
                                                 BandRequestOption options,
                                                 BandTensor** input_tensors) {
-  // TODO(widiba): error handling
+  if (!engine || !model || !input_tensors) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or BandModel (%d) or input_tensors (%d) is "
+             "null",
+             engine, model, input_tensors);
+    return 0;
+  }
+
   return engine->impl
       ->RequestAsync(
           model->impl->GetId(), ToRequestOption(options),
@@ -339,6 +537,13 @@ BandRequestHandle BandEngineRequestAsyncOptions(BandEngine* engine,
 
 BandStatus BandEngineWait(BandEngine* engine, BandRequestHandle handle,
                           BandTensor** output_tensors, size_t num_outputs) {
+  if (!engine || !output_tensors) {
+    BAND_LOG(band::LogSeverity::kError,
+             "BandEngine (%d) or output_tensors (%d) is null", engine,
+             output_tensors);
+    return kBandErr;
+  }
+
   return ToBandStatus(engine->impl->Wait(
       handle, BandTensorArrayToVec(output_tensors, num_outputs)));
 }
@@ -347,6 +552,11 @@ BandCallbackHandle BandEngineSetOnEndRequest(
     BandEngine* engine,
     void (*on_end_invoke)(void* user_data, int job_id, BandStatus status),
     void* user_data) {
+  if (!engine) {
+    BAND_LOG(band::LogSeverity::kError, "BandEngine is null");
+    return 0;
+  }
+
   auto user_data_invoke = std::bind(
       on_end_invoke, user_data, std::placeholders::_1, std::placeholders::_2);
   std::function<void(int, absl::Status)> new_on_end_invoke =
@@ -358,6 +568,11 @@ BandCallbackHandle BandEngineSetOnEndRequest(
 
 BandStatus BandEngineUnsetOnEndRequest(BandEngine* engine,
                                        BandCallbackHandle handle) {
+  if (!engine) {
+    BAND_LOG(band::LogSeverity::kError, "BandEngine is null");
+    return kBandErr;
+  }
+
   return ToBandStatus(engine->impl->UnsetOnEndRequest(handle));
 }
 

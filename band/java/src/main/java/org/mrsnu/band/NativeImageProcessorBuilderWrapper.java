@@ -25,8 +25,8 @@ class NativeImageProcessorBuilderWrapper implements AutoCloseable {
     nativeHandle = createImageProcessorBuilder();
   }
 
-  public void addCrop(int x, int y, int width, int height) {
-    addCrop(nativeHandle, x, y, width, height);
+  public void addCrop(int x0, int y0, int x1, int y1) {
+    addCrop(nativeHandle, x0, y0, x1, y1);
   }
 
   public void addResize(int width, int height) {
@@ -68,7 +68,7 @@ class NativeImageProcessorBuilderWrapper implements AutoCloseable {
   private native void deleteImageProcessorBuilder(long imageProcessorBuilderHandle);
 
   private native void addCrop(
-      long imageProcessorBuilderHandle, int x, int y, int width, int height);
+      long imageProcessorBuilderHandle, int x0, int y0, int x1, int y1);
 
   private native void addResize(long imageProcessorBuilderHandle, int width, int height);
 

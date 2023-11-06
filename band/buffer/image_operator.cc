@@ -72,12 +72,12 @@ IBufferOperator::Type ColorSpaceConvert::GetOpType() const {
 IBufferOperator::Type AutoConvert::GetOpType() const { return Type(); }
 
 absl::Status Crop::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(
-      BAND_LOG_INFO, "Crop: %d x %d (%s, %s) -> %d x %d (%s, %s)",
-      input.GetDimension()[0], input.GetDimension()[1],
-      ToString(input.GetBufferFormat()), ToString(input.GetDataType()),
-      output_->GetDimension()[0], output_->GetDimension()[1],
-      ToString(output_->GetBufferFormat()), ToString(output_->GetDataType()));
+  BAND_LOG(LogSeverity::kInternal, "Crop: %d x %d (%s, %s) -> %d x %d (%s, %s)",
+           input.GetDimension()[0], input.GetDimension()[1],
+           ToString(input.GetBufferFormat()), ToString(input.GetDataType()),
+           output_->GetDimension()[0], output_->GetDimension()[1],
+           ToString(output_->GetBufferFormat()),
+           ToString(output_->GetDataType()));
 
   return LibyuvImageOperator::Crop(input, x0_, y0_, x1_, y1_, *GetOutput());
 }
@@ -89,17 +89,21 @@ absl::Status Crop::ValidateInput(const Buffer& input) const {
   }
 
   if (x0_ < 0 || y0_ < 0 || x1_ < 0 || y1_ < 0) {
-    return absl::InvalidArgumentError(
-        "Crop: negative crop region is not allowed.");
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Crop: negative crop region is not allowed. (%d, %d) -> (%d, %d)", x0_,
+        y0_, x1_, y1_));
   }
 
   if (x0_ >= x1_ || y0_ >= y1_) {
-    return absl::InvalidArgumentError(
-        "Crop: invalid crop region is not allowed.");
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Crop: invalid crop region is not allowed. (%d, %d) -> (%d, %d)", x0_,
+        y0_, x1_, y1_));
   }
 
-  if (x1_ > input.GetDimension()[0] || y1_ > input.GetDimension()[1]) {
-    return absl::InvalidArgumentError("Crop: crop region is out of bounds.");
+  if (x1_ >= input.GetDimension()[0] || y1_ >= input.GetDimension()[1]) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Crop: crop region is out of bounds. (%d, %d) -> (%d, %d)", x0_, y0_,
+        x1_, y1_));
   }
 
   if (input.GetDataType() != DataType::kUInt8) {
@@ -151,9 +155,9 @@ absl::Status Crop::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Resize::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(BAND_LOG_INFO, "Resize: %d x %d -> %d x %d",
-                input.GetDimension()[0], input.GetDimension()[1],
-                output_->GetDimension()[0], output_->GetDimension()[1]);
+  BAND_LOG(LogSeverity::kInternal, "Resize: %d x %d -> %d x %d",
+           input.GetDimension()[0], input.GetDimension()[1],
+           output_->GetDimension()[0], output_->GetDimension()[1]);
   return LibyuvImageOperator::Resize(input, *GetOutput());
 }
 
@@ -230,12 +234,11 @@ absl::Status Resize::CreateOutput(const Buffer& input) {
 }
 
 absl::Status Rotate::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(BAND_LOG_INFO,
-                "Rotate: input dimension: %d x %d, output dimension: %d x "
-                "%d, angle: %d",
-                input.GetDimension()[0], input.GetDimension()[1],
-                output_->GetDimension()[0], output_->GetDimension()[1],
-                angle_deg_);
+  BAND_LOG(LogSeverity::kInfo,
+           "Rotate: input dimension: %d x %d, output dimension: %d x "
+           "%d, angle: %d",
+           input.GetDimension()[0], input.GetDimension()[1],
+           output_->GetDimension()[0], output_->GetDimension()[1], angle_deg_);
 
   return LibyuvImageOperator::Rotate(input, angle_deg_, *GetOutput());
 }
@@ -261,10 +264,11 @@ absl::Status Rotate::ValidateOutput(const Buffer& input) const {
   const bool are_dimensions_equal =
       input.GetDimension() == output_->GetDimension();
 
-  if (angle_deg_ >= 360 || angle_deg_ <= 0 || angle_deg_ % 90 != 0) {
-    return absl::InvalidArgumentError(
-        "Rotation angle must be between 0 and 360, in multiples of 90 "
-        "degrees.");
+  if (angle_deg_ > 360 || angle_deg_ < 0 || angle_deg_ % 90 != 0) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "Rotation angle (%d) must be between 0 and 360, in multiples of 90 "
+        "degrees.",
+        angle_deg_));
   } else if ((is_dimension_change && !are_dimensions_rotated) ||
              (!is_dimension_change && !are_dimensions_equal)) {
     return absl::InvalidArgumentError(
@@ -343,10 +347,10 @@ absl::Status Flip::CreateOutput(const Buffer& input) {
 }
 
 absl::Status ColorSpaceConvert::ProcessImpl(const Buffer& input) {
-  BAND_LOG_PROD(
-      BAND_LOG_INFO, "ColorSpaceConvert: input format: %s, output format: %s",
-      ToString(input.GetBufferFormat()), ToString(output_->GetBufferFormat()));
-
+  BAND_LOG(LogSeverity::kInternal,
+           "ColorSpaceConvert: input format: %s, output format: %s",
+           ToString(input.GetBufferFormat()),
+           ToString(output_->GetBufferFormat()));
   return LibyuvImageOperator::ColorSpaceConvert(input, *GetOutput());
 }
 

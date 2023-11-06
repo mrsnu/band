@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "band/common.h"
-#include "band/error_reporter.h"
 
 namespace band {
 

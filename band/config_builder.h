@@ -25,7 +25,6 @@
 #include "band/common.h"
 #include "band/config.h"
 #include "band/device/cpu.h"
-#include "band/error_reporter.h"
 
 namespace band {
 

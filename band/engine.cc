@@ -50,9 +50,8 @@ Engine::~Engine() {
   planner_.reset();
 }
 
-std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config,
-                                       ErrorReporter* error_reporter) {
-  std::unique_ptr<Engine> engine_ptr(new Engine(error_reporter));
+std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config) {
+  std::unique_ptr<Engine> engine_ptr(new Engine());
   return engine_ptr->Init(config).ok() ? std::move(engine_ptr) : nullptr;
 }
 
@@ -77,8 +76,8 @@ absl::Status Engine::RegisterModel(Model* model) {
       // TODO(BAND-49): unregister for specific backend
       auto status = UnregisterModel(model);
       if (!status.ok()) {
-        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to unregister model %d: %s",
-                      model_id, status.message());
+        BAND_LOG(LogSeverity::kError, "Failed to unregister model %d: %s",
+                 model_id, status.message());
       }
       return status_or_result.status();
     }
@@ -100,9 +99,9 @@ absl::Status Engine::RegisterModel(Model* model) {
                   worker->GetWorkerThreadAffinity(), worker->GetNumThreads()));
           model_executors_[{model_id, worker_id}] = std::move(model_executor);
           added_once = true;
-          BAND_LOG_INTERNAL(BAND_LOG_INFO,
-                            "Create model executor for model %d worker %s",
-                            model_id, ToString(GetWorkerDevice(worker_id)));
+          BAND_LOG(LogSeverity::kInternal,
+                   "Create model executor for model %d worker %s", model_id,
+                   ToString(GetWorkerDevice(worker_id)));
         }
       }
 
@@ -110,8 +109,8 @@ absl::Status Engine::RegisterModel(Model* model) {
         // TODO(BAND-49): unregister for specific backend
         auto status = UnregisterModel(model);
         if (!status.ok()) {
-          BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to unregister model %d: %s",
-                        model_id, status.message());
+          BAND_LOG(LogSeverity::kError, "Failed to unregister model %d: %s",
+                   model_id, status.message());
         }
         return absl::InternalError(
             "Failed to create model executor on all worker types");
@@ -130,10 +129,10 @@ absl::Status Engine::RegisterModel(Model* model) {
 
         if (model_executors_.find(model_executor_key) ==
             model_executors_.end()) {
-          BAND_REPORT_ERROR(error_reporter_,
-                            "Subgraph logic created a subgraph for worker %d "
-                            "that does not supports model %d",
-                            subgraph_def.worker_id, model_id);
+          return absl::InternalError(
+              absl::StrFormat("Subgraph logic created a subgraph for worker %d "
+                              "that does not supports model %d",
+                              subgraph_def.worker_id, model_id));
         } else {
           auto& model_executor =
               model_executors_[{model_id, subgraph_def.worker_id}];
@@ -247,11 +246,11 @@ absl::Status Engine::RegisterModel(Model* model) {
                                               model_spec.output_tensors.end()};
 
         model_input_buffer_.emplace(
-            model->GetId(), std::make_unique<TensorRingBuffer>(
-                                error_reporter_, input_tensors, input_indices));
+            model->GetId(),
+            std::make_unique<TensorRingBuffer>(input_tensors, input_indices));
         model_output_buffer_.emplace(
-            model_id, std::make_unique<TensorRingBuffer>(
-                          error_reporter_, output_tensors, output_indices));
+            model_id,
+            std::make_unique<TensorRingBuffer>(output_tensors, output_indices));
       }
     }
     {
@@ -330,9 +329,9 @@ DeviceFlag Engine::GetWorkerDevice(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id)->GetDeviceFlag();
   }
-  BAND_LOG_PROD(
-      BAND_LOG_ERROR,
-      "Cannot find the device for the given worker: %d. Fallback to CPU", id);
+  BAND_LOG(LogSeverity::kError,
+           "Cannot find the device for the given worker: %d. Fallback to CPU",
+           id);
   return DeviceFlag::kCPU;
 }
 
@@ -523,8 +522,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
     auto cpu_mask_set = BandCPUMaskGetSet(cpu_mask);
 
-    BAND_LOG_INTERNAL(BAND_LOG_INFO, "Set affinity to %s cores.",
-                      ToString(cpu_mask));
+    BAND_LOG(LogSeverity::kInfo, "Set affinity to %s cores.",
+             ToString(cpu_mask));
 
     auto status = SetCPUThreadAffinity(cpu_mask_set);
     if (!status.ok()) {
@@ -561,22 +560,20 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
             "Worker::Init() failed for worker : %s.", ToString(device_flag)));
       }
 
-      BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
-                        ToString(device_flag));
+      BAND_LOG(LogSeverity::kInternal, "%s worker is created.",
+               ToString(device_flag));
       worker->Start();
       workers_.push_back(std::move(worker));
       workers_waiting_[i] = 0;
       BAND_TRACER_ADD_WORKER(device_flag, workers_.back()->GetId());
     } else {
-      BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
-                        ToString(device_flag));
+      BAND_LOG(LogSeverity::kWarning, "%s worker is not created.",
+               ToString(device_flag));
     }
   }
 
   return absl::OkStatus();
 }
-
-Engine::Engine(ErrorReporter* error_reporeter) : IEngine(error_reporeter) {}
 
 void Engine::UpdateWorkersWaiting() const {
   for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
@@ -1081,8 +1078,8 @@ WorkerId Engine::GetDeviceWorkerId(DeviceFlag flag) const {
       return worker_id;
     }
   }
-  BAND_LOG_INTERNAL(BAND_LOG_WARNING, "Failed to find a worker for %s",
-                    ToString(flag));
+  BAND_LOG(LogSeverity::kWarning, "Failed to find a worker for %s",
+           ToString(flag));
   return -1;
 }
 

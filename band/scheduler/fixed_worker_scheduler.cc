@@ -14,8 +14,6 @@
 
 #include "band/scheduler/fixed_worker_scheduler.h"
 
-#include "band/error_reporter.h"
-
 namespace band {
 bool FixedWorkerScheduler::Schedule(JobQueue& requests) {
   bool success = true;
