@@ -4,6 +4,7 @@
 #include <jni.h>
 
 #include "band/buffer/buffer.h"
+#include "band/buffer/buffer_processor.h"
 #include "band/config.h"
 #include "band/config_builder.h"
 #include "band/engine.h"
