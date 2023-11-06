@@ -279,6 +279,7 @@ class RuntimeConfigBuilder {
   }
 
   absl::StatusOr<RuntimeConfig> Build();
+  static RuntimeConfig GetDefaultConfig();
 
  private:
   absl::Status IsValid();

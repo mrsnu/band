@@ -111,11 +111,6 @@ absl::Status LatencyEstimator::ProfileModel(ModelId model_id) {
             const int64_t latency =
                 average_profiler
                     .GetAverageElapsedTime<std::chrono::microseconds>();
-            BAND_LOG_DEBUG(
-                "Profiled latency of subgraph (%s) in worker "
-                "%d: %ld us",
-                subgraph_key.ToString().c_str(), worker_id, latency);
-
             profile_database_[subgraph_key] = {latency, latency};
           }
         });

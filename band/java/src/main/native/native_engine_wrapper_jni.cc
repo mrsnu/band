@@ -61,6 +61,13 @@ jintArray ConvertNativeToIntArray(JNIEnv* env, jsize length, const int* array) {
 
 extern "C" {
 
+JNIEXPORT jlong JNICALL
+Java_org_mrsnu_band_NativeEngineWrapper_createEngineWithDefaultConfig(
+    JNIEnv* env, jclass clazz) {
+  RuntimeConfig defaultConfig = RuntimeConfigBuilder::GetDefaultConfig();
+  return reinterpret_cast<jlong>(Engine::Create(defaultConfig).release());
+}
+
 JNIEXPORT jlong JNICALL Java_org_mrsnu_band_NativeEngineWrapper_createEngine(
     JNIEnv* env, jclass clazz, jobject config) {
   RuntimeConfig* native_config = ConvertJobjectToConfig(env, config);

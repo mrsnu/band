@@ -40,14 +40,8 @@ class NativeBufferWrapper implements AutoCloseable {
   }
 
   public void setFromByteBuffer(
-      final byte[] buffer, int width, int height, BufferFormat bufferFormat) {
+      final ByteBuffer buffer, int width, int height, BufferFormat bufferFormat) {
     this.nativeHandle = createFromByteBuffer(buffer, width, height, bufferFormat.getValue());
-  }
-
-  public void setFromYUVBuffer(final byte[][] yuvBytes, int width, int height, int yRowStride,
-      int uvRowStride, int uvPixelStride, BufferFormat bufferFormat) {
-    this.nativeHandle = createFromYUVBuffer(yuvBytes[0], yuvBytes[1], yuvBytes[2], width, height,
-        yRowStride, uvRowStride, uvPixelStride, bufferFormat.getValue());
   }
 
   public void setFromYUVPlane(
@@ -57,15 +51,12 @@ class NativeBufferWrapper implements AutoCloseable {
         planes[1].getPixelStride(), bufferFormat.getValue());
   }
 
-  private static native void deleteBuffer(long bufferHandle); 
+  private static native void deleteBuffer(long bufferHandle);
 
   private static native long createFromTensor(Object tensorObject);
 
   private static native long createFromByteBuffer(
-      final byte[] buffer, int width, int height, int bufferFormat);
-
-  private static native long createFromYUVBuffer(byte[] y, byte[] u, byte[] v, int width,
-      int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);
+      ByteBuffer buffer, int width, int height, int bufferFormat);
 
   private static native long createFromYUVPlanes(ByteBuffer y, ByteBuffer u, ByteBuffer v,
       int width, int height, int yRowStride, int uvRowStride, int uvPixelStride, int bufferFormat);

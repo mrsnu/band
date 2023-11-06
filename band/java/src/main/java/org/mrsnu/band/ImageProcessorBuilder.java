@@ -24,32 +24,39 @@ public class ImageProcessorBuilder {
     wrapper = new NativeImageProcessorBuilderWrapper();
   }
 
-  public void addCrop(int x0, int y0, int x1, int y1) {
+  public ImageProcessorBuilder addCrop(int x0, int y0, int x1, int y1) {
     wrapper.addCrop(x0, y0, x1, y1);
+    return this;
   }
 
-  public void addResize(int width, int height) {
+  public ImageProcessorBuilder addResize(int width, int height) {
     wrapper.addResize(width, height);
+    return this;
   }
 
-  public void addRotate(int angle) {
+  public ImageProcessorBuilder addRotate(int angle) {
     wrapper.addRotate(angle);
+    return this;
   }
 
-  public void addFlip(boolean horizontal, boolean vertical) {
+  public ImageProcessorBuilder addFlip(boolean horizontal, boolean vertical) {
     wrapper.addFlip(horizontal, vertical);
+    return this;
   }
 
-  public void addColorSpaceConvert(BufferFormat dstColorSpace) {
+  public ImageProcessorBuilder addColorSpaceConvert(BufferFormat dstColorSpace) {
     wrapper.addColorSpaceConvert(dstColorSpace);
+    return this;
   }
 
-  public void addNormalize(float mean, float std) {
+  public ImageProcessorBuilder addNormalize(float mean, float std) {
     wrapper.addNormalize(mean, std);
+    return this;
   }
 
-  public void addDataTypeConvert() {
+  public ImageProcessorBuilder addDataTypeConvert() {
     wrapper.addDataTypeConvert();
+    return this;
   }
 
   public ImageProcessor build() {

@@ -343,6 +343,11 @@ void* BandTensorGetQuantizationParams(BandTensor* tensor) {
 
 BandRequestOption BandRequestOptionGetDefault() { return {-1, true, -1, -1.f}; }
 
+BandEngine* BandEngineCreateWithDefaultConfig() {
+  BandConfig config{band::RuntimeConfigBuilder::GetDefaultConfig()};
+  return BandEngineCreate(&config);
+}
+
 BandEngine* BandEngineCreate(BandConfig* config) {
   if (!config) {
     BAND_LOG(band::LogSeverity::kError, "BandConfig is null");
