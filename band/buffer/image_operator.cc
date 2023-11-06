@@ -100,7 +100,7 @@ absl::Status Crop::ValidateInput(const Buffer& input) const {
         y0_, x1_, y1_));
   }
 
-  if (x1_ > input.GetDimension()[0] || y1_ > input.GetDimension()[1]) {
+  if (x1_ >= input.GetDimension()[0] || y1_ >= input.GetDimension()[1]) {
     return absl::InvalidArgumentError(absl::StrFormat(
         "Crop: crop region is out of bounds. (%d, %d) -> (%d, %d)", x0_, y0_,
         x1_, y1_));
