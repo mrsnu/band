@@ -7,8 +7,14 @@
 #include "band/backend_factory.h"
 #include "band/common.h"
 #include "band/engine_interface.h"
-#include "band/estimator/latency_estimator.h"
+#ifdef BAND_SPLASH
+#include "band/estimator/frequency_latency_estimator.h"
 #include "band/estimator/thermal_estimator.h"
+#include "band/profiler/frequency_profiler.h"
+#include "band/profiler/thermal_profiler.h"
+#else
+#include "band/estimator/latency_estimator.h"
+#endif  // BAND_SPLASH
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
@@ -16,9 +22,7 @@
 #include "band/model_analyzer.h"
 #include "band/model_spec.h"
 #include "band/planner.h"
-#include "band/profiler/frequency_profiler.h"
 #include "band/profiler/latency_profiler.h"
-#include "band/profiler/thermal_profiler.h"
 #include "band/tensor.h"
 #include "band/worker.h"
 
@@ -48,6 +52,7 @@ Engine::~Engine() {
                       status.message());
       }
     }
+#ifdef BAND_SPLASH
     {
       auto status = thermal_estimator_->DumpModel(
           absl::StrFormat("%s/thermal_model.json", dump_dir_.c_str()));
@@ -56,11 +61,14 @@ Engine::~Engine() {
                       status.message());
       }
     }
+#endif  // BAND_SPLASH
   }
 
-  delete latency_profiler_;
+#ifdef BAND_SPLASH
   delete thermal_profiler_;
   delete frequency_profiler_;
+#endif  // BAND_SPLASH
+  delete latency_profiler_;
 }
 
 void Engine::SetDumpDirectory(std::string path) { dump_dir_ = path; }
@@ -519,18 +527,32 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   // Setup for profilers
   {
     latency_profiler_ = new LatencyProfiler();
+    profilers_.push_back(latency_profiler_);
+#ifdef BAND_SPLASH
     thermal_profiler_ = new ThermalProfiler(config.device_config);
+    profilers_.push_back(thermal_profiler_);
     frequency_profiler_ = new FrequencyProfiler(config.device_config);
-    profilers_ = {latency_profiler_, thermal_profiler_, frequency_profiler_};
+    profilers_.push_back(frequency_profiler_);
+#endif  // BAND_SPLASH
   }
 
   // Setup for estimators
-#ifdef BAND_FREQ
+#ifdef BAND_SPLASH
   {
     latency_estimator_ = std::make_unique<FrequencyLatencyEstimator>(
         this, frequency_profiler_, latency_profiler_);
     auto status = latency_estimator_->Init(
         config.profile_config.frequency_latency_config);
+    if (!status.ok()) {
+      return status;
+    }
+  }
+  {
+    thermal_estimator_ = std::make_unique<ThermalEstimator>(
+        this, thermal_profiler_, frequency_profiler_, latency_profiler_,
+        latency_estimator_.get());
+    auto status =
+        thermal_estimator_->Init(config.profile_config.thermal_config);
     if (!status.ok()) {
       return status;
     }
@@ -545,18 +567,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       return status;
     }
   }
-#endif  // BAND_FREQ
-
-  {
-    thermal_estimator_ = std::make_unique<ThermalEstimator>(
-        this, thermal_profiler_, frequency_profiler_, latency_profiler_,
-        latency_estimator_.get());
-    auto status =
-        thermal_estimator_->Init(config.profile_config.thermal_config);
-    if (!status.ok()) {
-      return status;
-    }
-  }
+#endif  // BAND_SPLASH
 
   {
     const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
@@ -938,8 +949,13 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     double latency = GetExpected(key);
     double expected_latency =
         latency + std::max(waiting_time, static_cast<double>(start_time));
+#ifdef BAND_SPLASH
     ThermalMap expected_thermal = thermal_estimator_->GetExpected(key);
     ThermalMap profiled_thermal = thermal_estimator_->GetProfiled(key);
+#else
+    ThermalMap expected_thermal = ThermalMap();
+    ThermalMap profiled_thermal = ThermalMap();
+#endif  // BAND_SPLASH
     double cost =
         cost_func(expected_latency, expected_thermal, profiled_thermal);
     if (min_cost >= cost) {
@@ -952,7 +968,9 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
 
 void Engine::UpdateWithEvent(const SubgraphKey& key, size_t event_id) {
   latency_estimator_->UpdateWithEvent(key, event_id);
+#ifdef BAND_SPLASH
   thermal_estimator_->UpdateWithEvent(key, event_id);
+#endif  // BAND_SPLASH
 }
 
 double Engine::GetProfiled(const SubgraphKey& key) const {
@@ -977,8 +995,10 @@ void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
 void Engine::EnqueueFinishedJob(Job& job) {
   if (!job.is_idle_job) {
-    job.profiled_thermal = thermal_estimator_->GetProfiled(job.subgraph_key);
     job.profiled_latency = latency_estimator_->GetProfiled(job.subgraph_key);
+#ifdef BAND_SPLASH
+    job.profiled_thermal = thermal_estimator_->GetProfiled(job.subgraph_key);
+#endif  // BAND_SPLASH
   }
   planner_->EnqueueFinishedJob(job);
 }

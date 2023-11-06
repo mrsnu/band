@@ -38,14 +38,14 @@ test:trace --define trace=true
 test:trace --copt=-DBAND_TRACE
 test:trace --cxxopt=-DBAND_TRACE
 
-# Band build config for frequency setting.
-build:freq --define freq=true
-build:freq --copt=-DBAND_FREQ
-build:freq --cxxopt=-DBAND_FREQ
-build:freq --action_env DBAND_FREQ=true
-test:freq --define freq=true
-test:freq --copt=-DBAND_FREQ
-test:freq --cxxopt=-DBAND_FREQ
+# Band build config for splash setting.
+build:splash --define splash=true
+build:splash --copt=-DBAND_SPLASH
+build:splash --cxxopt=-DBAND_SPLASH
+build:splash --action_env DBAND_SPLASH=true
+test:splash --define splash=true
+test:splash --copt=-DBAND_SPLASH
+test:splash --cxxopt=-DBAND_SPLASH
 
 # Linux build config for Band Engine.
 build:linux_x86_64 --config=linux

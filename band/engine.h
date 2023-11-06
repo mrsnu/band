@@ -12,10 +12,13 @@
 #include "band/engine_interface.h"
 #include "band/error_reporter.h"
 #include "band/estimator/estimator_interface.h"
-#include "band/estimator/frequency_latency_estimator.h"
-#include "band/estimator/latency_estimator.h"
+#ifdef BAND_SPLASH
 #include "band/estimator/thermal_estimator.h"
-// #include "band/graph/graph.h"
+#include "band/estimator/frequency_latency_estimator.h"
+#else
+#include "band/estimator/latency_estimator.h"
+#endif  // BAND_SPLASH
+#include "band/device/thermal.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
 #include "band/tensor_ring_buffer.h"
@@ -225,17 +228,19 @@ class Engine : public IEngine {
 
   // Profilers
   LatencyProfiler* latency_profiler_;
+#ifdef BAND_SPLASH
   ThermalProfiler* thermal_profiler_;
   FrequencyProfiler* frequency_profiler_;
+#endif  // BAND_SPLASH
   std::vector<Profiler*> profilers_;
 
   // Estimators
-#ifdef BAND_FREQ
+#ifdef BAND_SPLASH
   std::unique_ptr<FrequencyLatencyEstimator> latency_estimator_;
+  std::unique_ptr<ThermalEstimator> thermal_estimator_;
 #else
   std::unique_ptr<LatencyEstimator> latency_estimator_;
-#endif  // BAND_FREQ
-  std::unique_ptr<ThermalEstimator> thermal_estimator_;
+#endif  // BAND_SPLASH
 };
 
 }  // namespace band

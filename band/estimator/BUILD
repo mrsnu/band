@@ -1,4 +1,4 @@
-load("//band:band.bzl", "band_cc_library")
+load("//band:band.bzl", "band_cc_library", "clean_dep")
 
 package(
     default_visibility = [
@@ -28,10 +28,10 @@ band_cc_library(
     ],
     deps = [
         ":estimator_interface",
-        "//band/profiler:latency_profiler",
         "//band:json_util",
         "//band:worker",
         "//band/device",
+        "//band/profiler:latency_profiler",
     ],
 )
 
@@ -45,21 +45,15 @@ band_cc_library(
     ],
     deps = [
         ":estimator_interface",
-        "//band/profiler:thermal_profiler",
-        "//band/profiler:frequency_profiler",
-        "//band/profiler:latency_profiler",
         "//band:json_util",
         "//band:worker",
         "//band/device",
-        "//third_party/eigen3"
-    ] + select({
-        "//conditions:default": [
-            "//band/estimator:latency_estimator",
-        ],
-        "//band:freq": [
-            "//band/estimator:frequency_latency_estimator",
-        ],
-    }),
+        "//band/estimator:frequency_latency_estimator",
+        "//band/profiler:frequency_profiler",
+        "//band/profiler:latency_profiler",
+        "//band/profiler:thermal_profiler",
+        "//third_party/eigen3",
+    ],
 )
 
 band_cc_library(
@@ -72,19 +66,22 @@ band_cc_library(
     ],
     deps = [
         ":estimator_interface",
-        "//band/profiler:latency_profiler",
-        "//band/profiler:frequency_profiler",
         "//band:json_util",
         "//band:worker",
         "//band/device",
+        "//band/profiler:frequency_profiler",
+        "//band/profiler:latency_profiler",
     ],
 )
 
 band_cc_library(
     name = "estimators",
-    deps = [
-        ":latency_estimator",
-        ":thermal_estimator",
-        ":frequency_latency_estimator",
-    ],
+    deps = select({
+        clean_dep("//band:splash"): [
+            ":thermal_estimator",
+        ],
+        "//conditions:default": [
+            ":latency_estimator",
+        ],
+    }),
 )

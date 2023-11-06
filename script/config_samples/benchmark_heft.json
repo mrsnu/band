@@ -11,41 +11,36 @@
             "batch_size": 3
         }
     ],
-    "log_path": "/data/local/tmp/log.csv",
+    "log_path": "/data/local/tmp/splash/log.json",
     "schedulers": [
         "heterogeneous_earliest_finish_time"
     ],
-    "minimum_subgraph_size": 1,
+    "minimum_subgraph_size": 7,
     "subgraph_preparation_type": "merge_unit_subgraph",
     "execution_mode": "stream",
     "cpu_masks": "ALL",
     "num_threads": 1,
-    "planner_cpu_masks": "PRIMARY",
+    "planner_cpu_masks": "BIG",
     "workers": [
         {
             "device": "CPU",
-            "num_threads": 2,
-            "cpu_masks": "BIG"
-        },
-        {
-            "device": "CPU",
-            "num_threads": 2,
-            "cpu_masks": "LITTLE"
+            "num_threads": 1,
+            "cpu_masks": "PRIMARY"
         },
         {
             "device": "GPU",
             "num_threads": 1,
-            "cpu_masks": "ALL"
+            "cpu_masks": "BIG"
         },
         {
             "device": "DSP",
             "num_threads": 1,
-            "cpu_masks": "PRIMARY"
+            "cpu_masks": "BIG"
         },
         {
             "device": "NPU",
             "num_threads": 1,
-            "cpu_masks": "PRIMARY"
+            "cpu_masks": "BIG"
         }
     ],
     "running_time_ms": 10000,

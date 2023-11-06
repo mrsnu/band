@@ -119,9 +119,9 @@ config_setting(
 )
 
 config_setting(
-    name = "freq",
+    name = "splash",
     define_values = {
-        "freq": "true",
+        "splash": "true",
     },
     visibility = ["//visibility:public"],
 )
@@ -274,8 +274,8 @@ band_cc_library(
         "scheduler/fixed_worker_scheduler.cc",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.cc",
         "scheduler/least_slack_first_scheduler.cc",
-        "scheduler/round_robin_scheduler.cc",
         "scheduler/round_robin_idle_scheduler.cc",
+        "scheduler/round_robin_scheduler.cc",
         "scheduler/shortest_expected_latency_scheduler.cc",
         "scheduler/thermal_scheduler.cc",
     ],
@@ -283,8 +283,8 @@ band_cc_library(
         "scheduler/fixed_worker_scheduler.h",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.h",
         "scheduler/least_slack_first_scheduler.h",
-        "scheduler/round_robin_scheduler.h",
         "scheduler/round_robin_idle_scheduler.h",
+        "scheduler/round_robin_scheduler.h",
         "scheduler/scheduler.h",
         "scheduler/shortest_expected_latency_scheduler.h",
         "scheduler/thermal_scheduler.h",
@@ -309,7 +309,7 @@ band_cc_library(
         ":common",
         ":job_tracer",
         ":scheduler",
-        ":worker", 
+        ":worker",
     ],
 )
 
@@ -379,9 +379,9 @@ band_cc_library(
         ":tensor_ring_buffer",
         ":time",
         ":worker",
-        "//band/estimator:estimators",
-        # "//band/graph:graph",
         "//band/buffer",
+        "//band/device:thermal",
+        "//band/estimator:estimators",
     ],
 )
 
