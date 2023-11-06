@@ -68,6 +68,10 @@ public class ConfigBuilder {
     wrapper.addNPUFreqPath(npuFreqPath);
   }
 
+  public void addRuntimeFreqPath(String runtimeFreqPath) {
+    wrapper.addRuntimeFreqPath(runtimeFreqPath);
+  }
+
   public void addLatencyLogPath(String latencyLogPath) {
     wrapper.addLatencyLogPath(latencyLogPath);
   }

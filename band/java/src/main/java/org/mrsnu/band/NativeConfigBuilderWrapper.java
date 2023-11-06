@@ -67,6 +67,10 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
     addNPUFreqPath(nativeHandle, npuFreqPath);
   }
 
+  public void addRuntimeFreqPath(String runtimeFreqPath) {
+    addRuntimeFreqPath(nativeHandle, runtimeFreqPath);
+  }
+
   public void addLatencyLogPath(String latencyLogPath) {
     addLatencyLogPath(nativeHandle, latencyLogPath);
   }
@@ -193,6 +197,8 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addDSPFreqPath(long configBuilderHandle, String dspFreqPath);
 
   private native void addNPUFreqPath(long configBuilderHandle, String npuFreqPath);
+
+  private native void addRuntimeFreqPath(long configBuilderHandle, String runtimeFreqPath);
 
   private native void addLatencyLogPath(long configBuilderHandle, String latencyLogPath);
 

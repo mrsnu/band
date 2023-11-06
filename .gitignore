@@ -13,7 +13,7 @@ bazel-testlogs
 *.iml
 local.properties
 gradleBuild
-.aar
+*.aar
 
 # Python cache
 __pycache__/
@@ -36,3 +36,4 @@ band.aar
 
 # experiment
 experiments/*.png
+

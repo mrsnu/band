@@ -148,6 +148,14 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addNPUFreqPath(
 }
 
 JNIEXPORT void JNICALL
+Java_org_mrsnu_band_NativeConfigBuilderWrapper_addRuntimeFreqPath(
+    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
+    jstring runtimeFreqPath) {
+  ConvertLongToConfigBuilder(env, configBuilderHandle)
+      ->AddRuntimeFreqPath(ConvertJstringToString(env, runtimeFreqPath));
+}
+
+JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencyLogPath(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     jstring latencyLogPath) {

@@ -154,6 +154,11 @@ class DeviceConfigBuilder {
     return *this;
   }
 
+  DeviceConfigBuilder& AddRuntimeFreqPath(std::string runtime_freq_path) {
+    runtime_freq_path_ = runtime_freq_path;
+    return *this;
+  }
+
   DeviceConfigBuilder& AddLatencyLogPath(std::string latency_log_path) {
     latency_log_path_ = latency_log_path;
     return *this;
@@ -182,6 +187,7 @@ class DeviceConfigBuilder {
   std::string gpu_freq_path_ = "";
   std::string dsp_freq_path_ = "";
   std::string npu_freq_path_ = "";
+  std::string runtime_freq_path_ = "";
   std::string latency_log_path_ = "";
   std::string therm_log_path_ = "";
   std::string freq_log_path_ = "";
@@ -359,6 +365,11 @@ class RuntimeConfigBuilder {
 
   RuntimeConfigBuilder& AddNPUFreqPath(std::string npu_freq_path) {
     device_config_builder_.AddNPUFreqPath(npu_freq_path);
+    return *this;
+  }
+
+  RuntimeConfigBuilder& AddRuntimeFreqPath(std::string runtime_freq_path) {
+    device_config_builder_.AddRuntimeFreqPath(runtime_freq_path);
     return *this;
   }
 

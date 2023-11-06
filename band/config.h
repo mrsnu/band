@@ -29,11 +29,11 @@ struct DeviceConfig {
   size_t npu_therm_index = -1;
   size_t target_therm_index = -1;
 
-  std::string runtime_freq_path = "";
   std::string cpu_freq_path = "";
   std::string gpu_freq_path = "";
   std::string dsp_freq_path = "";
   std::string npu_freq_path = "";
+  std::string runtime_freq_path = "";
 
   std::string latency_log_path = "";
   std::string therm_log_path = "";

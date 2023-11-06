@@ -11,11 +11,11 @@ static DeviceConfig GetPixel4DeviceConfig() {
   pixel4_config.npu_therm_index = 38;
   pixel4_config.target_therm_index = 74;
   
-  pixel4_config.runtime_freq_path = "/sys/devices/system/cpu/cpufreq/policy4";
   pixel4_config.cpu_freq_path = "/sys/devices/system/cpu/cpufreq/policy7";
   pixel4_config.gpu_freq_path = "/sys/class/devfreq/2c00000.qcom,kgsl-3d0";
   pixel4_config.dsp_freq_path = "";
   pixel4_config.npu_freq_path = "";
+  pixel4_config.runtime_freq_path = "/sys/devices/system/cpu/cpufreq/policy4";
 
   pixel4_config.latency_log_path = "/data/local/tmp/splash/latency.log";
   pixel4_config.therm_log_path = "/data/local/tmp/splash/therm.log";

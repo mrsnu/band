@@ -189,6 +189,7 @@ DeviceConfig DeviceConfigBuilder::Build(
   device_config.gpu_freq_path = gpu_freq_path_;
   device_config.dsp_freq_path = dsp_freq_path_;
   device_config.npu_freq_path = npu_freq_path_;
+  device_config.runtime_freq_path = runtime_freq_path_;
   device_config.latency_log_path = latency_log_path_;
   device_config.therm_log_path = therm_log_path_;
   device_config.freq_log_path = freq_log_path_;
