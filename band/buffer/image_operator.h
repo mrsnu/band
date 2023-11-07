@@ -134,7 +134,11 @@ class ColorSpaceConvert : public IBufferOperator {
 // target dimension from bottom to top.
 class AutoConvert : public IBufferOperator {
  public:
+  AutoConvert() = default;
+  AutoConvert(const AutoConvert& rhs);
+  AutoConvert& operator=(const AutoConvert& rhs);
   virtual ~AutoConvert() override;
+
   virtual Type GetOpType() const override;
   virtual absl::Status ProcessImpl(const Buffer& input) override;
   virtual absl::Status ValidateInput(const Buffer& input) const override;
@@ -149,9 +153,9 @@ class AutoConvert : public IBufferOperator {
   bool RequiresResize(const Buffer& input) const;
   bool RequiresDataTypeConvert(const Buffer& input) const;
 
-  ColorSpaceConvert color_space_convert_;
-  Resize resize_;
-  DataTypeConvert data_type_convert_;
+  std::unique_ptr<ColorSpaceConvert> color_space_convert_ = nullptr;
+  std::unique_ptr<Resize> resize_ = nullptr;
+  std::unique_ptr<DataTypeConvert> data_type_convert_ = nullptr;
 };
 
 }  // namespace buffer

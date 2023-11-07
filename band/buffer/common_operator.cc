@@ -33,8 +33,8 @@ void NormalizeFromTo(const Buffer& input, Buffer* output, float mean,
     output_data[i] = static_cast<OutputType>((input_data[i] - mean)) / std;
   }
   BAND_LOG(LogSeverity::kInternal, "Normalize: %s %s %f %f",
-                ToString(input.GetDataType()), ToString(output->GetDataType()),
-                mean, std);
+           ToString(input.GetDataType()), ToString(output->GetDataType()), mean,
+           std);
 }
 
 template <typename InputType>
@@ -57,7 +57,7 @@ void NormalizeFrom(const Buffer& input, Buffer* output, float mean, float std) {
       break;
     default:
       BAND_LOG(LogSeverity::kError, "Normalize: unsupported data type %s",
-                    ToString(output->GetDataType()));
+               ToString(output->GetDataType()));
       break;
   }
 }
@@ -68,9 +68,8 @@ IBufferOperator::Type Normalize::GetOpType() const { return Type::kCommon; }
 
 void Normalize::SetOutput(Buffer* output) {
   if (inplace_) {
-    BAND_LOG(
-        LogSeverity::kError,
-        "Normalize: setting output buffer is not allowed for inplace");
+    BAND_LOG(LogSeverity::kError,
+             "Normalize: setting output buffer is not allowed for inplace");
   } else {
     IBufferOperator::SetOutput(output);
   }
@@ -151,9 +150,11 @@ absl::Status Normalize::ValidateOutput(const Buffer& input) const {
 
 absl::Status Normalize::CreateOutput(const Buffer& input) {
   if (!inplace_) {
-    output_ = Buffer::CreateEmpty(
-        input.GetDimension()[0], input.GetDimension()[1],
-        input.GetBufferFormat(), input.GetDataType(), input.GetOrientation());
+    output_ = std::unique_ptr<Buffer, void (*)(Buffer*)>(
+        Buffer::CreateEmpty(input.GetDimension()[0], input.GetDimension()[1],
+                            input.GetBufferFormat(), input.GetDataType(),
+                            input.GetOrientation()),
+        [](Buffer* buffer) { delete buffer; });
   }
 
   return absl::Status();

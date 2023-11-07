@@ -18,10 +18,35 @@
 #include "operator.h"
 
 namespace band {
-IBufferOperator::~IBufferOperator() {
-  if (output_ != nullptr && !output_assigned_) {
-    delete output_;
+
+IBufferOperator::IBufferOperator(IBufferOperator&& rhs)
+    : output_(std::move(rhs.output_)), output_assigned_(rhs.output_assigned_) {}
+
+IBufferOperator::IBufferOperator(const IBufferOperator& rhs) {
+  if (rhs.output_assigned_) {
+    output_ =
+        std::unique_ptr<Buffer, void (*)(Buffer*)>(nullptr, [](Buffer*) {});
+  } else {
+    // deep copy
+    output_ = std::unique_ptr<Buffer, void (*)(Buffer*)>(
+        rhs.output_ ? new Buffer(*rhs.output_) : nullptr,
+        [](Buffer* buffer) { delete buffer; });
   }
+  output_assigned_ = rhs.output_assigned_;
+}
+
+IBufferOperator& IBufferOperator::operator=(const IBufferOperator& rhs) {
+  if (rhs.output_assigned_) {
+    output_ =
+        std::unique_ptr<Buffer, void (*)(Buffer*)>(nullptr, [](Buffer*) {});
+  } else {
+    // deep copy
+    output_ = std::unique_ptr<Buffer, void (*)(Buffer*)>(
+        rhs.output_ ? new Buffer(*rhs.output_) : nullptr,
+        [](Buffer* buffer) { delete buffer; });
+  }
+  output_assigned_ = rhs.output_assigned_;
+  return *this;
 }
 
 absl::Status IBufferOperator::Process(const Buffer& input) {
@@ -33,16 +58,15 @@ absl::Status IBufferOperator::Process(const Buffer& input) {
 
 void IBufferOperator::SetOutput(Buffer* output) {
   if (output) {
-    if (!output_assigned_) {
-      delete output_;
-    }
-    output_ = output;
     output_assigned_ = true;
+    // no need to delete the previous output buffer
+    output_ =
+        std::unique_ptr<Buffer, void (*)(Buffer*)>(output, [](Buffer*) {});
   }
 }
 
-Buffer* IBufferOperator::GetOutput() { return output_; }
-const Buffer* IBufferOperator::GetOutput() const { return output_; }
+Buffer* IBufferOperator::GetOutput() { return output_.get(); }
+const Buffer* IBufferOperator::GetOutput() const { return output_.get(); }
 
 absl::Status IBufferOperator::ValidateInput(const Buffer& input) const {
   return absl::OkStatus();
@@ -64,8 +88,7 @@ absl::Status IBufferOperator::ValidateOrCreateOutput(const Buffer& input) {
       if (!status.ok()) {
         // real trouble if the created output is not valid
         BAND_LOG(LogSeverity::kError,
-                      "Failed to create valid output buffer: %s",
-                      status.message());
+                 "Failed to create valid output buffer: %s", status.message());
       }
       return status;
     }
