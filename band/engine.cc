@@ -49,7 +49,6 @@ Engine::~Engine() {
                       status.message());
       }
     }
-#ifdef BAND_SPLASH
     {
       auto status = thermal_estimator_->DumpModel(
           absl::StrFormat("%s/thermal_model.json", dump_dir_.c_str()));
@@ -58,7 +57,6 @@ Engine::~Engine() {
                       status.message());
       }
     }
-#endif  // BAND_SPLASH
   }
 
   delete thermal_profiler_;
@@ -540,16 +538,6 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       return status;
     }
   }
-  {
-    thermal_estimator_ = std::make_unique<ThermalEstimator>(
-        this, thermal_profiler_, frequency_profiler_, latency_profiler_,
-        latency_estimator_.get());
-    auto status =
-        thermal_estimator_->Init(config.profile_config.thermal_config);
-    if (!status.ok()) {
-      return status;
-    }
-  }
 #else
   {
     latency_estimator_ =
@@ -561,6 +549,16 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     }
   }
 #endif  // BAND_SPLASH
+  {
+    thermal_estimator_ = std::make_unique<ThermalEstimator>(
+        this, thermal_profiler_, frequency_profiler_, latency_profiler_,
+        latency_estimator_.get());
+    auto status =
+        thermal_estimator_->Init(config.profile_config.thermal_config);
+    if (!status.ok()) {
+      return status;
+    }
+  }
 
   {
     const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);

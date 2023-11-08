@@ -209,17 +209,15 @@ int get_max_freq_khz(int cpuid) {
 
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if BAND_IS_MOBILE
-
-  // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
   pid_t pid = syscall(SYS_gettid);
-#else
+#else  // __GLIBC__ || __OHOS__
 #ifdef PI3
   pid_t pid = getpid();
-#else
+#else  // PI3
   pid_t pid = gettid();
-#endif
-#endif
+#endif  // PI3
+#endif  // __GLIBC__ || __OHOS__
   int syscallret = sched_setaffinity(pid, sizeof(cpu_set_t),
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
@@ -229,9 +227,9 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
         " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
   }
   return absl::OkStatus();
-#else
+#else  // BAND_IS_MOBILE
   return absl::UnavailableError("Device not supported");
-#endif
+#endif  // BAND_IS_MOBILE
 }
 
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
@@ -243,7 +241,7 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
   pid_t pid = getpid();
 #else
   pid_t pid = gettid();
-#endif // defined(__GLIBC__) || defined(__OHOS__)
+#endif  // defined(__GLIBC__) || defined(__OHOS__)
   int syscallret = sched_getaffinity(pid, sizeof(cpu_set_t),
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
