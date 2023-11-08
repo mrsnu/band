@@ -57,3 +57,12 @@ band_cc_library(
         "//band/device:frequency",
     ],
 )
+
+band_cc_library(
+    name = "profilers",
+    deps = [
+        ":latency_profiler",
+        ":thermal_profiler",
+        ":frequency_profiler",
+    ]
+)

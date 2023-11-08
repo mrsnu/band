@@ -381,6 +381,7 @@ band_cc_library(
         ":worker",
         "//band/buffer",
         "//band/device:thermal",
+        "//band/profiler:profilers",
         "//band/estimator:estimators",
     ],
 )

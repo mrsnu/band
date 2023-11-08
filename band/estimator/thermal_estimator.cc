@@ -73,7 +73,9 @@ Eigen::VectorXd GetFillVector(double value, size_t size) {
 }  // anonymous namespace
 
 absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
+#ifdef BAND_SPLASH
   window_size_ = config.window_size;
+#endif  // BAND_SPLASH
   return absl::OkStatus();
 }
 
@@ -82,6 +84,7 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
                               double latency) {
   profile_database_[key] = therm_end;
 
+#ifdef BAND_SPLASH
   const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
   Eigen::VectorXd old_therm_vec =
@@ -111,7 +114,7 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   if (features_.size() > window_size_) {
     features_.pop_front();
   }
-  
+
   size_t window_size = std::min(window_size_, features_.size());
   Eigen::MatrixXd data(window_size, feature_size);
   Eigen::MatrixXd target(window_size, target_size);
@@ -125,6 +128,7 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
   }
 
   model_ = SolveLinear(data, target);
+#endif  // BAND_SPLASH
 }
 
 void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
@@ -142,6 +146,7 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 }
 
 ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
+#ifdef BAND_SPLASH
   const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
   double latency = latency_estimator_->GetExpected(key);
@@ -170,6 +175,9 @@ ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
   auto expected_therm =
       ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
   return expected_therm;
+#else
+  return {};
+#endif  // BAND_SPLASH
 }
 
 absl::Status ThermalEstimator::LoadModel(std::string profile_path) {
@@ -182,11 +190,13 @@ absl::Status ThermalEstimator::LoadModel(std::string profile_path) {
 }
 
 absl::Status ThermalEstimator::DumpModel(std::string profile_path) {
+#ifdef BAND_SPLASH
   Json::Value root;
   root["window_size"] = window_size_;
   root["model"] = EigenMatrixToJson(model_);
   std::ofstream file(profile_path);
   file << root;
+#endif  // BAND_SPLASH
   return absl::OkStatus();
 }
 

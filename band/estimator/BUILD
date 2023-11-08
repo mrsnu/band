@@ -76,9 +76,9 @@ band_cc_library(
 
 band_cc_library(
     name = "estimators",
-    deps = select({
+    deps = [":thermal_estimator"] + select({
         clean_dep("//band:splash"): [
-            ":thermal_estimator",
+            ":frequency_latency_estimator",
         ],
         "//conditions:default": [
             ":latency_estimator",
