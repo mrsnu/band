@@ -16,7 +16,6 @@
 
 package org.mrsnu.band;
 
-import android.util.Log;
 import java.nio.ByteBuffer;
 
 class NativeImageProcessorBuilderWrapper implements AutoCloseable {
@@ -24,12 +23,10 @@ class NativeImageProcessorBuilderWrapper implements AutoCloseable {
 
   NativeImageProcessorBuilderWrapper() {
     nativeHandle = createImageProcessorBuilder();
-    Log.d("NativeImageProcessorBuilderWrapper", "NIPBW created " + nativeHandle);
   }
 
   @Override
   public void close() {
-    Log.d("NativeImageProcessorBuilderWrapper", "NIPBW closed " + nativeHandle);
     deleteImageProcessorBuilder(nativeHandle);
     nativeHandle = 0;
   }
