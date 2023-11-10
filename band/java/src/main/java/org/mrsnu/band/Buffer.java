@@ -19,6 +19,9 @@ package org.mrsnu.band;
 import android.media.Image.Plane;
 import java.nio.ByteBuffer;
 
+// Caution: This class has a native resource.
+// You may need to use `try-with-resources` statement to
+// avoid potential memory leak.
 public class Buffer implements AutoCloseable {
   private NativeBufferWrapper wrapper;
 
