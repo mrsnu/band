@@ -16,6 +16,9 @@
 
 package org.mrsnu.band;
 
+// Caution: This class has a native resource.
+// You may need to use `try-with-resources` statement to
+// avoid potential memory leak.
 public class ImageProcessor implements AutoCloseable {
   private long nativeHandle = 0;
 
@@ -37,7 +40,7 @@ public class ImageProcessor implements AutoCloseable {
   }
 
   private native void process(
-    long imageProcessorHandle, Object srcBufferObject, Object dstTensorObject);
+      long imageProcessorHandle, Object srcBufferObject, Object dstTensorObject);
 
   private native void deleteImageProcessor(long imageProcessorHandle);
 }

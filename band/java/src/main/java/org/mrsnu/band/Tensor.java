@@ -16,17 +16,25 @@
 
 package org.mrsnu.band;
 
-import java.util.List;
 import java.nio.ByteBuffer;
+import java.util.List;
 
-public class Tensor {
+// Caution: This class has a native resource.
+// You may need to use `try-with-resources` statement to
+// avoid potential memory leak.
+public class Tensor implements AutoCloseable {
   private NativeTensorWrapper wrapper;
 
   Tensor(long nativeHandle) {
     Band.init();
     wrapper = new NativeTensorWrapper(nativeHandle);
   }
-  
+
+  @Override
+  public void close() {
+    wrapper = null;
+  }
+
   public DataType getType() {
     return wrapper.getType();
   }

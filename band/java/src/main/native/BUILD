@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//band:band.bzl", "band_copts", "band_cc_library")
+load("//band:band.bzl", "band_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -60,5 +60,5 @@ exports_files(
     [
         "exported_symbols.lds",
         "version_scripts.lds",
-    ]
+    ],
 )

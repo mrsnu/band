@@ -30,8 +30,13 @@ namespace band {
 // for future use (e.g. for the next operator with the same input format).
 class IBufferOperator {
  public:
-  IBufferOperator() = default;
-  virtual ~IBufferOperator();
+  IBufferOperator() : output_(nullptr, [](Buffer*) {}) {}
+  virtual ~IBufferOperator() = default;
+
+  IBufferOperator(IBufferOperator&&);
+  IBufferOperator(const IBufferOperator& rhs);
+  IBufferOperator& operator=(const IBufferOperator&);
+
   absl::Status Process(const Buffer& input);
   virtual void SetOutput(Buffer* output);
   Buffer* GetOutput();
@@ -59,8 +64,6 @@ class IBufferOperator {
 
  protected:
   friend class ImageProcessorBuilder;
-  IBufferOperator(const IBufferOperator&) = default;
-  IBufferOperator& operator=(const IBufferOperator&) = default;
   // Process the input buffer and generate the output buffer.
   // Returns following status:
   // - OK: the operation is successful.
@@ -70,7 +73,8 @@ class IBufferOperator {
   virtual IBufferOperator* Clone() const = 0;
 
   bool output_assigned_ = false;
-  Buffer* output_ = nullptr;
+  std::unique_ptr<Buffer, void (*)(Buffer*)> output_ =
+      std::unique_ptr<Buffer, void (*)(Buffer*)>(nullptr, [](Buffer*) {});
 };
 }  // namespace band
 

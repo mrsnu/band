@@ -19,12 +19,20 @@ package org.mrsnu.band;
 import android.media.Image.Plane;
 import java.nio.ByteBuffer;
 
-public class Buffer {
+// Caution: This class has a native resource.
+// You may need to use `try-with-resources` statement to
+// avoid potential memory leak.
+public class Buffer implements AutoCloseable {
   private NativeBufferWrapper wrapper;
 
   public Buffer(final Tensor tensor) {
     wrapper = new NativeBufferWrapper();
     wrapper.setFromTensor(tensor);
+  }
+
+  @Override
+  public void close() {
+    wrapper = null;
   }
 
   public Buffer(final ByteBuffer buffer, int width, int height, BufferFormat bufferFormat) {

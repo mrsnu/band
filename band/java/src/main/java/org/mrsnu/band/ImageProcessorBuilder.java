@@ -16,12 +16,17 @@
 
 package org.mrsnu.band;
 
-public class ImageProcessorBuilder {
+public class ImageProcessorBuilder implements AutoCloseable {
   private NativeImageProcessorBuilderWrapper wrapper;
 
   public ImageProcessorBuilder() {
     Band.init();
     wrapper = new NativeImageProcessorBuilderWrapper();
+  }
+
+  @Override
+  public void close() {
+    wrapper = null;
   }
 
   public ImageProcessorBuilder addCrop(int x0, int y0, int x1, int y1) {

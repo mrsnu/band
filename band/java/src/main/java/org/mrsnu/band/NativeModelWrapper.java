@@ -31,7 +31,6 @@ class NativeModelWrapper implements AutoCloseable {
   @Override
   public void close() {
     deleteModel(nativeHandle);
-    nativeHandle = 0;
   }
 
   public void loadFromFile(BackendType backendType, String filePath) {
@@ -62,7 +61,8 @@ class NativeModelWrapper implements AutoCloseable {
 
   private static native void loadFromFile(long modelHandle, int backendType, String filePath);
 
-  private static native void loadFromBuffer(long modelHandle, int backendType, ByteBuffer modelBuffer);
+  private static native void loadFromBuffer(
+      long modelHandle, int backendType, ByteBuffer modelBuffer);
 
   private static native int[] getSupportedBackends(long modelHandle);
 }
