@@ -36,20 +36,20 @@ T ConvertEigenVectorToTMap(const Eigen::VectorXd& vec) {
   return value;
 }
 
-Eigen::VectorXd GetOneHotVector(double value, size_t size, size_t index) {
-  Eigen::VectorXd vec(size);
-  vec.setZero();
-  vec(index) = value;
-  return vec;
-}
+// Eigen::VectorXd GetOneHotVector(double value, size_t size, size_t index) {
+//   Eigen::VectorXd vec(size);
+//   vec.setZero();
+//   vec(index) = value;
+//   return vec;
+// }
 
-Eigen::VectorXd GetFillVector(double value, size_t size) {
-  Eigen::VectorXd vec(size);
-  for (int i = 0; i < size; i++) {
-    vec(i) = value;
-  }
-  return vec;
-}
+// Eigen::VectorXd GetFillVector(double value, size_t size) {
+//   Eigen::VectorXd vec(size);
+//   for (int i = 0; i < size; i++) {
+//     vec(i) = value;
+//   }
+//   return vec;
+// }
 
 // std::string ThermalMapToJson(ThermalMap thermal_map) {
 //   std::string result = "{";

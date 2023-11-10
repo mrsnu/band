@@ -6,6 +6,7 @@
 #include <cassert>
 #include <deque>
 #include <iostream>
+#include <cstring>
 #include <list>
 #include <map>
 #include <set>

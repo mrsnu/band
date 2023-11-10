@@ -25,7 +25,7 @@ class ThermalEstimator
   explicit ThermalEstimator(IEngine* engine, ThermalProfiler* thermal_profiler,
                             FrequencyProfiler* frequency_profiler,
                             LatencyProfiler* latency_profiler,
-                            FrequencyLatencyEstimator* latency_estimator)
+                            IEstimator<SubgraphKey, double, double>* latency_estimator)
       : IEstimator(engine),
         thermal_profiler_(thermal_profiler),
         frequency_profiler_(frequency_profiler),
@@ -51,10 +51,10 @@ class ThermalEstimator
   Eigen::MatrixXd JsonToEigenMatrix(Json::Value json);
 
  private:
-  LatencyProfiler* latency_profiler_;
   ThermalProfiler* thermal_profiler_;
   FrequencyProfiler* frequency_profiler_;
-  FrequencyLatencyEstimator* latency_estimator_;
+  LatencyProfiler* latency_profiler_;
+  IEstimator<SubgraphKey, double, double>* latency_estimator_;
 
   size_t num_resources_ = 0;
   size_t window_size_;
