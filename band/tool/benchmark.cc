@@ -245,6 +245,58 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     }
   }
 
+  // Device config
+  {
+    if (root["cpu_therm_index"].isInt()) {
+      builder.AddCPUThermIndex(root["cpu_therm_index"].asInt());
+    }
+    if (root["gpu_therm_index"].isInt()) {
+      builder.AddGPUThermIndex(root["gpu_therm_index"].asInt());
+    }
+    if (root["dsp_therm_index"].isInt()) {
+      builder.AddDSPThermIndex(root["dsp_therm_index"].asInt());
+    }
+    if (root["npu_therm_index"].isInt()) {
+      builder.AddNPUThermIndex(root["npu_therm_index"].asInt());
+    }
+    if (root["target_therm_index"].isInt()) {
+      builder.AddTargetThermIndex(root["target_therm_index"].asInt());
+    }
+
+    if (root["cpu_freq_path"].isString()) {
+      builder.AddCPUFreqPath(root["cpu_freq_path"].asCString());
+    }
+    if (root["gpu_freq_path"].isString()) {
+      builder.AddGPUFreqPath(root["gpu_freq_path"].asCString());
+    }
+    if (root["dsp_freq_path"].isString()) {
+      builder.AddDSPFreqPath(root["dsp_freq_path"].asCString());
+    }
+    if (root["npu_freq_path"].isString()) {
+      builder.AddNPUFreqPath(root["npu_freq_path"].asCString());
+    }
+    if (root["runtime_freq_path"].isString()) {
+      builder.AddRuntimeFreqPath(root["runtime_freq_path"].asCString());
+    }
+
+    if (root["latency_log_path"].isString()) {
+      builder.AddLatencyLogPath(root["latency_log_path"].asCString());
+    }
+    if (root["therm_log_path"].isString()) {
+      builder.AddThermLogPath(root["therm_log_path"].asCString());
+    }
+    if (root["freq_log_path"].isString()) {
+      builder.AddFreqLogPath(root["freq_log_path"].asCString());
+    }
+  }
+
+  // ThermalProfile config
+  {
+    if (root["thermal_profile_window_size"].isInt()) {
+      builder.AddThermalWindowSize(root["thermal_profile_window_size"].asInt());
+    }
+  }
+
   // Runtime config
   {
     if (root["minimum_subgraph_size"].isInt()) {
@@ -448,7 +500,7 @@ void Benchmark::RunPeriodic() {
   }
   // wait for some time until we stop the benchmark
   std::this_thread::sleep_for(
-      std::chrono::milliseconds(benchmark_config_.running_time_ms));
+      std::chrono::microseconds(benchmark_config_.running_time_ms));
   kill_app_ = true;
   engine_->WaitAll();
 }

@@ -5,7 +5,7 @@ namespace test {
 
 static DeviceConfig GetPixel4DeviceConfig() {
   static DeviceConfig pixel4_config;
-  pixel4_config.cpu_therm_index = 47;
+  pixel4_config.cpu_therm_index = 14;
   pixel4_config.gpu_therm_index = 32;
   pixel4_config.dsp_therm_index = 52;
   pixel4_config.npu_therm_index = 38;

@@ -51,5 +51,18 @@
     "profile_num_runs": 50,
     "allow_work_steal": true,
     "availability_check_interval_ms": 30000,
-    "schedule_window_size": 10
+    "schedule_window_size": 10,
+    "cpu_therm_index": 14,
+    "gpu_therm_index": 32,
+    "dsp_therm_index": 52,
+    "npu_therm_index": 38,
+    "target_therm_index": 74,
+    "cpu_freq_path": "/sys/devices/system/cpu/cpufreq/policy7",
+    "gpu_freq_path": "/sys/class/devfreq/2c00000.qcom,kgsl-3d0",
+    "dsp_freq_path": "",
+    "npu_freq_path": "",
+    "runtime_freq_path": "/sys/devices/system/cpu/cpufreq/policy4",
+    "latency_log_path": "/data/local/tmp/splash/latency.log",
+    "therm_log_path": "/data/local/tmp/splash/therm.log",
+    "freq_log_path": "/data/local/tmp/splash/freq.log"
 }

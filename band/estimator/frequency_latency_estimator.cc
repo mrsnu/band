@@ -36,7 +36,7 @@ void FrequencyLatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
                                                 size_t event_handle) {
   auto freq_interval = frequency_profiler_->GetInterval(event_handle);
   auto latency =
-      latency_profiler_->GetDuration<std::chrono::milliseconds>(event_handle);
+      latency_profiler_->GetDuration<std::chrono::microseconds>(event_handle);
   Update(key, freq_interval.first, latency);
 }
 

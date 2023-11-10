@@ -19,7 +19,7 @@ struct LatencyProfileConfig {
 };
 
 struct ThermalProfileConfig {
-  size_t window_size = 10;
+  size_t window_size = 500;
 };
 
 struct DeviceConfig {
@@ -38,11 +38,6 @@ struct DeviceConfig {
   std::string latency_log_path = "";
   std::string therm_log_path = "";
   std::string freq_log_path = "";
-
-  float cpu_freq_multiplier = 1.0E-6f;
-  float dev_freq_multiplier = 1.0E-9f;
-  size_t cpu_freq_multiplier_w = 1.0E+6f;
-  size_t dev_freq_multiplier_w = 1.0E+9f;
 };
 
 struct ProfileConfig {

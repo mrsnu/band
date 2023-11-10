@@ -8,7 +8,7 @@
 #include "chrome_tracer/tracer.h"
 
 namespace band {
-class JobTracer : protected chrome_tracer::ChromeTracer {
+class JobTracer : public chrome_tracer::ChromeTracer {
  public:
   static JobTracer& Get();
   void BeginSubgraph(const Job& job);
@@ -52,6 +52,7 @@ class JobTracer : protected chrome_tracer::ChromeTracer {
   } while (0)
 
 #else
+#define BAND_TRACER_ADD_STREAM(...)
 #define BAND_TRACER_ADD_WORKER(...)
 #define BAND_TRACER_BEGIN_SUBGRAPH(...)
 #define BAND_TRACER_END_SUBGRAPH(...)

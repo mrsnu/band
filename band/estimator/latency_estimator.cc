@@ -47,7 +47,7 @@ void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
 
 void LatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
                                        size_t event_handle) {
-  Update(key, latency_profiler_->GetDuration<std::chrono::milliseconds>(
+  Update(key, latency_profiler_->GetDuration<std::chrono::microseconds>(
                   event_handle));
 }
 

@@ -66,18 +66,16 @@ Frequency::Frequency(DeviceConfig config) : config_(config) {
 double Frequency::GetFrequency(DeviceFlag device_flag) {
   auto path = freq_device_map_[device_flag];
   if (device_flag == DeviceFlag::kCPU) {
-    return device::TryReadDouble({GetCpuFreqPath(path)},
-                                 {config_.cpu_freq_multiplier})
+    return device::TryReadDouble({GetCpuFreqPath(path)}, {cpu_freq_multiplier})
         .value();
   }
-  return device::TryReadDouble({GetFreqPath(path)},
-                               {config_.dev_freq_multiplier})
+  return device::TryReadDouble({GetFreqPath(path)}, {dev_freq_multiplier})
       .value();
 }
 
 double Frequency::GetRuntimeFrequency() {
   return device::TryReadDouble({GetCpuFreqPath(config_.runtime_freq_path)},
-                               {config_.cpu_freq_multiplier})
+                               {cpu_freq_multiplier})
       .value();
 }
 
@@ -96,13 +94,13 @@ absl::Status Frequency::SetFrequency(DeviceFlag device_flag, double freq) {
 
 absl::Status Frequency::SetRuntimeFrequency(double freq) {
   return SetFrequencyWithPath(GetCpuScalingPath(runtime_cpu_path_), freq,
-                              config_.cpu_freq_multiplier_w);
+                              cpu_freq_multiplier_w);
 }
 
 absl::Status Frequency::SetCpuFrequency(double freq) {
   return SetFrequencyWithPath(
       GetCpuScalingPath(freq_device_map_.at(DeviceFlag::kCPU)), freq,
-      config_.cpu_freq_multiplier_w);
+      cpu_freq_multiplier_w);
 }
 
 absl::Status Frequency::SetDevFrequency(DeviceFlag device_flag, double freq) {
@@ -112,7 +110,7 @@ absl::Status Frequency::SetDevFrequency(DeviceFlag device_flag, double freq) {
   }
 
   return SetFrequencyWithPath(GetScalingPath(freq_device_map_.at(device_flag)),
-                              freq, config_.dev_freq_multiplier_w);
+                              freq, dev_freq_multiplier_w);
 }
 
 absl::Status Frequency::SetFrequencyWithPath(const std::string& path,
@@ -139,12 +137,12 @@ Frequency::GetAllAvailableFrequency() {
     auto path = pair.second;
     if (pair.first == DeviceFlag::kCPU) {
       auto freqs = device::TryReadDoubles({GetCpuAvailableFreqPath(path)},
-                                          {config_.cpu_freq_multiplier})
+                                          {cpu_freq_multiplier})
                        .value();
       freq_map[pair.first] = freqs;
     } else {
       auto freqs = device::TryReadDoubles({GetAvailableFreqPath(path)},
-                                          {config_.dev_freq_multiplier})
+                                          {dev_freq_multiplier})
                        .value();
       freq_map[pair.first] = freqs;
     }
@@ -156,7 +154,7 @@ Frequency::GetAllAvailableFrequency() {
 std::vector<double> Frequency::GetRuntimeAvailableFrequency() {
   return device::TryReadDoubles(
              {GetCpuAvailableFreqPath(config_.runtime_freq_path)},
-             {config_.cpu_freq_multiplier})
+             {cpu_freq_multiplier})
       .value();
 }
 

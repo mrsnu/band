@@ -37,6 +37,11 @@ class Frequency {
   std::string runtime_cpu_path_;
   std::map<DeviceFlag, std::string> freq_device_map_;
   std::map<DeviceFlag, std::vector<double>> freq_available_map_;
+
+  float cpu_freq_multiplier = 1.0E-6f;
+  float dev_freq_multiplier = 1.0E-9f;
+  size_t cpu_freq_multiplier_w = 1.0E+6f;
+  size_t dev_freq_multiplier_w = 1.0E+9f;
 };
 
 }  // namespace band
