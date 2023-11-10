@@ -16,6 +16,7 @@
 
 package org.mrsnu.band;
 
+import android.util.Log;
 import java.nio.ByteBuffer;
 
 class NativeImageProcessorBuilderWrapper implements AutoCloseable {
@@ -23,6 +24,14 @@ class NativeImageProcessorBuilderWrapper implements AutoCloseable {
 
   NativeImageProcessorBuilderWrapper() {
     nativeHandle = createImageProcessorBuilder();
+    Log.d("NativeImageProcessorBuilderWrapper", "NIPBW created " + nativeHandle);
+  }
+
+  @Override
+  public void close() {
+    Log.d("NativeImageProcessorBuilderWrapper", "NIPBW closed " + nativeHandle);
+    deleteImageProcessorBuilder(nativeHandle);
+    nativeHandle = 0;
   }
 
   public void addCrop(int x0, int y0, int x1, int y1) {
@@ -57,18 +66,11 @@ class NativeImageProcessorBuilderWrapper implements AutoCloseable {
     return (ImageProcessor) build(nativeHandle);
   }
 
-  @Override
-  public void close() {
-    deleteImageProcessorBuilder(nativeHandle);
-    nativeHandle = 0;
-  }
-
   private native long createImageProcessorBuilder();
 
   private native void deleteImageProcessorBuilder(long imageProcessorBuilderHandle);
 
-  private native void addCrop(
-      long imageProcessorBuilderHandle, int x0, int y0, int x1, int y1);
+  private native void addCrop(long imageProcessorBuilderHandle, int x0, int y0, int x1, int y1);
 
   private native void addResize(long imageProcessorBuilderHandle, int width, int height);
 

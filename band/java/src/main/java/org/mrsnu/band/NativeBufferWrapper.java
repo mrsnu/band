@@ -17,6 +17,7 @@
 package org.mrsnu.band;
 
 import android.media.Image.Plane;
+import android.util.Log;
 import java.nio.ByteBuffer;
 
 class NativeBufferWrapper implements AutoCloseable {

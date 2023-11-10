@@ -16,17 +16,22 @@
 
 package org.mrsnu.band;
 
-import java.util.List;
 import java.nio.ByteBuffer;
+import java.util.List;
 
-public class Tensor {
+public class Tensor implements AutoCloseable {
   private NativeTensorWrapper wrapper;
 
   Tensor(long nativeHandle) {
     Band.init();
     wrapper = new NativeTensorWrapper(nativeHandle);
   }
-  
+
+  @Override
+  public void close() {
+    wrapper = null;
+  }
+
   public DataType getType() {
     return wrapper.getType();
   }

@@ -19,12 +19,17 @@ package org.mrsnu.band;
 import android.media.Image.Plane;
 import java.nio.ByteBuffer;
 
-public class Buffer {
+public class Buffer implements AutoCloseable {
   private NativeBufferWrapper wrapper;
 
   public Buffer(final Tensor tensor) {
     wrapper = new NativeBufferWrapper();
     wrapper.setFromTensor(tensor);
+  }
+
+  @Override
+  public void close() {
+    wrapper = null;
   }
 
   public Buffer(final ByteBuffer buffer, int width, int height, BufferFormat bufferFormat) {

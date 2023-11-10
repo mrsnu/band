@@ -137,7 +137,7 @@ class AutoConvert : public IBufferOperator {
   AutoConvert() = default;
   AutoConvert(const AutoConvert& rhs);
   AutoConvert& operator=(const AutoConvert& rhs);
-  virtual ~AutoConvert() override;
+  virtual ~AutoConvert();
 
   virtual Type GetOpType() const override;
   virtual absl::Status ProcessImpl(const Buffer& input) override;
