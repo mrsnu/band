@@ -8,12 +8,14 @@
 #include "band/logger.h"
 #include "band/model_spec.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
+#include "band/scheduler/fixed_worker_idle_scheduler.h"
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_idle_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/scheduler/thermal_scheduler.h"
+#include "band/scheduler/dvfs_scheduler.h"
 #include "band/time.h"
 
 
@@ -56,6 +58,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
                       schedulers[i]);
     if (schedulers[i] == SchedulerType::kFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kFixedWorkerIdle) {
+      schedulers_.emplace_back(new FixedWorkerIdleScheduler(engine_, config.idle_us_));
     } else if (schedulers[i] == SchedulerType::kFixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kRoundRobin) {
@@ -78,6 +82,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
           new HEFTScheduler(engine_, schedule_window_size_, true));
     } else if (schedulers[i] == SchedulerType::kThermal) {
       schedulers_.emplace_back(new ThermalScheduler(engine_));
+    } else if (schedulers[i] == SchedulerType::kDVFS) {
+      schedulers_.emplace_back(new DVFSScheduler(engine_));
     } else {
       return absl::InternalError("[Planner] Unsupported scheduler type.");
     }

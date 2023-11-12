@@ -214,6 +214,10 @@ class PlannerConfigBuilder {
     log_path_ = log_path;
     return *this;
   }
+  PlannerConfigBuilder& AddIdleUs(int idle_us) {
+    idle_us_ = idle_us;
+    return *this;
+  }
 
   PlannerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
@@ -223,6 +227,8 @@ class PlannerConfigBuilder {
   std::vector<SchedulerType> schedulers_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";
+
+  int idle_us_;
 };
 
 // Builder for creating WorkerConfig.
@@ -398,6 +404,10 @@ class RuntimeConfigBuilder {
   }
   RuntimeConfigBuilder& AddPlannerCPUMask(CPUMaskFlag cpu_masks) {
     planner_config_builder_.AddCPUMask(cpu_masks);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddIdleUs(int idle_us) {
+    planner_config_builder_.AddIdleUs(idle_us);
     return *this;
   }
 

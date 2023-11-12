@@ -211,6 +211,10 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     if (root["log_path"].isString()) {
       builder.AddPlannerLogPath(root["log_path"].asCString());
     }
+    
+    if (root["idle_us"].isInt()) {
+      builder.AddIdleUs(root["idle_us"].asInt());
+    }
   }
 
   // Worker config
@@ -500,7 +504,7 @@ void Benchmark::RunPeriodic() {
   }
   // wait for some time until we stop the benchmark
   std::this_thread::sleep_for(
-      std::chrono::microseconds(benchmark_config_.running_time_ms));
+      std::chrono::milliseconds(benchmark_config_.running_time_ms));
   kill_app_ = true;
   engine_->WaitAll();
 }

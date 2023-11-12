@@ -21,6 +21,8 @@ class Planner;
 class RuntimeConfig;
 class Tensor;
 class ModelSpec;
+class Frequency;
+class Thermal;
 
 // Type definition for the device waiting time.
 // The unit of time is ms.
@@ -125,6 +127,13 @@ class IEngine {
   /* tensor communication */
   virtual absl::Status TryCopyInputTensors(const Job& job) = 0;
   virtual absl::Status TryCopyOutputTensors(const Job& job) = 0;
+
+  /* device */
+  virtual Frequency* GetFrequency() const = 0;
+  virtual Thermal* GetThermal() const = 0;
+
+  /* sleep */
+  virtual void SleepTemperature(double target_temperature) const = 0;
 
  protected:
   ErrorReporter* error_reporter_;

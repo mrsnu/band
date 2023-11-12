@@ -4,3 +4,8 @@ bazel build -c opt --config android_arm64_tflite --config trace //band/tool:band
 cp bazel-bin/band/tool/band_benchmark ./band_benchmark.run
 bazel build -c dbg --config android_arm64_tflite --config trace //band/tool:band_benchmark
 cp bazel-bin/band/tool/band_benchmark ./band_benchmark_dbg.run
+
+bazel build -c opt --config android_arm64_tflite //band/tool:band_benchmark
+cp bazel-bin/band/tool/band_benchmark ./band_benchmark_notrace.run
+bazel build -c dbg --config android_arm64_tflite //band/tool:band_benchmark
+cp bazel-bin/band/tool/band_benchmark ./band_benchmark_notrace_dbg.run

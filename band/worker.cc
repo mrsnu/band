@@ -5,6 +5,7 @@
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/time.h"
+#include "band/device/frequency.h"
 
 namespace band {
 Worker::Worker(IEngine* engine, WorkerId worker_id, DeviceFlag device_flag)
@@ -196,6 +197,21 @@ void Worker::Work() {
     }
 
     BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
+    if (current_job->runtime_frequency != -1) {
+      auto status = engine_->GetFrequency()->SetRuntimeFrequency(
+          current_job->runtime_frequency);
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
+      }
+    }
+    if (current_job->device_frequency != -1) {
+      auto status = engine_->GetFrequency()->SetFrequency(
+          device_flag_, current_job->device_frequency);
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
+      }
+    }
+
     if (current_job->is_idle_job) {
       time::SleepForMicros(current_job->idle_us);
       current_job->end_time = time::NowMicros();

@@ -53,6 +53,7 @@ enum class BackendType : size_t {
 
 enum class SchedulerType : size_t {
   kFixedWorker = 0,
+  kFixedWorkerIdle,
   kRoundRobin,
   kRoundRobinIdle,
   kShortestExpectedLatency,
@@ -61,6 +62,7 @@ enum class SchedulerType : size_t {
   kLeastSlackTimeFirst,
   kHeterogeneousEarliestFinishTimeReserved,
   kThermal,
+  kDVFS,
 };
 
 enum class CPUMaskFlag : size_t {
@@ -325,6 +327,10 @@ struct Job {
 
   // Target worker id (only for fixed worker request)
   WorkerId target_worker_id = -1;
+
+  // frequency
+  double device_frequency = -1;
+  double runtime_frequency = -1;
 
   // Current status for execution (Valid after planning)
   JobStatus status = JobStatus::kQueued;

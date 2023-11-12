@@ -6,6 +6,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <thread>
 
 #include "band/common.h"
 #include "band/config.h"
@@ -113,6 +114,23 @@ class Engine : public IEngine {
 
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
+
+  Frequency* GetFrequency() const override {
+    return frequency_profiler_->GetFrequency();
+  }
+
+  Thermal* GetThermal() const override {
+    return thermal_profiler_->GetThermal();
+  }
+
+  void SleepTemperature(double target_temperature) const override {
+    double current_temp = GetThermal()->GetThermal(SensorFlag::kTarget);
+    while (current_temp > target_temperature) {
+      BAND_LOG_PROD(BAND_LOG_INFO, "Current temperature: %f", current_temp);
+      current_temp = GetThermal()->GetThermal(SensorFlag::kTarget);
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  }
 
  private:
   /* engine */

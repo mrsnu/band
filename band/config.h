@@ -54,6 +54,8 @@ struct PlannerConfig {
   std::vector<SchedulerType> schedulers;
   CPUMaskFlag cpu_mask = CPUMaskFlag::kAll;
   std::string log_path = "";
+
+  int idle_us_ = 0;
 };
 
 struct WorkerConfig {

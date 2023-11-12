@@ -94,6 +94,9 @@ const char* ToString(SchedulerType scheduler_type) {
     case SchedulerType::kFixedWorker: {
       return "fixed_worker";
     } break;
+    case SchedulerType::kFixedWorkerIdle: {
+      return "fixed_worker_idle";
+    } break;
     case SchedulerType::kRoundRobin: {
       return "round_robin";
     } break;
@@ -116,7 +119,10 @@ const char* ToString(SchedulerType scheduler_type) {
       return "heterogeneous_earliest_finish_time_reserved";
     } break;
     case SchedulerType::kThermal: {
-      return "frame_thermal";
+      return "thermal";
+    } break;
+    case SchedulerType::kDVFS: {
+      return "dvfs";
     } break;
     default: {
       return "Unknown scheduler type";

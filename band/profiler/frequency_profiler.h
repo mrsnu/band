@@ -41,6 +41,8 @@ class FrequencyProfiler : public Profiler {
     return frequency_->GetAllAvailableFrequency();
   }
 
+  Frequency* GetFrequency() { return frequency_.get(); }
+
  private:
   std::unique_ptr<Frequency> frequency_;
   std::vector<std::pair<FreqInfo, FreqInfo>> timeline_;

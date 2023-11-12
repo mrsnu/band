@@ -264,6 +264,7 @@ band_cc_library(
         ":config",
         ":job_tracer",
         ":time",
+        "//band/device:frequency",
     ],
 )
 
@@ -272,15 +273,18 @@ band_cc_library(
     srcs = [
         "scheduler/fixed_worker_global_queue_scheduler.cc",
         "scheduler/fixed_worker_scheduler.cc",
+        "scheduler/fixed_worker_idle_scheduler.cc",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.cc",
         "scheduler/least_slack_first_scheduler.cc",
         "scheduler/round_robin_idle_scheduler.cc",
         "scheduler/round_robin_scheduler.cc",
         "scheduler/shortest_expected_latency_scheduler.cc",
         "scheduler/thermal_scheduler.cc",
+        "scheduler/dvfs_scheduler.cc",
     ],
     hdrs = [
         "scheduler/fixed_worker_scheduler.h",
+        "scheduler/fixed_worker_idle_scheduler.h",
         "scheduler/heterogeneous_earliest_finish_time_scheduler.h",
         "scheduler/least_slack_first_scheduler.h",
         "scheduler/round_robin_idle_scheduler.h",
@@ -288,6 +292,7 @@ band_cc_library(
         "scheduler/scheduler.h",
         "scheduler/shortest_expected_latency_scheduler.h",
         "scheduler/thermal_scheduler.h",
+        "scheduler/dvfs_scheduler.h",
     ],
     deps = [
         ":common",
