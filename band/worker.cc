@@ -2,10 +2,10 @@
 
 #include "absl/strings/str_format.h"
 #include "band/common.h"
+#include "band/device/frequency.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/time.h"
-#include "band/device/frequency.h"
 
 namespace band {
 Worker::Worker(IEngine* engine, WorkerId worker_id, DeviceFlag device_flag)
@@ -174,7 +174,7 @@ void Worker::Work() {
     Job* current_job = GetCurrentJob();
     lock.unlock();
 
-    if (!current_job || (!current_job->is_idle_job && !IsValid(*current_job))) {
+    if (!current_job || !IsValid(*current_job)) {
       BAND_REPORT_ERROR(GetErrorReporter(),
                         "%s worker spotted an invalid job (model id %d, "
                         "subgraph valid %d (%d, %d), "
@@ -197,26 +197,39 @@ void Worker::Work() {
     }
 
     BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
-    if (current_job->runtime_frequency != -1) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Worker %d set frequency", worker_id_);
+    BAND_LOG_PROD(BAND_LOG_INFO, "  current_job->job_id: %d",
+                  current_job->job_id);
+    BAND_LOG_PROD(BAND_LOG_INFO, "  current_job->runtime_frequency: %f",
+                  current_job->runtime_frequency);
+    BAND_LOG_PROD(BAND_LOG_INFO, "  current_job->cpu_frequency: %f",
+                  current_job->cpu_frequency);
+    BAND_LOG_PROD(BAND_LOG_INFO, "  current_job->gpu_frequency: %f",
+                  current_job->gpu_frequency);
+
+    if (current_job->runtime_frequency) {
       auto status = engine_->GetFrequency()->SetRuntimeFrequency(
           current_job->runtime_frequency);
       if (!status.ok()) {
         BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
       }
     }
-    if (current_job->device_frequency != -1) {
-      auto status = engine_->GetFrequency()->SetFrequency(
-          device_flag_, current_job->device_frequency);
+    if (current_job->cpu_frequency) {
+      auto status =
+          engine_->GetFrequency()->SetCpuFrequency(current_job->cpu_frequency);
+      if (!status.ok()) {
+        BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
+      }
+    }
+    if (current_job->gpu_frequency) {
+      auto status =
+          engine_->GetFrequency()->SetGpuFrequency(current_job->gpu_frequency);
       if (!status.ok()) {
         BAND_LOG_PROD(BAND_LOG_ERROR, "%s", status.message());
       }
     }
 
-    if (current_job->is_idle_job) {
-      time::SleepForMicros(current_job->idle_us);
-      current_job->end_time = time::NowMicros();
-      current_job->status = JobStatus::kSuccess;
-    } else if (engine_->TryCopyInputTensors(*current_job).ok()) {
+    if (engine_->TryCopyInputTensors(*current_job).ok()) {
       lock.lock();
       current_job->invoke_time = time::NowMicros();
       current_job->event_id = engine_->BeginEvent();

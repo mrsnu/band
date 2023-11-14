@@ -44,6 +44,7 @@ class Benchmark {
   void RunPeriodic();
   void RunStream();
   void RunWorkload();
+  void RunMotivation();
 
   absl::Status LogResults();
 

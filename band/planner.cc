@@ -7,17 +7,14 @@
 #include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/model_spec.h"
+#include "band/scheduler/dvfs_scheduler.h"
 #include "band/scheduler/fixed_worker_scheduler.h"
-#include "band/scheduler/fixed_worker_idle_scheduler.h"
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
-#include "band/scheduler/round_robin_idle_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
 #include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/scheduler/thermal_scheduler.h"
-#include "band/scheduler/dvfs_scheduler.h"
 #include "band/time.h"
-
 
 namespace band {
 
@@ -35,7 +32,6 @@ Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
 Planner::~Planner() {
   if (log_path_.size()) {
     BAND_LOG_PROD(BAND_LOG_INFO, "Dumping job tracer to %s", log_path_.c_str());
-    BAND_TRACER_DUMP(log_path_);
   }
   planner_safe_bool_.terminate();
   planner_thread_.join();
@@ -58,14 +54,10 @@ absl::Status Planner::Init(const PlannerConfig& config) {
                       schedulers[i]);
     if (schedulers[i] == SchedulerType::kFixedWorker) {
       schedulers_.emplace_back(new FixedWorkerScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::kFixedWorkerIdle) {
-      schedulers_.emplace_back(new FixedWorkerIdleScheduler(engine_, config.idle_us_));
     } else if (schedulers[i] == SchedulerType::kFixedWorkerGlobalQueue) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::kRoundRobinIdle) {
-      schedulers_.emplace_back(new RoundRobinIdleScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kShortestExpectedLatency) {
       schedulers_.emplace_back(
           new ShortestExpectedLatencyScheduler(engine_, schedule_window_size_));
@@ -190,10 +182,9 @@ void Planner::EnqueueFinishedJob(Job& job) {
       engine_.IsEnd(job.subgraph_key) || job.status != JobStatus::kSuccess;
   // record finished / failed job
   if (is_finished) {
-    if (!job.is_idle_job) {
-      jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
-      num_finished_jobs_++;
-    }
+    jobs_finished_record_[GetJobRecordIndex(job.job_id)] = job;
+    num_finished_jobs_++;
+
     end_invoke_.notify_all();
   }
   // make sure to unlock before calling callback to avoid
@@ -201,12 +192,10 @@ void Planner::EnqueueFinishedJob(Job& job) {
   finished_lock.unlock();
 
   // report end invoke using callback
-  if (!job.is_idle_job) {
-    if (on_end_request_ && job.require_callback && is_finished) {
-      on_end_request_(job.job_id, job.status == JobStatus::kSuccess
-                                      ? absl::OkStatus()
-                                      : absl::InternalError("Job failed."));
-    }
+  if (on_end_request_ && job.require_callback && is_finished) {
+    on_end_request_(job.job_id, job.status == JobStatus::kSuccess
+                                    ? absl::OkStatus()
+                                    : absl::InternalError("Job failed."));
   }
 }
 
@@ -297,8 +286,7 @@ void Planner::CopyToLocalQueues() {
   request_lock.unlock();
 }
 
-bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions,
-                              const std::vector<int> idle_uses) {
+bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
   bool success = true;
   for (int i = 0; i < actions.size(); i++) {
     Job job;
@@ -333,15 +321,6 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions,
                         "EnqueueToWorker failed. Requests scheduled to "
                         "unavailable worker id %d",
                         target_key.GetWorkerId());
-        }
-        if (idle_uses.size() > 0) {
-          Job idle_job = Job::CreateIdleJob(idle_uses[i], target_key);
-          if (!worker->EnqueueJob(idle_job)) {
-            BAND_LOG_PROD(BAND_LOG_ERROR,
-                          "EnqueueToWorker failed. Requests scheduled to "
-                          "unavailable worker id %d",
-                          target_key.GetWorkerId());
-          }
         }
       } else {
         EnqueueRequest(job, true);

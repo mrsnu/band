@@ -152,7 +152,7 @@ TEST(TFLiteBackend, SimpleEngineProfile) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kRoundRobinIdle})
+          .AddSchedulers({SchedulerType::kRoundRobin})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -244,7 +244,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kRoundRobinIdle})
+          .AddSchedulers({SchedulerType::kRoundRobin})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -312,7 +312,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kRoundRobinIdle})
+          .AddSchedulers({SchedulerType::kRoundRobin})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -369,7 +369,7 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kRoundRobinIdle})
+          .AddSchedulers({SchedulerType::kRoundRobin})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)
@@ -446,7 +446,7 @@ TEST(TFLiteBackend, ClassificationTest) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kRoundRobinIdle})
+          .AddSchedulers({SchedulerType::kRoundRobin})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kUnitSubgraph)

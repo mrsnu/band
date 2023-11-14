@@ -206,7 +206,6 @@ PlannerConfig PlannerConfigBuilder::Build(
   planner_config.schedule_window_size = schedule_window_size_;
   planner_config.schedulers = schedulers_;
   planner_config.cpu_mask = cpu_mask_;
-  planner_config.idle_us_ = idle_us_;
   return planner_config;
 }
 

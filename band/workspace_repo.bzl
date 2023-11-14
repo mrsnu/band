@@ -1,6 +1,7 @@
 """Initialize Band workspace"""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("//third_party/android:android.bzl", android = "repo")
 
 def workspace():
@@ -28,11 +29,10 @@ def workspace():
         strip_prefix = "jsoncpp-1.9.5",
     )
 
-    http_archive(
+    git_repository(
         name = "chrome_tracer",
-        url = "https://github.com/mrsnu/chrome-tracer/archive/refs/tags/v0.0.2.zip",
-        sha256 = "2a5d24832ca6c5dac8136004d6276d69ab1a3aebc81fc79cd909c8732385e8fa",
-        strip_prefix = "chrome-tracer-0.0.2",
+        branch = "stream_tracer",
+        remote = "https://github.com/mrsnu/chrome-tracer.git",
     )
 
     http_archive(

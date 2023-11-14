@@ -35,6 +35,8 @@ absl::Status Benchmark::Run() {
     RunStream();
   } else if (benchmark_config_.execution_mode == "workload") {
     RunWorkload();
+  } else if (benchmark_config_.execution_mode == "motivation") {
+    RunMotivation();
   }
 
   return LogResults();
@@ -90,7 +92,7 @@ bool Benchmark::ParseArgs(int argc, const char** argv) {
   if (argc >= 3) {
     band::Logger::SetVerbosity(atoi(argv[2]));
   } else {
-    band::Logger::SetVerbosity(BAND_LOG_WARNING);
+    band::Logger::SetVerbosity(BAND_LOG_INFO);
   }
 
   Json::Value json_config = json::LoadFromFile(argv[1]);
@@ -104,7 +106,7 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
 
   json::AssignIfValid(benchmark_config_.execution_mode, root, "execution_mode");
 
-  std::set<std::string> supported_execution_modes{"periodic", "stream"};
+  std::set<std::string> supported_execution_modes{"periodic", "stream", "motivation"};
   if (supported_execution_modes.find(benchmark_config_.execution_mode) ==
       supported_execution_modes.end()) {
     std::cout << "Please check if argument execution mode "
@@ -157,6 +159,10 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
     json::AssignIfValid(model.worker_id, model_json_value, "worker_id");
     json::AssignIfValid(model.slo_us, model_json_value, "slo_us");
     json::AssignIfValid(model.slo_scale, model_json_value, "slo_scale");
+    json::AssignIfValid(model.runtime_frequency, model_json_value,
+                        "runtime_frequency");
+    json::AssignIfValid(model.cpu_frequency, model_json_value, "cpu_frequency");
+    json::AssignIfValid(model.cpu_frequency, model_json_value, "gpu_frequency");
 
     benchmark_config_.model_configs.push_back(model);
   }
@@ -210,10 +216,6 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
 
     if (root["log_path"].isString()) {
       builder.AddPlannerLogPath(root["log_path"].asCString());
-    }
-    
-    if (root["idle_us"].isInt()) {
-      builder.AddIdleUs(root["idle_us"].asInt());
     }
   }
 
@@ -546,6 +548,86 @@ void Benchmark::RunStream() {
 }
 
 void Benchmark::RunWorkload() { BAND_NOT_IMPLEMENTED; }
+
+void Benchmark::RunMotivation() {
+  const std::vector<double> cpu_frequencies = {
+    // 0.8256, 
+    // 0.9408, 
+    // 1.0560, 
+    // 1.1712, 
+    // 1.2864, 
+    // 1.4016, 
+    // 1.4976,
+    // 1.6128, 
+    // 1.7088, 
+    // 1.8048, 
+    // 1.9200, 
+    // 2.0160, 
+    // 2.1312, 
+    // 2.2272,
+    // 2.3232, 
+    // 2.4192, 
+    // 2.5344, 
+    // 2.6496, 
+    // 2.7456, 
+    2.8416
+  };
+
+  const std::vector<double> gpu_frequencies = {
+    0.257, 
+    0.345, 
+    0.427, 
+    0.4992,
+    0.585
+  };
+  const std::vector<double> runtime_frequencies = {
+    // 0.7104, 
+    // 0.8256, 
+    // 0.9408, 
+    // 1.0560, 
+    // 1.1712, 
+    // 1.2864,
+    // 1.4016, 
+    // 1.4976, 
+    // 1.6128, 
+    // 1.7088, 
+    // 1.8048, 
+    // 1.9200,
+    // 2.0160, 
+    // 2.1312, 
+    // 2.2272, 
+    // 2.3232, 
+    2.4192
+  };
+
+  for (int model_index = 0; model_index < model_contexts_.size();
+       model_index++) {
+    ModelContext* model_context = model_contexts_[model_index];
+    for (auto runtime_freq : runtime_frequencies) {
+      for (auto cpu_freq : cpu_frequencies) {
+        for (auto gpu_freq : gpu_frequencies) {
+          for (auto& request_option : model_context->request_options) {
+            request_option.runtime_frequency = runtime_freq;
+            request_option.cpu_frequency = cpu_freq;
+            request_option.gpu_frequency = gpu_freq;
+          }
+
+          engine_->SleepTemperature(28.f);
+          if (!model_context->PrepareInput().ok()) {
+            BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+            continue;
+          }
+          auto status = engine_->RequestSync(
+              model_context->model_ids, model_context->request_options,
+              model_context->model_request_inputs,
+              model_context->model_request_outputs);
+        }
+      }
+    }
+  }
+
+  engine_->WaitAll();
+}
 
 void PrintHeader(std::string key, size_t indent_level = 0) {
   std::cout << std::left << std::string(indent_level * 2, ' ') << "<" << key

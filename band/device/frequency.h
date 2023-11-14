@@ -18,8 +18,9 @@ class Frequency {
   double GetFrequency(DeviceFlag device_flag);
   double GetRuntimeFrequency();
 
-  absl::Status SetFrequency(DeviceFlag device_flag, double freq);
   absl::Status SetRuntimeFrequency(double freq);
+  absl::Status SetCpuFrequency(double freq);
+  absl::Status SetGpuFrequency(double freq);
 
   FreqMap GetAllFrequency();
 
@@ -29,19 +30,23 @@ class Frequency {
  private:
   DeviceConfig config_;
   bool CheckFrequency(std::string path);
-  absl::Status SetCpuFrequency(double freq);
-  absl::Status SetDevFrequency(DeviceFlag device_flag, double freq);
   absl::Status SetFrequencyWithPath(const std::string& path, double freq,
                                     size_t multiplier);
 
   std::string runtime_cpu_path_;
   std::map<DeviceFlag, std::string> freq_device_map_;
   std::map<DeviceFlag, std::vector<double>> freq_available_map_;
+  std::vector<double> freq_runtime_available_;
 
   float cpu_freq_multiplier = 1.0E-6f;
   float dev_freq_multiplier = 1.0E-9f;
   size_t cpu_freq_multiplier_w = 1.0E+6f;
   size_t dev_freq_multiplier_w = 1.0E+9f;
+  const std::map<size_t, size_t> gpu_freq_map_ = {{585000000, 0},
+                                                  {499200000, 1},
+                                                  {427000000, 2},
+                                                  {345000000, 3},
+                                                  {257000000, 4}};
 };
 
 }  // namespace band

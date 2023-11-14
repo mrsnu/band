@@ -5,16 +5,15 @@
 #include <unordered_map>
 
 #include "band/common.h"
-#include "chrome_tracer/tracer.h"
+#include "chrome_tracer/stream_tracer.h"
 
 namespace band {
-class JobTracer : public chrome_tracer::ChromeTracer {
+class JobTracer : public chrome_tracer::ChromeStreamTracer {
  public:
   static JobTracer& Get();
   void BeginSubgraph(const Job& job);
   void EndSubgraph(const Job& job);
   void AddWorker(DeviceFlag device_flag, size_t id);
-  void Dump(std::string path) const;
 
  private:
   JobTracer();
@@ -46,17 +45,11 @@ class JobTracer : public chrome_tracer::ChromeTracer {
     band::JobTracer::Get().EndSubgraph(job); \
   } while (0)
 
-#define BAND_TRACER_DUMP(path)         \
-  do {                                 \
-    band::JobTracer::Get().Dump(path); \
-  } while (0)
-
 #else
 #define BAND_TRACER_ADD_STREAM(...)
 #define BAND_TRACER_ADD_WORKER(...)
 #define BAND_TRACER_BEGIN_SUBGRAPH(...)
 #define BAND_TRACER_END_SUBGRAPH(...)
-#define BAND_TRACER_DUMP(...)
 #endif
 
 #endif  // BAND_TRACER_H_

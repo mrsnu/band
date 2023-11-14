@@ -49,8 +49,7 @@ class Planner {
   void PrepareReenqueue(Job& job);
   // Enqueue the request to the worker.
   // Returns true if the request is successfully enqueued.
-  bool EnqueueToWorker(const std::vector<ScheduleAction>& action,
-                       const std::vector<int> idle_uses = {});
+  bool EnqueueToWorker(const std::vector<ScheduleAction>& action);
   void Trigger() { planner_safe_bool_.notify(); }
   int IssueSchedId() { return sched_id_++; }
 

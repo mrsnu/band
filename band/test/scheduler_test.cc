@@ -57,14 +57,13 @@ struct MockEngine : public MockEngineBase {
   }
 
   double GetExpected(const SubgraphKey& key) const override { return 10; }
-  bool EnqueueToWorker(const ScheduleAction& action,
-                       const int idle_us = -1) override {
+  bool EnqueueToWorker(const ScheduleAction& action) override {
     action_.push_back(action);
     return true;
   }
 
-  bool EnqueueToWorkerBatch(const std::vector<ScheduleAction>& schedule_action,
-                            const std::vector<int> idle_uses = {}) override {
+  bool EnqueueToWorkerBatch(
+      const std::vector<ScheduleAction>& schedule_action) override {
     action_.insert(action_.end(), schedule_action.begin(),
                    schedule_action.end());
     return true;

@@ -1,9 +1,9 @@
-#include "job_tracer.h"
+#include "band/job_tracer.h"
 
 #include "band/logger.h"
 
 namespace band {
-JobTracer::JobTracer() : chrome_tracer::ChromeTracer("Band") {}
+JobTracer::JobTracer() : chrome_tracer::ChromeStreamTracer("/data/local/tmp/splash/log.json") {}
 
 std::string JobTracer::GetStreamName(size_t id) const {
   if (id_to_streams_.find(id) == id_to_streams_.end()) {
@@ -58,14 +58,11 @@ void JobTracer::AddWorker(DeviceFlag device_flag, size_t id) {
 
   if (id_to_streams_.find(id) == id_to_streams_.end()) {
     id_to_streams_[id] = stream_name;
-    chrome_tracer::ChromeTracer::AddStream(stream_name);
+    chrome_tracer::ChromeStreamTracer::AddStream(stream_name);
   } else {
     band::Logger::Log(BAND_LOG_INFO, "The given worker id already exists. %zd",
                       id);
   }
 }
 
-void JobTracer::Dump(std::string path) const {
-  return chrome_tracer::ChromeTracer::Dump(path);
-}
 }  // namespace band

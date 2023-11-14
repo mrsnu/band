@@ -53,7 +53,8 @@ void Logger::LogFormatted(LogSeverity severity, const char* format,
   fputc('\n', stderr);
 
 #ifdef __ANDROID__
-  __android_log_vprint(LogSeverityToAndroid(severity), "BAND", format, args);
+  // __android_log_vprint(LogSeverityToAndroid(severity), "BAND", format, args);
+  fprintf(stderr, "%s: ", GetSeverityName(severity));
 #endif
 }
 

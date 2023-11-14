@@ -4,9 +4,9 @@
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <cstring>
 #include <deque>
 #include <iostream>
-#include <cstring>
 #include <list>
 #include <map>
 #include <set>
@@ -53,9 +53,7 @@ enum class BackendType : size_t {
 
 enum class SchedulerType : size_t {
   kFixedWorker = 0,
-  kFixedWorkerIdle,
   kRoundRobin,
-  kRoundRobinIdle,
   kShortestExpectedLatency,
   kFixedWorkerGlobalQueue,
   kHeterogeneousEarliestFinishTime,
@@ -237,7 +235,14 @@ struct RequestOption {
   int slo_us;
   float slo_scale;
 
-  static RequestOption GetDefaultOption() { return {-1, true, -1, -1.f}; }
+  // splash
+  double runtime_frequency = 0;
+  double cpu_frequency = 0;
+  double gpu_frequency = 0;
+
+  static RequestOption GetDefaultOption() {
+    return {-1, true, -1, -1.f, 0.f, 0.f};
+  }
 };
 
 // data structure for identifying subgraphs within whole models
@@ -282,16 +287,6 @@ struct Job {
   explicit Job(ModelId model_id, int64_t slo)
       : model_id(model_id), slo_us(slo) {}
 
-  static Job CreateIdleJob(int idle_us, SubgraphKey key) {
-    static int count = -1;
-    Job idle_job;
-    idle_job.job_id = count--;
-    idle_job.is_idle_job = true;
-    idle_job.idle_us = idle_us;
-    idle_job.subgraph_key = key;
-    return idle_job;
-  }
-
   std::string ToJson() const;
 
   // Constant variables (Valid after invoke)
@@ -329,8 +324,9 @@ struct Job {
   WorkerId target_worker_id = -1;
 
   // frequency
-  double device_frequency = -1;
-  double runtime_frequency = -1;
+  double runtime_frequency = 0;
+  double cpu_frequency = 0;
+  double gpu_frequency = 0;
 
   // Current status for execution (Valid after planning)
   JobStatus status = JobStatus::kQueued;
@@ -340,10 +336,6 @@ struct Job {
   // Resolved unit subgraphs and executed subgraph keys
   BitMask resolved_unit_subgraphs;
   std::list<SubgraphKey> previous_subgraph_keys;
-
-  // Idle job
-  bool is_idle_job = false;
-  int idle_us = 0;
 };
 
 // Type definition of job queue.

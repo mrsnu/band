@@ -28,7 +28,6 @@ typedef enum BandWorkerType {
 typedef enum BandSchedulerType {
   kBandFixedWorker = 0,
   kBandRoundRobin,
-  kBandRoundRobinIdle,
   kBandShortestExpectedLatency,
   kBandFixedWorkerGlobalQueue,
   kBandHeterogeneousEarliestFinishTime,

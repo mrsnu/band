@@ -94,14 +94,8 @@ const char* ToString(SchedulerType scheduler_type) {
     case SchedulerType::kFixedWorker: {
       return "fixed_worker";
     } break;
-    case SchedulerType::kFixedWorkerIdle: {
-      return "fixed_worker_idle";
-    } break;
     case SchedulerType::kRoundRobin: {
       return "round_robin";
-    } break;
-    case SchedulerType::kRoundRobinIdle: {
-      return "round_robin_idle";
     } break;
     case SchedulerType::kShortestExpectedLatency: {
       return "shortest_expected_latency";
@@ -509,6 +503,9 @@ std::string Job::ToJson() const {
          (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
          ",\"unit_indices\": \"" + subgraph_key.GetUnitIndicesString() + "\"" +
          ",\"job_id\":" + std::to_string(job_id) +
+         ",\"runtime_frequency\":" + std::to_string(runtime_frequency) +
+         ",\"cpu_frequency\":" + std::to_string(cpu_frequency) +
+         ",\"gpu_frequency\":" + std::to_string(gpu_frequency) +
          ",\"expected_therm\":" + "{" + expected_therm_string + "}" +
          ",\"profiled_therm\":" + "{" + profiled_therm_string + "}" + "}";
 }

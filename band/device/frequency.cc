@@ -18,20 +18,24 @@ std::string GetCpuScalingPath(const std::string& path) {
   return absl::StrFormat("%s/scaling_setspeed", path.c_str());
 }
 
-std::string GetFreqPath(const std::string& path) {
-  return absl::StrFormat("%s/cur_freq", path.c_str());
-}
-
-std::string GetScalingPath(const std::string& path) {
-  return absl::StrFormat("%s/userspace/set_freq", path.c_str());
-}
-
 std::string GetCpuAvailableFreqPath(const std::string& path) {
   return absl::StrFormat("%s/scaling_available_frequencies", path.c_str());
 }
 
-std::string GetAvailableFreqPath(const std::string& path) {
-  return absl::StrFormat("%s/available_frequencies", path.c_str());
+std::string GetGpuFreqPath(const std::string& path) {
+  return absl::StrFormat("%s/gpuclk", path.c_str());
+}
+
+std::string GetGpuMinScalingPath(const std::string& path) {
+  return absl::StrFormat("%s/min_pwrlevel", path.c_str());
+}
+
+std::string GetGpuMaxScalingPath(const std::string& path) {
+  return absl::StrFormat("%s/max_pwrlevel", path.c_str());
+}
+
+std::string GetGpuAvailableFreqPath(const std::string& path) {
+  return absl::StrFormat("%s/devfreq/available_frequencies", path.c_str());
 }
 
 }  // anonymous namespace
@@ -69,7 +73,7 @@ double Frequency::GetFrequency(DeviceFlag device_flag) {
     return device::TryReadDouble({GetCpuFreqPath(path)}, {cpu_freq_multiplier})
         .value();
   }
-  return device::TryReadDouble({GetFreqPath(path)}, {dev_freq_multiplier})
+  return device::TryReadDouble({GetGpuFreqPath(path)}, {dev_freq_multiplier})
       .value();
 }
 
@@ -77,19 +81,6 @@ double Frequency::GetRuntimeFrequency() {
   return device::TryReadDouble({GetCpuFreqPath(config_.runtime_freq_path)},
                                {cpu_freq_multiplier})
       .value();
-}
-
-absl::Status Frequency::SetFrequency(DeviceFlag device_flag, double freq) {
-  if (freq_available_map_.find(device_flag) == freq_available_map_.end()) {
-    return absl::UnavailableError(
-        "The given device is not available for DVFS.");
-  }
-
-  if (device_flag == DeviceFlag::kCPU) {
-    return SetCpuFrequency(freq);
-  }
-
-  return SetDevFrequency(device_flag, freq);
 }
 
 absl::Status Frequency::SetRuntimeFrequency(double freq) {
@@ -103,14 +94,23 @@ absl::Status Frequency::SetCpuFrequency(double freq) {
       cpu_freq_multiplier_w);
 }
 
-absl::Status Frequency::SetDevFrequency(DeviceFlag device_flag, double freq) {
-  if (freq_available_map_.find(device_flag) == freq_available_map_.end()) {
-    return absl::UnavailableError(
-        "The given device is not available for DVFS.");
+absl::Status Frequency::SetGpuFrequency(double freq) {
+  auto status1 = device::TryWriteSizeT(
+      {GetGpuMinScalingPath(freq_device_map_.at(DeviceFlag::kGPU))},
+      gpu_freq_map_.at(static_cast<size_t>(freq * dev_freq_multiplier_w)));
+  auto status2 = device::TryWriteSizeT(
+      {GetGpuMaxScalingPath(freq_device_map_.at(DeviceFlag::kGPU))},
+      gpu_freq_map_.at(static_cast<size_t>(freq * dev_freq_multiplier_w)));
+  auto status3 = device::TryWriteSizeT(
+      {GetGpuMinScalingPath(freq_device_map_.at(DeviceFlag::kGPU))},
+      gpu_freq_map_.at(static_cast<size_t>(freq * dev_freq_multiplier_w)));
+  auto status4 = device::TryWriteSizeT(
+      {GetGpuMaxScalingPath(freq_device_map_.at(DeviceFlag::kGPU))},
+      gpu_freq_map_.at(static_cast<size_t>(freq * dev_freq_multiplier_w)));
+  if (!status1.ok() || !status2.ok() || !status3.ok() || !status4.ok()) {
+    return absl::InternalError("Failed to set GPU frequency.");
   }
-
-  return SetFrequencyWithPath(GetScalingPath(freq_device_map_.at(device_flag)),
-                              freq, dev_freq_multiplier_w);
+  return absl::OkStatus();
 }
 
 absl::Status Frequency::SetFrequencyWithPath(const std::string& path,
@@ -141,7 +141,7 @@ Frequency::GetAllAvailableFrequency() {
                        .value();
       freq_map[pair.first] = freqs;
     } else {
-      auto freqs = device::TryReadDoubles({GetAvailableFreqPath(path)},
+      auto freqs = device::TryReadDoubles({GetGpuAvailableFreqPath(path)},
                                           {dev_freq_multiplier})
                        .value();
       freq_map[pair.first] = freqs;
@@ -152,10 +152,16 @@ Frequency::GetAllAvailableFrequency() {
 }
 
 std::vector<double> Frequency::GetRuntimeAvailableFrequency() {
-  return device::TryReadDoubles(
-             {GetCpuAvailableFreqPath(config_.runtime_freq_path)},
-             {cpu_freq_multiplier})
-      .value();
+  if (freq_runtime_available_.size()) {
+    return freq_runtime_available_;
+  }
+
+  freq_runtime_available_ =
+      device::TryReadDoubles(
+          {GetCpuAvailableFreqPath(config_.runtime_freq_path)},
+          {cpu_freq_multiplier})
+          .value();
+  return freq_runtime_available_;
 }
 
 bool Frequency::CheckFrequency(std::string path) {

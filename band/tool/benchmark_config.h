@@ -17,6 +17,10 @@ struct ModelConfig {
   int slo_us = -1;
   float slo_scale = -1.f;
 
+  double runtime_frequency = 0;
+  double cpu_frequency = 0;
+  double gpu_frequency = 0;
+
   const RequestOption GetRequestOption() const {
     RequestOption option = RequestOption::GetDefaultOption();
     if (worker_id >= 0) {

@@ -423,6 +423,18 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
       job.target_worker_id = options[i].target_worker;
     }
 
+    if (options[i].runtime_frequency) {
+      job.runtime_frequency = options[i].runtime_frequency;
+    }
+
+    if (options[i].cpu_frequency) {
+      job.cpu_frequency = options[i].cpu_frequency;
+    }
+
+    if (options[i].gpu_frequency) {
+      job.gpu_frequency = options[i].gpu_frequency;
+    }
+
     if (i < inputs.size()) {
       int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
       if (!model_input_buffer_[model_ids[i]]
@@ -982,24 +994,15 @@ std::vector<int> Engine::EnqueueBatch(std::vector<Job> jobs, bool push_front) {
 
 void Engine::PrepareReenqueue(Job& job) { planner_->PrepareReenqueue(job); }
 
-void Engine::EnqueueFinishedJob(Job& job) {
-  if (!job.is_idle_job) {
-    job.profiled_latency = latency_estimator_->GetProfiled(job.subgraph_key);
-    job.profiled_thermal = thermal_estimator_->GetProfiled(job.subgraph_key);
-  }
-  planner_->EnqueueFinishedJob(job);
-}
+void Engine::EnqueueFinishedJob(Job& job) { planner_->EnqueueFinishedJob(job); }
 
-bool Engine::EnqueueToWorker(const ScheduleAction& action, const int idle_us) {
-  return EnqueueToWorkerBatch(
-      std::vector<ScheduleAction>{action},
-      idle_us > 0 ? std::vector<int>{idle_us} : std::vector<int>());
+bool Engine::EnqueueToWorker(const ScheduleAction& action) {
+  return EnqueueToWorkerBatch(std::vector<ScheduleAction>{action});
 }
 
 bool Engine::EnqueueToWorkerBatch(
-    const std::vector<ScheduleAction>& schedule_action,
-    const std::vector<int> idle_uses) {
-  return planner_->EnqueueToWorker(schedule_action, idle_uses);
+    const std::vector<ScheduleAction>& schedule_action) {
+  return planner_->EnqueueToWorker(schedule_action);
 }
 
 const Worker* Engine::GetWorker(WorkerId id) const {

@@ -10,6 +10,7 @@ namespace band {
 FrequencyProfiler::FrequencyProfiler(DeviceConfig config)
     : frequency_(new Frequency(config)) {
   BAND_LOG_PROD(BAND_LOG_INFO, "FrequencyProfiler is created.");
+  auto tmp = frequency_->GetAllAvailableFrequency();
 }
 
 size_t FrequencyProfiler::BeginEvent() {
