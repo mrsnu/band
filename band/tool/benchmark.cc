@@ -550,29 +550,6 @@ void Benchmark::RunStream() {
 void Benchmark::RunWorkload() { BAND_NOT_IMPLEMENTED; }
 
 void Benchmark::RunMotivation() {
-  const std::vector<double> cpu_frequencies = {
-    // 0.8256, 
-    // 0.9408, 
-    // 1.0560, 
-    // 1.1712, 
-    // 1.2864, 
-    // 1.4016, 
-    // 1.4976,
-    // 1.6128, 
-    // 1.7088, 
-    // 1.8048, 
-    // 1.9200, 
-    // 2.0160, 
-    // 2.1312, 
-    // 2.2272,
-    // 2.3232, 
-    // 2.4192, 
-    // 2.5344, 
-    // 2.6496, 
-    // 2.7456, 
-    2.8416
-  };
-
   const std::vector<double> gpu_frequencies = {
     0.257, 
     0.345, 
@@ -599,20 +576,25 @@ void Benchmark::RunMotivation() {
     // 2.3232, 
     2.4192
   };
+  const std::vector<DeviceFlag> device_flags = {
+    DeviceFlag::kGPU, 
+    DeviceFlag::kDSP, 
+    DeviceFlag::kNPU
+  };
 
+  time::SleepForMicros(5 * 60 * 1000000);
   for (int model_index = 0; model_index < model_contexts_.size();
        model_index++) {
     ModelContext* model_context = model_contexts_[model_index];
-    for (auto runtime_freq : runtime_frequencies) {
-      for (auto cpu_freq : cpu_frequencies) {
+    for (auto device_flag : device_flags) {
+      for (auto runtime_freq : runtime_frequencies) {
         for (auto gpu_freq : gpu_frequencies) {
           for (auto& request_option : model_context->request_options) {
+            request_option.target_worker = static_cast<int>(device_flag);
             request_option.runtime_frequency = runtime_freq;
-            request_option.cpu_frequency = cpu_freq;
             request_option.gpu_frequency = gpu_freq;
           }
-
-          engine_->SleepTemperature(28.f);
+          time::SleepForMicros(5 * 60 * 1000000);
           if (!model_context->PrepareInput().ok()) {
             BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
             continue;

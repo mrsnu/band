@@ -24,6 +24,8 @@ class ModelSpec;
 class Frequency;
 class Thermal;
 
+using ThermalMap = std::map<SensorFlag, double>;
+
 // Type definition for the device waiting time.
 // The unit of time is ms.
 using WorkerWaitingTime = std::map<WorkerId, double>;
@@ -94,9 +96,12 @@ class IEngine {
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* estimators */
-  virtual void UpdateWithEvent(const SubgraphKey&, size_t event_id) = 0;
+  virtual void UpdateWithEvent(const SubgraphKey&, Job&) = 0;
+  virtual void UpdateWithEvent(const SubgraphKey&, size_t) = 0;
   virtual double GetProfiled(const SubgraphKey&) const = 0;
   virtual double GetExpected(const SubgraphKey&) const = 0;
+  virtual ThermalMap GetThermalProfiled(const SubgraphKey&) const = 0;
+  virtual ThermalMap GetThermalExpected(const SubgraphKey&) const = 0;
 
   /* profilers */
   virtual size_t BeginEvent() = 0;
@@ -131,7 +136,7 @@ class IEngine {
   virtual Thermal* GetThermal() const = 0;
 
   /* sleep */
-  virtual void SleepTemperature(double target_temperature) const = 0;
+  virtual void SleepTemperature() = 0;
 
  protected:
   ErrorReporter* error_reporter_;

@@ -351,8 +351,6 @@ bool Planner::IsSLOViolated(Job& job) {
 void Planner::UpdateJobScheduleStatus(Job& job, const SubgraphKey& target_key) {
   job.subgraph_key = target_key;
   job.sched_id = IssueSchedId();
-  job.profiled_execution_time = engine_.GetProfiled(target_key);
-  job.expected_execution_time = engine_.GetExpected(target_key);
   job.resolved_unit_subgraphs |= target_key.GetUnitIndices();
 
   if (!engine_.IsEnd(target_key)) {

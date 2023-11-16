@@ -241,9 +241,9 @@ void Worker::Work() {
         // is_busy == true, so it's safe to update it w/o grabbing the lock
         current_job->end_time = time::NowMicros();
         engine_->EndEvent(current_job->event_id);
-        engine_->UpdateWithEvent(subgraph_key, current_job->event_id);
+        engine_->UpdateWithEvent(subgraph_key, *current_job);
         if (current_job->following_jobs.size() != 0) {
-          engine_->EnqueueBatch(current_job->following_jobs);
+          engine_->EnqueueBatch(current_job->following_jobs, true);
         }
         {
           auto status = engine_->TryCopyOutputTensors(*current_job);

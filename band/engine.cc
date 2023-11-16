@@ -448,7 +448,6 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
     }
     jobs.push_back(job);
   }
-  BAND_LOG_PROD(BAND_LOG_INFO, "Enqueue jobs");
   return EnqueueBatch(jobs);
 }
 
@@ -969,6 +968,12 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
   return {min_key, min_cost};
 }
 
+void Engine::UpdateWithEvent(const SubgraphKey& key, Job& job) {
+  UpdateWithEvent(key, job.event_id);
+  job.profiled_thermal = GetThermalProfiled(key);
+  job.expected_thermal = GetThermalExpected(key);
+}
+
 void Engine::UpdateWithEvent(const SubgraphKey& key, size_t event_id) {
   latency_estimator_->UpdateWithEvent(key, event_id);
   thermal_estimator_->UpdateWithEvent(key, event_id);
@@ -979,7 +984,15 @@ double Engine::GetProfiled(const SubgraphKey& key) const {
 }
 
 double Engine::GetExpected(const SubgraphKey& key) const {
-  return latency_estimator_->GetProfiled(key);
+  return latency_estimator_->GetExpected(key);
+}
+
+ThermalMap Engine::GetThermalProfiled(const SubgraphKey& key) const {
+  return thermal_estimator_->GetProfiled(key);
+}
+
+ThermalMap Engine::GetThermalExpected(const SubgraphKey& key) const {
+  return thermal_estimator_->GetExpected(key);
 }
 
 void Engine::Trigger() { planner_->Trigger(); }
@@ -1182,6 +1195,7 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
                             worker_id, status.message());
         }
       }
+
       ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
         if (subgraph_key.GetWorkerId() != worker_id ||
             subgraph_key.GetModelId() != model_id) {

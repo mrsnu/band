@@ -110,7 +110,9 @@ class Engine : public IEngine {
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
 
   double GetProfiled(const SubgraphKey& key) const override;
+  ThermalMap GetThermalProfiled(const SubgraphKey& key) const override;
   double GetExpected(const SubgraphKey& key) const override;
+  ThermalMap GetThermalExpected(const SubgraphKey& key) const override;
 
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
@@ -123,13 +125,37 @@ class Engine : public IEngine {
     return thermal_profiler_->GetThermal();
   }
 
-  void SleepTemperature(double target_temperature) const override {
-    double current_temp = GetThermal()->GetThermal(SensorFlag::kTarget);
-    while (current_temp > target_temperature) {
-      BAND_LOG_PROD(BAND_LOG_INFO, "Current temperature: %f", current_temp);
-      current_temp = GetThermal()->GetThermal(SensorFlag::kTarget);
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+  void SetTargetTemperature(ThermalMap target) {
+    target_temp_ = target;
+  }
+  
+  void SetNowTemperature() {
+    target_temp_ = GetThermal()->GetAllThermal();
+  }
+
+  void SleepTemperature() override {
+    ThermalMap current_temp;
+    auto comp = [&](const ThermalMap& cur_temp, const ThermalMap& target_temp) -> bool {
+      for (const auto& target_temp : target_temp_) {
+        if (cur_temp.at(target_temp.first) > target_temp.second) {
+          BAND_LOG_PROD(BAND_LOG_INFO, "Target temperature (%s): %f",
+                        ToString(target_temp.first), target_temp.second);
+          BAND_LOG_PROD(BAND_LOG_INFO, "Current temperature (%s): %f",
+                        ToString(target_temp.first), cur_temp.at(target_temp.first));
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (target_temp_.size() == 0) {
+      SetNowTemperature();
     }
+    
+    do {
+      current_temp = GetThermal()->GetAllThermal();
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    } while (comp(current_temp, target_temp_));
   }
 
  private:
@@ -181,6 +207,7 @@ class Engine : public IEngine {
 
   /* estimators */
   void UpdateWithEvent(const SubgraphKey&, size_t event_id) override;
+  void UpdateWithEvent(const SubgraphKey&, Job& job) override;
 
   /* planner */
   void Trigger() override;
@@ -258,6 +285,9 @@ class Engine : public IEngine {
   std::unique_ptr<LatencyEstimator> latency_estimator_;
 #endif  // BAND_SPLASH
   std::unique_ptr<ThermalEstimator> thermal_estimator_;
+
+  // Sleep engine with temperature target
+  ThermalMap target_temp_;
 };
 
 }  // namespace band
