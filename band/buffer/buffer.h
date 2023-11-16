@@ -72,6 +72,7 @@ class Buffer {
   size_t GetNumPlanes() const;
   size_t GetNumElements() const;
   size_t GetPixelBytes() const;
+  size_t GetNumPixelElements() const;
   size_t GetBytes() const;
   DataType GetDataType() const;
   BufferFormat GetBufferFormat() const;

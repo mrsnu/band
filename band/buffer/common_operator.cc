@@ -29,7 +29,9 @@ void NormalizeFromTo(const Buffer& input, Buffer* output, float mean,
       reinterpret_cast<const InputType*>(input[0].data);
   OutputType* output_data =
       reinterpret_cast<OutputType*>((*output)[0].GetMutableData());
-  for (int i = 0; i < input.GetNumElements(); ++i) {
+  // each pixel
+  for (int i = 0; i < input.GetNumElements() * input.GetNumPixelElements();
+       ++i) {
     output_data[i] = static_cast<OutputType>((input_data[i] - mean)) / std;
   }
   BAND_LOG(LogSeverity::kInternal, "Normalize: %s %s %f %f",
