@@ -62,8 +62,6 @@ class ThermalEstimator
   Eigen::MatrixXd model_;
   std::deque<std::pair<Eigen::VectorXd, Eigen::VectorXd>> features_;
   mutable std::map<SubgraphKey, ThermalMap> profile_database_;
-  mutable ThermalMap last_therm_;
-  mutable FreqMap last_freq_;
 };
 
 }  // namespace band

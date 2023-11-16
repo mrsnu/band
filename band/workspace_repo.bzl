@@ -31,7 +31,7 @@ def workspace():
 
     git_repository(
         name = "chrome_tracer",
-        branch = "stream_tracer",
+        commit = "ad96baa27234526719404007f2d28f0862702320",
         remote = "https://github.com/mrsnu/chrome-tracer.git",
     )
 

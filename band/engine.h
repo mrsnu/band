@@ -110,9 +110,7 @@ class Engine : public IEngine {
   void SetOnEndRequest(std::function<void(int, absl::Status)> on_end_request);
 
   double GetProfiled(const SubgraphKey& key) const override;
-  ThermalMap GetThermalProfiled(const SubgraphKey& key) const override;
   double GetExpected(const SubgraphKey& key) const override;
-  ThermalMap GetThermalExpected(const SubgraphKey& key) const override;
 
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;

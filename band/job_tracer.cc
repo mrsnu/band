@@ -27,8 +27,8 @@ std::string JobTracer::GetJobName(const Job& job) const {
 }
 
 JobTracer& JobTracer::Get() {
-  static JobTracer* tracer = new JobTracer;
-  return *tracer;
+  static JobTracer tracer;
+  return tracer;
 }
 
 void JobTracer::BeginSubgraph(const Job& job) {

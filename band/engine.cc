@@ -969,9 +969,10 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
 }
 
 void Engine::UpdateWithEvent(const SubgraphKey& key, Job& job) {
+  auto profiled_thermal = thermal_profiler_->GetInterval(job.event_id);
+  job.start_thermal = profiled_thermal.first.second;
+  job.end_thermal = profiled_thermal.second.second;
   UpdateWithEvent(key, job.event_id);
-  job.profiled_thermal = GetThermalProfiled(key);
-  job.expected_thermal = GetThermalExpected(key);
 }
 
 void Engine::UpdateWithEvent(const SubgraphKey& key, size_t event_id) {
@@ -985,14 +986,6 @@ double Engine::GetProfiled(const SubgraphKey& key) const {
 
 double Engine::GetExpected(const SubgraphKey& key) const {
   return latency_estimator_->GetExpected(key);
-}
-
-ThermalMap Engine::GetThermalProfiled(const SubgraphKey& key) const {
-  return thermal_estimator_->GetProfiled(key);
-}
-
-ThermalMap Engine::GetThermalExpected(const SubgraphKey& key) const {
-  return thermal_estimator_->GetExpected(key);
 }
 
 void Engine::Trigger() { planner_->Trigger(); }

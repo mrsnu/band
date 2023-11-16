@@ -76,8 +76,8 @@ Eigen::VectorXd GetFillVector(double value, size_t size) {
 }  // anonymous namespace
 
 absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
-#ifdef BAND_SPLASH
   JobTracer::Get().AddStream("ThermalEstimator");
+#ifdef BAND_SPLASH
   window_size_ = config.window_size;
 #endif  // BAND_SPLASH
   return absl::OkStatus();
@@ -86,9 +86,8 @@ absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
 void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
                               ThermalMap therm_end, FreqMap freq,
                               double latency) {
+  auto trace_handle = JobTracer::Get().BeginEvent("ThermalEstimator", "Update");
   profile_database_[key] = therm_end;
-  last_therm_ = therm_end;
-  last_freq_ = freq;
 
 #ifdef BAND_SPLASH
   const size_t num_sensors = EnumLength<SensorFlag>();
@@ -135,6 +134,7 @@ void ThermalEstimator::Update(const SubgraphKey& key, ThermalMap therm_start,
 
   model_ = SolveLinear(data, target);
 #endif  // BAND_SPLASH
+  JobTracer::Get().EndEvent("ThermalEstimator", trace_handle);
 }
 
 void ThermalEstimator::UpdateWithEvent(const SubgraphKey& key,
@@ -153,26 +153,17 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 }
 
 ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
+  auto trace_handle = JobTracer::Get().BeginEvent("ThermalEstimator", "GetExpected");
 #ifdef BAND_SPLASH
   const size_t num_sensors = EnumLength<SensorFlag>();
   const size_t num_devices = EnumLength<DeviceFlag>();
-  // auto handle_1 = JobTracer::Get().BeginEvent("ThermalEstimator", "GetExpected_latency");
+  
   double latency = latency_estimator_->GetExpected(key) / 1000.f;
-  // JobTracer::Get().EndEvent("ThermalEstimator", handle_1);
-
-  // auto handle_2 = JobTracer::Get().BeginEvent("ThermalEstimator", "GetAllFrequency");
-  // auto cur_freq_map = frequency_profiler_->GetAllFrequency();
-  auto cur_freq_map = last_freq_;
-  // JobTracer::Get().EndEvent("ThermalEstimator", handle_2);
-
-  // auto handle_3 = JobTracer::Get().BeginEvent("ThermalEstimator", "GetAllThermal");
-  // auto cur_therm_map = thermal_profiler_->GetAllThermal();
-  auto cur_therm_map = last_therm_;
-  // JobTracer::Get().EndEvent("ThermalEstimator", handle_3);
+  auto cur_freq_map = frequency_profiler_->GetAllFrequency();
+  auto cur_therm_map = thermal_profiler_->GetAllThermal();
 
   profile_database_[key] = cur_therm_map;
 
-  // auto trace_handle = JobTracer::Get().BeginEvent("ThermalEstimator", "GetExpected_Calculation");
   Eigen::VectorXd old_therm_vec =
       ConvertTMapToEigenVector<ThermalMap>(cur_therm_map, num_sensors);
   Eigen::VectorXd freq_vec =
@@ -193,9 +184,10 @@ ThermalMap ThermalEstimator::GetExpected(const SubgraphKey& key) const {
 
   auto expected_therm =
       ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
-  // JobTracer::Get().EndEvent("ThermalEstimator", trace_handle);
+  JobTracer::Get().EndEvent("ThermalEstimator", trace_handle);
   return expected_therm;
 #else
+  JobTracer::Get().EndEvent("ThermalEstimator", trace_handle);
   return {};
 #endif  // BAND_SPLASH
 }

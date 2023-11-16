@@ -480,13 +480,22 @@ std::string Job::ToJson() const {
     expected_therm_string.pop_back();
   }
 
-  std::string profiled_therm_string = "";
-  for (auto& pair : profiled_thermal) {
-    profiled_therm_string += "\"" + std::string(ToString(pair.first)) +
+  std::string start_therm_string = "";
+  for (auto& pair : start_thermal) {
+    start_therm_string += "\"" + std::string(ToString(pair.first)) +
                              "\":" + std::to_string(pair.second) + ",";
   }
-  if (!profiled_therm_string.empty()) {
-    profiled_therm_string.pop_back();
+  if (!start_therm_string.empty()) {
+    start_therm_string.pop_back();
+  }
+
+  std::string end_therm_string = "";
+  for (auto& pair : end_thermal) {
+    end_therm_string += "\"" + std::string(ToString(pair.first)) +
+                             "\":" + std::to_string(pair.second) + ",";
+  }
+  if (!end_therm_string.empty()) {
+    end_therm_string.pop_back();
   }
 
   return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
@@ -507,7 +516,8 @@ std::string Job::ToJson() const {
          ",\"cpu_frequency\":" + std::to_string(cpu_frequency) +
          ",\"gpu_frequency\":" + std::to_string(gpu_frequency) +
          ",\"expected_therm\":" + "{" + expected_therm_string + "}" +
-         ",\"profiled_therm\":" + "{" + profiled_therm_string + "}" + "}";
+         ",\"start_therm\":" + "{" + start_therm_string + "}" +
+         ",\"end_therm\":" + "{" + end_therm_string + "}" + "}";
 }
 
 std::size_t JobIdBitMaskHash::operator()(

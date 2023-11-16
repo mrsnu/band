@@ -100,8 +100,6 @@ class IEngine {
   virtual void UpdateWithEvent(const SubgraphKey&, size_t) = 0;
   virtual double GetProfiled(const SubgraphKey&) const = 0;
   virtual double GetExpected(const SubgraphKey&) const = 0;
-  virtual ThermalMap GetThermalProfiled(const SubgraphKey&) const = 0;
-  virtual ThermalMap GetThermalExpected(const SubgraphKey&) const = 0;
 
   /* profilers */
   virtual size_t BeginEvent() = 0;

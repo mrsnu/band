@@ -551,11 +551,11 @@ void Benchmark::RunWorkload() { BAND_NOT_IMPLEMENTED; }
 
 void Benchmark::RunMotivation() {
   const std::vector<double> gpu_frequencies = {
-    0.257, 
-    0.345, 
-    0.427, 
+    0.585,
     0.4992,
-    0.585
+    0.427, 
+    0.345, 
+    0.257
   };
   const std::vector<double> runtime_frequencies = {
     // 0.7104, 
