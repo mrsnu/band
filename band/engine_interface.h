@@ -33,6 +33,8 @@ using WorkerWaitingTime = std::map<WorkerId, double>;
 // Decision from a scheduler. Run subgraph key for a specific job.
 using ScheduleAction = std::pair<Job, SubgraphKey>;
 
+using CostFunc = std::function<double(double, ThermalMap)>;
+
 // Minimal interfaces for Band framework
 class IEngine {
  public:
@@ -73,23 +75,14 @@ class IEngine {
   // ops, but the latency value is calculated with all subgraphs leading to
   // the final op (of the model) in mind.
 
-  // TODO: replace subgraph idx to subgraph key in below functions
-  virtual std::pair<SubgraphKey, double> GetMinCost(
-      int model_id, BitMask resolved_unit_subgraphs, double start_time,
-      const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)> cost)
-      const = 0;
-
   virtual std::pair<std::vector<SubgraphKey>, double>
   GetMinCostWithUnitSubgraph(
       int model_id, int start_unit_idx, const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)> cost)
-      const = 0;
+      const CostFunc cost) const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
-      const Job& job, const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, std::map<SensorFlag, double>, std::map<SensorFlag, double>)> cost)
-      const = 0;
+      const Job& job, const WorkerWaitingTime& worker_waiting, 
+      const CostFunc cost)const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,
@@ -134,7 +127,9 @@ class IEngine {
   virtual Thermal* GetThermal() const = 0;
 
   /* sleep */
-  virtual void SleepTemperature() = 0;
+  virtual void SetMinFrequencies() = 0;
+  virtual void SetMaxFrequencies() = 0;
+  virtual void Sleep() = 0;
 
  protected:
   ErrorReporter* error_reporter_;

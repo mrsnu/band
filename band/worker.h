@@ -41,7 +41,7 @@ class Worker {
   const CpuSet& GetWorkerThreadAffinity() const;
   int GetNumThreads() const;
   virtual int GetCurrentJobId() = 0;
-  virtual int64_t GetWaitingTime() = 0;
+  virtual double GetWaitingTime() = 0;
   // Make sure the worker lock is acquired before calling below functions.
   virtual bool EnqueueJob(Job& job) = 0;
   virtual bool IsEnqueueReady() const;
@@ -86,7 +86,7 @@ class DeviceQueueWorker : public Worker {
                              DeviceFlag device_flag)
       : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
-  int64_t GetWaitingTime() override;
+  double GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;
   bool HasJob() override;
   JobQueue& GetDeviceRequests();
@@ -109,7 +109,7 @@ class GlobalQueueWorker : public Worker {
                              DeviceFlag device_flag)
       : Worker(engine, worker_id, device_flag) {}
   int GetCurrentJobId() override;
-  int64_t GetWaitingTime() override;
+  double GetWaitingTime() override;
   bool EnqueueJob(Job& job) override;
   bool IsEnqueueReady() const override;
   bool HasJob() override;

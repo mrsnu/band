@@ -5,8 +5,8 @@
 #include <functional>
 #include <memory>
 #include <set>
-#include <vector>
 #include <thread>
+#include <vector>
 
 #include "band/common.h"
 #include "band/config.h"
@@ -94,15 +94,10 @@ class Engine : public IEngine {
   absl::StatusOr<std::vector<JobId>> RequestAsync(
       std::vector<ModelId> model_ids, std::vector<RequestOption> options = {},
       std::vector<Tensors> inputs = {});
-  // Graph Execution
-  //   absl::Status RequestGraphSync(Graph graph, Tensors inputs = {}, Tensors
-  //   outputs = {}); absl::StatusOr<JobId> RequestGraphAsync(Graph graph,
-  //   Tensors inputs = {});
 
   absl::Status Wait(JobId job_id, Tensors outputs = {});
   absl::Status Wait(std::vector<JobId> job_ids,
                     std::vector<Tensors> outputs = {});
-  //   absl::Status Wait(GraphJobId graph_job_id, Tensors outputs = {});
   void WaitAll();
   absl::Status GetOutputTensors(JobId job_id, Tensors outputs = {});
 
@@ -123,37 +118,36 @@ class Engine : public IEngine {
     return thermal_profiler_->GetThermal();
   }
 
-  void SetTargetTemperature(ThermalMap target) {
-    target_temp_ = target;
-  }
-  
-  void SetNowTemperature() {
-    target_temp_ = GetThermal()->GetAllThermal();
-  }
-
-  void SleepTemperature() override {
-    ThermalMap current_temp;
-    auto comp = [&](const ThermalMap& cur_temp, const ThermalMap& target_temp) -> bool {
-      for (const auto& target_temp : target_temp_) {
-        if (cur_temp.at(target_temp.first) > target_temp.second) {
-          BAND_LOG_PROD(BAND_LOG_INFO, "Target temperature (%s): %f",
-                        ToString(target_temp.first), target_temp.second);
-          BAND_LOG_PROD(BAND_LOG_INFO, "Current temperature (%s): %f",
-                        ToString(target_temp.first), cur_temp.at(target_temp.first));
-          return true;
-        }
-      }
-      return false;
-    };
-
-    if (target_temp_.size() == 0) {
-      SetNowTemperature();
+  void SetMinFrequencies() override {
+    auto freq = GetFrequency();
+    if (!freq->SetRuntimeFrequency(0.7104).ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set runtime frequeny");
     }
-    
-    do {
-      current_temp = GetThermal()->GetAllThermal();
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while (comp(current_temp, target_temp_));
+    if (!freq->SetCpuFrequency(0.8256).ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set cpu frequeny");
+    }
+    if (!freq->SetGpuFrequency(0.2570).ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set gpu frequeny");
+    }
+  }
+
+  void SetMaxFrequencies() override {
+    auto freq = GetFrequency();
+    if (!freq->SetRuntimeFrequency(2.4192).ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set runtime frequeny");
+    }
+    if (!freq->SetCpuFrequency(2.8416).ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set cpu frequeny");
+    }
+    if (!freq->SetGpuFrequency(0.5850).ok()) {
+      BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to set gpu frequeny");
+    }
+  }
+
+  void Sleep() override {
+    SetMinFrequencies();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10 * 60 * 1000));
+    SetMaxFrequencies();
   }
 
  private:
@@ -174,22 +168,14 @@ class Engine : public IEngine {
   WorkerId GetModelWorker(ModelId model_id) const override;
 
   /* utility funtions for unit-level scheduling */
-  std::pair<SubgraphKey, double> GetMinCost(
-      ModelId model_id, BitMask resolved_unit_subgraphs, double start_time,
-      const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap, ThermalMap)> cost)
-      const override;
+  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
+      const Job& job, const WorkerWaitingTime& worker_waiting,
+      const CostFunc cost) const override;
 
   std::pair<std::vector<SubgraphKey>, double> GetMinCostWithUnitSubgraph(
       ModelId model_id, int start_unit_idx,
       const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap, ThermalMap)> cost)
-      const override;
-
-  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
-      const Job& job, const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap, ThermalMap)> cost)
-      const override;
+      const CostFunc cost) const override;
 
   SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,
@@ -200,8 +186,8 @@ class Engine : public IEngine {
 
   std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-      const WorkerWaitingTime& worker_waiting,
-      const std::function<double(double, ThermalMap, ThermalMap)> cost) const;
+      ThermalMap start_them, FreqMap freq,
+      const WorkerWaitingTime& worker_waiting, const CostFunc cost) const;
 
   /* estimators */
   void UpdateWithEvent(const SubgraphKey&, size_t event_id) override;
@@ -215,7 +201,8 @@ class Engine : public IEngine {
   void PrepareReenqueue(Job& job) override;
   void EnqueueFinishedJob(Job& job) override;
   bool EnqueueToWorker(const ScheduleAction& schedule_action) override;
-  bool EnqueueToWorkerBatch(const std::vector<ScheduleAction>& schedule_action) override;
+  bool EnqueueToWorkerBatch(
+      const std::vector<ScheduleAction>& schedule_action) override;
   const Worker* GetWorker(WorkerId id) const override;
   Worker* GetWorker(WorkerId id) override;
   /* tensor communication */
@@ -259,10 +246,6 @@ class Engine : public IEngine {
   std::string dump_dir_;
 
   // Scheduling
-  // cache for GetMinCost()
-  mutable std::unordered_map<std::pair<ModelId, BitMask>,
-                             std::pair<SubgraphKey, double>, JobIdBitMaskHash>
-      cache_;
 
   // Find subgraph indices with the (model_id, start_unit_idx, end_unit_idx).
   // NOTE: we assume every subgraph consists of unit subgraphs with the

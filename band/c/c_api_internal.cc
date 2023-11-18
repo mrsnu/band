@@ -9,8 +9,6 @@ const char* BandSchedulerToString(BandSchedulerType type) {
       return "fixed_worker";
     case kBandRoundRobin:
       return "round_robin";
-    case kBandShortestExpectedLatency:
-      return "shortest_expected_latency";
     case kBandFixedWorkerGlobalQueue:
       return "fixed_worker_global_queue";
     case kBandHeterogeneousEarliestFinishTime:

@@ -33,12 +33,7 @@ struct MockEngineBase : public IEngine {
   using WorkerWaiting = const std::map<WorkerId, double>&;
   using MinCostWithUnitSubgraph = std::pair<std::vector<SubgraphKey>, double>;
   using SubgraphWithMinCost = std::pair<std::vector<SubgraphKey>, double>;
-  MOCK_CONST_METHOD5(
-      GetMinCost, std::pair<SubgraphKey, double>(
-                      ModelId, BitMask, double, WorkerWaiting,
-                      std::function<double(double, std::map<SensorFlag, double>,
-                                           std::map<SensorFlag, double>)>));
-
+  
   MOCK_CONST_METHOD4(
       GetMinCostWithUnitSubgraph,
       MinCostWithUnitSubgraph(

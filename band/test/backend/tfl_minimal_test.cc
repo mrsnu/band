@@ -187,7 +187,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeAsync) {
   RuntimeConfigBuilder b;
   RuntimeConfig config =
       b.AddPlannerLogPath("band/test/data/log.json")
-          .AddSchedulers({SchedulerType::kShortestExpectedLatency})
+          .AddSchedulers({SchedulerType::kRoundRobin})
           .AddMinimumSubgraphSize(7)
           .AddSubgraphPreparationType(
               SubgraphPreparationType::kMergeUnitSubgraph)

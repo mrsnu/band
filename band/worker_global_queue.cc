@@ -64,7 +64,7 @@ void GlobalQueueWorker::HandleDeviceError(Job& current_job) {
 //
 // In case this function fails to acquire a shared ptr to the Planner,
 // we print an error message and this function returns -1.
-int64_t GlobalQueueWorker::GetWaitingTime() {
+double GlobalQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
@@ -74,7 +74,7 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
     return 0;
   }
 
-  int64_t invoke_time = current_job_.invoke_time;
+  double invoke_time = current_job_.invoke_time;
 
   // if this thread is the same thread that updates is_busy_ (false --> true)
   // and there are no other threads that call this function, then it is
@@ -94,9 +94,10 @@ int64_t GlobalQueueWorker::GetWaitingTime() {
     return profiled_latency;
   }
 
-  int64_t current_time = time::NowMicros();
-  int64_t progress = current_time - invoke_time;
-  return std::max((long)(profiled_latency - progress), 0L);
+  double current_time = time::NowMicros();
+  double progress = current_time - invoke_time;
+  double result = profiled_latency - progress;
+  return result > 0 ? result : 0;
 }
 
 }  // namespace band

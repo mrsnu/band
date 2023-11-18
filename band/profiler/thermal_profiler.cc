@@ -13,19 +13,14 @@ ThermalProfiler::ThermalProfiler(DeviceConfig config)
 }
 
 size_t ThermalProfiler::BeginEvent() {
+  std::lock_guard<std::mutex> lock(mtx_);
   ThermalInfo info = {std::chrono::system_clock::now(),
                       thermal_->GetAllThermal()};
-  timeline_.push_back({info, {}});
-  return timeline_.size() - 1;
+  timeline_[count_] = {info, {}};
+  return count_++;
 }
 
 void ThermalProfiler::EndEvent(size_t event_handle) {
-  if (event_handle >= timeline_.size()) {
-    BAND_LOG_PROD(BAND_LOG_ERROR,
-                  "ThermalProfiler end event with an invalid handle %d",
-                  event_handle);
-    return;
-  }
   ThermalInfo info = {std::chrono::system_clock::now(),
                                         thermal_->GetAllThermal()};
   timeline_[event_handle].second = info;

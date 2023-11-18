@@ -35,6 +35,57 @@ class Benchmark {
     Tensors model_inputs;
   };
 
+  const std::vector<double> cpu_frequencies = {
+    0.8256,
+    // 0.9408,
+    // 1.0560,
+    // 1.1712,
+    // 1.2864,
+    // 1.4016,
+    // 1.4976,
+    // 1.6128,
+    // 1.7088,
+    // 1.8048,
+    1.9200,
+    // 2.0160,
+    // 2.1312,
+    // 2.2272,
+    // 2.3232,
+    // 2.4192,
+    // 2.5344,
+    // 2.6496,
+    // 2.7456,
+    2.8416
+  };
+
+  const std::vector<double> gpu_frequencies = {
+    0.5850,
+    0.4992,
+    0.4270, 
+    0.3450, 
+    0.2570
+  };
+
+  const std::vector<double> runtime_frequencies = {
+    0.7104, 
+    // 0.8256, 
+    // 0.9408, 
+    // 1.0560, 
+    // 1.1712, 
+    // 1.2864,
+    // 1.4016, 
+    // 1.4976, 
+    1.6128, 
+    // 1.7088, 
+    // 1.8048, 
+    // 1.9200,
+    // 2.0160, 
+    // 2.1312, 
+    // 2.2272, 
+    // 2.3232, 
+    2.4192
+  };
+
   // initialization
   bool ParseArgs(int argc, const char** argv);
   bool LoadBenchmarkConfigs(const Json::Value& root);
@@ -44,7 +95,11 @@ class Benchmark {
   void RunPeriodic();
   void RunStream();
   void RunWorkload();
-  void RunMotivation();
+  void RunCPU();
+  void RunGPU();
+  void RunDSP();
+  void RunNPU();
+  void RunAll();
 
   absl::Status LogResults();
 

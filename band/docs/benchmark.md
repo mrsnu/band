@@ -37,7 +37,6 @@ python .\script\run_benchmark.py -c .\benchmark_config.json
 * `schedulers`: The scheduler types in `list[string]`. If N schedulers are specified, then N queues are generated.
   * `fixed_worker`
   * `round_robin`
-  * `shortest_expected_latency`
   * `least_slack_time_first`
   * `heterogeneous_earliest_finish_time`
   * `heterogeneous_earliest_finish_time_reserved`

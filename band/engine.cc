@@ -626,6 +626,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     }
   }
 
+  SetMinFrequencies();
+
   return absl::OkStatus();
 }  // namespace band
 
@@ -721,96 +723,9 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
   return model_executor_it->second->ExecuteSubgraph(key);
 }
 
-std::pair<SubgraphKey, double> Engine::GetMinCost(
-    ModelId model_id, BitMask resolved_unit_subgraphs, double start_time,
-    const WorkerWaitingTime& worker_waiting,
-    const std::function<double(double, ThermalMap, ThermalMap)> cost) const {
-  // lookup key for cache
-  std::pair<ModelId, BitMask> cache_key = {model_id, resolved_unit_subgraphs};
-
-  // check if it is safe to lookup the cache:
-  // are all waiting times < start_time ?
-  bool wait_time_is_stale = true;
-  for (auto& pair : worker_waiting) {
-    auto wait_time = pair.second;
-    if (wait_time > start_time) {
-      wait_time_is_stale = false;
-    }
-  }
-
-  if (wait_time_is_stale) {
-    auto it = cache_.find(cache_key);
-    if (it != cache_.end()) {
-      auto& pair = it->second;
-      // the stored latency value assumes a start_time of 0,
-      // so we need to add our own start_time to the stored value to get the
-      // correct return value
-      return {pair.first, pair.second + start_time};
-    }
-  }
-
-  std::vector<SubgraphKey> candidates =
-      GetSubgraphCandidates(model_id, resolved_unit_subgraphs);
-
-  auto bit_mask_comparator = [](const BitMask& lhs, const BitMask& rhs) {
-    return lhs.to_ullong() < rhs.to_ullong();
-  };
-
-  std::map<BitMask, std::vector<SubgraphKey>, decltype(bit_mask_comparator)>
-      unit_indicies_subgraphs(bit_mask_comparator);
-
-  // group by unit indices
-  for (const SubgraphKey& key : candidates) {
-    unit_indicies_subgraphs[key.GetUnitIndices()].push_back(key);
-  }
-
-  std::pair<SubgraphKey, double> subgraph_min_cost{
-      {}, std::numeric_limits<double>::max()};
-  for (const auto& it : unit_indicies_subgraphs) {
-    // first, filter out the subgraphs that take longer than others with the
-    // same start/end indices, since there's no reason to pick them
-    std::pair<SubgraphKey, double> target_subgraph =
-        GetMinCostSubgraphKey(it.second, start_time, worker_waiting, cost);
-
-    std::pair<SubgraphKey, double> local_min;
-    if (IsEnd(target_subgraph.first)) {
-      local_min = target_subgraph;
-    } else {
-      local_min = GetMinCost(
-          model_id,
-          resolved_unit_subgraphs | target_subgraph.first.GetUnitIndices(),
-          target_subgraph.second, worker_waiting, cost);
-    }
-
-    // check if this subgraph is better than the best one
-    if (local_min.second < subgraph_min_cost.second) {
-      // note the subgraph to return is the next immediate one (start_idx, XX),
-      // but the latency to return is that of the final subgraph (XX, #ops)
-      // hence, target_subgraph.first & local_min.second
-      subgraph_min_cost.first = target_subgraph.first;
-      subgraph_min_cost.second = local_min.second;
-    }
-  }
-
-  if (wait_time_is_stale) {
-    // if we've reached this point, then there shouldn't be an entry
-    // for this key in the cache
-    assert(cache_.find(cache_key) == cache_.end());
-    // we are going to store the latency value for start_time == 0,
-    // so do a sanity check for latency - start_time
-    // assert(subgraph_min_cost.second >= start_time);
-
-    cache_[cache_key] = {subgraph_min_cost.first,
-                         subgraph_min_cost.second - start_time};
-  }
-
-  return subgraph_min_cost;
-}
-
 std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
     ModelId model_id, int start_unit_idx,
-    const WorkerWaitingTime& worker_waiting,
-    const std::function<double(double, ThermalMap, ThermalMap)> cost) const {
+    const WorkerWaitingTime& worker_waiting, const CostFunc cost) const {
   const ModelSpec* model_spec = GetModelSpec(model_id);
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
@@ -881,7 +796,7 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
 
 std::pair<std::vector<SubgraphKey>, double> Engine::GetSubgraphWithMinCost(
     const Job& job, const WorkerWaitingTime& worker_waiting,
-    const std::function<double(double, ThermalMap, ThermalMap)> cost) const {
+    const CostFunc cost) const {
   int start_unit_idx = 0;
   for (int i = 0; i < model_specs_.at(job.model_id).GetNumUnitSubgraphs();
        i++) {
@@ -940,9 +855,8 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
 
 std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-    const WorkerWaitingTime& worker_waiting,
-    const std::function<double(double, ThermalMap, ThermalMap)> cost_func)
-    const {
+    ThermalMap start_them, FreqMap freq,
+    const WorkerWaitingTime& worker_waiting, const CostFunc cost_func) const {
   double min_cost = std::numeric_limits<double>::max();
   SubgraphKey min_key = {};
 
@@ -951,15 +865,17 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     double latency = GetExpected(key);
     double expected_latency =
         latency + std::max(waiting_time, static_cast<double>(start_time));
+    ThermalMap delta_thermal = ThermalMap();
+
 #ifdef BAND_SPLASH
-    ThermalMap expected_thermal = thermal_estimator_->GetExpected(key);
-    ThermalMap profiled_thermal = thermal_estimator_->GetProfiled(key);
-#else
-    ThermalMap expected_thermal = ThermalMap();
-    ThermalMap profiled_thermal = ThermalMap();
+    ThermalKey thermal_key = std::make_pair(ThermalMap(), FreqMap(), key);
+    ThermalMap expected_thermal = thermal_estimator_->GetExpected(thermal_key);
+    for (auto& pair : expected_thermal) {
+      delta_thermal[pair.first] = pair.second - profiled_thermal[pair.first];
+    }
 #endif  // BAND_SPLASH
-    double cost =
-        cost_func(expected_latency, expected_thermal, profiled_thermal);
+
+    double cost = cost_func(expected_latency, delta_thermal);
     if (min_cost >= cost) {
       min_cost = cost;
       min_key = key;
@@ -1169,6 +1085,8 @@ void Engine::EndEvent(size_t event_id) {
 }
 
 absl::Status Engine::ProfileModel(ModelId model_id) {
+  SetMaxFrequencies();
+
   for (WorkerId worker_id = 0; worker_id < GetNumWorkers(); worker_id++) {
     Worker* worker = GetWorker(worker_id);
     worker->Pause();
@@ -1222,6 +1140,8 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
     profile_thread.join();
     worker->Resume();
   }
+
+  SetMinFrequencies();
   return absl::OkStatus();
 }
 

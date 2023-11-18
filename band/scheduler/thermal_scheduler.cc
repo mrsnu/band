@@ -37,20 +37,8 @@ bool ThermalScheduler::Schedule(JobQueue& requests) {
       auto best_subgraph = engine_.GetSubgraphWithMinCost(
           job, worker_waiting,
           [&expected_lat, &expected_therm](
-              double lat, std::map<SensorFlag, double> therm,
-              std::map<SensorFlag, double> cur_therm) -> double {
-            BAND_LOG_PROD(BAND_LOG_INFO, "Latency:");
-            BAND_LOG_PROD(BAND_LOG_INFO, "  %f", lat);
-            BAND_LOG_PROD(BAND_LOG_INFO, "Thermal:");
-            for (auto& pair : therm) {
-              BAND_LOG_PROD(BAND_LOG_INFO, "  %s: %f", ToString(pair.first),
-                            pair.second);
-            }
-            auto target_diff = therm.at(SensorFlag::kTarget) -
-                               cur_therm.at(SensorFlag::kTarget);
-            expected_lat = lat;
-            expected_therm = therm;
-            return target_diff;
+              double lat, std::map<SensorFlag, double> therm) -> double {
+            return therm.at(SensorFlag::kTarget);
           });
 
       if (largest_min_cost < best_subgraph.second) {

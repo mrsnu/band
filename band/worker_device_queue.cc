@@ -18,22 +18,22 @@ int DeviceQueueWorker::GetCurrentJobId() {
   return requests_.front().job_id;
 }
 
-int64_t DeviceQueueWorker::GetWaitingTime() {
+double DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {
     return LARGE_WAITING_TIME;
   }
 
-  int64_t total = 0;
+  double total = 0;
   for (JobQueue::iterator it = requests_.begin(); it != requests_.end(); ++it) {
-    int64_t expected_latency = engine_->GetExpected(it->subgraph_key);
+    double expected_latency = engine_->GetExpected(it->subgraph_key);
 
     total += expected_latency;
     if (it == requests_.begin()) {
-      int64_t current_time = time::NowMicros();
-      int64_t invoke_time = (*it).invoke_time;
+      double current_time = time::NowMicros();
+      double invoke_time = (*it).invoke_time;
       if (invoke_time > 0 && current_time > invoke_time) {
-        int64_t progress = (current_time - invoke_time) > expected_latency
+        double progress = (current_time - invoke_time) > expected_latency
                                ? expected_latency
                                : (current_time - invoke_time);
         total -= progress;

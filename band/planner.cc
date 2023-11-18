@@ -12,7 +12,6 @@
 #include "band/scheduler/heterogeneous_earliest_finish_time_scheduler.h"
 #include "band/scheduler/least_slack_first_scheduler.h"
 #include "band/scheduler/round_robin_scheduler.h"
-#include "band/scheduler/shortest_expected_latency_scheduler.h"
 #include "band/scheduler/thermal_scheduler.h"
 #include "band/time.h"
 
@@ -58,9 +57,6 @@ absl::Status Planner::Init(const PlannerConfig& config) {
       schedulers_.emplace_back(new FixedWorkerGlobalQueueScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kRoundRobin) {
       schedulers_.emplace_back(new RoundRobinScheduler(engine_));
-    } else if (schedulers[i] == SchedulerType::kShortestExpectedLatency) {
-      schedulers_.emplace_back(
-          new ShortestExpectedLatencyScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] ==
                SchedulerType::kHeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(

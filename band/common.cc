@@ -97,9 +97,6 @@ const char* ToString(SchedulerType scheduler_type) {
     case SchedulerType::kRoundRobin: {
       return "round_robin";
     } break;
-    case SchedulerType::kShortestExpectedLatency: {
-      return "shortest_expected_latency";
-    } break;
     case SchedulerType::kFixedWorkerGlobalQueue: {
       return "fixed_worker_global_queue";
     } break;

@@ -54,7 +54,6 @@ enum class BackendType : size_t {
 enum class SchedulerType : size_t {
   kFixedWorker = 0,
   kRoundRobin,
-  kShortestExpectedLatency,
   kFixedWorkerGlobalQueue,
   kHeterogeneousEarliestFinishTime,
   kLeastSlackTimeFirst,

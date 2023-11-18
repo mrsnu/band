@@ -4,6 +4,7 @@
 #include <chrono>
 #include <deque>
 #include <unordered_map>
+#include <tuple>
 
 #include "absl/status/status.h"
 #include "band/common.h"
@@ -19,8 +20,10 @@
 
 namespace band {
 
+using ThermalKey = std::tuple<ThermalMap, FreqMap, SubgraphKey>;
+
 class ThermalEstimator
-    : public IEstimator<SubgraphKey, ThermalInterval, ThermalMap> {
+    : public IEstimator<ThermalKey, ThermalInterval, ThermalMap> {
  public:
   explicit ThermalEstimator(IEngine* engine, ThermalProfiler* thermal_profiler,
                             FrequencyProfiler* frequency_profiler,
@@ -32,21 +35,18 @@ class ThermalEstimator
         latency_profiler_(latency_profiler),
         latency_estimator_(latency_estimator) {}
   absl::Status Init(const ThermalProfileConfig& config);
-  void Update(const SubgraphKey& key, ThermalMap therm_start,
-              ThermalMap therm_end, FreqMap freq, double latency);
+  void Update(const ThermalKey& key, ThermalMap target_therm);
   void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
 
   ThermalMap GetProfiled(const SubgraphKey& key) const override;
-  ThermalMap GetExpected(const SubgraphKey& key) const override;
+  ThermalMap GetExpected(const ThermalKey& thermal_key) const override;
 
   absl::Status LoadModel(std::string profile_path) override;
   absl::Status DumpModel(std::string profile_path) override;
 
-  Eigen::MatrixXd SolveLinear(Eigen::MatrixXd x, Eigen::MatrixXd y) {
-    return (x.transpose() * x).ldlt().solve(x.transpose() * y);
-  }
+  Eigen::MatrixXd SolveLinear(Eigen::MatrixXd& x, Eigen::MatrixXd& y);
 
-  Json::Value EigenMatrixToJson(Eigen::MatrixXd matrix);
+  Json::Value EigenMatrixToJson(Eigen::MatrixXd& matrix);
 
   Eigen::MatrixXd JsonToEigenMatrix(Json::Value json);
 
@@ -62,6 +62,10 @@ class ThermalEstimator
   Eigen::MatrixXd model_;
   std::deque<std::pair<Eigen::VectorXd, Eigen::VectorXd>> features_;
   mutable std::map<SubgraphKey, ThermalMap> profile_database_;
+
+  const size_t num_sensors_ = EnumLength<SensorFlag>();
+  const size_t num_devices_ = EnumLength<DeviceFlag>();
+  const size_t feature_size_ = num_sensors_ + 3 * num_devices_;
 };
 
 }  // namespace band

@@ -4,6 +4,8 @@
 #include <fstream>
 #include <chrono>
 #include <vector>
+#include <map>
+#include <mutex>
 
 #include "band/config.h"
 #include "band/device/thermal.h"
@@ -48,8 +50,13 @@ class ThermalProfiler : public Profiler {
   }
 
  private:
+  size_t window_size_ = 5000;
+  size_t count_ = 0;
+
   std::unique_ptr<Thermal> thermal_;
-  std::vector<std::pair<ThermalInfo, ThermalInfo>> timeline_;
+  std::map<size_t, std::pair<ThermalInfo, ThermalInfo>> timeline_;
+
+  std::mutex mtx_;
 };
 
 }  // namespace band

@@ -8,7 +8,6 @@ Each configuration field is optional or required. If a field is optional, then i
 - `SchedulerType`:
   - `kBandFixedDeviceFixedWorker`: 
   - `SchedulerType::kRoundRobin`: 
-  - `SchedulerType::kShortestExpectedLatency`: 
   - `kBandFixedDeviceFixedWorkerGlobalQueue`: 
   - `SchedulerType::kHeterogeneousEarliestFinishTime`: 
   - `SchedulerType::kLeastSlackTimeFirst`: 

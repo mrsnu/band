@@ -27,7 +27,6 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     // basically the same as ShortestExpectedLatencyScheduler
     double largest_min_cost = -1;
     double largest_expected_latency = -1;
-    std::map<SensorFlag, double> largest_expected_thermal;
     int target_job_index;
     SubgraphKey target_subgraph_key;
     SubgraphKey target_subgraph_key_next;
@@ -67,22 +66,17 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
         }
 
         double expected_lat;
-        std::map<SensorFlag, double> expected_therm;
         std::pair<std::vector<SubgraphKey>, double> best_subgraph =
             engine_.GetSubgraphWithMinCost(
                 job, reserved_time,
-                [&expected_lat, &expected_therm](
-                    double lat, std::map<SensorFlag, double> therm,
-                    std::map<SensorFlag, double> cur_therm) -> double {
+                [&expected_lat](double lat, std::map<SensorFlag, double>) -> double {
                   expected_lat = lat;
-                  expected_therm = therm;
                   return lat;
                 });
 
         if (largest_min_cost < best_subgraph.second) {
           largest_min_cost = best_subgraph.second;
           largest_expected_latency = expected_lat;
-          largest_expected_thermal = expected_therm;
           target_subgraph_key = best_subgraph.first.front();
           target_job_index = it - requests.begin();
           if (best_subgraph.first.size() > 1) {
@@ -119,7 +113,6 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     num_jobs--;
 
     job.expected_latency = largest_expected_latency;
-    job.expected_thermal = largest_expected_thermal;
 
     success &= engine_.EnqueueToWorker({job, target_subgraph_key});
 
