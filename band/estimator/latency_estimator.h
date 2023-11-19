@@ -21,7 +21,7 @@ class LatencyEstimator : public IEstimator<SubgraphKey, double, double> {
   absl::Status Init(const LatencyProfileConfig& config);
 
   void Update(const SubgraphKey& key, double latency);
-  void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
+  void Update(const SubgraphKey& key, JobId event_handle) override;
   double GetProfiled(const SubgraphKey& key) const override;
   double GetExpected(const SubgraphKey& key) const override;
 

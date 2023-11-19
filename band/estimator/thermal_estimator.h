@@ -3,15 +3,15 @@
 
 #include <chrono>
 #include <deque>
-#include <unordered_map>
 #include <tuple>
+#include <unordered_map>
 
 #include "absl/status/status.h"
 #include "band/common.h"
 #include "band/config.h"
+#include "band/device/frequency.h"
+#include "band/device/thermal.h"
 #include "band/estimator/estimator_interface.h"
-#include "band/estimator/frequency_latency_estimator.h"
-#include "band/profiler/frequency_profiler.h"
 #include "band/profiler/latency_profiler.h"
 #include "band/profiler/thermal_profiler.h"
 #include "json/json.h"
@@ -25,18 +25,16 @@ using ThermalKey = std::tuple<ThermalMap, FreqMap, SubgraphKey>;
 class ThermalEstimator
     : public IEstimator<ThermalKey, ThermalInterval, ThermalMap> {
  public:
-  explicit ThermalEstimator(IEngine* engine, ThermalProfiler* thermal_profiler,
-                            FrequencyProfiler* frequency_profiler,
-                            LatencyProfiler* latency_profiler,
-                            IEstimator<SubgraphKey, double, double>* latency_estimator)
+  explicit ThermalEstimator(
+      IEngine* engine, ThermalProfiler* thermal_profiler,
+      LatencyProfiler* latency_profiler,
+      IEstimator<SubgraphKey, double, double>* latency_estimator)
       : IEstimator(engine),
         thermal_profiler_(thermal_profiler),
-        frequency_profiler_(frequency_profiler),
         latency_profiler_(latency_profiler),
         latency_estimator_(latency_estimator) {}
   absl::Status Init(const ThermalProfileConfig& config);
   void Update(const ThermalKey& key, ThermalMap target_therm);
-  void UpdateWithEvent(const SubgraphKey& key, size_t event_handle) override;
 
   ThermalMap GetProfiled(const SubgraphKey& key) const override;
   ThermalMap GetExpected(const ThermalKey& thermal_key) const override;
@@ -51,8 +49,10 @@ class ThermalEstimator
   Eigen::MatrixXd JsonToEigenMatrix(Json::Value json);
 
  private:
+  Eigen::VectorXd GetFeatureVector(const ThermalMap& therm, const FreqMap freq,
+                                 size_t worker_id, double latency);
+
   ThermalProfiler* thermal_profiler_;
-  FrequencyProfiler* frequency_profiler_;
   LatencyProfiler* latency_profiler_;
   IEstimator<SubgraphKey, double, double>* latency_estimator_;
 

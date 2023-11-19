@@ -232,7 +232,7 @@ void Worker::Work() {
     if (engine_->TryCopyInputTensors(*current_job).ok()) {
       lock.lock();
       current_job->invoke_time = time::NowMicros();
-      current_job->event_id = engine_->BeginEvent();
+      engine_->BeginEvent(current_job->job_id);
       lock.unlock();
 
       absl::Status status = engine_->Invoke(subgraph_key);
@@ -240,8 +240,8 @@ void Worker::Work() {
         // end_time is never read/written by any other thread as long as
         // is_busy == true, so it's safe to update it w/o grabbing the lock
         current_job->end_time = time::NowMicros();
-        engine_->EndEvent(current_job->event_id);
-        engine_->UpdateWithEvent(subgraph_key, *current_job);
+        engine_->EndEvent(current_job->job_id);
+        engine_->UpdateWithJob(subgraph_key, *current_job);
         if (current_job->following_jobs.size() != 0) {
           engine_->EnqueueBatch(current_job->following_jobs, true);
         }

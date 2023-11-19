@@ -5,9 +5,7 @@
 #include "band/engine.h"
 #include "band/json_util.h"
 #include "band/model.h"
-#include "band/profiler/latency_profiler.h"
 #include "band/tool/benchmark_config.h"
-#include "band/tool/benchmark_profiler.h"
 
 namespace band {
 namespace tool {
@@ -25,7 +23,6 @@ class Benchmark {
     absl::Status PrepareInput();
 
     Model model;
-    BenchmarkProfiler profiler;
     // pre-allocated model tensors for runtime requests
     std::vector<ModelId> model_ids;
     std::vector<RequestOption> request_options;
@@ -108,7 +105,6 @@ class Benchmark {
   RuntimeConfig* runtime_config_ = nullptr;
   std::unique_ptr<Engine> engine_ = nullptr;
   std::vector<ModelContext*> model_contexts_;
-  BenchmarkProfiler global_profiler_;
   bool kill_app_ = false;
 };
 }  // namespace tool

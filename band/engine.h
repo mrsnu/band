@@ -14,15 +14,14 @@
 #include "band/error_reporter.h"
 #include "band/estimator/estimator_interface.h"
 #ifdef BAND_SPLASH
-#include "band/estimator/frequency_latency_estimator.h"
+#include "band/estimator/thermal_estimator.h"
 #else
 #include "band/estimator/latency_estimator.h"
 #endif  // BAND_SPLASH
+#include "band/device/frequency.h"
 #include "band/device/thermal.h"
-#include "band/estimator/thermal_estimator.h"
 #include "band/interface/model_executor.h"
 #include "band/interface/tensor.h"
-#include "band/profiler/frequency_profiler.h"
 #include "band/profiler/latency_profiler.h"
 #include "band/profiler/thermal_profiler.h"
 #include "band/tensor_ring_buffer.h"
@@ -110,9 +109,7 @@ class Engine : public IEngine {
   SubgraphKey GetLargestSubgraphKey(ModelId model_id,
                                     WorkerId worker_id) const override;
 
-  Frequency* GetFrequency() const override {
-    return frequency_profiler_->GetFrequency();
-  }
+  Frequency* GetFrequency() const override { return frequency_.get(); }
 
   Thermal* GetThermal() const override {
     return thermal_profiler_->GetThermal();
@@ -190,8 +187,8 @@ class Engine : public IEngine {
       const WorkerWaitingTime& worker_waiting, const CostFunc cost) const;
 
   /* estimators */
-  void UpdateWithEvent(const SubgraphKey&, size_t event_id) override;
-  void UpdateWithEvent(const SubgraphKey&, Job& job) override;
+  void UpdateWithJob(const SubgraphKey&, Job& job) override;
+  void Update(const SubgraphKey&, JobId job_id);
 
   /* planner */
   void Trigger() override;
@@ -216,8 +213,8 @@ class Engine : public IEngine {
       const SubgraphKey& key) const;
 
   /* Model Profile */
-  size_t BeginEvent() override;
-  void EndEvent(size_t event_id) override;
+  void BeginEvent(JobId job_id) override;
+  void EndEvent(JobId job_id) override;
   absl::Status ProfileModel(ModelId model_id);
 
   Engine() = delete;
@@ -253,19 +250,20 @@ class Engine : public IEngine {
   std::map<int, std::map<int, std::map<int, std::vector<SubgraphKey>>>>
       unit_subgraphs_to_subgraph_keys_;
 
+  // Resources
+  std::unique_ptr<Frequency> frequency_;
+  std::unique_ptr<Thermal> thermal_;
+
   // Profilers
-  LatencyProfiler* latency_profiler_;
-  ThermalProfiler* thermal_profiler_;
-  FrequencyProfiler* frequency_profiler_;
+  std::unique_ptr<LatencyProfiler> latency_profiler_;
+  std::unique_ptr<ThermalProfiler> thermal_profiler_;
   std::vector<Profiler*> profilers_;
 
   // Estimators
-#ifdef BAND_SPLASH
-  std::unique_ptr<FrequencyLatencyEstimator> latency_estimator_;
-#else
   std::unique_ptr<LatencyEstimator> latency_estimator_;
-#endif  // BAND_SPLASH
+#ifdef BAND_SPLASH
   std::unique_ptr<ThermalEstimator> thermal_estimator_;
+#endif  // BAND_SPLASH
 
   // Sleep engine with temperature target
   ThermalMap target_temp_;

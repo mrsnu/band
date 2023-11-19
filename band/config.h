@@ -10,10 +10,6 @@
 
 namespace band {
 
-struct FrequencyLatencyProfileConfig {
-  float smoothing_factor = 0.1f;
-};
-
 struct LatencyProfileConfig {
   float smoothing_factor = 0.1f;
 };
@@ -43,7 +39,6 @@ struct DeviceConfig {
 struct ProfileConfig {
   LatencyProfileConfig latency_config;
   ThermalProfileConfig thermal_config;
-  FrequencyLatencyProfileConfig frequency_latency_config;
   std::string profile_path = "";
   size_t num_warmups = 1;
   size_t num_runs = 1;

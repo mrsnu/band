@@ -45,24 +45,9 @@ band_cc_library(
 )
 
 band_cc_library(
-    name = "frequency_profiler",
-    srcs = [
-        "frequency_profiler.cc",
-    ],
-    hdrs = [
-        "frequency_profiler.h",
-    ],
-    deps = [
-        ":profiler",
-        "//band/device:frequency",
-    ],
-)
-
-band_cc_library(
     name = "profilers",
     deps = [
         ":latency_profiler",
         ":thermal_profiler",
-        ":frequency_profiler",
     ]
 )

@@ -20,14 +20,6 @@ bool ProfileConfigBuilder::IsValid(
   return result;
 }
 
-bool FrequencyLatencyProfileConfigBuilder::IsValid(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  bool result = true;
-  REPORT_IF_FALSE(FrequencyProfileConfigBuilder,
-                  smoothing_factor_ >= .0f && smoothing_factor_ <= 1.0f);
-  return result;
-}
-
 bool LatencyProfileConfigBuilder::IsValid(
     ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
   bool result = true;
@@ -127,8 +119,6 @@ ProfileConfig ProfileConfigBuilder::Build(
   }
   ProfileConfig profile_config;
   profile_config.latency_config = latency_profile_builder_.Build();
-  profile_config.frequency_latency_config =
-      freq_latency_profile_builder_.Build();
   profile_config.thermal_config = thermal_profile_builder_.Build();
   profile_config.profile_path = profile_path_;
   profile_config.num_warmups = num_warmups_;
@@ -144,16 +134,6 @@ LatencyProfileConfig LatencyProfileConfigBuilder::Build(
     abort();
   }
   LatencyProfileConfig profile_config;
-  profile_config.smoothing_factor = smoothing_factor_;
-  return profile_config;
-}
-
-FrequencyLatencyProfileConfig FrequencyLatencyProfileConfigBuilder::Build(
-    ErrorReporter* error_reporter /* = DefaultErrorReporter()*/) {
-  if (!IsValid(error_reporter)) {
-    abort();
-  }
-  FrequencyLatencyProfileConfig profile_config;
   profile_config.smoothing_factor = smoothing_factor_;
   return profile_config;
 }

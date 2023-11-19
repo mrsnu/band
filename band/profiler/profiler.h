@@ -12,8 +12,8 @@ namespace band {
 class Profiler {
  public:
   virtual ~Profiler() = default;
-  virtual size_t BeginEvent() = 0;
-  virtual void EndEvent(size_t event_handle) = 0;
+  virtual void BeginEvent(JobId job_id) = 0;
+  virtual void EndEvent(JobId job_id) = 0;
   virtual size_t GetNumEvents() const = 0;
 };
 

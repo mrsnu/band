@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <fstream>
+#include <mutex>
 #include <vector>
 
 #include "band/config.h"
@@ -11,50 +12,39 @@
 
 namespace band {
 
-using LatencyInfo = std::pair<std::chrono::system_clock::time_point,
-                              std::chrono::system_clock::time_point>;
+using LatencyInterval = std::pair<std::chrono::system_clock::time_point,
+                                  std::chrono::system_clock::time_point>;
 
 class LatencyProfiler : public Profiler {
  public:
-  size_t BeginEvent() override;
-  void EndEvent(size_t event_handle) override;
+  void BeginEvent(JobId job_id) override;
+  void EndEvent(JobId job_id) override;
   size_t GetNumEvents() const override;
 
-  LatencyInfo GetInterval(size_t index) const {
-    if (timeline_.size() <= index) {
-      return {};
+  LatencyInterval GetInterval(JobId job_id) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (timeline_.find(job_id) == timeline_.end()) {
+      return {{}, {}};
     }
-    return timeline_[index];
+    LatencyInterval result = timeline_.at(job_id);
+    timeline_.erase(job_id);
+    return result;
   }
 
   template <typename T>
-  double GetDuration(size_t index) const {
-    if (timeline_.size() <= index) {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Index out of bound: %d", index);
-      return 0;
-    }
-    auto interv = GetInterval(index);
+  double GetDuration(JobId job_id) {
+    auto interv = GetInterval(job_id);
     double duration =
         std::chrono::duration_cast<T>(interv.second - interv.first).count();
     return std::max<double>(duration, 0);
   }
 
-  template <typename T>
-  double GetAverageDuration() const {
-    double accumulated_time = 0;
-    for (size_t i = 0; i < timeline_.size(); i++) {
-      accumulated_time += GetDuration<T>(i);
-    }
-
-    if (timeline_.size() == 0) {
-      return 0;
-    }
-
-    return accumulated_time / timeline_.size();
-  }
-
  private:
-  std::vector<LatencyInfo> timeline_;
+  size_t count_ = 0;
+
+  std::map<JobId, LatencyInterval> timeline_;
+
+  mutable std::mutex mtx_;
 };
 
 }  // namespace band

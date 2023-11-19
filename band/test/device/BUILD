@@ -28,3 +28,15 @@ band_cc_android_test(
         "@com_google_googletest//:gtest",
     ],
 )
+
+band_cc_android_test(
+    name = "thermal_profiler_test",
+    size = "small",
+    srcs = ["thermal_profiler_test.cc"],
+    data = [],
+    deps = [
+        ":device_util",
+        "//band/profiler:thermal_profiler",
+        "@com_google_googletest//:gtest",
+    ],
+)

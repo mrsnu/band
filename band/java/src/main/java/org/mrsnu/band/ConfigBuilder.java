@@ -20,10 +20,6 @@ public class ConfigBuilder {
     wrapper.addProfilePath(profilePath);
   }
 
-  public void addFrequencyLatencySmoothingFactor(float smoothingFactor) {
-    wrapper.addFrequencyLatencySmoothingFactor(smoothingFactor);
-  }
-
   public void addLatencySmoothingFactor(float smoothingFactor) {
     wrapper.addLatencySmoothingFactor(smoothingFactor);
   }

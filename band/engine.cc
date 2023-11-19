@@ -8,7 +8,6 @@
 #include "band/common.h"
 #include "band/engine_interface.h"
 #ifdef BAND_SPLASH
-#include "band/estimator/frequency_latency_estimator.h"
 #include "band/estimator/thermal_estimator.h"
 #else
 #include "band/estimator/latency_estimator.h"
@@ -49,6 +48,7 @@ Engine::~Engine() {
                       status.message());
       }
     }
+#ifdef BAND_SPLASH
     {
       auto status = thermal_estimator_->DumpModel(
           absl::StrFormat("%s/thermal_model.json", dump_dir_.c_str()));
@@ -57,11 +57,8 @@ Engine::~Engine() {
                       status.message());
       }
     }
+#endif  // BAND_SPLASH
   }
-
-  delete thermal_profiler_;
-  delete frequency_profiler_;
-  delete latency_profiler_;
 }
 
 void Engine::SetDumpDirectory(std::string path) { dump_dir_ = path; }
@@ -529,47 +526,37 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   subgraph_config_ = config.subgraph_config;
 
   // Setup for profilers
+  thermal_ = std::make_unique<Thermal>(config.device_config);
+  frequency_ = std::make_unique<Frequency>(config.device_config);
+
   {
-    latency_profiler_ = new LatencyProfiler();
-    profilers_.push_back(latency_profiler_);
-    thermal_profiler_ = new ThermalProfiler(config.device_config);
-    profilers_.push_back(thermal_profiler_);
-    frequency_profiler_ = new FrequencyProfiler(config.device_config);
-    profilers_.push_back(frequency_profiler_);
+    latency_profiler_ = std::make_unique<LatencyProfiler>();
+    profilers_.push_back(latency_profiler_.get());
+    thermal_profiler_ = std::make_unique<ThermalProfiler>(thermal_.get());
+    profilers_.push_back(thermal_profiler_.get());
   }
 
-  // Setup for estimators
-#ifdef BAND_SPLASH
-  {
-    latency_estimator_ = std::make_unique<FrequencyLatencyEstimator>(
-        this, frequency_profiler_, latency_profiler_);
-    auto status = latency_estimator_->Init(
-        config.profile_config.frequency_latency_config);
-    if (!status.ok()) {
-      return status;
-    }
-  }
-#else
   {
     latency_estimator_ =
-        std::make_unique<LatencyEstimator>(this, latency_profiler_);
+        std::make_unique<LatencyEstimator>(this, latency_profiler_.get());
     auto status =
         latency_estimator_->Init(config.profile_config.latency_config);
     if (!status.ok()) {
       return status;
     }
   }
-#endif  // BAND_SPLASH
+
+#ifdef BAND_SPLASH
   {
     thermal_estimator_ = std::make_unique<ThermalEstimator>(
-        this, thermal_profiler_, frequency_profiler_, latency_profiler_,
-        latency_estimator_.get());
+        this, thermal_profiler_, latency_profiler_, latency_estimator_.get());
     auto status =
         thermal_estimator_->Init(config.profile_config.thermal_config);
     if (!status.ok()) {
       return status;
     }
   }
+#endif  // BAND_SPLASH
 
   {
     const CPUMaskFlag cpu_mask = static_cast<CPUMaskFlag>(config.cpu_mask);
@@ -771,8 +758,10 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
       const auto& subgraph_keys =
           unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).at(j);
       int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
-      std::pair<SubgraphKey, double> target_pair =
-          GetMinCostSubgraphKey(subgraph_keys, start, worker_waiting, cost);
+      ThermalMap start_therm;
+      FreqMap freq;
+      std::pair<SubgraphKey, double> target_pair = GetMinCostSubgraphKey(
+          subgraph_keys, start, start_therm, freq, worker_waiting, cost);
       SubgraphKey& target_key = target_pair.first;
       double& target_cost = target_pair.second;
 
@@ -884,16 +873,18 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
   return {min_key, min_cost};
 }
 
-void Engine::UpdateWithEvent(const SubgraphKey& key, Job& job) {
-  auto profiled_thermal = thermal_profiler_->GetInterval(job.event_id);
+void Engine::UpdateWithJob(const SubgraphKey& key, Job& job) {
+  auto profiled_thermal = thermal_profiler_->GetInterval(job.job_id);
   job.start_thermal = profiled_thermal.first.second;
   job.end_thermal = profiled_thermal.second.second;
-  UpdateWithEvent(key, job.event_id);
+  Update(key, job.job_id);
 }
 
-void Engine::UpdateWithEvent(const SubgraphKey& key, size_t event_id) {
-  latency_estimator_->UpdateWithEvent(key, event_id);
-  thermal_estimator_->UpdateWithEvent(key, event_id);
+void Engine::Update(const SubgraphKey& key, JobId job_id) {
+  latency_estimator_->Update(key, job_id);
+#ifdef BAND_SPLASH
+  thermal_estimator_->Update(key, job_id);
+#endif  // BAND_SPLASH
 }
 
 double Engine::GetProfiled(const SubgraphKey& key) const {
@@ -1070,23 +1061,22 @@ const interface::IModelExecutor* Engine::GetModelExecutor(
   return it != model_executors_.end() ? it->second.get() : nullptr;
 }
 
-size_t Engine::BeginEvent() {
-  size_t event_handle = -1;
+void Engine::BeginEvent(JobId job_id) {
   for (auto profiler : profilers_) {
-    event_handle = profiler->BeginEvent();
+    profiler->BeginEvent(job_id);
   }
-  return event_handle;
 }
 
-void Engine::EndEvent(size_t event_id) {
-  for (int i = 0; i < profilers_.size(); i++) {
-    profilers_[i]->EndEvent(event_id);
+void Engine::EndEvent(JobId job_id) {
+  for (auto profiler : profilers_) {
+    profiler->EndEvent(job_id);
   }
 }
 
 absl::Status Engine::ProfileModel(ModelId model_id) {
   SetMaxFrequencies();
 
+  JobId job_id = 0;
   for (WorkerId worker_id = 0; worker_id < GetNumWorkers(); worker_id++) {
     Worker* worker = GetWorker(worker_id);
     worker->Pause();
@@ -1124,15 +1114,15 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
 
         for (int i = 0; i < profile_config_.num_runs; i++) {
           // All event handles must be the same.
-          size_t event_id = BeginEvent();
+          BeginEvent(job_id);
           if (!Invoke(subgraph_key).ok()) {
             BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                               "Profiler failed to invoke largest subgraph of "
                               "model %d in worker %d during profiling.",
                               model_id, worker_id);
           }
-          EndEvent(event_id);
-          UpdateWithEvent(subgraph_key, event_id);
+          EndEvent(job_id++);
+          Update(subgraph_key, job_id);
         }
       });
     });

@@ -89,14 +89,13 @@ class IEngine {
       const std::set<WorkerId>& idle_workers) const = 0;
 
   /* estimators */
-  virtual void UpdateWithEvent(const SubgraphKey&, Job&) = 0;
-  virtual void UpdateWithEvent(const SubgraphKey&, size_t) = 0;
+  virtual void UpdateWithJob(const SubgraphKey&, Job&) = 0;
   virtual double GetProfiled(const SubgraphKey&) const = 0;
   virtual double GetExpected(const SubgraphKey&) const = 0;
 
   /* profilers */
-  virtual size_t BeginEvent() = 0;
-  virtual void EndEvent(size_t event_id) = 0;
+  virtual void BeginEvent(JobId job_id) = 0;
+  virtual void EndEvent(JobId job_id) = 0;
 
   /* planner */
   virtual void Trigger() = 0;

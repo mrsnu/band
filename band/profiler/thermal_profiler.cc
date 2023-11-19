@@ -1,29 +1,27 @@
 #include "band/profiler/thermal_profiler.h"
 
-#include <fstream>
 #include <cerrno>
+#include <fstream>
 
 #include "band/logger.h"
 
 namespace band {
 
-ThermalProfiler::ThermalProfiler(DeviceConfig config)
-    : thermal_(new Thermal(config)) {
+ThermalProfiler::ThermalProfiler(Thermal* thermal) : thermal_(thermal) {
   BAND_LOG_PROD(BAND_LOG_INFO, "ThermalProfiler is created.");
 }
 
-size_t ThermalProfiler::BeginEvent() {
-  std::lock_guard<std::mutex> lock(mtx_);
+void ThermalProfiler::BeginEvent(JobId job_id) {
   ThermalInfo info = {std::chrono::system_clock::now(),
                       thermal_->GetAllThermal()};
-  timeline_[count_] = {info, {}};
-  return count_++;
+  std::lock_guard<std::mutex> lock(mtx_);
+  timeline_[job_id] = {info, {}};
 }
 
-void ThermalProfiler::EndEvent(size_t event_handle) {
+void ThermalProfiler::EndEvent(JobId job_id) {
   ThermalInfo info = {std::chrono::system_clock::now(),
-                                        thermal_->GetAllThermal()};
-  timeline_[event_handle].second = info;
+                      thermal_->GetAllThermal()};
+  timeline_[job_id].second = info;
 }
 
 size_t ThermalProfiler::GetNumEvents() const { return timeline_.size(); }

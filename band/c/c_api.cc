@@ -66,10 +66,6 @@ void BandAddConfig(BandConfigBuilder* b, int field, int count, ...) {
       float arg = va_arg(vl, double);
       b->impl.AddLatencySmoothingFactor(arg);
     } break;
-    case BAND_PROFILE_FREQ_LATENCY_SMOOTHING_FACTOR: {
-      float arg = va_arg(vl, double);
-      b->impl.AddFrequencyLatencySmoothingFactor(arg);
-    } break;
     case BAND_PROFILE_PATH: {
       char* arg = va_arg(vl, char*);
       b->impl.AddProfilePath(arg);

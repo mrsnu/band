@@ -7,7 +7,7 @@
 #include <map>
 #include <mutex>
 
-#include "band/config.h"
+#include "band/common.h"
 #include "band/device/thermal.h"
 #include "band/profiler/profiler.h"
 
@@ -19,26 +19,21 @@ using ThermalInterval = std::pair<ThermalInfo, ThermalInfo>;
 
 class ThermalProfiler : public Profiler {
  public:
-  explicit ThermalProfiler(DeviceConfig config);
+  explicit ThermalProfiler(Thermal* thermal);
   ~ThermalProfiler() {}
 
-  size_t BeginEvent() override;
-  void EndEvent(size_t event_handle) override;
+  void BeginEvent(JobId job_id) override;
+  void EndEvent(JobId job_id) override;
   size_t GetNumEvents() const override;
 
-  ThermalInterval GetInterval(size_t index) const {
-    if (timeline_.size() <= index) {
-      return {};
+  ThermalInterval GetInterval(size_t index) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (timeline_.find(index) == timeline_.end()) {
+      return {{}, {}};
     }
-    return timeline_[index];
-  }
-
-  ThermalInfo GetStart(size_t index) const {
-    return GetInterval(index).first;
-  }
-
-  ThermalInfo GetEnd(size_t index) const {
-    return GetInterval(index).second;
+    ThermalInterval result = timeline_.at(index);
+    timeline_.erase(index);
+    return result;
   }
 
   ThermalMap GetAllThermal() const {
@@ -46,17 +41,16 @@ class ThermalProfiler : public Profiler {
   }
 
   Thermal* GetThermal() const {
-    return thermal_.get();
+    return thermal_;
   }
 
  private:
-  size_t window_size_ = 5000;
   size_t count_ = 0;
 
-  std::unique_ptr<Thermal> thermal_;
-  std::map<size_t, std::pair<ThermalInfo, ThermalInfo>> timeline_;
+  Thermal* thermal_;
+  std::map<JobId, ThermalInterval> timeline_;
 
-  std::mutex mtx_;
+  mutable std::mutex mtx_;
 };
 
 }  // namespace band

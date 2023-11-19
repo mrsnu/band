@@ -61,14 +61,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addProfilePath(
 }
 
 JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addFrequencyLatencySmoothingFactor(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    float smoothingFactor) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddFrequencyLatencySmoothingFactor(smoothingFactor);
-}
-
-JNIEXPORT void JNICALL
 Java_org_mrsnu_band_NativeConfigBuilderWrapper_addLatencySmoothingFactor(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle,
     float smoothingFactor) {

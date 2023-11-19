@@ -45,10 +45,9 @@ void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
       (1 - profile_smoothing_factor_) * prev_latency;
 }
 
-void LatencyEstimator::UpdateWithEvent(const SubgraphKey& key,
-                                       size_t event_handle) {
-  Update(key, latency_profiler_->GetDuration<std::chrono::microseconds>(
-                  event_handle));
+void LatencyEstimator::Update(const SubgraphKey& key, JobId job_id) {
+  Update(key,
+         latency_profiler_->GetDuration<std::chrono::microseconds>(job_id));
 }
 
 double LatencyEstimator::GetProfiled(const SubgraphKey& key) const {

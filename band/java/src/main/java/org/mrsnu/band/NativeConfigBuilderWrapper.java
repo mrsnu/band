@@ -18,11 +18,7 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
   public void addProfilePath(String profilePath) {
     addProfilePath(nativeHandle, profilePath);
   }
-
-  public void addFrequencyLatencySmoothingFactor(float smoothingFactor) {
-    addFrequencyLatencySmoothingFactor(nativeHandle, smoothingFactor);
-  }
-
+  
   public void addLatencySmoothingFactor(float smoothingFactor) {
     addLatencySmoothingFactor(nativeHandle, smoothingFactor);
   }
@@ -169,8 +165,6 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
   private native void addNumRuns(long configBuilderHandle, int numRuns);
 
   private native void addProfilePath(long configBuilderHandle, String profilePath);
-
-  private native void addFrequencyLatencySmoothingFactor(long configBuilderHandle, float smoothingFactor);
 
   private native void addLatencySmoothingFactor(long configBuilderHandle, float smoothingFactor);
 

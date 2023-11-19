@@ -29,24 +29,6 @@ class LatencyProfileConfigBuilder {
   float smoothing_factor_ = 0.1f;
 };
 
-class FrequencyLatencyProfileConfigBuilder {
-  friend class RuntimeConfigBuilder;
-
- public:
-  FrequencyLatencyProfileConfigBuilder& AddSmoothingFactor(
-      float smoothing_factor) {
-    smoothing_factor_ = smoothing_factor;
-    return *this;
-  }
-
-  FrequencyLatencyProfileConfig Build(
-      ErrorReporter* error_reporter = DefaultErrorReporter());
-  bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
-
- private:
-  float smoothing_factor_ = 0.1f;
-};
-
 class ThermalProfileConfigBuilder {
   friend class RuntimeConfigBuilder;
 
@@ -72,10 +54,6 @@ class ProfileConfigBuilder {
     latency_profile_builder_.AddSmoothingFactor(smoothing_factor);
     return *this;
   }
-  ProfileConfigBuilder& AddFrequencySmoothingFactor(float smoothing_factor) {
-    freq_latency_profile_builder_.AddSmoothingFactor(smoothing_factor);
-    return *this;
-  }
   ProfileConfigBuilder& AddThermalWindowSize(size_t window_size) {
     thermal_profile_builder_.AddWindowSize(window_size);
     return *this;
@@ -98,7 +76,6 @@ class ProfileConfigBuilder {
 
  private:
   LatencyProfileConfigBuilder latency_profile_builder_;
-  FrequencyLatencyProfileConfigBuilder freq_latency_profile_builder_;
   ThermalProfileConfigBuilder thermal_profile_builder_;
   std::string profile_path_ = "";
   size_t num_warmups_ = 1;
@@ -293,11 +270,6 @@ class RuntimeConfigBuilder {
   // Add ProfileConfig
   RuntimeConfigBuilder& AddLatencySmoothingFactor(float smoothing_factor) {
     profile_config_builder_.AddLatencySmoothingFactor(smoothing_factor);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddFrequencyLatencySmoothingFactor(
-      float smoothing_factor) {
-    profile_config_builder_.AddFrequencySmoothingFactor(smoothing_factor);
     return *this;
   }
   RuntimeConfigBuilder& AddThermalWindowSize(size_t window_size) {

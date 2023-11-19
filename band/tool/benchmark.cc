@@ -9,7 +9,6 @@
 #include "band/config_builder.h"
 #include "band/logger.h"
 #include "band/model.h"
-#include "band/profiler/latency_profiler.h"
 #include "band/tensor.h"
 #include "band/time.h"
 #include "benchmark.h"
@@ -114,7 +113,8 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
 
   json::AssignIfValid(benchmark_config_.execution_mode, root, "execution_mode");
 
-  std::set<std::string> supported_execution_modes{"periodic", "stream", "all", "cpu", "gpu", "dsp", "npu"};
+  std::set<std::string> supported_execution_modes{
+      "periodic", "stream", "all", "cpu", "gpu", "dsp", "npu"};
   if (supported_execution_modes.find(benchmark_config_.execution_mode) ==
       supported_execution_modes.end()) {
     std::cout << "Please check if argument execution mode "
@@ -478,40 +478,39 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
 }
 
 void Benchmark::RunPeriodic() {
-  for (int model_index = 0; model_index < model_contexts_.size();
-       model_index++) {
-    std::thread t(
-        [this](ModelContext* model_context, const size_t period_us) {
-          while (true) {
-            if (!model_context->PrepareInput().ok()) {
-              BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
-              continue;
-            }
+  std::thread t([this]() {
+    const size_t period_us =
+        benchmark_config_.model_configs[0].period_ms * 1000;
+    while (true) {
+      auto start = std::chrono::system_clock::now();
+      for (int model_index = 0; model_index < model_contexts_.size();
+           model_index++) {
+        ModelContext* model_context = model_contexts_[model_index];
+        if (!model_context->PrepareInput().ok()) {
+          BAND_LOG_PROD(BAND_LOG_WARNING, "Failed to prepare input");
+          continue;
+        }
 
-            size_t id = model_context->profiler.BeginEvent();
-            auto status = engine_->RequestSync(
-                model_context->model_ids, model_context->request_options,
-                model_context->model_request_inputs,
-                model_context->model_request_outputs);
-            model_context->profiler.EndEventWithStatus(id, status);
+        auto status = engine_->RequestSync(
+            model_context->model_ids, model_context->request_options,
+            model_context->model_request_inputs,
+            model_context->model_request_outputs);
 
-            if (kill_app_) return;
+        if (kill_app_) return;
 
-            size_t elapsed_us =
-                model_context->profiler.GetDuration<std::chrono::microseconds>(
-                    id);
+        auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                              std::chrono::system_clock::now() - start)
+                              .count();
+        if (elapsed_us < period_us) {
+          std::this_thread::sleep_for(
+              std::chrono::microseconds(period_us - elapsed_us));
+        }
+      }
+    }
+  });
 
-            if (elapsed_us < period_us) {
-              std::this_thread::sleep_for(
-                  std::chrono::microseconds(period_us - elapsed_us));
-            }
-          }
-        },
-        model_contexts_[model_index],
-        benchmark_config_.model_configs[model_index].period_ms * 1000);
+  t.detach();
 
-    t.detach();
-  }
   // wait for some time until we stop the benchmark
   std::this_thread::sleep_for(
       std::chrono::milliseconds(benchmark_config_.running_time_ms));
@@ -546,10 +545,8 @@ void Benchmark::RunStream() {
                      model_context->model_request_outputs.end());
     }
 
-    size_t id = global_profiler_.BeginEvent();
     auto status =
         engine_->RequestSync(model_ids, request_options, inputs, outputs);
-    global_profiler_.EndEventWithStatus(id, status);
     int64_t current = time::NowMicros();
     if (current - start >= run_duration_us) break;
   }
@@ -625,10 +622,10 @@ void Benchmark::RunDSP() {
         continue;
       }
       engine_->Sleep();
-      auto status = engine_->RequestSync(
-          model_context->model_ids, model_context->request_options,
-          model_context->model_request_inputs,
-          model_context->model_request_outputs);
+      auto status = engine_->RequestSync(model_context->model_ids,
+                                         model_context->request_options,
+                                         model_context->model_request_inputs,
+                                         model_context->model_request_outputs);
     }
   }
 
@@ -649,10 +646,10 @@ void Benchmark::RunNPU() {
         continue;
       }
       engine_->Sleep();
-      auto status = engine_->RequestSync(
-          model_context->model_ids, model_context->request_options,
-          model_context->model_request_inputs,
-          model_context->model_request_outputs);
+      auto status = engine_->RequestSync(model_context->model_ids,
+                                         model_context->request_options,
+                                         model_context->model_request_inputs,
+                                         model_context->model_request_outputs);
     }
   }
 
@@ -697,56 +694,6 @@ absl::Status Benchmark::LogResults() {
     PrintLine("Request period (ms)", model_config.period_ms, 2);
     PrintLine("SLO (us)", model_config.slo_us, 2);
     PrintLine("SLO scale", model_config.slo_scale, 2);
-  }
-
-  auto print_profiler = [](const std::string& prefix,
-                           const BenchmarkProfiler& profiler,
-                           const ModelConfig* model_config = nullptr) {
-    const double batch_size = model_config ? model_config->batch_size : 1;
-    double average_ms =
-        (profiler.GetAverageDuration<std::chrono::microseconds>() / batch_size);
-    double average_fps = 1000 / average_ms;
-
-    PrintHeader("Result - " + prefix);
-    PrintLine("# Processed requests", profiler.GetNumEvents() * batch_size, 1);
-    PrintLine("Avg. Latency (ms)", average_ms, 1);
-    PrintLine("Avg. FPS", average_fps, 1);
-    PrintLine("Total # requests", profiler.GetNumEvents() * batch_size, 1);
-    PrintLine("Total # canceled requests",
-              profiler.GetNumCanceledEvents() * batch_size, 1);
-
-    if (model_config && model_config->slo_us > 0) {
-      double slo_satisfactory_count = 0;
-      for (size_t i = 0; i < profiler.GetNumEvents(); i++) {
-        if (!profiler.IsEventCanceled(i) &&
-            profiler.GetDuration<std::chrono::microseconds>(i) <
-                model_config->slo_us) {
-          slo_satisfactory_count++;
-        }
-      }
-
-      double num_events =
-          profiler.GetNumEvents() - profiler.GetNumCanceledEvents();
-
-      PrintLine("SLO Satisfactory Rate (%)",
-                slo_satisfactory_count / num_events * 100, 1);
-    }
-  };
-
-  if (global_profiler_.GetNumEvents() > 0) {
-    print_profiler("Global", global_profiler_);
-  }
-
-  for (size_t model_index = 0; model_index < model_contexts_.size();
-       model_index++) {
-    auto& model_context = model_contexts_[model_index];
-    auto& model_config = benchmark_config_.model_configs[model_index];
-
-    if (model_context->profiler.GetNumEvents() > 0) {
-      print_profiler(
-          model_context->model.GetBackendModel(target_backend_)->GetPath(),
-          model_context->profiler, &model_config);
-    }
   }
 
   return absl::OkStatus();
