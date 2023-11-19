@@ -10,13 +10,12 @@
 
 namespace band {
 
-using FreqMap = std::map<DeviceFlag, double>;
+using FreqMap = std::map<FreqFlag, double>;
 
 class Frequency {
  public:
   explicit Frequency(DeviceConfig config);
-  double GetFrequency(DeviceFlag device_flag);
-  double GetRuntimeFrequency();
+  double GetFrequency(FreqFlag device_flag);
 
   absl::Status SetRuntimeFrequency(double freq);
   absl::Status SetCpuFrequency(double freq);
@@ -24,8 +23,7 @@ class Frequency {
 
   FreqMap GetAllFrequency();
 
-  std::map<DeviceFlag, std::vector<double>> GetAllAvailableFrequency();
-  std::vector<double> GetRuntimeAvailableFrequency();
+  std::map<FreqFlag, std::vector<double>> GetAllAvailableFrequency();
 
  private:
   DeviceConfig config_;
@@ -33,9 +31,8 @@ class Frequency {
   absl::Status SetFrequencyWithPath(const std::string& path, double freq,
                                     size_t multiplier);
 
-  std::string runtime_cpu_path_;
-  std::map<DeviceFlag, std::string> freq_device_map_;
-  std::map<DeviceFlag, std::vector<double>> freq_available_map_;
+  std::map<FreqFlag, std::string> freq_device_map_;
+  std::map<FreqFlag, std::vector<double>> freq_available_map_;
   std::vector<double> freq_runtime_available_;
 
   float cpu_freq_multiplier = 1.0E-6f;

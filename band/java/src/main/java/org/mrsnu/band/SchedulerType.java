@@ -6,8 +6,7 @@ public enum SchedulerType {
   FIXED_DEVICE_GLOBAL_QUEUE(2),
   HETEROGENEOUS_EARLIEST_FINISH_TIME(3),
   LEAST_SLACK_TIME_FRIST(4),
-  HETEROGENEOUS_EARLIEST_FINISH_TIME_RESERVED(5),
-  THERMAL(6);
+  THERMAL(5);
   
   private final int value;
   SchedulerType(int value) {

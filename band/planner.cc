@@ -60,14 +60,10 @@ absl::Status Planner::Init(const PlannerConfig& config) {
     } else if (schedulers[i] ==
                SchedulerType::kHeterogeneousEarliestFinishTime) {
       schedulers_.emplace_back(
-          new HEFTScheduler(engine_, schedule_window_size_, false));
+          new HEFTScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] == SchedulerType::kLeastSlackTimeFirst) {
       schedulers_.emplace_back(
           new LeastSlackFirstScheduler(engine_, schedule_window_size_));
-    } else if (schedulers[i] ==
-               SchedulerType::kHeterogeneousEarliestFinishTimeReserved) {
-      schedulers_.emplace_back(
-          new HEFTScheduler(engine_, schedule_window_size_, true));
     } else if (schedulers[i] == SchedulerType::kThermal) {
       schedulers_.emplace_back(new ThermalScheduler(engine_));
     } else if (schedulers[i] == SchedulerType::kDVFS) {
@@ -196,7 +192,6 @@ void Planner::EnqueueFinishedJob(Job& job) {
 }
 
 void Planner::PrepareReenqueue(Job& job) {
-  job.invoke_time = 0;
   job.end_time = 0;
   job.resolved_unit_subgraphs = 0;
   job.following_jobs.clear();
@@ -300,8 +295,6 @@ bool Planner::EnqueueToWorker(const std::vector<ScheduleAction>& actions) {
     } else if (IsSLOViolated(job)) {
       // no point in running this job anymore
       job.status = JobStatus::kSLOViolation;
-      // mark this as -1 to differentiate it from the default value, 0
-      job.invoke_time = -1;
       // mark the time of this decision (of early-dropping this job)
       job.end_time = time::NowMicros();
       // Set reschedule flag.

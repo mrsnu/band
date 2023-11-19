@@ -7,7 +7,7 @@ namespace band {
 
 class HEFTScheduler : public IScheduler {
  public:
-  explicit HEFTScheduler(IEngine& engine, int window_size, bool reserve);
+  explicit HEFTScheduler(IEngine& engine, int window_size);
 
   bool Schedule(JobQueue& requests) override;
   bool NeedFallbackSubgraphs() override { return true; }
@@ -15,9 +15,7 @@ class HEFTScheduler : public IScheduler {
 
  private:
   // job_id --> subgraph_key
-  std::map<JobId, SubgraphKey> reserved_;
   const int window_size_;
-  const bool reserve_;
 };
 
 }  // namespace band

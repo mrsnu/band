@@ -31,11 +31,11 @@ double DeviceQueueWorker::GetWaitingTime() {
     total += expected_latency;
     if (it == requests_.begin()) {
       double current_time = time::NowMicros();
-      double invoke_time = (*it).invoke_time;
-      if (invoke_time > 0 && current_time > invoke_time) {
-        double progress = (current_time - invoke_time) > expected_latency
+      double start_time = (*it).start_time;
+      if (start_time > 0 && current_time > start_time) {
+        double progress = (current_time - start_time) > expected_latency
                                ? expected_latency
-                               : (current_time - invoke_time);
+                               : (current_time - start_time);
         total -= progress;
       }
     }
@@ -166,7 +166,7 @@ void DeviceQueueWorker::TryWorkSteal() {
     // this must not be a reference,
     // otherwise the pop_back() below will invalidate it
     Job job = target_worker->GetDeviceRequests().back();
-    if (job.invoke_time > 0) {
+    if (job.start_time > 0) {
       // make sure the target worker hasn't started processing the job yet
       return;
     }

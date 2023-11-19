@@ -9,9 +9,8 @@
 #include "band/engine_interface.h"
 #ifdef BAND_SPLASH
 #include "band/estimator/thermal_estimator.h"
-#else
-#include "band/estimator/latency_estimator.h"
 #endif  // BAND_SPLASH
+#include "band/estimator/latency_estimator.h"
 #include "band/interface/tensor_view.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
@@ -408,7 +407,6 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
     Job job(model_ids[i]);
     job.require_callback = options[i].require_callback;
     job.slo_us = options[i].slo_us;
-    BAND_LOG_PROD(BAND_LOG_INFO, "Job is created");
 
     if (options[i].target_worker != -1) {
       Worker* target_worker = GetWorker(options[i].target_worker);
@@ -549,7 +547,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
 #ifdef BAND_SPLASH
   {
     thermal_estimator_ = std::make_unique<ThermalEstimator>(
-        this, thermal_profiler_, latency_profiler_, latency_estimator_.get());
+        this, thermal_profiler_.get(), latency_profiler_.get(),
+        latency_estimator_.get());
     auto status =
         thermal_estimator_->Init(config.profile_config.thermal_config);
     if (!status.ok()) {
@@ -613,7 +612,7 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     }
   }
 
-  SetMinFrequencies();
+  SetMaxFrequencies();
 
   return absl::OkStatus();
 }  // namespace band
@@ -857,10 +856,10 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     ThermalMap delta_thermal = ThermalMap();
 
 #ifdef BAND_SPLASH
-    ThermalKey thermal_key = std::make_pair(ThermalMap(), FreqMap(), key);
-    ThermalMap expected_thermal = thermal_estimator_->GetExpected(thermal_key);
+    ThermalMap expected_thermal = thermal_estimator_->GetExpected(
+        std::make_tuple(key, ThermalMap(), FreqMap()));
     for (auto& pair : expected_thermal) {
-      delta_thermal[pair.first] = pair.second - profiled_thermal[pair.first];
+      delta_thermal[pair.first] = pair.second - start_them[pair.first];
     }
 #endif  // BAND_SPLASH
 
@@ -874,16 +873,26 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
 }
 
 void Engine::UpdateWithJob(const SubgraphKey& key, Job& job) {
+  auto profiled_latency = latency_profiler_->GetInterval(job.job_id);
   auto profiled_thermal = thermal_profiler_->GetInterval(job.job_id);
+
+  job.start_time = std::chrono::duration_cast<std::chrono::microseconds>(
+                       profiled_latency.first.time_since_epoch())
+                       .count();
+  job.end_time = std::chrono::duration_cast<std::chrono::microseconds>(
+                     profiled_latency.second.time_since_epoch())
+                     .count();
+  job.profiled_execution_time = job.end_time - job.start_time;
+
   job.start_thermal = profiled_thermal.first.second;
   job.end_thermal = profiled_thermal.second.second;
-  Update(key, job.job_id);
-}
+  for (auto& pair : job.end_thermal) {
+    job.delta_thermal[pair.first] = pair.second - job.start_thermal[pair.first];
+  }
 
-void Engine::Update(const SubgraphKey& key, JobId job_id) {
-  latency_estimator_->Update(key, job_id);
+  latency_estimator_->Update(key, job);
 #ifdef BAND_SPLASH
-  thermal_estimator_->Update(key, job_id);
+  thermal_estimator_->Update(key, job);
 #endif  // BAND_SPLASH
 }
 
@@ -1098,6 +1107,10 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
       }
 
       ForEachSubgraph([&](const SubgraphKey& subgraph_key) -> void {
+        Job job(subgraph_key.GetModelId());
+        job.subgraph_key = subgraph_key;
+        job.job_id = job_id++;
+
         if (subgraph_key.GetWorkerId() != worker_id ||
             subgraph_key.GetModelId() != model_id) {
           return;
@@ -1114,15 +1127,15 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
 
         for (int i = 0; i < profile_config_.num_runs; i++) {
           // All event handles must be the same.
-          BeginEvent(job_id);
+          BeginEvent(job.job_id);
           if (!Invoke(subgraph_key).ok()) {
             BAND_LOG_INTERNAL(BAND_LOG_ERROR,
                               "Profiler failed to invoke largest subgraph of "
                               "model %d in worker %d during profiling.",
                               model_id, worker_id);
           }
-          EndEvent(job_id++);
-          Update(subgraph_key, job_id);
+          EndEvent(job.job_id);
+          UpdateWithJob(subgraph_key, job);
         }
       });
     });
@@ -1131,7 +1144,6 @@ absl::Status Engine::ProfileModel(ModelId model_id) {
     worker->Resume();
   }
 
-  SetMinFrequencies();
   return absl::OkStatus();
 }
 

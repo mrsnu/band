@@ -60,21 +60,20 @@ absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
   return absl::OkStatus();
 }
 
-void ThermalEstimator::Update(const ThermalKey& key, ThermalMap target_therm) {
+void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
   auto trace_handle = JobTracer::Get().BeginEvent("ThermalEstimator", "Update");
-  profile_database_[key] = therm_end;
+  Eigen::VectorXd target_therm =
+      ConvertTMapToEigenVector<ThermalMap>(job.end_thermal, num_sensors_);
+  FreqMap freq;
+  freq[FreqFlag::kCPU] = job.cpu_frequency;
+  freq[FreqFlag::kGPU] = job.gpu_frequency;
+  freq[FreqFlag::kRuntime] = job.runtime_frequency;
 
-  auto therm_start = std::get<0>(key);
-  auto freq_start = std::get<1>(key);
-  auto subgraph_key = std::get<2>(key);
-
-  Eigen::VectorXd new_therm_vec =
-      ConvertTMapToEigenVector<ThermalMap>(therm_end, num_sensors);
   Eigen::VectorXd feature =
-      GetFeatureVector(therm_start, freq_start, subgraph_key.GetWorkerId(),
-                       latency_estimator_->GetExpected(subgraph_key) / 1000.f);
+      GetFeatureVector(job.start_thermal, freq, job.subgraph_key.GetWorkerId(),
+                       job.profiled_execution_time / 1000.f);
 
-  features_.push_back({feature, new_therm_vec});
+  features_.push_back({feature, target_therm});
   if (features_.size() > window_size_) {
     features_.pop_front();
   }
@@ -100,15 +99,6 @@ Eigen::MatrixXd ThermalEstimator::SolveLinear(Eigen::MatrixXd& x,
   return (x.transpose() * x).ldlt().solve(x.transpose() * y);
 }
 
-void ThermalEstimator::Update(const SubgraphKey& key, size_t event_handle) {
-  auto therm_interval = thermal_profiler_->GetInterval(event_handle);
-  auto latency =
-      latency_profiler_->GetDuration<std::chrono::microseconds>(event_handle) /
-      1000.f;
-  Update(key, therm_interval.first.second, therm_interval.second.second,
-         latency);
-}
-
 ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
   return profile_database_.at(key);
 }
@@ -116,9 +106,9 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 ThermalMap ThermalEstimator::GetExpected(const ThermalKey& thermal_key) const {
   auto trace_handle =
       JobTracer::Get().BeginEvent("ThermalEstimator", "GetExpected");
-  auto cur_therm_map = std::get<0>(thermal_key);
-  auto cur_freq_map = std::get<1>(thermal_key);
-  auto key = std::get<2>(thermal_key);
+  auto key = std::get<0>(thermal_key);
+  auto cur_therm_map = std::get<1>(thermal_key);
+  auto cur_freq_map = std::get<2>(thermal_key);
 
   profile_database_[key] = cur_therm_map;
 
@@ -175,7 +165,7 @@ Eigen::MatrixXd ThermalEstimator::JsonToEigenMatrix(Json::Value json) {
 Eigen::VectorXd ThermalEstimator::GetFeatureVector(const ThermalMap& therm,
                                                    const FreqMap freq,
                                                    size_t worker_id,
-                                                   double latency) {
+                                                   double latency) const {
   Eigen::VectorXd feature(feature_size_);
   Eigen::VectorXd therm_vec =
       ConvertTMapToEigenVector<ThermalMap>(therm, num_sensors_);

@@ -31,14 +31,6 @@ class LatencyProfiler : public Profiler {
     return result;
   }
 
-  template <typename T>
-  double GetDuration(JobId job_id) {
-    auto interv = GetInterval(job_id);
-    double duration =
-        std::chrono::duration_cast<T>(interv.second - interv.first).count();
-    return std::max<double>(duration, 0);
-  }
-
  private:
   size_t count_ = 0;
 

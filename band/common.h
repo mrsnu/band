@@ -57,7 +57,6 @@ enum class SchedulerType : size_t {
   kFixedWorkerGlobalQueue,
   kHeterogeneousEarliestFinishTime,
   kLeastSlackTimeFirst,
-  kHeterogeneousEarliestFinishTimeReserved,
   kThermal,
   kDVFS,
 };
@@ -123,17 +122,25 @@ enum class BufferOrientation : size_t {
 
 enum class DeviceFlag : size_t {
   kCPU = 0,
-  kGPU = 1,
-  kDSP = 2,
-  kNPU = 3,
+  kGPU,
+  kDSP,
+  kNPU,
 };
 
 enum class SensorFlag : size_t {
   kCPU = 0,
-  kGPU = 1,
-  kDSP = 2,
-  kNPU = 3,
-  kTarget = 4,
+  kGPU,
+  kDSP,
+  kNPU,
+  kTarget,
+};
+
+enum class FreqFlag : size_t {
+  kCPU = 0,
+  kGPU,
+  kDSP,
+  kNPU,
+  kRuntime
 };
 
 enum class QuantizationType : size_t {
@@ -300,14 +307,15 @@ struct Job {
 
   // For record (Valid after execution)
   int64_t enqueue_time = 0;
-  int64_t invoke_time = 0;
+  int64_t start_time = 0;
   int64_t end_time = 0;
+  int64_t profiled_execution_time = 0;
+  int64_t profiled_latency = 0;
 
   // Profiled invoke execution time
-  double profiled_execution_time = 0;
-  double profiled_latency = 0;
   std::map<SensorFlag, double> start_thermal;
   std::map<SensorFlag, double> end_thermal;
+  std::map<SensorFlag, double> delta_thermal;
 
   // Expected
   double expected_execution_time = 0;

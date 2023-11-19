@@ -15,8 +15,6 @@ const char* BandSchedulerToString(BandSchedulerType type) {
       return "heterogeneous_earliest_finish_time";
     case kBandLeastSlackTimeFirst:
       return "least_slack_time_first";
-    case kBandHeterogeneousEarliestFinishTimeReserved:
-      return "heterogeneous_earliest_finish_time_reserved";
     default: {
     }
   }

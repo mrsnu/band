@@ -127,8 +127,7 @@ const ErrorReporter* Worker::GetErrorReporter() const {
 }
 
 bool Worker::IsValid(Job& job) {
-  return job.model_id >= 0 && job.subgraph_key.IsValid() &&
-         job.enqueue_time > 0 && job.invoke_time == 0 && job.end_time == 0;
+  return job.model_id >= 0 && job.subgraph_key.IsValid();
 }
 
 absl::Status Worker::TryUpdateWorkerThread() {
@@ -177,14 +176,11 @@ void Worker::Work() {
     if (!current_job || !IsValid(*current_job)) {
       BAND_REPORT_ERROR(GetErrorReporter(),
                         "%s worker spotted an invalid job (model id %d, "
-                        "subgraph valid %d (%d, %d), "
-                        "enqueue time %d, invoke time %d, end time %d)",
+                        "subgraph valid %d (%d, %d), ",
                         ToString(device_flag_), current_job->model_id,
                         current_job->subgraph_key.IsValid(),
                         current_job->subgraph_key.GetModelId(),
-                        current_job->subgraph_key.GetWorkerId(),
-                        current_job->enqueue_time, current_job->invoke_time,
-                        current_job->end_time);
+                        current_job->subgraph_key.GetWorkerId());
       break;
     }
 
@@ -230,18 +226,11 @@ void Worker::Work() {
     }
 
     if (engine_->TryCopyInputTensors(*current_job).ok()) {
-      lock.lock();
-      current_job->invoke_time = time::NowMicros();
       engine_->BeginEvent(current_job->job_id);
-      lock.unlock();
 
       absl::Status status = engine_->Invoke(subgraph_key);
       if (status.ok()) {
-        // end_time is never read/written by any other thread as long as
-        // is_busy == true, so it's safe to update it w/o grabbing the lock
-        current_job->end_time = time::NowMicros();
         engine_->EndEvent(current_job->job_id);
-        engine_->UpdateWithJob(subgraph_key, *current_job);
         if (current_job->following_jobs.size() != 0) {
           engine_->EnqueueBatch(current_job->following_jobs, true);
         }
@@ -251,7 +240,7 @@ void Worker::Work() {
             BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
           }
         }
-        current_job->end_time = time::NowMicros();
+        engine_->UpdateWithJob(subgraph_key, *current_job);
         current_job->status = JobStatus::kSuccess;
       } else if (!status.ok()) {
         HandleDeviceError(*current_job);

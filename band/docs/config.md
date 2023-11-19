@@ -11,7 +11,6 @@ Each configuration field is optional or required. If a field is optional, then i
   - `kBandFixedDeviceFixedWorkerGlobalQueue`: 
   - `SchedulerType::kHeterogeneousEarliestFinishTime`: 
   - `SchedulerType::kLeastSlackTimeFirst`: 
-  - `SchedulerType::kHeterogeneousEarliestFinishTimeReserved`
 
 - `CPUMaskFlag`: 
    - `CPUMaskFlag::kAll`

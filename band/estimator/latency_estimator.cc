@@ -31,7 +31,8 @@ absl::Status LatencyEstimator::Init(const LatencyProfileConfig& config) {
   return absl::OkStatus();
 }
 
-void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
+void LatencyEstimator::Update(const SubgraphKey& key, Job& job) {
+  double latency = job.profiled_execution_time;
   auto it = profile_database_.find(key);
   if (it == profile_database_.end()) {
     BAND_LOG_INTERNAL(BAND_LOG_INFO, "Initial profiled latency %s: %f.",
@@ -40,14 +41,10 @@ void LatencyEstimator::Update(const SubgraphKey& key, double latency) {
     return;
   }
   double prev_latency = it->second.moving_averaged;
-  profile_database_[key].moving_averaged =
-      profile_smoothing_factor_ * latency +
-      (1 - profile_smoothing_factor_) * prev_latency;
-}
-
-void LatencyEstimator::Update(const SubgraphKey& key, JobId job_id) {
-  Update(key,
-         latency_profiler_->GetDuration<std::chrono::microseconds>(job_id));
+  job.expected_execution_time = prev_latency;
+  
+  profile_database_[key].moving_averaged = profile_smoothing_factor_ * latency +
+                            (1 - profile_smoothing_factor_) * prev_latency;
 }
 
 double LatencyEstimator::GetProfiled(const SubgraphKey& key) const {

@@ -31,7 +31,6 @@ typedef enum BandSchedulerType {
   kBandFixedWorkerGlobalQueue,
   kBandHeterogeneousEarliestFinishTime,
   kBandLeastSlackTimeFirst,
-  kBandHeterogeneousEarliestFinishTimeReserved,
   kBandNumSchedulerType
 } BandSchedulerType;
 

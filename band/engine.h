@@ -188,7 +188,6 @@ class Engine : public IEngine {
 
   /* estimators */
   void UpdateWithJob(const SubgraphKey&, Job& job) override;
-  void Update(const SubgraphKey&, JobId job_id);
 
   /* planner */
   void Trigger() override;

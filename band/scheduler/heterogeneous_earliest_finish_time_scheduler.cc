@@ -5,8 +5,8 @@
 #include "band/logger.h"
 
 namespace band {
-HEFTScheduler::HEFTScheduler(IEngine& engine, int window_size, bool reserve)
-    : IScheduler(engine), window_size_(window_size), reserve_(reserve) {}
+HEFTScheduler::HEFTScheduler(IEngine& engine, int window_size)
+    : IScheduler(engine), window_size_(window_size) {}
 
 bool HEFTScheduler::Schedule(JobQueue& requests) {
   bool success = true;
@@ -54,22 +54,12 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
 
         searched_jobs.insert(job_to_search);
 
-        // update waiting_time for all future jobs in reserved_
-        WorkerWaitingTime reserved_time(waiting_time);
-        for (auto job_subgraph_key : reserved_) {
-          if (job_subgraph_key.first == job.job_id) {
-            continue;
-          }
-
-          reserved_time[job_subgraph_key.second.GetWorkerId()] +=
-              engine_.GetExpected(job_subgraph_key.second);
-        }
-
         double expected_lat;
         std::pair<std::vector<SubgraphKey>, double> best_subgraph =
             engine_.GetSubgraphWithMinCost(
-                job, reserved_time,
-                [&expected_lat](double lat, std::map<SensorFlag, double>) -> double {
+                job, waiting_time,
+                [&expected_lat](double lat,
+                                std::map<SensorFlag, double>) -> double {
                   expected_lat = lat;
                   return lat;
                 });
@@ -115,15 +105,6 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     job.expected_latency = largest_expected_latency;
 
     success &= engine_.EnqueueToWorker({job, target_subgraph_key});
-
-    if (reserve_) {
-      // add next job to reserved_, if one exists
-      if (target_subgraph_key_next != SubgraphKey()) {
-        reserved_[job.job_id] = target_subgraph_key_next;
-      } else {
-        reserved_.erase(job.job_id);
-      }
-    }
   }
 
   return success;

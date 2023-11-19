@@ -20,7 +20,7 @@
 
 namespace band {
 
-using ThermalKey = std::tuple<ThermalMap, FreqMap, SubgraphKey>;
+using ThermalKey = std::tuple<SubgraphKey, ThermalMap, FreqMap>;
 
 class ThermalEstimator
     : public IEstimator<ThermalKey, ThermalInterval, ThermalMap> {
@@ -34,7 +34,8 @@ class ThermalEstimator
         latency_profiler_(latency_profiler),
         latency_estimator_(latency_estimator) {}
   absl::Status Init(const ThermalProfileConfig& config);
-  void Update(const ThermalKey& key, ThermalMap target_therm);
+
+  void Update(const SubgraphKey& key, Job& job) override;
 
   ThermalMap GetProfiled(const SubgraphKey& key) const override;
   ThermalMap GetExpected(const ThermalKey& thermal_key) const override;
@@ -50,7 +51,7 @@ class ThermalEstimator
 
  private:
   Eigen::VectorXd GetFeatureVector(const ThermalMap& therm, const FreqMap freq,
-                                 size_t worker_id, double latency);
+                                 size_t worker_id, double latency) const;
 
   ThermalProfiler* thermal_profiler_;
   LatencyProfiler* latency_profiler_;
@@ -64,7 +65,7 @@ class ThermalEstimator
   mutable std::map<SubgraphKey, ThermalMap> profile_database_;
 
   const size_t num_sensors_ = EnumLength<SensorFlag>();
-  const size_t num_devices_ = EnumLength<DeviceFlag>();
+  const size_t num_devices_ = EnumLength<FreqFlag>();
   const size_t feature_size_ = num_sensors_ + 3 * num_devices_;
 };
 
