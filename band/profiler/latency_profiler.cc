@@ -10,6 +10,7 @@ void LatencyProfiler::BeginEvent(JobId job_id) {
 }
 
 void LatencyProfiler::EndEvent(JobId job_id) {
+  std::lock_guard<std::mutex> lock(mtx_);
   timeline_[job_id].second = std::chrono::system_clock::now();
 }
 

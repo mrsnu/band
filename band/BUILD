@@ -291,6 +291,7 @@ band_cc_library(
     deps = [
         ":common",
         ":time",
+        ":job_tracer",
     ],
 )
 

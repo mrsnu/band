@@ -21,6 +21,7 @@ void ThermalProfiler::BeginEvent(JobId job_id) {
 void ThermalProfiler::EndEvent(JobId job_id) {
   ThermalInfo info = {std::chrono::system_clock::now(),
                       thermal_->GetAllThermal()};
+  std::lock_guard<std::mutex> lock(mtx_);
   timeline_[job_id].second = info;
 }
 

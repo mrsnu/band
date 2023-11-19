@@ -192,7 +192,6 @@ void Worker::Work() {
                     worker_id_);
     }
 
-    BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
     BAND_LOG_PROD(BAND_LOG_INFO, "Worker %d set frequency", worker_id_);
     BAND_LOG_PROD(BAND_LOG_INFO, "  current_job->job_id: %d",
                   current_job->job_id);
@@ -225,44 +224,44 @@ void Worker::Work() {
       }
     }
 
-    if (engine_->TryCopyInputTensors(*current_job).ok()) {
-      engine_->BeginEvent(current_job->job_id);
+    BAND_TRACER_BEGIN_SUBGRAPH(*current_job);
+    engine_->BeginEvent(current_job->job_id);
+    {
+      if (engine_->TryCopyInputTensors(*current_job).ok()) {
+        lock.lock();
+        current_job->invoke_time = time::NowMicros();
+        lock.unlock();
 
-      absl::Status status = engine_->Invoke(subgraph_key);
-      if (status.ok()) {
-        engine_->EndEvent(current_job->job_id);
-        if (current_job->following_jobs.size() != 0) {
-          engine_->EnqueueBatch(current_job->following_jobs, true);
-        }
-        {
-          auto status = engine_->TryCopyOutputTensors(*current_job);
-          if (!status.ok()) {
-            BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+        absl::Status status = engine_->Invoke(subgraph_key);
+        if (status.ok()) {
+          if (current_job->following_jobs.size() != 0) {
+            engine_->EnqueueBatch(current_job->following_jobs, true);
           }
+          {
+            auto status = engine_->TryCopyOutputTensors(*current_job);
+            if (!status.ok()) {
+              BAND_LOG_PROD(BAND_LOG_WARNING, "%s", status.message());
+            }
+          }
+          current_job->status = JobStatus::kSuccess;
+          engine_->EndEvent(current_job->job_id);
+          engine_->UpdateWithJob(subgraph_key, *current_job);
+        } else if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to invoke job %d",
+                        worker_id_, current_job->job_id);
+          HandleDeviceError(*current_job);
+          engine_->Trigger();
+          current_job->status = JobStatus::kInvokeFailure;
+          engine_->EndEvent(current_job->job_id);
+          continue;
         }
-        engine_->UpdateWithJob(subgraph_key, *current_job);
-        current_job->status = JobStatus::kSuccess;
-      } else if (!status.ok()) {
-        HandleDeviceError(*current_job);
-        engine_->Trigger();
-        BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to invoke job %d",
-                      worker_id_, current_job->job_id);
-        continue;
       } else {
-        // end_time is never read/written by any other thread as long as
-        // !requests_.empty(), so it's safe to update it w/o grabbing the lock
-        current_job->end_time = time::NowMicros();
-        // TODO #21: Handle errors in multi-thread environment
-        current_job->status = JobStatus::kInvokeFailure;
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to copy input",
+                      worker_id_);
+        current_job->status = JobStatus::kInputCopyFailure;
       }
-    } else {
-      BAND_LOG_PROD(BAND_LOG_ERROR, "Worker %d failed to copy input",
-                    worker_id_);
-      // TODO #21: Handle errors in multi-thread environment
-      current_job->end_time = time::NowMicros();
-      current_job->status = JobStatus::kInputCopyFailure;
+      engine_->EnqueueFinishedJob(*current_job);
     }
-    engine_->EnqueueFinishedJob(*current_job);
     BAND_TRACER_END_SUBGRAPH(*current_job);
 
     lock.lock();

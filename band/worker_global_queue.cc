@@ -55,8 +55,8 @@ void GlobalQueueWorker::HandleDeviceError(Job& current_job) {
 //
 // The remaining time is calculated based on the profiled model time of the
 // Job, the timestamp of when this worker started processing the Job
-// (current_job_.start_time), and the current timestamp.
-// In case more time has passed (since start_time) than the profiled model
+// (current_job_.invoke_time), and the current timestamp.
+// In case more time has passed (since invoke_time) than the profiled model
 // time, this function returns 0, as it is unable to predict when the current
 // job will finish.
 // This function can also return 0 if the worker is not working on any job at
@@ -74,7 +74,7 @@ double GlobalQueueWorker::GetWaitingTime() {
     return 0;
   }
 
-  double start_time = current_job_.start_time;
+  double invoke_time = current_job_.invoke_time;
 
   // if this thread is the same thread that updates is_busy_ (false --> true)
   // and there are no other threads that call this function, then it is
@@ -89,13 +89,13 @@ double GlobalQueueWorker::GetWaitingTime() {
 
   double profiled_latency = engine_->GetExpected(current_job_.subgraph_key);
 
-  if (start_time == 0) {
+  if (invoke_time == 0) {
     // the worker has not started on processing the job yet
     return profiled_latency;
   }
 
   double current_time = time::NowMicros();
-  double progress = current_time - start_time;
+  double progress = current_time - invoke_time;
   double result = profiled_latency - progress;
   return result > 0 ? result : 0;
 }

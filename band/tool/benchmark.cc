@@ -479,7 +479,7 @@ absl::Status Benchmark::Initialize(int argc, const char** argv) {
 
 void Benchmark::RunPeriodic() {
   std::thread t([this]() {
-    const size_t period_us =
+    const int64_t period_us =
         benchmark_config_.model_configs[0].period_ms * 1000;
     while (true) {
       auto start = std::chrono::system_clock::now();
@@ -495,16 +495,14 @@ void Benchmark::RunPeriodic() {
             model_context->model_ids, model_context->request_options,
             model_context->model_request_inputs,
             model_context->model_request_outputs);
-
-        if (kill_app_) return;
-
-        auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
-                              std::chrono::system_clock::now() - start)
-                              .count();
-        if (elapsed_us < period_us) {
-          std::this_thread::sleep_for(
-              std::chrono::microseconds(period_us - elapsed_us));
-        }
+      }
+      if (kill_app_) return;
+      auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::system_clock::now() - start)
+                            .count();
+      if (elapsed_us < period_us) {
+        std::this_thread::sleep_for(
+            std::chrono::microseconds(period_us - elapsed_us));
       }
     }
   });

@@ -2,13 +2,17 @@
 
 #include <unordered_set>
 
+#include "band/job_tracer.h"
 #include "band/logger.h"
 
 namespace band {
 HEFTScheduler::HEFTScheduler(IEngine& engine, int window_size)
-    : IScheduler(engine), window_size_(window_size) {}
+    : IScheduler(engine), window_size_(window_size) {
+  JobTracer::Get().AddStream("HEFTScheduler");
+}
 
 bool HEFTScheduler::Schedule(JobQueue& requests) {
+  auto trace_handle = JobTracer::Get().BeginEvent("HEFTScheduler", "Schedule");
   bool success = true;
   int num_jobs = std::min(window_size_, (int)requests.size());
   while (num_jobs > 0) {
@@ -24,9 +28,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     WorkerWaitingTime waiting_time = engine_.GetWorkerWaitingTime();
     std::set<JobId> jobs_to_yield;
 
-    // basically the same as ShortestExpectedLatencyScheduler
     double largest_min_cost = -1;
-    double largest_expected_latency = -1;
     int target_job_index;
     SubgraphKey target_subgraph_key;
     SubgraphKey target_subgraph_key_next;
@@ -54,19 +56,18 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
 
         searched_jobs.insert(job_to_search);
 
-        double expected_lat;
+        double expected_cost;
         std::pair<std::vector<SubgraphKey>, double> best_subgraph =
             engine_.GetSubgraphWithMinCost(
                 job, waiting_time,
-                [&expected_lat](double lat,
+                [&expected_cost](double lat,
                                 std::map<SensorFlag, double>) -> double {
-                  expected_lat = lat;
+                  expected_cost = lat;
                   return lat;
                 });
 
         if (largest_min_cost < best_subgraph.second) {
           largest_min_cost = best_subgraph.second;
-          largest_expected_latency = expected_lat;
           target_subgraph_key = best_subgraph.first.front();
           target_job_index = it - requests.begin();
           if (best_subgraph.first.size() > 1) {
@@ -102,11 +103,15 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     requests.erase(requests_it);
     num_jobs--;
 
-    job.expected_latency = largest_expected_latency;
+    if (engine_.IsBegin(target_subgraph_key)) {
+      // only set these fields if this is the first subgraph of this model
+      job.cost = largest_min_cost;
+    }
 
     success &= engine_.EnqueueToWorker({job, target_subgraph_key});
   }
 
+  JobTracer::Get().EndEvent("HEFTScheduler", trace_handle);
   return success;
 }
 }  // namespace band

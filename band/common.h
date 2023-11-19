@@ -305,10 +305,14 @@ struct Job {
   std::string model_fname;
   bool require_callback = true;
 
+  // Cost
+  double cost = 0;
+
   // For record (Valid after execution)
   int64_t enqueue_time = 0;
   int64_t start_time = 0;
   int64_t end_time = 0;
+  int64_t invoke_time = 0;
   int64_t profiled_execution_time = 0;
   int64_t profiled_latency = 0;
 
