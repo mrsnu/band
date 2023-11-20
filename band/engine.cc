@@ -712,6 +712,7 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
 std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
     ModelId model_id, int start_unit_idx,
     const WorkerWaitingTime& worker_waiting, const CostFunc cost) const {
+  BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostWithUnitSubgraph);
   const ModelSpec* model_spec = GetModelSpec(model_id);
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
@@ -845,6 +846,7 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     const std::vector<SubgraphKey>& subgraph_keys, double start_time,
     ThermalMap start_therm, FreqMap freq,
     const WorkerWaitingTime& worker_waiting, const CostFunc cost_func) const {
+  BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostSubgraphKey);
   double min_cost = std::numeric_limits<double>::max();
   SubgraphKey min_key = {};
 

@@ -2,12 +2,14 @@
 
 #include <unordered_set>
 
+#include "band/job_tracer.h"
 #include "band/logger.h"
 #include "band/time.h"
 
 namespace band {
 
 bool ThermalScheduler::Schedule(JobQueue& requests) {
+  BAND_TRACER_SCOPED_THREAD_EVENT(Schedule);
   bool success = true;
   int num_requests = requests.size();
 

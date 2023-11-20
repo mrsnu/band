@@ -101,6 +101,7 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 }
 
 ThermalMap ThermalEstimator::GetExpected(const ThermalKey& thermal_key) const {
+  BAND_TRACER_SCOPED_THREAD_EVENT(GetExpected);
   auto key = std::get<0>(thermal_key);
   auto cur_therm_map = std::get<1>(thermal_key);
   auto cur_freq_map = std::get<2>(thermal_key);
