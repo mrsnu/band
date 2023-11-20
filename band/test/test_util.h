@@ -33,25 +33,21 @@ struct MockEngineBase : public IEngine {
   using WorkerWaiting = const std::map<WorkerId, double>&;
   using MinCostWithUnitSubgraph = std::pair<std::vector<SubgraphKey>, double>;
   using SubgraphWithMinCost = std::pair<std::vector<SubgraphKey>, double>;
-  
-  MOCK_CONST_METHOD4(
-      GetMinCostWithUnitSubgraph,
-      MinCostWithUnitSubgraph(
-          ModelId, int, WorkerWaiting,
-          std::function<double(double, std::map<SensorFlag, double>,
-                               std::map<SensorFlag, double>)>));
-  MOCK_CONST_METHOD3(
-      GetSubgraphWithMinCost,
-      SubgraphWithMinCost(
-          const Job&, WorkerWaiting,
-          std::function<double(double, std::map<SensorFlag, double>,
-                               std::map<SensorFlag, double>)>));
+
+  MOCK_CONST_METHOD4(GetMinCostWithUnitSubgraph,
+                     MinCostWithUnitSubgraph(ModelId, int, WorkerWaiting,
+                                             const CostFunc));
+
+  MOCK_CONST_METHOD3(GetSubgraphWithMinCost,
+                     SubgraphWithMinCost(const Job&, WorkerWaiting,
+                                         const CostFunc));
   MOCK_CONST_METHOD3(GetSubgraphIdxSatisfyingSLO,
                      SubgraphKey(const Job&, const WorkerWaitingTime&,
                                  const std::set<WorkerId>&));
 
   /* estimators */
   MOCK_METHOD2(Update, void(const SubgraphKey&, int64_t));
+  MOCK_METHOD2(UpdateWithJob, void(const SubgraphKey&, Job&));
   MOCK_CONST_METHOD1(GetProfiled, double(const SubgraphKey&));
   MOCK_CONST_METHOD1(GetExpected, double(const SubgraphKey&));
 
@@ -65,9 +61,8 @@ struct MockEngineBase : public IEngine {
   MOCK_METHOD2(EnqueueBatch, std::vector<JobId>(std::vector<Job>, bool));
   MOCK_METHOD1(PrepareReenqueue, void(Job&));
   MOCK_METHOD1(EnqueueFinishedJob, void(Job&));
-  MOCK_METHOD2(EnqueueToWorker, bool(const ScheduleAction&, const int));
-  MOCK_METHOD2(EnqueueToWorkerBatch, bool(const std::vector<ScheduleAction>&,
-                                          const std::vector<int>));
+  MOCK_METHOD1(EnqueueToWorker, bool(const ScheduleAction&));
+  MOCK_METHOD1(EnqueueToWorkerBatch, bool(const std::vector<ScheduleAction>&));
 
   /* getters */
   ErrorReporter* GetErrorReporter() { return DefaultErrorReporter(); }
@@ -76,9 +71,18 @@ struct MockEngineBase : public IEngine {
   MOCK_CONST_METHOD0(GetNumWorkers, size_t());
   MOCK_CONST_METHOD1(GetWorkerDevice, DeviceFlag(WorkerId));
 
+  MOCK_CONST_METHOD0(GetFrequency, Frequency*());
+  MOCK_CONST_METHOD0(GetThermal, Thermal*());
+  MOCK_METHOD0(SetMinFrequencies, void());
+  MOCK_METHOD0(SetMaxFrequencies, void());
+  MOCK_METHOD0(Sleep, void());
+
   /* tensor communication */
   MOCK_METHOD1(TryCopyInputTensors, absl::Status(const Job&));
   MOCK_METHOD1(TryCopyOutputTensors, absl::Status(const Job&));
+
+  MOCK_METHOD1(BeginEvent, void(JobId));
+  MOCK_METHOD1(EndEvent, void(JobId));
 };
 
 }  // namespace test
