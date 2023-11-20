@@ -9,7 +9,11 @@
 namespace band {
 
 bool ThermalScheduler::Schedule(JobQueue& requests) {
+<<<<<<< HEAD
   // BAND_TRACER_SCOPED_THREAD_EVENT(Schedule);
+=======
+  BAND_TRACER_SCOPED_THREAD_EVENT(Schedule);
+>>>>>>> 7c3858e6... (temporal) Add scoped tracing
   bool success = true;
   int num_requests = requests.size();
 

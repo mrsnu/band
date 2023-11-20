@@ -36,14 +36,12 @@ class JobTracer : public chrome_tracer::ChromeStreamTracer {
 };
 
 namespace internal {
-
 struct ScopedThreadEvent {
   ScopedThreadEvent(std::string event)
       : handle_(JobTracer::Get().BeginThreadEvent(event)) {}
   ~ScopedThreadEvent() { JobTracer::Get().EndThreadEvent(handle_); }
   int32_t handle_;
 };
-
 }  // namespace internal
 
 }  // namespace band

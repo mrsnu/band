@@ -155,10 +155,27 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 }
 
 ThermalMap ThermalEstimator::GetExpected(const ThermalKey& thermal_key) const {
+<<<<<<< HEAD
   // auto expected_therm =
   //     ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
   // return expected_therm;
   return {};
+=======
+  BAND_TRACER_SCOPED_THREAD_EVENT(GetExpected);
+  auto key = std::get<0>(thermal_key);
+  auto cur_therm_map = std::get<1>(thermal_key);
+  auto cur_freq_map = std::get<2>(thermal_key);
+
+  profile_database_[key] = cur_therm_map;
+
+  Eigen::VectorXd feature =
+      GetFeatureVector(cur_therm_map, cur_freq_map, key.GetWorkerId(),
+                       latency_estimator_->GetExpected(key) / 1000.f);
+
+  auto expected_therm =
+      ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
+  return expected_therm;
+>>>>>>> 7c3858e6... (temporal) Add scoped tracing
 }
 
 absl::Status ThermalEstimator::LoadModel(std::string profile_path) {
