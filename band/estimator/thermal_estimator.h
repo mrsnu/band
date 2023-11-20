@@ -12,7 +12,6 @@
 #include "band/device/frequency.h"
 #include "band/device/thermal.h"
 #include "band/estimator/estimator_interface.h"
-#include "band/profiler/latency_profiler.h"
 #include "band/profiler/thermal_profiler.h"
 #include "json/json.h"
 #include "third_party/eigen3/Eigen/Cholesky"
@@ -26,13 +25,9 @@ class ThermalEstimator
     : public IEstimator<ThermalKey, ThermalInterval, ThermalMap> {
  public:
   explicit ThermalEstimator(
-      IEngine* engine, ThermalProfiler* thermal_profiler,
-      LatencyProfiler* latency_profiler,
+      IEngine* engine,
       IEstimator<SubgraphKey, double, double>* latency_estimator)
-      : IEstimator(engine),
-        thermal_profiler_(thermal_profiler),
-        latency_profiler_(latency_profiler),
-        latency_estimator_(latency_estimator) {}
+      : IEstimator(engine), latency_estimator_(latency_estimator) {}
   absl::Status Init(const ThermalProfileConfig& config);
 
   void Update(const SubgraphKey& key, Job& job) override;
@@ -43,25 +38,29 @@ class ThermalEstimator
   absl::Status LoadModel(std::string profile_path) override;
   absl::Status DumpModel(std::string profile_path) override;
 
-  Eigen::MatrixXd SolveLinear(Eigen::MatrixXd& x, Eigen::MatrixXd& y);
+  void UpdateModel();
 
   Json::Value EigenMatrixToJson(Eigen::MatrixXd& matrix);
 
   Eigen::MatrixXd JsonToEigenMatrix(Json::Value json);
 
  private:
-  Eigen::VectorXd GetFeatureVector(const ThermalMap& therm, const FreqMap freq,
-                                 size_t worker_id, double latency) const;
+  Eigen::VectorXd GetFeatureVector(const Eigen::VectorXd& therm_vec,
+                                   const Eigen::VectorXd& freq_vec,
+                                   const Eigen::VectorXd& lat_vec,
+                                   size_t worker_id, double latency) const;
 
-  ThermalProfiler* thermal_profiler_;
-  LatencyProfiler* latency_profiler_;
   IEstimator<SubgraphKey, double, double>* latency_estimator_;
 
   size_t num_resources_ = 0;
   size_t window_size_;
 
   Eigen::MatrixXd model_;
-  std::deque<std::pair<Eigen::VectorXd, Eigen::VectorXd>> features_;
+  // WorkerId, start_time, end_time, start_therm, end_therm, freq
+  std::deque<std::tuple<WorkerId, int64_t, int64_t, Eigen::VectorXd,
+                        Eigen::VectorXd, Eigen::VectorXd>>
+      features_;
+
   mutable std::map<SubgraphKey, ThermalMap> profile_database_;
 
   const size_t num_sensors_ = EnumLength<SensorFlag>();

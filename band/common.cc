@@ -521,15 +521,6 @@ std::string Job::ToJson() const {
     end_therm_string.pop_back();
   }
 
-  std::string delta_therm_string = "";
-  for (auto& pair : delta_thermal) {
-    delta_therm_string += "\"" + std::string(ToString(pair.first)) +
-                             "\":" + std::to_string(pair.second) + ",";
-  }
-  if (!delta_therm_string.empty()) {
-    delta_therm_string.pop_back();
-  }
-
   return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
           ",\"start_time\":" + std::to_string(start_time) +
           ",\"end_time\":" + std::to_string(end_time) +
@@ -549,8 +540,7 @@ std::string Job::ToJson() const {
           ",\"gpu_frequency\":" + std::to_string(gpu_frequency) +
           ",\"expected_therm\":" + "{" + expected_therm_string + "}" +
           ",\"start_therm\":" + "{" + start_therm_string + "}" +
-          ",\"end_therm\":" + "{" + end_therm_string + "}" + 
-          ",\"delta_therm\":" + "{" + delta_therm_string + "}" + "}";
+          ",\"end_therm\":" + "{" + end_therm_string + "}" + "}";
 }
 
 std::size_t JobIdBitMaskHash::operator()(

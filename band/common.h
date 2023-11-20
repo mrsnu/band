@@ -315,11 +315,8 @@ struct Job {
   int64_t invoke_time = 0;
   int64_t profiled_execution_time = 0;
   int64_t profiled_latency = 0;
-
-  // Profiled invoke execution time
   std::map<SensorFlag, double> start_thermal;
   std::map<SensorFlag, double> end_thermal;
-  std::map<SensorFlag, double> delta_thermal;
 
   // Expected
   double expected_execution_time = 0;

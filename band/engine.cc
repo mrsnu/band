@@ -561,9 +561,8 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
 
 #ifdef BAND_SPLASH
   {
-    thermal_estimator_ = std::make_unique<ThermalEstimator>(
-        this, thermal_profiler_.get(), latency_profiler_.get(),
-        latency_estimator_.get());
+    thermal_estimator_ =
+        std::make_unique<ThermalEstimator>(this, latency_estimator_.get());
     auto status =
         thermal_estimator_->Init(config.profile_config.thermal_config);
     if (!status.ok()) {
@@ -878,11 +877,8 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     ThermalMap delta_thermal = ThermalMap();
 
 #ifdef BAND_SPLASH
-    ThermalMap expected_thermal = thermal_estimator_->GetExpected(
+    delta_thermal = thermal_estimator_->GetExpected(
         std::make_tuple(key, start_therm, FreqMap()));
-    for (auto& pair : expected_thermal) {
-      delta_thermal[pair.first] = pair.second - start_therm[pair.first];
-    }
 #endif  // BAND_SPLASH
 
     double cost = cost_func(expected_latency, delta_thermal);
@@ -908,9 +904,6 @@ void Engine::UpdateWithJob(const SubgraphKey& key, Job& job) {
 
   job.start_thermal = profiled_thermal.first.second;
   job.end_thermal = profiled_thermal.second.second;
-  for (auto& pair : job.end_thermal) {
-    job.delta_thermal[pair.first] = pair.second - job.start_thermal[pair.first];
-  }
 
   latency_estimator_->Update(key, job);
 #ifdef BAND_SPLASH
