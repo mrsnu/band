@@ -1,7 +1,7 @@
 """Initialize Band workspace"""
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//third_party/android:android.bzl", android = "repo")
 
 def workspace():
@@ -31,7 +31,7 @@ def workspace():
 
     git_repository(
         name = "chrome_tracer",
-        commit = "ad96baa27234526719404007f2d28f0862702320",
+        commit = "66394d43c894ee26995d3c4fe7f9c33a9e786bdb",
         remote = "https://github.com/mrsnu/chrome-tracer.git",
     )
 
@@ -60,6 +60,5 @@ def workspace():
 
     ######## Android repositories ########
     android(name = "android_repo")
-    
 
 workspace_repo = workspace
