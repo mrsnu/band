@@ -97,6 +97,7 @@ class Benchmark {
   void RunDSP();
   void RunNPU();
   void RunAll();
+  void RunThermal();
 
   absl::Status LogResults();
 
