@@ -46,6 +46,11 @@ size_t EnumLength<DeviceFlag>() {
 }
 
 template <>
+size_t EnumLength<FreqFlag>() {
+  return static_cast<size_t>(FreqFlag::kRuntime) + 1;
+}
+
+template <>
 size_t EnumLength<SensorFlag>() {
   return static_cast<size_t>(SensorFlag::kTarget) + 1;
 }
@@ -195,6 +200,30 @@ const char* ToString(DeviceFlag device_flag) {
     } break;
     case DeviceFlag::kNPU: {
       return "NPU";
+    } break;
+    default: {
+      return "Unknown device flag";
+    } break;
+  }
+}
+
+template <>
+const char* ToString(FreqFlag freq_flag) {
+  switch (freq_flag) {
+    case FreqFlag::kCPU: {
+      return "CPU";
+    } break;
+    case FreqFlag::kGPU: {
+      return "GPU";
+    } break;
+    case FreqFlag::kDSP: {
+      return "DSP";
+    } break;
+    case FreqFlag::kNPU: {
+      return "NPU";
+    } break;
+    case FreqFlag::kRuntime: {
+      return "Runtime";
     } break;
     default: {
       return "Unknown device flag";

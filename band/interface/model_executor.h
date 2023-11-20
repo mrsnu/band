@@ -54,7 +54,7 @@ class IModelExecutor : public IBackendSpecific {
 
   virtual absl::Status ExecuteSubgraph(const SubgraphKey& key) = 0;
   virtual void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) = 0;
+      std::function<void(const SubgraphKey&)> visitor) = 0;
 
  protected:
   const ModelId model_id_;

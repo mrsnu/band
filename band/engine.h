@@ -158,7 +158,7 @@ class Engine : public IEngine {
   bool IsEnd(const SubgraphKey& key) const override;
   bool HasSubgraph(const SubgraphKey& key) const override;
   void ForEachSubgraph(
-      std::function<void(const SubgraphKey&)> iterator) const override;
+      std::function<void(const SubgraphKey&)> visitor) const override;
   absl::Status Invoke(const SubgraphKey& key) override;
 
   const ModelSpec* GetModelSpec(ModelId model_id) const override;
@@ -183,7 +183,7 @@ class Engine : public IEngine {
 
   std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-      ThermalMap start_them, FreqMap freq,
+      ThermalMap start_therm, FreqMap freq,
       const WorkerWaitingTime& worker_waiting, const CostFunc cost) const;
 
   /* estimators */

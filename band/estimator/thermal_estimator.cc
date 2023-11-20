@@ -55,13 +55,11 @@ Eigen::VectorXd GetFillVector(double value, size_t size) {
 }  // anonymous namespace
 
 absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
-  JobTracer::Get().AddStream("ThermalEstimator");
   window_size_ = config.window_size;
   return absl::OkStatus();
 }
 
 void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
-  auto trace_handle = JobTracer::Get().BeginEvent("ThermalEstimator", "Update");
   Eigen::VectorXd target_therm =
       ConvertTMapToEigenVector<ThermalMap>(job.end_thermal, num_sensors_);
   FreqMap freq;
@@ -91,7 +89,6 @@ void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
   }
 
   model_ = SolveLinear(data, target);
-  JobTracer::Get().EndEvent("ThermalEstimator", trace_handle);
 }
 
 Eigen::MatrixXd ThermalEstimator::SolveLinear(Eigen::MatrixXd& x,
@@ -104,8 +101,6 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 }
 
 ThermalMap ThermalEstimator::GetExpected(const ThermalKey& thermal_key) const {
-  auto trace_handle =
-      JobTracer::Get().BeginEvent("ThermalEstimator", "GetExpected");
   auto key = std::get<0>(thermal_key);
   auto cur_therm_map = std::get<1>(thermal_key);
   auto cur_freq_map = std::get<2>(thermal_key);
@@ -118,7 +113,6 @@ ThermalMap ThermalEstimator::GetExpected(const ThermalKey& thermal_key) const {
 
   auto expected_therm =
       ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
-  JobTracer::Get().EndEvent("ThermalEstimator", trace_handle);
   return expected_therm;
 }
 

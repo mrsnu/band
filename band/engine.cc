@@ -694,9 +694,9 @@ bool Engine::HasSubgraph(const SubgraphKey& key) const {
 }
 
 void Engine::ForEachSubgraph(
-    std::function<void(const SubgraphKey&)> iterator) const {
+    std::function<void(const SubgraphKey&)> visitor) const {
   for (auto& model_executor : model_executors_) {
-    model_executor.second->ForEachSubgraph(iterator);
+    model_executor.second->ForEachSubgraph(visitor);
   }
 }
 
@@ -843,7 +843,7 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
 
 std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-    ThermalMap start_them, FreqMap freq,
+    ThermalMap start_therm, FreqMap freq,
     const WorkerWaitingTime& worker_waiting, const CostFunc cost_func) const {
   double min_cost = std::numeric_limits<double>::max();
   SubgraphKey min_key = {};
@@ -851,15 +851,14 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
   for (const auto& key : subgraph_keys) {
     double waiting_time = worker_waiting.at(key.GetWorkerId());
     double latency = GetExpected(key);
-    double expected_latency =
-        latency + std::max(waiting_time, static_cast<double>(start_time));
+    double expected_latency = latency + std::max(waiting_time, start_time);
     ThermalMap delta_thermal = ThermalMap();
 
 #ifdef BAND_SPLASH
     ThermalMap expected_thermal = thermal_estimator_->GetExpected(
-        std::make_tuple(key, ThermalMap(), FreqMap()));
+        std::make_tuple(key, start_therm, FreqMap()));
     for (auto& pair : expected_thermal) {
-      delta_thermal[pair.first] = pair.second - start_them[pair.first];
+      delta_thermal[pair.first] = pair.second - start_therm[pair.first];
     }
 #endif  // BAND_SPLASH
 

@@ -7,12 +7,9 @@
 
 namespace band {
 HEFTScheduler::HEFTScheduler(IEngine& engine, int window_size)
-    : IScheduler(engine), window_size_(window_size) {
-  JobTracer::Get().AddStream("HEFTScheduler");
-}
+    : IScheduler(engine), window_size_(window_size) {}
 
 bool HEFTScheduler::Schedule(JobQueue& requests) {
-  auto trace_handle = JobTracer::Get().BeginEvent("HEFTScheduler", "Schedule");
   bool success = true;
   int num_jobs = std::min(window_size_, (int)requests.size());
   while (num_jobs > 0) {
@@ -61,7 +58,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
             engine_.GetSubgraphWithMinCost(
                 job, waiting_time,
                 [&expected_cost](double lat,
-                                std::map<SensorFlag, double>) -> double {
+                                 std::map<SensorFlag, double>) -> double {
                   expected_cost = lat;
                   return lat;
                 });
@@ -111,7 +108,6 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     success &= engine_.EnqueueToWorker({job, target_subgraph_key});
   }
 
-  JobTracer::Get().EndEvent("HEFTScheduler", trace_handle);
   return success;
 }
 }  // namespace band
