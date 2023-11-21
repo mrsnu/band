@@ -70,6 +70,10 @@ class ProfileConfigBuilder {
     profile_path_ = profile_path;
     return *this;
   }
+  ProfileConfigBuilder& AddDumpPath(std::string dump_path) {
+    dump_path_ = dump_path;
+    return *this;
+  }
 
   ProfileConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
@@ -78,6 +82,7 @@ class ProfileConfigBuilder {
   LatencyProfileConfigBuilder latency_profile_builder_;
   ThermalProfileConfigBuilder thermal_profile_builder_;
   std::string profile_path_ = "";
+  std::string dump_path_ = "";
   size_t num_warmups_ = 1;
   size_t num_runs_ = 1;
 };
@@ -286,6 +291,10 @@ class RuntimeConfigBuilder {
   }
   RuntimeConfigBuilder& AddProfilePath(std::string profile_path) {
     profile_config_builder_.AddProfilePath(profile_path);
+    return *this;
+  }
+  RuntimeConfigBuilder& AddDumpPath(std::string dump_path) {
+    profile_config_builder_.AddDumpPath(dump_path);
     return *this;
   }
 

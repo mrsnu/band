@@ -44,6 +44,8 @@ absl::Status Benchmark::Run() {
     RunDSP();
   } else if (benchmark_config_.execution_mode == "npu") {
     RunNPU();
+  } else if (benchmark_config_.execution_mode == "thermal") {
+    RunThermal();
   }
 
   return LogResults();
@@ -114,7 +116,7 @@ bool Benchmark::LoadBenchmarkConfigs(const Json::Value& root) {
   json::AssignIfValid(benchmark_config_.execution_mode, root, "execution_mode");
 
   std::set<std::string> supported_execution_modes{
-      "periodic", "stream", "all", "cpu", "gpu", "dsp", "npu"};
+      "periodic", "stream", "all", "cpu", "gpu", "dsp", "npu", "thermal"};
   if (supported_execution_modes.find(benchmark_config_.execution_mode) ==
       supported_execution_modes.end()) {
     std::cout << "Please check if argument execution mode "
@@ -195,8 +197,11 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
       builder.AddLatencySmoothingFactor(
           root["profile_smoothing_factor"].asFloat());
     }
-    if (root["latency_profile_path"].isString()) {
-      builder.AddProfilePath(root["latency_profile_path"].asCString());
+    if (root["profile_path"].isString()) {
+      builder.AddProfilePath(root["profile_path"].asCString());
+    }
+    if (root["dump_path"].isString()) {
+      builder.AddDumpPath(root["dump_path"].asCString());
     }
   }
 
@@ -659,6 +664,16 @@ void Benchmark::RunAll() {
   RunDSP();
   RunGPU();
   RunCPU();
+}
+
+void Benchmark::RunThermal() {
+  std::vector<SubgraphKey> subgraph_keys;
+  engine_->ForEachSubgraph([&subgraph_keys](const SubgraphKey& key) {
+    subgraph_keys.push_back(key);
+  });
+  for (auto& subgraph_key : subgraph_keys) {
+    std::cout << subgraph_key.ToString() << std::endl;
+  }
 }
 
 void PrintHeader(std::string key, size_t indent_level = 0) {

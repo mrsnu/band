@@ -39,6 +39,7 @@ Engine::~Engine() {
   planner_.reset();
 
   if (!dump_dir_.empty()) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Dump path: %s", dump_dir_.c_str());
     {
       auto status = latency_estimator_->DumpModel(
           absl::StrFormat("%s/latency_model.json", dump_dir_.c_str()));
@@ -275,7 +276,7 @@ absl::Status Engine::RegisterModel(Model* model) {
     }
 
     // Profile models
-    {
+    if (profile_config_.profile_path.empty()) {
       auto status = ProfileModel(model_id);
       if (!status.ok()) {
         return status;
@@ -527,6 +528,12 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
   thermal_ = std::make_unique<Thermal>(config.device_config);
   frequency_ = std::make_unique<Frequency>(config.device_config);
 
+  if (!config.profile_config.dump_path.empty()) {
+    BAND_LOG_PROD(BAND_LOG_INFO, "Dump path: %s",
+                  config.profile_config.dump_path.c_str());
+    SetDumpDirectory(config.profile_config.dump_path);
+  }
+
   {
     latency_profiler_ = std::make_unique<LatencyProfiler>();
     profilers_.push_back(latency_profiler_.get());
@@ -542,17 +549,32 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
     if (!status.ok()) {
       return status;
     }
+
+    if (!config.profile_config.profile_path.empty()) {
+      auto status = latency_estimator_->LoadModel(absl::StrFormat(
+          "%s/latency_model.json", config.profile_config.profile_path.c_str()));
+      if (!status.ok()) {
+        return status;
+      }
+    }
   }
 
 #ifdef BAND_SPLASH
   {
-    thermal_estimator_ = std::make_unique<ThermalEstimator>(
-        this, thermal_profiler_.get(), latency_profiler_.get(),
-        latency_estimator_.get());
+    thermal_estimator_ =
+        std::make_unique<ThermalEstimator>(this, latency_estimator_.get());
     auto status =
         thermal_estimator_->Init(config.profile_config.thermal_config);
     if (!status.ok()) {
       return status;
+    }
+
+    if (!config.profile_config.profile_path.empty()) {
+      auto status = thermal_estimator_->LoadModel(absl::StrFormat(
+          "%s/thermal_model.json", config.profile_config.profile_path.c_str()));
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
 #endif  // BAND_SPLASH
@@ -855,11 +877,8 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     ThermalMap delta_thermal = ThermalMap();
 
 #ifdef BAND_SPLASH
-    ThermalMap expected_thermal = thermal_estimator_->GetExpected(
+    delta_thermal = thermal_estimator_->GetExpected(
         std::make_tuple(key, start_therm, FreqMap()));
-    for (auto& pair : expected_thermal) {
-      delta_thermal[pair.first] = pair.second - start_therm[pair.first];
-    }
 #endif  // BAND_SPLASH
 
     double cost = cost_func(expected_latency, delta_thermal);
@@ -885,9 +904,6 @@ void Engine::UpdateWithJob(const SubgraphKey& key, Job& job) {
 
   job.start_thermal = profiled_thermal.first.second;
   job.end_thermal = profiled_thermal.second.second;
-  for (auto& pair : job.end_thermal) {
-    job.delta_thermal[pair.first] = pair.second - job.start_thermal[pair.first];
-  }
 
   latency_estimator_->Update(key, job);
 #ifdef BAND_SPLASH

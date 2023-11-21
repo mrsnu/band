@@ -40,6 +40,7 @@ struct ProfileConfig {
   LatencyProfileConfig latency_config;
   ThermalProfileConfig thermal_config;
   std::string profile_path = "";
+  std::string dump_path = "";
   size_t num_warmups = 1;
   size_t num_runs = 1;
 };

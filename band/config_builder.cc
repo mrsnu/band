@@ -121,6 +121,7 @@ ProfileConfig ProfileConfigBuilder::Build(
   profile_config.latency_config = latency_profile_builder_.Build();
   profile_config.thermal_config = thermal_profile_builder_.Build();
   profile_config.profile_path = profile_path_;
+  profile_config.dump_path = dump_path_;
   profile_config.num_warmups = num_warmups_;
   profile_config.num_runs = num_runs_;
   return profile_config;

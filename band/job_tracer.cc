@@ -5,7 +5,6 @@
 
 namespace band {
 JobTracer::JobTracer()
-// if android
 #ifdef __ANDROID__
     : chrome_tracer::ChromeStreamTracer("/data/local/tmp/splash/log.json")
 #else

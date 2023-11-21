@@ -28,6 +28,10 @@
 
 namespace band {
 
+namespace tool {
+class Benchmark;
+}  // namespace tool
+
 class Model;
 class ModelSpec;
 class LatencyEstimator;
@@ -148,6 +152,8 @@ class Engine : public IEngine {
   }
 
  private:
+  friend class tool::Benchmark;
+
   /* engine */
   absl::Status Init(const RuntimeConfig& config) override;
   void UpdateWorkersWaiting() const override;
