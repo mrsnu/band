@@ -60,6 +60,7 @@ absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
 }
 
 void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
+  BAND_TRACER_SCOPED_THREAD_EVENT(Update);
   Eigen::VectorXd target_therm =
       ConvertTMapToEigenVector<ThermalMap>(job.end_thermal, num_sensors_);
   FreqMap freq;
@@ -158,7 +159,7 @@ Eigen::MatrixXd ThermalEstimator::JsonToEigenMatrix(Json::Value json) {
 }
 
 Eigen::VectorXd ThermalEstimator::GetFeatureVector(const ThermalMap& therm,
-                                                   const FreqMap freq,
+                                                   const FreqMap& freq,
                                                    size_t worker_id,
                                                    double latency) const {
   Eigen::VectorXd feature(feature_size_);

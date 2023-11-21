@@ -33,7 +33,7 @@ using WorkerWaitingTime = std::map<WorkerId, double>;
 // Decision from a scheduler. Run subgraph key for a specific job.
 using ScheduleAction = std::pair<Job, SubgraphKey>;
 
-using CostFunc = std::function<double(double, ThermalMap)>;
+using CostFunc = std::function<double(double, const ThermalMap&)>;
 
 // Minimal interfaces for Band framework
 class IEngine {
@@ -76,13 +76,13 @@ class IEngine {
   // the final op (of the model) in mind.
 
   virtual std::pair<std::vector<SubgraphKey>, double>
-  GetMinCostWithUnitSubgraph(
-      int model_id, int start_unit_idx, const WorkerWaitingTime& worker_waiting,
-      const CostFunc cost) const = 0;
+  GetMinCostWithUnitSubgraph(int model_id, int start_unit_idx,
+                             const WorkerWaitingTime& worker_waiting,
+                             const CostFunc cost) const = 0;
 
   virtual std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
-      const Job& job, const WorkerWaitingTime& worker_waiting, 
-      const CostFunc cost)const = 0;
+      const Job& job, const WorkerWaitingTime& worker_waiting,
+      const CostFunc cost) const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,

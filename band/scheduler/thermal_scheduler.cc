@@ -39,7 +39,7 @@ bool ThermalScheduler::Schedule(JobQueue& requests) {
       auto best_subgraph = engine_.GetSubgraphWithMinCost(
           job, worker_waiting,
           [&expected_lat, &expected_therm](
-              double lat, std::map<SensorFlag, double> therm) -> double {
+              double lat, const std::map<SensorFlag, double>& therm) -> double {
             return therm.at(SensorFlag::kTarget);
           });
 

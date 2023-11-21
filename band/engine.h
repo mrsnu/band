@@ -181,9 +181,11 @@ class Engine : public IEngine {
   std::vector<SubgraphKey> GetSubgraphCandidates(
       ModelId model_id, BitMask resolved_unit_subgraphs) const;
 
+  // Note: pass start_them as a copy to initialize not existing sensor flags to
+  // zero when accessing the map
   std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
       const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-      ThermalMap start_therm, FreqMap freq,
+      ThermalMap start_therm, const FreqMap& freq,
       const WorkerWaitingTime& worker_waiting, const CostFunc cost) const;
 
   /* estimators */

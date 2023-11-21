@@ -842,7 +842,7 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
 
 std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-    ThermalMap start_therm, FreqMap freq,
+    ThermalMap start_therm, const FreqMap& freq,
     const WorkerWaitingTime& worker_waiting, const CostFunc cost_func) const {
   BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostSubgraphKey);
   double min_cost = std::numeric_limits<double>::max();

@@ -50,8 +50,8 @@ class ThermalEstimator
   Eigen::MatrixXd JsonToEigenMatrix(Json::Value json);
 
  private:
-  Eigen::VectorXd GetFeatureVector(const ThermalMap& therm, const FreqMap freq,
-                                 size_t worker_id, double latency) const;
+  Eigen::VectorXd GetFeatureVector(const ThermalMap& therm, const FreqMap& freq,
+                                   size_t worker_id, double latency) const;
 
   ThermalProfiler* thermal_profiler_;
   LatencyProfiler* latency_profiler_;
