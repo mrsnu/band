@@ -599,13 +599,11 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
             absl::StrFormat("Worker initialization failed for worker : %s.",
                             ToString(device_flag)));
       }
-
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         ToString(device_flag));
       worker->Start();
       workers_.push_back(std::move(worker));
       workers_waiting_[i] = 0;
-      BAND_TRACER_ADD_WORKER(device_flag, workers_.back()->GetId());
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         ToString(device_flag));
