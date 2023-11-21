@@ -5,7 +5,14 @@
 
 namespace band {
 JobTracer::JobTracer()
-    : chrome_tracer::ChromeStreamTracer("/data/local/tmp/splash/log.json") {}
+// if android
+#ifdef __ANDROID__
+    : chrome_tracer::ChromeStreamTracer("/data/local/tmp/splash/log.json")
+#else
+    : chrome_tracer::ChromeStreamTracer("log.json")
+#endif
+{
+}
 
 std::string JobTracer::GetStreamName(size_t id) const {
   if (id_to_streams_.find(id) == id_to_streams_.end()) {
