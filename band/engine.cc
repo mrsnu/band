@@ -732,10 +732,7 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
 std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
     ModelId model_id, int start_unit_idx,
     const WorkerWaitingTime& worker_waiting, const CostFunc cost) const {
-<<<<<<< HEAD
-  // BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostWithUnitSubgraph);
-  == == == = BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostWithUnitSubgraph);
->>>>>>> 7c3858e6... (temporal) Add scoped tracing
+  BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostWithUnitSubgraph);
   const ModelSpec* model_spec = GetModelSpec(model_id);
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
