@@ -78,18 +78,27 @@ double Frequency::GetFrequency(FreqFlag device_flag) {
 }
 
 absl::Status Frequency::SetRuntimeFrequency(double freq) {
+  if (freq_device_map_.find(FreqFlag::kRuntime) == freq_device_map_.end()) {
+    return absl::InternalError("Runtime CPU frequency path is not available.");
+  }
   return SetFrequencyWithPath(
       GetCpuScalingPath(freq_device_map_.at(FreqFlag::kRuntime)), freq,
       cpu_freq_multiplier_w);
 }
 
 absl::Status Frequency::SetCpuFrequency(double freq) {
+  if (freq_device_map_.find(FreqFlag::kCPU) == freq_device_map_.end()) {
+    return absl::InternalError("CPU frequency path is not available.");
+  }
   return SetFrequencyWithPath(
       GetCpuScalingPath(freq_device_map_.at(FreqFlag::kCPU)), freq,
       cpu_freq_multiplier_w);
 }
 
 absl::Status Frequency::SetGpuFrequency(double freq) {
+  if (freq_device_map_.find(FreqFlag::kGPU) == freq_device_map_.end()) {
+    return absl::InternalError("GPU frequency path is not available.");
+  }
   auto status1 = device::TryWriteSizeT(
       {GetGpuMinScalingPath(freq_device_map_.at(FreqFlag::kGPU))},
       gpu_freq_map_.at(static_cast<size_t>(freq * dev_freq_multiplier_w)));
