@@ -12,7 +12,8 @@ TEST(BenchmarkTest, BenchmarkConfigLoadSuccess) {
 }
 
 TEST(BenchmarkTest, BenchmarkConfigLoadFail) {
-  // intentionally silent the log, to avoid the test failure due to the error log
+  // intentionally silent the log, to avoid the test failure due to the error
+  // log
   Logger::SetVerbosity(BAND_LOG_NUM_SEVERITIES);
   tool::Benchmark benchmark;
   const char* argv[] = {"", ""};
@@ -21,6 +22,7 @@ TEST(BenchmarkTest, BenchmarkConfigLoadFail) {
 }
 
 TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
+  Logger::SetVerbosity(BAND_LOG_NUM_SEVERITIES);
   tool::Benchmark benchmark;
   const char* argv[] = {"", "band/test/data/benchmark_config.json"};
   EXPECT_EQ(benchmark.Initialize(2, argv), absl::OkStatus());
