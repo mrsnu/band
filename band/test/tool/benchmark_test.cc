@@ -23,6 +23,7 @@ TEST(BenchmarkTest, BenchmarkConfigLoadFail) {
 }
 
 TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
+  Logger::SetVerbosity(BAND_LOG_NUM_SEVERITIES);
   tool::Benchmark benchmark;
   std::string severity = std::to_string(BAND_LOG_NUM_SEVERITIES);
   const char* argv[] = {"", "band/test/data/benchmark_config.json",
