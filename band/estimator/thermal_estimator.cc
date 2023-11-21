@@ -46,6 +46,15 @@ Eigen::VectorXd GetOneHotVector(double value, size_t size, size_t index) {
 
 }  // anonymous namespace
 
+ThermalEstimator::~ThermalEstimator() {
+  {
+    std::lock_guard<std::mutex> lock(model_update_queue_mutex_);
+    model_update_thread_exit_ = true;
+  }
+  model_update_cv_.notify_one();
+  model_update_thread_.join();
+}
+
 absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
   window_size_ = config.window_size;
   return absl::OkStatus();
@@ -71,14 +80,12 @@ void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
   freq[FreqFlag::kRuntime] = 1;
   auto freq_vec = ConvertTMapToEigenVector<FreqMap>(freq, num_devices_);
 
-  features_.push_back({key.GetWorkerId(), start_time, end_time, start_therm_vec,
-                       end_therm_vec, freq_vec});
-  if (features_.size() > window_size_) {
-    features_.pop_front();
-  }
+  model_update_queue_.push({key.GetWorkerId(), start_time, end_time,
+                            start_therm_vec, end_therm_vec, freq_vec});
 }
 
 void ThermalEstimator::UpdateModel() {
+  BAND_TRACER_SCOPED_THREAD_EVENT(UpdateModel);
   if (window_size_ > features_.size()) {
     return;
   }
@@ -148,7 +155,35 @@ void ThermalEstimator::UpdateModel() {
     }
   }
 
+  std::unique_lock<std::mutex> lock(model_mutex_);
   model_ = (x.transpose() * x).ldlt().solve(x.transpose() * y);
+}
+
+void ThermalEstimator::ModelUpdateThreadLoop() {
+  while (true) {
+    {
+      std::unique_lock<std::mutex> lock(model_update_queue_mutex_);
+      model_update_cv_.wait(lock, [&] {
+        return (!model_update_queue_.empty()) || model_update_thread_exit_;
+      });
+
+      if (model_update_thread_exit_) {
+        break;
+      }
+
+      while (!model_update_queue_.empty()) {
+        features_.push_back(model_update_queue_.front());
+        model_update_queue_.pop();
+      }
+    }
+    {
+      if (features_.size() > window_size_) {
+        features_.pop_front();
+      }
+
+      UpdateModel();
+    }
+  }
 }
 
 ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {

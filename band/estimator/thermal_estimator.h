@@ -2,7 +2,11 @@
 #define BAND_ESTIMATOR_THERMAL_ESTIMATOR_H_
 
 #include <chrono>
+#include <condition_variable>
 #include <deque>
+#include <mutex>
+#include <queue>
+#include <thread>
 #include <tuple>
 #include <unordered_map>
 
@@ -27,7 +31,11 @@ class ThermalEstimator
   explicit ThermalEstimator(
       IEngine* engine,
       IEstimator<SubgraphKey, double, double>* latency_estimator)
-      : IEstimator(engine), latency_estimator_(latency_estimator) {}
+      : IEstimator(engine),
+        latency_estimator_(latency_estimator),
+        model_update_thread_(
+            std::thread(&ThermalEstimator::ModelUpdateThreadLoop, this)) {}
+  ~ThermalEstimator();
   absl::Status Init(const ThermalProfileConfig& config);
 
   void Update(const SubgraphKey& key, Job& job) override;
@@ -55,17 +63,28 @@ class ThermalEstimator
   size_t num_resources_ = 0;
   size_t window_size_;
 
-  Eigen::MatrixXd model_;
   // WorkerId, start_time, end_time, start_therm, end_therm, freq
-  std::deque<std::tuple<WorkerId, int64_t, int64_t, Eigen::VectorXd,
-                        Eigen::VectorXd, Eigen::VectorXd>>
-      features_;
+  typedef std::tuple<WorkerId, int64_t, int64_t, Eigen::VectorXd,
+                     Eigen::VectorXd, Eigen::VectorXd>
+      Feature;
+
+  std::mutex model_mutex_;
+  Eigen::MatrixXd model_;
+  std::deque<Feature> features_;
 
   mutable std::map<SubgraphKey, ThermalMap> profile_database_;
 
   const size_t num_sensors_ = EnumLength<SensorFlag>();
   const size_t num_devices_ = EnumLength<FreqFlag>();
   const size_t feature_size_ = num_sensors_ + 3 * num_devices_;
+
+  bool model_update_thread_exit_ = false;
+  std::condition_variable model_update_cv_;
+  std::thread model_update_thread_;
+  std::mutex model_update_queue_mutex_;
+  std::queue<Feature> model_update_queue_;
+
+  void ModelUpdateThreadLoop();
 };
 
 }  // namespace band
