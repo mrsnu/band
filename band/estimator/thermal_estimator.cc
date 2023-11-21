@@ -82,6 +82,7 @@ void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
 
   model_update_queue_.push({key.GetWorkerId(), start_time, end_time,
                             start_therm_vec, end_therm_vec, freq_vec});
+  model_update_cv_.notify_one();
 }
 
 void ThermalEstimator::UpdateModel() {
@@ -97,11 +98,11 @@ void ThermalEstimator::UpdateModel() {
 
   size_t index = 0;
   for (int i = 0; i < window_size_; i++) {
-    auto s_worker_id = std::get<0>(features_[i]);
-    auto s_start_time = std::get<1>(features_[i]);
-    auto s_end_time = std::get<2>(features_[i]);
-    auto s_start_therm_vec = std::get<3>(features_[i]);
-    auto s_freq_vec = std::get<5>(features_[i]);
+    auto& s_worker_id = std::get<0>(features_[i]);
+    auto& s_start_time = std::get<1>(features_[i]);
+    auto& s_end_time = std::get<2>(features_[i]);
+    auto& s_start_therm_vec = std::get<3>(features_[i]);
+    auto& s_freq_vec = std::get<5>(features_[i]);
 
     auto freq_3_vec =
         s_freq_vec.cwiseProduct(s_freq_vec.cwiseProduct(s_freq_vec));
@@ -114,11 +115,11 @@ void ThermalEstimator::UpdateModel() {
 
     for (int j = i + 1; j < window_size_; j++) {
       Eigen::VectorXd feature(feature_size_);
-      auto e_worker_id = std::get<0>(features_[j]);
-      auto e_start_time = std::get<1>(features_[j]);
-      auto e_end_time = std::get<2>(features_[j]);
-      auto e_end_therm = std::get<4>(features_[j]);
-      auto e_freq = std::get<5>(features_[j]);
+      auto& e_worker_id = std::get<0>(features_[j]);
+      auto& e_start_time = std::get<1>(features_[j]);
+      auto& e_end_time = std::get<2>(features_[j]);
+      auto& e_end_therm = std::get<4>(features_[j]);
+      auto& e_freq = std::get<5>(features_[j]);
 
       auto e_freq_3_vec = e_freq.cwiseProduct(e_freq.cwiseProduct(e_freq));
 
@@ -154,9 +155,11 @@ void ThermalEstimator::UpdateModel() {
       index++;
     }
   }
-
-  std::unique_lock<std::mutex> lock(model_mutex_);
-  model_ = (x.transpose() * x).ldlt().solve(x.transpose() * y);
+  {
+    BAND_TRACER_SCOPED_THREAD_EVENT(UpdateModelSolve);
+    std::unique_lock<std::mutex> lock(model_mutex_);
+    model_ = (x.transpose() * x).ldlt().solve(x.transpose() * y);
+  }
 }
 
 void ThermalEstimator::ModelUpdateThreadLoop() {
