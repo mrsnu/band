@@ -4,28 +4,30 @@
 
 namespace band {
 namespace test {
+std::string severity = std::to_string(BAND_LOG_NUM_SEVERITIES);
 
 TEST(BenchmarkTest, BenchmarkConfigLoadSuccess) {
   tool::Benchmark benchmark;
-  const char* argv[] = {"", "band/test/data/benchmark_config.json"};
-  EXPECT_EQ(benchmark.Initialize(2, argv), absl::OkStatus());
+  const char* argv[] = {"", "band/test/data/benchmark_config.json",
+                        severity.c_str()};
+  EXPECT_EQ(benchmark.Initialize(3, argv), absl::OkStatus());
 }
 
 TEST(BenchmarkTest, BenchmarkConfigLoadFail) {
   // intentionally silent the log, to avoid the test failure due to the error
   // log
-  Logger::SetVerbosity(BAND_LOG_NUM_SEVERITIES);
   tool::Benchmark benchmark;
-  const char* argv[] = {"", ""};
+  const char* argv[] = {"", "", severity.c_str()};
+  EXPECT_TRUE(!benchmark.Initialize(3, argv).ok());
   EXPECT_TRUE(!benchmark.Initialize(2, argv).ok());
-  EXPECT_TRUE(!benchmark.Initialize(1, argv).ok());
 }
 
 TEST(BenchmarkTest, BenchmarkConfigRunSuccess) {
-  Logger::SetVerbosity(BAND_LOG_NUM_SEVERITIES);
   tool::Benchmark benchmark;
-  const char* argv[] = {"", "band/test/data/benchmark_config.json"};
-  EXPECT_EQ(benchmark.Initialize(2, argv), absl::OkStatus());
+  std::string severity = std::to_string(BAND_LOG_NUM_SEVERITIES);
+  const char* argv[] = {"", "band/test/data/benchmark_config.json",
+                        severity.c_str()};
+  EXPECT_EQ(benchmark.Initialize(3, argv), absl::OkStatus());
   EXPECT_EQ(benchmark.Run(), absl::OkStatus());
 }
 
