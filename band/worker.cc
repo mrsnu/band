@@ -9,7 +9,9 @@
 
 namespace band {
 Worker::Worker(IEngine* engine, WorkerId worker_id, DeviceFlag device_flag)
-    : engine_(engine), worker_id_(worker_id), device_flag_(device_flag) {}
+    : engine_(engine), worker_id_(worker_id), device_flag_(device_flag) {
+  BAND_TRACER_ADD_WORKER(device_flag, worker_id_);
+}
 
 Worker::~Worker() {
   if (!kill_worker_) {

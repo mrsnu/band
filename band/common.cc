@@ -506,7 +506,7 @@ std::string Job::ToJson() const {
   std::string start_therm_string = "";
   for (auto& pair : start_thermal) {
     start_therm_string += "\"" + std::string(ToString(pair.first)) +
-                             "\":" + std::to_string(pair.second) + ",";
+                          "\":" + std::to_string(pair.second) + ",";
   }
   if (!start_therm_string.empty()) {
     start_therm_string.pop_back();
@@ -515,32 +515,32 @@ std::string Job::ToJson() const {
   std::string end_therm_string = "";
   for (auto& pair : end_thermal) {
     end_therm_string += "\"" + std::string(ToString(pair.first)) +
-                             "\":" + std::to_string(pair.second) + ",";
+                        "\":" + std::to_string(pair.second) + ",";
   }
   if (!end_therm_string.empty()) {
     end_therm_string.pop_back();
   }
 
   return "{\"enqueue_time\":" + std::to_string(enqueue_time) +
-          ",\"start_time\":" + std::to_string(start_time) +
-          ",\"end_time\":" + std::to_string(end_time) +
-          ",\"profiled_execution_time\":" +
-          std::to_string(profiled_execution_time) +
-          ",\"expected_execution_time\":" +
-          std::to_string(expected_execution_time) +
-          ",\"expected_latency\":" + std::to_string(expected_latency) +
-          ",\"profiled_latency\":" + std::to_string(profiled_latency) +
-          ",\"slo_us\":" + std::to_string(slo_us) +
-          ",\"model_id\":" + std::to_string(model_id) +
-          (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
-          ",\"unit_indices\": \"" + subgraph_key.GetUnitIndicesString() + "\"" +
-          ",\"job_id\":" + std::to_string(job_id) +
-          ",\"runtime_frequency\":" + std::to_string(runtime_frequency) +
-          ",\"cpu_frequency\":" + std::to_string(cpu_frequency) +
-          ",\"gpu_frequency\":" + std::to_string(gpu_frequency) +
-          ",\"expected_therm\":" + "{" + expected_therm_string + "}" +
-          ",\"start_therm\":" + "{" + start_therm_string + "}" +
-          ",\"end_therm\":" + "{" + end_therm_string + "}" + "}";
+         ",\"start_time\":" + std::to_string(start_time) +
+         ",\"end_time\":" + std::to_string(end_time) +
+         ",\"profiled_execution_time\":" +
+         std::to_string(profiled_execution_time) +
+         ",\"expected_execution_time\":" +
+         std::to_string(expected_execution_time) +
+         ",\"expected_latency\":" + std::to_string(expected_latency) +
+         ",\"profiled_latency\":" + std::to_string(profiled_latency) +
+         ",\"slo_us\":" + std::to_string(slo_us) +
+         ",\"model_id\":" + std::to_string(model_id) +
+         (model_fname != "" ? ",\"model_fname\":" + model_fname : "") +
+         ",\"unit_indices\": \"" + subgraph_key.GetUnitIndicesString() + "\"" +
+         ",\"job_id\":" + std::to_string(job_id) +
+         ",\"runtime_frequency\":" + std::to_string(runtime_frequency) +
+         ",\"cpu_frequency\":" + std::to_string(cpu_frequency) +
+         ",\"gpu_frequency\":" + std::to_string(gpu_frequency) +
+         ",\"expected_therm\":" + "{" + expected_therm_string + "}" +
+         ",\"start_therm\":" + "{" + start_therm_string + "}" +
+         ",\"end_therm\":" + "{" + end_therm_string + "}" + "}";
 }
 
 std::size_t JobIdBitMaskHash::operator()(

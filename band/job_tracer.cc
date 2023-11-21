@@ -1,9 +1,18 @@
 #include "band/job_tracer.h"
 
 #include "band/logger.h"
+#include "job_tracer.h"
 
 namespace band {
-JobTracer::JobTracer() : chrome_tracer::ChromeStreamTracer("/data/local/tmp/splash/log.json") {}
+JobTracer::JobTracer()
+// if android
+#ifdef __ANDROID__
+    : chrome_tracer::ChromeStreamTracer("/data/local/tmp/splash/log.json")
+#else
+    : chrome_tracer::ChromeStreamTracer("log.json")
+#endif
+{
+}
 
 std::string JobTracer::GetStreamName(size_t id) const {
   if (id_to_streams_.find(id) == id_to_streams_.end()) {
@@ -24,6 +33,18 @@ std::string JobTracer::GetJobName(const Job& job) const {
     model_name = job.model_fname;
   }
   return model_name + ", JobId " + std::to_string(job.job_id) + ")";
+}
+
+std::string JobTracer::GetThreadStreamName() {
+  std::thread::id thread_id = std::this_thread::get_id();
+  if (thread_to_stream_.find(thread_id) == thread_to_stream_.end()) {
+    size_t hashed_id = std::hash<std::thread::id>{}(thread_id);
+    std::string id =
+        std::string("(Thread ") + std::to_string(hashed_id) + std::string(")");
+    thread_to_stream_[thread_id] = id;
+    chrome_tracer::ChromeStreamTracer::AddStream(id);
+  }
+  return thread_to_stream_[thread_id];
 }
 
 JobTracer& JobTracer::Get() {
@@ -65,4 +86,12 @@ void JobTracer::AddWorker(DeviceFlag device_flag, size_t id) {
   }
 }
 
+int32_t JobTracer::BeginThreadEvent(std::string event) {
+  return chrome_tracer::ChromeStreamTracer::BeginEvent(GetThreadStreamName(),
+                                                       event);
+}
+void JobTracer::EndThreadEvent(int32_t handle, std::string args) {
+  return chrome_tracer::ChromeStreamTracer::EndEvent(GetThreadStreamName(),
+                                                     handle, args);
+}
 }  // namespace band

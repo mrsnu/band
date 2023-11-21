@@ -54,8 +54,8 @@ absl::Status ThermalEstimator::Init(const ThermalProfileConfig& config) {
 void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
   auto start_time = job.start_time;
   auto end_time = job.end_time;
-  auto start_therm = job.start_thermal;
-  auto end_therm = job.end_thermal;
+  auto& start_therm = job.start_thermal;
+  auto& end_therm = job.end_thermal;
 
   auto start_therm_vec =
       ConvertTMapToEigenVector<ThermalMap>(job.start_thermal, num_sensors_);
@@ -102,8 +102,7 @@ void ThermalEstimator::UpdateModel() {
 
     auto freq_3_lat_vec = freq_3_vec * s_latency;
     auto freq_lat_vec = s_freq_vec * s_latency;
-    auto lat_vec =
-        GetOneHotVector(s_end_time - s_start_time, num_devices_, s_worker_id);
+    auto lat_vec = GetOneHotVector(s_latency, num_devices_, s_worker_id);
 
     for (int j = i + 1; j < window_size_; j++) {
       Eigen::VectorXd feature(feature_size_);
@@ -118,8 +117,7 @@ void ThermalEstimator::UpdateModel() {
       auto e_latency = (e_end_time - e_start_time) / 1000.f;
       auto e_freq_3_lat_vec = e_freq_3_vec * e_latency;
       auto e_freq_lat_vec = e_freq * e_latency;
-      auto e_lat_vec =
-          GetOneHotVector(e_latency, num_devices_, e_worker_id);
+      auto e_lat_vec = GetOneHotVector(e_latency, num_devices_, e_worker_id);
 
       auto total_latency = (e_end_time - s_start_time) / 1000.f;
 
@@ -131,13 +129,20 @@ void ThermalEstimator::UpdateModel() {
       } else {
         // Accumulate
         feature << therm_lat_vec,
-            x.row(index - 1).segment(num_sensors_, num_devices_).transpose() + e_freq_3_lat_vec,
-            x.row(index - 1).segment(2 * num_devices_, num_devices_).transpose() + e_freq_lat_vec,
-            x.row(index - 1).segment(3 * num_devices_, num_devices_).transpose() + e_lat_vec;
+            x.row(index - 1).segment(num_sensors_, num_devices_).transpose() +
+                e_freq_3_lat_vec,
+            x.row(index - 1)
+                    .segment(2 * num_devices_, num_devices_)
+                    .transpose() +
+                e_freq_lat_vec,
+            x.row(index - 1)
+                    .segment(3 * num_devices_, num_devices_)
+                    .transpose() +
+                e_lat_vec;
       }
 
       x.row(index) = feature;
-      y.row(index) = e_end_therm - s_start_therm_vec;
+      y.row(index) = (e_end_therm - s_start_therm_vec);
       index++;
     }
   }

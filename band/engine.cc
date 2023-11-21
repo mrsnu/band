@@ -621,13 +621,11 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
             absl::StrFormat("Worker initialization failed for worker : %s.",
                             ToString(device_flag)));
       }
-
       BAND_LOG_INTERNAL(BAND_LOG_INFO, "%s worker is created.",
                         ToString(device_flag));
       worker->Start();
       workers_.push_back(std::move(worker));
       workers_waiting_[i] = 0;
-      BAND_TRACER_ADD_WORKER(device_flag, workers_.back()->GetId());
     } else {
       BAND_LOG_INTERNAL(BAND_LOG_WARNING, "%s worker is not created.",
                         ToString(device_flag));
@@ -734,6 +732,7 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
 std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
     ModelId model_id, int start_unit_idx,
     const WorkerWaitingTime& worker_waiting, const CostFunc cost) const {
+  // BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostWithUnitSubgraph);
   const ModelSpec* model_spec = GetModelSpec(model_id);
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
@@ -865,8 +864,9 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
 
 std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
     const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-    ThermalMap start_therm, FreqMap freq,
+    ThermalMap start_therm, const FreqMap& freq,
     const WorkerWaitingTime& worker_waiting, const CostFunc cost_func) const {
+  // BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostSubgraphKey);
   double min_cost = std::numeric_limits<double>::max();
   SubgraphKey min_key = {};
 

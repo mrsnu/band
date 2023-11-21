@@ -135,13 +135,7 @@ enum class SensorFlag : size_t {
   kTarget,
 };
 
-enum class FreqFlag : size_t {
-  kCPU = 0,
-  kGPU,
-  kDSP,
-  kNPU,
-  kRuntime
-};
+enum class FreqFlag : size_t { kCPU = 0, kGPU, kDSP, kNPU, kRuntime };
 
 enum class QuantizationType : size_t {
   kNoQuantization = 0,
@@ -177,6 +171,8 @@ template <>
 size_t EnumLength<BufferFormat>();
 template <>
 size_t EnumLength<BufferOrientation>();
+template <>
+size_t EnumLength<FreqFlag>();
 template <>
 size_t EnumLength<DeviceFlag>();
 template <>
