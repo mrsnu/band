@@ -35,6 +35,9 @@ using ScheduleAction = std::pair<Job, SubgraphKey>;
 
 using CostFunc = std::function<double(double, const ThermalMap&)>;
 
+// latency, therm, cost
+using State = std::tuple<double, ThermalMap&, double>;
+
 // Minimal interfaces for Band framework
 class IEngine {
  public:
@@ -75,14 +78,13 @@ class IEngine {
   // ops, but the latency value is calculated with all subgraphs leading to
   // the final op (of the model) in mind.
 
-  virtual std::pair<std::vector<SubgraphKey>, double>
-  GetMinCostWithUnitSubgraph(int model_id, int start_unit_idx,
-                             const WorkerWaitingTime& worker_waiting,
-                             const CostFunc cost) const = 0;
+  virtual std::pair<std::vector<SubgraphKey>, State> GetMinCostWithUnitSubgraph(
+      int model_id, int start_unit_idx, ThermalMap& start_therm,
+      const WorkerWaitingTime& worker_waiting, const CostFunc cost) const = 0;
 
-  virtual std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
+  virtual std::pair<std::vector<SubgraphKey>, State> GetSubgraphWithMinCost(
       const Job& job, const WorkerWaitingTime& worker_waiting,
-      const CostFunc cost) const = 0;
+      ThermalMap& start_therm, const CostFunc cost) const = 0;
 
   virtual SubgraphKey GetSubgraphIdxSatisfyingSLO(
       const Job& job, const WorkerWaitingTime& worker_waiting,

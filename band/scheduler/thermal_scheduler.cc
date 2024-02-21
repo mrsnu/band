@@ -2,73 +2,117 @@
 
 #include <unordered_set>
 
+#include "band/device/thermal.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
-#include "band/time.h"
 
 namespace band {
+ThermalScheduler::ThermalScheduler(IEngine& engine, int window_size, double eta)
+    : IScheduler(engine), window_size_(window_size), eta_(eta) {}
 
 bool ThermalScheduler::Schedule(JobQueue& requests) {
-  BAND_TRACER_SCOPED_THREAD_EVENT(Schedule);
   bool success = true;
-  int num_requests = requests.size();
-
-  while (!requests.empty()) {
+  auto thermal = engine_.GetThermal()->GetAllThermal();
+  int num_jobs = std::min(window_size_, (int)requests.size());
+  while (num_jobs > 0) {
     engine_.UpdateWorkersWaiting();
-    WorkerWaitingTime worker_waiting = engine_.GetWorkerWaitingTime();
-    double largest_min_cost = -1;
-    double largest_expected_latency = -1;
-    std::map<SensorFlag, double> largest_expected_thermal;
-    int target_job_idx;
-    SubgraphKey target_subgraph_key;
 
-    for (auto it = requests.begin(); it != requests.end(); it++) {
-      Job& job = *it;
-      std::pair<int, BitMask> job_to_search =
-          std::make_pair(job.model_id, job.resolved_unit_subgraphs);
+    // stop if there are no idle devices.
+    std::set<int> idle_workers = engine_.GetIdleWorkers();
+    if (idle_workers.empty()) {
+      break;
+    }
+
+    // hold on to a local copy of worker waiting time
+    WorkerWaitingTime waiting_time = engine_.GetWorkerWaitingTime();
+    std::set<JobId> jobs_to_yield;
+
+    double largest_min_cost = -1;
+    int target_job_index;
+    SubgraphKey target_subgraph_key;
+    SubgraphKey target_subgraph_key_next;
+
+    do {
+      largest_min_cost = -1;
+      target_job_index = -1;
+
+      // only check up to `num_jobs` requests
       std::unordered_set<std::pair<int, BitMask>, JobIdBitMaskHash>
           searched_jobs;
-      if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
-        continue;
-      } else {
+      for (auto it = requests.begin(); it != requests.begin() + num_jobs;
+           ++it) {
+        Job job = *it;
+
+        if (jobs_to_yield.find(job.job_id) != jobs_to_yield.end()) {
+          continue;
+        }
+
+        std::pair<ModelId, BitMask> job_to_search =
+            std::make_pair(job.model_id, job.resolved_unit_subgraphs);
+        if (searched_jobs.find(job_to_search) != searched_jobs.end()) {
+          continue;
+        }
+
         searched_jobs.insert(job_to_search);
+
+        std::pair<std::vector<SubgraphKey>, State> best_subgraph =
+            engine_.GetSubgraphWithMinCost(
+                job, waiting_time, thermal,
+                [&](double lat,
+                    const std::map<SensorFlag, double>& therm) -> double {
+                  if (therm.find(SensorFlag::kTarget) == therm.end()) {
+                    return lat;
+                  } else {
+                    return (1.f - eta_) * therm.at(SensorFlag::kTarget) +
+                           eta_ * lat;
+                  }
+                });
+
+        if (largest_min_cost < std::get<2>(best_subgraph.second)) {
+          largest_min_cost = std::get<2>(best_subgraph.second);
+          target_subgraph_key = best_subgraph.first.front();
+          target_job_index = it - requests.begin();
+          if (best_subgraph.first.size() > 1) {
+            target_subgraph_key_next = best_subgraph.first[1];
+          } else {
+            target_subgraph_key_next = {};
+          }
+        }
       }
 
-      double expected_lat;
-      std::map<SensorFlag, double> expected_therm;
-      auto best_subgraph = engine_.GetSubgraphWithMinCost(
-          job, worker_waiting,
-          [&expected_lat, &expected_therm](
-              double lat, const std::map<SensorFlag, double>& therm) -> double {
-            return therm.at(SensorFlag::kTarget);
-          });
-
-      if (largest_min_cost < best_subgraph.second) {
-        largest_min_cost = best_subgraph.second;
-        largest_expected_latency = expected_lat;
-        largest_expected_thermal = expected_therm;
-        target_job_idx = it - requests.begin();
-        target_subgraph_key = best_subgraph.first[0];
+      // no one wants to be scheduled.
+      if (target_job_index < 0) {
+        return success;
       }
+
+      // skip this job if we can't schedule it immediately,
+      // even if this job is the "most urgent" one
+      const int worker_id = target_subgraph_key.GetWorkerId();
+      if (idle_workers.find(worker_id) != idle_workers.end()) {
+        break;
+      }
+      waiting_time[worker_id] += engine_.GetExpected(target_subgraph_key);
+      auto requests_it = requests.begin() + target_job_index;
+      Job& job = *requests_it;
+
+      jobs_to_yield.insert(job.job_id);
+    } while (true);
+
+    auto requests_it = requests.begin() + target_job_index;
+    Job job = *requests_it;
+
+    // erase the job from requests and decrement num_jobs
+    requests.erase(requests_it);
+    num_jobs--;
+
+    if (engine_.IsBegin(target_subgraph_key)) {
+      // only set these fields if this is the first subgraph of this model
+      job.cost = largest_min_cost;
     }
 
-    if (target_subgraph_key.IsValid() == false) {
-      continue;
-    }
-
-    Job most_urgent_job = requests[target_job_idx];
-    most_urgent_job.expected_latency = largest_expected_latency;
-    most_urgent_job.expected_thermal = largest_expected_thermal;
-    BAND_LOG_PROD(BAND_LOG_INFO, "Expected thermal:");
-    for (auto& pair : largest_expected_thermal) {
-      BAND_LOG_PROD(BAND_LOG_INFO, "  %s: %f", ToString(pair.first),
-                    pair.second);
-    }
-
-    requests.erase(requests.begin() + target_job_idx);
-    success &= engine_.EnqueueToWorker({most_urgent_job, target_subgraph_key});
+    success &= engine_.EnqueueToWorker({job, target_subgraph_key});
   }
+
   return success;
 }
-
 }  // namespace band

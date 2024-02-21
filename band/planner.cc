@@ -65,7 +65,8 @@ absl::Status Planner::Init(const PlannerConfig& config) {
       schedulers_.emplace_back(
           new LeastSlackFirstScheduler(engine_, schedule_window_size_));
     } else if (schedulers[i] == SchedulerType::kThermal) {
-      schedulers_.emplace_back(new ThermalScheduler(engine_));
+      schedulers_.emplace_back(
+          new ThermalScheduler(engine_, schedule_window_size_, config.eta));
     } else if (schedulers[i] == SchedulerType::kDVFS) {
       schedulers_.emplace_back(new DVFSScheduler(engine_));
     } else {

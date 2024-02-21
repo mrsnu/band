@@ -171,12 +171,12 @@ class Engine : public IEngine {
   WorkerId GetModelWorker(ModelId model_id) const override;
 
   /* utility funtions for unit-level scheduling */
-  std::pair<std::vector<SubgraphKey>, double> GetSubgraphWithMinCost(
+  std::pair<std::vector<SubgraphKey>, State> GetSubgraphWithMinCost(
       const Job& job, const WorkerWaitingTime& worker_waiting,
-      const CostFunc cost) const override;
+      ThermalMap& start_therm, const CostFunc cost) const override;
 
-  std::pair<std::vector<SubgraphKey>, double> GetMinCostWithUnitSubgraph(
-      ModelId model_id, int start_unit_idx,
+  std::pair<std::vector<SubgraphKey>, State> GetMinCostWithUnitSubgraph(
+      ModelId model_id, int start_unit_idx, ThermalMap& start_therm,
       const WorkerWaitingTime& worker_waiting,
       const CostFunc cost) const override;
 
@@ -189,10 +189,10 @@ class Engine : public IEngine {
 
   // Note: pass start_them as a copy to initialize not existing sensor flags to
   // zero when accessing the map
-  std::pair<SubgraphKey, double> GetMinCostSubgraphKey(
-      const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-      ThermalMap start_therm, const FreqMap& freq,
-      const WorkerWaitingTime& worker_waiting, const CostFunc cost) const;
+  std::tuple<SubgraphKey, double, ThermalMap, double> GetMinCostSubgraphKey(
+      const std::vector<SubgraphKey>& subgraph_keys, State& start_state,
+      const FreqMap& freq, const WorkerWaitingTime& worker_waiting,
+      const CostFunc cost) const;
 
   /* estimators */
   void UpdateWithJob(const SubgraphKey&, Job& job) override;

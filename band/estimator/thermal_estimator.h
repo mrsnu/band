@@ -32,9 +32,7 @@ class ThermalEstimator
       IEngine* engine,
       IEstimator<SubgraphKey, double, double>* latency_estimator)
       : IEstimator(engine),
-        latency_estimator_(latency_estimator),
-        model_update_thread_(
-            std::thread(&ThermalEstimator::ModelUpdateThreadLoop, this)) {}
+        latency_estimator_(latency_estimator) {}
   ~ThermalEstimator();
   absl::Status Init(const ThermalProfileConfig& config);
 
@@ -46,7 +44,7 @@ class ThermalEstimator
   absl::Status LoadModel(std::string profile_path) override;
   absl::Status DumpModel(std::string profile_path) override;
 
-  void UpdateModel();
+  bool UpdateModel();
 
   Json::Value EigenMatrixToJson(Eigen::MatrixXd& matrix);
 

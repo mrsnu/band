@@ -196,6 +196,10 @@ class PlannerConfigBuilder {
     log_path_ = log_path;
     return *this;
   }
+  PlannerConfigBuilder& AddEta(double eta) {
+    eta_ = eta;
+    return *this;
+  }
 
   PlannerConfig Build(ErrorReporter* error_reporter = DefaultErrorReporter());
   bool IsValid(ErrorReporter* error_reporter = DefaultErrorReporter());
@@ -205,6 +209,7 @@ class PlannerConfigBuilder {
   std::vector<SchedulerType> schedulers_;
   CPUMaskFlag cpu_mask_ = CPUMaskFlag::kAll;
   std::string log_path_ = "";
+  double eta_ = 0.1f;
 };
 
 // Builder for creating WorkerConfig.
@@ -381,7 +386,11 @@ class RuntimeConfigBuilder {
     planner_config_builder_.AddCPUMask(cpu_masks);
     return *this;
   }
-  
+  RuntimeConfigBuilder& AddEta(double eta) {
+    planner_config_builder_.AddEta(eta);
+    return *this;
+  }
+
   // Add WorkerConfig
   RuntimeConfigBuilder& AddWorkers(std::vector<DeviceFlag> workers) {
     worker_config_builder_.AddWorkers(workers);

@@ -554,7 +554,10 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       auto status = latency_estimator_->LoadModel(absl::StrFormat(
           "%s/latency_model.json", config.profile_config.profile_path.c_str()));
       if (!status.ok()) {
-        return status;
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to load latency model: %s",
+                      status.message());
+      } else {
+        BAND_LOG_PROD(BAND_LOG_INFO, "Loaded latency model");
       }
     }
   }
@@ -573,7 +576,10 @@ absl::Status Engine::Init(const RuntimeConfig& config) {
       auto status = thermal_estimator_->LoadModel(absl::StrFormat(
           "%s/thermal_model.json", config.profile_config.profile_path.c_str()));
       if (!status.ok()) {
-        return status;
+        BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to load thermal model: %s",
+                      status.message());
+      } else {
+        BAND_LOG_PROD(BAND_LOG_INFO, "Loaded thermal model");
       }
     }
   }
@@ -729,23 +735,26 @@ absl::Status Engine::Invoke(const SubgraphKey& key) {
   return model_executor_it->second->ExecuteSubgraph(key);
 }
 
-std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
-    ModelId model_id, int start_unit_idx,
-    const WorkerWaitingTime& worker_waiting, const CostFunc cost) const {
+std::pair<std::vector<SubgraphKey>, State> Engine::GetMinCostWithUnitSubgraph(
+    ModelId model_id, int start_unit_idx, ThermalMap& start_therm,
+    const WorkerWaitingTime& worker_waiting, const CostFunc cost_func) const {
   BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostWithUnitSubgraph);
   const ModelSpec* model_spec = GetModelSpec(model_id);
   // vector for memoization during scheduling.
   // Each element is a pair of subgraph indices list and shortest latency.
-  std::vector<std::pair<std::vector<SubgraphKey>, double>> memo;
+  std::vector<std::pair<std::vector<SubgraphKey>, State>> memo;
   const size_t num_unit_subgraphs = model_spec->GetNumUnitSubgraphs();
-  memo.resize(num_unit_subgraphs);
+  // memo.resize(num_unit_subgraphs);
 
   assert(start_unit_idx < num_unit_subgraphs);
 
   // Initialize memo.
+  State initial_state =
+      std::make_tuple(std::numeric_limits<double>::max(), std::ref(start_therm),
+                      std::numeric_limits<double>::max());
+
   for (int i = 0; i < num_unit_subgraphs; ++i) {
-    memo[i] = std::make_pair<std::vector<SubgraphKey>, double>(
-        {}, std::numeric_limits<double>::max());
+    memo.push_back(std::make_pair(std::vector<SubgraphKey>(), initial_state));
   }
 
   // `i` and `j` refer to an unit subgraph idx.
@@ -757,8 +766,10 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
   // subgraph(start_unit_idx, num_unit_subgraphs - 1) is
   // `memo[num_unit_subgraphs - 1].second`.
   for (int j = start_unit_idx; j < num_unit_subgraphs; ++j) {
-    std::pair<std::vector<SubgraphKey>, double> local_min =
-        std::make_pair<std::vector<SubgraphKey>, int64_t>({}, -1);
+    std::pair<std::vector<SubgraphKey>, State> local_min =
+        std::make_pair(std::vector<SubgraphKey>(),
+                       std::make_tuple(-1, std::ref(start_therm), -1));
+
     for (int i = j; i >= start_unit_idx; --i) {
       // Check if the subgraph(i, j) is valid.
       if (unit_subgraphs_to_subgraph_keys_.find(model_id) ==
@@ -777,24 +788,44 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
       // Search from the profile result of the unit subgraph.
       const auto& subgraph_keys =
           unit_subgraphs_to_subgraph_keys_.at(model_id).at(i).at(j);
-      int64_t start = i > start_unit_idx ? memo[i - 1].second : 0;
-      ThermalMap start_therm;
-      FreqMap freq;
-      std::pair<SubgraphKey, double> target_pair = GetMinCostSubgraphKey(
-          subgraph_keys, start, start_therm, freq, worker_waiting, cost);
-      SubgraphKey& target_key = target_pair.first;
-      double& target_cost = target_pair.second;
 
-      if (local_min.second == -1 || target_cost < local_min.second) {
+      State& start_state = initial_state;
+      if (i > start_unit_idx) {
+        start_state = memo.at(i - 1).second;
+      } else {
+        std::get<0>(start_state) = 0;
+      }
+
+      FreqMap freq;
+      freq[FreqFlag::kCPU] = 1;
+      freq[FreqFlag::kGPU] = 1;
+      freq[FreqFlag::kDSP] = 1;
+      freq[FreqFlag::kNPU] = 1;
+      freq[FreqFlag::kRuntime] = 1;
+
+      auto target_tuple = GetMinCostSubgraphKey(
+          subgraph_keys, start_state, freq, worker_waiting, cost_func);
+
+      SubgraphKey& target_key = std::get<0>(target_tuple);
+      double& target_lat = std::get<1>(target_tuple);
+      ThermalMap& target_therm = std::get<2>(target_tuple);
+      double& target_cost = std::get<3>(target_tuple);
+
+      BAND_LOG_PROD(BAND_LOG_INFO, "Target cost: %f", target_cost);
+
+      if (std::get<2>(local_min.second) == -1 ||
+          target_cost < std::get<2>(local_min.second)) {
         if (i > start_unit_idx) {
           local_min.first = memo[i - 1].first;
-          local_min.first.push_back(target_key);
-          local_min.second = target_cost;
         } else {
           local_min.first.clear();
-          local_min.first.push_back(target_key);
-          local_min.second = target_cost;
         }
+        local_min.first.push_back(target_key);
+
+        State& local_min_state = local_min.second;
+        std::get<0>(local_min_state) = target_lat;
+        std::get<1>(local_min_state) = target_therm;
+        std::get<2>(local_min_state) = target_cost;
       }
     }
     memo[j] = local_min;
@@ -803,9 +834,10 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetMinCostWithUnitSubgraph(
   return memo[num_unit_subgraphs - 1];
 }
 
-std::pair<std::vector<SubgraphKey>, double> Engine::GetSubgraphWithMinCost(
+std::pair<std::vector<SubgraphKey>, State> Engine::GetSubgraphWithMinCost(
     const Job& job, const WorkerWaitingTime& worker_waiting,
-    const CostFunc cost) const {
+    ThermalMap& start_therm, const CostFunc cost) const {
+  BAND_TRACER_SCOPED_THREAD_EVENT(GetSubgraphWithMinCost);
   int start_unit_idx = 0;
   for (int i = 0; i < model_specs_.at(job.model_id).GetNumUnitSubgraphs();
        i++) {
@@ -813,7 +845,7 @@ std::pair<std::vector<SubgraphKey>, double> Engine::GetSubgraphWithMinCost(
       start_unit_idx = i + 1;
     }
   }
-  return GetMinCostWithUnitSubgraph(job.model_id, start_unit_idx,
+  return GetMinCostWithUnitSubgraph(job.model_id, start_unit_idx, start_therm,
                                     worker_waiting, cost);
 }
 
@@ -862,13 +894,20 @@ std::vector<SubgraphKey> Engine::GetSubgraphCandidates(
   return candidates;
 }
 
-std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
-    const std::vector<SubgraphKey>& subgraph_keys, double start_time,
-    ThermalMap start_therm, const FreqMap& freq,
-    const WorkerWaitingTime& worker_waiting, const CostFunc cost_func) const {
+std::tuple<SubgraphKey, double, ThermalMap, double>
+Engine::GetMinCostSubgraphKey(const std::vector<SubgraphKey>& subgraph_keys,
+                              State& start_state, const FreqMap& freq,
+                              const WorkerWaitingTime& worker_waiting,
+                              const CostFunc cost_func) const {
   BAND_TRACER_SCOPED_THREAD_EVENT(GetMinCostSubgraphKey);
   double min_cost = std::numeric_limits<double>::max();
+  double min_lat = std::numeric_limits<double>::max();
+  ThermalMap min_therm = ThermalMap();
+
   SubgraphKey min_key = {};
+
+  auto& start_time = std::get<0>(start_state);
+  auto& start_therm = std::get<1>(start_state);
 
   for (const auto& key : subgraph_keys) {
     double waiting_time = worker_waiting.at(key.GetWorkerId());
@@ -878,16 +917,22 @@ std::pair<SubgraphKey, double> Engine::GetMinCostSubgraphKey(
 
 #ifdef BAND_SPLASH
     delta_thermal = thermal_estimator_->GetExpected(
-        std::make_tuple(key, start_therm, FreqMap()));
+        std::make_tuple(key, start_therm, freq));
 #endif  // BAND_SPLASH
 
     double cost = cost_func(expected_latency, delta_thermal);
     if (min_cost >= cost) {
+      min_lat = expected_latency;
+      for (auto& therm : start_therm) {
+        min_therm[therm.first] =
+            start_therm[therm.first] + delta_thermal[therm.first];
+      }
       min_cost = cost;
+
       min_key = key;
     }
   }
-  return {min_key, min_cost};
+  return std::make_tuple(min_key, min_lat, min_therm, min_cost);
 }
 
 void Engine::UpdateWithJob(const SubgraphKey& key, Job& job) {

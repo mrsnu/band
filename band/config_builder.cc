@@ -187,6 +187,7 @@ PlannerConfig PlannerConfigBuilder::Build(
   planner_config.schedule_window_size = schedule_window_size_;
   planner_config.schedulers = schedulers_;
   planner_config.cpu_mask = cpu_mask_;
+  planner_config.eta = eta_;
   return planner_config;
 }
 

@@ -85,10 +85,10 @@ void ThermalEstimator::Update(const SubgraphKey& key, Job& job) {
   model_update_cv_.notify_one();
 }
 
-void ThermalEstimator::UpdateModel() {
+bool ThermalEstimator::UpdateModel() {
   BAND_TRACER_SCOPED_THREAD_EVENT(UpdateModel);
   if (window_size_ > features_.size()) {
-    return;
+    return false;
   }
 
   auto data_size = window_size_ * (window_size_ - 1) / 2;
@@ -160,9 +160,11 @@ void ThermalEstimator::UpdateModel() {
     std::unique_lock<std::mutex> lock(model_mutex_);
     model_ = (x.transpose() * x).ldlt().solve(x.transpose() * y);
   }
+  return true;
 }
 
 void ThermalEstimator::ModelUpdateThreadLoop() {
+  size_t count = 0;
   while (true) {
     {
       std::unique_lock<std::mutex> lock(model_update_queue_mutex_);
@@ -184,7 +186,14 @@ void ThermalEstimator::ModelUpdateThreadLoop() {
         features_.pop_front();
       }
 
-      UpdateModel();
+      if (UpdateModel()) {
+        auto status = DumpModel(absl::StrFormat(
+            "/data/local/tmp/splash/thermal_model_%d.json", count++));
+        if (!status.ok()) {
+          BAND_LOG_PROD(BAND_LOG_ERROR, "Failed to dump model: %s",
+                        status.message());
+        }
+      }
     }
   }
 }
@@ -194,10 +203,24 @@ ThermalMap ThermalEstimator::GetProfiled(const SubgraphKey& key) const {
 }
 
 ThermalMap ThermalEstimator::GetExpected(const ThermalKey& thermal_key) const {
-  // auto expected_therm =
-  //     ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
-  // return expected_therm;
-  return {};
+  if (model_.size() == 0) {
+    BAND_LOG_PROD(BAND_LOG_ERROR, "Model is not loaded");
+    return {};
+  }
+
+  auto& key = std::get<0>(thermal_key);
+  auto& therm = std::get<1>(thermal_key);
+  auto& freq = std::get<2>(thermal_key);
+
+  auto latency = latency_estimator_->GetExpected(key);
+
+  auto therm_vec = ConvertTMapToEigenVector<ThermalMap>(therm, num_sensors_);
+  auto freq_vec = ConvertTMapToEigenVector<FreqMap>(freq, num_devices_);
+  auto lat_vec = GetOneHotVector(latency, num_devices_, key.GetWorkerId());
+
+  auto feature = GetFeatureVector(therm_vec, freq_vec, lat_vec,
+                                  key.GetWorkerId(), latency);
+  return ConvertEigenVectorToTMap<ThermalMap>(model_.transpose() * feature);
 }
 
 absl::Status ThermalEstimator::LoadModel(std::string profile_path) {
@@ -210,7 +233,6 @@ absl::Status ThermalEstimator::LoadModel(std::string profile_path) {
 }
 
 absl::Status ThermalEstimator::DumpModel(std::string profile_path) {
-  UpdateModel();
   Json::Value root;
   root["window_size"] = window_size_;
   root["model"] = EigenMatrixToJson(model_);

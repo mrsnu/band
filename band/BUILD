@@ -292,6 +292,7 @@ band_cc_library(
         ":common",
         ":time",
         ":job_tracer",
+        "//band/device:thermal",
     ],
 )
 

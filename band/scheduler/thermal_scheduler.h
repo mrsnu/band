@@ -7,13 +7,15 @@ namespace band {
 
 class ThermalScheduler : public IScheduler {
  public:
-  explicit ThermalScheduler(IEngine& engine) : IScheduler(engine) {};
+  explicit ThermalScheduler(IEngine& engine, int window_size, double eta);
 
   bool Schedule(JobQueue& requests) override;
   bool NeedFallbackSubgraphs() override { return true; }
   WorkerType GetWorkerType() override { return WorkerType::kGlobalQueue; }
 
  private:
+  double eta_ = 0.1f;
+  const int window_size_;
 };
 
 }  // namespace band

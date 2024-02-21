@@ -50,6 +50,7 @@ struct PlannerConfig {
   std::vector<SchedulerType> schedulers;
   CPUMaskFlag cpu_mask = CPUMaskFlag::kAll;
   std::string log_path = "";
+  double eta = 0.1f;
 };
 
 struct WorkerConfig {

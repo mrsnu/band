@@ -2,6 +2,7 @@
 
 #include <unordered_set>
 
+#include "band/device/thermal.h"
 #include "band/job_tracer.h"
 #include "band/logger.h"
 
@@ -10,9 +11,18 @@ HEFTScheduler::HEFTScheduler(IEngine& engine, int window_size)
     : IScheduler(engine), window_size_(window_size) {}
 
 bool HEFTScheduler::Schedule(JobQueue& requests) {
+  BAND_TRACER_SCOPED_THREAD_EVENT(ScheduleFunction);
   bool success = true;
+  auto thermal = ThermalMap();
+  thermal[SensorFlag::kCPU] = 25.f;
+  thermal[SensorFlag::kGPU] = 25.f;
+  thermal[SensorFlag::kDSP] = 25.f;
+  thermal[SensorFlag::kNPU] = 25.f;
+  thermal[SensorFlag::kTarget] = 25.f;
+
   int num_jobs = std::min(window_size_, (int)requests.size());
   while (num_jobs > 0) {
+    BAND_TRACER_SCOPED_THREAD_EVENT(ScheduleJob);
     engine_.UpdateWorkersWaiting();
 
     // stop if there are no idle devices.
@@ -31,6 +41,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
     SubgraphKey target_subgraph_key_next;
 
     do {
+      BAND_TRACER_SCOPED_THREAD_EVENT(ScheduleWhileLoop);
       largest_min_cost = -1;
       target_job_index = -1;
 
@@ -39,6 +50,7 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
           searched_jobs;
       for (auto it = requests.begin(); it != requests.begin() + num_jobs;
            ++it) {
+        BAND_TRACER_SCOPED_THREAD_EVENT(ScheduleForLoop);
         Job job = *it;
 
         if (jobs_to_yield.find(job.job_id) != jobs_to_yield.end()) {
@@ -52,25 +64,24 @@ bool HEFTScheduler::Schedule(JobQueue& requests) {
         }
 
         searched_jobs.insert(job_to_search);
-
-        double expected_cost;
-        std::pair<std::vector<SubgraphKey>, double> best_subgraph =
-            engine_.GetSubgraphWithMinCost(
-                job, waiting_time,
-                [&expected_cost](double lat,
-                                 std::map<SensorFlag, double>) -> double {
-                  expected_cost = lat;
-                  return lat;
-                });
-
-        if (largest_min_cost < best_subgraph.second) {
-          largest_min_cost = best_subgraph.second;
-          target_subgraph_key = best_subgraph.first.front();
-          target_job_index = it - requests.begin();
-          if (best_subgraph.first.size() > 1) {
-            target_subgraph_key_next = best_subgraph.first[1];
-          } else {
-            target_subgraph_key_next = {};
+        {
+          BAND_TRACER_SCOPED_THREAD_EVENT(BestSubgraph);
+          const auto& best_subgraph = engine_.GetSubgraphWithMinCost(
+              job, waiting_time, thermal,
+              [](double lat, const std::map<SensorFlag, double>&) -> double {
+                return lat;
+              });
+          BAND_LOG_PROD(BAND_LOG_INFO, "cost: %f",
+                        std::get<2>(best_subgraph.second));
+          if (largest_min_cost < std::get<2>(best_subgraph.second)) {
+            largest_min_cost = std::get<2>(best_subgraph.second);
+            target_subgraph_key = best_subgraph.first.front();
+            target_job_index = it - requests.begin();
+            if (best_subgraph.first.size() > 1) {
+              target_subgraph_key_next = best_subgraph.first[1];
+            } else {
+              target_subgraph_key_next = {};
+            }
           }
         }
       }

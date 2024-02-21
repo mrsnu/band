@@ -230,6 +230,10 @@ bool tool::Benchmark::LoadRuntimeConfigs(const Json::Value& root) {
     if (root["log_path"].isString()) {
       builder.AddPlannerLogPath(root["log_path"].asCString());
     }
+
+    if (root["eta"].isDouble()) {
+      builder.AddEta(root["eta"].asDouble());
+    }
   }
 
   // Worker config
