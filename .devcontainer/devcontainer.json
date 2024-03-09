@@ -16,7 +16,12 @@
 	"extensions": [
 		"ms-vscode.cpptools",
 		"bazelbuild.vscode-bazel"
-	]
+	],
+	
+	"remoteEnv": {
+        "http_proxy": "http://192.168.68.50:10809",
+        "https_proxy": "http://192.168.68.50:10809"
+    }
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
