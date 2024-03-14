@@ -331,6 +331,10 @@ size_t Buffer::GetPixelBytes() const {
   }
 }
 
+size_t Buffer::GetNumPixelElements() const{
+  return GetNumPixelElements(buffer_format_);
+}
+
 size_t Buffer::GetBytes() const { return GetPixelBytes() * GetNumElements(); }
 
 DataType Buffer::GetDataType() const { return data_type_; }
