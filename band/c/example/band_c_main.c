@@ -130,9 +130,9 @@ bool LoadBandLibrary() {
   libbandc = dlopen("libband_c.so", RTLD_NOW | RTLD_LOCAL);
   if (libbandc) {
     LoadBandLibraryFunctions(libbandc);
-    return true;
   }
 #endif
+  return true;
 }
 
 void on_end_request(void* user_data, int job_id, BandStatus status) {
@@ -243,7 +243,7 @@ int main() {
   }
 
   BandRequestHandle request_handle =
-      pBandEngineRequestAsync(engine, model, &input);
+      pBandEngineRequestAsync(engine, model, &input_tensor);
   printf("BandEngineRequestAsync\n");
   pBandEngineWait(engine, request_handle, &output_tensor, num_outputs);
 
