@@ -19,8 +19,11 @@ import shutil
 
 from utils import *
 
+# 根目录下存储benchmark的文件夹
 BASE_DIR = 'benchmark'
+# 编译的目标
 TARGET = "band/tool:band_benchmark"
+# 默认的配置文件
 DEFAULT_CONFIG = 'script/config_samples/benchmark_config.json'
 
 
