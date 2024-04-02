@@ -524,6 +524,7 @@ TEST(TFLiteBackend, ClassificationTest) {
   ImageProcessorBuilder preprocessor_builder;
   preprocessor_builder.AddOperation(std::make_unique<buffer::Resize>(224, 224))
       .AddOperation(std::make_unique<buffer::Normalize>(127.5f, 127.5f, false));
+
   absl::StatusOr<std::unique_ptr<BufferProcessor>> preprocessor =
       preprocessor_builder.Build();
   EXPECT_TRUE(preprocessor.ok());
@@ -531,8 +532,8 @@ TEST(TFLiteBackend, ClassificationTest) {
       preprocessor.value()->Process(*image_buffer, *tensor_buffer).ok());
 
   for (size_t i = 0; i < input_tensor->GetNumElements(); ++i) {
-    EXPECT_GT(reinterpret_cast<float*>(input_tensor->GetData())[i], -1.0f);
-    EXPECT_LT(reinterpret_cast<float*>(input_tensor->GetData())[i], 1.0f);
+    EXPECT_GE(reinterpret_cast<float*>(input_tensor->GetData())[i], -1.0f);
+    EXPECT_LE(reinterpret_cast<float*>(input_tensor->GetData())[i], 1.0f);
   }
 
   // confirm that the image is resized to 224x224 and converted to RGB
