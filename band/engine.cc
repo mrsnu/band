@@ -1,17 +1,3 @@
-// Copyright 2023 Seoul National University
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "band/engine.h"
 
 #include <algorithm>
@@ -38,6 +24,7 @@ Engine::~Engine() {
   for (auto& model_executor : model_executors_) {
     model_executor.second.reset();
   }
+  // 清理模型执行器
 
   for (auto& worker : workers_) {
     worker->End();
@@ -46,13 +33,19 @@ Engine::~Engine() {
   for (auto& worker : workers_) {
     worker.reset();
   }
+  // 结束工作器
 
   planner_.reset();
+  // 清理计划器
 }
 
 std::unique_ptr<Engine> Engine::Create(const RuntimeConfig& config) {
   std::unique_ptr<Engine> engine_ptr(new Engine());
+  // new实例 封装在一个智能指针当中
+  // std::unique_ptr 确保了内存的安全管理，当 unique_ptr 超出作用域或被显式释放时，它所管理的对象也会被自动销毁
   return engine_ptr->Init(config).ok() ? std::move(engine_ptr) : nullptr;
+  // 调用init初始化 通过ok判断是否初始化成功
+  // std::move 将engine_ptr的所有权转移给返回值
 }
 
 absl::Status Engine::RegisterModel(Model* model) {
@@ -62,18 +55,23 @@ absl::Status Engine::RegisterModel(Model* model) {
 
   if (model->GetSupportedBackends().size() == 0) {
     return absl::InternalError("No supported backends.");
+    // 获取支持的后端数量为0
   }
 
   const ModelId model_id = model->GetId();
 
   for (BackendType backend_type : model->GetSupportedBackends()) {
     // Analyze model & generate subgraphs per backend type
+    // 分析模型并为每个后端类型生成子图
     ModelAnalyzer analyzer(*this, planner_->NeedFallbackSubgraphs(),
                            subgraph_config_, model, backend_type);
 
     const auto status_or_result = analyzer.CreateSubgraphs();
+    // 创建子图
+
     if (!status_or_result.ok()) {
       // TODO(BAND-49): unregister for specific backend
+      // 为特定后端取消注册
       auto status = UnregisterModel(model);
       if (!status.ok()) {
         BAND_LOG(LogSeverity::kError, "Failed to unregister model %d: %s",
@@ -87,11 +85,13 @@ absl::Status Engine::RegisterModel(Model* model) {
     const std::vector<SubgraphDef> subgraph_defs = std::get<1>(result);
 
     // Create internal model_executor per each supported backends
+    // 为每个支持的后端创建内部模型执行器
     {
       bool added_once = false;
       for (WorkerId worker_id = 0; worker_id < workers_.size(); worker_id++) {
         if (model_spec.unavailable_devices.find(GetWorkerDevice(worker_id)) ==
             model_spec.unavailable_devices.end()) {
+              // 遍历工作器 如果设备可用 为支持的工作器创建模型执行器
           const Worker* worker = workers_[worker_id].get();
           std::unique_ptr<interface::IModelExecutor> model_executor(
               BackendFactory::CreateModelExecutor(
@@ -120,12 +120,15 @@ absl::Status Engine::RegisterModel(Model* model) {
     model_specs_.insert({model_id, model_spec});
 
     // Prepare execution of subgraph definitions per each model_executor
+    // 为每个子图定义的执行准备环境，并验证子图的输入和输出格式是否正确
     {
       for (const SubgraphDef& subgraph_def : subgraph_defs) {
         const std::pair<ModelId, WorkerId> model_executor_key = {
             model_id, subgraph_def.worker_id};
+            // 用于从 model_executors_ 映射中检索对应的模型执行器
         const SubgraphKey key = {model_id, subgraph_def.worker_id,
                                  subgraph_def.unit_subgraph_indices};
+                                //  用于执行过程中识别具体的子图
 
         if (model_executors_.find(model_executor_key) ==
             model_executors_.end()) {
@@ -139,6 +142,7 @@ absl::Status Engine::RegisterModel(Model* model) {
           absl::Status status = model_executor->PrepareSubgraph(
               model->GetBackendModel(backend_type), subgraph_def.op_indices,
               subgraph_def.unit_subgraph_indices);
+              // 使用找到的模型执行器调用 PrepareSubgraph 方法，准备子图以供执行
           if (status.ok()) {
             // Verify generated subgraphs
             if (model_executor->HasSubgraph(key) == false) {
@@ -148,8 +152,10 @@ absl::Status Engine::RegisterModel(Model* model) {
             }
             const std::set<int> inputs =
                 model_spec.GetPureInputTensors(subgraph_def.op_indices);
+                // 获取子图定义中所有操作的纯输入张量集合，并与模型执行器返回的实际输入集合进行比较
             const std::set<int> all_outputs =
                 model_spec.GetOutputTensors(subgraph_def.op_indices);
+                // 获取子图定义中所有操作的输出张量集合，并检查这些输出是否包含在模型执行器返回的输出集合中。
 
             if (!std::equal(model_executor->GetInputs(key).begin(),
                             model_executor->GetInputs(key).end(),
@@ -169,19 +175,25 @@ absl::Status Engine::RegisterModel(Model* model) {
                 [model_id][*subgraph_def.unit_subgraph_indices.begin()]
                 [*subgraph_def.unit_subgraph_indices.rbegin()]
                     .push_back(key);
+                    // 记录子图的键，该映射用于后续操作中快速查找和参照子图
           }
         }
       }
 
       // Verify equality of all tensor pairs
+      // 验证不同工作器之间的子图输出和输入的一致性
+      // 此代码段是模型在多工作器环境下确保数据一致性的关键步骤
+      // 通过对不同工作器上执行的子图之间的输入和输出进行严格的一致性验证，来保证模型整体的执行逻辑和数据处理的正确性
       for (const SubgraphDef& lhs : subgraph_defs) {
         auto& lhs_model_executor = model_executors_[{model_id, lhs.worker_id}];
         const SubgraphKey lhs_key = {model_id, lhs.worker_id,
                                      lhs.unit_subgraph_indices};
+                                    //  获取对应的模型执行器和子图键
 
         std::set<int> lhs_outputs{
             lhs_model_executor->GetOutputs(lhs_key).begin(),
             lhs_model_executor->GetOutputs(lhs_key).end()};
+            // 提取该子图的所有输出张量到一个集合lhs_outputs中
 
         for (const SubgraphDef& rhs : subgraph_defs) {
           auto& rhs_model_executor =
@@ -189,6 +201,7 @@ absl::Status Engine::RegisterModel(Model* model) {
           const SubgraphKey rhs_key = {model_id, rhs.worker_id,
                                        rhs.unit_subgraph_indices};
           if ((lhs.worker_id != rhs.worker_id) && (&lhs != &rhs)) {
+            // 左右子图不同，且工作器不同
             std::set<int> rhs_inputs{
                 rhs_model_executor->GetInputs(rhs_key).begin(),
                 rhs_model_executor->GetInputs(rhs_key).end()};
@@ -198,6 +211,7 @@ absl::Status Engine::RegisterModel(Model* model) {
                 lhs_outputs.begin(), lhs_outputs.end(), rhs_inputs.begin(),
                 rhs_inputs.end(),
                 std::inserter(common_tensors, common_tensors.end()));
+                // 计算交集 两个集合的交集存储在common_tensors中
 
             for (int common_tensor_index : common_tensors) {
               if (!(*lhs_model_executor->GetTensorView(lhs_key,
@@ -210,6 +224,8 @@ absl::Status Engine::RegisterModel(Model* model) {
                     lhs.ToString().c_str(), common_tensor_index,
                     ToString(GetWorkerDevice(rhs.worker_id)),
                     rhs.ToString().c_str(), common_tensor_index));
+                    // 任何一个张量视图不相等，返回错误
+                    // 说明不同工作器之间的数据传递可能存在问题
               }
             }
           }
@@ -217,18 +233,24 @@ absl::Status Engine::RegisterModel(Model* model) {
       }
 
       // todo: connect prev / next && unit indices
+      // 待办：连接前一个和后一个单元索引。
 
       // Initialize tensor ring buffer
+      // 初始化张量环形缓冲区
       // Assumption: each backend model in band::Model has the same input /
       // output tensor shapes
+      // 假设：band::Model 中的每个后端模型具有相同的输入/输出张量形状
       {
         std::vector<std::shared_ptr<interface::ITensor>> input_tensors;
         std::vector<std::shared_ptr<interface::ITensor>> output_tensors;
+        // (std::shared_ptr<interface::ITensor>)，指向实际的张量对象。
 
         auto model_subgraph_key = GetLargestSubgraphKey(
             model_id, GetDeviceWorkerId(DeviceFlag::kCPU));
+            // 获取模型在CPU上的最大子图键
         interface::IModelExecutor* primary_model_executor =
             GetModelExecutor(model_subgraph_key);
+            // 获取模型执行器
 
         for (int input_tensor : model_spec.input_tensors) {
           input_tensors.push_back(primary_model_executor->GetTensorView(
@@ -244,6 +266,7 @@ absl::Status Engine::RegisterModel(Model* model) {
                                              model_spec.input_tensors.end()};
         const std::vector<int> output_indices{model_spec.output_tensors.begin(),
                                               model_spec.output_tensors.end()};
+        // 遍历模型规格中定义的输入和输出张量索引，获取相应的张量视图
 
         model_input_buffer_.emplace(
             model->GetId(),
@@ -251,6 +274,7 @@ absl::Status Engine::RegisterModel(Model* model) {
         model_output_buffer_.emplace(
             model_id,
             std::make_unique<TensorRingBuffer>(output_tensors, output_indices));
+            // 创建环形缓冲区并映射到模型ID
       }
     }
     {
@@ -291,20 +315,38 @@ absl::Status Engine::UnregisterModel(Model* model) {
   return absl::OkStatus();
 }
 
+/**
+ * @brief Creates a new Tensor object corresponding to the specified model's specific tensor index.
+ * 
+ * @param model_id The ID of the model.
+ * @param tensor_index The index of the tensor.
+ * @return A pointer to the newly created Tensor object, or nullptr if the model executor is not found.
+ */
 Tensor* Engine::CreateTensor(ModelId model_id, int tensor_index) {
+  // 用于创建一个新的Tensor对象，他对应于指定模型的特定张量索引
   // TODO: What if there are multiple backends?
   SubgraphKey model_subgraph_key =
       GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlag::kCPU));
+      // 获取模型在CPU上的最大子图键
 
   if (interface::IModelExecutor* model_executor =
           GetModelExecutor(model_subgraph_key)) {
+            // 获取模型执行器
     return new Tensor(
         model_executor->GetTensorView(model_subgraph_key, tensor_index).get());
+        // 通过执行器的GetTensorView方法获取张量视图
+        // 通过张量视图获取张量
   } else {
     return nullptr;
   }
 }
 
+/**
+ * @brief Returns a vector of integers representing the output tensor indices for a given model.
+ * 
+ * @param model_id The ID of the model.
+ * @return std::vector<int> A vector of integers representing the output tensor indices.
+ */
 std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
       GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlag::kCPU));
@@ -314,6 +356,12 @@ std::vector<int> Engine::GetOutputTensorIndices(ModelId model_id) const {
                         : std::vector<int>();
 }
 
+/**
+ * @brief Returns a vector of integers representing the input tensor indices for a given model.
+ * 
+ * @param model_id The ID of the model.
+ * @return std::vector<int> A vector of integers representing the input tensor indices.
+ */
 std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
   SubgraphKey model_subgraph_key =
       GetLargestSubgraphKey(model_id, GetDeviceWorkerId(DeviceFlag::kCPU));
@@ -325,6 +373,13 @@ std::vector<int> Engine::GetInputTensorIndices(ModelId model_id) const {
 
 size_t Engine::GetNumWorkers() const { return workers_.size(); }
 
+/**
+ * Retrieves the device flag for the specified worker.
+ *
+ * @param id The ID of the worker.
+ * @return The device flag associated with the worker.
+ *         If the worker ID is out of range, it falls back to CPU.
+ */
 DeviceFlag Engine::GetWorkerDevice(WorkerId id) const {
   if (id >= 0 && id < workers_.size()) {
     return workers_.at(id)->GetDeviceFlag();
@@ -337,17 +392,22 @@ DeviceFlag Engine::GetWorkerDevice(WorkerId id) const {
 
 absl::Status Engine::RequestSync(ModelId model_id, RequestOption options,
                                  Tensors inputs, Tensors outputs) {
+                                //  处理单个模型的同步执行请求
   auto status_or_job_id = RequestAsync(model_id, options, inputs);
+  // 启动模型的异步执行 并返回JobId
   if (!status_or_job_id.ok()) {
     return status_or_job_id.status();
   }
   return Wait(status_or_job_id.value(), outputs);
+  // 等待模型执行完成 并获取输出张量
+  // wait 也会返回一个状态
 }
 
 absl::Status Engine::RequestSync(std::vector<ModelId> model_ids,
                                  std::vector<RequestOption> options,
                                  std::vector<Tensors> inputs,
                                  std::vector<Tensors> outputs) {
+                                //  处理多个模型的同步执行请求
   auto status_or_job_ids = RequestAsync(model_ids, options, inputs);
   if (!status_or_job_ids.ok()) {
     return status_or_job_ids.status();
@@ -358,9 +418,12 @@ absl::Status Engine::RequestSync(std::vector<ModelId> model_ids,
 absl::StatusOr<JobId> Engine::RequestAsync(ModelId model_id,
                                            RequestOption options,
                                            Tensors inputs) {
+                                          //  处理单个模型的异步执行请求
   std::vector<Tensors> input_tensors;
   if (inputs.size()) {
     input_tensors.push_back(inputs);
+    // 将输入张量放入input_tensors
+    // 处理多个模型的重载版本希望接受向量形式的参数
   }
   auto status_or_job_ids = RequestAsync({model_id}, {options}, input_tensors);
   if (!status_or_job_ids.ok()) {
@@ -369,12 +432,35 @@ absl::StatusOr<JobId> Engine::RequestAsync(ModelId model_id,
   return status_or_job_ids.value()[0];
 }
 
+/**
+ * Represents the result of an operation that can either return a vector of JobId values or an error status.
+ * 
+ * The `absl::StatusOr` class template is a lightweight wrapper that either holds a value or an error status.
+ * It is used to indicate the success or failure of an operation that returns a vector of JobId values.
+ * 
+ * If the operation succeeds, the `absl::StatusOr` object contains the vector of JobId values.
+ * If the operation fails, the `absl::StatusOr` object contains an error status that describes the failure.
+ * 
+ * Usage example:
+ * 
+ * absl::StatusOr<std::vector<JobId>> result = engine.RequestAsync(model_ids, options, inputs);
+ * if (result.ok()) {
+ *     std::vector<JobId> job_ids = result.value();
+ *     // Process the job IDs
+ * } else {
+ *     absl::Status error_status = result.status();
+ *     // Handle the error
+ * }
+ */
 absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
     std::vector<ModelId> model_ids, std::vector<RequestOption> options,
     std::vector<Tensors> inputs) {
+    // 处理多个模型的同时异步提交作业请求
   std::vector<Job> jobs;
 
   if (model_ids.size() != options.size()) {
+  // 检查模型ID和选项的数量是否相等
+  // 如果不相等，返回错误 因为每个模型ID都应该有对应的请求选项
     return absl::InternalError(
         absl::StrFormat("# Model requests (%llu) != # Worker ids (%llu)",
                         model_ids.size(), options.size()));
@@ -382,11 +468,13 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
 
   for (size_t i = 0; i < model_ids.size(); i++) {
     // TODO(BAND-33): explicit job life cycle
+    // 显式作业生命周期
     Job job(model_ids[i]);
     job.require_callback = options[i].require_callback;
 
     int target_slo_us = options[i].slo_us;
     // TODO(widiba03304): absl::optional for implicit slo_scale default.
+    // absl::optional 用于隐式 slo_scale 默认值
     if (options[i].slo_scale != -1) {
       if (options[i].slo_scale <= 0) {
         return absl::InternalError(absl::StrFormat(
@@ -397,6 +485,7 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
     }
 
     // override, if `slo_us` is specified
+    // 如果指定了`slo_us`，则覆盖
     if (options[i].slo_us != -1) {
       target_slo_us = options[i].slo_us;
     }
@@ -412,25 +501,35 @@ absl::StatusOr<std::vector<JobId>> Engine::RequestAsync(
       }
       job.target_worker_id = options[i].target_worker;
     }
+    // 根据options设置回调、SLO、目标工作器
 
     if (i < inputs.size()) {
+    //确保对于每个模型的索引 存在相应的输入数据
       int input_handle = model_input_buffer_[model_ids[i]]->Alloc();
+      // 调用 model_input_buffer_[model_ids[i]]->Alloc() 为特定模型分配一个新的输入缓冲句柄
+      // 这个句柄用于标识模型输入数据在缓冲区中的位置
       if (!model_input_buffer_[model_ids[i]]
                ->PutTensorsToHandle(inputs[i], input_handle)
                .ok()) {
+              //  将对应的输入张量 inputs[i] 复制到前面分配的句柄 input_handle
+              // 这一步是将实际的输入数据（张量）存入由 Alloc() 方法分配的缓冲区位置
         return absl::InternalError(
             absl::StrFormat("Input copy failure for model %d", model_ids[i]));
       }
       job.input_handle = input_handle;
       job.output_handle = model_output_buffer_[model_ids[i]]->Alloc();
+      // 这个句柄将用于在模型执行完成后，存储模型的输出数据
     }
 
     jobs.push_back(job);
+    // 更新作业列表
   }
   return EnqueueBatch(jobs);
+  // 将作业加入队列
 }
 
 absl::Status Engine::Wait(JobId job_id, Tensors outputs) {
+// 等待单个作业完成 获取输出张量
   std::vector<Tensors> output_tensors;
   if (outputs.size()) {
     output_tensors.push_back(outputs);
@@ -440,6 +539,7 @@ absl::Status Engine::Wait(JobId job_id, Tensors outputs) {
 
 absl::Status Engine::Wait(std::vector<JobId> job_ids,
                           std::vector<Tensors> outputs) {
+                          // ·等待多个作业完成 获取输出张量
   planner_->Wait(job_ids);
   for (size_t i = 0; i < outputs.size(); i++) {
     auto status = GetOutputTensors(job_ids[i], outputs[i]);

@@ -1,31 +1,35 @@
-// Copyright 2023 Seoul National University
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include <algorithm>
 
 #include "band/logger.h"
 #include "band/time.h"
 #include "band/worker.h"
 
+/**
+ * @brief Namespace `band` contains classes and functions related to the band module.
+ */
 namespace band {
 
+/**
+ * @brief Get the reference to the job queue of the device queue worker.
+ * @return Reference to the job queue.
+ */
 JobQueue& DeviceQueueWorker::GetDeviceRequests() { return requests_; }
 
+/**
+ * @brief Allow work steal for the device queue worker.
+ */
 void DeviceQueueWorker::AllowWorkSteal() { allow_work_steal_ = true; }
 
+/**
+ * @brief Check if the device queue worker has a job in the job queue.
+ * @return True if the job queue is not empty, false otherwise.
+ */
 bool DeviceQueueWorker::HasJob() { return !requests_.empty(); }
 
+/**
+ * @brief Get the ID of the current job in the job queue.
+ * @return The ID of the current job, or -1 if the job queue is empty.
+ */
 int DeviceQueueWorker::GetCurrentJobId() {
   if (requests_.empty()) {
     return -1;
@@ -33,6 +37,10 @@ int DeviceQueueWorker::GetCurrentJobId() {
   return requests_.front().job_id;
 }
 
+/**
+ * @brief Get the waiting time of the device queue worker.
+ * @return The waiting time in microseconds.
+ */
 int64_t DeviceQueueWorker::GetWaitingTime() {
   std::unique_lock<std::mutex> lock(device_mtx_);
   if (!IsAvailable()) {
@@ -60,6 +68,11 @@ int64_t DeviceQueueWorker::GetWaitingTime() {
   return total;
 }
 
+/**
+ * @brief Enqueue a job into the job queue of the device queue worker.
+ * @param job The job to enqueue.
+ * @return True if the job was successfully enqueued, false otherwise.
+ */
 bool DeviceQueueWorker::EnqueueJob(Job& job) {
   if (!IsEnqueueReady()) {
     return false;
@@ -69,10 +82,17 @@ bool DeviceQueueWorker::EnqueueJob(Job& job) {
   return true;
 }
 
+/**
+ * @brief Get the pointer to the current job in the job queue.
+ * @return Pointer to the current job, or nullptr if the job queue is empty.
+ */
 Job* DeviceQueueWorker::GetCurrentJob() {
   return HasJob() ? &requests_.front() : nullptr;
 }
 
+/**
+ * @brief Remove the current job from the job queue and perform necessary actions.
+ */
 void DeviceQueueWorker::EndEnqueue() {
   requests_.pop_front();
 
@@ -83,6 +103,10 @@ void DeviceQueueWorker::EndEnqueue() {
   }
 }
 
+/**
+ * @brief Handle device error for the current job in the job queue.
+ * @param current_job The current job.
+ */
 void DeviceQueueWorker::HandleDeviceError(Job& current_job) {
   std::unique_lock<std::mutex> lock(device_mtx_);
   lock.lock();
@@ -100,11 +124,17 @@ void DeviceQueueWorker::HandleDeviceError(Job& current_job) {
   lock.unlock();
 }
 
+/**
+ * @brief Try to steal work from other workers.
+ */
 void DeviceQueueWorker::TryWorkSteal() {
   // Note: Due to the removal of attribute `Worker::worker_id_`,
   // `target_worker->GetWorkerId() == worker_id_` should be updated to
   // `target_worker == this`, and the type of `max_latency_gain_worker` should
   // be changed from `int` to `Worker*`.
+  // 注意：因为移除了 `Worker::worker_id_` 属性，
+  // 原来的比较代码 `target_worker->GetWorkerId() == worker_id_` 需要更改为 `target_worker == this`。
+  // 此外，`max_latency_gain_worker` 的数据类型也应从 `int` 转变为 `Worker*`。
 
   BAND_NOT_IMPLEMENTED;
   /*

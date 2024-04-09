@@ -1,19 +1,3 @@
-/*
- * Copyright 2023 Seoul National University
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #ifndef BAND_MODEL_ANALYZER_H_
 #define BAND_MODEL_ANALYZER_H_
 
@@ -31,6 +15,7 @@ class Model;
 struct SubgraphDef {
   WorkerId worker_id;
   std::set<int> op_indices;
+  // teh op indices of the fallback ops in the subgraph.
   std::set<int> unit_subgraph_indices;
   std::string ToString() const;
 };
@@ -55,9 +40,13 @@ class ModelAnalyzer {
   // topologically sorted. Note that there can be better way to assign unit
   // subgraph indices if there exists any unit subgraphs that can be executed in
   // parallel.
+  // 我们将一个模型分解成了若干个单元子图，并为每个子图指派了一个唯一的编号。
+  // 这些编号是经过拓扑排序的，这意味着它们的排列顺序考虑了子图间的依赖关系。
+  // 值得一提的是，如果某些单元子图可以同时执行，我们还有更优的编号方案以支持这种并行处理。
   absl::Status GetUnitSubgraphs(std::vector<SubgraphDef>& unit_subgraphs);
   // Generate subgraphs for fallback ops in provided model
   // This does not provides unit indices with a SubgraphDef
+  // 在给定模型中为备选操作生成子图，但这个过程并不会为这些子图定义中的每个单元分配索引。
   std::vector<SubgraphDef> GetSubgraphsForFallbackOps(WorkerId worker_id);
   std::vector<SubgraphDef> MergeUnitSubgraphs(
       const std::vector<SubgraphDef>& unit_subgraphs);

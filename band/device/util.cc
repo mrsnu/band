@@ -34,6 +34,9 @@
 namespace band {
 namespace device {
 
+// 列出指定路径下的所有文件
+// 返回类型为std::vector<std::string>
+// 参数为const char* path
 std::vector<std::string> ListFilesInPath(const char* path) {
   std::vector<std::string> ret;
 
@@ -70,6 +73,7 @@ std::vector<std::string> ListFilesInPath(const char* path) {
   return ret;
 }
 
+// 列出指定路径下的所有目录
 std::vector<std::string> ListDirectoriesInPath(const char* path) {
   std::vector<std::string> ret;
 #if defined(_POSIX_VERSION)
@@ -104,6 +108,7 @@ std::vector<std::string> ListDirectoriesInPath(const char* path) {
   return ret;
 }
 
+// 检查文件是否可用
 bool IsFileAvailable(std::string path) {
 #if defined(_POSIX_VERSION)
   return access(path.c_str(), F_OK) != -1;
@@ -112,16 +117,20 @@ bool IsFileAvailable(std::string path) {
 #endif
 }
 
+// 运行命令
+// 返回命令的输出
 std::string RunCommand(const std::string& command) {
   std::string result = "";
   // suppress stderr
 #ifdef _WIN32
   FILE* pipe = _popen((command + "2>&1").c_str(), "r");
 #else
+// 2>&1表示将标准错误输出重定向到标准输出
   FILE* pipe = popen((command + "2>&1").c_str(), "r");
 #endif
   if (pipe != nullptr) {
     char buffer[128];
+    // 从pipe中读取数据 读取到buffer中
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
       result += buffer;
     }
@@ -134,6 +143,7 @@ std::string RunCommand(const std::string& command) {
   return result;
 }
 
+// 检查设备是否已root
 bool IsRooted() {
   static std::once_flag flag;
   static bool is_rooted = false;
@@ -152,6 +162,7 @@ bool IsRooted() {
   return is_rooted;
 }
 
+// 获取设备属性
 absl::StatusOr<std::string> GetDeviceProperty(const std::string& property) {
   static std::once_flag flag;
   static std::map<std::string, std::string> properties;

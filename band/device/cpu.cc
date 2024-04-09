@@ -36,8 +36,9 @@ namespace band {
 using namespace device;
 
 #if BAND_IS_MOBILE
+// 构造函数
 CpuSet::CpuSet() { DisableAll(); }
-
+// 启用 cpu
 void CpuSet::Enable(int cpu) { CPU_SET(cpu, &cpu_set_); }
 
 void CpuSet::Disable(int cpu) { CPU_CLR(cpu, &cpu_set_); }
@@ -47,16 +48,18 @@ void CpuSet::DisableAll() { CPU_ZERO(&cpu_set_); }
 bool CpuSet::IsEnabled(int cpu) const { return CPU_ISSET(cpu, &cpu_set_); }
 
 const unsigned long* CpuSet::GetMaskBits() const { return cpu_set_.__bits; }
-
+// 返回一个包含 cpu_set_.__bits 的 vector
 std::vector<unsigned long> CpuSet::GetMaskBitsVector() const {
   return std::vector<unsigned long>(
       GetMaskBits(),
       GetMaskBits() + sizeof(cpu_set_.__bits) / sizeof(*cpu_set_.__bits));
 }
+// 返回一个包含CPU集合位的vector
 
 bool CpuSet::operator==(const CpuSet& rhs) const {
   return CPU_EQUAL(&cpu_set_, &rhs.cpu_set_) != 0;
 }
+// 重载运算符
 
 size_t CpuSet::NumEnabled() const {
   size_t num_enabled = 0;
@@ -66,6 +69,7 @@ size_t CpuSet::NumEnabled() const {
 
   return num_enabled;
 }
+// 返回启用的CPU数量
 
 #else   // defined BAND_IS_MOBILE
 CpuSet::CpuSet() {}
@@ -95,9 +99,13 @@ std::string CpuSet::ToString() const {
   return str;
 }
 
+// 获取CPU掩码标志
 CPUMaskFlag CpuSet::GetCPUMaskFlag() const {
+  // 遍历所有的CPU掩码标志
   for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
+    // 将i转换为CPUMaskFlag类型
     const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);
+    // 如果当前的CPU掩码标志等于当前的CPU掩码标志
     if (BandCPUMaskGetSet(flag) == *this) {
       return flag;
     }
@@ -106,9 +114,13 @@ CPUMaskFlag CpuSet::GetCPUMaskFlag() const {
 }
 
 static CpuSet g_thread_affinity_mask_all;
+// 定义一个CPU掩码
 static CpuSet g_thread_affinity_mask_little;
+// 小核的CPU掩码
 static CpuSet g_thread_affinity_mask_big;
+// 大核的
 static CpuSet g_thread_affinity_mask_primary;
+// 主核的
 static size_t g_cpucount = GetCPUCount();
 
 size_t GetCPUCount() {
@@ -155,6 +167,12 @@ size_t GetBigCPUCount() {
 }
 
 #if BAND_IS_MOBILE
+/**
+ * Retrieves the maximum frequency in kHz for a given CPU.
+ *
+ * @param cpuid The ID of the CPU.
+ * @return The maximum frequency in kHz, or -1 if an error occurs.
+ */
 int get_max_freq_khz(int cpuid) {
   // first try, for all possible cpu
   char path[256];
@@ -164,6 +182,7 @@ int get_max_freq_khz(int cpuid) {
   FILE* fp = fopen(path, "rb");
 
   if (!fp) {
+    // 如果没有打开
     // second try, for online cpu
     sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/stats/time_in_state",
             cpuid);
@@ -174,6 +193,7 @@ int get_max_freq_khz(int cpuid) {
       while (!feof(fp)) {
         int freq_khz = 0;
         int nscan = fscanf(fp, "%d %*d", &freq_khz);
+        // 从fp中读取数据
         if (nscan != 1) break;
 
         if (freq_khz > max_freq_khz) max_freq_khz = freq_khz;
@@ -218,11 +238,25 @@ int get_max_freq_khz(int cpuid) {
 
 #endif  // defined BAND_IS_MOBILE
 
+
+/**
+ * Sets the CPU thread affinity.
+ *
+ * This function sets the CPU affinity for the current thread. The CPU affinity
+ * determines which CPU cores the thread is allowed to run on.
+ *
+ * @param thread_affinity_mask The CPU set specifying the allowed CPU cores.
+ * @return absl::Status The status of the operation. Returns absl::OkStatus()
+ *         if the CPU affinity was set successfully. Returns absl::InternalError()
+ *         if there was an error setting the CPU affinity. Returns
+ *         absl::UnavailableError() if the device is not supported.
+ */
 absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #if BAND_IS_MOBILE
 
   // set affinity for thread
 #if defined(__GLIBC__) || defined(__OHOS__)
+  // get current thread id
   pid_t pid = syscall(SYS_gettid);
 #else
 #ifdef PI3
@@ -235,6 +269,7 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
                                      &thread_affinity_mask.GetCpuSet());
   int err = errno;
   if (syscallret != 0) {
+    // failed to set the CPU affinity
     return absl::InternalError(
         "Failed to set the CPU affinity - " + thread_affinity_mask.ToString() +
         " for pid " + std::to_string(pid) + ": " + std::string(strerror(err)));
@@ -245,10 +280,17 @@ absl::Status SetCPUThreadAffinity(const CpuSet& thread_affinity_mask) {
 #endif
 }
 
+/**
+ * Retrieves the CPU thread affinity.
+ *
+ * @param thread_affinity_mask The output parameter to store the CPU thread affinity.
+ * @return absl::Status Returns an absl::Status indicating the success or failure of the operation.
+ */
 absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #if BAND_IS_MOBILE
 
 #if defined(__GLIBC__) || defined(__OHOS__)
+// get current thread id
   pid_t pid = syscall(SYS_gettid);
 #else
 #ifdef PI3
@@ -271,15 +313,26 @@ absl::Status GetCPUThreadAffinity(CpuSet& thread_affinity_mask) {
 #endif
 }
 
+/**
+ * @brief Sets up the thread affinity masks for CPU cores.
+ *
+ * This function sets up the thread affinity masks for CPU cores based on the maximum frequency of each core.
+ * It categorizes the cores into LITTLE and big based on the maximum frequency, and assigns a primary core if available.
+ * The affinity masks are stored in global variables: g_thread_affinity_mask_all, g_thread_affinity_mask_little,
+ * g_thread_affinity_mask_big, and g_thread_affinity_mask_primary.
+ *
+ * @return 0 on success.
+ */
 int SetupThreadAffinityMasks() {
   g_thread_affinity_mask_all.DisableAll();
-
+  // disabel all cores
 #if BAND_IS_MOBILE
   int max_freq_khz_min = std::numeric_limits<int>::max();
   int max_freq_khz_max = 0;
   std::vector<int> cpu_max_freq_khz(g_cpucount);
   for (int i = 0; i < g_cpucount; i++) {
     g_thread_affinity_mask_all.Enable(i);
+    // enable current cpu
     int max_freq_khz = get_max_freq_khz(i);
 
     cpu_max_freq_khz[i] = max_freq_khz;
@@ -291,7 +344,9 @@ int SetupThreadAffinityMasks() {
   int max_freq_khz_medium = (max_freq_khz_min + max_freq_khz_max) / 2;
   if (max_freq_khz_medium == max_freq_khz_max) {
     g_thread_affinity_mask_little.DisableAll();
+    // disable all little cores
     g_thread_affinity_mask_big = g_thread_affinity_mask_all;
+    //at hear set all core be big core
     return 0;
   }
 
@@ -328,6 +383,9 @@ int SetupThreadAffinityMasks() {
   return 0;
 }
 
+/**
+ * Represents a set of CPUs.
+ */
 const CpuSet& BandCPUMaskGetSet(CPUMaskFlag flag) {
   static std::once_flag once_flag;
   std::call_once(once_flag, []() { SetupThreadAffinityMasks(); });

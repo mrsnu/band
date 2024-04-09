@@ -1,17 +1,3 @@
-// Copyright 2023 Seoul National University
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "band/backend_factory.h"
 
 #include <mutex>
@@ -31,6 +17,7 @@ __attribute__((weak)) extern bool TfLiteRegisterCreators() { return false; }
 
 // Expected process
 void RegisterBackendInternal() {
+  // 负责注册所有可用的后端，并且它确保注册过程只执行一次，无论这个函数被调用多少次。
   static std::once_flag g_flag;
   std::call_once(g_flag, [] {
 #ifdef BAND_TFLITE
@@ -52,16 +39,21 @@ std::map<BackendType, std::shared_ptr<Creator<IModel, ModelId>>>
     BackendFactory::model_creators_ = {};
 std::map<BackendType, std::shared_ptr<Creator<IBackendUtil>>>
     BackendFactory::util_creators_ = {};
+// 初始了三个成员变量，用于将BackendType（后端类型）映射到相应的创建器对象。
+// 这些创建器对象是用于动态创建模型执行器（IModelExecutor）、模型（IModel）和后端工具（IBackendUtil）的工厂对象。
 
 IModelExecutor* BackendFactory::CreateModelExecutor(
     BackendType backend, ModelId model_id, WorkerId worker_id,
     DeviceFlag device_flag, CpuSet thread_affinity_mask, int num_threads) {
   RegisterBackendInternal();
   auto it = model_executor_creators_.find(backend);
+  // 查找给定backend类型的条目
   return it != model_executor_creators_.end()
              ? it->second->Create(model_id, worker_id, device_flag,
                                   thread_affinity_mask, num_threads)
              : nullptr;
+            //  如果找到了对应的创建器对象（it != model_executor_creators_.end()），
+            // 则调用该创建器的Create方法，并传递给定的参数，以创建并返回一个新的模型执行器实例。
 }  // namespace band
 
 IModel* BackendFactory::CreateModel(BackendType backend, ModelId id) {
@@ -90,6 +82,7 @@ std::vector<BackendType> BackendFactory::GetAvailableBackends() {
 
 void BackendFactory::RegisterBackendCreators(
     BackendType backend,
+    // 指定要为其注册创建器的后端类型
     Creator<IModelExecutor, ModelId, WorkerId, DeviceFlag, CpuSet, int>*
         model_executor_creator,
     Creator<IModel, ModelId>* model_creator,
@@ -101,5 +94,6 @@ void BackendFactory::RegisterBackendCreators(
       std::shared_ptr<Creator<IModel, ModelId>>(model_creator);
   util_creators_[backend] =
       std::shared_ptr<Creator<IBackendUtil>>(util_creator);
+  // 使用std::shared_ptr进行封装主要是为了自动管理创建器对象的生命周期，避免内存泄漏，并允许在多处共享这些创建器对象。
 }
 }  // namespace band

@@ -1,17 +1,3 @@
-// Copyright 2023 Seoul National University
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "band/tensor.h"
 
 #include <string.h>
@@ -26,6 +12,7 @@ Tensor::Tensor(ITensor* tensor_view, bool copy_data)
             tensor_view->GetDims() + tensor_view->GetNumDims()),
       data_(new char[tensor_view->GetBytes()]),
       name_(tensor_view->GetName()) {
+        // 从另一个张量对象 tensor_view 初始化一个 Tensor 对象。copy_data 参数指示是否进行数据的深拷贝
   auto status = SetQuantization(tensor_view->GetQuantization());
   if (!status.ok()) {
     BAND_LOG(LogSeverity::kError, "Failed to set quantization: %s",
@@ -65,8 +52,11 @@ Quantization Tensor::GetQuantization() const { return quantization_; }
 
 absl::Status Tensor::SetQuantization(Quantization quantization) {
   if (quantization_.GetType() == QuantizationType::kAffineQuantization) {
+    // 检查是否需要释放之前的量化参数
     AffineQuantizationParams* input_q_params =
         reinterpret_cast<AffineQuantizationParams*>(quantization.GetParams());
+        // 使用 reinterpret_cast 将 Quantization 对象的参数转换为 AffineQuantizationParams 结构体指针 input_q_params
+        // 这允许直接访问仿射量化的参数
 
     AffineQuantizationParams* q_params =
         reinterpret_cast<AffineQuantizationParams*>(

@@ -18,7 +18,7 @@
 #define BAND_BACKEND_TFL_MODEL_EXECUTOR_H_
 
 #include "band/interface/model_executor.h"
-#include "tensorflow/lite/interpreter.h"
+#include "tensorflow/tensorflow/lite/interpreter.h"
 
 namespace band {
 namespace tfl {
