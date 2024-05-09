@@ -109,14 +109,14 @@ ANDROID_BASE = '/data/local/tmp/'
 
 
 def push_to_android(src, dst):
-    run_cmd(f'adb -d push {src} {ANDROID_BASE}{dst}')
+    run_cmd(f'adb push {src} {ANDROID_BASE}{dst}')
 
 
 def run_binary_android(basepath, path, option=''):
-    run_cmd(f'adb -d shell chmod 777 {ANDROID_BASE}{basepath}{path}')
+    run_cmd(f'adb shell chmod 777 {ANDROID_BASE}{basepath}{path}')
     # cd & run -- to preserve the relative relation of the binary
     run_cmd(
-        f'adb -d shell cd {ANDROID_BASE}{basepath} && ./{path} {option}')
+        f'adb shell cd {ANDROID_BASE}{basepath} && ./{path} {option}')
 
 
 def get_argument_parser(desc: str):

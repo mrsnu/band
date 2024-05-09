@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
         print("Clean up test directory from device")
         run_cmd(
-            f'adb -d shell rm -r /data/local/tmp/{temp_dir_name}')
+            f'adb shell rm -r /data/local/tmp/{temp_dir_name}')
     else:
         cmd = make_cmd(
                 args.build, 
