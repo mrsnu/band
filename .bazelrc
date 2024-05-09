@@ -2,7 +2,22 @@
 build --enable_platform_specific_config
 build:android --noenable_platform_specific_config
 
-# Use C++14 as a default language.
+# Use C++17 for better support
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+build:android --cxxopt=-std=c++17
+build:android --host_cxxopt=-std=c++17
+build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++17
+test:linux --cxxopt=-std=c++17
+test:linux --host_cxxopt=-std=c++17
+test:android --cxxopt=-std=c++17
+test:android --host_cxxopt=-std=c++17
+test:windows --cxxopt=/std:c++17
+test:windows --host_cxxopt=/std:c++17
+
+<!-- Deprecated -->
+<!-- # Use C++14 as a default language.
 build:linux --cxxopt=-std=c++14
 build:linux --host_cxxopt=-std=c++14
 build:android --cxxopt=-std=c++14
@@ -14,7 +29,7 @@ test:linux --host_cxxopt=-std=c++14
 test:android --cxxopt=-std=c++14
 test:android --host_cxxopt=-std=c++14
 test:windows --cxxopt=/std:c++14
-test:windows --host_cxxopt=/std:c++14
+test:windows --host_cxxopt=/std:c++14 -->
 
 # Supress warnings from external libraries.
 build:linux --per_file_copt=external/.*@-w

@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   if (benchmark.Initialize(argc, argv).ok()) {
     auto status = benchmark.Run();
     if (!status.ok()) {
-      BAND_LOG(LogSeverity::kError, "Benchmark failed: %s", status.message());
+      BAND_LOG(LogSeverity::kError, "Benchmark failed: %s", std::string(status.message()).c_str());
       return -1;
     }
   } else {

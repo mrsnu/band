@@ -25,7 +25,7 @@ void BenchmarkProfiler::EndEvent(size_t event_handle, absl::Status status) {
     canceled_events_.insert(event_handle);
   } else {
     BAND_LOG(LogSeverity::kError, "Event %zu failed: %s", event_handle,
-                  status.message());
+                  std::string(status.message()).c_str());
   }
 }
 

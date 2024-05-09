@@ -29,7 +29,7 @@ Tensor::Tensor(ITensor* tensor_view, bool copy_data)
   auto status = SetQuantization(tensor_view->GetQuantization());
   if (!status.ok()) {
     BAND_LOG(LogSeverity::kError, "Failed to set quantization: %s",
-                  status.message());
+                  std::string(status.message()).c_str());
   }
   if (copy_data) {
     memcpy(data_, tensor_view->GetData(), tensor_view->GetBytes());
