@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "band/resource_monitor.h"
+#include "band/device/util.h"
 
 #include <gtest/gtest.h>
 
@@ -143,73 +144,78 @@ TEST(ResourceMonitorTest, GetCpuFreqTest) {
   EXPECT_EQ(monitor.Init(config), absl::OkStatus());
 
 #if BAND_IS_MOBILE
-  std::vector<CPUMaskFlag> valid_cpus;
-  for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
-    const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);
-    if (flag == CPUMaskFlag::kAll) {
-      continue;
+  if (!device::IsRooted()) {
+      std::cout << "As this device is unrooted, CpuFreqFlag can't be adapted.\n" << std::endl;
+  }
+  else {
+    std::vector<CPUMaskFlag> valid_cpus;
+    for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
+      const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);
+      if (flag == CPUMaskFlag::kAll) {
+        continue;
+      }
+
+      valid_cpus.push_back(flag);
+      EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::CUR_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::TARGET_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::MIN_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::MAX_FREQ),
+                absl::OkStatus());
+      EXPECT_EQ(
+          monitor.AddCpuFreqResource(flag, CpuFreqFlag::UP_TRANSITION_LATENCY),
+          absl::OkStatus());
+      EXPECT_EQ(
+          monitor.AddCpuFreqResource(flag, CpuFreqFlag::DOWN_TRANSITION_LATENCY),
+          absl::OkStatus());
+      // This is optional. E.g., Pixel 4 doesn't have this.
+      auto status =
+          monitor.AddCpuFreqResource(flag, CpuFreqFlag::TRANSITION_COUNT);
+      std::cout << "AddCpuFreqResource " << ToString(flag)
+                << " TRANSITION_COUNT: " << status << std::endl;
     }
 
-    valid_cpus.push_back(flag);
-    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::CUR_FREQ),
-              absl::OkStatus());
-    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::TARGET_FREQ),
-              absl::OkStatus());
-    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::MIN_FREQ),
-              absl::OkStatus());
-    EXPECT_EQ(monitor.AddCpuFreqResource(flag, CpuFreqFlag::MAX_FREQ),
-              absl::OkStatus());
-    EXPECT_EQ(
-        monitor.AddCpuFreqResource(flag, CpuFreqFlag::UP_TRANSITION_LATENCY),
-        absl::OkStatus());
-    EXPECT_EQ(
-        monitor.AddCpuFreqResource(flag, CpuFreqFlag::DOWN_TRANSITION_LATENCY),
-        absl::OkStatus());
-    // This is optional. E.g., Pixel 4 doesn't have this.
-    auto status =
-        monitor.AddCpuFreqResource(flag, CpuFreqFlag::TRANSITION_COUNT);
-    std::cout << "AddCpuFreqResource " << ToString(flag)
-              << " TRANSITION_COUNT: " << status << std::endl;
-  }
+    std::this_thread::sleep_for(std::chrono::milliseconds(22));
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(22));
-
-  for (auto& cpu_mask : valid_cpus) {
-    auto cur_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::CUR_FREQ);
-    EXPECT_TRUE(cur_freq.ok());
-    std::cout << "CpuFreq " << ToString(cpu_mask)
-              << " CUR_FREQ: " << cur_freq.value() << std::endl;
-    auto target_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::TARGET_FREQ);
-    EXPECT_TRUE(target_freq.ok());
-    std::cout << "CpuFreq " << ToString(cpu_mask)
-              << " TARGET_FREQ: " << target_freq.value() << std::endl;
-    auto min_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MIN_FREQ);
-    EXPECT_TRUE(min_freq.ok());
-    std::cout << "CpuFreq " << ToString(cpu_mask)
-              << " MIN_FREQ: " << min_freq.value() << std::endl;
-    auto max_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MAX_FREQ);
-    EXPECT_TRUE(max_freq.ok());
-    std::cout << "CpuFreq " << ToString(cpu_mask)
-              << " MAX_FREQ: " << max_freq.value() << std::endl;
-    auto up_transition_latency =
-        monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::UP_TRANSITION_LATENCY);
-    EXPECT_TRUE(up_transition_latency.ok());
-    std::cout << "CpuFreq " << ToString(cpu_mask)
-              << " UP_TRANSITION_LATENCY: " << up_transition_latency.value()
-              << std::endl;
-    auto down_transition_latency =
-        monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::DOWN_TRANSITION_LATENCY);
-    EXPECT_TRUE(down_transition_latency.ok());
-    std::cout << "CpuFreq " << ToString(cpu_mask)
-              << " DOWN_TRANSITION_LATENCY: " << down_transition_latency.value()
-              << std::endl;
-    auto transition_count =
-        monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::TRANSITION_COUNT);
-    // This is optional, so we don't check if it's ok.
-    if (transition_count.ok()) {
+    for (auto& cpu_mask : valid_cpus) {
+      auto cur_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::CUR_FREQ);
+      EXPECT_TRUE(cur_freq.ok());
       std::cout << "CpuFreq " << ToString(cpu_mask)
-                << " TRANSITION_COUNT: " << transition_count.value()
+                << " CUR_FREQ: " << cur_freq.value() << std::endl;
+      auto target_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::TARGET_FREQ);
+      EXPECT_TRUE(target_freq.ok());
+      std::cout << "CpuFreq " << ToString(cpu_mask)
+                << " TARGET_FREQ: " << target_freq.value() << std::endl;
+      auto min_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MIN_FREQ);
+      EXPECT_TRUE(min_freq.ok());
+      std::cout << "CpuFreq " << ToString(cpu_mask)
+                << " MIN_FREQ: " << min_freq.value() << std::endl;
+      auto max_freq = monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::MAX_FREQ);
+      EXPECT_TRUE(max_freq.ok());
+      std::cout << "CpuFreq " << ToString(cpu_mask)
+                << " MAX_FREQ: " << max_freq.value() << std::endl;
+      auto up_transition_latency =
+          monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::UP_TRANSITION_LATENCY);
+      EXPECT_TRUE(up_transition_latency.ok());
+      std::cout << "CpuFreq " << ToString(cpu_mask)
+                << " UP_TRANSITION_LATENCY: " << up_transition_latency.value()
                 << std::endl;
+      auto down_transition_latency =
+          monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::DOWN_TRANSITION_LATENCY);
+      EXPECT_TRUE(down_transition_latency.ok());
+      std::cout << "CpuFreq " << ToString(cpu_mask)
+                << " DOWN_TRANSITION_LATENCY: " << down_transition_latency.value()
+                << std::endl;
+      auto transition_count =
+          monitor.GetCpuFreq(cpu_mask, CpuFreqFlag::TRANSITION_COUNT);
+      // This is optional, so we don't check if it's ok.
+      if (transition_count.ok()) {
+        std::cout << "CpuFreq " << ToString(cpu_mask)
+                  << " TRANSITION_COUNT: " << transition_count.value()
+                  << std::endl;
+      }
     }
   }
 #endif
