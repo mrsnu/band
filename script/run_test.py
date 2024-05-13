@@ -37,6 +37,7 @@ if __name__ == '__main__':
         clean_bazel(args.docker)
     
     if args.android:
+        run_cmd(f'rm -rf {BASE_DIR}')
         build_cmd = make_cmd(
                 build_only=True,
                 debug=args.debug,
