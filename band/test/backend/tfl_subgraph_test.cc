@@ -93,6 +93,8 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("ICN_quant.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
+                        SubgraphPreparationType::kMergeUnitSubgraph),
+        std::make_tuple("ffnet_40s_quantized.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph)));
 }  // namespace test
 }  // namespace band
