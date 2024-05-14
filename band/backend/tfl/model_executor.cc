@@ -24,6 +24,10 @@
 #include "tensorflow/lite/context_util.h"
 #include "tensorflow/lite/core/subgraph.h"
 
+#ifdef CL_DELEGATE_NO_GL
+#include "tensorflow/lite/delegates/gpu/delegate.h"
+#endif
+
 #if defined(__ANDROID__)
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
@@ -389,6 +393,33 @@ absl::StatusOr<TfLiteDelegate*> TfLiteModelExecutor::GetDeviceDelegate(
         return nullptr;
         break;
       }
+
+#ifdef CL_DELEGATE_NO_GL
+      case DeviceFlag::kGPU: {
+        TfLiteGpuDelegateOptionsV2 gpu_opts =
+            TfLiteGpuDelegateOptionsV2Default();
+        gpu_opts.inference_priority1 =
+            TFLITE_GPU_INFERENCE_PRIORITY_MIN_LATENCY;
+        gpu_opts.inference_priority2 =
+            TFLITE_GPU_INFERENCE_PRIORITY_MIN_MEMORY_USAGE;
+        gpu_opts.inference_priority3 =
+            TFLITE_GPU_INFERENCE_PRIORITY_MAX_PRECISION;
+        gpu_opts.experimental_flags |=
+            TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_QUANT;
+        gpu_opts.experimental_flags |=
+            TFLITE_GPU_EXPERIMENTAL_FLAGS_CL_ONLY;
+            
+
+        // set this to a large number so that we can prevent this from getting
+        // defaulted to 1 (cf. #34)
+        gpu_opts.max_delegated_partitions = 100;
+        target_delegate = tflite::Interpreter::TfLiteDelegatePtr(
+            TfLiteGpuDelegateV2Create(&gpu_opts), &TfLiteGpuDelegateV2Delete);
+
+        BAND_LOG(LogSeverity::kInfo, "Create Tensorflow Lite GPU delegate");
+        break;
+      }
+#endif
 
 #if defined(__ANDROID__)
       case DeviceFlag::kGPU: {

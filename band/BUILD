@@ -71,6 +71,31 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+# TODO dongho: which value should be updated?
+# Linux GPU setting.
+config_setting(
+    name = "linux_gpu",
+    flag_values = {},
+    define_values = {
+        # "tflite": "true",
+        "gpu": "nvidia-opencl"
+    },
+    values = {},
+    visibility = ["//visibility:public"],
+)
+
+# TODO dongho: which value should be updated?
+config_setting(
+    name = "linux_x86_64_tflite_gpu",
+    define_values = {
+        "tflite": "true",
+        "gpu": "nvidia-opencl"
+    },
+    flag_values = {},
+    values = {"cpu": "k8"},
+    visibility = ["//visibility:public"],
+)
+
 # Android config settings
 config_setting(
     name = "android",

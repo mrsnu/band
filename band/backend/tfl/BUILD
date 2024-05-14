@@ -55,6 +55,9 @@ band_cc_library(
             "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
             "@org_tensorflow//tensorflow/lite/delegates/hexagon:hexagon_delegate",
         ],
+        "//band:linux_x86_64_tflite_gpu": [
+            "@org_tensorflow//tensorflow/lite/delegates/gpu:delegate",
+        ],
         "//conditions:default": [],
     }),
 )
