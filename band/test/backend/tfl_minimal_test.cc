@@ -271,7 +271,12 @@ TEST(TFLiteBackend, SimpleEngineInvokeSyncOnWorker) {
               SubgraphPreparationType::kMergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
-#ifdef __ANDROID__
+#ifdef CL_DELEGATE_NO_GL
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll})
+#elif __ANDROID__
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
                        DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
@@ -342,7 +347,12 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
               SubgraphPreparationType::kMergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
-#ifdef __ANDROID__
+#ifdef CL_DELEGATE_NO_GL
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll})
+#elif __ANDROID__
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
                        DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
@@ -383,6 +393,7 @@ TEST(TFLiteBackend, SimpleEngineInvokeCallback) {
                     ->RequestSync(model.GetId(),
                                   {static_cast<int>(worker_id), true, -1, -1})
                     .ok());
+
     EXPECT_EQ(execution_count, worker_id + 1);
     EXPECT_TRUE(engine
                     ->RequestSync(model.GetId(),
@@ -402,7 +413,12 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
               SubgraphPreparationType::kMergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
-#ifdef __ANDROID__
+#ifdef CL_DELEGATE_NO_GL
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll})
+#elif __ANDROID__
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
                        DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
@@ -470,6 +486,9 @@ TEST(TFLiteBackend, ClassificationQuantTest) {
   }
   // tiger cat
   EXPECT_EQ(max_index, 282);
+
+  delete input_tensor;
+  delete output_tensor;
 }
 
 TEST(TFLiteBackend, ClassificationTest) {
@@ -482,7 +501,12 @@ TEST(TFLiteBackend, ClassificationTest) {
               SubgraphPreparationType::kMergeUnitSubgraph)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
-#ifdef __ANDROID__
+#ifdef CL_DELEGATE_NO_GL
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll})
+#elif __ANDROID__
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
                        DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
@@ -560,6 +584,9 @@ TEST(TFLiteBackend, ClassificationTest) {
   }
   // tiger cat
   EXPECT_EQ(max_index, 282);
+
+  delete input_tensor;
+  delete output_tensor;
 }
 
 }  // namespace test

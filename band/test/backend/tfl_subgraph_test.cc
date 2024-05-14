@@ -51,7 +51,12 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .AddSubgraphPreparationType(subgraph_type)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
-#ifdef __ANDROID__
+#ifdef CL_DELEGATE_NO_GL
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll})
+#elif __ANDROID__
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
                        DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
@@ -92,7 +97,7 @@ INSTANTIATE_TEST_SUITE_P(
                         SubgraphPreparationType::kFallbackPerWorker),
         std::make_tuple("ICN_quant.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph),
-        std::make_tuple("retinaface_mbv2_quant_160.tflite",
+        std::make_tuple("tf2_10_models/retinaface_mbv2-fp16.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("ffnet_40s_quantized.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph)));

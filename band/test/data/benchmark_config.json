@@ -1,14 +1,14 @@
 {
     "models": [
         {
-            "graph": "band/test/data/retinaface_mbv2_quant_160.tflite",
+            "graph": "band/test/data/tf2_10_models/retinaface_mbv2-fp16.tflite",
             "period_ms": 50,
             "batch_size": 1,
             "slo_scale": 1.5,
             "device": "CPU"
         },
         {
-            "graph": "band/test/data/retinaface_mbv2_quant_160.tflite",
+            "graph": "band/test/data/tf2_10_models/retinaface_mbv2-fp16.tflite",
             "period_ms": 50,
             "batch_size": 1,
             "slo_us": 50000,

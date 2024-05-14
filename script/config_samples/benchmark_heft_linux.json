@@ -1,0 +1,80 @@
+{
+    "models": [
+        {
+            "graph": "/workspaces/band/band/test/data/tf2_10_models/retinaface_mbv2-fp16.tflite",
+            "period_ms": 30,
+            "batch_size": 3
+        },
+        {
+            "graph": "/workspaces/band/band/test/data/tf2_10_models/retinaface_mbv2.tflite",
+            "period_ms": 30,
+            "batch_size": 2
+        },
+        {
+            "graph": "/workspaces/band/band/test/data/tf2_10_models/retinaface_res50-fp16.tflite",
+            "period_ms": 30,
+            "batch_size": 3
+        },
+        {
+            "graph": "/workspaces/band/band/test/data/tf2_10_models/retinaface_res50.tflite",
+            "period_ms": 30,
+            "batch_size": 3
+        }
+    ],
+    "log_path": "/data/local/tmp/log.json",
+    "schedulers": [
+        "heterogeneous_earliest_finish_time"
+    ],
+    "minimum_subgraph_size": 1,
+    "subgraph_preparation_type": "merge_unit_subgraph",
+    "execution_mode": "stream",
+    "cpu_masks": "ALL",
+    "num_threads": 1,
+    "planner_cpu_masks": "PRIMARY",
+    "workers": [
+        {
+            "device": "CPU",
+            "num_threads": 2,
+            "cpu_masks": "BIG"
+        },
+        {
+            "device": "CPU",
+            "num_threads": 2,
+            "cpu_masks": "LITTLE"
+        },
+        {
+            "device": "GPU",
+            "num_threads": 1,
+            "cpu_masks": "ALL"
+        }
+    ],
+    "running_time_ms": 10000,
+    "profile_smoothing_factor": 0.1,
+    "profile_data_path": "/data/local/tmp/profile.json",
+    "profile_online": true,
+    "profile_warmup_runs": 3,
+    "profile_num_runs": 50,
+    "allow_work_steal": true,
+    "availability_check_interval_ms": 30000,
+    "schedule_window_size": 10
+}
+
+
+// "models": [
+//     {
+//         "graph": "/workspaces/band/band/test/data/ICN_quant.tflite",
+//         "period_ms": 30,
+//         "batch_size": 3
+//     }
+    
+//     // {
+//     //     "graph": "/workspaces/band/band/test/data/retinaface_mbv2_quant_160.tflite",
+//     //     "period_ms": 30,
+//     //     "batch_size": 3
+//     // },
+//     // {
+//     //     "graph": "/workspaces/band/band/test/data/mobilenet_v2_1.0_224_quant.tflite",
+//     //     "period_ms": 30,
+//     //     "batch_size": 2
+//     // }
+// ],

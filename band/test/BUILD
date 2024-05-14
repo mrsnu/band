@@ -16,6 +16,7 @@ load("//band:band.bzl", "band_cc_android_test", "band_cc_library")
 
 exports_files(glob([
     "data/*.tflite",
+    "data/tf2_10_models/*.tflite",
     "data/*.json",
     "data/*.jpg",
 ]))
@@ -24,6 +25,7 @@ filegroup(
     name = "tfl_models",
     srcs = glob([
         "data/*.tflite",
+        "data/tf2_10_models/*.tflite",
     ]),
 )
 
