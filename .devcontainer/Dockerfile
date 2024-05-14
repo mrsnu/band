@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM tensorflow/tensorflow:devel
+FROM tensorflow/tensorflow:devel-gpu
 
 ENV ANDROID_DEV_HOME /android
 RUN mkdir -p ${ANDROID_DEV_HOME}
@@ -40,3 +40,32 @@ ENV PATH ${PATH}:$ANDROID_SDK_HOME/tools:$ANDROID_SDK_HOME/platform-tools:$ANDRO
 
 # Make android ndk executable to all users.
 RUN chmod -R go=u ${ANDROID_DEV_HOME}
+
+# OpenCL
+# ref : https://stackoverflow.com/questions/54243119/how-to-run-opencl-opengl-inside-a-docker-container
+RUN apt-get update && apt-get install -y \
+    ocl-icd-opencl-dev \
+    clinfo &&\
+    rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /etc/OpenCL/vendors && \
+    echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+
+# # For TFLite build with OpenCL-NVIDIA GPU
+# RUN apt-get update && apt-get install -y cmake 
+# RUN mkdir /tflite_build && cd /tflite_build
+# # RUN cmake ../tensorflow_src/tensorflow/lite -DTFLITE_ENABLE_GPU=ON -DCMAKE_BUILD_TYPE=Debug
+# RUN cmake ../tensorflow_src/tensorflow/lite -DTFLITE_ENABLE_GPU=ON
+# RUN cmake --build . -j
+
+# For Debugging
+RUN apt-get update && apt-get install -y gdb
+
+# Build essentials
+RUN apt-get update && apt-get install -y cmake git vim wget
+
+# fzf settings
+RUN git clone https://github.com/junegunn/fzf.git ~/.fzf
+RUN ~/.fzf/install
+RUN source ~/.bashrc

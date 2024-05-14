@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.134.1/containers/ubuntu
 {
-	"name": "Band Dev",
+	"name": "Dongho's Band Dev",
 	"build": {
 		"dockerfile": "Dockerfile",
 		"args": {}
@@ -12,10 +12,24 @@
 		"terminal.integrated.shell.linux": "/bin/bash"
 	},
 
+	"runArgs": [
+        "--gpus",
+        "all",
+        "--ipc",
+        "host",
+		"-p",
+		"4711:4711"
+    ],
+
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"ms-vscode.cpptools",
-		"bazelbuild.vscode-bazel"
+		"bazelbuild.vscode-bazel",
+		"ms-azuretools.vscode-docker",
+		"visualstudioexptteam.vscodeintellicode",
+		"webfreak.debug",
+		"stackbuild.bazel-stack-vscode-cc",
+		"llvm-vs-code-extensions.vscode-clangd"
 	]
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

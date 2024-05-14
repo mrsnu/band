@@ -33,3 +33,6 @@ band.aar
 
 # mac icloud
 *.icloud
+
+# Bazel C/C++ Compilation Database
+compile_commands.json

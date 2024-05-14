@@ -58,12 +58,22 @@ build:linux_x86_64 --config=linux
 build:linux_x86_64 --cpu=k8
 build:linux_x86_64_tflite --config=linux_x86_64
 build:linux_x86_64_tflite --config=tflite
+build:linux_x86_64_tflite_gpu --config=linux_x86_64_tflite
+build:linux_x86_64_tflite_gpu --define gpu=nvidia-opencl
+build:linux_x86_64_tflite_gpu --copt=-DCL_TARGET_OPENCL_VERSION=200
+build:linux_x86_64_tflite_gpu --copt=-DCL_DELEGATE_NO_GL
+build:linux_x86_64_tflite_gpu --copt=-DEGL_NO_X11
 
 # Linux test config for Band Engine.
 test:linux_x86_64 --config=linux
 test:linux_x86_64 --cpu=k8
 test:linux_x86_64_tflite --config=linux_x86_64
 test:linux_x86_64_tflite --config=tflite
+test:linux_x86_64_tflite_gpu --config=linux_x86_64_tflite
+test:linux_x86_64_tflite_gpu --define gpu=nvidia-opencl
+test:linux_x86_64_tflite_gpu --copt=-DCL_TARGET_OPENCL_VERSION=200
+test:linux_x86_64_tflite_gpu --copt=-DCL_DELEGATE_NO_GL
+test:linux_x86_64_tflite_gpu --copt=-DEGL_NO_X11
 
 # Android build config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
