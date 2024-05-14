@@ -2,7 +2,7 @@
 build --enable_platform_specific_config
 build:android --noenable_platform_specific_config
 
-# Use C++17 for better support
+# Use C++17 as a default language.
 build:linux --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
 build:android --cxxopt=-std=c++17
@@ -15,21 +15,6 @@ test:android --cxxopt=-std=c++17
 test:android --host_cxxopt=-std=c++17
 test:windows --cxxopt=/std:c++17
 test:windows --host_cxxopt=/std:c++17
-
-# Deprecated
-# Use C++14 as a default language.
-# build:linux --cxxopt=-std=c++14
-# build:linux --host_cxxopt=-std=c++14
-# build:android --cxxopt=-std=c++14
-# build:android --host_cxxopt=-std=c++14
-# build:windows --cxxopt=/std:c++14
-# build:windows --host_cxxopt=/std:c++14
-# test:linux --cxxopt=-std=c++14
-# test:linux --host_cxxopt=-std=c++14
-# test:android --cxxopt=-std=c++14
-# test:android --host_cxxopt=-std=c++14
-# test:windows --cxxopt=/std:c++14
-# test:windows --host_cxxopt=/std:c++14
 
 # Supress warnings from external libraries.
 build:linux --per_file_copt=external/.*@-w
@@ -58,12 +43,23 @@ build:linux_x86_64 --config=linux
 build:linux_x86_64 --cpu=k8
 build:linux_x86_64_tflite --config=linux_x86_64
 build:linux_x86_64_tflite --config=tflite
+build:linux_x86_64_tflite_gpu --config=linux_x86_64_tflite
+build:linux_x86_64_tflite_gpu --define gpu=nvidia-opencl
+build:linux_x86_64_tflite_gpu --copt=-DCL_TARGET_OPENCL_VERSION=200
+build:linux_x86_64_tflite_gpu --copt=-DCL_DELEGATE_NO_GL
+build:linux_x86_64_tflite_gpu --copt=-DEGL_NO_X11
 
 # Linux test config for Band Engine.
 test:linux_x86_64 --config=linux
 test:linux_x86_64 --cpu=k8
 test:linux_x86_64_tflite --config=linux_x86_64
 test:linux_x86_64_tflite --config=tflite
+test:linux_x86_64_tflite_gpu --config=linux_x86_64_tflite
+test:linux_x86_64_tflite_gpu --define gpu=nvidia-opencl
+test:linux_x86_64_tflite_gpu --copt=-DCL_TARGET_OPENCL_VERSION=200
+test:linux_x86_64_tflite_gpu --copt=-DCL_DELEGATE_NO_GL
+test:linux_x86_64_tflite_gpu --copt=-DEGL_NO_X11
+
 
 # Android build config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
