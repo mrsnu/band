@@ -12,11 +12,11 @@
 Band supports backend-agnostic coordination of DNN requests on heterogeneous processors in a mobile device to <s>cloud server</s>.
 Band is currently backed by following backend machine learning frameworks.
 
-|         | [Tensorflow v2.9.2](https://github.com/tensorflow/tensorflow/tree/v2.9.2)    | ... |
-|---------|--------------------|-----|
-| Android |  &#9745; |     |
-| iOS     |  &#9744; |     |
-| gRPC    |  &#9744; |     |
+|         | [Tensorflow v2.9.2](https://github.com/tensorflow/tensorflow/tree/v2.9.2)    | [Tensorflow v2.10.0](https://github.com/tensorflow/tensorflow/tree/v2.10.0)    | ... |
+|---------|--------------------|--------------------|-----|
+| Android |  &#9745; |  &#9745; |     |
+| iOS     |  &#9744; |  &#9744; |     |
+| gRPC    |  &#9744; |  &#9744; |     |
 
 Band provides Java and C APIs, as well as an official plugin for [Unreal Engine](https://www.unrealengine.com/).
 
@@ -60,9 +60,14 @@ Band provides Java and C APIs, as well as an official plugin for [Unreal Engine]
 
 Refer to detailed instructions in `[root]/script`
 
-* Run test 
+* Run test with Android
   ```sh
   python script/run_test.py -android 
+  ```
+
+* Run test in local linux with NVIDIA GPU(OpenCL Support)
+  ```sh
+  python script/run_test.py -opencl 
   ```
 
 * Build Android AAR
