@@ -144,10 +144,7 @@ TEST(ResourceMonitorTest, GetCpuFreqTest) {
   EXPECT_EQ(monitor.Init(config), absl::OkStatus());
 
 #if BAND_IS_MOBILE
-  if (!device::IsRooted()) {
-      std::cout << "As this device is unrooted, CpuFreqFlag can't be adapted.\n" << std::endl;
-  }
-  else {
+  if (device::IsRooted()) {
     std::vector<CPUMaskFlag> valid_cpus;
     for (size_t i = 0; i < EnumLength<CPUMaskFlag>(); i++) {
       const CPUMaskFlag flag = static_cast<CPUMaskFlag>(i);

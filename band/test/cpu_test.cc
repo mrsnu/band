@@ -29,10 +29,7 @@ namespace test {
 // NOTE: set may be different from kAll due to device-specific limitation
 // e.g., Galaxy S20 can only set affinity to first 6 cores
 TEST(CPUTest, AffinitySetTest) {
-  if (!device::IsRooted()) {
-      std::cout << "As this device is unrooted, Cpu Affinity can't be set.\n" << std::endl;
-  }
-  else {
+  if (device::IsRooted()) {
     std::vector<CPUMaskFlag> masks = {CPUMaskFlag::kAll, CPUMaskFlag::kLittle,
                                       CPUMaskFlag::kBig, CPUMaskFlag::kPrimary};
     for (auto mask : masks) {
