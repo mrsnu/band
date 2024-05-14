@@ -25,7 +25,6 @@
 #include "absl/status/status.h"
 #include "band/common.h"
 
-
 namespace band {
 /*
   Logger is a singleton class that provides basic thread-safe logging
@@ -91,6 +90,10 @@ class Logger {
     }();                                        \
     (void)s_logged;                             \
   } while (false);
+
+#if !defined(__PRETTY_FUNCTION__) && defined(_MSC_VER)
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
 
 #define BAND_NOT_IMPLEMENTED                                 \
   BAND_LOG(band::LogSeverity::kError, "Not implemented: %s", \
