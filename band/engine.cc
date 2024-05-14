@@ -77,7 +77,7 @@ absl::Status Engine::RegisterModel(Model* model) {
       auto status = UnregisterModel(model);
       if (!status.ok()) {
         BAND_LOG(LogSeverity::kError, "Failed to unregister model %d: %s",
-                 model_id, std::string(status.message()).c_str());
+                 model_id, status.ToString());
       }
       return status_or_result.status();
     }
@@ -110,7 +110,7 @@ absl::Status Engine::RegisterModel(Model* model) {
         auto status = UnregisterModel(model);
         if (!status.ok()) {
           BAND_LOG(LogSeverity::kError, "Failed to unregister model %d: %s",
-                   model_id, std::string(status.message()).c_str());
+                   model_id, status.ToString());
         }
         return absl::InternalError(
             "Failed to create model executor on all worker types");
