@@ -218,7 +218,7 @@ void Worker::Work() {
         {
           auto status = engine_->TryCopyOutputTensors(*current_job);
           if (!status.ok()) {
-            BAND_LOG(LogSeverity::kWarning, "%s", status.ToString());
+            BAND_LOG(LogSeverity::kWarning, "%s", status.ToString().c_str());
           }
         }
         current_job->status = JobStatus::kSuccess;

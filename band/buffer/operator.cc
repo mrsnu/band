@@ -88,7 +88,7 @@ absl::Status IBufferOperator::ValidateOrCreateOutput(const Buffer& input) {
       if (!status.ok()) {
         // real trouble if the created output is not valid
         BAND_LOG(LogSeverity::kError,
-                 "Failed to create valid output buffer: %s", status.ToString());
+                 "Failed to create valid output buffer: %s", status.ToString().c_str());
       }
       return status;
     }

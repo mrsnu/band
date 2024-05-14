@@ -35,7 +35,7 @@ Planner::Planner(IEngine& engine) : num_submitted_jobs_(0), engine_(engine) {
     auto status = this->Plan();
     if (!status.ok()) {
       BAND_LOG(LogSeverity::kError, "Planner thread failed: %s",
-               status.ToString());
+               status.ToString().c_str());
     }
   });
 }
@@ -273,7 +273,7 @@ absl::Status Planner::Plan() {
       {
         auto status = SetCPUThreadAffinity(cpu_set_);
         if (!status.ok()) {
-          BAND_LOG(LogSeverity::kWarning, "%s", status.ToString());
+          BAND_LOG(LogSeverity::kWarning, "%s", status.ToString().c_str());
         }
       }
       need_cpu_update_ = false;
