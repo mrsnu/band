@@ -2,112 +2,64 @@
 build --enable_platform_specific_config
 build:android --noenable_platform_specific_config
 
-# Use C++14 as a default language.
-build:linux --cxxopt=-std=c++14
-build:linux --host_cxxopt=-std=c++14
-build:android --cxxopt=-std=c++14
-build:android --host_cxxopt=-std=c++14
-build:windows --cxxopt=/std:c++14
-build:windows --host_cxxopt=/std:c++14
-test:linux --cxxopt=-std=c++14
-test:linux --host_cxxopt=-std=c++14
-test:android --cxxopt=-std=c++14
-test:android --host_cxxopt=-std=c++14
-test:windows --cxxopt=/std:c++14
-test:windows --host_cxxopt=/std:c++14
+# Use C++17 as a default language.
+common --cxxopt=-std=c++17
+common --host_cxxopt=-std=c++17
 
 # Supress warnings from external libraries.
 build:linux --per_file_copt=external/.*@-w
 build:android --per_file_copt=external/.*@-w
 
-# Band build config for backend setting.
-build:tflite --define tflite=true
-build:tflite --copt=-DBAND_TFLITE
-build:tflite --cxxopt=-DBAND_TFLITE
+# Band config for backend setting.
+common:tflite --define tflite=true
+common:tflite --copt=-DBAND_TFLITE
+common:tflite --cxxopt=-DBAND_TFLITE
 build:tflite --action_env BAND_TFLITE=true
-test:tflite --define tflite=true
-test:tflite --copt=-DBAND_TFLITE
-test:tflite --cxxopt=-DBAND_TFLITE
 
-# Band build config for trace setting.
-build:trace --define trace=true
-build:trace --copt=-DBAND_TRACE
-build:trace --cxxopt=-DBAND_TRACE
+# Band config for trace setting.
+common:trace --define trace=true
+common:trace --copt=-DBAND_TRACE
+common:trace --cxxopt=-DBAND_TRACE
 build:trace --action_env DBAND_TRACE=true
-test:trace --define trace=true
-test:trace --copt=-DBAND_TRACE
-test:trace --cxxopt=-DBAND_TRACE
 
-# Linux build config for Band Engine.
-build:linux_x86_64 --config=linux
-build:linux_x86_64 --cpu=k8
-build:linux_x86_64_tflite --config=linux_x86_64
-build:linux_x86_64_tflite --config=tflite
+# Linux config for Band Engine.
+common:linux_x86_64 --config=linux
+common:linux_x86_64 --cpu=k8
+common:linux_x86_64_tflite --config=linux_x86_64
+common:linux_x86_64_tflite --config=tflite
 
-# Linux test config for Band Engine.
-test:linux_x86_64 --config=linux
-test:linux_x86_64 --cpu=k8
-test:linux_x86_64_tflite --config=linux_x86_64
-test:linux_x86_64_tflite --config=tflite
-
-# Android build config for Band Engine.
+# Android config for Band Engine.
 build:android --crosstool_top=//external:android/crosstool
 build:android --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
-build:android_arm64 --config=android
-build:android_arm64 --cpu=arm64-v8a
-build:android_arm64 --fat_apk_cpu=arm64-v8a
-build:android_arm64_tflite --config=android_arm64
-build:android_arm64_tflite --config=tflite
+common:android_arm64 --config=android
+common:android_arm64 --cpu=arm64-v8a
+common:android_arm64 --fat_apk_cpu=arm64-v8a
+common:android_arm64_tflite --config=android_arm64
+common:android_arm64_tflite --config=tflite
 # List all backends
-build:android_arm64_all --config=android_arm64
-build:android_arm64_all --config=tflite
+common:android_arm64_all --config=android_arm64
+common:android_arm64_all --config=tflite
 
-# Android test config for Band Engine.
-test:android_arm64 --config=android
-test:android_arm64 --cpu=arm64-v8a
-test:android_arm64 --fat_apk_cpu=arm64-v8a
-test:android_arm64_tflite --config=android_arm64
-test:android_arm64_tflite --config=tflite
-# List all backends
-test:android_arm64_all --config=android_arm64
-test:android_arm64_all --config=tflite
-
-build:windows --copt=/D_USE_MATH_DEFINES
-build:windows --host_copt=/D_USE_MATH_DEFINES
-build:windows --copt=-DWIN32_LEAN_AND_MEAN
-build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
-build:windows --copt=-DNOGDI
-build:windows --host_copt=-DNOGDI
-build:windows --copt=/Zc:preprocessor
-build:windows --host_copt=/Zc:preprocessor
-build:windows --linkopt=/OPT:REF
-build:windows --host_linkopt=/OPT:REF
-build:windows --linkopt=/OPT:ICF
-build:windows --host_linkopt=/OPT:ICF
-build:windows --verbose_failures
-build:windows --features=compiler_param_file
-build:windows --distinct_host_configuration=false
+# Windows config for Band Engine.
+common:windows --copt=/D_USE_MATH_DEFINES
+common:windows --host_copt=/D_USE_MATH_DEFINES
+common:windows --copt=-DWIN32_LEAN_AND_MEAN
+common:windows --host_copt=-DWIN32_LEAN_AND_MEAN
+common:windows --copt=-DNOGDI
+common:windows --host_copt=-DNOGDI
+common:windows --copt=/Zc:preprocessor
+common:windows --host_copt=/Zc:preprocessor
+common:windows --linkopt=/OPT:REF
+common:windows --host_linkopt=/OPT:REF
+common:windows --linkopt=/OPT:ICF
+common:windows --host_linkopt=/OPT:ICF
+common:windows --verbose_failures
+common:windows --features=compiler_param_file
+common:windows --distinct_host_configuration=false
 test:windows --enable_runfiles
-test:windows --copt=/D_USE_MATH_DEFINES
-test:windows --host_copt=/D_USE_MATH_DEFINES
-test:windows --copt=-DWIN32_LEAN_AND_MEAN
-test:windows --host_copt=-DWIN32_LEAN_AND_MEAN
-test:windows --copt=-DNOGDI
-test:windows --host_copt=-DNOGDI
-test:windows --copt=/Zc:preprocessor
-test:windows --host_copt=/Zc:preprocessor
-test:windows --linkopt=/OPT:REF
-test:windows --host_linkopt=/OPT:REF
-test:windows --linkopt=/OPT:ICF
-test:windows --host_linkopt=/OPT:ICF
-test:windows --verbose_failures
-test:windows --features=compiler_param_file
-test:windows --distinct_host_configuration=false
 
-build:windows_tflite --config=windows
-build:windows_tflite --config=tflite
-test:windows_tflite --config=windows
-test:windows_tflite --config=tflite
+common:windows_tflite --config=windows
+common:windows_tflite --config=tflite
 
 try-import %workspace%/.band_android_config.bazelrc
 try-import %workspace%/.tflite_config.bazelrc

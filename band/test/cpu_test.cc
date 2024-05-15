@@ -14,6 +14,7 @@
 
 
 #include "band/device/cpu.h"
+#include "band/device/util.h"
 
 #include <gtest/gtest.h>
 
@@ -28,20 +29,22 @@ namespace test {
 // NOTE: set may be different from kAll due to device-specific limitation
 // e.g., Galaxy S20 can only set affinity to first 6 cores
 TEST(CPUTest, AffinitySetTest) {
-  std::vector<CPUMaskFlag> masks = {CPUMaskFlag::kAll, CPUMaskFlag::kLittle,
-                                    CPUMaskFlag::kBig, CPUMaskFlag::kPrimary};
-  for (auto mask : masks) {
-    CpuSet target_set = BandCPUMaskGetSet(mask);
-    // this fails if target_set is null
-    absl::Status set_status = SetCPUThreadAffinity(target_set);
-    if (!set_status.ok()) {
-      EXPECT_EQ(target_set.NumEnabled(), 0);
-    } else {
-      sleep(1);
-      CpuSet current_set;
-      // should always success
-      EXPECT_EQ(GetCPUThreadAffinity(current_set), absl::OkStatus());
-      EXPECT_EQ(target_set, current_set);
+  if (device::IsRooted()) {
+    std::vector<CPUMaskFlag> masks = {CPUMaskFlag::kAll, CPUMaskFlag::kLittle,
+                                      CPUMaskFlag::kBig, CPUMaskFlag::kPrimary};
+    for (auto mask : masks) {
+      CpuSet target_set = BandCPUMaskGetSet(mask);
+      // this fails if target_set is null
+      absl::Status set_status = SetCPUThreadAffinity(target_set);
+      if (!set_status.ok()) {
+        EXPECT_EQ(target_set.NumEnabled(), 0);
+      } else {
+        sleep(1);
+        CpuSet current_set;
+        // should always success
+        EXPECT_EQ(GetCPUThreadAffinity(current_set), absl::OkStatus());
+        EXPECT_EQ(target_set, current_set);
+      }
     }
   }
 }

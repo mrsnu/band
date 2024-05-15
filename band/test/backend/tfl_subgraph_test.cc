@@ -92,10 +92,9 @@ INSTANTIATE_TEST_SUITE_P(
                         SubgraphPreparationType::kFallbackPerWorker),
         std::make_tuple("ICN_quant.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph),
-        std::make_tuple(
-            "magenta_arbitrary-image-stylization-v1-256_int8_transfer_1.tflite",
-            SubgraphPreparationType::kMergeUnitSubgraph),
         std::make_tuple("retinaface_mbv2_quant_160.tflite",
+                        SubgraphPreparationType::kMergeUnitSubgraph),
+        std::make_tuple("ffnet_40s_quantized.tflite",
                         SubgraphPreparationType::kMergeUnitSubgraph)));
 }  // namespace test
 }  // namespace band
