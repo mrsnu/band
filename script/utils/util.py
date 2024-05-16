@@ -108,15 +108,15 @@ def get_dst_path(base_dir, target_platform, debug):
 ANDROID_BASE = '/data/local/tmp/'
 
 
-def push_to_android(src, dst):
-    run_cmd(f'adb -d push {src} {ANDROID_BASE}{dst}')
+def push_to_android(src, dst, device_connection_flag):
+    run_cmd(f'adb {device_connection_flag} push {src} {ANDROID_BASE}{dst}')
 
 
-def run_binary_android(basepath, path, option=''):
-    run_cmd(f'adb -d shell chmod 777 {ANDROID_BASE}{basepath}{path}')
+def run_binary_android(basepath, path, device_connection_flag, option=''):
+    run_cmd(f'adb {device_connection_flag} shell chmod 777 {ANDROID_BASE}{basepath}{path}')
     # cd & run -- to preserve the relative relation of the binary
     run_cmd(
-        f'adb -d shell cd {ANDROID_BASE}{basepath} && ./{path} {option}')
+        f'adb {device_connection_flag} shell cd {ANDROID_BASE}{basepath} && ./{path} {option}')
 
 
 def get_argument_parser(desc: str):
@@ -143,3 +143,19 @@ def clean_bazel(docker):
         run_cmd_docker('bazel clean')
     else:
         run_cmd('bazel clean')
+
+def get_adb_devices():
+    result = subprocess.check_output(['adb', 'devices']).decode('utf-8')
+    lines = result.strip().split('\n')[1:]
+    device_connection_flags = []
+    for line in lines:
+        if line.strip():
+            device_info = line.split()
+            device_id = device_info[0]
+            if ':' in device_id:
+                # Wireless device detected
+                device_connection_flags.append(f"-s {device_id}")
+            else:
+                # USB device detected
+                device_connection_flags.append("-d")
+    return device_connection_flags

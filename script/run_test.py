@@ -37,6 +37,11 @@ if __name__ == '__main__':
         clean_bazel(args.docker)
     
     if args.android:
+        device_connection_flag = get_adb_devices()
+        # check if the android device is connected
+        assert device_connection_flag
+        device_connection_flag = device_connection_flag[0]
+
         build_cmd = make_cmd(
                 build_only=True,
                 debug=args.debug,
@@ -55,7 +60,7 @@ if __name__ == '__main__':
 
         temp_dir_name = next(tempfile._get_candidate_names())
         print("Copy test data to device")
-        push_to_android('band/test', f'{temp_dir_name}/band/test')
+        push_to_android('band/test', f'{temp_dir_name}/band/test', device_connection_flag)
         for test_file in os.listdir(get_target(args.debug, 'test')):
             if args.filter != "":
                 if args.filter not in test_file:
@@ -64,12 +69,13 @@ if __name__ == '__main__':
             if not '.' in test_file and os.path.isfile(get_target(args.debug, f'test/{test_file}')):
                 print(f'-----------TEST : {test_file}-----------')
                 push_to_android(
-                    get_target(args.debug, f'test/{test_file}'), temp_dir_name)
-                run_binary_android(f'{temp_dir_name}/', f'{test_file}')
+                    get_target(args.debug, f'test/{test_file}'), temp_dir_name, device_connection_flag)
+                run_binary_android(f'{temp_dir_name}/', f'{test_file}', device_connection_flag)
 
-        print("Clean up test directory from device")
+        print("Clean up test/temporal directory from device and local")
         run_cmd(
-            f'adb -d shell rm -r /data/local/tmp/{temp_dir_name}')
+            f'adb {device_connection_flag} shell rm -r /data/local/tmp/{temp_dir_name}')
+        run_cmd(f'rm -rf {get_target(args.debug)}')
     else:
         cmd = make_cmd(
                 args.build, 
