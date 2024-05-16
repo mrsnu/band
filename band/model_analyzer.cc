@@ -351,12 +351,11 @@ absl::Status ModelAnalyzer::GetUnitSubgraphs(
           continue;
         }
 
-        WorkerId tmp_worker_id = static_cast<int>(device_flag);
-        if (unsupported_ops.find(tmp_worker_id) == unsupported_ops.end() ||
-            unsupported_ops.at(tmp_worker_id).find(op_index) ==
-                unsupported_ops.at(tmp_worker_id).end()) {
-          if (op_sets_to_ignore[tmp_worker_id].find(op_index) ==
-              op_sets_to_ignore[tmp_worker_id].end()) {
+        if (unsupported_ops.find(worker_id) == unsupported_ops.end() ||
+            unsupported_ops.at(worker_id).find(op_index) ==
+                unsupported_ops.at(worker_id).end()) {
+          if (op_sets_to_ignore[worker_id].find(op_index) ==
+              op_sets_to_ignore[worker_id].end()) {
             op_support_table[op_index] |= 1 << worker_id;
           }
         }
