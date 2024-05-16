@@ -103,18 +103,6 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
     addCPUMask(nativeHandle, cpuMask.getValue());
   }
 
-  public void addResourceMonitorDeviceFreqPath(Device flag, String devicePath) {
-    addResourceMonitorDeviceFreqPath(nativeHandle, flag.getValue(), devicePath);
-  }
-
-  public void addResourceMonitorIntervalMs(int intervalMs) {
-    addResourceMonitorIntervalMs(nativeHandle, intervalMs);
-  }
-
-  public void addResourceMonitorLogPath(String logPath) {
-    addResourceMonitorLogPath(nativeHandle, logPath);
-  }
-
   public Config build() {
     // TODO(widiba03304): Config should be built only by the ConfigBuilder.
     // By declaring the Config's private ctor and violating the access control in
@@ -171,13 +159,6 @@ class NativeConfigBuilderWrapper implements AutoCloseable {
       long configBuilderHandle, int subgraphPreparationType);
 
   private native void addCPUMask(long configBuilderHandle, int cpuMask);
-
-  private native void addResourceMonitorDeviceFreqPath(
-      long configBuilderHandle, int deviceFlag, String devicePath);
-
-  private native void addResourceMonitorIntervalMs(long configBuilderHandle, int intervalMs);
-
-  private native void addResourceMonitorLogPath(long configBuilderHandle, String logPath);
 
   private native Object build(long configBuilderHandle);
 }

@@ -109,21 +109,6 @@ public class ConfigBuilder {
     return this;
   }
 
-  public ConfigBuilder addResourceMonitorDeviceFreqPath(Device deviceFlag, String devicePath) {
-    wrapper.addResourceMonitorDeviceFreqPath(deviceFlag, devicePath);
-    return this;
-  }
-
-  public ConfigBuilder addResourceMonitorIntervalMs(int resourceMonitorIntervalMs) {
-    wrapper.addResourceMonitorIntervalMs(resourceMonitorIntervalMs);
-    return this;
-  }
-
-  public ConfigBuilder addResourceMonitorLogPath(String resourceMonitorLogPath) {
-    wrapper.addResourceMonitorLogPath(resourceMonitorLogPath);
-    return this;
-  }
-
   public Config build() {
     return wrapper.build();
   }

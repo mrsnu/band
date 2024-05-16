@@ -134,23 +134,6 @@ absl::StatusOr<WorkerConfig> WorkerConfigBuilder::Build() {
   return worker_config;
 }
 
-absl::StatusOr<ResourceMonitorConfig> ResourceMonitorConfigBuilder::Build() {
-  RETURN_IF_ERROR(IsValid());
-
-  ResourceMonitorConfig resource_monitor_config;
-  resource_monitor_config.log_path = log_path_;
-  resource_monitor_config.device_freq_paths = device_freq_paths_;
-  resource_monitor_config.monitor_interval_ms = monitor_interval_ms_;
-  return resource_monitor_config;
-}
-
-absl::Status ResourceMonitorConfigBuilder::IsValid() {
-  REPORT_IF_FALSE(
-      ResourceMonitorConfigBuilder,
-      log_path_ == "" || log_path_.find(".json") != std::string::npos);
-  return absl::OkStatus();
-}
-
 absl::StatusOr<RuntimeConfig> RuntimeConfigBuilder::Build() {
   RETURN_IF_ERROR(IsValid());
   RuntimeConfig runtime_config;
@@ -162,8 +145,6 @@ absl::StatusOr<RuntimeConfig> RuntimeConfigBuilder::Build() {
   runtime_config.profile_config = profile_config_builder_.Build().value();
   runtime_config.planner_config = planner_config_builder_.Build().value();
   runtime_config.worker_config = worker_config_builder_.Build().value();
-  runtime_config.resource_monitor_config =
-      resource_monitor_config_builder_.Build().value();
   return runtime_config;
 }
 
