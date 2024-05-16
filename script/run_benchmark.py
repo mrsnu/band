@@ -50,6 +50,10 @@ def benchmark_local(debug, trace, platform, backend, build_only, config_path):
 
 def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
     target_base_dir = BASE_DIR
+    device_connection_flag = get_adb_devices()
+    # check if the android device is connected
+    assert device_connection_flag
+    device_connection_flag = device_connection_flag[0]
     # build android targets only (specified in band_cc_android_test tags)
 
     build_command = make_cmd(
@@ -84,13 +88,13 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         shutil.copy(config_path, f'{target_base_dir}/{name}')
         print (f'Push {name} to Android')
 
-    push_to_android(f'{target_base_dir}', '')
+    push_to_android(f'{target_base_dir}', '', , device_connection_flag)
 
     for config_path in config_paths:
         name = os.path.basename(config_path)
         print(f'Run {name}')
         run_binary_android('', f'{target_base_dir}/band_benchmark',
-                           f'{target_base_dir}/{name}')
+                           f'{target_base_dir}/{name}', device_connection_flag)
 
 
 if __name__ == '__main__':
