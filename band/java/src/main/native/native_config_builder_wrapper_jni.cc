@@ -182,34 +182,6 @@ Java_org_mrsnu_band_NativeConfigBuilderWrapper_addCPUMask(
       ->AddCPUMask(static_cast<band::CPUMaskFlag>(cpuMask));
 }
 
-JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorDeviceFreqPath(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle, jint deviceFlag,
-    jstring devicePath) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddResourceMonitorDeviceFreqPath(
-          static_cast<band::DeviceFlag>(deviceFlag),
-          ConvertJstringToString(env, devicePath));
-}
-
-JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorIntervalMs(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jint resourceMonitorIntervalMs) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddResourceMonitorIntervalMs(
-          static_cast<int>(resourceMonitorIntervalMs));
-}
-
-JNIEXPORT void JNICALL
-Java_org_mrsnu_band_NativeConfigBuilderWrapper_addResourceMonitorLogPath(
-    JNIEnv* env, jclass clazz, jlong configBuilderHandle,
-    jstring resourceMonitorLogPath) {
-  ConvertLongToConfigBuilder(env, configBuilderHandle)
-      ->AddResourceMonitorLogPath(
-          ConvertJstringToString(env, resourceMonitorLogPath));
-}
-
 JNIEXPORT jobject JNICALL Java_org_mrsnu_band_NativeConfigBuilderWrapper_build(
     JNIEnv* env, jclass clazz, jlong configBuilderHandle) {
   jclass config_cls = env->FindClass("org/mrsnu/band/Config");

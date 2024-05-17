@@ -153,36 +153,6 @@ class WorkerConfigBuilder {
   int availability_check_interval_ms_ = 30000;
 };
 
-class ResourceMonitorConfigBuilder {
-  friend class RuntimeConfigBuilder;
-
- public:
-  ResourceMonitorConfigBuilder& AddResourceMonitorLogPath(
-      std::string log_path) {
-    log_path_ = log_path;
-    return *this;
-  }
-  ResourceMonitorConfigBuilder& AddResourceMonitorDeviceFreqPath(
-      DeviceFlag device, std::string device_freq_path) {
-    device_freq_paths_.insert({device, device_freq_path});
-    return *this;
-  }
-  ResourceMonitorConfigBuilder& AddResourceMonitorIntervalMs(
-      int monitor_interval_ms) {
-    monitor_interval_ms_ = monitor_interval_ms;
-    return *this;
-  }
-
-  absl::StatusOr<ResourceMonitorConfig> Build();
-
- private:
-  absl::Status IsValid();
-
-  std::string log_path_ = "";
-  std::map<DeviceFlag, std::string> device_freq_paths_;
-  int monitor_interval_ms_ = 10;
-};
-
 // Delegate for ConfigBuilders
 class RuntimeConfigBuilder {
  public:
@@ -249,21 +219,6 @@ class RuntimeConfigBuilder {
         availability_check_interval_ms);
     return *this;
   }
-  RuntimeConfigBuilder& AddResourceMonitorLogPath(std::string log_path) {
-    resource_monitor_config_builder_.AddResourceMonitorLogPath(log_path);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddResourceMonitorDeviceFreqPath(
-      DeviceFlag device, std::string device_freq_path) {
-    resource_monitor_config_builder_.AddResourceMonitorDeviceFreqPath(
-        device, device_freq_path);
-    return *this;
-  }
-  RuntimeConfigBuilder& AddResourceMonitorIntervalMs(int monitor_interval_ms) {
-    resource_monitor_config_builder_.AddResourceMonitorIntervalMs(
-        monitor_interval_ms);
-    return *this;
-  }
   RuntimeConfigBuilder& AddMinimumSubgraphSize(int minimum_subgraph_size) {
     minimum_subgraph_size_ = minimum_subgraph_size;
     return *this;
@@ -287,7 +242,6 @@ class RuntimeConfigBuilder {
   ProfileConfigBuilder profile_config_builder_;
   PlannerConfigBuilder planner_config_builder_;
   WorkerConfigBuilder worker_config_builder_;
-  ResourceMonitorConfigBuilder resource_monitor_config_builder_;
   int minimum_subgraph_size_ = 7;
   SubgraphPreparationType subgraph_preparation_type_ =
       SubgraphPreparationType::kMergeUnitSubgraph;
