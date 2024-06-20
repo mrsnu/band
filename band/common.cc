@@ -413,7 +413,7 @@ void RegisterSharedLibDir(const char* native_lib_dir) {
   // see if the directory is already registered
   for (const std::string& dir : g_shared_lib_dirs) {
     if (dir == native_lib_dir) {
-      BAND_LOG_INTERNAL(BAND_LOG_INFO,
+      BAND_LOG(LogSeverity::kInfo,
                         "Shared library directory %s is already registered",
                         native_lib_dir);
       return;
@@ -421,7 +421,7 @@ void RegisterSharedLibDir(const char* native_lib_dir) {
   }
 
   g_shared_lib_dirs.push_back(native_lib_dir);
-  BAND_LOG_INTERNAL(BAND_LOG_INFO, "Registering shared library directory %s",
+  BAND_LOG(LogSeverity::kInfo,"Registering shared library directory %s",
                     native_lib_dir);
 }
 
