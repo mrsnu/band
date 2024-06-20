@@ -22,6 +22,7 @@ from utils import *
 BASE_DIR = 'test_bin'
 TARGET = "band/test/..."
 
+
 def get_target(debug, postfix=""):
     return f'{get_dst_path(BASE_DIR, "armv8-a", debug)}/' + postfix
 
@@ -33,9 +34,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print(f"Test {get_platform()}")
-    if args.rebuild: 
+    if args.rebuild:
         clean_bazel(args.docker)
-    
+
     if args.android:
         device_connection_flag = get_adb_devices()
         # check if the android device is connected
@@ -43,13 +44,13 @@ if __name__ == '__main__':
         device_connection_flag = device_connection_flag[0]
 
         build_cmd = make_cmd(
-                build_only=True,
-                debug=args.debug,
-                trace=args.trace,   
-                platform='android',
-                backend=args.backend,
-                target=TARGET
-            )
+            build_only=True,
+            debug=args.debug,
+            trace=args.trace,
+            platform='android',
+            backend=args.backend,
+            target=TARGET
+        )
         subprocess.call(['mkdir', '-p', get_target(args.debug)])
         if args.docker:
             run_cmd_docker(build_cmd)
@@ -60,6 +61,7 @@ if __name__ == '__main__':
 
         temp_dir_name = next(tempfile._get_candidate_names())
         print("Copy test data to device")
+        push_external_libs_to_android()
         push_to_android('band/test', f'{temp_dir_name}/band/test', device_connection_flag)
         for test_file in os.listdir(get_target(args.debug, 'test')):
             if args.filter != "":
@@ -78,11 +80,11 @@ if __name__ == '__main__':
         run_cmd(f'rm -rf {get_target(args.debug)}')
     else:
         cmd = make_cmd(
-                args.build, 
-                args.debug,
-                args.trace,
-                get_platform(),
-                args.backend, 
-                TARGET
-            )
+            args.build,
+            args.debug,
+            args.trace,
+            get_platform(),
+            args.backend,
+            TARGET
+        )
         run_cmd(cmd)

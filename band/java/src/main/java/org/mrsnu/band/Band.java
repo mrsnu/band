@@ -16,12 +16,17 @@
 
 package org.mrsnu.band;
 
+import android.app.Application;
+import android.content.pm.ApplicationInfo;
 import java.util.logging.Logger;
 
 /** Static utility methods for loading the Band runtime and native code. */
 public final class Band {
   private static final Logger logger = Logger.getLogger(Band.class.getName());
   private static final String BAND_RUNTIME_LIBNAME = "band_jni";
+
+  // This field is used by the static initializer of TensorFlowLite to load the
+  // native TensorFlowLite library.
 
   private static final Throwable LOAD_LIBRARY_EXCEPTION;
   private static volatile boolean isInit = false;
@@ -40,7 +45,12 @@ public final class Band {
     LOAD_LIBRARY_EXCEPTION = loadLibraryException;
   }
 
-  private Band() {
+  private Band() {}
+
+  public static Application getApplicationUsingReflection() throws Exception {
+    return (Application) Class.forName("android.app.ActivityThread")
+        .getMethod("currentApplication")
+        .invoke(null, (Object[]) null);
   }
 
   public static void init() {
@@ -49,18 +59,19 @@ public final class Band {
     }
 
     try {
-      nativeDoNothing();
+      registerNativeLibDirs(getApplicationUsingReflection().getApplicationInfo().nativeLibraryDir);
       isInit = true;
     } catch (UnsatisfiedLinkError e) {
       Throwable exceptionToLog = LOAD_LIBRARY_EXCEPTION != null ? LOAD_LIBRARY_EXCEPTION : e;
       UnsatisfiedLinkError exceptionToThrow = new UnsatisfiedLinkError(
           "Failed to load native Band methods. Check that the correct native"
-              + " libraries are present, and, if using a custom native library, have been"
-              + " properly loaded via System.loadLibrary():\n"
-              + "  "
-              + exceptionToLog);
+          + " libraries are present, and, if using a custom native library, have been"
+          + " properly loaded via System.loadLibrary():\n"
+          + "  " + exceptionToLog);
       exceptionToThrow.initCause(e);
       throw exceptionToThrow;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
