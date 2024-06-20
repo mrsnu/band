@@ -65,6 +65,13 @@ def workspace():
         build_file = Label("//third_party/libyuv:BUILD"),
     )
 
+    http_archive(
+        name = "com_github_grpc_grpc",
+        strip_prefix = "grpc-1.45.0",
+        sha256 = "ec19657a677d49af59aa806ec299c070c882986c9fcc022b1c22c2a3caf01bcd",
+        urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.45.0.tar.gz"],
+    )
+
     ######## Android repositories ########
     android(name = "android_repo")
 

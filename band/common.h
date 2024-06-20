@@ -158,6 +158,8 @@ enum class QuantizationType : size_t {
 enum class WorkerType : size_t {
   kDeviceQueue = 1 << 0,
   kGlobalQueue = 1 << 1,
+  kRemote = 1 << 2,
+  kLocal = kDeviceQueue | kGlobalQueue,
 };
 
 enum class JobStatus : size_t {
