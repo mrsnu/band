@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package band;
+
+service Band {
+  rpc RequestInference (Request) returns (Response) {}
+}
+
+message Request {
+  string model = 1;
+  string data_type = 2;
+  int32 height = 3;
+  int32 width = 4;
+  bytes data = 5;
+  int32 latency_ms = 6;
+}
+
+message Response {
+  int32 computation_time_ms = 1;
+  bytes result = 2;
+}
