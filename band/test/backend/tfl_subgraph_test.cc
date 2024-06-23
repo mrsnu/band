@@ -51,7 +51,12 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .AddSubgraphPreparationType(subgraph_type)
           .AddCPUMask(CPUMaskFlag::kAll)
           .AddPlannerCPUMask(CPUMaskFlag::kPrimary)
-#ifdef __ANDROID__
+#ifdef CL_DELEGATE_NO_GL
+          .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kGPU})
+          .AddWorkerNumThreads({3, 4, 1})
+          .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle,
+                              CPUMaskFlag::kAll})
+#elif __ANDROID__
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU, DeviceFlag::kDSP,
                        DeviceFlag::kNPU, DeviceFlag::kGPU})
           .AddWorkerNumThreads({3, 4, 1, 1, 1})
@@ -62,7 +67,7 @@ TEST_P(ModelPartitionTestsFixture, ModelPartitionTest) {
           .AddWorkers({DeviceFlag::kCPU, DeviceFlag::kCPU})
           .AddWorkerNumThreads({3, 4})
           .AddWorkerCPUMasks({CPUMaskFlag::kBig, CPUMaskFlag::kLittle})
-#endif  // __ANDROID__
+#endif  // CL_DELEGATE_NO_GL & __ANDROID__
           .AddSmoothingFactor(0.1)
           .AddProfileDataPath("band/test/data/profile.json")
           .AddOnline(true)

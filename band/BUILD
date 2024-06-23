@@ -71,6 +71,17 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "linux_x86_64_tflite_opencl",
+    define_values = {
+        "tflite": "true",
+        "gpu": "nvidia-opencl"
+    },
+    flag_values = {},
+    values = {"cpu": "k8"},
+    visibility = ["//visibility:public"],
+)
+
 # Android config settings
 config_setting(
     name = "android",

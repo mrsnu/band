@@ -24,14 +24,15 @@ TARGET = "band/tool:band_benchmark"
 DEFAULT_CONFIG = 'script/config_samples/benchmark_config.json'
 
 
-def benchmark_local(debug, trace, platform, backend, build_only, config_path):
+def benchmark_local(debug, trace, platform, backend, build_only, config_path, nvidia_opencl):
     build_cmd = make_cmd(
         build_only=build_only,
         debug=debug,
         trace=trace,
         platform=platform,
         backend=backend,
-        target=TARGET
+        target=TARGET,
+        nvidia_opencl=nvidia_opencl
     )
     run_cmd(build_cmd)
     copy('bazel-bin/band/tool/band_benchmark', BASE_DIR)
@@ -63,6 +64,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         platform="android",
         backend=backend,
         target=TARGET,
+        nvidia_opencl=False
     )
     if docker:
         run_cmd_docker(build_command)
@@ -88,7 +90,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         shutil.copy(config_path, f'{target_base_dir}/{name}')
         print (f'Push {name} to Android')
 
-    push_to_android(f'{target_base_dir}', '', , device_connection_flag)
+    push_to_android(f'{target_base_dir}', '', device_connection_flag)
 
     for config_path in config_paths:
         name = os.path.basename(config_path)
@@ -110,7 +112,10 @@ if __name__ == '__main__':
         if args.android:
             shutil.copy('script/config_samples/benchmark_heft.json', f'{DEFAULT_CONFIG}')
         else:
-            args.config = 'band/test/data/benchmark_config.json'
+            if args.opencl:
+                args.config = 'band/test/data/benchmark_wgpu_config.json'
+            else:
+                args.config = 'band/test/data/benchmark_config.json'
 
 
     if args.rebuild:
@@ -127,4 +132,4 @@ if __name__ == '__main__':
     else:
         print(f'Benchmark {get_platform()}')
         benchmark_local(args.debug, args.trace, get_platform(),
-                        args.backend, args.build, args.config)
+                        args.backend, args.build, args.config, args.opencl)

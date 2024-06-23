@@ -34,7 +34,8 @@ if __name__ == '__main__':
         trace=args.trace,
         platform="android" if args.android else get_platform(),
         backend=args.backend,
-        target=TARGET
+        target=TARGET,
+        nvidia_opencl=args.opencl
     )
     if args.docker:
         run_cmd_docker(build_cmd)
