@@ -112,7 +112,10 @@ if __name__ == '__main__':
         if args.android:
             shutil.copy('script/config_samples/benchmark_heft.json', f'{DEFAULT_CONFIG}')
         else:
-            args.config = 'band/test/data/benchmark_config.json'
+            if args.opencl:
+                args.config = 'band/test/data/benchmark_wgpu_config.json'
+            else:
+                args.config = 'band/test/data/benchmark_config.json'
 
 
     if args.rebuild:
