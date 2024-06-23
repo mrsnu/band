@@ -77,11 +77,11 @@ def get_bazel_options(
         trace: bool, 
         platform: str,
         backend: str,
-        opencl: bool):
+        nvidia_opencl: bool):
     opt = ""
     opt += "-c " + ("dbg" if debug else "opt") + " "
     opt += "--strip " + ("never" if debug else "always") + " "
-    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + ("" if trace == False else " --config trace") + ("" if opencl == False else " --define gpu=nvidia-opencl --copt=-DCL_TARGET_OPENCL_VERSION=300 --copt=-DCL_DELEGATE_NO_GL --copt=-DEGL_NO_X11") + " "
+    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + ("" if trace == False else " --config trace") + ("" if nvidia_opencl == False else " --define gpu=nvidia-opencl --copt=-DCL_TARGET_OPENCL_VERSION=300 --copt=-DCL_DELEGATE_NO_GL --copt=-DEGL_NO_X11") + " "
     return opt
 
 
@@ -91,12 +91,12 @@ def make_cmd(
         trace: bool, 
         platform: str, 
         backend: str, 
-        opencl: bool,
         target: str,
+        nvidia_opencl: bool
     ):
     cmd = "bazel" + " "
     cmd += ("build" if build_only else "test") + " "
-    cmd += get_bazel_options(debug, trace, platform, backend, opencl)
+    cmd += get_bazel_options(debug, trace, platform, backend, nvidia_opencl)
     cmd += target
     return cmd
 

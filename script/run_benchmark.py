@@ -31,7 +31,8 @@ def benchmark_local(debug, trace, platform, backend, build_only, config_path):
         trace=trace,
         platform=platform,
         backend=backend,
-        target=TARGET
+        target=TARGET,
+        nvidia_opencl=args.opencl
     )
     run_cmd(build_cmd)
     copy('bazel-bin/band/tool/band_benchmark', BASE_DIR)
@@ -63,6 +64,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         platform="android",
         backend=backend,
         target=TARGET,
+        nvidia_opencl=args.opencl
     )
     if docker:
         run_cmd_docker(build_command)

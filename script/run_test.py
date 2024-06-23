@@ -52,7 +52,8 @@ if __name__ == '__main__':
                 trace=args.trace,   
                 platform='android',
                 backend=args.backend,
-                target=TARGET
+                target=TARGET,
+                nvidia_opencl=args.opencl
             )
         subprocess.call(['mkdir', '-p', get_target(args.debug)])
         if args.docker:
@@ -87,7 +88,7 @@ if __name__ == '__main__':
                 args.trace,
                 get_platform(),
                 args.backend, 
-                args.opencl,
-                TARGET
+                TARGET,
+                args.opencl
             )
         run_cmd(cmd)
