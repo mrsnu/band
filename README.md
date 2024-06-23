@@ -70,6 +70,10 @@ Refer to detailed instructions in `[root]/script`
   ```sh
   python script/run_test.py -opencl 
   ```
+* Run benchmark for Linux with GPU(OpenCL Support)
+  ```sh
+  python script/run_benchmark.py -opencl 
+  ```
 
 * Build Android AAR
   ```sh
