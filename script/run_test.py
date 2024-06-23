@@ -32,7 +32,11 @@ if __name__ == '__main__':
                         help='Run specific test that contains given string (only for android)')
     args = parser.parse_args()
 
-    print(f"Test {get_platform()}")
+    if args.opencl:
+        print(f"Test {get_platform()} with GPU (OpenCL Support)")
+    else:
+        print(f"Test {get_platform()}")
+        
     if args.rebuild: 
         clean_bazel(args.docker)
     
@@ -83,6 +87,7 @@ if __name__ == '__main__':
                 args.trace,
                 get_platform(),
                 args.backend, 
+                args.opencl,
                 TARGET
             )
         run_cmd(cmd)
