@@ -90,7 +90,7 @@ def benchmark_android(debug, trace, platform, backend, docker, config_path=""):
         shutil.copy(config_path, f'{target_base_dir}/{name}')
         print (f'Push {name} to Android')
 
-    push_to_android(f'{target_base_dir}', '', , device_connection_flag)
+    push_to_android(f'{target_base_dir}', '', device_connection_flag)
 
     for config_path in config_paths:
         name = os.path.basename(config_path)
