@@ -22,6 +22,10 @@ python .\script\run_benchmark.py -android -c .\benchmark_config.json
 ```
 python .\script\run_benchmark.py -c .\benchmark_config.json
 ```
+If you want to run with GPU (Tested on Ubuntu)
+```
+python .\script\run_benchmark.py -opencl -c .\benchmark_config.json
+```
 
 
 ## Config file

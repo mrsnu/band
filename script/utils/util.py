@@ -76,11 +76,12 @@ def get_bazel_options(
         debug: bool,
         trace: bool, 
         platform: str,
-        backend: str):
+        backend: str,
+        nvidia_opencl: bool):
     opt = ""
     opt += "-c " + ("dbg" if debug else "opt") + " "
     opt += "--strip " + ("never" if debug else "always") + " "
-    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + ("" if trace == False else " --config trace") + " "
+    opt += f"--config {PLATFORM[platform]}" + ("" if backend == "none" else f" --config {backend}") + ("" if trace == False else " --config trace") + ("" if nvidia_opencl == False else " --define gpu=nvidia-opencl --copt=-DCL_TARGET_OPENCL_VERSION=300 --copt=-DCL_DELEGATE_NO_GL --copt=-DEGL_NO_X11") + " "
     return opt
 
 
@@ -91,10 +92,11 @@ def make_cmd(
         platform: str, 
         backend: str, 
         target: str,
+        nvidia_opencl: bool
     ):
     cmd = "bazel" + " "
     cmd += ("build" if build_only else "test") + " "
-    cmd += get_bazel_options(debug, trace, platform, backend)
+    cmd += get_bazel_options(debug, trace, platform, backend, nvidia_opencl)
     cmd += target
     return cmd
 
@@ -135,6 +137,8 @@ def get_argument_parser(desc: str):
                         help='Re-build test target, only affects to android ')
     parser.add_argument('-b', '--build', action="store_true", default=False,
                         help='Build only, only affects to local (default = false)')
+    parser.add_argument('-opencl', action="store_true", default=False,
+                        help='Test on Linux & GPU with OpenCL Support')
     return parser
 
 

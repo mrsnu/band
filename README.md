@@ -61,9 +61,14 @@ Band provides Java and C APIs, as well as an official plugin for [Unreal Engine]
 
 Refer to detailed instructions in `[root]/script`
 
-* Run test 
+* Run test for Android
   ```sh
   python script/run_test.py -android 
+  ```
+
+* Run test for Linux with GPU(OpenCL Support)
+  ```sh
+  python script/run_test.py -opencl 
   ```
 
 * Build Android AAR
